@@ -38,11 +38,10 @@ const nextConfig: NextConfig = {
   },
   images: {
     unoptimized: true,
-    domains: ["*"],
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "localhost",
+        hostname: "**",
       },
     ],
   },
