@@ -44,21 +44,15 @@ export function Footer() {
     <footer className="w-full sm:h-[252px] flex flex-col items-center justify-start overflow-hidden bg-gray-3 border-t border-gray-6">
       <div className="w-full h-full flex flex-col sm:flex-row items-center justify-between">
         <div className="flex flex-col sm:flex-row items-center justify-between w-full h-full p-8 sm:p-8 gap-8 sm:gap-0">
-          {/* Brand Section */}
           <div className="flex flex-col items-start justify-between h-full w-full sm:w-1/2">
             <Image
-              src="/images/logo_footer.png"
+              src="/images/logo_horizontal.png"
               alt="Logo"
               width={164}
               height={44}
               className="object-cover"
               draggable={false}
             />
-
-            <p className="text-gray-11 leading-relaxed mt-2 sm:mt-0">
-              Loot4Fun is a platform for creating and managing tickets for your
-              events.
-            </p>
 
             <div className="flex items-center gap-3 mt-4 sm:mt-0">
               {socialLinks.map(({ href, icon: Icon }) => (
