@@ -1,6 +1,6 @@
 "use client";
 import { modalitiesColumns, locationsOptions } from "@/constants";
-import { Dropdown } from "../Dropdown";
+import { Dropdown, DropdownOption } from "../Dropdown";
 import { LocationIcon } from "../Icons/LocationIcon";
 import { MoneyIcon } from "../Icons/MoneyIcon";
 import { SneakersIcon } from "../Icons/SneakersIcon";
@@ -9,9 +9,14 @@ import { SearchIcon } from "lucide-react";
 import { DateRangePicker } from "../DateRangePicker";
 import { PriceRangeSlider } from "../PriceRangeSlider";
 import { useState, useCallback, useMemo } from "react";
+import type { DateRange } from "react-day-picker";
 
 export function HomeFilters() {
   const [selectedModalities, setSelectedModalities] = useState<string[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<
+    DateRange | undefined
+  >(undefined);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
 
   const handleModalitiesChange = useCallback((ids: string[]) => {
@@ -20,6 +25,16 @@ export function HomeFilters() {
 
   const handlePriceRangeChange = useCallback((range: [number, number]) => {
     setPriceRange(range);
+  }, []);
+
+  const handleLocationSelect = useCallback((option: DropdownOption) => {
+    if (option.id) {
+      setSelectedLocation(option.id);
+    }
+  }, []);
+
+  const handleDateRangeSelect = useCallback((range: DateRange | undefined) => {
+    setSelectedDateRange(range);
   }, []);
 
   const memoizedSelectedModalities = useMemo(
@@ -47,6 +62,27 @@ export function HomeFilters() {
     )}`;
   }, [priceRange]);
 
+  const formatDateRange = useCallback(() => {
+    if (!selectedDateRange?.from) {
+      return "Dia do evento";
+    }
+
+    const formatDate = (date: Date) => {
+      return new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "short",
+      }).format(date);
+    };
+
+    if (selectedDateRange.from && selectedDateRange.to) {
+      return `${formatDate(selectedDateRange.from)} - ${formatDate(
+        selectedDateRange.to
+      )}`;
+    }
+
+    return formatDate(selectedDateRange.from);
+  }, [selectedDateRange]);
+
   return (
     <div className="relative flex items-center justify-center mt-14 shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
       <Dropdown
@@ -55,17 +91,26 @@ export function HomeFilters() {
         width="w-[470px]"
         maxHeight="max-h-[430px]"
         className="top-20"
-        trigger={() => (
-          <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
-            <LocationIcon />
-            <div className="flex flex-col">
-              <h1 className="font-family-manrope font-bold">Local</h1>
-              <p className="font-family-dm-sans font-normal text-gray-11">
-                Selecione um local
-              </p>
+        selectedIds={selectedLocation ? [selectedLocation] : []}
+        onSelect={handleLocationSelect}
+        trigger={() => {
+          const selectedLocationOption = locationsOptions.find(
+            (loc) => loc.id === selectedLocation
+          );
+          return (
+            <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
+              <LocationIcon />
+              <div className="flex flex-col">
+                <h1 className="font-family-manrope font-bold">Local</h1>
+                <p className="font-family-dm-sans font-normal text-gray-11">
+                  {selectedLocationOption
+                    ? selectedLocationOption.label
+                    : "Selecione um local"}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        }}
       />
 
       <div className="w-px h-[30px] bg-gray-6" />
@@ -80,14 +125,21 @@ export function HomeFilters() {
             <CalendarIcon />
             <div className="flex flex-col">
               <h1 className="font-family-manrope font-bold">Datas</h1>
-              <p className="font-family-dm-sans font-normal text-gray-11">
-                Dia do evento
+              <p
+                className={`font-family-dm-sans font-normal text-gray-11 ${
+                  selectedDateRange?.from ? "text-base" : "text-base"
+                }`}
+              >
+                {formatDateRange()}
               </p>
             </div>
           </div>
         )}
       >
-        <DateRangePicker />
+        <DateRangePicker
+          onSelect={handleDateRangeSelect}
+          value={selectedDateRange}
+        />
       </Dropdown>
 
       <div className="w-px h-[30px] bg-gray-6" />
@@ -132,7 +184,11 @@ export function HomeFilters() {
             <MoneyIcon />
             <div className="flex flex-col">
               <h1 className="font-family-manrope font-bold">Preço</h1>
-              <p className={`font-family-dm-sans font-normal text-gray-11 ${isAllPrices ? "text-base" : "text-xs"}`}>
+              <p
+                className={`font-family-dm-sans font-normal text-gray-11 ${
+                  isAllPrices ? "text-base" : "text-xs"
+                }`}
+              >
                 {formatPriceRange()}
               </p>
             </div>

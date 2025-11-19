@@ -1,6 +1,5 @@
 import { HomeFilters } from "@/components/HomeFilters";
 import { EventCarousel } from "@/components/EventCarousel";
-import Image from "next/image";
 
 export default function Home() {
   return (

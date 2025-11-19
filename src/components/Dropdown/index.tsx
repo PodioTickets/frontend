@@ -288,7 +288,6 @@ export function Dropdown({
   const prevSelectedIdsRef = useRef<string[]>(selectedIds);
   const isInternalUpdateRef = useRef(false);
 
-  // Use Set for O(1) lookup instead of O(n) array.includes
   const selectedIdsSet = useMemo(
     () => new Set(internalSelectedIds),
     [internalSelectedIds]

@@ -60,10 +60,7 @@ export default function RootLayout({
         <link rel="icon" href="/images/logo.png" />
       </head>
 
-      <body
-        suppressHydrationWarning
-        className="scroll-smooth antialiased"
-      >
+      <body suppressHydrationWarning className="scroll-smooth antialiased">
         <Toaster position="bottom-right" />
         <Providers>
           <div className="flex flex-col min-h-screen bg-gray-2">

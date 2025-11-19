@@ -4,57 +4,57 @@ export { translations } from "./translations";
 
 export const locationsOptions = [
   {
-    href: "/locations/sao-paulo",
+    id: "sao-paulo",
     label: "São Paulo",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/rio-de-janeiro",
+    id: "rio-de-janeiro",
     label: "Rio de Janeiro",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/belo-horizonte",
+    id: "belo-horizonte",
     label: "Belo Horizonte",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/brasilia",
+    id: "brasilia",
     label: "Brasília",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/curitiba",
+    id: "curitiba",
     label: "Curitiba",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/porto-alegre",
+    id: "porto-alegre",
     label: "Porto Alegre",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/salvador",
+    id: "salvador",
     label: "Salvador",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/fortaleza",
+    id: "fortaleza",
     label: "Fortaleza",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/manaus",
+    id: "manaus",
     label: "Manaus",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/recife",
+    id: "recife",
     label: "Recife",
     icon: "/images/location_icon.svg",
   },
   {
-    href: "/locations/sao-luis",
+    id: "sao-luis",
     label: "São Luís",
     icon: "/images/location_icon.svg",
   },

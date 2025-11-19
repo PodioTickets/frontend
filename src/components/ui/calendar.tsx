@@ -31,7 +31,7 @@ function CalendarDayButton({ day, modifiers, ...props }: DayButtonProps) {
         buttonVariants({ variant: "ghost" }),
         "h-9! w-9! p-0! font-normal! text-gray-12 rounded-md!",
         "transition-all duration-200 ease-out",
-        "hover:bg-gray-4 hover:text-gray-12 hover:scale-110 active:scale-95",
+        "hover:bg-primary-9 hover:text-primary-1 hover:scale-110 active:scale-95",
         "focus-visible:ring-2 focus-visible:ring-primary-9 focus-visible:ring-offset-2",
         "transform-gpu will-change-transform",
         isSelected && "rounded-md! bg-primary-9 text-primary-1 animate-in fade-in duration-200",

@@ -8,10 +8,15 @@ import { cn } from "@/utils/cn";
 interface DateRangePickerProps {
   onSelect?: (range: DateRange | undefined) => void;
   className?: string;
+  value?: DateRange | undefined;
 }
 
-export function DateRangePicker({ onSelect, className }: DateRangePickerProps) {
-  const [date, setDate] = React.useState<DateRange | undefined>();
+export function DateRangePicker({ onSelect, className, value }: DateRangePickerProps) {
+  const [date, setDate] = React.useState<DateRange | undefined>(value);
+  
+  React.useEffect(() => {
+    setDate(value);
+  }, [value]);
 
   const handleSelect = (range: DateRange | undefined) => {
     setDate(range);
