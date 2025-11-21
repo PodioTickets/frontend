@@ -111,7 +111,8 @@ export async function proxy(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  response.headers.set("X-Frame-Options", "DENY");
+  // Removed X-Frame-Options: DENY to allow Google Maps iframe
+  // Using CSP frame-ancestors instead for better control
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-XSS-Protection", "1; mode=block");
@@ -166,16 +167,16 @@ export async function proxy(request: NextRequest) {
     `default-src ${trustedDomains.join(" ")}`,
     `script-src ${trustedDomains.join(" ")} ${
       isDev ? "'unsafe-eval'" : ""
-    } 'unsafe-inline' https://va.vercel-scripts.com`,
+    } 'unsafe-inline' https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
     `style-src ${trustedDomains.join(
       " "
-    )} 'unsafe-inline' https://fonts.googleapis.com`,
-    `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com`,
+    )} 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com`,
+    `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://api.web3modal.org https://pulse.walletconnect.org https://rpc.walletconnect.org https://data-seed-prebsc-1-s1.bnbchain.org`,
-    `frame-src 'self' https://secure.walletconnect.org`,
-    `img-src ${trustedDomains.join(" ")} data: blob:`,
+    )} wss: ws: https://api.web3modal.org https://pulse.walletconnect.org https://rpc.walletconnect.org https://data-seed-prebsc-1-s1.bnbchain.org https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
+    `frame-src 'self' https://secure.walletconnect.org https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     `object-src 'none'`,
     `base-uri 'self'`,

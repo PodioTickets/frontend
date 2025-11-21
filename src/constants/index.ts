@@ -1,6 +1,8 @@
+import { ModalityColumn } from "@/components/Dropdown";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 
 export { translations } from "./translations";
+export { mockEvents, type Event } from "./events";
 
 export const locationsOptions = [
   {
@@ -176,3 +178,4 @@ export const modalitiesColumns: ModalityOption[][] = [
     { id: "outros", label: "Outros", icon: "/icons-3d/Icon3D-outros.webp" },
   ],
 ];
+

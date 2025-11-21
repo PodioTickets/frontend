@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { EventCard } from "@/components/Event/Card";
+import { mockEvents } from "@/constants/events";
 
 interface EventCarouselProps {
   items?: number;
@@ -9,8 +10,8 @@ interface EventCarouselProps {
   itemsPerViewTablet?: number;
 }
 
-export function EventCarousel({ 
-  items = 10, 
+export function EventCarousel({
+  items = 10,
   itemsPerView = 4,
   itemsPerViewMobile = 1,
   itemsPerViewTablet = 2,
@@ -22,10 +23,8 @@ export function EventCarousel({
   const [currentItemsPerView, setCurrentItemsPerView] = useState(itemsPerView);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  // Generate array of event items
   const eventItems = Array.from({ length: items }, (_, i) => i);
 
-  // Responsive items per view
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 768) {
@@ -38,17 +37,20 @@ export function EventCarousel({
     };
 
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [itemsPerView, itemsPerViewMobile, itemsPerViewTablet]);
 
   const totalSlides = Math.ceil(eventItems.length / currentItemsPerView);
   const maxIndex = Math.max(0, totalSlides - 1);
 
-  const goToSlide = useCallback((index: number) => {
-    const newIndex = Math.max(0, Math.min(index, maxIndex));
-    setCurrentIndex(newIndex);
-  }, [maxIndex]);
+  const goToSlide = useCallback(
+    (index: number) => {
+      const newIndex = Math.max(0, Math.min(index, maxIndex));
+      setCurrentIndex(newIndex);
+    },
+    [maxIndex]
+  );
 
   const goNext = useCallback(() => {
     goToSlide(currentIndex + 1);
@@ -58,7 +60,6 @@ export function EventCarousel({
     goToSlide(currentIndex - 1);
   }, [currentIndex, goToSlide]);
 
-  // Handle mouse drag
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!carouselRef.current) return;
     setIsDragging(true);
@@ -82,7 +83,6 @@ export function EventCarousel({
     setIsDragging(false);
   };
 
-  // Touch support
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!carouselRef.current) return;
     setIsDragging(true);
@@ -101,27 +101,25 @@ export function EventCarousel({
     setIsDragging(false);
   };
 
-  // Auto-scroll to current slide
   useEffect(() => {
     if (!carouselRef.current) return;
     const cardWidth = carouselRef.current.offsetWidth / currentItemsPerView;
     const gap = 16; // gap-4 = 16px
-    const scrollPosition = currentIndex * (cardWidth + gap) * currentItemsPerView;
-    
+    const scrollPosition =
+      currentIndex * (cardWidth + gap) * currentItemsPerView;
+
     carouselRef.current.scrollTo({
       left: scrollPosition,
-      behavior: 'smooth',
+      behavior: "smooth",
     });
   }, [currentIndex, currentItemsPerView]);
 
-  // Reset to first slide when items per view changes
   useEffect(() => {
     setCurrentIndex(0);
   }, [currentItemsPerView]);
 
   return (
     <div className="relative w-full">
-      {/* Navigation Arrows */}
       {currentIndex > 0 && (
         <button
           onClick={goPrev}
@@ -166,13 +164,12 @@ export function EventCarousel({
         </button>
       )}
 
-      {/* Carousel Container */}
       <div
         ref={carouselRef}
         className="flex gap-4 overflow-x-hidden scroll-smooth scrollbar-hide p-3"
         style={{
-          cursor: isDragging ? 'grabbing' : 'grab',
-          userSelect: 'none',
+          cursor: isDragging ? "grabbing" : "grab",
+          userSelect: "none",
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -182,15 +179,17 @@ export function EventCarousel({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {eventItems.map((_, index) => (
+        {mockEvents.map((event, index) => (
           <div
             key={index}
             className="shrink-0"
             style={{
-              width: `calc((100% - ${(currentItemsPerView - 1) * 16}px) / ${currentItemsPerView})`,
+              width: `calc((100% - ${
+                (currentItemsPerView - 1) * 16
+              }px) / ${currentItemsPerView})`,
             }}
           >
-            <EventCard />
+            <EventCard event={event} />
           </div>
         ))}
       </div>
@@ -204,8 +203,8 @@ export function EventCarousel({
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 rounded-full transition-all duration-200 ${
                 currentIndex === index
-                  ? 'bg-primary-12 w-8'
-                  : 'bg-gray-6 hover:bg-gray-8'
+                  ? "bg-primary-12 w-8"
+                  : "bg-gray-6 hover:bg-gray-8"
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />

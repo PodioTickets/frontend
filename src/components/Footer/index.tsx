@@ -6,61 +6,26 @@ import { FacebookIcon } from "../Icons/FacebookIcon";
 import Link from "next/link";
 
 export function Footer() {
-  const socialLinks = [
-    { href: "https://x.com/Loot4Fun", icon: TwitterIcon },
-    { href: "https://www.instagram.com/loot4fun/", icon: InstagramIcon },
-  ];
-
-  const footerSections = [
-    {
-      title: "Platform",
-      links: [
-        { href: "/", label: "Home" },
-        { href: "/boxes", label: "Boxes" },
-        { href: "/leaderboard", label: "Leaderboard" },
-        { href: "/affiliates", label: "Affiliates" },
-      ],
-    },
-    {
-      title: "Resources",
-      links: [
-        { href: "/docs/privacy", label: "Privacy" },
-        { href: "/docs/terms-of-use", label: "Terms of Use" },
-        { href: "/docs/refund", label: "Refund" },
-        { href: "/docs/cookies", label: "Cookies" },
-      ],
-    },
-    {
-      title: "Company",
-      links: [
-        { href: "/#about-us", label: "About Us" },
-        { href: "/#tokenomics", label: "Tokenomics" },
-        { href: "/#whitepaper", label: "Whitepaper" },
-        { href: "/#gitbook", label: "Gitbook" },
-      ],
-    },
-  ];
-
   return (
     <footer className="w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] border-t border-gray-6 p-20 pt-[52px]">
       <Image
         src="/images/left_footer.png"
         alt="Footer Left"
-        width={425}
-        height={171}
+        width={100000}
+        height={100000}
         draggable={false}
-        className="absolute top-8 left-0 object-cover"
+        className="absolute top-8 left-0 object-cover w-[25%] h-auto"
       />
       <Image
         src="/images/right_footer.png"
         alt="Footer Right"
-        width={425}
-        height={171}
+        width={100000}
+        height={100000}
         draggable={false}
-        className="absolute top-8 right-0 object-cover"
+        className="absolute top-8 right-0 object-cover w-[25%] h-auto"
       />
       <div className="flex flex-col items-center justify-center w-full h-full z-10">
-        <div className="flex flex-col items-center justify-between h-full w-full max-w-[810px]">
+        <div className="flex flex-col items-center justify-between h-full w-full max-w-[45%]">
           <Image
             src="/images/logo_horizontal.png"
             alt="Logo"
@@ -70,7 +35,7 @@ export function Footer() {
             draggable={false}
           />
 
-          <p className="font-family-dm-sans text-[#B4B4B4] mt-6">
+          <p className="font-family-dm-sans text-center text-[#B4B4B4] mt-6">
             PodioTicket é o ponto de encontro de quem vibra por esporte, onde
             você descobre o próximo desafio, junta a galera, combina a largada e
             transforma cada chegada em uma memória que dá vontade de repetir
@@ -111,3 +76,4 @@ export function Footer() {
     </footer>
   );
 }
+

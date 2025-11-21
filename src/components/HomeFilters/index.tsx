@@ -8,16 +8,91 @@ import { CalendarIcon } from "../Icons/CalendarIcon";
 import { SearchIcon } from "lucide-react";
 import { DateRangePicker } from "../DateRangePicker";
 import { PriceRangeSlider } from "../PriceRangeSlider";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 
-export function HomeFilters() {
-  const [selectedModalities, setSelectedModalities] = useState<string[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+interface HomeFiltersProps {
+  initialLocation?: string | null;
+  initialModalities?: string[];
+  initialDateRange?: DateRange | undefined;
+  initialPriceRange?: [number, number];
+}
+
+const arraysEqual = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false;
+  return a.every((val, index) => val === b[index]);
+};
+
+const dateRangesEqual = (
+  a: DateRange | undefined,
+  b: DateRange | undefined
+) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  const aFrom = a.from?.getTime();
+  const bFrom = b.from?.getTime();
+  const aTo = a.to?.getTime();
+  const bTo = b.to?.getTime();
+  return aFrom === bFrom && aTo === bTo;
+};
+
+const priceRangesEqual = (
+  a: [number, number],
+  b: [number, number]
+) => {
+  return a[0] === b[0] && a[1] === b[1];
+};
+
+export function HomeFilters({
+  initialLocation = null,
+  initialModalities = [],
+  initialDateRange = undefined,
+  initialPriceRange = [0, 10000],
+}: HomeFiltersProps = {}) {
+  const router = useRouter();
+  
+  const [selectedModalities, setSelectedModalities] = useState<string[]>(initialModalities);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(initialLocation);
   const [selectedDateRange, setSelectedDateRange] = useState<
     DateRange | undefined
-  >(undefined);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
+  >(initialDateRange);
+  const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange);
+
+  // Use refs to track previous values and avoid unnecessary updates
+  const prevInitialLocationRef = useRef(initialLocation);
+  const prevInitialModalitiesRef = useRef(initialModalities);
+  const prevInitialDateRangeRef = useRef(initialDateRange);
+  const prevInitialPriceRangeRef = useRef(initialPriceRange);
+
+  // Sync with initial props when they change (only if actually different)
+  useEffect(() => {
+    if (prevInitialLocationRef.current !== initialLocation) {
+      setSelectedLocation(initialLocation);
+      prevInitialLocationRef.current = initialLocation;
+    }
+  }, [initialLocation]);
+
+  useEffect(() => {
+    if (!arraysEqual(prevInitialModalitiesRef.current, initialModalities)) {
+      setSelectedModalities(initialModalities);
+      prevInitialModalitiesRef.current = initialModalities;
+    }
+  }, [initialModalities]);
+
+  useEffect(() => {
+    if (!dateRangesEqual(prevInitialDateRangeRef.current, initialDateRange)) {
+      setSelectedDateRange(initialDateRange);
+      prevInitialDateRangeRef.current = initialDateRange;
+    }
+  }, [initialDateRange]);
+
+  useEffect(() => {
+    if (!priceRangesEqual(prevInitialPriceRangeRef.current, initialPriceRange)) {
+      setPriceRange(initialPriceRange);
+      prevInitialPriceRangeRef.current = initialPriceRange;
+    }
+  }, [initialPriceRange]);
 
   const handleModalitiesChange = useCallback((ids: string[]) => {
     setSelectedModalities(ids);
@@ -82,6 +157,46 @@ export function HomeFilters() {
 
     return formatDate(selectedDateRange.from);
   }, [selectedDateRange]);
+
+  const handleSearch = useCallback(() => {
+    const params = new URLSearchParams();
+
+    if (selectedLocation) {
+      params.set("location", selectedLocation);
+    }
+
+    if (selectedModalities.length > 0) {
+      params.set("modalities", selectedModalities.join(","));
+    }
+
+    if (selectedDateRange?.from) {
+      params.set(
+        "dateFrom",
+        selectedDateRange.from.toISOString().split("T")[0]
+      );
+    }
+
+    if (selectedDateRange?.to) {
+      params.set("dateTo", selectedDateRange.to.toISOString().split("T")[0]);
+    }
+
+    if (priceRange[0] > 0) {
+      params.set("priceMin", priceRange[0].toString());
+    }
+
+    if (priceRange[1] < 10000) {
+      params.set("priceMax", priceRange[1].toString());
+    }
+
+    const queryString = params.toString();
+    router.push(`/search${queryString ? `?${queryString}` : ""}`);
+  }, [
+    selectedLocation,
+    selectedModalities,
+    selectedDateRange,
+    priceRange,
+    router,
+  ]);
 
   return (
     <div className="relative flex items-center justify-center mt-14 shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
@@ -203,9 +318,14 @@ export function HomeFilters() {
         />
       </Dropdown>
 
-      <div className="absolute right-0 flex items-center justify-center gap-2 bg-[#5CC870] p-2 rounded-full w-10 h-10 ml-4 mr-4 cursor-pointer">
+      <button
+        onClick={handleSearch}
+        className="absolute right-0 flex items-center justify-center gap-2 bg-[#5CC870] hover:bg-[#4db860] transition-colors p-2 rounded-full w-10 h-10 ml-4 mr-4 cursor-pointer"
+        aria-label="Pesquisar eventos"
+      >
         <SearchIcon />
-      </div>
+      </button>
     </div>
   );
 }
+

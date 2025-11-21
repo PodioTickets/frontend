@@ -196,56 +196,60 @@ const ModalityItemWrapper = memo(
 ModalityItemWrapper.displayName = "ModalityItemWrapper";
 
 // Memoized option item component for virtual list
-const OptionItem = memo(({
-  option,
-  index,
-  onSelect,
-}: {
-  option: DropdownOption;
-  index: number;
-  onSelect: (option: DropdownOption) => void;
-}) => {
-  const handleClick = useCallback(() => {
-    onSelect(option);
-  }, [option, onSelect]);
+const OptionItem = memo(
+  ({
+    option,
+    index,
+    onSelect,
+  }: {
+    option: DropdownOption;
+    index: number;
+    onSelect: (option: DropdownOption) => void;
+  }) => {
+    const handleClick = useCallback(() => {
+      onSelect(option);
+    }, [option, onSelect]);
 
-  const content = (
-    <div
-      className="h-[50px] px-4 text-sm flex items-center text-gray-12 hover:bg-gray-4 hover:text-primary-11 transition-colors duration-200"
-    >
-      {!!option?.icon && (
-        <img
-          src={option.icon}
-          alt={option.label}
-          width={24}
-          height={24}
-          className="mr-2 flex-shrink-0"
-          loading="lazy"
-          decoding="async"
-        />
-      )}
-      <span className="truncate">{option.label}</span>
-    </div>
-  );
+    const content = (
+      <div className="h-[50px] px-4 text-sm flex items-center text-gray-12 hover:bg-gray-4 hover:text-primary-11 transition-colors duration-200">
+        {!!option?.icon && (
+          <img
+            src={option.icon}
+            alt={option.label}
+            width={24}
+            height={24}
+            className="mr-2 shrink-0"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+        <span className="truncate">{option.label}</span>
+      </div>
+    );
 
-  return (
-    <div
-      className={`block h-[50px] ${
-        index > 0 ? "border-t border-gray-6" : ""
-      }`}
-    >
-      {option.href ? (
-        <Link href={option.href} onClick={handleClick} className="block h-full">
-          {content}
-        </Link>
-      ) : (
-        <div onClick={handleClick} className="cursor-pointer h-full">
-          {content}
-        </div>
-      )}
-    </div>
-  );
-});
+    return (
+      <div
+        className={`block h-[50px] ${
+          index > 0 ? "border-t border-gray-6" : ""
+        }`}
+      >
+        {option.href ? (
+          <Link
+            href={option.href}
+            onClick={handleClick}
+            className="block h-full"
+          >
+            {content}
+          </Link>
+        ) : (
+          <div onClick={handleClick} className="cursor-pointer h-full">
+            {content}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 OptionItem.displayName = "OptionItem";
 
@@ -537,3 +541,4 @@ export function Dropdown({
     </div>
   );
 }
+

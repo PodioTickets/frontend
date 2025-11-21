@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 
 const securityHeaders = [
   {
-    key: "X-Frame-Options",
-    value: "DENY",
-  },
-  {
     key: "X-Content-Type-Options",
     value: "nosniff",
   },
@@ -24,6 +20,22 @@ const securityHeaders = [
   {
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=()",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com",
+      "img-src 'self' data: https: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com",
+      "font-src 'self' data: https://fonts.gstatic.com https://*.google.com",
+      "frame-src 'self' https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com",
+      "connect-src 'self' https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join("; "),
   },
 ];
 
@@ -56,3 +68,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+

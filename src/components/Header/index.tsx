@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "../Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,13 +10,42 @@ import { Dropdown } from "../Dropdown";
 import { ArrowButton } from "../ArrowButton";
 import { SearchBar } from "../SearchBar";
 import { LanguageToggle } from "../LanguageToggle";
-import { modalitiesColumns } from "@/constants";
+import { modalitiesColumns, mockEvents } from "@/constants";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { push } = useRouter();
   const { isAuthenticated, user } = useAuth();
+
+  const searchResults = useMemo(() => {
+    if (search.trim().length === 0) return [];
+
+    const query = search.toLowerCase().trim();
+    const filtered = mockEvents
+      .filter(
+        (event) =>
+          event.title.toLowerCase().includes(query) ||
+          event.organizer.toLowerCase().includes(query) ||
+          event.location.city.toLowerCase().includes(query) ||
+          event.location.state.toLowerCase().includes(query) ||
+          event.description?.toLowerCase().includes(query)
+      )
+      .slice(0, 5);
+
+    return filtered.map((event) => ({
+      id: event.id,
+      title: event.title,
+      href: `/events/${event.id}`,
+    }));
+  }, [search]);
+
+  const handleSearch = () => {
+    if (search.trim().length > 0) {
+      push(`/search?q=${encodeURIComponent(search.trim())}`);
+      setSearch("");
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -77,7 +106,7 @@ export function Header() {
 
             <div className="hidden lg:flex items-center h-full text-[#B4B4B4] text-sm gap-4">
               <Link
-                href="/events"
+                href="/search"
                 className="flex items-center gap-2 hover:text-primary-7 transition-all duration-200"
               >
                 Calendário de eventos
@@ -103,7 +132,12 @@ export function Header() {
             </div>
           </div>
           <div className="hidden md:flex w-full max-w-[560px]">
-            <SearchBar search={search} setSearch={setSearch} />
+            <SearchBar
+              search={search}
+              setSearch={setSearch}
+              results={searchResults}
+              onSearch={handleSearch}
+            />
           </div>
           <div className="hidden md:flex items-center h-[50px] gap-2">
             <LanguageToggle className="h-[44px]" />
@@ -227,3 +261,4 @@ export function Header() {
     </>
   );
 }
+
