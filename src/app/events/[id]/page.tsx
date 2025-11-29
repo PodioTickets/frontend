@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { mockEvents } from "@/constants/events";
 import Image from "next/image";
@@ -16,11 +16,18 @@ import { EventMap } from "@/components/EventMap";
 
 export default function EventPage() {
   const params = useParams();
+  const router = useRouter();
   const eventId = params.id as string;
 
   const event = useMemo(() => {
     return mockEvents.find((e) => e.id === eventId);
   }, [eventId]);
+
+  const handleSubscribe = () => {
+    if (event) {
+      router.push(`/checkout?eventId=${event.id}`);
+    }
+  };
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -107,7 +114,10 @@ export default function EventPage() {
               <span>{formatDate(event.date)}</span>
             </h1>
 
-            <Button className="w-full mt-10">
+            <Button 
+              className="w-full mt-10"
+              onClick={handleSubscribe}
+            >
               <ShopIcon className="size-5" />
               Inscrever-se
             </Button>

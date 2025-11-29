@@ -179,3 +179,22 @@ export const modalitiesColumns: ModalityOption[][] = [
   ],
 ];
 
+export const checkoutHeaderOptions = [
+  {
+    id: 1,
+    label: "Modalidades",
+  },
+  {
+    id: 2,
+    label: "Informações",
+  },
+  {
+    id: 3,
+    label: "Inscrição",
+  },
+  {
+    id: 4,
+    label: "Pagamento",
+  },
+];
+
