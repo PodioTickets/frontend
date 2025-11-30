@@ -48,8 +48,8 @@ export function SearchBar({
 
   const handleResultClick = useCallback(
     (result: { id: string; title: string; href: string }) => {
-      if (onResultClick) {
-        onResultClick(result);
+    if (onResultClick) {
+      onResultClick(result);
       } else {
         router.push(result.href);
       }
@@ -67,9 +67,9 @@ export function SearchBar({
           onSearch();
         } else {
           router.push(`/search?q=${encodeURIComponent(search.trim())}`);
-        }
-        setSearch("");
-        setIsOpen(false);
+    }
+    setSearch("");
+    setIsOpen(false);
         setIsFocused(false);
       } else if (e.key === "Escape") {
         setIsOpen(false);

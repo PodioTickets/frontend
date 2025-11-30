@@ -1,8 +1,6 @@
-import { ModalityColumn } from "@/components/Dropdown";
-import { LocationIcon } from "@/components/Icons/LocationIcon";
-
 export { translations } from "./translations";
 export { mockEvents, type Event } from "./events";
+export { mockKits, type Kit, type Race } from "./kits";
 
 export const locationsOptions = [
   {

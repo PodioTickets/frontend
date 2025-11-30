@@ -1,16 +1,19 @@
 "use client";
 
-import { ArrowButton } from "@/components/ArrowButton";
 import CheckoutHeader from "@/components/Checkout/CheckoutHeader";
-import { EventInfo } from "@/components/Checkout/EventInfo";
+import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
+import { InformationStep } from "@/components/Checkout/InformationStep";
+import { SubscriptionStep } from "@/components/Checkout/SubscriptionStep";
+import { PaymentStep } from "@/components/Checkout/PaymentStep";
 import { mockEvents } from "@/constants/events";
+import { mockKits } from "@/constants/kits";
 import { useState, useMemo, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { CheckoutProvider } from "@/contexts/CheckoutContext";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [activeOption, setActiveOption] = useState(1);
 
   const eventId = searchParams.get("eventId");
@@ -18,6 +21,11 @@ function CheckoutContent() {
   const event = useMemo(() => {
     if (!eventId) return null;
     return mockEvents.find((e) => e.id === eventId);
+  }, [eventId]);
+
+  const kits = useMemo(() => {
+    if (!eventId) return [];
+    return mockKits.filter((kit) => kit.eventId === eventId);
   }, [eventId]);
 
   if (!eventId) {
@@ -54,6 +62,47 @@ function CheckoutContent() {
     );
   }
 
+  const renderStep = () => {
+    switch (activeOption) {
+      case 1:
+        return (
+          <ModalitiesStep
+            event={event}
+            kits={kits}
+            onNext={() => setActiveOption(2)}
+          />
+        );
+      case 2:
+        return (
+          <InformationStep
+            event={event}
+            onNext={() => setActiveOption(3)}
+            onBack={() => setActiveOption(1)}
+          />
+        );
+      case 3:
+        return (
+          <SubscriptionStep
+            event={event}
+            onNext={() => setActiveOption(4)}
+            onBack={() => setActiveOption(2)}
+          />
+        );
+      case 4:
+        return (
+          <PaymentStep event={event} onBack={() => setActiveOption(3)} />
+        );
+      default:
+        return (
+          <ModalitiesStep
+            event={event}
+            kits={kits}
+            onNext={() => setActiveOption(2)}
+          />
+        );
+    }
+  };
+
   return (
     <div className="w-full max-w-[1760px] mx-auto gap-4">
       <CheckoutHeader
@@ -62,32 +111,7 @@ function CheckoutContent() {
       />
 
       <div className="w-full flex flex-col min-h-screen items-start justify-start gap-4 py-11 px-4">
-        <div className="w-full">
-          <h1 className="text-2xl font-bold">Selecione um kit</h1>
-          <p className="text-sm text-gray-11">
-            Escolha sua prova dentro do kit e defina a quantidade de ingressos.
-            Você pode ajustar depois em Informações.
-          </p>
-        </div>
-
-        <div className="w-full flex items-start justify-between gap-4">
-          <div className="max-w-2/3 w-full">
-            <div className="flex items-center w-full justify-between rounded-lg border border-gray-5 px-4 py-3 cursor-pointer">
-              <div className="flex flex-col items-start justify-center gap-2">
-                <h1 className="text-lg font-bold">Kit inscrição</h1>
-                <p className="text-sm text-gray-11">
-                  Apartir de:{" "}
-                  <span className="text-gray-12 font-bold">R$ 100,00</span>
-                </p>
-              </div>
-
-              <ArrowButton isOpen={false} />
-            </div>
-          </div>
-          <div className="max-w-1/3 w-full">
-            <EventInfo event={event} onNext={() => setActiveOption(2)} />
-          </div>
-        </div>
+        {renderStep()}
       </div>
     </div>
   );
@@ -95,15 +119,17 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full max-w-[1760px] mx-auto flex items-center justify-center min-h-screen">
-          <p className="text-gray-11">Carregando...</p>
-        </div>
-      }
-    >
-      <CheckoutContent />
-    </Suspense>
+    <CheckoutProvider>
+      <Suspense
+        fallback={
+          <div className="w-full max-w-[1760px] mx-auto flex items-center justify-center min-h-screen">
+            <p className="text-gray-11">Carregando...</p>
+          </div>
+        }
+      >
+        <CheckoutContent />
+      </Suspense>
+    </CheckoutProvider>
   );
 }
 
