@@ -1,115 +1,441 @@
 "use client";
 
-import { EventInfo } from "./EventInfo";
+import { useState, useEffect } from "react";
+import { OrderSummary } from "./OrderSummary";
 import { Button } from "../Button";
-import { CardIcon } from "../Icons/CardIcon";
+import { Dropdown, DropdownOption } from "../Dropdown";
+import { VisaIcon } from "../Icons/VisaIcon";
+import { MasterCardIcon } from "../Icons/MasterCardIcon";
+import { EloIcon } from "../Icons/EloIcon";
+import { HelpIcon } from "../Icons/HelpIcon";
 import type { Event } from "@/constants/events";
+import { ArrowButton } from "../ArrowButton";
+import { RemoveIcon } from "../Icons/RemoveIcon";
 
 interface PaymentStepProps {
   event: Event;
   onBack: () => void;
 }
 
-export function PaymentStep({ event, onBack }: PaymentStepProps) {
+type PaymentMethod = "credit" | "pix" | "boleto";
+
+interface PaymentOption {
+  id: PaymentMethod;
+  name: string;
+  description: string;
+  badge?: string;
+  icons?: React.ReactNode;
+}
+
+// Componentes dos formulários
+function CreditCardForm({
+  installmentOptions,
+  selectedInstallments,
+  setSelectedInstallments,
+}: {
+  installmentOptions: DropdownOption[];
+  selectedInstallments: string;
+  setSelectedInstallments: (value: string) => void;
+}) {
   return (
-    <>
-      <div className="w-full">
-        <h1 className="text-2xl font-bold">Pagamento</h1>
-        <p className="text-sm text-gray-11">
-          Escolha a forma de pagamento e finalize sua inscrição.
-        </p>
+    <div className="space-y-4">
+      <div className="flex justify-between gap-4">
+        <div className="space-y-2 w-full">
+          <label className="text-sm font-medium text-gray-12">
+            Número do cartão
+          </label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+            placeholder="Ex: 5400 7975 6026 4737"
+          />
+        </div>
+        <div className="space-y-2 w-full">
+          <label className="text-sm font-medium text-gray-12">
+            Nome impresso no cartão
+          </label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+            placeholder="Ex: João Ribeiro"
+          />
+        </div>
       </div>
 
-      <div className="w-full flex items-start justify-between gap-11">
-        <div className="max-w-2/3 w-full">
-          <div className="flex flex-col gap-4">
-            <div className="rounded-lg border border-gray-5 p-4">
-              <h2 className="text-lg font-bold mb-4">
-                Métodos de pagamento
-              </h2>
-              <div className="flex flex-col gap-3">
-                <button className="flex items-center justify-between p-4 rounded-lg border border-gray-5 hover:bg-gray-2 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <CardIcon className="size-6" />
-                    <span className="text-sm font-medium text-gray-12">
-                      Cartão de crédito
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-11">Em até 4x sem juros</span>
-                </button>
-                <button className="flex items-center justify-between p-4 rounded-lg border border-gray-5 hover:bg-gray-2 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <CardIcon className="size-6" />
-                    <span className="text-sm font-medium text-gray-12">
-                      PIX
-                    </span>
-                  </div>
-                  <span className="text-xs text-primary-10">5% de desconto</span>
-                </button>
-                <button className="flex items-center justify-between p-4 rounded-lg border border-gray-5 hover:bg-gray-2 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <CardIcon className="size-6" />
-                    <span className="text-sm font-medium text-gray-12">
-                      Boleto bancário
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-11">Vencimento em 3 dias</span>
-                </button>
-              </div>
-            </div>
+      <div className="flex justify-between gap-4 w-3/4">
+        <div className="flex-1 space-y-2">
+          <label className="text-sm font-medium text-gray-12">
+            Data de validade
+          </label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+            placeholder="MM/AA"
+          />
+        </div>
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-12">CVV</label>
+            <button className="text-gray-11 hover:text-gray-12 transition-colors">
+              <HelpIcon className="size-4" />
+            </button>
+          </div>
+          <input
+            type="text"
+            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+            placeholder="Digite os 3 dígitos do seu cartão"
+          />
+        </div>
+      </div>
 
-            <div className="rounded-lg border border-gray-5 p-4">
-              <h2 className="text-lg font-bold mb-4">Dados do cartão</h2>
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-12">
-                    Número do cartão
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
-                    placeholder="0000 0000 0000 0000"
-                  />
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex flex-col gap-2 flex-1">
-                    <label className="text-sm font-medium text-gray-12">
-                      Validade
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
-                      placeholder="MM/AA"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2 flex-1">
-                    <label className="text-sm font-medium text-gray-12">CVV</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
-                      placeholder="000"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-12">
-                    Nome no cartão
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
-                    placeholder="Nome completo"
-                  />
-                </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-12">Parcelas</label>
+        <Dropdown
+          options={installmentOptions}
+          dataAttribute="installments"
+          width="w-full"
+          maxHeight="max-h-[200px]"
+          selectedIds={[selectedInstallments]}
+          onSelect={(option) => setSelectedInstallments(option.id || "1")}
+          trigger={() => (
+            <div className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors cursor-pointer hover:border-gray-8">
+              <p className="text-sm">
+                {installmentOptions.find(
+                  (opt: DropdownOption) => opt.id === selectedInstallments
+                )?.label || "Selecione as parcelas"}
+              </p>
+            </div>
+          )}
+        />
+      </div>
+
+      <Button className="w-full py-4 text-lg font-bold">
+        Finalizar compra
+      </Button>
+    </div>
+  );
+}
+
+function PixModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutos em segundos
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          onClose();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isOpen, onClose]);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl mx-4 shadow-2xl w-[730px]">
+        <div className="text-[20px] font-bold text-gray-12 flex items-center justify-between border-b border-gray-6 pb-4 p-4">
+          <p>Pix gerado com sucesso</p>
+          <button className="cursor-pointer" onClick={onClose}>
+            <RemoveIcon className="size-4" />
+          </button>
+        </div>
+        <div className="text-center space-y-4 p-4">
+          <div className="space-y-2">
+            <p className="text-sm text-gray-12 px-4">
+              Mantenha esta página aberta. Assim que o banco confirmar o
+              pagamento, vamos atualizar automaticamente o status do seu pedido
+            </p>
+
+            {/* Countdown */}
+            <p className="text-2xl font-bold text-primary-11">
+              {String(minutes).padStart(2, "0")}:
+              {String(seconds).padStart(2, "0")}
+            </p>
+
+            <p className="text-sm text-gray-12">
+              Tempo para conclusão do pagamento
+            </p>
+          </div>
+
+          {/* QR Code */}
+          <div className="space-y-4">
+            <div className="bg-gray-2 p-8 rounded-lg mx-auto max-w-xs">
+              <div className="w-48 h-48 bg-gray-5 rounded-lg mx-auto flex items-center justify-center">
+                <span className="text-xs text-gray-11 text-center">
+                  QR Code PIX
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Botões */}
+          <div className="space-y-3 w-1/2 mx-auto mb-8">
+            <Button className="w-full py-4 text-lg font-bold">
+              Copiar pix
+            </Button>
+          </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function PixForm() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleFinalizePurchase = () => {
+    setIsModalOpen(true);
+  };
+
+  return (
+    <>
+      <div className="">
+        <div className="text-center space-y-2 rounded-lg border border-gray-5 p-6 shadow-sm">
+          <p className="text-sm text-gray-11">
+            Valor à vista:{" "}
+            <span className="text-gray-12 font-bold">R$ 438,34</span>
+          </p>
+          <p className="text-sm text-gray-11">
+            Prazo de até 30 minutos para compensar
+          </p>
+        </div>
+        <p className="text-sm text-gray-12 my-4 mx-auto w-full text-center">
+          Clique em "finalizar compra" para gerar o PIX
+        </p>
+        <Button
+          className="w-full py-4 text-lg font-bold"
+          onClick={handleFinalizePurchase}
+        >
+          Finalizar compra
+        </Button>
+      </div>
+
+      <PixModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
+  );
+}
+
+function BoletoForm() {
+  return (
+    <div className="bg-white rounded-lg border border-gray-5 p-6 shadow-sm">
+      <h2 className="text-lg font-bold text-gray-12 mb-6">
+        Pagamento via Boleto
+      </h2>
+      <div className="space-y-4">
+        <p className="text-sm text-gray-11">
+          O boleto será gerado após a finalização da compra e enviado para seu
+          e-mail.
+        </p>
+        <div className="bg-gray-2 p-4 rounded-lg">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-12">
+              Vencimento:
+            </span>
+            <span className="text-sm text-gray-11">3 dias após a compra</span>
+          </div>
+        </div>
+        <Button variant="outline" className="w-full">
+          Gerar boleto
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function PaymentMethodOption({
+  option,
+  isSelected,
+  onSelect,
+}: {
+  option: PaymentOption;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      onClick={onSelect}
+      className={`flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer ${
+        isSelected
+          ? "border border-blue-8 bg-blue-3"
+          : "border border-gray-5 hover:bg-gray-2"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className={`rounded-full size-4 border-[1.5px] ${
+            isSelected
+              ? "bg-primary-10 border-primary-10"
+              : "bg-transparent border-gray-6"
+          }`}
+        />
+        <span className="text-sm font-medium text-gray-12">{option.name}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span
+          className={`text-xs ${
+            option.badge?.includes("OFF")
+              ? "text-primary-10 font-semibold"
+              : "text-gray-11"
+          }`}
+        >
+          {option.description}
+        </span>
+        {option.icons}
+      </div>
+    </div>
+  );
+}
+
+export function PaymentStep({ event, onBack }: PaymentStepProps) {
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<PaymentMethod>("credit");
+  const [selectedInstallments, setSelectedInstallments] = useState<string>("1");
+
+  const orderItems = [
+    {
+      name: "Camiseta Regata",
+      price: 29.9,
+      image: "/images/camisa.png",
+      size: "M",
+    },
+    { name: "Viseira", price: 29.9, image: "/images/mochila.png" },
+  ];
+
+  const installmentOptions: DropdownOption[] = [
+    { id: "1", label: "1x de R$ 438,34 (à vista)" },
+    { id: "2", label: "2x de R$ 219,17 sem juros" },
+    { id: "3", label: "3x de R$ 146,11 sem juros" },
+    { id: "4", label: "4x de R$ 109,59 sem juros" },
+    { id: "5", label: "5x de R$ 87,67 sem juros" },
+    { id: "6", label: "6x de R$ 73,06 sem juros" },
+    { id: "7", label: "7x de R$ 62,62 sem juros" },
+    { id: "8", label: "8x de R$ 54,79 sem juros" },
+    { id: "9", label: "9x de R$ 48,70 sem juros" },
+    { id: "10", label: "10x de R$ 43,83 sem juros" },
+    { id: "11", label: "11x de R$ 39,85 sem juros" },
+    { id: "12", label: "12x de R$ 36,53 sem juros" },
+  ];
+
+  const paymentOptions: PaymentOption[] = [
+    {
+      id: "credit",
+      name: "Cartão de crédito",
+      description: "",
+      icons: (
+        <div className="flex gap-1">
+          <VisaIcon className="h-4 w-8" />
+          <MasterCardIcon className="h-4 w-8" />
+          <EloIcon className="h-4 w-8" />
+        </div>
+      ),
+    },
+    {
+      id: "pix",
+      name: "PIX",
+      description: "5% OFF",
+      badge: "5% OFF",
+    },
+    {
+      id: "boleto",
+      name: "Boleto bancário",
+      description: "Vencimento em 3 dias",
+    },
+  ];
+
+  return (
+    <>
+      <div className="w-full flex items-start justify-between gap-11">
+        {/* Coluna Esquerda - Formulário de Pagamento */}
+        <div className="max-w-2/3 w-full">
+          <div className="flex flex-col gap-6">
+            {/* Cabeçalho */}
+            <div className="w-full">
+              <div className="flex items-center gap-3 mb-2">
+                <button
+                  className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-2 transition-colors"
+                  onClick={onBack}
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+                <h1 className="text-2xl font-bold text-gray-12">
+                  Selecione o método de pagamento
+                </h1>
+              </div>
+              <p className="text-sm text-gray-11">
+                Revise seu pedido e conclua com cartão, Pix ou boleto. Os
+                ingressos são liberados após aprovação.
+              </p>
+            </div>
+
+            {/* Métodos de Pagamento */}
+            <div className="space-y-6">
+              {paymentOptions.map((option) => {
+                const isNotSelected = selectedPaymentMethod !== option.id;
+
+                if (isNotSelected) {
+                  return (
+                    <PaymentMethodOption
+                      key={option.id}
+                      option={option}
+                      isSelected={false}
+                      onSelect={() => setSelectedPaymentMethod(option.id)}
+                    />
+                  );
+                }
+
+                return (
+                  <div key={option.id}>
+                    <PaymentMethodOption
+                      option={option}
+                      isSelected={true}
+                      onSelect={() => setSelectedPaymentMethod(option.id)}
+                    />
+
+                    <div className="mt-4">
+                      {option.id === "credit" && (
+                        <CreditCardForm
+                          installmentOptions={installmentOptions}
+                          selectedInstallments={selectedInstallments}
+                          setSelectedInstallments={setSelectedInstallments}
+                        />
+                      )}
+                      {option.id === "pix" && <PixForm />}
+                      {option.id === "boleto" && <BoletoForm />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Coluna Direita - Resumo do Pedido */}
         <div className="max-w-1/3 w-full">
-          <EventInfo event={event} onNext={() => {}} />
+          <OrderSummary
+            items={orderItems}
+            serviceFee={39.85}
+            total={438.34}
+            onApplyCoupon={(coupon) => console.log("Applying coupon:", coupon)}
+          />
         </div>
       </div>
     </>
   );
 }
-
