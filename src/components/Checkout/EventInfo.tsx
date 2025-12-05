@@ -1,5 +1,5 @@
 import { Button } from "../Button";
-import { Event } from "@/constants/events";
+import type { Event } from "@/interfaces/event";
 import Image from "next/image";
 import { MessageIcon } from "../Icons/MessageIcon";
 
@@ -12,8 +12,8 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
   return (
     <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full">
       <Image
-        src={event.image}
-        alt={event.title}
+        src={event.bannerUrl}
+        alt={event.name}
         width={100000}
         height={100000}
         className="w-full h-full object-cover rounded-xl"
@@ -21,7 +21,7 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
 
       <div className="p-4">
         <p className="text-sm text-gray-11">Seu pedido:</p>
-        <h1 className="text-lg font-bold">{event.title}</h1>
+        <h1 className="text-lg font-bold">{event.name}</h1>
         <p className="text-sm font-medium text-gray-12 mb-2">
           Do dia 13 - 15 Dez 2025
         </p>
@@ -31,17 +31,19 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
 
           <div className="flex items-center gap-2">
             <Image
-              src={event.image}
-              alt={event.title}
+              src={event.organizer.imageUrl}
+              alt={event.name}
               width={100000}
               height={100000}
               className="w-10 h-10 rounded-full object-cover"
             />
             <div>
               <p className="text-sm font-medium text-gray-12">
-                {event.organizer}
+                {event.organizer.name}
               </p>
-              <p className="text-sm text-gray-11">CNPJ: 27.912.458/0001-73</p>
+              <p className="text-sm text-gray-11">
+                CNPJ: {event.organizer.cnpj}
+              </p>
             </div>
           </div>
 
@@ -53,15 +55,17 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
 
         <div className="flex flex-col w-full mt-4 gap-2">
           <p className="text-sm font-medium text-gray-11 flex items-center justify-between w-full">
-            Valor dos ingressos: <span className="text-gray-12">R$ 100,00</span>
+            Valor dos ingressos:{" "}
+            <span className="text-gray-12">R$ {event.price}</span>
           </p>
           <p className="text-sm font-medium text-gray-11 flex items-center justify-between w-full">
-            Taxa de serviço: <span className="text-gray-12">R$ 39,85</span>
+            Taxa de serviço:{" "}
+            <span className="text-gray-12">R$ {event.serviceFee}</span>
           </p>
         </div>
 
         <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
-          Total: <span className="text-gray-12">R$ 139,85</span>
+          Total: <span className="text-gray-12">R$ {event.totalPrice}</span>
         </h1>
 
         <Button onClick={onNext} className="w-full mt-8 font-bold">
@@ -71,4 +75,3 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
     </div>
   );
 }
-

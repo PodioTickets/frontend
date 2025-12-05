@@ -7,7 +7,6 @@ import { EventCard } from "@/components/Event/Card";
 import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
-import { X } from "lucide-react";
 
 function SearchContent() {
   const searchParams = useSearchParams();

@@ -123,13 +123,12 @@ export class ApiClient {
     }
   }
 
-  async getToken(): Promise<any | null> {
+  async getToken(): Promise<string | null> {
     try {
-      const response = await this.client.get<ApiResponse<{ data: any }>>(
-        "/api/v1/auth/csrf-token",
-        { withCredentials: true }
-      );
-      return response.data.data || null;
+      const response = await this.client.get("/api/v1/auth/csrf-token", {
+        withCredentials: true,
+      });
+      return response.data || null;
     } catch (error) {
       console.error("Erro ao obter token CSRF:", error);
       return null;
@@ -189,8 +188,8 @@ export class ApiClient {
 
   async request<T = any>(
     config: AxiosRequestConfig
-  ): Promise<AxiosResponse<ApiResponse<T>>> {
-    const response = await this.client.request<ApiResponse<T>>(config);
+  ): Promise<AxiosResponse<T>> {
+    const response = await this.client.request<T>(config);
     return response;
   }
 
@@ -198,61 +197,61 @@ export class ApiClient {
     url: string,
     data?: any,
     config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
+  ): Promise<AxiosResponse<T>> {
     const response = await this.request<T>({
       ...config,
       method: "patch",
       url,
       data,
     });
-    return response.data;
+    return response;
   }
 
   async get<T = any>(
     url: string,
     config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
+  ): Promise<AxiosResponse<T>> {
     const response = await this.request<T>({ ...config, method: "get", url });
-    return response.data;
+    return response;
   }
 
   async post<T = any>(
     url: string,
     data?: any,
     config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
+  ): Promise<AxiosResponse<T>> {
     const response = await this.request<T>({
       ...config,
       method: "post",
       url,
       data,
     });
-    return response.data;
+    return response;
   }
 
   async put<T = any>(
     url: string,
     data?: any,
     config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
+  ): Promise<AxiosResponse<T>> {
     const response = await this.request<T>({
       ...config,
       method: "put",
       url,
       data,
     });
-    return response.data;
+    return response;
   }
 
   async delete<T = any>(
     url: string,
     config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
+  ): Promise<AxiosResponse<T>> {
     const response = await this.request<T>({
       ...config,
       method: "delete",
       url,
     });
-    return response.data;
+    return response;
   }
 }

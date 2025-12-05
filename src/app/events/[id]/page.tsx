@@ -1,8 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useMemo } from "react";
-import { mockEvents } from "@/constants/events";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
@@ -13,52 +11,23 @@ import { ShopIcon } from "@/components/Icons/ShopIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { modalitiesColumns, ModalityOption } from "@/constants";
 import { EventMap } from "@/components/EventMap";
+import { useEvent } from "@/hooks/useEvent";
 
 export default function EventPage() {
   const params = useParams();
-  const router = useRouter();
   const eventId = params.id as string;
-
-  const event = useMemo(() => {
-    return mockEvents.find((e) => e.id === eventId);
-  }, [eventId]);
-
-  const handleSubscribe = () => {
-    if (event) {
-      router.push(`/checkout?eventId=${event.id}`);
-    }
-  };
+  const { event, isLoading } = useEvent(eventId);
 
   const formatDate = (date: Date) => {
+    console.log("date", date);
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "long",
       year: "numeric",
-    }).format(date);
+    }).format(new Date(date));
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "inscricoes-abertas":
-        return "Inscrições abertas";
-      case "inscricoes-encerradas":
-        return "Inscrições encerradas";
-      case "evento-encerrado":
-        return "Evento encerrado";
-      default:
-        return "Inscrições abertas";
-    }
-  };
-
-  if (!event) {
+  if (!event || isLoading) {
     return (
       <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto lg:px-8 py-20">
         <div className="flex flex-col items-center justify-center">
@@ -83,7 +52,7 @@ export default function EventPage() {
       <div
         className="absolute top-0 left-0 w-full max-h-[500px] h-full blur-sm"
         style={{
-          backgroundImage: `url(${event.image})`,
+          backgroundImage: `url(${event?.bannerUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "top",
           backgroundRepeat: "no-repeat",
@@ -94,33 +63,32 @@ export default function EventPage() {
       <div className="w-full z-10 relative h-full max-h-[400px] flex flex-col items-center justify-center">
         <div className="w-full h-full flex items-start justify-center gap-4">
           <Image
-            src={event.image}
-            alt={event.title}
+            src={event.bannerUrl}
+            alt={event.name}
             width={100000}
             height={100000}
             className="w-2/3 h-full object-cover shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl"
           />
 
           <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full w-1/3">
-            <h1 className="text-lg font-bold mb-4">{event.title}</h1>
+            <h1 className="text-lg font-bold mb-4">{event.name}</h1>
             <h1 className="flex items-center gap-2 text-gray-12 font-medium">
               <LocationIcon className="size-5" />{" "}
               <span className="text-sm">
-                {event.location.city}, {event.location.state}
+                {event.city}, {event.state}
               </span>
             </h1>
             <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium mt-4">
               <CalendarIcon className="size-5" />{" "}
-              <span>{formatDate(event.date)}</span>
+              <span>{formatDate(new Date(event.eventDate))}</span>
             </h1>
 
-            <Button 
-              className="w-full mt-10"
-              onClick={handleSubscribe}
-            >
-              <ShopIcon className="size-5" />
-              Inscrever-se
-            </Button>
+            <Link href={`/checkout?eventId=${event.id}`}>
+              <Button className="w-full mt-10">
+                <ShopIcon className="size-5" />
+                Inscrever-se
+              </Button>
+            </Link>
             <Button
               className="bg-blue-5 text-blue-12 border border-blue-7 hover:bg-blue-6 hover:text-blue-12 rounded-4xl w-full mt-4"
               variant="ghost"
@@ -183,14 +151,10 @@ export default function EventPage() {
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl font-bold text-gray-12">Local no mapa</h1>
             <p className="text-gray-11 text-sm">
-              {event.location.city}, {event.location.state}
+              {event.city}, {event.state}
             </p>
           </div>
-          <EventMap
-            city={event.location.city}
-            state={event.location.state}
-            title={event.title}
-          />
+          <EventMap city={event.city} state={event.state} title={event.name} />
         </div>
 
         <div className="w-full h-px bg-gray-6 my-10" />
@@ -225,4 +189,3 @@ export default function EventPage() {
     </section>
   );
 }
-

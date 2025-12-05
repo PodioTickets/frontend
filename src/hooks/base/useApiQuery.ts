@@ -1,12 +1,17 @@
-import { useMutation, useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
-import { ApiResponse } from '@/services/base/ApiClient';
+import {
+  useMutation,
+  useQuery,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
+import { ApiResponse } from "@/services/base/ApiClient";
 
 // Hook base para queries de API
 export function useApiQuery<TData = unknown, TError = unknown>(
   queryKey: any[],
-  queryFn: () => Promise<ApiResponse<TData>>,
-  options?: Omit<UseQueryOptions<ApiResponse<TData>, TError>, 'queryKey' | 'queryFn'>
-): UseQueryResult<ApiResponse<TData>, TError> {
+  queryFn: () => Promise<TData>,
+  options?: Omit<UseQueryOptions<TData, TError>, "queryKey" | "queryFn">
+): UseQueryResult<TData, TError> {
   return useQuery({
     queryKey,
     queryFn: async () => {
@@ -18,10 +23,11 @@ export function useApiQuery<TData = unknown, TError = unknown>(
 }
 
 // Hook base para mutations de API
-export function useApiMutation<TData = unknown, TError = unknown, TVariables = unknown>(
-  mutationFn: (variables: TVariables) => Promise<ApiResponse<TData>>,
-  options?: any
-) {
+export function useApiMutation<
+  TData = unknown,
+  TError = unknown,
+  TVariables = unknown
+>(mutationFn: (variables: TVariables) => Promise<TData>, options?: any) {
   return useMutation({
     mutationFn,
     ...options,

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { EventCard } from "@/components/Event/Card";
-import { mockEvents } from "@/constants/events";
+import { useEvents } from "@/hooks/useEvents";
 
 interface EventCarouselProps {
   items?: number;
@@ -16,6 +16,11 @@ export function EventCarousel({
   itemsPerViewMobile = 1,
   itemsPerViewTablet = 2,
 }: EventCarouselProps) {
+  const { events, pagination, isLoading } = useEvents({
+    page: 1,
+    limit: items,
+  });
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -179,7 +184,7 @@ export function EventCarousel({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {mockEvents.map((event, index) => (
+        {events?.map((event, index) => (
           <div
             key={index}
             className="shrink-0"
@@ -214,4 +219,3 @@ export function EventCarousel({
     </div>
   );
 }
-

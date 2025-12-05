@@ -5,28 +5,24 @@ import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { InformationStep } from "@/components/Checkout/InformationStep";
 import { SubscriptionStep } from "@/components/Checkout/SubscriptionStep";
 import { PaymentStep } from "@/components/Checkout/PaymentStep";
-import { mockEvents } from "@/constants/events";
-import { mockKits } from "@/constants/kits";
 import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckoutProvider } from "@/contexts/CheckoutContext";
+import { useEvent } from "@/hooks/useEvent";
+import { Loader2 } from "lucide-react";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const [activeOption, setActiveOption] = useState(1);
 
   const eventId = searchParams.get("eventId");
-
-  const event = useMemo(() => {
-    if (!eventId) return null;
-    return mockEvents.find((e) => e.id === eventId);
-  }, [eventId]);
+  const { event, isLoading } = useEvent(eventId ?? "");
 
   const kits = useMemo(() => {
-    if (!eventId) return [];
-    return mockKits.filter((kit) => kit.eventId === eventId);
-  }, [eventId]);
+    if (!eventId || !event || !event.kits) return [];
+    return event.kits;
+  }, [eventId, event]);
 
   if (!eventId) {
     return (
@@ -89,9 +85,7 @@ function CheckoutContent() {
           />
         );
       case 4:
-        return (
-          <PaymentStep event={event} onBack={() => setActiveOption(3)} />
-        );
+        return <PaymentStep event={event} onBack={() => setActiveOption(3)} />;
       default:
         return (
           <ModalitiesStep
@@ -123,7 +117,7 @@ export default function CheckoutPage() {
       <Suspense
         fallback={
           <div className="w-full max-w-[1760px] mx-auto flex items-center justify-center min-h-screen">
-            <p className="text-gray-11">Carregando...</p>
+            <Loader2 className="size-4 animate-spin" />
           </div>
         }
       >
@@ -132,4 +126,3 @@ export default function CheckoutPage() {
     </CheckoutProvider>
   );
 }
-

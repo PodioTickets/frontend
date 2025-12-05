@@ -3,7 +3,7 @@ import { EventCarousel } from "@/components/EventCarousel";
 
 export default function Home() {
   return (
-    <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto lg:px-8">
+    <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto lg:px-8 mb-44">
       <HomeFilters />
 
       <div className="bg-[url('/banners/placeholder.png')] bg-cover bg-center bg-no-repeat w-full h-[620px] rounded-lg mt-14" />
@@ -19,4 +19,3 @@ export default function Home() {
     </section>
   );
 }
-

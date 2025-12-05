@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import { KitCard } from "./KitCard";
 import { EventInfo } from "./EventInfo";
-import type { Event } from "@/constants/events";
+import type { Event } from "@/interfaces/event";
 import type { Kit } from "@/constants/kits";
 
 interface ModalitiesStepProps {

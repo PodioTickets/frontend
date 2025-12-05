@@ -3,8 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ArrowButton } from "../ArrowButton";
-import { EventInfo } from "./EventInfo";
-import type { Event } from "@/constants/events";
+import type { Event } from "@/interfaces/event";
 import { Button } from "../Button";
 import { useCheckout } from "@/contexts/CheckoutContext";
 
@@ -38,6 +37,14 @@ export function InformationStep({
     updateParticipant(participantIndex, { [name]: value });
   };
 
+  const formatDate = (date: string) => {
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(date));
+  };
+
   return (
     <>
       <div className="w-full">
@@ -59,8 +66,8 @@ export function InformationStep({
       <div className="flex items-stretch mt-4 justify-start w-full shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-lg overflow-hidden">
         <div className="w-2/6 h-auto relative">
           <Image
-            src={event.image}
-            alt={event.title}
+            src={event.bannerUrl}
+            alt={event.name}
             fill
             draggable={false}
             className="object-cover"
@@ -69,22 +76,24 @@ export function InformationStep({
 
         <div className="p-4 py-6 w-2/5 flex flex-col justify-between">
           <p className="text-sm text-gray-11">Seu pedido:</p>
-          <h1 className="text-lg font-bold">{event.title}</h1>
+          <h1 className="text-lg font-bold">{event.name}</h1>
           <p className="font-medium text-gray-12 mt-6">
-            Do dia 13 - 15 Dez 2025
+            Do dia {formatDate(event.eventDate)}
           </p>
         </div>
 
         <div className="p-4 py-6 w-2/5 flex flex-col justify-between border-l border-gray-6">
           <p className="font-semibold text-gray-12 flex items-center justify-between">
-            Valor dos ingressos: <span>R$ 100,00</span>
+            Valor dos ingressos: <span>R$ {event.price}</span>
           </p>
           <p className="font-semibold text-gray-12 flex items-center justify-between mt-4">
-            Taxa de serviço: <span>R$ 39,85</span>
+            Taxa de serviço: <span>R$ {event.serviceFee}</span>
           </p>
 
           <div className="w-full h-px bg-gray-6 my-5" />
-          <p className="text-[20px] font-bold text-gray-12">Total: R$ 139,85</p>
+          <p className="text-[20px] font-bold text-gray-12">
+            Total: R$ {event.price + event.serviceFee}
+          </p>
         </div>
       </div>
 
@@ -226,4 +235,3 @@ export function InformationStep({
     </>
   );
 }
-
