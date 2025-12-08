@@ -1,7 +1,15 @@
 "use client";
 
+import { LoginModal } from "@/components/Auth/LoginModal";
+import { RegisterModal } from "@/components/Auth/RegisterModal";
+
 export function ModalsProvider() {
-  return <></>;
+  return (
+    <>
+      <LoginModal />
+      <RegisterModal />
+    </>
+  );
 }
 
-export { useLoginModal } from "@/stores/modalStore";
+export { useLoginModal, useRegisterModal } from "@/stores/modalStore";

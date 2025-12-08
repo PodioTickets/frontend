@@ -11,12 +11,14 @@ import { ArrowButton } from "../ArrowButton";
 import { SearchBar } from "../SearchBar";
 import { LanguageToggle } from "../LanguageToggle";
 import { modalitiesColumns, mockEvents } from "@/constants";
+import { useModalStore } from "@/stores/modalStore";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { push } = useRouter();
   const { isAuthenticated, user } = useAuth();
+  const { openModal } = useModalStore();
 
   const searchResults = useMemo(() => {
     if (search.trim().length === 0) return [];
@@ -142,7 +144,7 @@ export function Header() {
           <div className="hidden md:flex items-center h-[50px] gap-2">
             <LanguageToggle className="h-[44px]" />
             <Button
-              onClick={() => push("/login")}
+              onClick={() => openModal("register")}
               variant="outline"
               size="default"
             >
@@ -154,7 +156,7 @@ export function Header() {
               </Button>
             ) : (
               <Button
-                onClick={() => push("/login")}
+                onClick={() => openModal("login")}
                 variant="default"
                 size="default"
               >
@@ -261,4 +263,3 @@ export function Header() {
     </>
   );
 }
-

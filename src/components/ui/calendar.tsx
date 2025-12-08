@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import {
   DayPicker,
   getDefaultClassNames,
   type MonthCaptionProps,
   type DayButtonProps,
   useDayPicker,
+  type DropdownProps,
 } from "react-day-picker";
 
 import { cn } from "@/utils/cn";
@@ -116,6 +117,7 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  captionLayout,
   ...props
 }: CalendarProps) {
   const today = new Date();
@@ -127,23 +129,67 @@ function Calendar({
     return dateToCheck < today;
   };
 
+  // Components configuration
+  const components = {
+    DayButton: CalendarDayButton,
+    Chevron: ({ orientation, className, ...props }: { orientation?: "left" | "right" | "up" | "down"; className?: string; size?: number; disabled?: boolean }) => {
+      if (orientation === "left") {
+        return <ChevronLeftIcon className={cn("h-4 w-4", className)} {...props} />;
+      }
+      if (orientation === "right") {
+        return <ChevronRightIcon className={cn("h-4 w-4", className)} {...props} />;
+      }
+      return <ChevronDownIcon className={cn("h-3.5 w-3.5 text-gray-11", className)} {...props} />;
+    },
+    ...(captionLayout !== "dropdown" && { MonthCaption: CalendarCaption }),
+  };
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       disabled={isDateDisabled}
+      captionLayout={captionLayout}
       className={cn("p-3", className)}
+      formatters={
+        captionLayout === "dropdown"
+          ? {
+              formatMonthDropdown: (date: Date) =>
+                date.toLocaleDateString("pt-BR", { month: "long" }),
+              formatYearDropdown: (date: Date) => date.getFullYear().toString(),
+            }
+          : undefined
+      }
       classNames={{
         months: "flex flex-col sm:flex-row gap-4 transition-all duration-300",
         month: "space-y-4 transition-all duration-300",
-        caption: "flex justify-between items-center pt-1 relative mb-1",
-        caption_label: "hidden",
+        caption:
+          captionLayout === "dropdown"
+            ? "flex justify-center items-center pt-1 relative mb-1"
+            : "flex justify-between items-center pt-1 relative mb-1",
+        caption_label:
+          captionLayout === "dropdown"
+            ? "hidden"
+            : "text-sm font-medium text-gray-12",
+        dropdowns:
+          captionLayout === "dropdown"
+            ? "flex h-8 w-full items-center justify-center gap-1.5 text-sm font-medium [&>*:nth-child(n+3)]:hidden"
+            : "hidden",
+        dropdown_root:
+          captionLayout === "dropdown"
+            ? "relative rounded-md border border-gray-7 bg-gray-1 shadow-sm has-focus:border-primary-9 has-focus:ring-primary-9/50 has-focus:ring-[3px] transition-all min-w-[120px] h-8"
+            : "hidden",
+        dropdown:
+          captionLayout === "dropdown"
+            ? "w-full h-full cursor-pointer appearance-none bg-transparent border-0 text-sm font-medium text-gray-12 px-2 pr-7"
+            : "hidden",
         nav: "hidden",
         button_previous: "hidden",
         button_next: "hidden",
         month_caption: "flex items-center justify-center pt-1",
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
-        weekday: "text-gray-11 rounded w-9 font-normal text-[0.8rem] transition-colors duration-200",
+        weekday:
+          "text-gray-11 rounded w-9 font-normal text-[0.8rem] transition-colors duration-200",
         week: "flex w-full mt-2 gap-0.5",
         day: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20 transition-all duration-200",
         day_button: "",
@@ -154,22 +200,14 @@ function Calendar({
         today: "",
         outside:
           "day-outside text-gray-11 opacity-50 aria-selected:bg-gray-4/50 aria-selected:text-gray-11 aria-selected:opacity-30 transition-opacity duration-200",
-        disabled: "text-gray-11 opacity-50 cursor-not-allowed transition-opacity duration-200",
+        disabled:
+          "text-gray-11 opacity-50 cursor-not-allowed transition-opacity duration-200",
         range_middle:
           "aria-selected:bg-gray-4 aria-selected:text-gray-12 rounded-md transition-all duration-200",
         hidden: "invisible",
         ...classNames,
       }}
-      components={{
-        MonthCaption: CalendarCaption,
-        DayButton: CalendarDayButton,
-        Chevron: ({ orientation, ...props }) => {
-          if (orientation === "left") {
-            return <ChevronLeftIcon className="h-4 w-4" />;
-          }
-          return <ChevronRightIcon className="h-4 w-4" />;
-        },
-      }}
+      components={components}
       {...props}
     />
   );
