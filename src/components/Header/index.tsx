@@ -92,7 +92,7 @@ export function Header() {
   return (
     <>
       <header
-        className={`w-full fixed top-0 left-0 p-[14px] px-6 z-9999 h-[64px] md:h-[68px] border-b border-gray-11 transition-all duration-300 flex items-center justify-center bg-linear-to-r from-[#191919] to-[#222222]`}
+        className={`w-full fixed top-0 left-0 p-[14px] px-6 z-999 h-[64px] md:h-[68px] border-b border-gray-11 transition-all duration-300 flex items-center justify-center bg-linear-to-r from-[#191919] to-[#222222]`}
       >
         <div className="max-w-screen-2xl h-full w-full flex items-center justify-between md:px-0">
           <div className="flex items-center gap-8 h-full">
