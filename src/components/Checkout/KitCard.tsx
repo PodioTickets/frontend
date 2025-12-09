@@ -9,6 +9,7 @@ import { ClockIcon } from "../Icons/ClockIcon";
 import { Counter } from "./Counter";
 import type { Kit } from "@/constants/kits";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { Minus, Plus } from "lucide-react";
 
 interface KitCardProps {
   kit: Kit;
@@ -30,8 +31,23 @@ export function KitCard({ kit }: KitCardProps) {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-      minimumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(price);
+  };
+
+  const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
+    if (!ageLimit) return null;
+    if (ageLimit.min && ageLimit.max) {
+      return `de ${ageLimit.min} a ${ageLimit.max} anos`;
+    }
+    if (ageLimit.min) {
+      return `a partir de ${ageLimit.min} anos`;
+    }
+    if (ageLimit.max) {
+      return `até ${ageLimit.max} anos`;
+    }
+    return null;
   };
 
   const handleDecrease = (raceId: string) => {
@@ -47,107 +63,161 @@ export function KitCard({ kit }: KitCardProps) {
   return (
     <div className="w-full">
       <div
-        className="flex items-center w-full justify-between rounded-lg border border-gray-5 px-4 py-3 cursor-pointer hover:bg-gray-2 transition-colors"
+        className="flex items-center w-full justify-between rounded-lg border border-gray-6 px-3 py-4 cursor-pointer hover:bg-gray-2 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex flex-col items-start justify-center gap-2">
-          <h1 className="text-lg font-bold">{kit.name}</h1>
-          <p className="text-sm text-gray-11">
-            A partir de:{" "}
-            <span className="text-gray-12 font-bold">
+        <div className="flex flex-col items-start justify-center gap-6">
+          <h1 className="text-xl font-bold">{kit.name}</h1>
+          <div className="flex items-center gap-1">
+            <p className="text-base text-gray-11">A partir de:</p>
+            <span className="text-base text-gray-12 font-bold">
               {formatPrice(kit.minPrice)}
             </span>
-          </p>
+          </div>
         </div>
 
-        <ArrowButton isOpen={isExpanded} />
+        <div className={`transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-180' : ''}`}>
+          <ArrowButton isOpen={isExpanded} />
+        </div>
       </div>
 
-      {isExpanded && (
-        <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex gap-4 w-full">
-            <div className="w-1/3 h-full">
-              <div className="w-full h-[136px] flex gap-2">
-                {kit.images[0] && (
-                  <Image
-                    src={kit.images[0]}
-                    alt={kit.name}
-                    width={100000}
-                    height={100000}
-                    className="w-2/3 h-full object-cover rounded-lg"
-                  />
-                )}
-                {kit.images.length > 1 && (
-                  <div className="flex flex-col gap-2">
-                    {kit.images.slice(1, 3).map((image, index) => (
-                      <Image
-                        key={index}
-                        src={image}
-                        alt={`${kit.name} ${index + 2}`}
-                        width={100000}
-                        height={100000}
-                        className="w-2/3 h-full object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="w-2/3 flex flex-col gap-3">
-              <p className="text-sm text-gray-11">{kit.description}</p>
-              <div className="flex flex-col gap-2">
-                {kit.races.map((race) => (
-                  <div
-                    key={race.id}
-                    className="flex flex-col items-start justify-between w-full gap-6 rounded-lg border border-gray-5 px-4 py-3 hover:bg-gray-2 transition-colors"
-                  >
-                    <div className="flex flex-col items-start justify-center gap-2 flex-1">
-                      <h1 className="text-lg font-bold">{race.name}</h1>
-                      <div className="flex items-center gap-4 text-gray-12 text-sm">
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="mt-6">
+            <p className="text-sm text-gray-11 mb-6">{kit.description}</p>
+
+          {/* Cards das races */}
+          <div className="flex flex-col gap-6">
+            {kit.races.map((race) => {
+              const ageLimitText = formatAgeLimit(race.ageLimit);
+              return (
+                <div key={race.id} className="flex gap-4 w-full">
+                  {/* Galeria de imagens da race à esquerda */}
+                  {race.images && race.images.length > 0 && (
+                    <div className="shrink-0">
+                      <div className="flex items-center gap-2">
+                        {race.images[0] && (
+                          <div className="w-[136px] h-[136px] relative rounded-lg border border-gray-6 overflow-hidden">
+                            <Image
+                              src={race.images[0]}
+                              alt={race.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                        {race.images.length > 1 && (
+                          <div className="flex flex-col gap-1 items-center">
+                            {/* Seta para cima (placeholder) */}
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              <div className="rotate-180">
+                                <ArrowButton isOpen={true} />
+                              </div>
+                            </div>
+                            {/* Thumbnails */}
+                            <div className="flex flex-col gap-1">
+                              {race.images.slice(1, 4).map((image, index) => (
+                                <div
+                                  key={index}
+                                  className="w-9 h-9 relative rounded border border-gray-6 overflow-hidden"
+                                >
+                                  <Image
+                                    src={image}
+                                    alt={`${race.name} ${index + 2}`}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            {/* Seta para baixo (placeholder) */}
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              <div className="">
+                                <ArrowButton isOpen={true} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Card da race à direita */}
+                  <div className="flex-1 bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
+                    <div className="flex flex-col gap-5">
+                      <h2 className="text-xl font-bold">{race.name}</h2>
+                      <div className="flex items-center gap-8 flex-wrap">
                         <div className="flex items-center gap-2">
-                          <DistanceIcon className="size-5" />
-                          <p className="text-sm font-medium text-gray-12">
+                          <DistanceIcon className="size-6" />
+                          <p className="text-lg font-medium text-gray-12">
                             {race.distanceKm} km
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <CalendarIcon className="size-5" />
-                          <p className="text-sm font-medium text-gray-12">
+                          <CalendarIcon className="size-6" />
+                          <p className="text-lg font-medium text-gray-12">
                             {formatDate(race.date)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <ClockIcon className="size-5" />
-                          <p className="text-sm font-medium text-gray-12">
+                          <ClockIcon className="size-6" />
+                          <p className="text-lg font-medium text-gray-12">
                             {race.time}
                           </p>
                         </div>
                       </div>
+                      {ageLimitText && (
+                        <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 w-fit">
+                          <p className="text-base font-medium">
+                            Limite de idade: {ageLimitText}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center w-full justify-between gap-4">
-                      <div className="flex flex-col items-end gap-1">
-                        <p className="text-lg font-bold text-gray-12">
-                          {formatPrice(race.price)}
-                        </p>
-                        {!race.available && (
-                          <p className="text-xs text-red-10">Esgotado</p>
-                        )}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xl font-bold text-gray-12">
+                        {formatPrice(race.price)}
+                      </p>
+                      <div className="flex items-center gap-2 bg-primary-4 rounded-full px-2 py-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDecrease(race.id)}
+                          disabled={
+                            (raceQuantities[race.id] || 0) === 0 ||
+                            !race.available
+                          }
+                          className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                          aria-label="Diminuir quantidade"
+                        >
+                          <Minus className="size-4" />
+                        </button>
+                        <span className="w-6 text-center text-lg font-semibold text-gray-12 px-6">
+                          {raceQuantities[race.id] || 0}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleIncrease(race.id)}
+                          disabled={!race.available}
+                          className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                          aria-label="Aumentar quantidade"
+                        >
+                          <Plus className="size-4" />
+                        </button>
                       </div>
-                      <Counter
-                        value={raceQuantities[race.id] || 0}
-                        onDecrease={() => handleDecrease(race.id)}
-                        onIncrease={() => handleIncrease(race.id)}
-                        disabled={!race.available}
-                      />
+                      {!race.available && (
+                        <p className="text-xs text-red-10">Esgotado</p>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
-

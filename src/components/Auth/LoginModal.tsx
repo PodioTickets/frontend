@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useLoginModal, useRegisterModal } from "@/stores/modalStore";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Mail, Lock, X } from "lucide-react";
 import Image from "next/image";
-import { cn } from "@/utils/cn";
 import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
@@ -72,6 +72,7 @@ const AppleIcon = () => (
 export function LoginModal() {
   const { isOpen, closeLoginModal } = useLoginModal();
   const { openRegisterModal } = useRegisterModal();
+  const { login, isLoading: authLoading } = useAuth();
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -81,6 +82,7 @@ export function LoginModal() {
 
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -94,17 +96,26 @@ export function LoginModal() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const validatedData: LoginFormData = loginSchema.parse(formData);
-      // If validation passes, proceed with login
-      console.log("Login data:", validatedData);
-      // TODO: Implement actual login logic here
+
+      // Chama a função de login do contexto
+      await login({
+        emailOrCpf: validatedData.email,
+        password: validatedData.password,
+      });
+
       toast.success("Login realizado com sucesso!");
       closeLoginModal();
+      // Limpa o formulário
+      setFormData({ email: "", password: "" });
+      setErrors({});
     } catch (error) {
+      console.log("error", error);
       if (error instanceof ZodError) {
         const newErrors: Record<string, string> = {};
         error.issues.forEach((err) => {
@@ -112,13 +123,24 @@ export function LoginModal() {
             newErrors[err.path[0] as string] = err.message;
           }
         });
+        console.log("newErrors", newErrors);
         setErrors(newErrors);
         // Show first error as toast
         const firstError = error.issues[0];
         if (firstError) {
           toast.error(firstError.message);
         }
+      } else {
+        // Erro da API ou do contexto
+        console.log("error", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Erro ao fazer login. Tente novamente.";
+        toast.error(errorMessage);
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -141,209 +163,213 @@ export function LoginModal() {
             onClick={(e) => e.stopPropagation()}
             className="bg-gray-1 rounded-xl shadow-2xl w-full max-w-[600px] mx-4 relative overflow-hidden"
           >
-        {/* Header with logo and decorative elements */}
-        <div className="relative pt-8 pb-3 px-6 flex items-center justify-center">
-          <div className="absolute left-0 top-0 w-[162px] h-[80px] flex items-center justify-center">
-            <Image
-              src="/images/login_left.png"
-              alt="Decorative left"
-              width={162}
-              height={80}
-              draggable={false}
-            />
-          </div>
-
-          <div className="relative z-10 flex items-center">
-            <Image
-              src="/images/logo_horizontal_black.png"
-              alt="Pódio Ticket"
-              width={210}
-              height={36}
-              priority
-              className="h-9 w-auto"
-              draggable={false}
-            />
-          </div>
-
-          <div className="absolute right-0 top-0 w-[162px] h-[80px]">
-            {/* Decorative icon */}
-            <Image
-              src="/images/login_right.png"
-              alt="Decorative right"
-              width={162}
-              height={80}
-              draggable={false}
-            />
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-col items-center w-full">
-          {/* Welcome text */}
-          <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
-            <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
-              Bem-vindo de volta
-            </h2>
-            <p className="font-normal text-lg leading-[1.3] text-gray-11 font-dm-sans">
-              Por favor, preencha os campos para conectar-se
-            </p>
-          </div>
-
-          {/* Form inputs */}
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col gap-5 items-start p-6 w-full"
-          >
-            <div className="flex flex-col gap-5 items-start w-full">
-              {/* Email input */}
-              <div className="flex flex-col gap-1 items-start w-full">
-                <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
-                  Email
-                </label>
-                <div className="relative w-full">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                  <Input
-                    type="email"
-                    placeholder="Digite seu email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    className={`pl-10 h-12 ${
-                      errors.email
-                        ? "border-red-9 focus-visible:border-red-9"
-                        : ""
-                    }`}
-                    aria-invalid={!!errors.email}
-                  />
-                </div>
-                {errors.email && (
-                  <p className="text-sm text-red-9 font-dm-sans">
-                    {errors.email}
-                  </p>
-                )}
+            <div className="relative pt-8 pb-3 px-6 flex items-center justify-center">
+              <div className="absolute left-0 top-0 w-[162px] h-[80px] flex items-center justify-center">
+                <Image
+                  src="/images/login_left.png"
+                  alt="Decorative left"
+                  width={162}
+                  height={80}
+                  draggable={false}
+                />
               </div>
 
-              {/* Password input */}
-              <div className="flex flex-col gap-1 items-start w-full">
-                <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
-                  Senha
-                </label>
-                <div className="relative w-full">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                  <Input
-                    type="password"
-                    placeholder="Digite sua senha"
-                    value={formData.password}
-                    onChange={(e) =>
-                      handleInputChange("password", e.target.value)
-                    }
-                    className={`pl-10 h-12 ${
-                      errors.password
-                        ? "border-red-9 focus-visible:border-red-9"
-                        : ""
-                    }`}
-                    aria-invalid={!!errors.password}
-                  />
-                </div>
-                {errors.password && (
-                  <p className="text-sm text-red-9 font-dm-sans">
-                    {errors.password}
-                  </p>
-                )}
+              <div className="relative z-10 flex items-center">
+                <Image
+                  src="/images/logo_horizontal_black.png"
+                  alt="Pódio Ticket"
+                  width={210}
+                  height={36}
+                  priority
+                  className="h-9 w-auto"
+                  draggable={false}
+                />
               </div>
 
-              {/* Forgot password link */}
-              <button
-                type="button"
-                className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-dm-sans cursor-pointer underline"
-              >
-                Esqueci minha senha
-              </button>
+              <div className="absolute right-0 top-0 w-[162px] h-[80px]">
+                {/* Decorative icon */}
+                <Image
+                  src="/images/login_right.png"
+                  alt="Decorative right"
+                  width={162}
+                  height={80}
+                  draggable={false}
+                />
+              </div>
             </div>
 
-            {/* Login button */}
-            <Button
-              type="submit"
-              className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope"
-            >
-              Conectar-se
-            </Button>
-          </form>
-
-          {/* Social login section */}
-          <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
-            <div className="flex flex-col gap-6 items-start w-full">
-              {/* Divider */}
-              <div className="flex gap-2.5 items-center justify-center w-full">
-                <div className="flex-1 h-px bg-gray-6" />
-                <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-dm-sans whitespace-nowrap">
-                  Ou conecte-se com
+            {/* Content */}
+            <div className="flex flex-col items-center w-full">
+              {/* Welcome text */}
+              <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
+                <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
+                  Bem-vindo de volta
+                </h2>
+                <p className="font-normal text-lg leading-[1.3] text-gray-11 font-dm-sans">
+                  Por favor, preencha os campos para conectar-se
                 </p>
-                <div className="flex-1 h-px bg-gray-6" />
               </div>
 
-              {/* Social login buttons */}
-              <div className="flex gap-2 items-center w-full">
-                <Button
-                  variant="ghost"
-                  className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                >
-                  <FacebookIcon />
-                  <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
-                    Entrar Facebook
-                  </span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                >
-                  <GoogleIcon />
-                  <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
-                    Entrar Google
-                  </span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                >
-                  <AppleIcon />
-                  <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
-                    Entrar Apple
-                  </span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Sign up link */}
-            <div className="flex gap-1 items-start">
-              <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-dm-sans">
-                Ainda não possui uma conta?
-              </p>
-              <button
-                onClick={() => {
-                  closeLoginModal();
-                  openRegisterModal();
-                }}
-                className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-dm-sans cursor-pointer"
+              {/* Form inputs */}
+              <form
+                onSubmit={handleSubmit}
+                className="flex flex-col gap-5 items-start p-6 w-full"
               >
-                Cadastrar-se
-              </button>
-            </div>
+                <div className="flex flex-col gap-5 items-start w-full">
+                  {/* Email input */}
+                  <div className="flex flex-col gap-1 items-start w-full">
+                    <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                      Email
+                    </label>
+                    <div className="relative w-full">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                      <Input
+                        type="email"
+                        placeholder="Digite seu email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
+                        className={`pl-10 h-12 ${
+                          errors.email
+                            ? "border-red-9 focus-visible:border-red-9"
+                            : ""
+                        }`}
+                        aria-invalid={!!errors.email}
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="text-sm text-red-9 font-dm-sans">
+                        {errors.email}
+                      </p>
+                    )}
+                  </div>
 
-            {/* Terms and privacy */}
-            <p className="text-xs leading-[1.3] text-gray-11 text-center font-dm-sans">
-              Ao continuar você concorda com nossos{" "}
-              <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                Termos de serviço
-              </button>{" "}
-              e{" "}
-              <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                Política de privacidade
-              </button>
-            </p>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
+                  {/* Password input */}
+                  <div className="flex flex-col gap-1 items-start w-full">
+                    <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                      Senha
+                    </label>
+                    <div className="relative w-full">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                      <Input
+                        type="password"
+                        placeholder="Digite sua senha"
+                        value={formData.password}
+                        onChange={(e) =>
+                          handleInputChange("password", e.target.value)
+                        }
+                        className={`pl-10 h-12 ${
+                          errors.password
+                            ? "border-red-9 focus-visible:border-red-9"
+                            : ""
+                        }`}
+                        aria-invalid={!!errors.password}
+                      />
+                    </div>
+                    {errors.password && (
+                      <p className="text-sm text-red-9 font-dm-sans">
+                        {errors.password}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Forgot password link */}
+                  <button
+                    type="button"
+                    className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-dm-sans cursor-pointer underline"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
+
+                {/* Login button */}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || authLoading}
+                  className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting || authLoading
+                    ? "Conectando..."
+                    : "Conectar-se"}
+                </Button>
+              </form>
+
+              {/* Social login section */}
+              <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
+                <div className="flex flex-col gap-6 items-start w-full">
+                  {/* Divider */}
+                  <div className="flex gap-2.5 items-center justify-center w-full">
+                    <div className="flex-1 h-px bg-gray-6" />
+                    <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-dm-sans whitespace-nowrap">
+                      Ou conecte-se com
+                    </p>
+                    <div className="flex-1 h-px bg-gray-6" />
+                  </div>
+
+                  {/* Social login buttons */}
+                  <div className="flex gap-2 items-center w-full">
+                    <Button
+                      variant="ghost"
+                      className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                    >
+                      <FacebookIcon />
+                      <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                        Entrar Facebook
+                      </span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                    >
+                      <GoogleIcon />
+                      <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                        Entrar Google
+                      </span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                    >
+                      <AppleIcon />
+                      <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                        Entrar Apple
+                      </span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Sign up link */}
+                <div className="flex gap-1 items-start">
+                  <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-dm-sans">
+                    Ainda não possui uma conta?
+                  </p>
+                  <button
+                    onClick={() => {
+                      closeLoginModal();
+                      openRegisterModal();
+                    }}
+                    className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-dm-sans cursor-pointer"
+                  >
+                    Cadastrar-se
+                  </button>
+                </div>
+
+                {/* Terms and privacy */}
+                <p className="text-xs leading-[1.3] text-gray-11 text-center font-dm-sans">
+                  Ao continuar você concorda com nossos{" "}
+                  <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                    Termos de serviço
+                  </button>{" "}
+                  e{" "}
+                  <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                    Política de privacidade
+                  </button>
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

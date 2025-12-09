@@ -26,7 +26,7 @@ function CheckoutContent() {
 
   if (!eventId) {
     return (
-      <div className="w-full max-w-[1760px] mx-auto flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="w-full max-w-[1280px] mx-auto flex flex-col items-center justify-center min-h-screen gap-4">
         <h1 className="text-2xl font-bold">Evento não especificado</h1>
         <p className="text-gray-11 mb-6">
           Por favor, selecione um evento para continuar com o checkout.
@@ -43,7 +43,7 @@ function CheckoutContent() {
 
   if (!event) {
     return (
-      <div className="w-full max-w-[1760px] mx-auto flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="w-full max-w-[1280px] mx-auto flex flex-col items-center justify-center min-h-screen gap-4">
         <h1 className="text-2xl font-bold">Evento não encontrado</h1>
         <p className="text-gray-11 mb-6">
           O evento que você está procurando não existe ou foi removido.

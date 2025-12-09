@@ -39,8 +39,17 @@ export default function UserProfilePage() {
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState<"sms" | "authenticator">("sms");
-  const [verificationCode, setVerificationCode] = useState(["", "", "", "", "", ""]);
+  const [twoFactorMethod, setTwoFactorMethod] = useState<
+    "sms" | "authenticator"
+  >("sms");
+  const [verificationCode, setVerificationCode] = useState([
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+  ]);
   const [codeError, setCodeError] = useState(false);
 
   const handleInputChange = (
@@ -71,7 +80,7 @@ export default function UserProfilePage() {
   const handleCodeChange = (index: number, value: string) => {
     // Only allow numbers and limit to 1 character
     if (value && !/^\d$/.test(value)) return;
-    
+
     const newCode = [...verificationCode];
     newCode[index] = value;
     setVerificationCode(newCode);
@@ -84,7 +93,10 @@ export default function UserProfilePage() {
     }
   };
 
-  const handleCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleCodeKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === "Backspace" && !verificationCode[index] && index > 0) {
       const prevInput = document.getElementById(`code-input-${index - 1}`);
       prevInput?.focus();
@@ -95,7 +107,9 @@ export default function UserProfilePage() {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").slice(0, 6);
     if (/^\d+$/.test(pastedData)) {
-      const newCode = pastedData.split("").concat(Array(6 - pastedData.length).fill(""));
+      const newCode = pastedData
+        .split("")
+        .concat(Array(6 - pastedData.length).fill(""));
       setVerificationCode(newCode);
       setCodeError(false);
       // Focus last filled input
@@ -118,12 +132,11 @@ export default function UserProfilePage() {
       setCodeError(true);
       return;
     }
-    // TODO: Implement code verification logic
     console.log("Verifying code:", code);
   };
 
   return (
-    <div className="min-h-screen bg-gray-2 pb-32 pt-[69px]">
+    <div className="min-h-screen bg-gray-2 pb-32">
       <div className="mx-auto flex max-w-[842px] flex-col items-center justify-center px-5 py-[52px]">
         {/* Profile Card */}
         <div className="w-full rounded-xl bg-gray-2 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
@@ -508,7 +521,9 @@ export default function UserProfilePage() {
                   <div
                     className={cn(
                       "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-                      twoFactorEnabled ? "translate-x-[17px]" : "translate-x-0.5"
+                      twoFactorEnabled
+                        ? "translate-x-[17px]"
+                        : "translate-x-0.5"
                     )}
                   />
                 </div>
@@ -541,7 +556,9 @@ export default function UserProfilePage() {
                     >
                       <Checkbox
                         checked={twoFactorMethod === "authenticator"}
-                        onCheckedChange={() => setTwoFactorMethod("authenticator")}
+                        onCheckedChange={() =>
+                          setTwoFactorMethod("authenticator")
+                        }
                       />
                       <span className="text-base text-gray-12">
                         Google Authenticator
@@ -577,7 +594,9 @@ export default function UserProfilePage() {
                           inputMode="numeric"
                           maxLength={1}
                           value={digit}
-                          onChange={(e) => handleCodeChange(index, e.target.value)}
+                          onChange={(e) =>
+                            handleCodeChange(index, e.target.value)
+                          }
                           onKeyDown={(e) => handleCodeKeyDown(index, e)}
                           onPaste={handlePaste}
                           className={cn(
@@ -622,4 +641,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-

@@ -4,22 +4,25 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { ShopIcon } from "@/components/Icons/ShopIcon";
-import { CardIcon } from "@/components/Icons/CardIcon";
-import { modalitiesColumns, ModalityOption } from "@/constants";
 import { EventMap } from "@/components/EventMap";
 import { useEvent } from "@/hooks/useEvent";
+import { MessageIcon } from "@/components/Icons/MessageIcon";
+import { modalitiesColumns } from "@/constants";
+import { ShareIcon } from "@/components/Icons/ShareIcon";
+import { ShareModal } from "@/components/ShareModal";
+import { useState } from "react";
 
 export default function EventPage() {
   const params = useParams();
   const eventId = params.id as string;
   const { event, isLoading } = useEvent(eventId);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const formatDate = (date: Date) => {
-    console.log("date", date);
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "long",
@@ -29,7 +32,7 @@ export default function EventPage() {
 
   if (!event || isLoading) {
     return (
-      <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto lg:px-8 py-20">
+      <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto lg:px-8 py-20">
         <div className="flex flex-col items-center justify-center">
           <h1 className="text-2xl font-bold mb-4">Evento não encontrado</h1>
           <p className="text-gray-11 mb-6">
@@ -48,9 +51,9 @@ export default function EventPage() {
   }
 
   return (
-    <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto p-20 pt-20`">
+    <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto p-20 pt-20 relative">
       <div
-        className="absolute top-0 left-0 w-full max-h-[500px] h-full blur-sm"
+        className="absolute top-0 left-0 w-full max-h-[600px] h-full blur-sm"
         style={{
           backgroundImage: `url(${event?.bannerUrl})`,
           backgroundSize: "cover",
@@ -60,132 +63,162 @@ export default function EventPage() {
       >
         <div className="absolute bottom-0 left-0 w-full h-[50%] bg-linear-to-b from-transparent to-white" />
       </div>
-      <div className="w-full z-10 relative h-full max-h-[400px] flex flex-col items-center justify-center">
-        <div className="w-full h-full flex items-start justify-center gap-4">
+      <div className="w-full z-10 relative h-full max-h-[400px] flex flex-col items-center justify-center mt-0 2xl:mt-14">
+        <div className="w-full h-full flex items-start justify-center gap-8">
           <Image
             src={event.bannerUrl}
             alt={event.name}
             width={100000}
             height={100000}
-            className="w-2/3 h-full object-cover shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl"
+            className="w-full h-full object-cover shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl"
           />
 
-          <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full w-1/3">
-            <h1 className="text-lg font-bold mb-4">{event.name}</h1>
-            <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-              <LocationIcon className="size-5" />{" "}
-              <span className="text-sm">
-                {event.city}, {event.state}
-              </span>
-            </h1>
-            <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium mt-4">
-              <CalendarIcon className="size-5" />{" "}
-              <span>{formatDate(new Date(event.eventDate))}</span>
-            </h1>
+          <div className="min-w-1/4 w-1/4">
+            <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full">
+              <h1 className="text-lg font-bold mb-4">{event.name}</h1>
+              <div className="flex flex-col gap-4">
+                <h1 className="flex items-center gap-2 text-gray-12 font-medium">
+                  <LocationIcon className="size-5" />{" "}
+                  <span className="text-sm">
+                    {event.city}, {event.state}
+                  </span>
+                </h1>
+                <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
+                  <CalendarIcon className="size-5" />{" "}
+                  <span>{formatDate(new Date(event.eventDate))}</span>
+                </h1>
+                {event.modalities
+                  ?.filter((modality) => modality.isActive)
+                  .map((modality) => {
+                    const icon = modality.template?.icon;
+                    const label = modality.template?.label;
+                    if (!icon || !label) return null;
+                    return (
+                      <h1
+                        key={modality.id}
+                        className="flex items-center gap-2 text-sm text-gray-12 font-medium"
+                      >
+                        <Image
+                          src={icon}
+                          alt={label}
+                          width={20}
+                          height={20}
+                          draggable={false}
+                        />
+                        <span className="text-sm">{label}</span>
+                      </h1>
+                    );
+                  })}
+              </div>
 
-            <Link href={`/checkout?eventId=${event.id}`}>
-              <Button className="w-full mt-10">
-                <ShopIcon className="size-5" />
-                Inscrever-se
+              <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
+                <p className="text-sm font-medium text-gray-11 mb-3">
+                  Organizador
+                </p>
+
+                {event.organizer ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
+                        <span className="text-primary-11 font-semibold text-sm">
+                          {event.organizer.name?.charAt(0).toUpperCase() || "O"}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-12 truncate">
+                          {event.organizer.name}
+                        </p>
+                        {event.organizer.phone && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <Phone className="size-3.5 text-gray-11 shrink-0" />
+                            <a
+                              href={`tel:${event.organizer.phone}`}
+                              className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
+                            >
+                              {event.organizer.phone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full text-gray-12 border-gray-6"
+                      onClick={() => {
+                        if (event.organizer?.email) {
+                          window.location.href = `mailto:${event.organizer.email}?subject=Contato sobre ${event.name}`;
+                        }
+                      }}
+                    >
+                      <MessageIcon className="min-w-5 min-h-5" />
+                      Falar com organizador
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-11">
+                    Informações não disponíveis
+                  </p>
+                )}
+              </div>
+
+              <Link href={`/checkout?eventId=${event.id}`}>
+                <Button className="w-full mt-8">Inscrever-se</Button>
+              </Link>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Button
+                variant="outline"
+                className="mt-8 text-gray-11 border-gray-6"
+                onClick={() => setIsShareModalOpen(true)}
+              >
+                <ShareIcon className="size-5" />
+                Compartilhar
               </Button>
-            </Link>
-            <Button
-              className="bg-blue-5 text-blue-12 border border-blue-7 hover:bg-blue-6 hover:text-blue-12 rounded-4xl w-full mt-4"
-              variant="ghost"
-            >
-              <CardIcon className="size-5" /> Em ate 4x sem juros
-            </Button>
+
+              <h1 className="underline font-semibold text-gray-11 text-sm cursor-pointer">
+                Denunciar evento
+              </h1>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="w-2/3 self-start mt-10">
-        <div className="flex flex-col gap-2">
+      <div className="w-3/4 self-start mt-10 2xl:mt-20 pr-8 z-10">
+        <div className="flex flex-col gap-2 p-4 rounded-xl border border-gray-6">
           <h1 className="text-2xl font-bold text-gray-12">
             Detalhes do evento
           </h1>
           <p className="text-gray-11 text-sm">{event.description}</p>
         </div>
 
-        <div className="w-full h-px bg-gray-6 my-10" />
-
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold text-gray-12">Modalidades</h1>
-          <div className="flex flex-wrap gap-2">
-            {event.modalities.map((modality) => (
-              <div
-                key={modality}
-                className="bg-gray-2 p-2 rounded-xl flex items-center gap-2"
-              >
-                <Image
-                  src={
-                    modalitiesColumns
-                      .flat()
-                      .find((m: ModalityOption) => m.id === modality)?.icon ||
-                    ""
-                  }
-                  alt={
-                    modalitiesColumns
-                      .flat()
-                      .find((m: ModalityOption) => m.id === modality)?.label ||
-                    ""
-                  }
-                  width={36}
-                  height={36}
-                  className="mr-2 shrink-0"
-                  loading="lazy"
-                  decoding="async"
-                />
-
-                <span className="text-gray-11 text-normal">
-                  {modalitiesColumns
-                    .flat()
-                    .find((m: ModalityOption) => m.id === modality)?.label ||
-                    ""}
-                </span>
-              </div>
-            ))}
+        {event.topics?.map((topic) => (
+          <div
+            key={topic.id}
+            className="flex flex-col gap-2 p-4 mt-6 rounded-xl border border-gray-6"
+          >
+            <h1 className="text-2xl font-bold text-gray-12">{topic.title}</h1>
+            <p className="text-gray-11 text-sm">{topic.content}</p>
           </div>
-        </div>
-        <div className="flex flex-col gap-4 mt-10">
+        ))}
+
+        <div className="flex flex-col gap-4 mt-6  p-4 rounded-xl border border-gray-6">
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-bold text-gray-12">Local no mapa</h1>
-            <p className="text-gray-11 text-sm">
-              {event.city}, {event.state}
-            </p>
+            <h1 className="text-2xl font-bold text-gray-12">
+              Onde acontecerá o evento
+            </h1>
           </div>
           <EventMap city={event.city} state={event.state} title={event.name} />
         </div>
-
-        <div className="w-full h-px bg-gray-6 my-10" />
-
-        <div className="flex flex-col gap-4 mt-10">
-          <h1 className="text-2xl font-bold text-gray-12">Percurso</h1>
-          <p className="text-gray-11 text-sm">
-            🛣️ Percurso de 5 km sobre terreno 100% asfalto, com altimetria leve.
-            Largada e chegada acontecem no mesmo ponto (ATI – Parque do Ingá). O
-            trajeto será totalmente sinalizado e contará com uma equipe de
-            apoio.
-          </p>
-        </div>
-
-        <div className="w-full h-px bg-gray-6 my-10" />
-
-        <div className="flex flex-col gap-4 mt-10">
-          <h1 className="text-2xl font-bold text-gray-12">Premiação</h1>
-          <p className="text-gray-11 text-sm">
-            🏆 Todos os participantes que concluírem a prova recebem medalha de
-            participação.  🏅 Premiação GERAL (Masculino e Feminino | Tempo
-            Bruto): 🥇 1º lugar – Troféu + R$ 800,00 🥈 2º lugar – Troféu + R$
-            600,00 🥉 3º lugar – Troféu + R$ 500,00 4º lugar – Troféu + R$
-            300,00 5º lugar – Troféu + R$ 200,00  🏅 Premiação por Faixas
-            Etárias (Masculino e Feminino | Tempo Líquido): Troféus para os 5
-            primeiros colocados nas seguintes categorias: 15-19, 20-24, 25-29,
-            30-34, 35-39, 40-44, 45-49, 50-54, 55-59, 60-64, 65-69, 70+,
-            Categoria Especial ACD. <br /> <br /> ❗ Não haverá dupla premiação.
-          </p>
-        </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        eventName={event.name}
+        eventUrl={`/events/${event.id}`}
+      />
     </section>
   );
 }

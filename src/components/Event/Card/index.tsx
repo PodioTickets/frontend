@@ -17,10 +17,10 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 });
 
 export function EventCard({ event }: EventCardProps) {
-  const formattedDate = useMemo(
-    () => dateFormatter.format(new Date(event.eventDate)),
-    [event.eventDate]
-  );
+  const formattedDate = useMemo(() => {
+    if (!event?.eventDate) return "";
+    return dateFormatter?.format?.(new Date(event?.eventDate));
+  }, [event?.eventDate]);
 
   const getStatusText = (status: Event["status"]) => {
     switch (status) {

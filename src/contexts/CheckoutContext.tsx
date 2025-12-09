@@ -9,18 +9,17 @@ interface ParticipantFormData {
   birthDate: string;
   phone: string;
   gender: string;
+  emergencyPhone?: string;
 }
 
 interface CheckoutState {
-  // Modalities step - quantities for each race
   raceQuantities: Record<string, number>;
-  
-  // Information step - participant data
   participants: ParticipantFormData[];
-  
-  // Methods to update state
   updateRaceQuantity: (raceId: string, quantity: number) => void;
-  updateParticipant: (index: number, data: Partial<ParticipantFormData>) => void;
+  updateParticipant: (
+    index: number,
+    data: Partial<ParticipantFormData>
+  ) => void;
   addParticipant: () => void;
   removeParticipant: (index: number) => void;
   resetCheckout: () => void;
@@ -29,7 +28,9 @@ interface CheckoutState {
 const CheckoutContext = createContext<CheckoutState | undefined>(undefined);
 
 export function CheckoutProvider({ children }: { children: ReactNode }) {
-  const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>({});
+  const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>(
+    {}
+  );
   const [participants, setParticipants] = useState<ParticipantFormData[]>([
     {
       name: "",
@@ -38,6 +39,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
       birthDate: "",
       phone: "",
       gender: "",
+      emergencyPhone: "",
     },
   ]);
 
@@ -48,7 +50,10 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const updateParticipant = (index: number, data: Partial<ParticipantFormData>) => {
+  const updateParticipant = (
+    index: number,
+    data: Partial<ParticipantFormData>
+  ) => {
     setParticipants((prev) => {
       const updated = [...prev];
       // Ensure participant exists at this index
@@ -60,6 +65,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
           birthDate: "",
           phone: "",
           gender: "",
+          emergencyPhone: "",
         };
       }
       updated[index] = { ...updated[index], ...data };
@@ -77,6 +83,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
         birthDate: "",
         phone: "",
         gender: "",
+        emergencyPhone: "",
       },
     ]);
   };
@@ -95,6 +102,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
         birthDate: "",
         phone: "",
         gender: "",
+        emergencyPhone: "",
       },
     ]);
   };
@@ -123,4 +131,3 @@ export function useCheckout() {
   }
   return context;
 }
-

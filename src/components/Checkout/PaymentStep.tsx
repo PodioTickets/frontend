@@ -285,13 +285,20 @@ function PaymentMethodOption({
               : "bg-transparent border-gray-6"
           }`}
         />
-        <span className="text-sm font-medium text-gray-12">{option.name}</span>
+        <span className="text-sm font-medium text-gray-12">
+          {option.name}{" "}
+          {option.badge?.includes("OFF") && (
+            <span className="text-xs text-primary-12 font-semibold ml-2 bg-primary-6 px-2 py-1 rounded-full">
+              {option.description}
+            </span>
+          )}
+        </span>
       </div>
       <div className="flex items-center gap-2">
         <span
           className={`text-xs ${
             option.badge?.includes("OFF")
-              ? "text-primary-10 font-semibold"
+              ? "text-primary-10 font-semibold hidden"
               : "text-gray-11"
           }`}
         >
@@ -351,11 +358,6 @@ export function PaymentStep({ event, onBack }: PaymentStepProps) {
       name: "PIX",
       description: "5% OFF",
       badge: "5% OFF",
-    },
-    {
-      id: "boleto",
-      name: "Boleto bancário",
-      description: "Vencimento em 3 dias",
     },
   ];
 
@@ -417,7 +419,6 @@ export function PaymentStep({ event, onBack }: PaymentStepProps) {
                         />
                       )}
                       {option.id === "pix" && <PixForm />}
-                      {option.id === "boleto" && <BoletoForm />}
                     </div>
                   </div>
                 );

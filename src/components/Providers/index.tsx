@@ -9,8 +9,10 @@ const Providers = ({ children }: PropsWithChildren) => {
   return (
     <LanguageProvider>
       <QueryProvider>
-        <ModalsProvider />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ModalsProvider />
+          {children}
+        </AuthProvider>
       </QueryProvider>
     </LanguageProvider>
   );

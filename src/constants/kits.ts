@@ -6,7 +6,12 @@ export interface Race {
   date: Date;
   time: string; // e.g., "10:00h"
   price: number;
+  images: string[];
   available: boolean;
+  ageLimit?: {
+    min?: number;
+    max?: number;
+  };
 }
 
 export interface Kit {
@@ -29,6 +34,7 @@ export const mockKits: Kit[] = [
       "/banners/card_placeholder.png",
       "/banners/card_placeholder.png",
       "/banners/card_placeholder.png",
+      "/banners/card_placeholder.png",
     ],
     minPrice: 100,
     eventId: "1",
@@ -42,6 +48,12 @@ export const mockKits: Kit[] = [
         time: "10:00h",
         price: 100,
         available: true,
+        images: [
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+        ],
       },
       {
         id: "race-2",
@@ -52,6 +64,12 @@ export const mockKits: Kit[] = [
         time: "10:30h",
         price: 120,
         available: true,
+        images: [
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+        ],
       },
       {
         id: "race-3",
@@ -62,6 +80,12 @@ export const mockKits: Kit[] = [
         time: "11:00h",
         price: 150,
         available: true,
+        images: [
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+        ],
       },
     ],
   },
@@ -71,6 +95,7 @@ export const mockKits: Kit[] = [
     description:
       "Kit completo com todos os itens do Kit Inscrição mais camiseta técnica, garrafa térmica personalizada e acesso VIP à área de descanso.",
     images: [
+      "/banners/card_placeholder.png",
       "/banners/card_placeholder.png",
       "/banners/card_placeholder.png",
       "/banners/card_placeholder.png",
@@ -87,6 +112,12 @@ export const mockKits: Kit[] = [
         time: "11:00h",
         price: 200,
         available: true,
+        images: [
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+        ],
       },
       {
         id: "race-5",
@@ -95,6 +126,12 @@ export const mockKits: Kit[] = [
         distanceKm: 21,
         date: new Date("2025-12-10"),
         time: "06:00h",
+        images: [
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+        ],
         price: 250,
         available: true,
       },
@@ -106,6 +143,8 @@ export const mockKits: Kit[] = [
     description:
       "Kit essencial com inscrição e camiseta oficial do evento. Perfeito para quem quer participar com o básico.",
     images: [
+      "/banners/card_placeholder.png",
+      "/banners/card_placeholder.png",
       "/banners/card_placeholder.png",
       "/banners/card_placeholder.png",
     ],
@@ -121,8 +160,12 @@ export const mockKits: Kit[] = [
         time: "10:00h",
         price: 80,
         available: true,
+        images: [
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+          "/banners/card_placeholder.png",
+        ],
       },
     ],
   },
 ];
-

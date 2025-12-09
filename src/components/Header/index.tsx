@@ -6,18 +6,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
-import { Dropdown } from "../Dropdown";
+import { Dropdown, DropdownOption } from "../Dropdown";
 import { ArrowButton } from "../ArrowButton";
 import { SearchBar } from "../SearchBar";
 import { LanguageToggle } from "../LanguageToggle";
 import { modalitiesColumns, mockEvents } from "@/constants";
 import { useModalStore } from "@/stores/modalStore";
+import { User, LogOut, LogOutIcon } from "lucide-react";
+import { TicketIcon } from "../Icons/TicketIcon";
+import { InfoIcon } from "../Icons/InfoIcon";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { push } = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
 
   const searchResults = useMemo(() => {
@@ -143,25 +146,94 @@ export function Header() {
           </div>
           <div className="hidden md:flex items-center h-[50px] gap-2">
             <LanguageToggle className="h-[44px]" />
-            <Button
-              onClick={() => openModal("register")}
-              variant="outline"
-              size="default"
-            >
-              Cadastrar-se
-            </Button>
+
             {isAuthenticated && user ? (
-              <Button variant="default" size="default" className="h-full">
-                Logout
-              </Button>
+              <Dropdown
+                trigger={(isOpen) => (
+                  <div className="flex items-center gap-2 cursor-pointer h-full text-gray-2">
+                    {(user as any).image ? (
+                      <Image
+                        src={(user as any).image}
+                        alt="User"
+                        width={40}
+                        height={40}
+                        className="size-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="size-10 rounded-full bg-primary-10 text-gray-12 uppercase flex items-center justify-center font-semibold text-base">
+                        {(user as any).firstName?.charAt(0)}
+                      </div>
+                    )}
+                    <ArrowButton isOpen={isOpen} />
+                  </div>
+                )}
+                options={[
+                  {
+                    id: "profile",
+                    label: "Perfil e configurações",
+                    icon: User,
+                    onClick: () => {
+                      push("/user");
+                    },
+                  },
+                  {
+                    id: "tickets",
+                    icon: TicketIcon,
+                    label: "Ingressos",
+                  },
+                  {
+                    id: "help",
+                    icon: InfoIcon,
+                    label: "Central de ajuda",
+                  },
+                  {
+                    id: "logout",
+                    label: "Logout",
+                    icon: LogOutIcon,
+                    onClick: () => {
+                      logout();
+                    },
+                  },
+                  {
+                    id: "organizer",
+                    label:
+                      user?.role === "ORGANIZER"
+                        ? "Painel de controle"
+                        : "organizer",
+                    onClick: () => {
+                      if (user?.role === "ORGANIZER") {
+                        push("/organizer");
+                      } else {
+                        push("/organizer/create");
+                      }
+                    },
+                  },
+                ]}
+                position="bottom"
+                align="end"
+                width="w-[240px]"
+                className="right-0 mt-2"
+                onSelect={(option) => {
+                  if (option.onClick) option.onClick();
+                }}
+              />
             ) : (
-              <Button
-                onClick={() => openModal("login")}
-                variant="default"
-                size="default"
-              >
-                Conectar-se
-              </Button>
+              <>
+                <Button
+                  onClick={() => openModal("register")}
+                  variant="outline"
+                  size="default"
+                >
+                  Cadastrar-se
+                </Button>
+                <Button
+                  onClick={() => openModal("login")}
+                  variant="default"
+                  size="default"
+                >
+                  Conectar-se
+                </Button>
+              </>
             )}
           </div>
           <div className="md:hidden flex items-center z-50">

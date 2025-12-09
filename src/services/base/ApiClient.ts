@@ -60,7 +60,16 @@ export class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const isAuthRoute =
+          originalRequest.url?.includes("/auth/login") ||
+          originalRequest.url?.includes("/auth/register") ||
+          originalRequest.url?.includes("/auth/refresh");
+
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !isAuthRoute
+        ) {
           if (this.isRefreshing) {
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject });
@@ -78,14 +87,19 @@ export class ApiClient {
           try {
             const refreshToken = this.getRefreshToken();
             if (!refreshToken) {
-              throw new Error("No refresh token available");
+              // Se não há refresh token, limpa tokens e rejeita com o erro original
+              this.clearTokens();
+              return Promise.reject(error);
             }
 
             const response = await this.refreshToken(refreshToken);
-            console.log("response", response);
-            const { access_token } = response as any;
+            const { access_token, refresh_token: newRefreshToken } =
+              response as any;
 
             this.setAccessToken(access_token);
+            if (newRefreshToken) {
+              this.setRefreshToken(newRefreshToken);
+            }
             this.processQueue(null, access_token);
 
             originalRequest.headers.Authorization = `Bearer ${access_token}`;
@@ -112,10 +126,10 @@ export class ApiClient {
 
   async refreshToken(
     refreshToken: string
-  ): Promise<AxiosResponse<{ access_token: string }>> {
+  ): Promise<AxiosResponse<{ access_token: string; refresh_token: string }>> {
     try {
       const response = await this.client.post("api/v1/auth/refresh", {
-        refreshToken,
+        refresh_token: refreshToken,
       });
       return response.data;
     } catch (error: any) {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRegisterModal, useLoginModal } from "@/stores/modalStore";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Dropdown } from "@/components/Dropdown";
@@ -37,8 +38,10 @@ type RegisterStep = 1 | 2 | 3;
 export function RegisterModal() {
   const { isOpen, closeRegisterModal } = useRegisterModal();
   const { openLoginModal } = useLoginModal();
+  const { register, isLoading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -139,15 +142,75 @@ export function RegisterModal() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 1) {
       if (validateStep1()) {
         setCurrentStep(2);
       }
     } else if (currentStep === 2) {
       if (validateStep2()) {
-        setCurrentStep(3);
+        // Quando valida o passo 2, faz o registro
+        await handleRegister();
       }
+    }
+  };
+
+  const handleRegister = async () => {
+    setIsSubmitting(true);
+    try {
+      // Prepara os dados para o registro conforme EmailRegisterDto
+      const registerData: any = {
+        email: formData.email,
+        password: formData.senha,
+        complete_name: formData.nome.trim(), // Nome completo
+        acceptedTerms: true, // Assumindo que o usuário aceitou os termos ao chegar no passo 3
+        acceptedPrivacyPolicy: true, // Assumindo que o usuário aceitou a política ao chegar no passo 3
+      };
+
+      // Campos opcionais conforme o DTO
+      if (formData.sexo) {
+        registerData.sex = formData.sexo;
+      }
+      if (formData.telefone) {
+        registerData.phone = formData.telefone.replace(/\D/g, ""); // Remove formatação
+      }
+      if (formData.telefoneEmergencia) {
+        registerData.reserve_phone = formData.telefoneEmergencia.replace(
+          /\D/g,
+          ""
+        ); // Remove formatação
+      }
+      if (formData.dataNascimento) {
+        // Converte Date para string no formato YYYY-MM-DD
+        const date = formData.dataNascimento;
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        registerData.dateOfBirth = `${year}-${month}-${day}`;
+      }
+      if (formData.nacionalidade) {
+        registerData.country = formData.nacionalidade;
+      }
+      if (formData.cpf) {
+        // CPF vai como documentNumber com documentType "CPF"
+        registerData.documentNumber = formData.cpf.replace(/\D/g, ""); // Remove formatação
+        registerData.documentType = "CPF"; // Assumindo que CPF é o tipo de documento
+      }
+
+      await register(registerData);
+
+      // Se o registro for bem-sucedido, vai para o passo 3 (sucesso)
+      setCurrentStep(3);
+      toast.success("Cadastro realizado com sucesso!");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Erro ao realizar cadastro. Tente novamente.";
+      toast.error(errorMessage);
+      // Não avança para o passo 3 se houver erro
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -586,8 +649,12 @@ export function RegisterModal() {
 
         {/* Next button */}
         <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full">
-          <Button onClick={handleNext} className="px-8 font-bold text-xl">
-            Criar conta
+          <Button
+            onClick={handleNext}
+            disabled={isSubmitting || authLoading}
+            className="px-8 font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting || authLoading ? "Criando conta..." : "Criar conta"}
           </Button>
         </div>
       </div>

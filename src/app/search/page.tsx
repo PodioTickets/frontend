@@ -2,40 +2,65 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useMemo, Suspense, useState, useEffect } from "react";
-import { mockEvents } from "@/constants/events";
 import { EventCard } from "@/components/Event/Card";
 import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
+import { useEventSearch } from "@/hooks/useEventSearch";
 
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [itemsToShow, setItemsToShow] = useState(8);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  // Extrair parâmetros da URL
+  const searchQuery = searchParams.get("q") || undefined;
+  const country = searchParams.get("country") || undefined;
+  const state = searchParams.get("state") || undefined;
+  const city = searchParams.get("city") || undefined;
+  const dateFrom = searchParams.get("dateFrom") || undefined;
+  const dateTo = searchParams.get("dateTo") || undefined;
+  const includePast = searchParams.get("includePast") === "true";
   const location = searchParams.get("location");
   const modalities =
     searchParams.get("modalities")?.split(",").filter(Boolean) || [];
-  const dateFrom = searchParams.get("dateFrom");
-  const dateTo = searchParams.get("dateTo");
   const priceMin = searchParams.get("priceMin");
   const priceMax = searchParams.get("priceMax");
-  const searchQuery = searchParams.get("q")?.toLowerCase() || "";
   const statusFilter = searchParams.get("status") || null;
   const orderBy = searchParams.get("orderBy") || "date-asc";
 
+  // Converter datas para formato ISO se necessário
+  const startDate = dateFrom
+    ? new Date(dateFrom).toISOString().split("T")[0]
+    : undefined;
+  const endDate = dateTo
+    ? new Date(dateTo).toISOString().split("T")[0]
+    : undefined;
+
+  // Buscar eventos usando a API
+  const { events, pagination, isLoading, query } = useEventSearch({
+    q: searchQuery,
+    country,
+    state,
+    city,
+    startDate,
+    endDate,
+    includePast: includePast || undefined,
+    page: currentPage,
+    limit: 20,
+  });
+
+  // Resetar página quando filtros mudarem
   useEffect(() => {
-    setItemsToShow(8);
+    setCurrentPage(1);
   }, [
-    location,
-    modalities.join(","),
+    searchQuery,
+    country,
+    state,
+    city,
     dateFrom,
     dateTo,
-    priceMin,
-    priceMax,
-    searchQuery,
-    statusFilter,
-    orderBy,
+    includePast,
   ]);
 
   const initialDateRange = useMemo(() => {
@@ -54,112 +79,72 @@ function SearchContent() {
     return [min, max] as [number, number];
   }, [priceMin, priceMax]);
 
-  const parsedFilters = useMemo(() => {
-    return {
-      fromDate: dateFrom ? new Date(dateFrom) : null,
-      toDate: dateTo
-        ? (() => {
-            const d = new Date(dateTo);
-            d.setHours(23, 59, 59, 999);
-            return d;
-          })()
-        : null,
-      minPrice: priceMin ? parseInt(priceMin, 10) : null,
-      maxPrice: priceMax ? parseInt(priceMax, 10) : null,
-      modalitiesSet: modalities.length > 0 ? new Set(modalities) : null,
-      searchLower: searchQuery || null,
-    };
-  }, [dateFrom, dateTo, priceMin, priceMax, modalities, searchQuery]);
-
+  // Filtrar eventos por status e ordenar (filtros que não estão na API)
   const filteredEvents = useMemo(() => {
-    let events = mockEvents;
+    let filtered = [...events];
 
-    if (location) {
-      events = events.filter((event) => event.location.locationId === location);
-    }
-
-    if (parsedFilters.modalitiesSet) {
-      events = events.filter((event) =>
-        event.modalities.some((modality) =>
-          parsedFilters.modalitiesSet!.has(modality)
-        )
-      );
-    }
-
-    if (parsedFilters.fromDate) {
-      events = events.filter((event) => event.date >= parsedFilters.fromDate!);
-    }
-    if (parsedFilters.toDate) {
-      events = events.filter((event) => event.date <= parsedFilters.toDate!);
-    }
-
-    if (parsedFilters.minPrice !== null) {
-      events = events.filter((event) => event.price >= parsedFilters.minPrice!);
-    }
-    if (parsedFilters.maxPrice !== null) {
-      events = events.filter((event) => event.price <= parsedFilters.maxPrice!);
-    }
-
-    if (parsedFilters.searchLower) {
-      const query = parsedFilters.searchLower;
-      events = events.filter(
-        (event) =>
-          event.title.toLowerCase().includes(query) ||
-          event.organizer.toLowerCase().includes(query) ||
-          event.location.city.toLowerCase().includes(query) ||
-          event.location.state.toLowerCase().includes(query) ||
-          event.description?.toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by status
+    // Filtrar por status (se necessário, pois a API pode não suportar)
     if (statusFilter) {
-      events = events.filter((event) => event.status === statusFilter);
+      // Mapear status do filtro para status da API
+      const statusMap: Record<string, string> = {
+        "inscricoes-abertas": "PUBLISHED",
+        "inscricoes-encerradas": "PUBLISHED", // Pode precisar de lógica adicional
+        "evento-encerrado": "COMPLETED",
+      };
+      const apiStatus = statusMap[statusFilter];
+      if (apiStatus) {
+        filtered = filtered.filter((event) => event.status === apiStatus);
+      }
     }
 
-    // Sort events
-    const sortedEvents = [...events].sort((a, b) => {
+    // Ordenar eventos (se a API não suportar ordenação)
+    const sortedEvents = [...filtered].sort((a, b) => {
       switch (orderBy) {
         case "date-asc":
-          return a.date.getTime() - b.date.getTime();
+          if (!a.eventDate || !b.eventDate) return 0;
+          return (
+            new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
+          );
         case "date-desc":
-          return b.date.getTime() - a.date.getTime();
-        case "price-asc":
-          return a.price - b.price;
-        case "price-desc":
-          return b.price - a.price;
+          if (!a.eventDate || !b.eventDate) return 0;
+          return (
+            new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()
+          );
         case "name-asc":
-          return a.title.localeCompare(b.title, "pt-BR");
+          return a.name.localeCompare(b.name, "pt-BR");
         case "name-desc":
-          return b.title.localeCompare(a.title, "pt-BR");
+          return b.name.localeCompare(a.name, "pt-BR");
         default:
-          return a.date.getTime() - b.date.getTime();
+          if (!a.eventDate || !b.eventDate) return 0;
+          return (
+            new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
+          );
       }
     });
 
     return sortedEvents;
-  }, [location, parsedFilters, statusFilter, orderBy]);
+  }, [events, statusFilter, orderBy]);
 
   const hasFilters = useMemo(() => {
     return !!(
-      location ||
-      modalities.length > 0 ||
+      searchQuery ||
+      country ||
+      state ||
+      city ||
       dateFrom ||
       dateTo ||
-      priceMin ||
-      priceMax ||
-      searchQuery ||
+      includePast ||
       statusFilter ||
       orderBy !== "date-asc"
     );
   }, [
-    location,
-    modalities,
+    searchQuery,
+    country,
+    state,
+    city,
     dateFrom,
     dateTo,
-    priceMin,
-    priceMax,
-    searchQuery,
+    includePast,
     statusFilter,
     orderBy,
   ]);
@@ -235,20 +220,13 @@ function SearchContent() {
     return option?.label || "Status";
   };
 
-  const getOrderLabel = () => {
-    const option = orderOptions.find((opt) => opt.id === orderBy);
-    return option?.label || "Ordenar por";
-  };
-
-  const paginatedEvents = useMemo(() => {
-    return filteredEvents.slice(0, itemsToShow);
-  }, [filteredEvents, itemsToShow]);
-
-  const hasMore = filteredEvents.length > itemsToShow;
-
   const handleLoadMore = () => {
-    setItemsToShow((prev) => prev + 8);
+    if (currentPage < pagination.totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
   };
+
+  const hasMore = currentPage < pagination.totalPages;
 
   return (
     <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto lg:px-8">
@@ -263,7 +241,7 @@ function SearchContent() {
         <div className="flex items-center justify-between mb-6 gap-4">
           <h1 className="text-[28px] font-extrabold">
             {hasFilters
-              ? `Resultados da busca (${filteredEvents.length})`
+              ? `Resultados da busca (${pagination.total})`
               : "Todos os eventos"}
           </h1>
           <div className="flex items-center gap-3">
@@ -310,19 +288,25 @@ function SearchContent() {
           </div>
         </div>
 
-        {filteredEvents.length === 0 ? (
+        {isLoading && filteredEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <p className="text-xl text-gray-11 mb-4">Carregando eventos...</p>
+          </div>
+        ) : filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <p className="text-xl text-gray-11 mb-4">
               Nenhum evento encontrado
             </p>
             <p className="text-sm text-gray-10">
-              Tente ajustar os filtros ou buscar por outros termos
+              {query
+                ? `Nenhum resultado para "${query}". Tente ajustar os filtros ou buscar por outros termos.`
+                : "Tente ajustar os filtros ou buscar por outros termos"}
             </p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {paginatedEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </div>
@@ -331,8 +315,9 @@ function SearchContent() {
                 onClick={handleLoadMore}
                 className="w-full mt-8 border border-gray-6 text-gray-12"
                 variant="outline"
+                disabled={isLoading}
               >
-                Carregar mais eventos
+                {isLoading ? "Carregando..." : "Carregar mais eventos"}
               </Button>
             )}
           </>
@@ -359,4 +344,3 @@ export default function SearchPage() {
     </Suspense>
   );
 }
-

@@ -11,7 +11,6 @@ import React, {
 } from "react";
 import Link from "next/link";
 import { Checkbox } from "../CheckBox";
-import Image from "next/image";
 import { VirtualList } from "../VirtualList";
 
 export interface DropdownOption {
@@ -29,8 +28,6 @@ export interface ModalityColumn {
   icon?: any;
 }
 
-// Ultra-lightweight lazy image component with Intersection Observer
-// Uses native img tag instead of Next.js Image for better performance
 const LazyModalityImage = memo(
   ({
     src,
@@ -45,12 +42,10 @@ const LazyModalityImage = memo(
     const imgRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-      // Only start observing if dropdown is visible
       if (!isVisible || !imgRef.current || shouldLoad) return;
 
       let observer: IntersectionObserver | null = null;
 
-      // Small delay to avoid blocking initial render
       const timeoutId = setTimeout(() => {
         if (!imgRef.current) return;
 
@@ -157,7 +152,6 @@ const ModalityItem = memo(
 
 ModalityItem.displayName = "ModalityItem";
 
-// Wrapper component to memoize the onSelect callback
 const ModalityItemWrapper = memo(
   ({
     item,
@@ -195,43 +189,76 @@ const ModalityItemWrapper = memo(
 
 ModalityItemWrapper.displayName = "ModalityItemWrapper";
 
-// Memoized option item component for virtual list
 const OptionItem = memo(
   ({
     option,
     index,
     onSelect,
+    allOptions,
   }: {
     option: DropdownOption;
     index: number;
     onSelect: (option: DropdownOption) => void;
+    allOptions?: DropdownOption[];
   }) => {
     const handleClick = useCallback(() => {
+      if (option.onClick) {
+        option.onClick();
+      }
       onSelect(option);
     }, [option, onSelect]);
 
+    const isOrganizerRequest = option.label === "organizer";
+    const isIconComponent = option?.icon && typeof option.icon !== "string";
+    const isIconString = option?.icon && typeof option.icon === "string";
+
     const content = (
-      <div className="h-[50px] px-4 text-sm flex items-center text-gray-12 hover:bg-gray-4 hover:text-primary-11 transition-colors duration-200">
-        {!!option?.icon && (
-          <img
-            src={option.icon}
-            alt={option.label}
-            width={24}
-            height={24}
-            className="mr-2 shrink-0"
-            loading="lazy"
-            decoding="async"
-          />
+      <>
+        {isOrganizerRequest ? (
+          <div className="min-h-[112px] px-4 flex flex-col items-start justify-center gap-2 bg-[url('/images/become-organizer.png')] bg-cover bg-center">
+            <h1 className="text-sm font-bold text-gray-12">
+              Torne-se um organizador
+            </h1>
+            <p className="text-sm font-normal text-gray-12 pr-4">
+              Quer tirar seu evento do papel? Vire organizador e publique
+            </p>
+          </div>
+        ) : (
+          <div className="h-[48px] px-4 flex items-center gap-3 text-gray-12 hover:bg-gray-3 transition-colors duration-150 cursor-pointer group">
+            {isIconComponent && (
+              <div className="shrink-0 w-5 h-5 flex items-center justify-center text-gray-11 group-hover:text-gray-12 transition-colors">
+                {React.createElement(option.icon, { className: "w-5 h-5" })}
+              </div>
+            )}
+            {isIconString && (
+              <img
+                src={option.icon}
+                alt={option.label}
+                width={20}
+                height={20}
+                className="shrink-0"
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+            <span className="text-sm font-normal text-gray-12 truncate">
+              {option.label}
+            </span>
+          </div>
         )}
-        <span className="truncate">{option.label}</span>
-      </div>
+      </>
     );
+
+    if (option.isDivider) {
+      return <div className="h-px bg-gray-6 mx-0 my-0" />;
+    }
+
+    const prevOption = allOptions && index > 0 ? allOptions[index - 1] : null;
+    const shouldShowBorder = index > 0 && !prevOption?.isDivider;
 
     return (
       <div
-        className={`block h-[50px] ${
-          index > 0 ? "border-t border-gray-6" : ""
-        }`}
+        className={`block ${shouldShowBorder ? "border-t border-gray-6" : ""}`}
       >
         {option.href ? (
           <Link
@@ -304,14 +331,12 @@ export function Dropdown({
     }
 
     const prevIds = prevSelectedIdsRef.current;
-    // Quick length check first
     if (prevIds.length !== selectedIds.length) {
       prevSelectedIdsRef.current = selectedIds;
       setInternalSelectedIds(selectedIds);
       return;
     }
 
-    // Only do deep comparison if lengths match
     const prevSet = new Set(prevIds);
     const hasChanged =
       selectedIds.some((id) => !prevSet.has(id)) ||
@@ -348,7 +373,6 @@ export function Dropdown({
   const handleSelect = useCallback(
     (option: DropdownOption) => {
       if (multiSelect && option.id) {
-        // Use Set for O(1) lookup instead of O(n) array.includes
         const isCurrentlySelected = selectedIdsSet.has(option.id);
         const newSelectedIds = isCurrentlySelected
           ? internalSelectedIds.filter((id) => id !== option.id)
@@ -383,7 +407,6 @@ export function Dropdown({
     ]
   );
 
-  // Memoize position classes calculation
   const positionClasses = useMemo(() => {
     const hasCustomTop = className.match(/\btop-\d+/);
     const hasCustomBottom = className.match(/\bbottom-\d+/);
@@ -428,14 +451,12 @@ export function Dropdown({
   const triggerContent =
     typeof trigger === "function" ? trigger(isOpen) : trigger;
 
-  // Calculate container height from maxHeight string
   const containerHeight = useMemo(() => {
     if (!maxHeight) return 400;
     const match = maxHeight.match(/\d+/);
     return match ? parseInt(match[0], 10) : 400;
   }, [maxHeight]);
 
-  // Determine if we should use virtual list (more than 10 items)
   const shouldUseVirtualList = useMemo(() => {
     return options && options.length > 10;
   }, [options]);
@@ -455,7 +476,7 @@ export function Dropdown({
       </div>
       <div
         {...dropdownDataAttr}
-        className={`absolute ${positionClasses} ${width} ${maxHeight} bg-gray-2 rounded-xl shadow-[0_0_10px_rgba(0,0,0,0.1)] border border-gray-6 z-50 overflow-hidden transition-all duration-200 ease-out origin-top ${className} ${
+        className={`absolute ${positionClasses} ${width} ${maxHeight} bg-gray-1 rounded-lg shadow-lg border border-gray-6 z-50 overflow-hidden transition-all duration-200 ease-out origin-top ${className} ${
           isOpen
             ? "opacity-100 scale-y-100 translate-y-0 pointer-events-auto visible"
             : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none invisible"
@@ -523,22 +544,25 @@ export function Dropdown({
                   option={option}
                   index={index}
                   onSelect={handleSelect}
+                  allOptions={options}
                 />
               )}
             />
           ) : (
-            options?.map((option, index) => (
-              <OptionItem
-                key={index}
-                option={option}
-                index={index}
-                onSelect={handleSelect}
-              />
-            ))
+            options?.map((option, index) => {
+              return (
+                <OptionItem
+                  key={index}
+                  option={option}
+                  index={index}
+                  onSelect={handleSelect}
+                  allOptions={options}
+                />
+              );
+            })
           )}
         </div>
       </div>
     </div>
   );
 }
-

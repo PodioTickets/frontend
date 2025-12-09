@@ -21,7 +21,7 @@ export interface Event {
   organizer: Organizer;
   topics: Topic[];
   locations: [];
-  modalities: [];
+  modalities: Modality[];
   kits: [];
   questions: [];
 }
@@ -30,9 +30,33 @@ export interface Topic {
   id: string;
   eventId: string;
   title: string;
+  content: string;
   isEnabled: boolean;
   isDefault: boolean;
   order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModalityTemplate {
+  id: string;
+  code: string;
+  label: string;
+  icon: string;
+}
+
+export interface Modality {
+  id: string;
+  eventId: string;
+  templateId: string;
+  name: string;
+  description?: string;
+  price: number;
+  maxParticipants?: number;
+  currentParticipants?: number;
+  isActive: boolean;
+  order: number;
+  template?: ModalityTemplate;
   createdAt: string;
   updatedAt: string;
 }

@@ -25,8 +25,8 @@ export function SuccessIcon({ className }: { className?: string }) {
           y2="64"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stop-color="#46A758" />
-          <stop offset="1" stop-color="#308737" />
+          <stop stopColor="#46A758" />
+          <stop offset="1" stopColor="#308737" />
         </linearGradient>
       </defs>
     </svg>
