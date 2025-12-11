@@ -41,12 +41,12 @@ export function EventCard({ event }: EventCardProps) {
         src={event.bannerUrl}
         alt={event.name}
         width={50000}
-        height={148}
-        className="rounded-lg object-contain"
+        height={400}
+        className="rounded-lg object-cover"
       />
 
       <div className="flex flex-col gap-2 px-3 mt-2">
-        <h1 className="text-lg font-bold truncate">{event.name}</h1>
+        <h1 className="font-bold truncate">{event.name}</h1>
         <h1 className="flex items-center gap-2 text-gray-12">
           <LocationIcon className="size-5" />{" "}
           <span className="text-sm text-gray-12">
@@ -59,7 +59,17 @@ export function EventCard({ event }: EventCardProps) {
 
       <div className="flex flex-col justify-between px-3 gap-3">
         <h1 className="flex items-center gap-2 text-sm text-gray-12">
-          <FlagIcon className="size-5" /> <span>{event.organizer.name}</span>
+          {event.organizer?.user?.avatarUrl ? (
+            <Image
+              src={event.organizer?.user?.avatarUrl}
+              alt={event.organizer.name}
+              width={20}
+              height={20}
+            />
+          ) : (
+            <FlagIcon className="size-5" />
+          )}
+          <span>{event.organizer.name}</span>
         </h1>
         <h1 className="flex items-center gap-2 text-sm text-gray-12">
           <CalendarIcon className="size-5" /> <span>{formattedDate}</span>

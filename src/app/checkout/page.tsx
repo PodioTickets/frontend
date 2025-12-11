@@ -5,6 +5,7 @@ import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { InformationStep } from "@/components/Checkout/InformationStep";
 import { SubscriptionStep } from "@/components/Checkout/SubscriptionStep";
 import { PaymentStep } from "@/components/Checkout/PaymentStep";
+import { PaymentSuccessStep } from "@/components/Checkout/PaymentSuccessStep";
 import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -85,7 +86,15 @@ function CheckoutContent() {
           />
         );
       case 4:
-        return <PaymentStep event={event} onBack={() => setActiveOption(3)} />;
+        return (
+          <PaymentStep
+            event={event}
+            onBack={() => setActiveOption(3)}
+            onSuccess={() => setActiveOption(5)}
+          />
+        );
+      case 5:
+        return <PaymentSuccessStep event={event} />;
       default:
         return (
           <ModalitiesStep
@@ -99,10 +108,12 @@ function CheckoutContent() {
 
   return (
     <div className="w-full max-w-[1760px] mx-auto gap-4">
-      <CheckoutHeader
-        activeOption={activeOption}
-        setActiveOption={setActiveOption}
-      />
+      {activeOption !== 5 && (
+        <CheckoutHeader
+          activeOption={activeOption}
+          setActiveOption={setActiveOption}
+        />
+      )}
 
       <div className="w-full flex flex-col min-h-screen items-start justify-start gap-4 py-11 px-4">
         {renderStep()}

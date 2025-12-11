@@ -1,47 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { useAuth } from "@/hooks/useAuth";
+import { userService } from "@/services";
+import toast from "react-hot-toast";
 import {
   User,
-  Calendar,
   Phone,
   Mail,
   Lock,
   Shield,
   ChevronDown,
   Plus,
-  Download,
-  Check,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Checkbox } from "@/components/CheckBox";
+import { FlagIcon } from "@/components/Icons/FlagIcon";
+import { HeartIcon } from "@/components/Icons/HeartIcon";
+import { ArrowButton } from "@/components/ArrowButton";
+import { useChangeEmailModal } from "@/stores/modalStore";
+import { CPFIcon } from "@/components/Icons/CPFIcon";
+import { DatePicker } from "@/components/DatePicker";
+import { getApiClient } from "@/services/base/ApiClient";
 
 export default function UserProfilePage() {
-  const { user } = useAuth();
-  const [formData, setFormData] = useState({
-    firstName: (user as any)?.firstName ?? "",
-    lastName: (user as any)?.lastName ?? "",
-    documentNumber: (user as any)?.documentNumber ?? "",
-    dateOfBirth: (user as any)?.dateOfBirth ?? "",
-    nationality: "Brasileira",
-    phone: (user as any)?.phone ?? "",
-    emergencyPhone: "",
-    gender: (user as any)?.gender ?? "",
-    email: user?.email ?? "",
-    currentPassword: "",
-    newPassword: "",
-  });
+  const { user, refetchUser } = useAuth();
+  const { openChangeEmailModal } = useChangeEmailModal();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  // Initialize formData with user data when available
+  const initialFormData = useMemo(
+    () => ({
+      firstName: (user as any)?.firstName ?? "",
+      lastName: (user as any)?.lastName ?? "",
+      documentNumber: (user as any)?.documentNumber ?? "",
+      dateOfBirth: (user as any)?.dateOfBirth ?? "",
+      nationality: (user as any)?.nationality ?? "Brasileira",
+      phone: (user as any)?.phone ?? "",
+      emergencyPhone: (user as any)?.emergencyPhone ?? "",
+      gender: (user as any)?.gender ?? "",
+      email: user?.email ?? "",
+      currentPassword: "",
+      newPassword: "",
+    }),
+    [user]
+  );
+
+  const [formData, setFormData] = useState(initialFormData);
+
+  // Update formData when user data is loaded
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        firstName: (user as any)?.firstName ?? prev.firstName,
+        lastName: (user as any)?.lastName ?? prev.lastName,
+        documentNumber: (user as any)?.documentNumber ?? prev.documentNumber,
+        dateOfBirth: (user as any)?.dateOfBirth ?? prev.dateOfBirth,
+        nationality: (user as any)?.nationality ?? prev.nationality,
+        phone: (user as any)?.phone ?? prev.phone,
+        emergencyPhone: (user as any)?.emergencyPhone ?? prev.emergencyPhone,
+        gender: (user as any)?.gender ?? prev.gender,
+        email: user?.email ?? prev.email,
+        // Don't update passwords
+        currentPassword: prev.currentPassword,
+        newPassword: prev.newPassword,
+      }));
+    }
+  }, [user]);
 
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState<
-    "sms" | "authenticator"
-  >("sms");
+  const [twoFactorMethod, setTwoFactorMethod] = useState<"email">("email");
   const [verificationCode, setVerificationCode] = useState([
     "",
     "",
@@ -51,6 +86,50 @@ export default function UserProfilePage() {
     "",
   ]);
   const [codeError, setCodeError] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato inválido. Use apenas PNG ou JPEG.");
+      return;
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      toast.error("Arquivo muito grande. Tamanho máximo: 5MB.");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const response = await userService.uploadAvatar(file);
+      toast.success("Foto de perfil atualizada com sucesso!");
+
+      // Refresh user data to get updated avatar URL
+      await refetchUser();
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast.error(
+        error?.message || "Erro ao atualizar foto de perfil. Tente novamente."
+      );
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    // TODO: Implement remove avatar endpoint if available
+    toast.error("Funcionalidade de remover avatar ainda não implementada.");
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -73,8 +152,7 @@ export default function UserProfilePage() {
   };
 
   const handleChangeEmail = () => {
-    // TODO: Implement email change logic
-    console.log("Changing email");
+    openChangeEmailModal();
   };
 
   const handleCodeChange = (index: number, value: string) => {
@@ -150,7 +228,11 @@ export default function UserProfilePage() {
             <div className="flex items-end gap-4">
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full">
                 <Image
-                  src="/images/default-avatar.png"
+                  src={
+                    user?.avatarUrl
+                      ? `${getApiClient().getBaseURL()}${user?.avatarUrl}`
+                      : "/images/default-avatar.png"
+                  }
                   alt="Profile"
                   fill
                   className="object-cover"
@@ -161,27 +243,30 @@ export default function UserProfilePage() {
                 />
               </div>
               <div className="flex flex-1 flex-col gap-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                  disabled={isUploadingAvatar}
+                />
                 <div className="flex gap-[17px]">
                   <Button
                     variant="default"
                     className="h-10 gap-2 px-5"
-                    onClick={() => {
-                      // TODO: Implement image upload
-                      console.log("Change image");
-                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
                   >
                     <Plus className="size-5" />
-                    Alterar imagem
+                    {isUploadingAvatar ? "Enviando..." : "Alterar imagem"}
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-10 gap-2 px-5"
-                    onClick={() => {
-                      // TODO: Implement image removal
-                      console.log("Remove image");
-                    }}
+                    className="h-10 text-gray-11 gap-2 px-5"
+                    onClick={handleRemoveAvatar}
+                    disabled={isUploadingAvatar || !user?.avatarUrl}
                   >
-                    <Plus className="size-5" />
                     Remover imagem
                   </Button>
                 </div>
@@ -204,7 +289,7 @@ export default function UserProfilePage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {/* Name */}
               <div className="flex min-w-[283px] flex-1 flex-col gap-2">
                 <label className="text-base text-gray-12">Nome</label>
@@ -226,16 +311,13 @@ export default function UserProfilePage() {
                 <label className="text-base text-gray-12">
                   Data de nascimento
                 </label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
-                  <Calendar className="size-5 shrink-0 text-gray-11" />
-                  <Input
-                    type="date"
-                    name="dateOfBirth"
-                    value={formData.dateOfBirth}
-                    onChange={handleInputChange}
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                  />
-                </div>
+                <DatePicker
+                  value={formData.dateOfBirth}
+                  onChange={(value) =>
+                    setFormData((prev) => ({ ...prev, dateOfBirth: value }))
+                  }
+                  placeholder="Selecione sua data de nascimento"
+                />
               </div>
 
               {/* Nationality */}
@@ -249,17 +331,12 @@ export default function UserProfilePage() {
                   className="flex h-12 items-center justify-between rounded-lg border border-gray-7 bg-transparent px-3"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="size-5 shrink-0 rounded-sm border border-gray-11" />
+                    <FlagIcon className="size-5 shrink-0 text-gray-11" />
                     <span className="text-base text-gray-11">
                       {formData.nationality}
                     </span>
                   </div>
-                  <ChevronDown
-                    className={cn(
-                      "size-6 shrink-0 text-gray-11 transition-transform",
-                      showNationalityDropdown && "rotate-180"
-                    )}
-                  />
+                  <ArrowButton isOpen={showNationalityDropdown} />
                 </button>
                 {showNationalityDropdown && (
                   <div className="absolute top-[76px] z-10 w-full rounded-lg border border-gray-6 bg-gray-1 shadow-[0px_2px_4px_0px_rgba(0,0,0,0.25)]">
@@ -293,22 +370,6 @@ export default function UserProfilePage() {
                 )}
               </div>
 
-              {/* CPF */}
-              <div className="flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">CPF</label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
-                  <div className="size-5 shrink-0" />
-                  <Input
-                    type="text"
-                    name="documentNumber"
-                    value={formData.documentNumber}
-                    onChange={handleInputChange}
-                    placeholder="000.000.000-00"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                  />
-                </div>
-              </div>
-
               {/* Phone */}
               <div className="flex min-w-[283px] flex-1 flex-col gap-2">
                 <label className="text-base text-gray-12">Telefone</label>
@@ -325,19 +386,16 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              {/* Emergency Phone */}
               <div className="flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">
-                  Telefone de emergência
-                </label>
+                <label className="text-base text-gray-12">CPF</label>
                 <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
-                  <Phone className="size-5 shrink-0 text-gray-11" />
+                  <CPFIcon className="size-5 shrink-0 text-gray-11" />
                   <Input
-                    type="tel"
-                    name="emergencyPhone"
-                    value={formData.emergencyPhone}
+                    type="text"
+                    name="documentNumber"
+                    value={formData.documentNumber}
                     onChange={handleInputChange}
-                    placeholder="Opcional"
+                    placeholder="000.000.000-00"
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
@@ -352,17 +410,12 @@ export default function UserProfilePage() {
                   className="flex h-12 items-center justify-between rounded-lg border border-gray-7 bg-transparent px-3"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="size-5 shrink-0" />
+                    <HeartIcon className="size-5 shrink-0 text-gray-11" />
                     <span className="text-base text-gray-11">
                       {formData.gender || "Selecione"}
                     </span>
                   </div>
-                  <ChevronDown
-                    className={cn(
-                      "size-6 shrink-0 text-gray-11 transition-transform",
-                      showGenderDropdown && "rotate-180"
-                    )}
-                  />
+                  <ArrowButton isOpen={showGenderDropdown} />
                 </button>
                 {showGenderDropdown && (
                   <div className="absolute top-[76px] z-10 w-full rounded-lg border border-gray-6 bg-gray-1 shadow-[0px_2px_4px_0px_rgba(0,0,0,0.25)]">
@@ -390,6 +443,23 @@ export default function UserProfilePage() {
                   </div>
                 )}
               </div>
+
+              <div className="flex min-w-[283px] w-full flex-1 flex-col gap-2">
+                <label className="text-base text-gray-12">
+                  Telefone de emergência
+                </label>
+                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
+                  <Phone className="size-5 shrink-0 text-gray-11" />
+                  <Input
+                    type="tel"
+                    name="emergencyPhone"
+                    value={formData.emergencyPhone}
+                    onChange={handleInputChange}
+                    placeholder="Opcional"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end">
@@ -409,7 +479,7 @@ export default function UserProfilePage() {
               Alterar senha
             </h2>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {/* Current Password */}
               <div className="flex min-w-[269px] flex-1 flex-col gap-2">
                 <label className="text-base text-gray-12">Senha atual</label>
@@ -424,16 +494,6 @@ export default function UserProfilePage() {
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
-                <button
-                  type="button"
-                  className="text-left text-base text-gray-11 hover:text-gray-12"
-                  onClick={() => {
-                    // TODO: Implement forgot password
-                    console.log("Forgot password");
-                  }}
-                >
-                  Esqueci minha senha
-                </button>
               </div>
 
               {/* New Password */}
@@ -453,9 +513,36 @@ export default function UserProfilePage() {
                   />
                 </div>
               </div>
+
+              <div className="flex min-w-[269px] flex-1 flex-col gap-2">
+                <label className="text-base text-gray-12">
+                  Criar uma senha
+                </label>
+                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
+                  <Lock className="size-5 shrink-0 text-gray-11" />
+                  <Input
+                    type="password"
+                    name="newPassword"
+                    value={formData.newPassword}
+                    onChange={handleInputChange}
+                    placeholder="Digite uma senha"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">
+              <button
+                type="button"
+                className="text-left text-base text-gray-11 hover:text-gray-12"
+                onClick={() => {
+                  // TODO: Implement forgot password
+                  console.log("Forgot password");
+                }}
+              >
+                Esqueci minha senha
+              </button>
               <div />
               <Button
                 variant="default"
@@ -538,38 +625,22 @@ export default function UserProfilePage() {
                     Selecione a forma que deseja receber a mensagem do código
                   </p>
                   <div className="flex gap-8">
-                    <button
-                      type="button"
-                      onClick={() => setTwoFactorMethod("sms")}
+                    <div
+                      onClick={() => setTwoFactorMethod("email")}
                       className="flex items-center gap-2"
                     >
                       <Checkbox
-                        checked={twoFactorMethod === "sms"}
-                        onCheckedChange={() => setTwoFactorMethod("sms")}
+                        checked={twoFactorMethod === "email"}
+                        onCheckedChange={() => setTwoFactorMethod("email")}
                       />
-                      <span className="text-base text-gray-12">Via SMS</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTwoFactorMethod("authenticator")}
-                      className="flex items-center gap-2"
-                    >
-                      <Checkbox
-                        checked={twoFactorMethod === "authenticator"}
-                        onCheckedChange={() =>
-                          setTwoFactorMethod("authenticator")
-                        }
-                      />
-                      <span className="text-base text-gray-12">
-                        Google Authenticator
-                      </span>
-                    </button>
+                      <span className="text-base text-gray-12">Email</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Code Input Section */}
                 <div className="flex flex-col gap-7">
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
                     <h3 className="text-lg font-bold leading-[1.1] text-gray-12">
                       Informe o código de segurança
                     </h3>
@@ -577,10 +648,6 @@ export default function UserProfilePage() {
                       Para continuar com a verificação em duas etapas em nossa
                       plataforma, por favor, insira abaixo o código recebido
                       através de SMS em seu dispositivo móvel
-                    </p>
-                    <p className="text-base font-medium text-gray-11">
-                      <span className="font-bold text-yellow-11">ATENÇÃO!</span>
-                      {` Observe se o número cadastrado não tem bloqueio de recebimento de SMS.`}
                     </p>
                   </div>
 
@@ -609,7 +676,7 @@ export default function UserProfilePage() {
                       ))}
                     </div>
                     {codeError && (
-                      <p className="text-base text-red-10 text-center">
+                      <p className="text-base text-red-10 text-start">
                         Código incorreto ou expirado. Tente novamente ou reenvie
                         um novo código
                       </p>

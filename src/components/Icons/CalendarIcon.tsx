@@ -1,48 +1,42 @@
 export function CalendarIcon({ className }: { className?: string }) {
   return (
     <svg
-      className={className}
-      width="32"
-      height="32"
-      viewBox="0 0 32 32"
-      fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      className={className}
     >
       <path
-        d="M10.667 2.6665V6.6665"
-        stroke="#202020"
+        d="M6.66699 1.66675V4.16675"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M21.333 2.6665V6.6665"
-        stroke="#202020"
+        d="M13.333 1.66675V4.16675"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M4 8.6665C4 6.45736 5.79086 4.6665 8 4.6665H24C26.2091 4.6665 28 6.45737 28 8.6665V25.3332C28 27.5423 26.2091 29.3332 24 29.3332H8C5.79086 29.3332 4 27.5423 4 25.3332V8.6665Z"
-        stroke="#202020"
+        d="M2.5 6.91675C2.5 4.70761 4.29086 2.91675 6.5 2.91675H13.5C15.7091 2.91675 17.5 4.70761 17.5 6.91675V14.3334C17.5 16.5426 15.7091 18.3334 13.5 18.3334H6.5C4.29086 18.3334 2.5 16.5426 2.5 14.3334V6.91675Z"
+        stroke="currentColor"
         strokeWidth="1.5"
       />
       <path
-        d="M4 12H28"
-        stroke="#202020"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M16 16V24"
-        stroke="#202020"
+        d="M12.5 12.5L7.5 12.5"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M20 20L12 20"
-        stroke="#202020"
+        d="M17.5 7.5L2.5 7.5"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"

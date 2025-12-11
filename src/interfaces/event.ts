@@ -13,6 +13,7 @@ export interface Event {
   price: number;
   serviceFee: number;
   googleMapsLink: string;
+  stravaRouteId?: string;
   eventDate: string;
   registrationEndDate: string;
   status: string;

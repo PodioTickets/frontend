@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | null;
 
 interface ModalData {
   amount?: number;
@@ -93,5 +93,16 @@ export const useRegisterModal = () => {
     data: data as ModalData | null,
     openRegisterModal: (data?: ModalData) => openModal("register", data),
     closeRegisterModal: closeModal,
+  };
+};
+
+export const useChangeEmailModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "changeEmail",
+    data: data as ModalData | null,
+    openChangeEmailModal: (data?: ModalData) => openModal("changeEmail", data),
+    closeChangeEmailModal: closeModal,
   };
 };

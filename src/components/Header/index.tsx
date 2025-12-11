@@ -15,6 +15,7 @@ import { useModalStore } from "@/stores/modalStore";
 import { User, LogOut, LogOutIcon } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
+import { getApiClient } from "@/services/base/ApiClient";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -151,9 +152,13 @@ export function Header() {
               <Dropdown
                 trigger={(isOpen) => (
                   <div className="flex items-center gap-2 cursor-pointer h-full text-gray-2">
-                    {(user as any).image ? (
+                    {user?.avatarUrl ? (
                       <Image
-                        src={(user as any).image}
+                        src={
+                          user?.avatarUrl
+                            ? `${getApiClient().getBaseURL()}${user?.avatarUrl}`
+                            : "/images/default-avatar.png"
+                        }
                         alt="User"
                         width={40}
                         height={40}
@@ -180,6 +185,9 @@ export function Header() {
                     id: "tickets",
                     icon: TicketIcon,
                     label: "Ingressos",
+                    onClick: () => {
+                      push("/user/tickets");
+                    },
                   },
                   {
                     id: "help",
@@ -212,7 +220,7 @@ export function Header() {
                 position="bottom"
                 align="end"
                 width="w-[240px]"
-                className="right-0 mt-2"
+                className="right-0 mt-3"
                 onSelect={(option) => {
                   if (option.onClick) option.onClick();
                 }}

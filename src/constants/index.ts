@@ -196,3 +196,44 @@ export const checkoutHeaderOptions = [
   },
 ];
 
+export const statusOptions = [
+  {
+    id: "inscricoes-abertas",
+    label: "Inscrições abertas",
+  },
+  {
+    id: "inscricoes-encerradas",
+    label: "Inscrições encerradas",
+  },
+  {
+    id: "evento-encerrado",
+    label: "Evento encerrado",
+  },
+];
+
+export const orderOptions = [
+  {
+    id: "date-asc",
+    label: "Data: mais próximo",
+  },
+  {
+    id: "date-desc",
+    label: "Data: mais distante",
+  },
+  {
+    id: "price-asc",
+    label: "Preço: menor para maior",
+  },
+  {
+    id: "price-desc",
+    label: "Preço: maior para menor",
+  },
+  {
+    id: "name-asc",
+    label: "Nome: A-Z",
+  },
+  {
+    id: "name-desc",
+    label: "Nome: Z-A",
+  },
+];

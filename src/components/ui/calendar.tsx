@@ -118,16 +118,19 @@ function Calendar({
   classNames,
   showOutsideDays = true,
   captionLayout,
+  disabled: customDisabled,
   ...props
 }: CalendarProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const isDateDisabled = (date: Date) => {
+  const defaultIsDateDisabled = (date: Date) => {
     const dateToCheck = new Date(date);
     dateToCheck.setHours(0, 0, 0, 0);
     return dateToCheck < today;
   };
+
+  const isDateDisabled = customDisabled || defaultIsDateDisabled;
 
   // Components configuration
   const components = {

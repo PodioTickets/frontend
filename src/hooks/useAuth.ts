@@ -14,7 +14,16 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  documentNumber: string;
+  documentType: string;
+  gender: string;
+  phone: string;
+  dateOfBirth: string;
+  country: string;
+  state: string;
+  city: string;
   role: string;
+  avatarUrl: string;
 }
 
 interface AuthContextType {
@@ -74,21 +83,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedUser = localStorage.getItem("user");
+        const { data: profile } = await userService.getProfile();
         const hasToken = userService.isAuthenticated();
-        if (hasToken && storedUser) {
-          try {
-            const cachedUser = JSON.parse(storedUser);
-            const cacheAge = Date.now() - (cachedUser._cachedAt || 0);
-            if (cacheAge < 5 * 60 * 1000) {
-              setUser(cachedUser);
-              return;
-            }
-          } catch (parseError) {
-            console.warn("Failed to parse cached user data");
-          }
-        }
-
         if (hasToken) {
           try {
             const { data: profile } = await userService.getProfile();
@@ -97,9 +93,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(profile);
           } catch (profileError) {
             console.error("Profile fetch failed:", profileError);
-            if (storedUser) {
+            if (profile) {
               try {
-                const cachedUser = JSON.parse(storedUser);
+                const cachedUser = JSON.parse(profile);
                 setUser(cachedUser);
               } catch (parseError) {
                 console.warn(
@@ -109,8 +105,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               }
             }
           }
-        } else if (storedUser) {
-          clearAuthData();
         }
       } catch (error) {
         console.error("Auth check failed:", error);

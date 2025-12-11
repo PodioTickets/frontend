@@ -10,6 +10,12 @@ export interface ApiResponse<T = any> {
   timestamp?: string;
 }
 
+export function getApiClient() {
+  return new ApiClient(
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333"
+  );
+}
+
 // Classe base para cliente HTTP
 export class ApiClient {
   private client: AxiosInstance;
@@ -27,6 +33,10 @@ export class ApiClient {
     });
 
     this.setupInterceptors();
+  }
+
+  getBaseURL(): string {
+    return this.client.defaults.baseURL || "";
   }
 
   private setupInterceptors() {

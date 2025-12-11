@@ -175,7 +175,7 @@ export async function proxy(request: NextRequest) {
     `connect-src ${trustedDomains.join(
       " "
     )} wss: ws: https://api.web3modal.org https://pulse.walletconnect.org https://rpc.walletconnect.org https://data-seed-prebsc-1-s1.bnbchain.org https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
-    `frame-src 'self' https://secure.walletconnect.org https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com`,
+    `frame-src 'self' https://secure.walletconnect.org https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com`,
     `img-src ${trustedDomains.join(" ")} data: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     `object-src 'none'`,

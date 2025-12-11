@@ -7,6 +7,7 @@ import { HomeFilters } from "@/components/HomeFilters";
 import { Button } from "@/components/Button";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { useEventSearch } from "@/hooks/useEventSearch";
+import { statusOptions, orderOptions } from "@/constants";
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -53,15 +54,7 @@ function SearchContent() {
   // Resetar página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    searchQuery,
-    country,
-    state,
-    city,
-    dateFrom,
-    dateTo,
-    includePast,
-  ]);
+  }, [searchQuery, country, state, city, dateFrom, dateTo, includePast]);
 
   const initialDateRange = useMemo(() => {
     if (dateFrom || dateTo) {
@@ -172,48 +165,6 @@ function SearchContent() {
   const handleClearFilters = () => {
     router.push("/search");
   };
-
-  const statusOptions: DropdownOption[] = [
-    {
-      id: "inscricoes-abertas",
-      label: "Inscrições abertas",
-    },
-    {
-      id: "inscricoes-encerradas",
-      label: "Inscrições encerradas",
-    },
-    {
-      id: "evento-encerrado",
-      label: "Evento encerrado",
-    },
-  ];
-
-  const orderOptions: DropdownOption[] = [
-    {
-      id: "date-asc",
-      label: "Data: mais próximo",
-    },
-    {
-      id: "date-desc",
-      label: "Data: mais distante",
-    },
-    {
-      id: "price-asc",
-      label: "Preço: menor para maior",
-    },
-    {
-      id: "price-desc",
-      label: "Preço: maior para menor",
-    },
-    {
-      id: "name-asc",
-      label: "Nome: A-Z",
-    },
-    {
-      id: "name-desc",
-      label: "Nome: Z-A",
-    },
-  ];
 
   const getStatusLabel = () => {
     const option = statusOptions.find((opt) => opt.id === statusFilter);

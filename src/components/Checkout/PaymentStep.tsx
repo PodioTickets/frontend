@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { OrderSummary } from "./OrderSummary";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
@@ -8,13 +8,17 @@ import { VisaIcon } from "../Icons/VisaIcon";
 import { MasterCardIcon } from "../Icons/MasterCardIcon";
 import { EloIcon } from "../Icons/EloIcon";
 import { HelpIcon } from "../Icons/HelpIcon";
-import type { Event } from "@/constants/events";
 import { ArrowButton } from "../ArrowButton";
 import { RemoveIcon } from "../Icons/RemoveIcon";
+import Image from "next/image";
+import { Tooltip, CVVTooltip } from "../Tooltip";
+import type { Event } from "@/interfaces/event";
+import { useCheckout } from "@/contexts/CheckoutContext";
 
 interface PaymentStepProps {
   event: Event;
   onBack: () => void;
+  onSuccess?: () => void;
 }
 
 type PaymentMethod = "credit" | "pix" | "boleto";
@@ -32,37 +36,38 @@ function CreditCardForm({
   installmentOptions,
   selectedInstallments,
   setSelectedInstallments,
+  onSuccess,
 }: {
   installmentOptions: DropdownOption[];
   selectedInstallments: string;
   setSelectedInstallments: (value: string) => void;
+  onSuccess?: () => void;
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex justify-between gap-4">
-        <div className="space-y-2 w-full">
-          <label className="text-sm font-medium text-gray-12">
-            Número do cartão
-          </label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
-            placeholder="Ex: 5400 7975 6026 4737"
-          />
-        </div>
-        <div className="space-y-2 w-full">
-          <label className="text-sm font-medium text-gray-12">
-            Nome impresso no cartão
-          </label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
-            placeholder="Ex: João Ribeiro"
-          />
-        </div>
+      <div className="space-y-2 w-full">
+        <label className="text-sm font-medium text-gray-12">
+          Nome impresso no cartão
+        </label>
+        <input
+          type="text"
+          className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+          placeholder="Ex: João Ribeiro"
+        />
       </div>
 
-      <div className="flex justify-between gap-4 w-3/4">
+      <div className="space-y-2 w-full">
+        <label className="text-sm font-medium text-gray-12">
+          Número do cartão
+        </label>
+        <input
+          type="text"
+          className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+          placeholder="Ex: 5400 7975 6026 4737"
+        />
+      </div>
+
+      <div className="flex justify-between gap-4 w-full">
         <div className="flex-1 space-y-2">
           <label className="text-sm font-medium text-gray-12">
             Data de validade
@@ -76,15 +81,27 @@ function CreditCardForm({
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-12">CVV</label>
-            <button className="text-gray-11 hover:text-gray-12 transition-colors">
-              <HelpIcon className="size-4" />
-            </button>
           </div>
-          <input
-            type="text"
-            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
-            placeholder="Digite os 3 dígitos do seu cartão"
-          />
+          <div className="relative w-full">
+            <input
+              type="text"
+              className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+              placeholder="Digite os 3 dígitos do seu cartão"
+            />
+            <Tooltip
+              content={<CVVTooltip />}
+              position="topRight"
+              trigger="hover"
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-help"
+            >
+              <button
+                type="button"
+                className="text-gray-11 hover:text-gray-12 transition-colors"
+              >
+                <HelpIcon className="size-4" />
+              </button>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
@@ -109,7 +126,15 @@ function CreditCardForm({
         />
       </div>
 
-      <Button className="w-full py-4 text-lg font-bold">
+      <Button
+        className="w-full py-4 text-lg font-bold"
+        onClick={() => {
+          // TODO: Process credit card payment here
+          if (onSuccess) {
+            onSuccess();
+          }
+        }}
+      >
         Finalizar compra
       </Button>
     </div>
@@ -197,11 +222,18 @@ function PixModal({
   );
 }
 
-function PixForm() {
+function PixForm({ onSuccess }: { onSuccess?: () => void }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleFinalizePurchase = () => {
     setIsModalOpen(true);
+    // In real app, this would wait for payment confirmation via webhook
+    // For now, we'll simulate success after a delay
+    setTimeout(() => {
+      if (onSuccess) {
+        onSuccess();
+      }
+    }, 3000);
   };
 
   return (
@@ -232,33 +264,6 @@ function PixForm() {
   );
 }
 
-function BoletoForm() {
-  return (
-    <div className="bg-white rounded-lg border border-gray-5 p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-gray-12 mb-6">
-        Pagamento via Boleto
-      </h2>
-      <div className="space-y-4">
-        <p className="text-sm text-gray-11">
-          O boleto será gerado após a finalização da compra e enviado para seu
-          e-mail.
-        </p>
-        <div className="bg-gray-2 p-4 rounded-lg">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-12">
-              Vencimento:
-            </span>
-            <span className="text-sm text-gray-11">3 dias após a compra</span>
-          </div>
-        </div>
-        <Button variant="outline" className="w-full">
-          Gerar boleto
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function PaymentMethodOption({
   option,
   isSelected,
@@ -285,7 +290,7 @@ function PaymentMethodOption({
               : "bg-transparent border-gray-6"
           }`}
         />
-        <span className="text-sm font-medium text-gray-12">
+        <span className="text-sm font-semibold font-family-manrope text-gray-12">
           {option.name}{" "}
           {option.badge?.includes("OFF") && (
             <span className="text-xs text-primary-12 font-semibold ml-2 bg-primary-6 px-2 py-1 rounded-full">
@@ -310,10 +315,65 @@ function PaymentMethodOption({
   );
 }
 
-export function PaymentStep({ event, onBack }: PaymentStepProps) {
+export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>("credit");
   const [selectedInstallments, setSelectedInstallments] = useState<string>("1");
+  const { participants, raceQuantities } = useCheckout();
+
+  // Generate participants data for the list
+  const participantsData = useMemo(() => {
+    const data: Array<{
+      participantIndex: number;
+      ticketName: string;
+      ticketPrice: number;
+      additionalProducts?: Array<{
+        name: string;
+        price: number;
+        quantity: number;
+      }>;
+    }> = [];
+
+    // Mock data for now - in real app, this would come from the checkout context
+    participants.forEach((participant, index) => {
+      if (participant.name || participant.cpf) {
+        data.push({
+          participantIndex: index,
+          ticketName: "Kit inscrição - 3K Caminhada",
+          ticketPrice: 438.34,
+          additionalProducts:
+            index === 0
+              ? [
+                  { name: "Camiseta Regata", price: 29.9, quantity: 1 },
+                  { name: "Viseira", price: 29.9, quantity: 1 },
+                ]
+              : undefined,
+        });
+      }
+    });
+
+    // If no participants, show mock data
+    if (data.length === 0) {
+      return [
+        {
+          participantIndex: 0,
+          ticketName: "Kit inscrição - 3K Caminhada",
+          ticketPrice: 438.34,
+          additionalProducts: [
+            { name: "Camiseta Regata", price: 29.9, quantity: 1 },
+            { name: "Viseira", price: 29.9, quantity: 1 },
+          ],
+        },
+        {
+          participantIndex: 1,
+          ticketName: "Kit inscrição - 3K Caminhada",
+          ticketPrice: 438.34,
+        },
+      ];
+    }
+
+    return data;
+  }, [participants]);
 
   const orderItems = [
     {
@@ -346,10 +406,24 @@ export function PaymentStep({ event, onBack }: PaymentStepProps) {
       name: "Cartão de crédito",
       description: "",
       icons: (
-        <div className="flex gap-1">
-          <VisaIcon className="h-4 w-8" />
-          <MasterCardIcon className="h-4 w-8" />
-          <EloIcon className="h-4 w-8" />
+        <div className="flex gap-2 items-center">
+          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+            <VisaIcon />
+          </div>
+          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+            <EloIcon />
+          </div>
+          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+            <Image
+              src="/images/american_express.png"
+              alt="Mastercard"
+              width={24}
+              height={24}
+            />
+          </div>
+          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+            <MasterCardIcon />
+          </div>
         </div>
       ),
     },
@@ -364,7 +438,6 @@ export function PaymentStep({ event, onBack }: PaymentStepProps) {
   return (
     <>
       <div className="w-full flex items-start justify-between gap-11">
-        {/* Coluna Esquerda - Formulário de Pagamento */}
         <div className="max-w-2/3 w-full">
           <div className="flex flex-col gap-6">
             {/* Cabeçalho */}
@@ -416,9 +489,10 @@ export function PaymentStep({ event, onBack }: PaymentStepProps) {
                           installmentOptions={installmentOptions}
                           selectedInstallments={selectedInstallments}
                           setSelectedInstallments={setSelectedInstallments}
+                          onSuccess={onSuccess}
                         />
                       )}
-                      {option.id === "pix" && <PixForm />}
+                      {option.id === "pix" && <PixForm onSuccess={onSuccess} />}
                     </div>
                   </div>
                 );
@@ -434,6 +508,7 @@ export function PaymentStep({ event, onBack }: PaymentStepProps) {
             serviceFee={39.85}
             total={438.34}
             onApplyCoupon={(coupon) => console.log("Applying coupon:", coupon)}
+            participantsData={participantsData}
           />
         </div>
       </div>

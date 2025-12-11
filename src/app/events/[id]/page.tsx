@@ -14,7 +14,7 @@ import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { modalitiesColumns } from "@/constants";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 export default function EventPage() {
   const params = useParams();
@@ -184,31 +184,60 @@ export default function EventPage() {
         </div>
       </div>
 
-      <div className="w-3/4 self-start mt-10 2xl:mt-20 pr-8 z-10">
-        <div className="flex flex-col gap-2 p-4 rounded-xl border border-gray-6">
-          <h1 className="text-2xl font-bold text-gray-12">
-            Detalhes do evento
-          </h1>
-          <p className="text-gray-11 text-sm">{event.description}</p>
-        </div>
-
+      <div className="w-3/4 self-start mt-10 2xl:mt-14 pr-8 z-10">
         {event.topics?.map((topic) => (
-          <div
-            key={topic.id}
-            className="flex flex-col gap-2 p-4 mt-6 rounded-xl border border-gray-6"
-          >
-            <h1 className="text-2xl font-bold text-gray-12">{topic.title}</h1>
-            <p className="text-gray-11 text-sm">{topic.content}</p>
-          </div>
+          <Fragment key={topic.id}>
+            <div key={topic.id} className="flex flex-col gap-2 my-10">
+              <h1 className="text-2xl font-bold text-gray-12">{topic.title}</h1>
+              <p className="text-gray-11 text-sm">{topic.content}</p>
+            </div>
+            <div className="w-full h-px bg-gray-6" />
+          </Fragment>
         ))}
 
-        <div className="flex flex-col gap-4 mt-6  p-4 rounded-xl border border-gray-6">
+        <div className="flex flex-col gap-4 my-10">
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl font-bold text-gray-12">
               Onde acontecerá o evento
             </h1>
           </div>
           <EventMap city={event.city} state={event.state} title={event.name} />
+        </div>
+
+        <div className="w-full h-px bg-gray-6" />
+
+        <div className="flex flex-col gap-4 mt-10">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-bold text-gray-12">Rota no Strava</h1>
+          </div>
+          <div className="w-full h-[400px] rounded-xl overflow-hidden border border-gray-6 shadow-lg relative bg-gray-2">
+            {event.stravaRouteId ? (
+              <iframe
+                height="100%"
+                width="100%"
+                frameBorder="0"
+                scrolling="no"
+                src={`https://www.strava.com/routes/${event.stravaRouteId}/embed`}
+                title={`Rota do ${event.name} no Strava`}
+                className="w-full h-full"
+                allowFullScreen
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-11">
+                <svg
+                  className="w-16 h-16 mb-4 text-gray-8"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+                <p className="text-lg font-medium mb-2">Rota não disponível</p>
+                <p className="text-sm text-center max-w-md">
+                  A rota do evento ainda não foi cadastrada no Strava
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

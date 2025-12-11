@@ -328,6 +328,57 @@ export class UserService {
     }
   }
 
+  async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await this.apiClient.post<{ avatarUrl: string }>(
+        "/api/v1/user/avatar",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getMyTickets(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<{
+    registrations: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    try {
+      const { page = 1, limit = 20, status } = params || {};
+      const response = await this.apiClient.get("/api/v1/registrations/me", {
+        params: {
+          page,
+          limit,
+          ...(status && { status }),
+        },
+      });
+      return response.data.data || {
+        registrations: [],
+        pagination: { page, limit, total: 0, totalPages: 1 },
+      };
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   private handleError(error: any): AuthError {
     if (error.response?.data) {
       const data = error.response.data;

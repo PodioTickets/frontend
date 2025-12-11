@@ -11,6 +11,7 @@ export interface User {
   country: string;
   state: string;
   city: string;
+  avatarUrl: string;
   password: string;
   createdAt: string;
   updatedAt: string;

@@ -32,6 +32,8 @@ import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { CPFIcon } from "../Icons/CPFIcon";
+import { HeartIcon } from "../Icons/HeartIcon";
 
 type RegisterStep = 1 | 2 | 3;
 
@@ -372,7 +374,7 @@ export function RegisterModal() {
               CPF
             </label>
             <div className="relative w-full">
-              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+              <CPFIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="text"
                 placeholder="000.000.000-00"
@@ -406,7 +408,7 @@ export function RegisterModal() {
                     }`}
                   >
                     <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <CalendarIconLucide className="w-5 h-5 text-gray-11 shrink-0" />
+                      <CalendarIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
                         {formatDate(formData.dataNascimento)}
                       </span>
@@ -521,7 +523,7 @@ export function RegisterModal() {
                 trigger={(open: boolean) => (
                   <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <Heart className="w-5 h-5 text-gray-11 shrink-0" />
+                      <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
                         {formData.sexo || "Selecione"}
                       </span>
