@@ -96,18 +96,21 @@ export function Header() {
   return (
     <>
       <header
-        className={`w-full fixed top-0 left-0 p-[14px] px-6 z-999 h-[64px] md:h-[68px] border-b border-gray-11 transition-all duration-300 flex items-center justify-center bg-linear-to-r from-[#191919] to-[#222222]`}
+        className={`w-full fixed top-0 left-0 p-[14px] px-4 md:px-6 z-999 h-[64px] md:h-[68px] border-b border-gray-11 transition-all duration-300 flex items-center justify-center bg-linear-to-r from-[#191919] to-[#222222]`}
       >
-        <div className="max-w-screen-2xl h-full w-full flex items-center justify-between md:px-0">
-          <div className="flex items-center gap-8 h-full">
-            <Link href="/">
-              <Image
-                src="/images/logo.png"
-                alt="Logo"
-                width={32}
-                height={32}
-                priority
-              />
+        <div className="max-w-[1280px] h-full w-full flex items-center justify-between gap-2 md:gap-4 md:px-0">
+          <div className="flex items-center gap-2 md:gap-8 h-full shrink-0">
+            <Link href="/" className="flex items-center">
+              <div className="size-8 md:w-8 md:h-8 rounded-full flex items-center justify-center">
+                <Image
+                  src="/images/logo.png"
+                  alt="Logo"
+                  width={10000}
+                  height={10000}
+                  priority
+                  className="size-8 md:w-8 md:h-8"
+                />
+              </div>
             </Link>
 
             <div className="hidden lg:flex items-center h-full text-[#B4B4B4] text-sm gap-4">
@@ -137,7 +140,7 @@ export function Header() {
               />
             </div>
           </div>
-          <div className="hidden md:flex w-full max-w-[560px]">
+          <div className="flex w-full max-w-[560px] px-4 md:px-0">
             <SearchBar
               search={search}
               setSearch={setSearch}
@@ -244,35 +247,31 @@ export function Header() {
               </>
             )}
           </div>
-          <div className="md:hidden flex items-center z-50">
+          <div className="flex items-center z-50 shrink-0 md:hidden">
             <button
-              className={`flex flex-col items-center justify-center w-10 h-10 rounded-full relative transition-colors ${
-                mobileMenuOpen ? "bg-primary-10/20" : "hover:bg-gray-6/50"
-              }`}
+              className="flex items-center justify-center w-10 h-10 relative transition-all duration-300 hover:opacity-80"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Menu"
               role="button"
             >
-              <div className="w-8 h-8 flex items-center justify-center relative">
+              <div className="w-6 h-5 flex flex-col items-center justify-center gap-1.5 relative">
                 <span
-                  className={`absolute h-[2px] rounded-full ${
+                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${
                     mobileMenuOpen
-                      ? "bg-primary-10"
-                      : "bg-linear-to-r from-primary-2 to-primary-10"
+                      ? "bg-gray-4 rotate-45 translate-y-[10px]"
+                      : "bg-gray-4"
                   }`}
                 />
                 <span
-                  className={`absolute h-[2px] rounded-full ${
-                    mobileMenuOpen
-                      ? "bg-primary-10"
-                      : "bg-linear-to-r from-primary-2 to-primary-10"
+                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${
+                    mobileMenuOpen ? "opacity-0 scale-0" : "bg-gray-4 opacity-100 scale-100"
                   }`}
                 />
                 <span
-                  className={`absolute h-[2px] rounded-full ${
+                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${
                     mobileMenuOpen
-                      ? "bg-primary-10"
-                      : "bg-linear-to-r from-primary-2 to-primary-10"
+                      ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
+                      : "bg-gray-4"
                   }`}
                 />
               </div>
@@ -343,3 +342,4 @@ export function Header() {
     </>
   );
 }
+

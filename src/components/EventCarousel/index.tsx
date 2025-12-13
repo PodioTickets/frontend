@@ -26,6 +26,7 @@ export function EventCarousel({
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [currentItemsPerView, setCurrentItemsPerView] = useState(itemsPerView);
+  const [isMobile, setIsMobile] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const eventItems = Array.from({ length: items }, (_, i) => i);
@@ -34,10 +35,13 @@ export function EventCarousel({
     const handleResize = () => {
       if (window.innerWidth < 768) {
         setCurrentItemsPerView(itemsPerViewMobile);
+        setIsMobile(true);
       } else if (window.innerWidth < 1024) {
         setCurrentItemsPerView(itemsPerViewTablet);
+        setIsMobile(false);
       } else {
         setCurrentItemsPerView(itemsPerView);
+        setIsMobile(false);
       }
     };
 
@@ -125,10 +129,11 @@ export function EventCarousel({
 
   return (
     <div className="relative w-full">
+      {/* Hide navigation arrows on mobile, show on desktop */}
       {currentIndex > 0 && (
         <button
           onClick={goPrev}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-6 z-10 w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-2 border border-gray-6 flex items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg"
+          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 z-10 w-10 h-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg"
           aria-label="Previous slide"
         >
           <svg
@@ -150,7 +155,7 @@ export function EventCarousel({
       {currentIndex < maxIndex && (
         <button
           onClick={goNext}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-6 z-10 w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-2 border border-gray-6 flex items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg"
+          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 z-10 w-10 h-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg"
           aria-label="Next slide"
         >
           <svg
@@ -171,10 +176,12 @@ export function EventCarousel({
 
       <div
         ref={carouselRef}
-        className="flex gap-4 overflow-x-hidden scroll-smooth scrollbar-hide p-3"
+        className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide p-3 md:overflow-x-hidden"
         style={{
           cursor: isDragging ? "grabbing" : "grab",
           userSelect: "none",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -187,21 +194,29 @@ export function EventCarousel({
         {events?.map((event, index) => (
           <div
             key={index}
-            className="shrink-0"
-            style={{
-              width: `calc((100% - ${
-                (currentItemsPerView - 1) * 16
-              }px) / ${currentItemsPerView})`,
-            }}
+            className={`shrink-0 ${
+              isMobile 
+                ? "w-[85vw] md:w-auto" 
+                : ""
+            }`}
+            style={
+              !isMobile
+                ? {
+                    width: `calc((100% - ${
+                      (currentItemsPerView - 1) * 16
+                    }px) / ${currentItemsPerView})`,
+                  }
+                : undefined
+            }
           >
             <EventCard event={event} />
           </div>
         ))}
       </div>
 
-      {/* Dots Navigation */}
+      {/* Dots Navigation - Hide on mobile */}
       {totalSlides > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
+        <div className="hidden md:flex items-center justify-center gap-2 mt-6">
           {Array.from({ length: totalSlides }, (_, index) => (
             <button
               key={index}

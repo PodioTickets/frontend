@@ -1,6 +1,7 @@
-export function SneakersIcon() {
+export function SneakersIcon({ className }: { className?: string }) {
   return (
     <svg
+      className={className}
       width="33"
       height="33"
       viewBox="0 0 33 33"

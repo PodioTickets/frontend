@@ -37,10 +37,7 @@ const dateRangesEqual = (
   return aFrom === bFrom && aTo === bTo;
 };
 
-const priceRangesEqual = (
-  a: [number, number],
-  b: [number, number]
-) => {
+const priceRangesEqual = (a: [number, number], b: [number, number]) => {
   return a[0] === b[0] && a[1] === b[1];
 };
 
@@ -51,13 +48,17 @@ export function HomeFilters({
   initialPriceRange = [0, 10000],
 }: HomeFiltersProps = {}) {
   const router = useRouter();
-  
-  const [selectedModalities, setSelectedModalities] = useState<string[]>(initialModalities);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(initialLocation);
+
+  const [selectedModalities, setSelectedModalities] =
+    useState<string[]>(initialModalities);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(
+    initialLocation
+  );
   const [selectedDateRange, setSelectedDateRange] = useState<
     DateRange | undefined
   >(initialDateRange);
-  const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange);
+  const [priceRange, setPriceRange] =
+    useState<[number, number]>(initialPriceRange);
 
   // Use refs to track previous values and avoid unnecessary updates
   const prevInitialLocationRef = useRef(initialLocation);
@@ -88,7 +89,9 @@ export function HomeFilters({
   }, [initialDateRange]);
 
   useEffect(() => {
-    if (!priceRangesEqual(prevInitialPriceRangeRef.current, initialPriceRange)) {
+    if (
+      !priceRangesEqual(prevInitialPriceRangeRef.current, initialPriceRange)
+    ) {
       setPriceRange(initialPriceRange);
       prevInitialPriceRangeRef.current = initialPriceRange;
     }
@@ -198,21 +201,146 @@ export function HomeFilters({
     router,
   ]);
 
+  const selectedLocationOption = locationsOptions.find(
+    (loc) => loc.id === selectedLocation
+  );
+
   return (
-    <div className="relative flex items-center justify-center mt-14 shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
-      <Dropdown
-        options={locationsOptions}
-        dataAttribute="location"
-        width="w-[470px]"
-        maxHeight="max-h-[430px]"
-        className="top-20"
-        selectedIds={selectedLocation ? [selectedLocation] : []}
-        onSelect={handleLocationSelect}
-        trigger={() => {
-          const selectedLocationOption = locationsOptions.find(
-            (loc) => loc.id === selectedLocation
-          );
-          return (
+    <div className="w-full md:px-0 mt-6 md:mt-14">
+      {/* Mobile Layout */}
+      <div className="flex flex-col gap-3 md:hidden relative">
+        {/* Local Filter */}
+        <Dropdown
+          options={locationsOptions}
+          dataAttribute="location"
+          width="w-full"
+          maxHeight="max-h-[430px]"
+          className="top-20"
+          selectedIds={selectedLocation ? [selectedLocation] : []}
+          onSelect={handleLocationSelect}
+          trigger={() => (
+            <div className="flex items-center gap-3 px-4 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
+              <div className="rounded-full flex items-center justify-center shrink-0">
+                <LocationIcon className="size-6 lg:size-4" />
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <h1 className="font-family-manrope font-bold text-sm text-gray-12">
+                  Local
+                </h1>
+                <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
+                  {selectedLocationOption
+                    ? selectedLocationOption.label
+                    : "Selecione um local"}
+                </p>
+              </div>
+            </div>
+          )}
+        />
+
+        {/* Datas Filter */}
+        <Dropdown
+          dataAttribute="dates"
+          width="w-full"
+          maxHeight="max-h-[500px]"
+          className="top-20"
+          trigger={() => (
+            <div className="flex items-center gap-3 px-4 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
+              <div className="rounded-full flex items-center justify-center shrink-0">
+                <CalendarIcon className="size-6 lg:size-4" />
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <h1 className="font-family-manrope font-bold text-sm text-gray-12">
+                  Datas
+                </h1>
+                <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
+                  {formatDateRange()}
+                </p>
+              </div>
+            </div>
+          )}
+        >
+          <DateRangePicker
+            onSelect={handleDateRangeSelect}
+            value={selectedDateRange}
+          />
+        </Dropdown>
+
+        {/* Modalidade and Preço - Two Columns */}
+        <div className="grid grid-cols-2 gap-3">
+          <Dropdown
+            dataAttribute="modalities"
+            width="w-full md:w-[311px]"
+            maxHeight="max-h-[430px]"
+            className="top-20 md:left-auto"
+            align="start"
+            columns={modalitiesColumns}
+            multiSelect={true}
+            selectedIds={memoizedSelectedModalities}
+            onMultiSelectChange={handleModalitiesChange}
+            trigger={() => (
+              <div className="flex items-center gap-2 px-3 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
+                <div className="rounded-full flex items-center justify-center shrink-0">
+                  <SneakersIcon className="size-6 lg:size-4" />
+                </div>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <h1 className="font-family-manrope font-bold text-xs text-gray-12">
+                    Modalidade
+                  </h1>
+                  <p className="font-family-dm-sans font-normal text-[10px] text-gray-11 truncate">
+                    {selectedModalities.length > 0
+                      ? `${selectedModalities.length} selecionada${
+                          selectedModalities.length > 1 ? "s" : ""
+                        }`
+                      : "Qual modalidade?"}
+                  </p>
+                </div>
+              </div>
+            )}
+          />
+
+          <Dropdown
+            dataAttribute="price"
+            width="w-full md:w-full"
+            maxHeight="max-h-[300px]"
+            className="top-20 md:right-auto"
+            align="end"
+            trigger={() => (
+              <div className="flex items-center gap-2 px-3 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
+                <div className="rounded-full flex items-center justify-center shrink-0">
+                  <MoneyIcon className="size-6 lg:size-4" />
+                </div>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <h1 className="font-family-manrope font-bold text-xs text-gray-12">
+                    Preço
+                  </h1>
+                  <p className="font-family-dm-sans font-normal text-[10px] text-gray-11 truncate">
+                    {formatPriceRange()}
+                  </p>
+                </div>
+              </div>
+            )}
+          >
+            <PriceRangeSlider
+              min={0}
+              max={10000}
+              defaultValue={priceRange}
+              onChange={handlePriceRangeChange}
+            />
+          </Dropdown>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:flex relative items-center justify-between shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
+        <Dropdown
+          options={locationsOptions}
+          dataAttribute="location"
+          width="w-full"
+          maxHeight="max-h-[430px]"
+          className="top-20"
+          selectedIds={selectedLocation ? [selectedLocation] : []}
+          onSelect={handleLocationSelect}
+          trigger={() => (
             <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
               <LocationIcon />
               <div className="flex flex-col">
@@ -224,107 +352,107 @@ export function HomeFilters({
                 </p>
               </div>
             </div>
-          );
-        }}
-      />
-
-      <div className="w-px h-[30px] bg-gray-6" />
-
-      <Dropdown
-        dataAttribute="dates"
-        width="w-auto min-w-[600px]"
-        maxHeight="max-h-[500px]"
-        className="top-20"
-        trigger={() => (
-          <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
-            <CalendarIcon />
-            <div className="flex flex-col">
-              <h1 className="font-family-manrope font-bold">Datas</h1>
-              <p
-                className={`font-family-dm-sans font-normal text-gray-11 ${
-                  selectedDateRange?.from ? "text-base" : "text-base"
-                }`}
-              >
-                {formatDateRange()}
-              </p>
-            </div>
-          </div>
-        )}
-      >
-        <DateRangePicker
-          onSelect={handleDateRangeSelect}
-          value={selectedDateRange}
+          )}
         />
-      </Dropdown>
 
-      <div className="w-px h-[30px] bg-gray-6" />
+        <div className="w-px h-[30px] bg-gray-6" />
 
-      <Dropdown
-        dataAttribute="modalities"
-        width="w-auto min-w-[960px]"
-        maxHeight="max-h-[430px]"
-        className="top-20 left-1/2 -translate-x-1/2"
-        align="center"
-        columns={modalitiesColumns}
-        multiSelect={true}
-        selectedIds={memoizedSelectedModalities}
-        onMultiSelectChange={handleModalitiesChange}
-        trigger={() => (
-          <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
-            <SneakersIcon />
-            <div className="flex flex-col">
-              <h1 className="font-family-manrope font-bold">Modalidade</h1>
-              <p className="font-family-dm-sans font-normal text-gray-11">
-                {selectedModalities.length > 0
-                  ? `${selectedModalities.length} selecionada${
-                      selectedModalities.length > 1 ? "s" : ""
-                    }`
-                  : "Qual modalidade?"}
-              </p>
+        <Dropdown
+          dataAttribute="dates"
+          width="w-auto min-w-[600px]"
+          maxHeight="max-h-[500px]"
+          className="top-20"
+          trigger={() => (
+            <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
+              <CalendarIcon className="size-8" />
+              <div className="flex flex-col">
+                <h1 className="font-family-manrope font-bold">Datas</h1>
+                <p
+                  className={`font-family-dm-sans font-normal text-gray-11 ${
+                    selectedDateRange?.from ? "text-base" : "text-base"
+                  }`}
+                >
+                  {formatDateRange()}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-      />
+          )}
+        >
+          <DateRangePicker
+            onSelect={handleDateRangeSelect}
+            value={selectedDateRange}
+          />
+        </Dropdown>
 
-      <div className="w-px h-[30px] bg-gray-6" />
+        <div className="w-px h-[30px] bg-gray-6" />
 
-      <Dropdown
-        dataAttribute="price"
-        width="w-auto min-w-[570px]"
-        maxHeight="max-h-[300px]"
-        className="top-20 right-0"
-        align="end"
-        trigger={() => (
-          <div className="flex items-center w-[280px] gap-2 px-4 pr-20 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
-            <MoneyIcon />
-            <div className="flex flex-col">
-              <h1 className="font-family-manrope font-bold">Preço</h1>
-              <p
-                className={`font-family-dm-sans font-normal text-gray-11 ${
-                  isAllPrices ? "text-base" : "text-xs"
-                }`}
-              >
-                {formatPriceRange()}
-              </p>
+        <Dropdown
+          dataAttribute="modalities"
+          width="w-auto min-w-[960px]"
+          maxHeight="max-h-[430px]"
+          className="top-20 left-1/2 -translate-x-1/2"
+          align="center"
+          columns={modalitiesColumns}
+          multiSelect={true}
+          selectedIds={memoizedSelectedModalities}
+          onMultiSelectChange={handleModalitiesChange}
+          trigger={() => (
+            <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
+              <SneakersIcon />
+              <div className="flex flex-col">
+                <h1 className="font-family-manrope font-bold">Modalidade</h1>
+                <p className="font-family-dm-sans font-normal text-gray-11">
+                  {selectedModalities.length > 0
+                    ? `${selectedModalities.length} selecionada${
+                        selectedModalities.length > 1 ? "s" : ""
+                      }`
+                    : "Qual modalidade?"}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-      >
-        <PriceRangeSlider
-          min={0}
-          max={10000}
-          defaultValue={priceRange}
-          onChange={handlePriceRangeChange}
+          )}
         />
-      </Dropdown>
 
-      <button
-        onClick={handleSearch}
-        className="absolute right-0 flex items-center justify-center gap-2 bg-[#5CC870] hover:bg-[#4db860] transition-colors p-2 rounded-full w-10 h-10 ml-4 mr-4 cursor-pointer"
-        aria-label="Pesquisar eventos"
-      >
-        <SearchIcon />
-      </button>
+        <div className="w-px h-[30px] bg-gray-6" />
+
+        <Dropdown
+          dataAttribute="price"
+          width="w-auto min-w-[570px]"
+          maxHeight="max-h-[300px]"
+          className="top-20 right-0"
+          align="end"
+          trigger={() => (
+            <div className="flex items-center w-[280px] gap-2 px-4 pr-20 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
+              <MoneyIcon />
+              <div className="flex flex-col">
+                <h1 className="font-family-manrope font-bold">Preço</h1>
+                <p
+                  className={`font-family-dm-sans font-normal text-gray-11 ${
+                    isAllPrices ? "text-base" : "text-xs"
+                  }`}
+                >
+                  {formatPriceRange()}
+                </p>
+              </div>
+            </div>
+          )}
+        >
+          <PriceRangeSlider
+            min={0}
+            max={10000}
+            defaultValue={priceRange}
+            onChange={handlePriceRangeChange}
+          />
+        </Dropdown>
+
+        <button
+          onClick={handleSearch}
+          className="absolute right-0 flex items-center justify-center gap-2 bg-[#5CC870] hover:bg-[#4db860] transition-colors p-2 rounded-full w-10 h-10 ml-4 mr-4 cursor-pointer"
+          aria-label="Pesquisar eventos"
+        >
+          <SearchIcon />
+        </button>
+      </div>
     </div>
   );
 }

@@ -180,7 +180,7 @@ function SearchContent() {
   const hasMore = currentPage < pagination.totalPages;
 
   return (
-    <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto lg:px-8">
+    <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8">
       <HomeFilters
         initialLocation={location}
         initialModalities={modalities}
@@ -188,7 +188,7 @@ function SearchContent() {
         initialPriceRange={initialPriceRange}
       />
 
-      <div className="w-full mt-14 px-4">
+      <div className="w-full mt-14">
         <div className="flex items-center justify-between mb-6 gap-4">
           <h1 className="text-[28px] font-extrabold">
             {hasFilters
@@ -282,7 +282,7 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <section className="flex flex-col min-h-screen items-center max-w-[1760px] mx-auto lg:px-8">
+        <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto lg:px-8">
           <div className="w-full mt-14 px-4">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-[28px] font-extrabold">Carregando...</h1>
