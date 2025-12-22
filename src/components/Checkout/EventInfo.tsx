@@ -39,7 +39,7 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
           <p className="text-sm font-medium text-gray-11">Organizador</p>
 
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-gray-5 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gray-3 flex items-center justify-center">
               <span className="text-xs font-bold text-gray-11">
                 {event.organizer.name.charAt(0).toUpperCase()}
               </span>
@@ -48,9 +48,7 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
               <p className="text-sm font-medium text-gray-12">
                 {event.organizer.name}
               </p>
-              <p className="text-sm text-gray-11">
-                {event.organizer.email}
-              </p>
+              <p className="text-sm text-gray-11">{event.organizer.email}</p>
             </div>
           </div>
 
@@ -63,16 +61,23 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
         <div className="flex flex-col w-full mt-4 gap-2">
           <p className="text-sm font-medium text-gray-11 flex items-center justify-between w-full">
             Valor dos ingressos:{" "}
-            <span className="text-gray-12">R$ {event.price?.toFixed(2) || 0}</span>
+            <span className="text-gray-12">
+              R$ {event.price?.toFixed(2) || 0}
+            </span>
           </p>
           <p className="text-sm font-medium text-gray-11 flex items-center justify-between w-full">
             Taxa de serviço:{" "}
-            <span className="text-gray-12">R$ {event.serviceFee?.toFixed(2) || 0}</span>
+            <span className="text-gray-12">
+              R$ {event.serviceFee?.toFixed(2) || 0}
+            </span>
           </p>
         </div>
 
         <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
-          Total: <span className="text-gray-12">R$ {(event.price + event.serviceFee || 0).toFixed(2)}</span>
+          Total:{" "}
+          <span className="text-gray-12">
+            R$ {(event.price + event.serviceFee || 0).toFixed(2)}
+          </span>
         </h1>
 
         <Button onClick={onNext} className="w-full mt-8 font-bold">

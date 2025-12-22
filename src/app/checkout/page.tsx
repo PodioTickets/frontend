@@ -107,7 +107,7 @@ function CheckoutContent() {
   };
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto gap-4">
+    <div className="w-full  gap-4">
       {activeOption !== 5 && (
         <CheckoutHeader
           activeOption={activeOption}
@@ -115,7 +115,7 @@ function CheckoutContent() {
         />
       )}
 
-      <div className="w-full flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
+      <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
         {renderStep()}
       </div>
     </div>

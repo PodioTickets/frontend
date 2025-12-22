@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import {
-  Calendar,
-  Clock,
-  Navigation,
-  ChevronDown,
-  Download,
-} from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { Button } from "../Button";
 import { SuccessIcon } from "../Icons/SuccessIcon";
 import { useRouter } from "next/navigation";
@@ -139,29 +133,482 @@ export function PaymentSuccessStep({
         ];
 
   return (
-    <div className="bg-gray-2 flex flex-col items-start overflow-hidden w-full">
-      <div className="flex flex-col h-auto items-center pb-[176px] pt-[56px] px-0 w-full">
-        {/* Header */}
-        <div className="flex flex-col items-center justify-center pb-[52px] pt-0 px-[168px] w-full">
-          <div className="flex flex-col gap-[8px] items-center">
-            <Image
-              src="/images/approved_payment.png"
-              alt="Success Icon"
-              width={117}
-              height={88}
-              draggable={false}
-            />
-            <div className="flex flex-col gap-[16px] items-center text-gray-12 text-center">
-              <h1 className="font-extrabold text-[32px] leading-[1.1] font-manrope">
-                Pagamento aprovado
-              </h1>
-              <p className="font-medium text-[18px] leading-[1.3] font-dm-sans">
-                Sua inscrição foi confirmada. Enviamos o comprovante para o seu
-                e-mail.
-              </p>
+    <>
+      {/* Mobile Layout */}
+      <div className="w-full md:hidden bg-gray-2 min-h-screen">
+        {/* Mobile Header */}
+        <div className="w-full bg-white border-b border-gray-6">
+          <div className="flex items-center justify-center px-4 py-4 relative">
+            <button
+              onClick={() => router.push("/user/tickets")}
+              className="absolute left-4 flex items-center justify-center"
+            >
+              <ArrowLeft className="size-5 text-gray-12" />
+            </button>
+            <h1 className="text-base font-medium text-gray-12">Informações</h1>
+            <div className="absolute right-4 w-6" /> {/* Spacer for centering */}
+          </div>
+        </div>
+
+        {/* Mobile Content */}
+        <div className="flex flex-col items-center pb-24 pt-0 px-4 w-full">
+          {/* Success Header */}
+          <div className="flex flex-col items-center justify-center pb-12 pt-12 w-full">
+            <div className="flex flex-col gap-2 items-center">
+              <Image
+                src="/images/approved_payment.png"
+                alt="Success Icon"
+                width={158}
+                height={158}
+                draggable={false}
+                className="mb-2"
+              />
+              <div className="flex flex-col gap-4 items-center text-gray-12 text-center">
+                <h1 className="font-extrabold text-xl leading-[1.1] font-manrope">
+                  Pagamento aprovado
+                </h1>
+                <p className="font-medium text-base leading-[1.3] font-dm-sans">
+                  Sua inscrição foi confirmada. Enviamos o comprovante para o seu
+                  e-mail.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Details Card */}
+          <div className="flex items-center justify-center w-full mb-8">
+            <div className="flex flex-col items-start w-full">
+              <div className="bg-gray-2 flex flex-col items-start overflow-hidden rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
+                <div className="border-b border-gray-6 flex flex-col gap-4 items-start px-4 py-6 w-full">
+                  <div className="flex flex-col gap-2 items-start w-full">
+                    {/* Order Number */}
+                    <div className="border border-gray-6 flex gap-8 items-center p-4 rounded-lg w-full">
+                      <div className="flex-1 flex flex-col items-start">
+                        <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                          Número do pedido:
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                          #{orderNumber}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Event Name */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Nome do evento:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope text-right flex-1 ml-2">
+                        {event.name}
+                      </p>
+                    </div>
+
+                    {/* Date */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Data:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                        {formatDate(event.eventDate)}
+                      </p>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Forma de pagamento:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                        {paymentMethod}
+                      </p>
+                    </div>
+
+                    {/* Participants */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Participantes:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                        {displayParticipants.length}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="bg-gray-6 h-px w-full" />
+
+                  {/* Totals */}
+                  <div className="flex flex-col gap-2 items-start w-full">
+                    {/* Additional Products */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Produtos adicionais:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                        {formatCurrency(additionalProductsTotal)}
+                      </p>
+                    </div>
+
+                    {/* Subtotal */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Subtotal:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                        {formatCurrency(subtotal)}
+                      </p>
+                    </div>
+
+                    {/* Service Fee */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Taxa de serviço:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                        {formatCurrency(serviceFee)}
+                      </p>
+                    </div>
+
+                    {/* Coupon Discount */}
+                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        Desconto cupom:
+                      </p>
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                        – {formatCurrency(couponDiscount)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Total Paid */}
+                  <div className="flex gap-0.5 items-center justify-center pl-4 pr-0 py-4 rounded-lg w-full">
+                    <p className="font-medium text-xl leading-[1.1] text-gray-12 font-manrope">
+                      Total pago:
+                    </p>
+                    <p className="font-bold text-2xl leading-[1.1] text-gray-12 font-manrope">
+                      {formatCurrency(totalPaid)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Button */}
+              <div className="flex flex-col items-start pb-0 pt-8 px-0 w-full">
+                <Button
+                  onClick={() => router.push("/user/tickets")}
+                  className="w-full font-bold text-lg h-12 bg-primary-11 text-primary-2"
+                >
+                  Ver meus ingressos
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Ticket Details Section */}
+          <div className="flex flex-col items-start pb-0 pt-15 w-full">
+            <div className="flex flex-col gap-6 items-start w-full">
+              <div className="flex flex-col gap-4 items-start justify-center w-full">
+                <h2 className="font-bold text-lg leading-[1.1] text-gray-12 font-manrope">
+                  Detalhes do seu ingresso
+                </h2>
+                <p className="font-normal text-sm leading-[1.3] text-gray-11 font-dm-sans">
+                  Apresente este QR Code na retirada do kit ou na entrada do
+                  evento para validar sua inscrição.
+                </p>
+              </div>
+
+              {/* Participant Cards */}
+              <div className="flex flex-col gap-5 items-start w-full">
+                {displayParticipants.map((participantData, index) => {
+                  const participant = participants[
+                    participantData.participantIndex
+                  ] || {
+                    name: "Lucas",
+                    cpf: "11812345685",
+                    birthDate: "2004-03-03",
+                    gender: "male",
+                  };
+                  const isExpanded = expandedParticipants[index] || false;
+
+                  return (
+                    <div
+                      key={index}
+                      className="bg-white border border-gray-6 flex flex-col items-start rounded-xl w-full overflow-hidden"
+                    >
+                      <button
+                        className="flex flex-col items-start p-0 w-full"
+                        onClick={() => toggleParticipant(index)}
+                      >
+                        {/* Content */}
+                        <div className="flex flex-col gap-5 items-start px-4 py-6 w-full">
+                          <div className="flex gap-3 items-start w-full">
+                            <div className="relative shrink-0 size-[120px]">
+                              {participantData.qrCode ? (
+                                <Image
+                                  src={participantData.qrCode}
+                                  alt="QR Code"
+                                  fill
+                                  className="object-cover rounded-lg"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center">
+                                  <span className="text-xs text-gray-11">
+                                    QR Code
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 flex flex-col gap-4 items-start px-0 py-3 text-gray-12">
+                              <p className="font-normal text-base leading-[1.3] font-dm-sans">
+                                Participante {participantData.participantIndex + 1}
+                              </p>
+                              <p className="font-bold text-lg leading-[1.1] font-manrope">
+                                {participantData.ticketName}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-4 items-start w-full">
+                            <div className="flex gap-2 items-center">
+                              <DistanceIcon className="size-6 text-gray-12" />
+                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                0.3 Km
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center">
+                              <CalendarIcon className="size-6 text-gray-12" />
+                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                {formatDate(event.eventDate)}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center">
+                              <ClockIcon className="size-6 text-gray-12" />
+                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                {formatTime(event.eventDate)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Profile */}
+                        <div className="border-b border-gray-6 flex flex-col gap-4 items-start pb-4 pt-0 px-4 w-full">
+                          <div className="border border-gray-6 flex items-center p-2 rounded-xl w-full">
+                            <div className="flex gap-2 items-center flex-1">
+                              <div className="relative shrink-0 size-10 rounded-full overflow-hidden bg-primary-10/20">
+                                {participant.name ? (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <span className="text-primary-11 font-semibold text-sm">
+                                      {participant.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <Image
+                                    src="/images/default-avatar.png"
+                                    alt="Avatar"
+                                    fill
+                                    className="object-cover"
+                                  />
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-3 items-start justify-center flex-1">
+                                <p className="font-semibold text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                                  {participant.name || "Sem nome"}
+                                </p>
+                                <div className="flex gap-2 items-center justify-center w-full">
+                                  {participant.birthDate && (
+                                    <>
+                                      <span className="font-normal text-xs leading-[1.3] text-gray-11 font-dm-sans">
+                                        {formatDate(participant.birthDate)}
+                                      </span>
+                                      <div className="size-1 rounded-full bg-gray-11" />
+                                    </>
+                                  )}
+                                  {participant.gender && (
+                                    <>
+                                      <span className="font-normal text-xs leading-[1.3] text-gray-11 font-dm-sans">
+                                        {getGenderLabel(participant.gender)}
+                                      </span>
+                                      <div className="size-1 rounded-full bg-gray-11" />
+                                    </>
+                                  )}
+                                  {participant.cpf && (
+                                    <span className="font-normal text-xs leading-[1.3] text-gray-11 font-dm-sans flex-1 truncate">
+                                      {maskCPF(participant.cpf)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <>
+                          {/* Tabs */}
+                          <div className="flex gap-3 items-start pb-2 pt-5 px-4 w-full">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab("info");
+                              }}
+                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${
+                                activeTab === "info"
+                                  ? "bg-primary-11 text-primary-2"
+                                  : "bg-gray-5 text-gray-11"
+                              }`}
+                            >
+                              Informações
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab("products");
+                              }}
+                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${
+                                activeTab === "products"
+                                  ? "bg-primary-11 text-primary-2"
+                                  : "bg-gray-5 text-gray-11"
+                              }`}
+                            >
+                              Produtos
+                            </button>
+                          </div>
+
+                          {/* Tab Content */}
+                          {activeTab === "info" ? (
+                            <div className="flex flex-wrap gap-5 items-start overflow-hidden pb-6 pt-8 px-4 w-full">
+                              <p className="font-bold text-lg leading-[1.1] text-gray-12 font-manrope w-full">
+                                Informações do participante
+                              </p>
+                              <div className="grid grid-cols-1 gap-2 w-full">
+                                {[
+                                  {
+                                    label: "Nome",
+                                    value: participant.name || "",
+                                  },
+                                  {
+                                    label: "Email",
+                                    value: participant.email || "",
+                                  },
+                                  { label: "CPF", value: participant.cpf || "" },
+                                  {
+                                    label: "Data de nascimento",
+                                    value: participant.birthDate
+                                      ? formatDate(participant.birthDate)
+                                      : "",
+                                  },
+                                  {
+                                    label: "Telefone",
+                                    value: participant.phone || "",
+                                  },
+                                  {
+                                    label: "Sexo",
+                                    value: participant.gender
+                                      ? getGenderLabel(participant.gender)
+                                      : "",
+                                  },
+                                ].map((field, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="border border-gray-6 flex flex-col gap-[15px] items-start px-3 py-4 rounded-lg w-full"
+                                  >
+                                    <label className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                                      {field.label}
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={field.value}
+                                      readOnly
+                                      className="w-full font-medium text-base leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                    />
+                                  </div>
+                                ))}
+                                <div className="border border-gray-6 flex flex-col gap-[15px] items-start px-3 py-4 rounded-lg w-full">
+                                  <label className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                                    Telefone de emergência
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={
+                                      participant.emergencyPhone || "Opcional"
+                                    }
+                                    readOnly
+                                    className="w-full font-medium text-base leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="pb-6 pt-8 px-4 w-full">
+                              <h4 className="font-semibold text-lg leading-[1.1] text-gray-12 font-manrope mb-4">
+                                Produtos adicionais
+                              </h4>
+                              {participantData.additionalProducts &&
+                              participantData.additionalProducts.length > 0 ? (
+                                <div className="space-y-3">
+                                  {participantData.additionalProducts.map(
+                                    (product, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-6"
+                                      >
+                                        <span className="text-sm text-gray-12">
+                                          {product.name} (x{product.quantity})
+                                        </span>
+                                        <span className="text-sm font-semibold text-gray-12">
+                                          {formatCurrency(
+                                            product.price * product.quantity
+                                          )}
+                                        </span>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-11">
+                                  Nenhum produto adicional para este participante.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:flex bg-gray-2 flex-col items-start overflow-hidden w-full">
+        <div className="flex flex-col h-auto items-center pb-[176px] pt-[56px] px-0 w-full">
+          {/* Header */}
+          <div className="flex flex-col items-center justify-center pb-[52px] pt-0 px-[168px] w-full">
+            <div className="flex flex-col gap-[8px] items-center">
+              <Image
+                src="/images/approved_payment.png"
+                alt="Success Icon"
+                width={117}
+                height={88}
+                draggable={false}
+              />
+              <div className="flex flex-col gap-[16px] items-center text-gray-12 text-center">
+                <h1 className="font-extrabold text-[32px] leading-[1.1] font-manrope">
+                  Pagamento aprovado
+                </h1>
+                <p className="font-medium text-[18px] leading-[1.3] font-dm-sans">
+                  Sua inscrição foi confirmada. Enviamos o comprovante para o seu
+                  e-mail.
+                </p>
+              </div>
+            </div>
+          </div>
 
         {/* Order Details */}
         <div className="flex items-center justify-center px-[168px] py-0 w-full">
@@ -578,7 +1025,8 @@ export function PaymentSuccessStep({
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

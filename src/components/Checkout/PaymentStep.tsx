@@ -14,6 +14,8 @@ import Image from "next/image";
 import { Tooltip, CVVTooltip } from "../Tooltip";
 import type { Event } from "@/interfaces/event";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { ArrowLeft } from "lucide-react";
+import { mockKits } from "@/constants/kits";
 
 interface PaymentStepProps {
   event: Event;
@@ -37,62 +39,119 @@ function CreditCardForm({
   selectedInstallments,
   setSelectedInstallments,
   onSuccess,
+  cardName,
+  setCardName,
+  cardNumber,
+  setCardNumber,
+  cardExpiry,
+  setCardExpiry,
+  cardCVV,
+  setCardCVV,
+  isMobile = false,
 }: {
   installmentOptions: DropdownOption[];
   selectedInstallments: string;
   setSelectedInstallments: (value: string) => void;
   onSuccess?: () => void;
+  cardName?: string;
+  setCardName?: (value: string) => void;
+  cardNumber?: string;
+  setCardNumber?: (value: string) => void;
+  cardExpiry?: string;
+  setCardExpiry?: (value: string) => void;
+  cardCVV?: string;
+  setCardCVV?: (value: string) => void;
+  isMobile?: boolean;
 }) {
+  const formatCardNumber = (value: string) => {
+    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+    const matches = v.match(/\d{4,16}/g);
+    const match = (matches && matches[0]) || "";
+    const parts = [];
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+    if (parts.length) {
+      return parts.join(" ");
+    } else {
+      return v;
+    }
+  };
+
+  const formatExpiry = (value: string) => {
+    const v = value.replace(/\D/g, "");
+    if (v.length >= 2) {
+      return v.substring(0, 2) + "/" + v.substring(2, 4);
+    }
+    return v;
+  };
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCardNumber(e.target.value);
+    if (setCardNumber) setCardNumber(formatted);
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatExpiry(e.target.value);
+    if (setCardExpiry) setCardExpiry(formatted);
+  };
+
+  const handleCVVChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "").substring(0, 3);
+    if (setCardCVV) setCardCVV(value);
+  };
+
   return (
-    <div className="space-y-4">
+    <div className={`${isMobile ? "space-y-4" : "space-y-4"}`}>
       <div className="space-y-2 w-full">
-        <label className="text-sm font-medium text-gray-12">
+        <label className="text-base text-gray-12">
           Nome impresso no cartão
         </label>
         <input
           type="text"
-          className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+          value={cardName || ""}
+          onChange={(e) => setCardName && setCardName(e.target.value)}
+          className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
           placeholder="Ex: João Ribeiro"
         />
       </div>
 
       <div className="space-y-2 w-full">
-        <label className="text-sm font-medium text-gray-12">
-          Número do cartão
-        </label>
+        <label className="text-base text-gray-12">Número do cartão</label>
         <input
           type="text"
-          className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+          value={cardNumber || ""}
+          onChange={handleCardNumberChange}
+          maxLength={19}
+          className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
           placeholder="Ex: 5400 7975 6026 4737"
         />
       </div>
 
-      <div className="flex justify-between gap-4 w-full">
-        <div className="flex-1 space-y-2">
-          <label className="text-sm font-medium text-gray-12">
-            Data de validade
-          </label>
+      <div
+        className={`flex ${
+          isMobile ? "flex-col gap-4" : "justify-between gap-4"
+        } w-full`}
+      >
+        <div className={`${isMobile ? "w-full" : "flex-1"} space-y-2`}>
+          <label className="text-base text-gray-12">Data de validade</label>
           <input
             type="text"
-            className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+            value={cardExpiry || ""}
+            onChange={handleExpiryChange}
+            maxLength={5}
+            className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
             placeholder="MM/AA"
           />
         </div>
-        <div className="flex-1 space-y-2">
+        <div className={`${isMobile ? "w-full" : "flex-1"} space-y-2 md:space-y-0`}>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-12">CVV</label>
-          </div>
-          <div className="relative w-full">
-            <input
-              type="text"
-              className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
-              placeholder="Digite os 3 dígitos do seu cartão"
-            />
+            <label className="text-base text-gray-12">CVV</label>
             <Tooltip
               content={<CVVTooltip />}
               position="topRight"
               trigger="hover"
-              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-help"
+              className="cursor-help"
             >
               <button
                 type="button"
@@ -102,11 +161,21 @@ function CreditCardForm({
               </button>
             </Tooltip>
           </div>
+          <div className="relative w-full">
+            <input
+              type="text"
+              value={cardCVV || ""}
+              onChange={handleCVVChange}
+              maxLength={3}
+              className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+              placeholder="3 dígitos"
+            />
+          </div>
         </div>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-12">Parcelas</label>
+        <label className="text-base text-gray-12">Parcelas</label>
         <Dropdown
           options={installmentOptions}
           dataAttribute="installments"
@@ -115,28 +184,17 @@ function CreditCardForm({
           selectedIds={[selectedInstallments]}
           onSelect={(option) => setSelectedInstallments(option.id || "1")}
           trigger={() => (
-            <div className="w-full px-4 py-3 rounded-lg border border-gray-5 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors cursor-pointer hover:border-gray-8">
-              <p className="text-sm">
+            <div className="w-full h-12 px-3 py-4 rounded-lg border border-gray-7 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between">
+              <p className="text-base text-gray-11">
                 {installmentOptions.find(
                   (opt: DropdownOption) => opt.id === selectedInstallments
-                )?.label || "Selecione as parcelas"}
+                )?.label || "Quanto deseja parcelar?"}
               </p>
+              <span className="text-gray-12">›</span>
             </div>
           )}
         />
       </div>
-
-      <Button
-        className="w-full py-4 text-lg font-bold"
-        onClick={() => {
-          // TODO: Process credit card payment here
-          if (onSuccess) {
-            onSuccess();
-          }
-        }}
-      >
-        Finalizar compra
-      </Button>
     </div>
   );
 }
@@ -222,7 +280,15 @@ function PixModal({
   );
 }
 
-function PixForm({ onSuccess }: { onSuccess?: () => void }) {
+function PixForm({
+  onSuccess,
+  pixValue,
+  isMobile = false,
+}: {
+  onSuccess?: () => void;
+  pixValue?: number;
+  isMobile?: boolean;
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleFinalizePurchase = () => {
@@ -236,27 +302,40 @@ function PixForm({ onSuccess }: { onSuccess?: () => void }) {
     }, 3000);
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
+  };
+
   return (
     <>
-      <div className="">
-        <div className="text-center space-y-2 rounded-lg border border-gray-5 p-6 shadow-sm">
-          <p className="text-sm text-gray-11">
-            Valor à vista:{" "}
-            <span className="text-gray-12 font-bold">R$ 438,34</span>
-          </p>
-          <p className="text-sm text-gray-11">
+      <div className="flex flex-col gap-4">
+        <div className="text-center space-y-2 rounded-lg border border-gray-6 p-4">
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-base text-gray-12">Valor à vista:</p>
+            <p className="text-lg font-bold text-gray-12">
+              {formatPrice(pixValue || 301.92)}
+            </p>
+          </div>
+          <p className="text-base text-gray-12">
             Prazo de até 30 minutos para compensar
           </p>
         </div>
-        <p className="text-sm text-gray-12 my-4 mx-auto w-full text-center">
+        <p className="text-base font-medium text-gray-12 text-center">
           Clique em "finalizar compra" para gerar o PIX
         </p>
-        <Button
-          className="w-full py-4 text-lg font-bold"
-          onClick={handleFinalizePurchase}
-        >
-          Finalizar compra
-        </Button>
+        {!isMobile && (
+          <Button
+            className="w-full py-4 text-lg font-bold"
+            onClick={handleFinalizePurchase}
+          >
+            Finalizar compra
+          </Button>
+        )}
       </div>
 
       <PixModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
@@ -319,6 +398,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>("credit");
   const [selectedInstallments, setSelectedInstallments] = useState<string>("1");
+
+  // Form states
+  const [cardName, setCardName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCVV, setCardCVV] = useState("");
+
   const { participants, raceQuantities } = useCheckout();
 
   // Generate participants data for the list
@@ -435,9 +521,219 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     },
   ];
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
+  };
+
+  // Calculate totals same way as ModalitiesStep
+  const { totalParticipants, totalPrice } = useMemo(() => {
+    let participants = 0;
+    let total = 0;
+
+    mockKits.forEach((kit) => {
+      kit.races.forEach((race) => {
+        const quantity = raceQuantities[race.id] || 0;
+        if (quantity > 0) {
+          participants += quantity;
+          total += race.price * quantity;
+        }
+      });
+    });
+
+    return { totalParticipants: participants, totalPrice: total };
+  }, [raceQuantities]);
+
+  const serviceFee = event.serviceFee || 0;
+  const additionalProductsTotal = orderItems.reduce((sum, item) => sum + item.price, 0);
+  const totalValue = totalPrice + serviceFee + additionalProductsTotal;
+
+  const calculatePixValue = () => {
+    const discount = totalValue * 0.05;
+    return totalValue - discount;
+  };
+
+  const pixValue = calculatePixValue();
+  const additionalProductsCount = orderItems.length;
+
   return (
     <>
-      <div className="w-full flex items-start justify-between gap-11">
+      {/* Mobile Layout */}
+      <div className="w-full md:hidden flex flex-col pb-24">
+        {/* Instructional Text */}
+        <div className="pb-4 md:pb-0 md:py-6">
+          <p className="text-sm text-gray-11">
+            Revise seu pedido e conclua com cartão, Pix ou boleto. Os ingressos
+            são liberados após aprovação.
+          </p>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="pb-6 flex flex-col gap-3">
+          {/* Credit Card Option */}
+          <div
+            className={`border rounded-lg p-4 transition-colors ${
+              selectedPaymentMethod === "credit"
+                ? "border-blue-8 bg-blue-3"
+                : "border-gray-5 bg-gray-3"
+            }`}
+          >
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setSelectedPaymentMethod("credit")}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`rounded-full size-4 border-[1.5px] ${
+                    selectedPaymentMethod === "credit"
+                      ? "bg-primary-10 border-primary-10"
+                      : "bg-transparent border-gray-6"
+                  }`}
+                />
+                <span className="text-base font-semibold text-gray-12">
+                  Cartão de crédito
+                </span>
+              </div>
+              <div className="flex gap-1 items-center">
+                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                  <VisaIcon />
+                </div>
+                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                  <EloIcon />
+                </div>
+                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                  <Image
+                    src="/images/american_express.png"
+                    alt="American Express"
+                    width={24}
+                    height={24}
+                  />
+                </div>
+                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                  <MasterCardIcon />
+                </div>
+              </div>
+            </div>
+
+            {selectedPaymentMethod === "credit" && (
+              <div className="mt-4">
+                <CreditCardForm
+                  installmentOptions={installmentOptions}
+                  selectedInstallments={selectedInstallments}
+                  setSelectedInstallments={setSelectedInstallments}
+                  onSuccess={onSuccess}
+                  cardName={cardName}
+                  setCardName={setCardName}
+                  cardNumber={cardNumber}
+                  setCardNumber={setCardNumber}
+                  cardExpiry={cardExpiry}
+                  setCardExpiry={setCardExpiry}
+                  cardCVV={cardCVV}
+                  setCardCVV={setCardCVV}
+                  isMobile={true}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* PIX Option */}
+          <div
+            className={`border rounded-lg p-4 transition-colors ${
+              selectedPaymentMethod === "pix"
+                ? "border-blue-8 bg-blue-3"
+                : "border-gray-5 bg-gray-3"
+            }`}
+          >
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setSelectedPaymentMethod("pix")}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`rounded-full size-4 border-[1.5px] ${
+                    selectedPaymentMethod === "pix"
+                      ? "bg-primary-10 border-primary-10"
+                      : "bg-transparent border-gray-6"
+                  }`}
+                />
+                <span className="text-base font-semibold text-gray-12">
+                  PIX
+                </span>
+                <div className="bg-primary-6 text-primary-12 rounded-full px-2 py-1">
+                  <span className="text-sm font-semibold">5% OFF</span>
+                </div>
+              </div>
+            </div>
+
+            {selectedPaymentMethod === "pix" && (
+              <div className="mt-4 flex flex-col gap-4">
+                <PixForm
+                  onSuccess={onSuccess}
+                  pixValue={pixValue}
+                  isMobile={true}
+                />
+                <Button
+                  onClick={() => {
+                    // Open PIX modal or generate QR code
+                    if (onSuccess) {
+                      onSuccess();
+                    }
+                  }}
+                  className="w-full bg-gray-12 text-gray-1 font-bold"
+                >
+                  Gerar QR CODE
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Footer Summary - Same style as ModalitiesStep */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
+        <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm">
+              Participantes: <span className="font-semibold">{totalParticipants}</span>
+            </p>
+            <p className="text-sm">
+              Taxa de serviço: {formatPrice(serviceFee)}
+            </p>
+            {additionalProductsCount > 0 && (
+              <p className="text-sm">
+                Produtos adicionais: <span className="font-semibold">{additionalProductsCount}</span>
+              </p>
+            )}
+            <p className="text-base">
+              Valor total: <span className="font-bold">{formatPrice(totalValue)}</span>
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              if (selectedPaymentMethod === "credit") {
+                // Validate credit card form
+                if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
+                  alert("Por favor, preencha todos os campos do cartão");
+                  return;
+                }
+              }
+              if (onSuccess) {
+                onSuccess();
+              }
+            }}
+            disabled={totalParticipants === 0}
+          >
+            Finalizar compra
+          </Button>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:flex w-full items-start justify-between gap-11">
         <div className="max-w-2/3 w-full">
           <div className="flex flex-col gap-6">
             {/* Cabeçalho */}
@@ -490,9 +786,24 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           selectedInstallments={selectedInstallments}
                           setSelectedInstallments={setSelectedInstallments}
                           onSuccess={onSuccess}
+                          cardName={cardName}
+                          setCardName={setCardName}
+                          cardNumber={cardNumber}
+                          setCardNumber={setCardNumber}
+                          cardExpiry={cardExpiry}
+                          setCardExpiry={setCardExpiry}
+                          cardCVV={cardCVV}
+                          setCardCVV={setCardCVV}
+                          isMobile={false}
                         />
                       )}
-                      {option.id === "pix" && <PixForm onSuccess={onSuccess} />}
+                      {option.id === "pix" && (
+                        <PixForm
+                          onSuccess={onSuccess}
+                          pixValue={pixValue}
+                          isMobile={false}
+                        />
+                      )}
                     </div>
                   </div>
                 );

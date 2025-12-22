@@ -41,8 +41,8 @@ export function EventCard({ event }: EventCardProps) {
         src={event.bannerUrl}
         alt={event.name}
         width={50000}
-        height={400}
-        className="rounded-lg object-cover"
+        height={50000}
+        className="rounded-lg object-cover lg:h-[232px]"
       />
 
       <div className="flex flex-col gap-2 px-3 mt-2">

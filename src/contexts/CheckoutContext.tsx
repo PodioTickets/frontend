@@ -10,6 +10,8 @@ interface ParticipantFormData {
   phone: string;
   gender: string;
   emergencyPhone?: string;
+  emergencyContactName?: string;
+  hasEmergencyContact?: boolean;
 }
 
 interface CheckoutState {
@@ -40,6 +42,8 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
       phone: "",
       gender: "",
       emergencyPhone: "",
+      emergencyContactName: "",
+      hasEmergencyContact: false,
     },
   ]);
 
@@ -66,6 +70,8 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
           phone: "",
           gender: "",
           emergencyPhone: "",
+          emergencyContactName: "",
+          hasEmergencyContact: false,
         };
       }
       updated[index] = { ...updated[index], ...data };
@@ -84,6 +90,8 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
         phone: "",
         gender: "",
         emergencyPhone: "",
+        emergencyContactName: "",
+        hasEmergencyContact: false,
       },
     ]);
   };
@@ -103,6 +111,8 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
         phone: "",
         gender: "",
         emergencyPhone: "",
+        emergencyContactName: "",
+        hasEmergencyContact: false,
       },
     ]);
   };

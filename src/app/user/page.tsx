@@ -23,7 +23,7 @@ import { HeartIcon } from "@/components/Icons/HeartIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useChangeEmailModal } from "@/stores/modalStore";
 import { CPFIcon } from "@/components/Icons/CPFIcon";
-import { DatePicker } from "@/components/DatePicker";
+import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { getApiClient } from "@/services/base/ApiClient";
 
 export default function UserProfilePage() {
@@ -311,7 +311,7 @@ export default function UserProfilePage() {
                 <label className="text-base text-gray-12">
                   Data de nascimento
                 </label>
-                <DatePicker
+                <DateOfBirthPicker
                   value={formData.dateOfBirth}
                   onChange={(value) =>
                     setFormData((prev) => ({ ...prev, dateOfBirth: value }))
@@ -616,92 +616,6 @@ export default function UserProfilePage() {
                 </div>
               </button>
             </div>
-
-            {/* Method Selection */}
-            {twoFactorEnabled && (
-              <>
-                <div className="flex flex-col gap-3">
-                  <p className="text-base font-medium text-gray-12">
-                    Selecione a forma que deseja receber a mensagem do código
-                  </p>
-                  <div className="flex gap-8">
-                    <div
-                      onClick={() => setTwoFactorMethod("email")}
-                      className="flex items-center gap-2"
-                    >
-                      <Checkbox
-                        checked={twoFactorMethod === "email"}
-                        onCheckedChange={() => setTwoFactorMethod("email")}
-                      />
-                      <span className="text-base text-gray-12">Email</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Code Input Section */}
-                <div className="flex flex-col gap-7">
-                  <div className="flex flex-col gap-2">
-                    <h3 className="text-lg font-bold leading-[1.1] text-gray-12">
-                      Informe o código de segurança
-                    </h3>
-                    <p className="text-base font-medium text-gray-11">
-                      Para continuar com a verificação em duas etapas em nossa
-                      plataforma, por favor, insira abaixo o código recebido
-                      através de SMS em seu dispositivo móvel
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-4">
-                    <div className="flex gap-2">
-                      {verificationCode.map((digit, index) => (
-                        <input
-                          key={index}
-                          id={`code-input-${index}`}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          onChange={(e) =>
-                            handleCodeChange(index, e.target.value)
-                          }
-                          onKeyDown={(e) => handleCodeKeyDown(index, e)}
-                          onPaste={handlePaste}
-                          className={cn(
-                            "size-[72.67px] rounded-lg border-2 bg-gray-2 text-center text-[32px] font-extrabold leading-[1.1] text-gray-11 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-11/50",
-                            codeError
-                              ? "border-red-10"
-                              : "border-gray-6 focus:border-primary-11"
-                          )}
-                        />
-                      ))}
-                    </div>
-                    {codeError && (
-                      <p className="text-base text-red-10 text-start">
-                        Código incorreto ou expirado. Tente novamente ou reenvie
-                        um novo código
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      className="h-12 px-8 text-gray-12 border border-gray-6"
-                      onClick={handleResendCode}
-                    >
-                      Reenviar código
-                    </Button>
-                    <Button
-                      variant="default"
-                      className="h-12 px-8"
-                      onClick={handleConfirmCode}
-                    >
-                      Confirmar código
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>

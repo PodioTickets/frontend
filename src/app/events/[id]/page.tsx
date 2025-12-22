@@ -80,7 +80,7 @@ export default function EventPage() {
   return (
     <>
       {/* Mobile Layout */}
-      <div className="md:hidden bg-gray-2 min-h-screen pb-8">
+      <div className="md:hidden bg-gray-2 min-h-screen pb-24">
         <div
           className="absolute top-0 left-0 w-full max-h-[300px] h-full blur-sm"
           style={{
@@ -180,8 +180,8 @@ export default function EventPage() {
 
             {/* Action Buttons */}
             <Link href={`/checkout?eventId=${event.id}`} className="block mb-3">
-              <Button className="w-full bg-[#5CC870] hover:bg-[#4db860] text-white">
-                Inscrever-se
+              <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
+                Inscreva-se
               </Button>
             </Link>
           </div>
@@ -203,8 +203,7 @@ export default function EventPage() {
 
         {/* Content Cards */}
         <div className="px-4 space-y-4 mt-4">
-          {/* Renderizar todos os tópicos */}
-          {event.topics?.map((topic) => {
+          {event.topics?.map((topic, index) => {
             const isExpanded = expandedSections[topic.id] || false;
             const shouldTruncate = topic.content.length > 150;
             const displayContent =
@@ -213,37 +212,40 @@ export default function EventPage() {
                 : topic.content.substring(0, 150) + "...";
 
             return (
-              <div
-                key={topic.id}
-                className="border border-gray-6 rounded-lg p-4"
-              >
-                <h2 className="text-base font-bold text-gray-12 mb-3">
-                  {topic.title}
-                </h2>
-                <div className="text-sm text-gray-11 mb-3">
-                  <p
-                    className={
-                      !isExpanded && shouldTruncate ? "line-clamp-3" : ""
-                    }
-                  >
-                    {displayContent}
-                  </p>
+              <Fragment key={topic.id}>
+                <div
+                  key={topic.id}
+                  className={`${index === 0 ? "mb-4" : "my-4"}`}
+                >
+                  <h2 className="text-lg font-bold text-gray-12 mb-3">
+                    {topic.title}
+                  </h2>
+                  <div className="text-sm text-gray-11 mb-3">
+                    <p
+                      className={
+                        !isExpanded && shouldTruncate ? "line-clamp-3" : ""
+                      }
+                    >
+                      {displayContent}
+                    </p>
+                  </div>
+                  {shouldTruncate && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => toggleSection(topic.id)}
+                      className="underline text-gray-11 font-bold px-0"
+                    >
+                      {isExpanded ? "Mostrar menos" : "Mostrar mais"}
+                    </Button>
+                  )}
                 </div>
-                {shouldTruncate && (
-                  <Button
-                    variant="outline"
-                    onClick={() => toggleSection(topic.id)}
-                    className="text-sm text-gray-11 border border-gray-6 px-4 py-2 rounded-lg w-2/5"
-                  >
-                    {isExpanded ? "Mostrar menos" : "Mostrar mais"}
-                  </Button>
-                )}
-              </div>
+                <div className="w-full h-px bg-gray-6" />
+              </Fragment>
             );
           })}
 
           {/* Onde acontecerá o evento */}
-          <div className="border border-gray-6 rounded-lg p-4">
+          <div className="my-4">
             <h2 className="text-base font-bold text-gray-12 mb-3">
               Onde acontecerá o evento
             </h2>
@@ -255,8 +257,8 @@ export default function EventPage() {
               />
             </div>
             <Button
-              variant="outline"
-              className="text-sm text-gray-11 border border-gray-6 px-4 py-2 rounded-lg w-2/5"
+              variant="ghost"
+              className="underline text-gray-11 font-bold px-0"
             >
               Ver no mapa
             </Button>
@@ -296,6 +298,36 @@ export default function EventPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Fixed Bottom Bar */}
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
+          <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
+            <div className="flex flex-col w-full gap-2">
+              <h1 className="text-gray-12 font-extrabold">{event.name}</h1>
+
+              <div className="flex items-center w-full justify-between gap-2 text-gray-11">
+                <div className="flex items-center gap-1">
+                  <CalendarIcon className="size-5" />
+                  <span className="text-sm">
+                    {formatDate(new Date(event.eventDate))}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <LocationIcon className="size-5" />
+                  <span className="text-sm">
+                    {event.location || `${event.city}, ${event.state}`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <Link href={`/checkout?eventId=${event.id}`} className="w-full">
+              <Button className="w-full bg-[#5CC870] hover:bg-[#4db860">
+                Inscreva-se
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -436,10 +468,14 @@ export default function EventPage() {
             </div>
           </div>
 
-          <div className="w-3/4 self-start 2xl:mt-10 pr-8 z-10">
-            {event.topics?.map((topic) => (
+          <div className="w-3/4 self-start pr-8 z-10">
+            {event.topics?.map((topic, index) => (
               <Fragment key={topic.id}>
-                <div key={topic.id} className="flex flex-col gap-2 my-10">
+                <div
+                  className={`flex flex-col gap-2 ${
+                    index === 0 ? "mb-10" : "my-10"
+                  }`}
+                >
                   <h1 className="text-2xl font-bold text-gray-12">
                     {topic.title}
                   </h1>
@@ -462,50 +498,34 @@ export default function EventPage() {
               />
             </div>
 
-            <div className="w-full h-px bg-gray-6" />
-
-            <div className="flex flex-col gap-4 mt-10">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-bold text-gray-12">
-                  Rota no Strava
-                </h1>
-              </div>
-              <div className="w-full h-[400px] rounded-xl overflow-hidden border border-gray-6 shadow-lg relative bg-gray-2">
-                {event.stravaRouteId ? (
-                  <iframe
-                    height="100%"
-                    width="100%"
-                    frameBorder="0"
-                    scrolling="no"
-                    src={`https://www.strava.com/routes/${event.stravaRouteId}/embed`}
-                    title={`Rota do ${event.name} no Strava`}
-                    className="w-full h-full"
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-11">
-                    <svg
-                      className="w-16 h-16 mb-4 text-gray-8"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                    </svg>
-                    <p className="text-lg font-medium mb-2">
-                      Rota não disponível
-                    </p>
-                    <p className="text-sm text-center max-w-md">
-                      A rota do evento ainda não foi cadastrada no Strava
-                    </p>
+            {event.stravaRouteId && (
+              <>
+                <div className="w-full h-px bg-gray-6" />
+                <div className="flex flex-col gap-4 mt-10">
+                  <div className="flex flex-col gap-2">
+                    <h1 className="text-2xl font-bold text-gray-12">
+                      Rota no Strava
+                    </h1>
                   </div>
-                )}
-              </div>
-            </div>
+                  <div className="w-full h-[400px] rounded-xl overflow-hidden border border-gray-6 shadow-lg relative bg-gray-2">
+                    <iframe
+                      height="100%"
+                      width="100%"
+                      frameBorder="0"
+                      scrolling="no"
+                      src={`https://www.strava.com/routes/${event.stravaRouteId}/embed`}
+                      title={`Rota do ${event.name} no Strava`}
+                      className="w-full h-full"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
       </div>
 
-      {/* Share Modal */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
@@ -515,4 +535,3 @@ export default function EventPage() {
     </>
   );
 }
-

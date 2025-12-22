@@ -3,6 +3,7 @@
 import { LoginModal } from "@/components/Auth/LoginModal";
 import { RegisterModal } from "@/components/Auth/RegisterModal";
 import { ChangeEmailModal } from "@/components/Auth/ChangeEmailModal";
+import { DeleteParticipantModal } from "@/components/Checkout/DeleteParticipantModal";
 
 export function ModalsProvider() {
   return (
@@ -10,8 +11,9 @@ export function ModalsProvider() {
       <LoginModal />
       <RegisterModal />
       <ChangeEmailModal />
+      <DeleteParticipantModal />
     </>
   );
 }
 
-export { useLoginModal, useRegisterModal, useChangeEmailModal } from "@/stores/modalStore";
+export { useLoginModal, useRegisterModal, useChangeEmailModal, useDeleteParticipantModal } from "@/stores/modalStore";

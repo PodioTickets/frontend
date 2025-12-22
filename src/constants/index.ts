@@ -180,7 +180,7 @@ export const modalitiesColumns: ModalityOption[][] = [
 export const checkoutHeaderOptions = [
   {
     id: 1,
-    label: "Modalidades",
+    label: "Ingressos",
   },
   {
     id: 2,
@@ -188,7 +188,7 @@ export const checkoutHeaderOptions = [
   },
   {
     id: 3,
-    label: "Inscrição",
+    label: "Produtos",
   },
   {
     id: 4,

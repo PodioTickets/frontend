@@ -1,4 +1,4 @@
-import type { Event, EventResponse } from "@/interfaces/event";
+import type { Event, EventResponse, Question } from "@/interfaces/event";
 import type { ApiClient } from "../base/ApiClient";
 
 export interface SearchEventsParams {
@@ -84,5 +84,12 @@ export class EventService {
         query: q,
       }
     );
+  }
+
+  async getEventQuestions(eventId: string): Promise<Question[]> {
+    const { data } = await this.apiClient.get(
+      `/api/v1/questions/events/${eventId}`
+    );
+    return data.data.questions || [];
   }
 }

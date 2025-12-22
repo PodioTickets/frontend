@@ -27,7 +27,7 @@ export default function CheckoutHeader({
       <div className="md:hidden w-full bg-white border-b border-gray-6">
         <div className="flex items-center justify-center px-4 py-4 relative">
           <button
-            onClick={() => router.back()}
+            onClick={() => setActiveOption(activeOption - 1)}
             className="absolute left-4 flex items-center justify-center"
           >
             <ArrowLeft className="size-5 text-gray-12" />

@@ -12,10 +12,58 @@ import { SearchBar } from "../SearchBar";
 import { LanguageToggle } from "../LanguageToggle";
 import { modalitiesColumns, mockEvents } from "@/constants";
 import { useModalStore } from "@/stores/modalStore";
-import { User, LogOut, LogOutIcon } from "lucide-react";
+import { User, LogOut, X, Globe } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
+import { TwitterIcon } from "../Icons/TwitterIcon";
+import { InstagramIcon } from "../Icons/InstagramIcon";
+import { FacebookIcon } from "../Icons/FacebookIcon";
+import { MedalIcon } from "../Icons/MedalIcon";
+import { SneakersIcon } from "../Icons/SneakersIcon";
 import { getApiClient } from "@/services/base/ApiClient";
+import { useLanguage, Language } from "@/contexts/LanguageContext";
+
+function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
+  const { language, setLanguage } = useLanguage();
+
+  const languages: Array<{ code: Language; label: string }> = [
+    { code: "pt", label: "PT-BR" },
+    { code: "en", label: "ENG" },
+    { code: "es", label: "ESP" },
+  ];
+
+  const dropdownOptions: DropdownOption[] = languages.map((lang) => ({
+    id: lang.code,
+    label: lang.label,
+    onClick: () => {
+      setLanguage(lang.code);
+      onClose();
+    },
+  }));
+
+  return (
+    <div className="relative">
+      <Dropdown
+        options={dropdownOptions}
+        dataAttribute="mobile-language"
+        width="w-full"
+        maxHeight="max-h-[200px]"
+        className="top-14 left-0 right-0"
+        trigger={(isOpen) => (
+          <Button variant="outline" className="w-full">
+            <Globe className="size-5" />
+            <span className="text-base font-medium">Idioma</span>
+          </Button>
+        )}
+        onSelect={(option) => {
+          if (option.onClick) {
+            option.onClick();
+          }
+        }}
+      />
+    </div>
+  );
+}
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -74,24 +122,6 @@ export function Header() {
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
-
-  const menuItemVariants = {
-    closed: { opacity: 0, y: -10, x: 20 },
-    open: { opacity: 1, y: 0, x: 0, transition: { duration: 0.4 } },
-  };
-
-  const links = [
-    {
-      href: "/",
-      label: "Calendario de eventos",
-      key: "calendar",
-    },
-    {
-      href: "/modalities",
-      label: "Modalidades",
-      key: "modalities",
-    },
-  ];
 
   return (
     <>
@@ -200,23 +230,9 @@ export function Header() {
                   {
                     id: "logout",
                     label: "Logout",
-                    icon: LogOutIcon,
+                    icon: LogOut,
                     onClick: () => {
                       logout();
-                    },
-                  },
-                  {
-                    id: "organizer",
-                    label:
-                      user?.role === "ORGANIZER"
-                        ? "Painel de controle"
-                        : "organizer",
-                    onClick: () => {
-                      if (user?.role === "ORGANIZER") {
-                        push("/organizer");
-                      } else {
-                        push("/organizer/create");
-                      }
                     },
                   },
                 ]}
@@ -264,7 +280,9 @@ export function Header() {
                 />
                 <span
                   className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${
-                    mobileMenuOpen ? "opacity-0 scale-0" : "bg-gray-4 opacity-100 scale-100"
+                    mobileMenuOpen
+                      ? "opacity-0 scale-0"
+                      : "bg-gray-4 opacity-100 scale-100"
                   }`}
                 />
                 <span
@@ -284,14 +302,14 @@ export function Header() {
         {mobileMenuOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-gray-2/30 backdrop-blur-md"
+              className="fixed inset-0 z-1000 bg-[rgba(32,32,32,0.9)]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
             />
             <motion.div
-              className="fixed inset-y-0 right-0 z-40 w-[85%] max-w-[360px] bg-linear-to-l from-gray-2 to-gray-2 pt-20 px-6 shadow-xl border-l border-gray-6"
+              className="fixed inset-y-0 right-0 z-1001 w-[336px] bg-[#111] overflow-hidden"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -301,40 +319,314 @@ export function Header() {
                 damping: 30,
               }}
             >
-              <motion.div
-                className="flex flex-col gap-8 py-6 h-full w-full"
-                initial="closed"
-                animate="open"
-                exit="closed"
-                variants={{
-                  open: {
-                    transition: {
-                      staggerChildren: 0.1,
-                      delayChildren: 0.1,
-                    },
-                  },
-                  closed: {
-                    transition: {
-                      staggerChildren: 0.05,
-                      staggerDirection: -1,
-                    },
-                  },
-                }}
-              >
-                <motion.div className="flex flex-col gap-4">
-                  {links.map((link) => (
-                    <motion.div key={link.href} variants={menuItemVariants}>
-                      <Link
-                        href={link.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-4 text-gray-11 hover:text-gray-11 transition-colors text-xl py-3 border-b border-gray-6"
+              {/* Header */}
+              <div className="bg-[#191919] border-b-2 border-[#3a3a3a] flex items-center justify-between p-4 h-[64px] shrink-0">
+                <Link href="/" className="h-5">
+                  <Image
+                    src="/images/logo_horizontal.png"
+                    alt="PodioTicket"
+                    width={117}
+                    height={20}
+                    className="h-5 w-auto"
+                  />
+                </Link>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-center w-8 h-8 text-[#EEE] hover:opacity-80 transition-opacity"
+                  aria-label="Fechar menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="overflow-y-auto h-[calc(100vh-64px)]">
+                {/* Menu Items */}
+                <div className="bg-[#222] border-b border-[#3a3a3a] p-4 space-y-2">
+                  {isAuthenticated && user ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          push("/user");
+                          setMobileMenuOpen(false);
+                        }}
+                        className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-gray-12 hover:bg-[#2a2a2a] transition-colors"
                       >
-                        {link.label}
-                      </Link>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </motion.div>
+                        <User className="w-5 h-5 text-gray-12" />
+                        <span className="text-base font-medium text-gray-12">
+                          Perfil e configurações
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          push("/user/tickets");
+                          setMobileMenuOpen(false);
+                        }}
+                        className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-gray-12 hover:bg-[#2a2a2a] transition-colors"
+                      >
+                        <TicketIcon className="w-5 h-5 text-gray-12" />
+                        <span className="text-base font-medium text-gray-12">
+                          Ingressos
+                        </span>
+                      </button>
+                      <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-gray-12 hover:bg-[#2a2a2a] transition-colors">
+                        <InfoIcon className="w-5 h-5 text-gray-12" />
+                        <span className="text-base font-medium text-gray-12">
+                          Central de ajuda
+                        </span>
+                      </button>
+                      <MobileLanguageToggle
+                        onClose={() => setMobileMenuOpen(false)}
+                      />
+                      <button
+                        onClick={() => {
+                          logout();
+                          setMobileMenuOpen(false);
+                        }}
+                        className="w-full flex gap-2 items-center h-[52px] px-4 text-gray-12 hover:bg-[#2a2a2a] transition-colors"
+                      >
+                        <LogOut className="w-5 h-5 text-gray-12" />
+                        <span className="text-base font-medium text-gray-12">
+                          Sair
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={() => openModal("login")}
+                        variant="default"
+                        size="default"
+                        className="w-full"
+                      >
+                        Conectar-se
+                      </Button>
+                      <Button
+                        onClick={() => openModal("register")}
+                        variant="outline"
+                        size="default"
+                        className="w-full"
+                      >
+                        Cadastrar-se
+                      </Button>
+                      <MobileLanguageToggle
+                        onClose={() => setMobileMenuOpen(false)}
+                      />
+                    </>
+                  )}
+                </div>
+
+                {/* About Section */}
+                <div className="w-full flex flex-col md:hidden p-4">
+                  {/* Logo */}
+                  <div className="mb-4 flex items-center justify-center gap-2">
+                    <Image
+                      src="/images/left_footer_mobile.png"
+                      alt="Footer Left"
+                      width={100000}
+                      height={100000}
+                      draggable={false}
+                      className="object-cover w-1/2 h-auto"
+                    />
+                    <Image
+                      src="/images/right_footer_mobile.png"
+                      alt="Footer Right"
+                      width={100000}
+                      height={100000}
+                      draggable={false}
+                      className=" object-cover w-1/2 h-auto"
+                    />
+                  </div>
+
+                  {/* Introductory Text */}
+                  <p className="font-family-dm-sans text-[#B4B4B4] text-sm text-center leading-relaxed">
+                    PodioTicket é o ponto de encontro de quem vibra por esporte,
+                    onde você descobre o próximo desafio, junta a galera,
+                    combina a largada e transforma cada chegada em uma memória
+                    que dá vontade de repetir
+                  </p>
+
+                  {/* Social Media Section */}
+                  <div className="text-[#EEE] flex items-center gap-10 w-full my-4 mb-6">
+                    <div className="flex-1 h-px bg-[#606060] min-w-0" />
+                    <p className="text-start whitespace-nowrap shrink-0">
+                      Nós conheça mais
+                    </p>
+                    <div className="flex-1 h-px bg-[#606060] min-w-0" />
+                  </div>
+                  <div className="flex items-center justify-center gap-2 whitespace-nowrap shrink-0 mb-4">
+                    <Link
+                      href="https://www.instagram.com/podiotickets/"
+                      className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
+                    >
+                      <InstagramIcon className="w-full h-full text-gray-2" />
+                    </Link>
+                    <Link
+                      href="https://x.com/podiotickets"
+                      className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
+                    >
+                      <TwitterIcon className="w-full h-full text-gray-2" />
+                    </Link>
+                    <Link
+                      href="https://www.facebook.com/podiotickets"
+                      className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
+                    >
+                      <FacebookIcon className="w-full h-full text-gray-2" />
+                    </Link>
+                  </div>
+
+                  {/* Information Blocks */}
+                  <div className="flex flex-col gap-3 mb-6">
+                    {/* Participantes */}
+                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
+                      <h4 className="text-white font-bold text-sm mb-3">
+                        Participantes
+                      </h4>
+                      <ul className="flex flex-col gap-2">
+                        <li>
+                          <button
+                            onClick={() => openModal("login")}
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
+                          >
+                            Login
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => openModal("register")}
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
+                          >
+                            Cadastre-se
+                          </button>
+                        </li>
+                        <li>
+                          <Link
+                            href="/help"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Central de ajuda
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/terms"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Termos de compra
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Organizadores */}
+                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
+                      <h4 className="text-white font-bold text-sm mb-3">
+                        Organizadores
+                      </h4>
+                      <ul className="flex flex-col gap-2">
+                        <li>
+                          <Link
+                            href="/organizer/create"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Solicite um orçamento
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/organizer"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Painel do Organizador
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/organizer/support"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Suporte
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Empresa */}
+                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
+                      <h4 className="text-white font-bold text-sm mb-3">
+                        Empresa
+                      </h4>
+                      <ul className="flex flex-col gap-2">
+                        <li>
+                          <Link
+                            href="/about"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Sobre nós
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/careers"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Trabalhe conosco
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/privacy"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Política de privacidade
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/terms"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Termos de uso
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Grupos esportivos */}
+                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
+                      <h4 className="text-white font-bold text-sm mb-3">
+                        Grupos esportivos
+                      </h4>
+                      <ul className="flex flex-col gap-2">
+                        <li>
+                          <button
+                            onClick={() => openModal("login")}
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
+                          >
+                            Login
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => openModal("register")}
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
+                          >
+                            Cadastre-se
+                          </button>
+                        </li>
+                        <li>
+                          <Link
+                            href="/help"
+                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
+                          >
+                            Central de Ajuda
+                          </Link>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </>
         )}
@@ -342,4 +634,3 @@ export function Header() {
     </>
   );
 }
-

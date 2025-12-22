@@ -24,7 +24,19 @@ export interface Event {
   locations: [];
   modalities: Modality[];
   kits: [];
-  questions: [];
+  questions: Question[];
+}
+
+export interface Question {
+  id: string;
+  eventId: string;
+  question: string;
+  type: "text" | "select" | "radio" | "checkbox";
+  options?: string[];
+  isRequired: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Topic {

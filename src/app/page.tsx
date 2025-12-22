@@ -8,7 +8,7 @@ export default function Home() {
 
       {/* Hero Banner */}
       <div className="w-full mt-6 md:mt-14">
-        <div className="bg-[url('/banners/placeholder.png')] bg-cover bg-center bg-no-repeat w-full h-[200px] md:h-[400px] lg:h-[388px] rounded-lg" />
+        <div className="bg-[url('/banners/banner_1.png')] bg-cover bg-center bg-no-repeat w-full h-[200px] md:h-[400px] lg:h-[388px] rounded-lg" />
       </div>
 
       {/* Featured Events Section */}
@@ -19,7 +19,7 @@ export default function Home() {
         <div className="mt-4 md:mt-8">
           <EventCarousel
             items={20}
-            itemsPerView={5.8}
+            itemsPerView={4.1}
             itemsPerViewMobile={1.2}
             itemsPerViewTablet={2.5}
           />

@@ -9,7 +9,6 @@ import { Fragment } from "react/jsx-runtime";
 import { useMemo } from "react";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { Button } from "../Button";
-import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -20,7 +19,6 @@ interface ModalitiesStepProps {
 export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
   const { raceQuantities } = useCheckout();
 
-  // Calcular total e participantes
   const { totalParticipants, totalPrice } = useMemo(() => {
     let participants = 0;
     let total = 0;
@@ -53,9 +51,6 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
       <div className="w-full md:hidden pb-24 px-0">
         {/* Instruction Card */}
         <div className=" rounded-lg mb-4">
-          <h1 className="text-lg font-bold text-gray-12 mb-2">
-            Selecione um kit
-          </h1>
           <p className="text-sm text-gray-11">
             Escolha sua prova dentro do kit e defina a quantidade de ingressos.
             Você pode ajustar depois em Informações.
@@ -65,7 +60,9 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
         {/* Kits List */}
         <div className="flex flex-col gap-4">
           {mockKits.length > 0 ? (
-            mockKits.map((kit) => <KitCard key={kit.id} kit={kit} />)
+            mockKits.map((kit, index) => (
+              <KitCard key={kit.id} kit={kit} index={index} />
+            ))
           ) : (
             <div className="w-full rounded-lg border border-gray-5 px-4 py-8 text-center ">
               <p className="text-gray-11">
@@ -77,19 +74,24 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
 
         {/* Fixed Bottom Bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
-          <div className="flex items-center justify-between max-w-[1280px] mx-auto">
-            <div className="flex flex-col">
-              <p className="text-xs text-gray-11">
-                Participantes: {totalParticipants}
+          <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm">
+                Participantes: <span className="font-semibold">{totalParticipants}</span>
               </p>
-              <p className="text-base font-bold text-gray-12">
-                Total: {formatPrice(totalPrice)}
+              <p className="text-sm">
+                Valor do ingresso: {formatPrice(event.price || 0)}
+              </p>
+              <p className="text-sm">
+                Taxa de serviço: {formatPrice(event.serviceFee || 0)}
+              </p>
+              <p className="text-base">
+                Valor total: <span className="font-bold">{formatPrice(totalPrice)}</span>
               </p>
             </div>
             <Button
               onClick={onNext}
               disabled={totalParticipants === 0}
-              className="bg-[#5CC870] hover:bg-[#4db860] text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Selecionar
             </Button>
@@ -113,7 +115,7 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
               mockKits.map((kit, index) => {
                 return (
                   <Fragment key={kit.id}>
-                    <KitCard kit={kit} />
+                    <KitCard kit={kit} index={index} />
                     {index < mockKits.length - 1 && (
                       <div className="w-full h-px bg-gray-6" />
                     )}
@@ -136,4 +138,3 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
     </>
   );
 }
-
