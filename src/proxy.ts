@@ -148,7 +148,7 @@ export async function proxy(request: NextRequest) {
 
   const trustedDomains = [
     "'self'",
-    "https://loot-for-fun.vercel.app",
+    "https://api.podioticket.com.br",
     "https://t.me",
     "https://x.com",
     "wss://relay.walletconnect.com",
