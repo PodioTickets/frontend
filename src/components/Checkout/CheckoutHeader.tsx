@@ -16,7 +16,6 @@ export default function CheckoutHeader({
   activeOption,
   setActiveOption,
 }: CheckoutHeaderProps) {
-  const router = useRouter();
   const currentStepLabel = checkoutHeaderOptions.find(
     (opt) => opt.id === activeOption
   )?.label || "Modalidades";

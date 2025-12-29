@@ -102,17 +102,17 @@ export function DeleteParticipantModal() {
               </div>
 
               {/* Botões */}
-              <div className="flex gap-2 items-start w-full">
+              <div className="flex md:flex-row flex-col-reverse gap-2 items-start w-full">
                 <Button
                   variant="outline"
                   onClick={closeDeleteParticipantModal}
-                  className="flex-1 h-12 border-gray-6 text-gray-12 font-bold text-base font-manrope hover:bg-gray-2"
+                  className="md:flex-1 w-full h-12 border-gray-6 text-gray-12 font-bold text-base font-manrope hover:bg-gray-2"
                 >
                   Fechar
                 </Button>
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 h-12 bg-red-10 cursor-pointer text-red-2 font-bold text-base font-manrope hover:bg-red-11 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                  className="md:flex-1 w-full h-12 bg-red-10 cursor-pointer text-red-2 font-bold text-base font-manrope hover:bg-red-11 rounded-lg transition-colors duration-200 flex items-center justify-center"
                 >
                   Remover participante
                 </button>

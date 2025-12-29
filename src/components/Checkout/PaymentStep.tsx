@@ -10,12 +10,15 @@ import { EloIcon } from "../Icons/EloIcon";
 import { HelpIcon } from "../Icons/HelpIcon";
 import { ArrowButton } from "../ArrowButton";
 import { RemoveIcon } from "../Icons/RemoveIcon";
+import { TrashIcon } from "../Icons/TrashIcon";
+import { PencilIcon } from "../Icons/PencilIcon";
 import Image from "next/image";
 import { Tooltip, CVVTooltip } from "../Tooltip";
 import type { Event } from "@/interfaces/event";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { ArrowLeft } from "lucide-react";
 import { mockKits } from "@/constants/kits";
+import { Input } from "../Input";
 
 interface PaymentStepProps {
   event: Event;
@@ -102,30 +105,36 @@ function CreditCardForm({
   };
 
   return (
-    <div className={`${isMobile ? "space-y-4" : "space-y-4"}`}>
-      <div className="space-y-2 w-full">
-        <label className="text-base text-gray-12">
+    <div className={`${isMobile ? "flex flex-col gap-4" : "space-y-4"}`}>
+      <div className="flex flex-col gap-2 w-full">
+        <label className="text-base text-gray-12 font-dm-sans">
           Nome impresso no cartão
         </label>
-        <input
-          type="text"
-          value={cardName || ""}
-          onChange={(e) => setCardName && setCardName(e.target.value)}
-          className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
-          placeholder="Ex: João Ribeiro"
-        />
+        <div className="relative">
+          <Input
+            type="text"
+            value={cardName || ""}
+            onChange={(e) => setCardName && setCardName(e.target.value)}
+            className="bg-gray-2"
+            placeholder="Ex: João Ribeiro"
+          />
+        </div>
       </div>
 
-      <div className="space-y-2 w-full">
-        <label className="text-base text-gray-12">Número do cartão</label>
-        <input
-          type="text"
-          value={cardNumber || ""}
-          onChange={handleCardNumberChange}
-          maxLength={19}
-          className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
-          placeholder="Ex: 5400 7975 6026 4737"
-        />
+      <div className="flex flex-col gap-2 w-full">
+        <label className="text-base text-gray-12 font-dm-sans">
+          Número do cartão
+        </label>
+        <div className="relative">
+          <Input
+            type="text"
+            value={cardNumber || ""}
+            onChange={handleCardNumberChange}
+            className="bg-gray-2"
+            maxLength={19}
+            placeholder="Ex: 5400 7975 6026 4737"
+          />
+        </div>
       </div>
 
       <div
@@ -133,20 +142,26 @@ function CreditCardForm({
           isMobile ? "flex-col gap-4" : "justify-between gap-4"
         } w-full`}
       >
-        <div className={`${isMobile ? "w-full" : "flex-1"} space-y-2`}>
-          <label className="text-base text-gray-12">Data de validade</label>
-          <input
+        <div
+          className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}
+        >
+          <label className="text-base text-gray-12 font-dm-sans">
+            Data de validade
+          </label>
+          <Input
             type="text"
             value={cardExpiry || ""}
             onChange={handleExpiryChange}
+            className="bg-gray-2"
             maxLength={5}
-            className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
             placeholder="MM/AA"
           />
         </div>
-        <div className={`${isMobile ? "w-full" : "flex-1"} space-y-2 md:space-y-0`}>
+        <div
+          className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}
+        >
           <div className="flex items-center gap-2">
-            <label className="text-base text-gray-12">CVV</label>
+            <label className="text-base text-gray-12 font-dm-sans">CVV</label>
             <Tooltip
               content={<CVVTooltip />}
               position="topRight"
@@ -162,20 +177,20 @@ function CreditCardForm({
             </Tooltip>
           </div>
           <div className="relative w-full">
-            <input
+            <Input
               type="text"
               value={cardCVV || ""}
               onChange={handleCVVChange}
               maxLength={3}
-              className="w-full h-12 px-3 py-4 rounded-lg border border-gray-6 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors"
+              className="bg-gray-2"
               placeholder="3 dígitos"
             />
           </div>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-base text-gray-12">Parcelas</label>
+      <div className="flex flex-col gap-2">
+        <label className="text-base text-gray-12 font-dm-sans">Parcelas</label>
         <Dropdown
           options={installmentOptions}
           dataAttribute="installments"
@@ -184,8 +199,8 @@ function CreditCardForm({
           selectedIds={[selectedInstallments]}
           onSelect={(option) => setSelectedInstallments(option.id || "1")}
           trigger={() => (
-            <div className="w-full h-12 px-3 py-4 rounded-lg border border-gray-7 bg-white text-gray-12 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between">
-              <p className="text-base text-gray-11">
+            <div className="w-full h-12 px-3 rounded-lg border border-gray-7 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between">
+              <p className="text-base text-gray-11 font-dm-sans">
                 {installmentOptions.find(
                   (opt: DropdownOption) => opt.id === selectedInstallments
                 )?.label || "Quanto deseja parcelar?"}
@@ -206,7 +221,7 @@ function PixModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutos em segundos
+  const [timeLeft, setTimeLeft] = useState(30 * 60);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -293,8 +308,7 @@ function PixForm({
 
   const handleFinalizePurchase = () => {
     setIsModalOpen(true);
-    // In real app, this would wait for payment confirmation via webhook
-    // For now, we'll simulate success after a delay
+
     setTimeout(() => {
       if (onSuccess) {
         onSuccess();
@@ -314,18 +328,20 @@ function PixForm({
   return (
     <>
       <div className="flex flex-col gap-4">
-        <div className="text-center space-y-2 rounded-lg border border-gray-6 p-4">
+        <div className="text-center space-y-4 rounded-lg border border-gray-6 p-4">
           <div className="flex items-center justify-center gap-1">
-            <p className="text-base text-gray-12">Valor à vista:</p>
-            <p className="text-lg font-bold text-gray-12">
+            <p className="text-base text-gray-12 font-dm-sans">
+              Valor à vista:
+            </p>
+            <p className="text-lg font-bold text-gray-12 font-manrope">
               {formatPrice(pixValue || 301.92)}
             </p>
           </div>
-          <p className="text-base text-gray-12">
+          <p className="text-base text-gray-12 font-dm-sans">
             Prazo de até 30 minutos para compensar
           </p>
         </div>
-        <p className="text-base font-medium text-gray-12 text-center">
+        <p className="text-base font-medium text-gray-12 text-center font-dm-sans">
           Clique em "finalizar compra" para gerar o PIX
         </p>
         {!isMobile && (
@@ -404,6 +420,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVV, setCardCVV] = useState("");
+
+  // Coupon states
+  const [couponCode, setCouponCode] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  const [isCouponApplied, setIsCouponApplied] = useState(false);
 
   const { participants, raceQuantities } = useCheckout();
 
@@ -549,24 +571,172 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   }, [raceQuantities]);
 
   const serviceFee = event.serviceFee || 0;
-  const additionalProductsTotal = orderItems.reduce((sum, item) => sum + item.price, 0);
-  const totalValue = totalPrice + serviceFee + additionalProductsTotal;
+  const additionalProductsTotal = orderItems.reduce(
+    (sum, item) => sum + item.price,
+    0
+  );
+  const subtotalValue = totalPrice + serviceFee + additionalProductsTotal;
+  const totalValue = subtotalValue - couponDiscount;
 
   const calculatePixValue = () => {
     const discount = totalValue * 0.05;
     return totalValue - discount;
   };
 
+  // Coupon validation
+  const validateCoupon = (code: string): boolean => {
+    // Remove espaços e converte para maiúsculo
+    const cleanCode = code.trim().replace(/\s/g, "");
+
+    // Verifica se tem 6 dígitos
+    if (cleanCode.length !== 6) {
+      return false;
+    }
+
+    // Verifica se é apenas números
+    if (!/^\d+$/.test(cleanCode)) {
+      return false;
+    }
+
+    // Verifica se é o cupom válido
+    return cleanCode === "111111";
+  };
+
+  const handleApplyCoupon = () => {
+    if (!couponCode.trim()) {
+      setCouponError("Por favor, digite um código de cupom");
+      setIsCouponApplied(false);
+      setCouponDiscount(0);
+      return;
+    }
+
+    if (validateCoupon(couponCode)) {
+      // Cupom válido - aplicar desconto de R$ 40,00
+      setCouponError(null);
+      setIsCouponApplied(true);
+      setCouponDiscount(40);
+    } else {
+      // Cupom inválido
+      setCouponError("Cupom inválido");
+      setIsCouponApplied(false);
+      setCouponDiscount(0);
+    }
+  };
+
   const pixValue = calculatePixValue();
   const additionalProductsCount = orderItems.length;
+
+  const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
+  const [isModalAnimating, setIsModalAnimating] = useState(false);
+  const [expandedProducts, setExpandedProducts] = useState<
+    Record<number, boolean>
+  >({});
+
+  const openModal = () => {
+    setIsParticipantsModalOpen(true);
+    // Trigger animation after modal is mounted
+    setTimeout(() => {
+      setIsModalAnimating(true);
+    }, 10);
+  };
+
+  const closeModal = () => {
+    setIsModalAnimating(false);
+    setTimeout(() => {
+      setIsParticipantsModalOpen(false);
+    }, 300);
+  };
+
+  // Generate participants with races dynamically
+  const participantsWithRaces = useMemo(() => {
+    const result: Array<{
+      participantIndex: number;
+      participant: (typeof participants)[0];
+      race: { id: string; name: string; price: number };
+      additionalProducts?: Array<{
+        name: string;
+        price: number;
+        quantity: number;
+        size?: string;
+        image?: string;
+      }>;
+    }> = [];
+    let participantIndex = 0;
+
+    mockKits.forEach((kit) => {
+      kit.races.forEach((race) => {
+        const quantity = raceQuantities[race.id] || 0;
+        for (let i = 0; i < quantity; i++) {
+          const participant = participants[participantIndex];
+          if (participant) {
+            result.push({
+              participantIndex,
+              participant,
+              race: {
+                id: race.id,
+                name: race.name,
+                price: race.price,
+              },
+              additionalProducts:
+                participantIndex === 0
+                  ? [
+                      {
+                        name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
+                        price: 29.9,
+                        quantity: 1,
+                        size: "XL",
+                        image: "/images/camisa.png",
+                      },
+                      {
+                        name: "ITEM EXTRA - Viseira - Compra Opcional",
+                        price: 29.9,
+                        quantity: 1,
+                        size: "M",
+                        image: "/images/mochila.png",
+                      },
+                    ]
+                  : participantIndex === 1
+                  ? [
+                      {
+                        name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
+                        price: 29.9,
+                        quantity: 1,
+                        size: "M",
+                        image: "/images/camisa.png",
+                      },
+                    ]
+                  : undefined,
+            });
+          }
+          participantIndex++;
+        }
+      });
+    });
+
+    return result;
+  }, [participants, raceQuantities]);
+
+  const formatDateShort = (date: string) => {
+    if (!date) return "";
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(date));
+  };
+
+  const maskCPF = (cpf: string) => {
+    if (!cpf) return "";
+    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
+  };
 
   return (
     <>
       {/* Mobile Layout */}
       <div className="w-full md:hidden flex flex-col pb-24">
         {/* Instructional Text */}
-        <div className="pb-4 md:pb-0 md:py-6">
-          <p className="text-sm text-gray-11">
+        <div className="pb-6">
+          <p className="text-sm text-gray-11 font-dm-sans">
             Revise seu pedido e conclua com cartão, Pix ou boleto. Os ingressos
             são liberados após aprovação.
           </p>
@@ -579,33 +749,31 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             className={`border rounded-lg p-4 transition-colors ${
               selectedPaymentMethod === "credit"
                 ? "border-blue-8 bg-blue-3"
-                : "border-gray-5 bg-gray-3"
+                : "border-gray-7 bg-gray-3"
             }`}
+            onClick={() => setSelectedPaymentMethod("credit")}
           >
-            <div
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => setSelectedPaymentMethod("credit")}
-            >
+            <div className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-3">
                 <div
-                  className={`rounded-full size-4 border-[1.5px] ${
+                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${
                     selectedPaymentMethod === "credit"
-                      ? "bg-primary-10 border-primary-10"
+                      ? "bg-primary-11 border-primary-11"
                       : "bg-transparent border-gray-6"
                   }`}
-                />
-                <span className="text-base font-semibold text-gray-12">
+                ></div>
+                <span className="text-base font-semibold text-primary-12 font-manrope">
                   Cartão de crédito
                 </span>
               </div>
               <div className="flex gap-1 items-center">
-                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
                   <VisaIcon />
                 </div>
-                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
                   <EloIcon />
                 </div>
-                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
                   <Image
                     src="/images/american_express.png"
                     alt="American Express"
@@ -613,7 +781,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     height={24}
                   />
                 </div>
-                <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
                   <MasterCardIcon />
                 </div>
               </div>
@@ -636,6 +804,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   setCardCVV={setCardCVV}
                   isMobile={true}
                 />
+                <Button
+                  onClick={() => {
+                    if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
+                      alert("Por favor, preencha todos os campos do cartão");
+                      return;
+                    }
+                    if (onSuccess) {
+                      onSuccess();
+                    }
+                  }}
+                  className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope"
+                >
+                  Finalizar compra
+                </Button>
               </div>
             )}
           </div>
@@ -645,26 +827,26 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             className={`border rounded-lg p-4 transition-colors ${
               selectedPaymentMethod === "pix"
                 ? "border-blue-8 bg-blue-3"
-                : "border-gray-5 bg-gray-3"
+                : "border-gray-7 bg-gray-3"
             }`}
+            onClick={() => setSelectedPaymentMethod("pix")}
           >
-            <div
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => setSelectedPaymentMethod("pix")}
-            >
+            <div className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-3">
                 <div
-                  className={`rounded-full size-4 border-[1.5px] ${
+                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${
                     selectedPaymentMethod === "pix"
-                      ? "bg-primary-10 border-primary-10"
+                      ? "bg-primary-11 border-primary-11"
                       : "bg-transparent border-gray-6"
                   }`}
-                />
-                <span className="text-base font-semibold text-gray-12">
+                ></div>
+                <span className="text-base font-semibold text-gray-12 font-manrope">
                   PIX
                 </span>
-                <div className="bg-primary-6 text-primary-12 rounded-full px-2 py-1">
-                  <span className="text-sm font-semibold">5% OFF</span>
+                <div className="bg-primary-6 text-primary-12 rounded-xl px-2 py-1">
+                  <span className="text-sm font-semibold font-plus-jakarta-sans">
+                    5% OFF
+                  </span>
                 </div>
               </div>
             </div>
@@ -678,12 +860,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 />
                 <Button
                   onClick={() => {
-                    // Open PIX modal or generate QR code
                     if (onSuccess) {
                       onSuccess();
                     }
                   }}
-                  className="w-full bg-gray-12 text-gray-1 font-bold"
+                  className="w-full bg-gray-12 text-gray-1 font-bold font-manrope"
                 >
                   Gerar QR CODE
                 </Button>
@@ -691,44 +872,130 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Mobile Footer Summary - Same style as ModalitiesStep */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
-        <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm">
-              Participantes: <span className="font-semibold">{totalParticipants}</span>
-            </p>
-            <p className="text-sm">
-              Taxa de serviço: {formatPrice(serviceFee)}
-            </p>
-            {additionalProductsCount > 0 && (
-              <p className="text-sm">
-                Produtos adicionais: <span className="font-semibold">{additionalProductsCount}</span>
+        {/* Coupon Section */}
+        <div className="pt-6 border-t border-gray-8">
+          <div className="flex flex-col gap-3">
+            <Input
+              type="text"
+              placeholder="Código de cupom (opcional)"
+              value={couponCode}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "").substring(0, 6);
+                setCouponCode(value);
+                setCouponError(null);
+                if (isCouponApplied) {
+                  setIsCouponApplied(false);
+                  setCouponDiscount(0);
+                }
+              }}
+              maxLength={6}
+              inputMode="numeric"
+              className={
+                couponError
+                  ? "border-red-6"
+                  : isCouponApplied
+                  ? "border-primary-8 bg-primary-3"
+                  : ""
+              }
+            />
+            {couponError && (
+              <p className="text-base font-medium text-red-11 font-dm-sans">
+                {couponError}
               </p>
             )}
-            <p className="text-base">
-              Valor total: <span className="font-bold">{formatPrice(totalValue)}</span>
-            </p>
+            {isCouponApplied && (
+              <p className="text-base font-medium text-primary-11 font-dm-sans">
+                Cupom aplicado com sucesso!
+              </p>
+            )}
+            {!isCouponApplied && (
+              <Button
+                onClick={handleApplyCoupon}
+                className="w-full bg-primary-11 text-primary-2 font-bold font-manrope"
+              >
+                Aplicar cupom
+              </Button>
+            )}
           </div>
-          <Button
-            onClick={() => {
-              if (selectedPaymentMethod === "credit") {
-                // Validate credit card form
-                if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
-                  alert("Por favor, preencha todos os campos do cartão");
-                  return;
+        </div>
+      </div>
+
+      {/* Mobile Footer Summary - Always Visible */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+        {/* Toggle Button */}
+        <div
+          className="bg-gray-2 place-self-end w-1/3 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 cursor-pointer transition-transform active:scale-95"
+          onClick={openModal}
+        >
+          <p className="text-sm font-medium text-gray-11 text-center font-dm-sans">
+            Mostrar resumo
+          </p>
+        </div>
+
+        {/* Summary Content - Always Visible */}
+        <div className="bg-gray-1 border-t border-gray-6 px-4 py-5">
+          <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
+            <div className="flex gap-1 items-center">
+              <p className="text-sm text-gray-12 font-dm-sans">
+                Participantes:
+              </p>
+              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                {totalParticipants}
+              </p>
+            </div>
+            <div className="flex gap-1 items-center">
+              <p className="text-sm text-gray-12 font-dm-sans">
+                Taxa de serviço:
+              </p>
+              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                {formatPrice(serviceFee)}
+              </p>
+            </div>
+            {additionalProductsCount > 0 && (
+              <div className="flex gap-1 items-center">
+                <p className="text-sm text-gray-12 font-dm-sans">
+                  Produtos adicionais:
+                </p>
+                <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                  {additionalProductsCount}
+                </p>
+              </div>
+            )}
+            {isCouponApplied && couponDiscount > 0 && (
+              <div className="flex gap-1 items-center">
+                <p className="text-sm text-gray-12 font-dm-sans">Cupom:</p>
+                <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                  -{formatPrice(couponDiscount)}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1 items-center">
+              <p className="text-base text-gray-12 font-dm-sans">Total:</p>
+              <p className="text-base font-bold text-gray-12 font-manrope">
+                {formatPrice(totalValue)}
+              </p>
+            </div>
+            <Button
+              onClick={() => {
+                if (selectedPaymentMethod === "credit") {
+                  if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
+                    alert("Por favor, preencha todos os campos do cartão");
+                    return;
+                  }
                 }
-              }
-              if (onSuccess) {
-                onSuccess();
-              }
-            }}
-            disabled={totalParticipants === 0}
-          >
-            Finalizar compra
-          </Button>
+                if (onSuccess) {
+                  onSuccess();
+                }
+              }}
+              disabled={totalParticipants === 0}
+              className="font-bold font-manrope"
+            >
+              Finalizar compra
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -816,13 +1083,356 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         <div className="max-w-1/3 w-full">
           <OrderSummary
             items={orderItems}
-            serviceFee={39.85}
-            total={438.34}
-            onApplyCoupon={(coupon) => console.log("Applying coupon:", coupon)}
+            serviceFee={serviceFee}
+            total={totalValue}
+            couponCode={couponCode}
+            couponDiscount={couponDiscount}
+            couponError={couponError}
+            isCouponApplied={isCouponApplied}
+            onApplyCoupon={handleApplyCoupon}
+            onCouponChange={(code) => {
+              setCouponCode(code);
+              setCouponError(null);
+              if (isCouponApplied) {
+                setIsCouponApplied(false);
+                setCouponDiscount(0);
+              }
+            }}
             participantsData={participantsData}
           />
         </div>
       </div>
+
+      {/* Participants Summary Modal */}
+      {isParticipantsModalOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className={`fixed inset-0 z-50 bg-black/90 md:hidden transition-opacity duration-300 ease-out ${
+              isModalAnimating ? 'opacity-100' : 'opacity-0'
+            }`}
+            onClick={closeModal}
+          />
+          
+          {/* Modal Content */}
+          <div 
+            className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-xl max-h-[90vh] flex flex-col md:hidden transition-transform duration-300 ease-out ${
+              isModalAnimating ? 'translate-y-0' : 'translate-y-full'
+            }`}
+          >
+            {/* Close Button */}
+            <div className="bg-gray-2 w-1/3 place-self-end border-t border-l border-r border-gray-6 rounded-tl-xl px-4 py-2 flex items-center justify-center shrink-0">
+              <button
+                onClick={closeModal}
+                className="text-sm font-medium text-gray-11 font-dm-sans transition-colors hover:text-gray-12 active:scale-95"
+              >
+                Fechar resumo
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className={`flex-1 overflow-y-auto transition-opacity duration-300 ${
+              isModalAnimating ? 'opacity-100' : 'opacity-0'
+            }`}>
+              <div className="bg-gray-1">
+                {/* Participants List */}
+                <div className="px-4 flex flex-col">
+                  {participantsWithRaces.map(
+                    (
+                      {
+                        participantIndex,
+                        participant,
+                        race,
+                        additionalProducts,
+                      },
+                      index
+                    ) => (
+                      <div
+                        key={participantIndex}
+                        className={`py-5 transition-all duration-300 ease-out ${
+                          index > 0 ? "border-t border-gray-6" : ""
+                        } ${
+                          isModalAnimating 
+                            ? 'opacity-100 translate-y-0' 
+                            : 'opacity-0 translate-y-4'
+                        }`}
+                        style={{
+                          transitionDelay: `${index * 50}ms`
+                        }}
+                      >
+                        <p className="text-base font-semibold text-gray-12 mb-5 font-dm-sans">
+                          Participantes {participantIndex + 1}
+                        </p>
+
+                        {/* Participant Card */}
+                        <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
+                          <div className="flex items-center gap-2">
+                            <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
+                              {participant.name ? (
+                                <span className="text-sm font-bold text-gray-12">
+                                  {participant.name.charAt(0).toUpperCase()}
+                                </span>
+                              ) : (
+                                <Image
+                                  src={
+                                    event.bannerUrl ||
+                                    "/images/default-avatar.png"
+                                  }
+                                  alt="Participante"
+                                  width={40}
+                                  height={40}
+                                  className="size-10 rounded-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                                {participant.name ||
+                                  `Participante ${participantIndex + 1}`}
+                              </p>
+                              <div className="flex items-center gap-2 text-xs text-gray-11 font-dm-sans">
+                                {participant.birthDate && (
+                                  <>
+                                    {formatDateShort(participant.birthDate)}
+                                    <span className="size-1 bg-gray-11 rounded-full" />
+                                  </>
+                                )}
+                                {participant.gender && (
+                                  <>
+                                    {participant.gender}
+                                    {participant.cpf && (
+                                      <span className="size-1 bg-gray-11 rounded-full" />
+                                    )}
+                                  </>
+                                )}
+                                {participant.cpf && maskCPF(participant.cpf)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Race Info */}
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-base font-medium text-gray-12 font-dm-sans">
+                            {race.name}
+                          </p>
+                          <p className="text-base font-bold text-gray-12 font-manrope">
+                            {formatPrice(race.price)}
+                          </p>
+                        </div>
+
+                        {/* Additional Products Summary */}
+                        {additionalProducts &&
+                          additionalProducts.length > 0 && (
+                            <div className="flex items-center justify-between mb-3">
+                              <p className="text-base font-semibold text-gray-12 font-manrope">
+                                {additionalProducts.length}x Itens adicionais:
+                              </p>
+                              <p className="text-base font-bold text-gray-12 font-manrope">
+                                {formatPrice(
+                                  additionalProducts.reduce(
+                                    (sum, item) =>
+                                      sum + item.price * item.quantity,
+                                    0
+                                  )
+                                )}
+                              </p>
+                            </div>
+                          )}
+
+                        {/* Action Buttons */}
+                        {additionalProducts &&
+                          additionalProducts.length > 0 && (
+                            <div className="flex gap-2 items-center mb-4">
+                              <button
+                                className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center"
+                                onClick={() => {
+                                  // Handle delete
+                                }}
+                              >
+                                <TrashIcon className="size-6 text-red-11" />
+                              </button>
+                              <button
+                                className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center"
+                                onClick={() => {
+                                  // Handle edit
+                                }}
+                              >
+                                <PencilIcon className="size-6 text-gray-12" />
+                              </button>
+                            </div>
+                          )}
+
+                        {/* Expanded Additional Products */}
+                        {expandedProducts[participantIndex] &&
+                          additionalProducts &&
+                          additionalProducts.length > 0 && (
+                            <div className="mb-4">
+                              {additionalProducts.map(
+                                (product, productIndex) => (
+                                  <div
+                                    key={productIndex}
+                                    className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
+                                  >
+                                    {/* Product Header */}
+                                    <div className="flex gap-3 p-4 border-b border-gray-6">
+                                      <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
+                                        <Image
+                                          src={
+                                            product.image ||
+                                            "/images/camisa.png"
+                                          }
+                                          alt={product.name}
+                                          width={100}
+                                          height={100}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                      <div className="flex flex-col justify-between flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-12 font-dm-sans line-clamp-2">
+                                          {product.name}
+                                        </p>
+                                        <p className="text-base font-semibold text-gray-12 font-manrope">
+                                          {formatPrice(product.price)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {/* Product Size */}
+                                    <div className="p-4">
+                                      <div className="flex gap-1 items-center">
+                                        <p className="text-base text-gray-12 font-dm-sans">
+                                          Tamanho:
+                                        </p>
+                                        <p className="text-base font-semibold text-gray-12 font-manrope">
+                                          {product.size || "N/A"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          )}
+
+                        {/* Show More/Less Button */}
+                        {additionalProducts &&
+                          additionalProducts.length > 0 && (
+                            <button
+                              onClick={() => {
+                                setExpandedProducts((prev) => ({
+                                  ...prev,
+                                  [participantIndex]: !prev[participantIndex],
+                                }));
+                              }}
+                              className="text-base font-medium text-gray-11 font-dm-sans underline mb-4"
+                            >
+                              {expandedProducts[participantIndex]
+                                ? "Mostrar menos"
+                                : "Mostrar mais"}
+                            </button>
+                          )}
+
+                        {/* Participant Total */}
+                        <div className="flex items-center justify-end">
+                          <p className="text-base font-bold text-gray-12 font-manrope">
+                            {formatPrice(
+                              race.price +
+                                (additionalProducts?.reduce(
+                                  (sum, item) =>
+                                    sum + item.price * item.quantity,
+                                  0
+                                ) || 0)
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Summary Footer - Fixed */}
+              <div className={`bg-gray-1 border-t border-gray-6 px-4 py-5 shrink-0 transition-opacity duration-300 delay-200 ${
+                isModalAnimating ? 'opacity-100' : 'opacity-0'
+              }`}>
+                <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
+                  <div className="flex gap-1 items-center">
+                    <p className="text-sm text-gray-12 font-dm-sans">
+                      Participantes:
+                    </p>
+                    <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                      {totalParticipants}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <p className="text-sm text-gray-12 font-dm-sans">
+                      Taxa de serviço:
+                    </p>
+                    <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                      {formatPrice(serviceFee)}
+                    </p>
+                  </div>
+                  {additionalProductsCount > 0 && (
+                    <div className="flex gap-1 items-center">
+                      <p className="text-sm text-gray-12 font-dm-sans">
+                        Produtos adicionais:
+                      </p>
+                      <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                        {additionalProductsCount}
+                      </p>
+                    </div>
+                  )}
+                  {isCouponApplied && couponDiscount > 0 && (
+                    <div className="flex gap-1 items-center">
+                      <p className="text-sm text-gray-12 font-dm-sans">
+                        Cupom:
+                      </p>
+                      <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                        -{formatPrice(couponDiscount)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-1 items-center">
+                    <p className="text-base text-gray-12 font-dm-sans">
+                      Total:
+                    </p>
+                    <p className="text-base font-bold text-gray-12 font-manrope">
+                      {formatPrice(totalValue)}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      closeModal();
+                      if (selectedPaymentMethod === "credit") {
+                        if (
+                          !cardName ||
+                          !cardNumber ||
+                          !cardExpiry ||
+                          !cardCVV
+                        ) {
+                          alert(
+                            "Por favor, preencha todos os campos do cartão"
+                          );
+                          return;
+                        }
+                      }
+                      if (onSuccess) {
+                        onSuccess();
+                      }
+                    }}
+                    disabled={totalParticipants === 0}
+                    className="bg-primary-11 text-primary-2 font-bold font-manrope"
+                  >
+                    Finalizar compra
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

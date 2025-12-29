@@ -262,14 +262,20 @@ export default function UserProfilePage() {
             <div className="flex flex-wrap gap-6 items-start w-full md:grid md:grid-cols-2 md:gap-3">
               {/* Name */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Nome</label>
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                  Nome
+                </label>
                 <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
                   <User className="size-5 shrink-0 text-gray-11" />
                   {/* Mobile Input */}
                   <Input
                     type="text"
                     name="firstName"
-                    value={`${formData.firstName || ""} ${formData.lastName || ""}`.trim() || ""}
+                    value={
+                      `${formData.firstName || ""} ${
+                        formData.lastName || ""
+                      }`.trim() || ""
+                    }
                     onChange={(e) => {
                       const fullName = e.target.value;
                       const parts = fullName.split(" ");
@@ -286,7 +292,11 @@ export default function UserProfilePage() {
                   <Input
                     type="text"
                     name="firstName"
-                    value={`${formData.firstName || ""} ${formData.lastName || ""}`.trim() || ""}
+                    value={
+                      `${formData.firstName || ""} ${
+                        formData.lastName || ""
+                      }`.trim() || ""
+                    }
                     onChange={(e) => {
                       const fullName = e.target.value;
                       const parts = fullName.split(" ");
@@ -331,7 +341,9 @@ export default function UserProfilePage() {
 
               {/* Nationality */}
               <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Nacionalidade</label>
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                  Nacionalidade
+                </label>
                 <button
                   type="button"
                   onClick={() =>
@@ -383,7 +395,9 @@ export default function UserProfilePage() {
 
               {/* Phone */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Telefone</label>
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                  Telefone
+                </label>
                 <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
                   <Phone className="size-5 shrink-0 text-gray-11" />
                   {/* Mobile Input */}
@@ -410,7 +424,8 @@ export default function UserProfilePage() {
               {/* Emergency Phone */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
-                  Telefone de emergência <span className="text-gray-11">(Opcional)</span>
+                  Telefone de emergência{" "}
+                  <span className="text-gray-11">(Opcional)</span>
                 </label>
                 <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
                   <Phone className="size-5 shrink-0 text-gray-11" />
@@ -436,7 +451,9 @@ export default function UserProfilePage() {
               </div>
 
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">CPF</label>
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                  CPF
+                </label>
                 <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
                   <CPFIcon className="size-5 shrink-0 text-gray-11" />
                   {/* Mobile Input */}
@@ -462,7 +479,9 @@ export default function UserProfilePage() {
 
               {/* Gender */}
               <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Sexo</label>
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                  Sexo
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowGenderDropdown(!showGenderDropdown)}
@@ -504,12 +523,11 @@ export default function UserProfilePage() {
                   </div>
                 )}
               </div>
-
             </div>
 
             {/* Mobile: Divider */}
             <div className="h-px bg-gray-6 w-full my-0 md:hidden" />
-            
+
             {/* Mobile: Full width button */}
             <div className="flex justify-start w-full md:hidden">
               <Button
@@ -641,7 +659,7 @@ export default function UserProfilePage() {
                 </div>
                 <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={handleChangePassword}
@@ -656,7 +674,7 @@ export default function UserProfilePage() {
                 <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
               </button>
             </div>
-            
+
             {/* Desktop: Single button */}
             <button
               type="button"
@@ -680,7 +698,6 @@ export default function UserProfilePage() {
                 Segurança
               </h2>
 
-              {/* Mobile: Full width button */}
               <button
                 type="button"
                 onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
@@ -708,8 +725,12 @@ export default function UserProfilePage() {
                   />
                 </div>
               </button>
-              
-              {/* Desktop: Original button */}
+
+              <p className="text-base text-gray-11 font-dm-sans">
+                Ative o 2FA para adicionar uma camada extra de segurança à sua
+                conta. Sempre que fizer login em um novo dispositivo, você
+                precisará informar um código enviado para o seu e-mail.
+              </p>
               <button
                 type="button"
                 onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}

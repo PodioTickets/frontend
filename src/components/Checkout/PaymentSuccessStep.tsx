@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download } from "lucide-react";
 import { Button } from "../Button";
 import { SuccessIcon } from "../Icons/SuccessIcon";
 import { useRouter } from "next/navigation";
@@ -138,7 +138,7 @@ export function PaymentSuccessStep({
       <div className="w-full md:hidden bg-gray-2 min-h-screen">
         {/* Mobile Header */}
         <div className="w-full bg-white border-b border-gray-6">
-          <div className="flex items-center justify-center px-4 py-4 relative">
+          <div className="flex items-center justify-center px-4 pb-4 relative">
             <button
               onClick={() => router.push("/user/tickets")}
               className="absolute left-4 flex items-center justify-center"
@@ -146,7 +146,8 @@ export function PaymentSuccessStep({
               <ArrowLeft className="size-5 text-gray-12" />
             </button>
             <h1 className="text-base font-medium text-gray-12">Informações</h1>
-            <div className="absolute right-4 w-6" /> {/* Spacer for centering */}
+            <div className="absolute right-4 w-6" />{" "}
+            {/* Spacer for centering */}
           </div>
         </div>
 
@@ -168,8 +169,8 @@ export function PaymentSuccessStep({
                   Pagamento aprovado
                 </h1>
                 <p className="font-medium text-base leading-[1.3] font-dm-sans">
-                  Sua inscrição foi confirmada. Enviamos o comprovante para o seu
-                  e-mail.
+                  Sua inscrição foi confirmada. Enviamos o comprovante para o
+                  seu e-mail.
                 </p>
               </div>
             </div>
@@ -220,7 +221,7 @@ export function PaymentSuccessStep({
                       <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
                         Forma de pagamento:
                       </p>
-                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope text-end">
                         {paymentMethod}
                       </p>
                     </div>
@@ -298,7 +299,7 @@ export function PaymentSuccessStep({
               <div className="flex flex-col items-start pb-0 pt-8 px-0 w-full">
                 <Button
                   onClick={() => router.push("/user/tickets")}
-                  className="w-full font-bold text-lg h-12 bg-primary-11 text-primary-2"
+                  className="w-full font-bold text-lg h-12 flex items-center justify-center gap-2"
                 >
                   Ver meus ingressos
                 </Button>
@@ -349,6 +350,7 @@ export function PaymentSuccessStep({
                                 <Image
                                   src={participantData.qrCode}
                                   alt="QR Code"
+                                  draggable={false}
                                   fill
                                   className="object-cover rounded-lg"
                                 />
@@ -360,9 +362,10 @@ export function PaymentSuccessStep({
                                 </div>
                               )}
                             </div>
-                            <div className="flex-1 flex flex-col gap-4 items-start px-0 py-3 text-gray-12">
+                            <div className="flex-1 flex flex-col gap-4 items-start px-0 py-3 text-gray-12 text-start">
                               <p className="font-normal text-base leading-[1.3] font-dm-sans">
-                                Participante {participantData.participantIndex + 1}
+                                Participante{" "}
+                                {participantData.participantIndex + 1}
                               </p>
                               <p className="font-bold text-lg leading-[1.1] font-manrope">
                                 {participantData.ticketName}
@@ -483,7 +486,7 @@ export function PaymentSuccessStep({
                               <p className="font-bold text-lg leading-[1.1] text-gray-12 font-manrope w-full">
                                 Informações do participante
                               </p>
-                              <div className="grid grid-cols-1 gap-2 w-full">
+                              <div className="grid grid-cols-1 gap-4 w-full">
                                 {[
                                   {
                                     label: "Nome",
@@ -493,7 +496,10 @@ export function PaymentSuccessStep({
                                     label: "Email",
                                     value: participant.email || "",
                                   },
-                                  { label: "CPF", value: participant.cpf || "" },
+                                  {
+                                    label: "CPF",
+                                    value: participant.cpf || "",
+                                  },
                                   {
                                     label: "Data de nascimento",
                                     value: participant.birthDate
@@ -513,20 +519,20 @@ export function PaymentSuccessStep({
                                 ].map((field, idx) => (
                                   <div
                                     key={idx}
-                                    className="border border-gray-6 flex flex-col gap-[15px] items-start px-3 py-4 rounded-lg w-full"
+                                    className="flex flex-col items-start rounded-lg w-full"
                                   >
-                                    <label className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                                    <label className="font-normal text-sm text-gray-12 font-dm-sans">
                                       {field.label}
                                     </label>
                                     <input
                                       type="text"
                                       value={field.value}
                                       readOnly
-                                      className="w-full font-medium text-base leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                      className="w-full font-medium text-base text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
                                     />
                                   </div>
                                 ))}
-                                <div className="border border-gray-6 flex flex-col gap-[15px] items-start px-3 py-4 rounded-lg w-full">
+                                <div className="flex flex-col items-start rounded-lg w-full">
                                   <label className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
                                     Telefone de emergência
                                   </label>
@@ -542,34 +548,60 @@ export function PaymentSuccessStep({
                               </div>
                             </div>
                           ) : (
-                            <div className="pb-6 pt-8 px-4 w-full">
-                              <h4 className="font-semibold text-lg leading-[1.1] text-gray-12 font-manrope mb-4">
-                                Produtos adicionais
-                              </h4>
+                            <div className="flex flex-col gap-5 items-start pb-6 pt-8 px-4 w-full">
+                              <p className="font-bold text-xl leading-[1.1] text-gray-12 font-manrope">
+                                Produtos do participante
+                              </p>
                               {participantData.additionalProducts &&
                               participantData.additionalProducts.length > 0 ? (
-                                <div className="space-y-3">
+                                <div className="flex flex-col gap-4 items-start w-full">
                                   {participantData.additionalProducts.map(
                                     (product, idx) => (
                                       <div
                                         key={idx}
-                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-6"
+                                        className="border border-gray-6 flex flex-col gap-6 items-start justify-center pb-6 pt-4 px-4 rounded-lg w-full"
                                       >
-                                        <span className="text-sm text-gray-12">
-                                          {product.name} (x{product.quantity})
-                                        </span>
-                                        <span className="text-sm font-semibold text-gray-12">
-                                          {formatCurrency(
-                                            product.price * product.quantity
-                                          )}
-                                        </span>
+                                        <div className="flex gap-3 items-center w-full">
+                                          <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                            <Image
+                                              src={
+                                                (product as any).image ||
+                                                "/images/camisa.png"
+                                              }
+                                              alt={product.name}
+                                              fill
+                                              className="object-cover rounded-lg"
+                                            />
+                                          </div>
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans w-[170px]">
+                                            {product.name}
+                                          </p>
+                                        </div>
+                                        <div className="flex items-center pl-0 pr-[37px] py-0 w-full">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans mr-[-37px]">
+                                            {formatCurrency(product.price)}
+                                          </p>
+                                          <div className="basis-0 flex gap-1 grow items-center justify-end min-w-[147px] mr-[-37px] rounded-lg">
+                                            <div className="flex gap-1 items-center">
+                                              <p className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                                Tamanho:
+                                              </p>
+                                            </div>
+                                            <div className="flex gap-1 h-[11px] items-center">
+                                              <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                                {(product as any).size || "XL"}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     )
                                   )}
                                 </div>
                               ) : (
                                 <p className="text-sm text-gray-11">
-                                  Nenhum produto adicional para este participante.
+                                  Nenhum produto adicional para este
+                                  participante.
                                 </p>
                               )}
                             </div>
@@ -603,428 +635,458 @@ export function PaymentSuccessStep({
                   Pagamento aprovado
                 </h1>
                 <p className="font-medium text-[18px] leading-[1.3] font-dm-sans">
-                  Sua inscrição foi confirmada. Enviamos o comprovante para o seu
-                  e-mail.
+                  Sua inscrição foi confirmada. Enviamos o comprovante para o
+                  seu e-mail.
                 </p>
               </div>
             </div>
           </div>
 
-        {/* Order Details */}
-        <div className="flex items-center justify-center px-[168px] py-0 w-full">
-          <div className="flex flex-col items-start w-[692px]">
-            <div className="bg-gray-2 flex flex-col items-start overflow-hidden rounded-[12px] shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
-              <div className="border-b border-gray-6 flex flex-col gap-[16px] items-start px-[16px] py-[24px] w-full">
-                <div className="flex flex-col gap-[8px] items-start w-full">
-                  {/* Order Number */}
-                  <div className="border border-gray-6 flex gap-[32px] items-center p-[16px] rounded-[8px] w-full">
-                    <div className="flex-1 flex flex-col items-start">
+          {/* Order Details */}
+          <div className="flex items-center justify-center px-[168px] py-0 w-full">
+            <div className="flex flex-col items-start w-[692px]">
+              <div className="bg-gray-2 flex flex-col items-start overflow-hidden rounded-[12px] shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
+                <div className="border-b border-gray-6 flex flex-col gap-[16px] items-start px-[16px] py-[24px] w-full">
+                  <div className="flex flex-col gap-[8px] items-start w-full">
+                    {/* Order Number */}
+                    <div className="border border-gray-6 flex gap-[32px] items-center p-[16px] rounded-[8px] w-full">
+                      <div className="flex-1 flex flex-col items-start">
+                        <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          Número do pedido:
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          #{orderNumber}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Event Name */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
                       <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        Número do pedido:
+                        Nome do evento:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        {event.name}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end">
+
+                    {/* Date */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
                       <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        #{orderNumber}
+                        Data:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        {formatDate(event.eventDate)}
+                      </p>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        Forma de pagamento:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope text-end">
+                        {paymentMethod}
+                      </p>
+                    </div>
+
+                    {/* Participants */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        Participantes:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        {displayParticipants.length}
                       </p>
                     </div>
                   </div>
 
-                  {/* Event Name */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Nome do evento:
-                    </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      {event.name}
-                    </p>
+                  {/* Divider */}
+                  <div className="bg-gray-6 h-px w-full" />
+
+                  {/* Totals */}
+                  <div className="flex flex-col gap-[8px] items-start w-full">
+                    {/* Additional Products */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        Produtos adicionais:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        {formatCurrency(additionalProductsTotal)}
+                      </p>
+                    </div>
+
+                    {/* Subtotal */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        Subtotal:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        {formatCurrency(subtotal)}
+                      </p>
+                    </div>
+
+                    {/* Service Fee */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        Taxa de serviço:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        {formatCurrency(serviceFee)}
+                      </p>
+                    </div>
+
+                    {/* Coupon Discount */}
+                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        Desconto cupom:
+                      </p>
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                        – {formatCurrency(couponDiscount)}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Date */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Data:
+                  {/* Total Paid */}
+                  <div className="flex gap-[2px] items-center justify-center pl-[16px] pr-0 py-[16px] rounded-[8px] w-full">
+                    <p className="font-medium text-[20px] leading-[1.1] text-gray-12 font-manrope">
+                      Total pago:
                     </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      {formatDate(event.eventDate)}
-                    </p>
-                  </div>
-
-                  {/* Payment Method */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Forma de pagamento:
-                    </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      {paymentMethod}
+                    <p className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
+                      {formatCurrency(totalPaid)}
                     </p>
                   </div>
-
-                  {/* Participants */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Participantes:
-                    </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      {displayParticipants.length}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="bg-gray-6 h-px w-full" />
-
-                {/* Totals */}
-                <div className="flex flex-col gap-[8px] items-start w-full">
-                  {/* Additional Products */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Produtos adicionais:
-                    </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      {formatCurrency(additionalProductsTotal)}
-                    </p>
-                  </div>
-
-                  {/* Subtotal */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Subtotal:
-                    </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      {formatCurrency(subtotal)}
-                    </p>
-                  </div>
-
-                  {/* Service Fee */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Taxa de serviço:
-                    </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      {formatCurrency(serviceFee)}
-                    </p>
-                  </div>
-
-                  {/* Coupon Discount */}
-                  <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                    <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      Desconto cupom:
-                    </p>
-                    <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                      – {formatCurrency(couponDiscount)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Total Paid */}
-                <div className="flex gap-[2px] items-center justify-center pl-[16px] pr-0 py-[16px] rounded-[8px] w-full">
-                  <p className="font-medium text-[20px] leading-[1.1] text-gray-12 font-manrope">
-                    Total pago:
-                  </p>
-                  <p className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
-                    {formatCurrency(totalPaid)}
-                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Button */}
-            <div className="flex flex-col items-start pb-0 pt-[32px] px-0 w-full">
-              <Button
-                onClick={() => router.push("/user/tickets")}
-                className="w-full font-bold text-[20px] h-[52px]"
-              >
-                Ver meus ingressos
-              </Button>
+              {/* Button */}
+              <div className="flex flex-col items-start pb-0 pt-[32px] px-0 w-full">
+                <Button
+                  onClick={() => router.push("/user/tickets")}
+                  className="w-full font-bold text-[20px] h-[52px]"
+                >
+                  Ver meus ingressos
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Ticket Details Section */}
-        <div className="flex flex-col items-center pb-0 pt-[80px] w-[692px]">
-          <div className="flex flex-col gap-[24px] items-start w-full">
-            <div className="flex flex-col gap-[16px] items-start justify-center w-full">
-              <h2 className="font-bold text-[28px] leading-[1.1] text-gray-12 font-manrope">
-                Detalhes do seu ingresso
-              </h2>
-              <p className="font-normal text-[16px] leading-[1.3] text-gray-11 font-dm-sans">
-                Apresente este QR Code na retirada do kit ou na entrada do
-                evento para validar sua inscrição.
-              </p>
-            </div>
+          {/* Ticket Details Section */}
+          <div className="flex flex-col items-center pb-0 pt-[80px] w-[692px]">
+            <div className="flex flex-col gap-[24px] items-start w-full">
+              <div className="flex flex-col gap-[16px] items-start justify-center w-full">
+                <h2 className="font-bold text-[28px] leading-[1.1] text-gray-12 font-manrope">
+                  Detalhes do seu ingresso
+                </h2>
+                <p className="font-normal text-[16px] leading-[1.3] text-gray-11 font-dm-sans">
+                  Apresente este QR Code na retirada do kit ou na entrada do
+                  evento para validar sua inscrição.
+                </p>
+              </div>
 
-            {/* Participant Cards */}
-            <div className="flex flex-col gap-[20px] items-center w-full">
-              {displayParticipants.map((participantData, index) => {
-                const participant = participants[
-                  participantData.participantIndex
-                ] || {
-                  name: "Lucas",
-                  cpf: "11812345685",
-                  birthDate: "2004-03-03",
-                  gender: "male",
-                };
-                const isExpanded = expandedParticipants[index] || false;
+              {/* Participant Cards */}
+              <div className="flex flex-col gap-[20px] items-center w-full">
+                {displayParticipants.map((participantData, index) => {
+                  const participant = participants[
+                    participantData.participantIndex
+                  ] || {
+                    name: "Lucas",
+                    cpf: "11812345685",
+                    birthDate: "2004-03-03",
+                    gender: "male",
+                  };
+                  const isExpanded = expandedParticipants[index] || false;
 
-                return (
-                  <div
-                    key={index}
-                    className="bg-gray-1 border border-gray-6 flex flex-col items-start min-w-[400px] rounded-[12px] w-[692px] overflow-hidden"
-                  >
-                    <button
-                      className="flex flex-col items-start p-0 w-full"
-                      onClick={() => toggleParticipant(index)}
+                  return (
+                    <div
+                      key={index}
+                      className="bg-gray-1 border border-gray-6 flex flex-col items-start min-w-[400px] rounded-[12px] w-[692px] overflow-hidden"
                     >
-                      {/* Content */}
-                      <div className="flex items-center justify-between px-[16px] py-[24px] w-full">
-                        <div className="flex flex-col gap-[20px] items-start">
-                          <p className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
-                            Participante {participantData.participantIndex + 1}
-                          </p>
-                          <h3 className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
-                            {participantData.ticketName}
-                          </h3>
-                          <div className="flex gap-[32px] items-start">
-                            <div className="flex gap-[8px] items-center">
-                              <DistanceIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
-                                0.3 Km
-                              </span>
-                            </div>
-                            <div className="flex gap-[8px] items-center">
-                              <CalendarIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
-                                {formatDate(event.eventDate)}
-                              </span>
-                            </div>
-                            <div className="flex gap-[8px] items-center">
-                              <ClockIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
-                                {formatTime(event.eventDate)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        {/* QR Code */}
-                        <div className="flex flex-row items-center">
-                          <div className="aspect-square h-full relative">
-                            {participantData.qrCode ? (
-                              <Image
-                                src={participantData.qrCode}
-                                alt="QR Code"
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="w-[128px] h-[128px] bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center">
-                                <span className="text-xs text-gray-11">
-                                  QR Code
+                      <button
+                        className="flex flex-col items-start p-0 w-full"
+                        onClick={() => toggleParticipant(index)}
+                      >
+                        {/* Content */}
+                        <div className="flex items-center justify-between px-[16px] py-[24px] w-full">
+                          <div className="flex flex-col gap-[20px] items-start">
+                            <p className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
+                              Participante{" "}
+                              {participantData.participantIndex + 1}
+                            </p>
+                            <h3 className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
+                              {participantData.ticketName}
+                            </h3>
+                            <div className="flex gap-[32px] items-start">
+                              <div className="flex gap-[8px] items-center">
+                                <DistanceIcon className="size-6 text-gray-12" />
+                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
+                                  0.3 Km
                                 </span>
                               </div>
-                            )}
+                              <div className="flex gap-[8px] items-center">
+                                <CalendarIcon className="size-6 text-gray-12" />
+                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
+                                  {formatDate(event.eventDate)}
+                                </span>
+                              </div>
+                              <div className="flex gap-[8px] items-center">
+                                <ClockIcon className="size-6 text-gray-12" />
+                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
+                                  {formatTime(event.eventDate)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Profile */}
-                      <div className="border-b border-gray-6 flex items-center justify-between pb-[20px] pt-0 px-[16px] w-full">
-                        <div className="border border-gray-6 flex items-center p-[12px] rounded-[12px]">
-                          <div className="flex gap-[8px] items-center">
-                            <div className="relative size-[40px] rounded-full overflow-hidden bg-primary-10/20">
-                              {participant.name ? (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <span className="text-primary-11 font-semibold text-sm">
-                                    {participant.name.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                              ) : (
+                          {/* QR Code */}
+                          <div className="flex flex-row items-center">
+                            <div className="aspect-square h-full relative">
+                              {participantData.qrCode ? (
                                 <Image
-                                  src="/images/default-avatar.png"
-                                  alt="Avatar"
+                                  src={participantData.qrCode}
+                                  alt="QR Code"
                                   fill
                                   className="object-cover"
                                 />
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-[12px] items-start justify-center">
-                              <p className="font-semibold text-[14px] leading-[1.3] text-gray-12 font-dm-sans">
-                                {participant.name || "Sem nome"}
-                              </p>
-                              <div className="flex gap-[8px] items-center justify-center">
-                                {participant.birthDate && (
-                                  <>
-                                    <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
-                                      {formatDate(participant.birthDate)}
-                                    </span>
-                                    <div className="size-1 rounded-full bg-gray-11" />
-                                  </>
-                                )}
-                                {participant.gender && (
-                                  <>
-                                    <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
-                                      {getGenderLabel(participant.gender)}
-                                    </span>
-                                    <div className="size-1 rounded-full bg-gray-11" />
-                                  </>
-                                )}
-                                {participant.cpf && (
-                                  <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
-                                    {maskCPF(participant.cpf)}
+                              ) : (
+                                <div className="w-[128px] h-[128px] bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center">
+                                  <span className="text-xs text-gray-11">
+                                    QR Code
                                   </span>
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-center size-8">
-                          <ChevronDown
-                            className={`size-8 text-gray-12 transition-transform ${
-                              isExpanded ? "rotate-180" : ""
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </button>
 
-                    {/* Expanded Content */}
-                    {isExpanded && (
-                      <>
-                        {/* Tabs */}
-                        <div className="flex gap-[12px] items-start pb-[8px] pt-[20px] px-[16px] w-full">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveTab("info");
-                            }}
-                            className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${
-                              activeTab === "info"
-                                ? "bg-primary-11 text-primary-2"
-                                : "bg-gray-5 text-gray-11"
-                            }`}
-                          >
-                            Informações
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveTab("products");
-                            }}
-                            className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${
-                              activeTab === "products"
-                                ? "bg-primary-11 text-primary-2"
-                                : "bg-gray-5 text-gray-11"
-                            }`}
-                          >
-                            Produtos
-                          </button>
+                        {/* Profile */}
+                        <div className="border-b border-gray-6 flex items-center justify-between pb-[20px] pt-0 px-[16px] w-full">
+                          <div className="border border-gray-6 flex items-center p-[12px] rounded-[12px]">
+                            <div className="flex gap-[8px] items-center">
+                              <div className="relative size-[40px] rounded-full overflow-hidden bg-primary-10/20">
+                                {participant.name ? (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <span className="text-primary-11 font-semibold text-sm">
+                                      {participant.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <Image
+                                    src="/images/default-avatar.png"
+                                    alt="Avatar"
+                                    fill
+                                    className="object-cover"
+                                  />
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-[12px] items-start justify-center">
+                                <p className="font-semibold text-[14px] leading-[1.3] text-gray-12 font-dm-sans">
+                                  {participant.name || "Sem nome"}
+                                </p>
+                                <div className="flex gap-[8px] items-center justify-center">
+                                  {participant.birthDate && (
+                                    <>
+                                      <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
+                                        {formatDate(participant.birthDate)}
+                                      </span>
+                                      <div className="size-1 rounded-full bg-gray-11" />
+                                    </>
+                                  )}
+                                  {participant.gender && (
+                                    <>
+                                      <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
+                                        {getGenderLabel(participant.gender)}
+                                      </span>
+                                      <div className="size-1 rounded-full bg-gray-11" />
+                                    </>
+                                  )}
+                                  {participant.cpf && (
+                                    <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
+                                      {maskCPF(participant.cpf)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-center size-8">
+                            <ChevronDown
+                              className={`size-8 text-gray-12 transition-transform ${
+                                isExpanded ? "rotate-180" : ""
+                              }`}
+                            />
+                          </div>
                         </div>
+                      </button>
 
-                        {/* Tab Content */}
-                        {activeTab === "info" ? (
-                          <div className="flex flex-wrap gap-[20px_12px] items-start overflow-hidden pb-[24px] pt-[32px] px-[16px] w-full">
-                            <p className="font-bold text-[20px] leading-[1.1] text-gray-12 font-manrope w-full">
-                              Informações do participante
-                            </p>
-                            <div className="grid grid-cols-2 gap-[8px] w-full">
-                              {[
-                                {
-                                  label: "Nome",
-                                  value: participant.name || "",
-                                },
-                                {
-                                  label: "Email",
-                                  value: participant.email || "",
-                                },
-                                { label: "CPF", value: participant.cpf || "" },
-                                {
-                                  label: "Data de nascimento",
-                                  value: participant.birthDate
-                                    ? formatDate(participant.birthDate)
-                                    : "",
-                                },
-                                {
-                                  label: "Telefone",
-                                  value: participant.phone || "",
-                                },
-                                {
-                                  label: "Sexo",
-                                  value: participant.gender
-                                    ? getGenderLabel(participant.gender)
-                                    : "",
-                                },
-                              ].map((field, idx) => (
-                                <div
-                                  key={idx}
-                                  className="border border-gray-6 flex flex-col gap-[15px] items-start px-[12px] py-[16px] rounded-[8px] min-w-[313px]"
-                                >
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <>
+                          {/* Tabs */}
+                          <div className="flex gap-[12px] items-start pb-[8px] pt-[20px] px-[16px] w-full">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab("info");
+                              }}
+                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${
+                                activeTab === "info"
+                                  ? "bg-primary-11 text-primary-2"
+                                  : "bg-gray-5 text-gray-11"
+                              }`}
+                            >
+                              Informações
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab("products");
+                              }}
+                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${
+                                activeTab === "products"
+                                  ? "bg-primary-11 text-primary-2"
+                                  : "bg-gray-5 text-gray-11"
+                              }`}
+                            >
+                              Produtos
+                            </button>
+                          </div>
+
+                          {/* Tab Content */}
+                          {activeTab === "info" ? (
+                            <div className="flex flex-wrap gap-[20px_12px] items-start overflow-hidden pb-[24px] pt-[32px] px-[16px] w-full">
+                              <p className="font-bold text-[20px] leading-[1.1] text-gray-12 font-manrope w-full">
+                                Informações do participante
+                              </p>
+                              <div className="grid grid-cols-2 gap-10 w-full">
+                                {[
+                                  {
+                                    label: "Nome",
+                                    value: participant.name || "",
+                                  },
+                                  {
+                                    label: "Email",
+                                    value: participant.email || "",
+                                  },
+                                  {
+                                    label: "CPF",
+                                    value: participant.cpf || "",
+                                  },
+                                  {
+                                    label: "Data de nascimento",
+                                    value: participant.birthDate
+                                      ? formatDate(participant.birthDate)
+                                      : "",
+                                  },
+                                  {
+                                    label: "Telefone",
+                                    value: participant.phone || "",
+                                  },
+                                  {
+                                    label: "Sexo",
+                                    value: participant.gender
+                                      ? getGenderLabel(participant.gender)
+                                      : "",
+                                  },
+                                ].map((field, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex flex-col gap-2 items-start rounded-[8px] min-w-[313px]"
+                                  >
+                                    <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
+                                      {field.label}
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={field.value}
+                                      readOnly
+                                      className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                    />
+                                  </div>
+                                ))}
+                                <div className="flex flex-col gap-2 items-start rounded-[8px] col-span-2">
                                   <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
-                                    {field.label}
+                                    Telefone de emergência
                                   </label>
                                   <input
                                     type="text"
-                                    value={field.value}
+                                    value={
+                                      participant.emergencyPhone || "Opcional"
+                                    }
                                     readOnly
                                     className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
                                   />
                                 </div>
-                              ))}
-                              <div className="border border-gray-6 flex flex-col gap-[15px] items-start px-[12px] py-[16px] rounded-[8px] col-span-2">
-                                <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
-                                  Telefone de emergência
-                                </label>
-                                <input
-                                  type="text"
-                                  value={
-                                    participant.emergencyPhone || "Opcional"
-                                  }
-                                  readOnly
-                                  className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
-                                />
                               </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="pb-[24px] pt-[32px] px-[16px] w-full">
-                            <h4 className="font-semibold text-[20px] leading-[1.1] text-gray-12 font-manrope mb-4">
-                              Produtos adicionais
-                            </h4>
-                            {participantData.additionalProducts &&
-                            participantData.additionalProducts.length > 0 ? (
-                              <div className="space-y-3">
-                                {participantData.additionalProducts.map(
-                                  (product, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-6"
-                                    >
-                                      <span className="text-sm text-gray-12">
-                                        {product.name} (x{product.quantity})
-                                      </span>
-                                      <span className="text-sm font-semibold text-gray-12">
-                                        {formatCurrency(
-                                          product.price * product.quantity
-                                        )}
-                                      </span>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-11">
-                                Nenhum produto adicional para este participante.
+                          ) : (
+                            <div className="flex flex-col gap-5 items-start pb-[24px] pt-[32px] px-[16px] w-full">
+                              <p className="font-bold text-[20px] leading-[1.1] text-gray-12 font-manrope">
+                                Produtos do participante
                               </p>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                              {participantData.additionalProducts &&
+                              participantData.additionalProducts.length > 0 ? (
+                                <div className="flex flex-col gap-4 items-start w-full">
+                                  {participantData.additionalProducts.map(
+                                    (product, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="border border-gray-6 flex flex-col gap-6 items-start justify-center pb-6 pt-4 px-4 rounded-lg w-full"
+                                      >
+                                        <div className="flex gap-3 items-center w-full">
+                                          <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                            <Image
+                                              src={
+                                                (product as any).image ||
+                                                "/images/camisa.png"
+                                              }
+                                              alt={product.name}
+                                              fill
+                                              className="object-cover rounded-lg"
+                                            />
+                                          </div>
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans w-[170px]">
+                                            {product.name}
+                                          </p>
+                                        </div>
+                                        <div className="flex items-center pl-0 pr-[37px] py-0 w-full">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans mr-[-37px]">
+                                            {formatCurrency(product.price)}
+                                          </p>
+                                          <div className="basis-0 flex gap-1 grow items-center justify-end min-w-[147px] mr-[-37px] rounded-lg">
+                                            <div className="flex gap-1 items-center">
+                                              <p className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                                Tamanho:
+                                              </p>
+                                            </div>
+                                            <div className="flex gap-1 h-[11px] items-center">
+                                              <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                                {(product as any).size || "XL"}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-11">
+                                  Nenhum produto adicional para este
+                                  participante.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </>

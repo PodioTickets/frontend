@@ -63,12 +63,13 @@ export default function EventPage() {
   useEffect(() => {
     const handleScroll = () => {
       // Mostrar botão quando scrollar mais de 200px
-      const scrollPosition = window.scrollY || document.documentElement.scrollTop;
+      const scrollPosition =
+        window.scrollY || document.documentElement.scrollTop;
       setShowFixedButton(scrollPosition > 200);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   if (!event || isLoading) {
@@ -200,7 +201,10 @@ export default function EventPage() {
             </div>
 
             {/* Action Buttons */}
-            <Link href={`/checkout?eventId=${event.id}`} className="hidden md:block mb-3">
+            <Link
+              href={`/checkout?eventId=${event.id}`}
+              className="hidden md:block mb-3"
+            >
               <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
                 Inscreva-se
               </Button>
@@ -303,25 +307,8 @@ export default function EventPage() {
               </div>
             </div>
           )}
-
-          {/* Eventos deste organizador */}
-          {sameOrganizerEvents.length > 0 && (
-            <div className="border border-gray-6 rounded-lg p-4 mt-6">
-              <h2 className="text-base font-bold text-gray-12 mb-4">
-                Eventos deste organizador
-              </h2>
-              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                {sameOrganizerEvents.map((e) => (
-                  <div key={e.id} className="min-w-[280px] shrink-0">
-                    <EventCard event={e} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Fixed Bottom Bar - Only shows when scrolling */}
         <div
           className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${
             showFixedButton
@@ -438,8 +425,9 @@ export default function EventPage() {
                           <div className="flex items-start gap-3">
                             <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
                               <span className="text-primary-11 font-semibold text-sm">
-                                {event.organizer.name?.charAt(0).toUpperCase() ||
-                                  "O"}
+                                {event.organizer.name
+                                  ?.charAt(0)
+                                  .toUpperCase() || "O"}
                               </span>
                             </div>
                             <div className="flex-1 min-w-0">
@@ -504,62 +492,70 @@ export default function EventPage() {
           )}
 
           {/* Content Layout - Different when no image */}
-          <div className={`w-full z-10 flex items-start gap-8 ${showBanner && event.bannerUrl ? 'mt-0 2xl:mt-0' : 'mt-0 2xl:mt-14'}`}>
+          <div
+            className={`w-full z-10 flex items-start gap-8 ${
+              showBanner && event.bannerUrl ? "mt-0 2xl:mt-0" : "mt-0 2xl:mt-14"
+            }`}
+          >
             {/* Topics Section */}
-            <div className={`${showBanner && event.bannerUrl ? 'w-3/4 pr-8' : 'flex-1 pr-8'}`}>
-            {event.topics?.map((topic, index) => (
-              <Fragment key={topic.id}>
-                <div
-                  className={`flex flex-col gap-2 ${
-                    index === 0 ? "mb-10" : "my-10"
-                  }`}
-                >
-                  <h1 className="text-2xl font-bold text-gray-12">
-                    {topic.title}
-                  </h1>
-                  <p className="text-gray-11 text-sm">{topic.content}</p>
-                </div>
-                <div className="w-full h-px bg-gray-6" />
-              </Fragment>
-            ))}
-
-            <div className="flex flex-col gap-4 my-10">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-bold text-gray-12">
-                  Onde acontecerá o evento
-                </h1>
-              </div>
-              <EventMap
-                city={event.city}
-                state={event.state}
-                title={event.name}
-              />
-            </div>
-
-            {event.stravaRouteId && (
-              <>
-                <div className="w-full h-px bg-gray-6" />
-                <div className="flex flex-col gap-4 mt-10">
-                  <div className="flex flex-col gap-2">
+            <div
+              className={`${
+                showBanner && event.bannerUrl ? "w-3/4 pr-8" : "flex-1 pr-8"
+              }`}
+            >
+              {event.topics?.map((topic, index) => (
+                <Fragment key={topic.id}>
+                  <div
+                    className={`flex flex-col gap-2 ${
+                      index === 0 ? "mb-10" : "my-10"
+                    }`}
+                  >
                     <h1 className="text-2xl font-bold text-gray-12">
-                      Rota no Strava
+                      {topic.title}
                     </h1>
+                    <p className="text-gray-11 text-sm">{topic.content}</p>
                   </div>
-                  <div className="w-full h-[400px] rounded-xl overflow-hidden border border-gray-6 shadow-lg relative bg-gray-2">
-                    <iframe
-                      height="100%"
-                      width="100%"
-                      frameBorder="0"
-                      scrolling="no"
-                      src={`https://www.strava.com/routes/${event.stravaRouteId}/embed`}
-                      title={`Rota do ${event.name} no Strava`}
-                      className="w-full h-full"
-                      allowFullScreen
-                    />
-                  </div>
+                  <div className="w-full h-px bg-gray-6" />
+                </Fragment>
+              ))}
+
+              <div className="flex flex-col gap-4 my-10">
+                <div className="flex flex-col gap-2">
+                  <h1 className="text-2xl font-bold text-gray-12">
+                    Onde acontecerá o evento
+                  </h1>
                 </div>
-              </>
-            )}
+                <EventMap
+                  city={event.city}
+                  state={event.state}
+                  title={event.name}
+                />
+              </div>
+
+              {event.stravaRouteId && (
+                <>
+                  <div className="w-full h-px bg-gray-6" />
+                  <div className="flex flex-col gap-4 mt-10">
+                    <div className="flex flex-col gap-2">
+                      <h1 className="text-2xl font-bold text-gray-12">
+                        Rota no Strava
+                      </h1>
+                    </div>
+                    <div className="w-full h-[400px] rounded-xl overflow-hidden border border-gray-6 shadow-lg relative bg-gray-2">
+                      <iframe
+                        height="100%"
+                        width="100%"
+                        frameBorder="0"
+                        scrolling="no"
+                        src={`https://www.strava.com/routes/${event.stravaRouteId}/embed`}
+                        title={`Rota do ${event.name} no Strava`}
+                        className="w-full h-full"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Info Card Section - Only shown when no image */}

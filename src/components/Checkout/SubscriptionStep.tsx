@@ -24,6 +24,16 @@ interface KitProduct {
   isRequired: boolean;
 }
 
+// Preços por tamanho (em reais)
+const sizePrices: Record<string, number> = {
+  pp: 20,
+  p: 25,
+  m: 30,
+  g: 35,
+  gg: 40,
+  xgg: 45,
+};
+
 const sizeOptions: DropdownOption[] = [
   { id: "pp", label: "PP" },
   { id: "p", label: "P" },
@@ -32,6 +42,27 @@ const sizeOptions: DropdownOption[] = [
   { id: "gg", label: "GG" },
   { id: "xgg", label: "XGG" },
 ];
+
+// Função para formatar o label do tamanho com preço
+const formatSizeLabel = (sizeId: string): string => {
+  const size = sizeOptions.find((s) => s.id === sizeId);
+  const price = sizePrices[sizeId] || 0;
+  if (!size) return "";
+  return `${size.label} - ${new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(price)}`;
+};
+
+// Função para obter as opções do dropdown com preços formatados
+const getSizeOptionsWithPrices = (): DropdownOption[] => {
+  return sizeOptions.map((option) => ({
+    ...option,
+    label: option.id ? formatSizeLabel(option.id) : option.label,
+  }));
+};
 
 // Mock de produtos do kit (obrigatórios)
 const requiredProducts: KitProduct[] = [
@@ -100,6 +131,14 @@ export function SubscriptionStep({
     Record<string, string | null>
   >({});
   const [selectedParticipant, setSelectedParticipant] = useState<number>(0);
+  const [expandedParticipants, setExpandedParticipants] = useState<
+    Record<number, boolean>
+  >({
+    0: true,
+  });
+  const [completedParticipants, setCompletedParticipants] = useState<
+    Record<number, boolean>
+  >({});
 
   // Função para obter a chave única do tamanho selecionado (participante + produto)
   const getSizeKey = (participantIndex: number, productId: string) => {
@@ -149,12 +188,87 @@ export function SubscriptionStep({
     return { totalParticipants: participants, totalPrice: total };
   }, [raceQuantities]);
 
-  const handleSizeSelect = (productId: string) => (option: DropdownOption) => {
-    const sizeKey = getSizeKey(selectedParticipant, productId);
-    setSelectedSizes((prev) => ({
-      ...prev,
-      [sizeKey]: option.id || null,
-    }));
+  const handleSizeSelect =
+    (participantIndex: number, productId: string) =>
+    (option: DropdownOption) => {
+      const sizeKey = getSizeKey(participantIndex, productId);
+      setSelectedSizes((prev) => ({
+        ...prev,
+        [sizeKey]: option.id || null,
+      }));
+    };
+
+  const handleParticipantSelect = (participantIndex: number) => {
+    // Colapsar todos os participantes
+    const newExpanded: Record<number, boolean> = {};
+    // Expandir apenas o selecionado
+    newExpanded[participantIndex] = true;
+    setExpandedParticipants(newExpanded);
+    setSelectedParticipant(participantIndex);
+  };
+
+  const toggleParticipant = (participantIndex: number) => {
+    setExpandedParticipants((prev) => {
+      const isCurrentlyExpanded = prev[participantIndex] || false;
+      // Se estiver expandindo, colapsa todos os outros e expande este
+      if (!isCurrentlyExpanded) {
+        setSelectedParticipant(participantIndex);
+        return { [participantIndex]: true };
+      }
+      // Se estiver colapsando, apenas remove este
+      const newState = { ...prev };
+      delete newState[participantIndex];
+      return newState;
+    });
+  };
+
+  // Verificar se todos os produtos obrigatórios têm tamanho (sem verificar se já está concluído)
+  const hasAllRequiredSizes = (participantIndex: number): boolean => {
+    return requiredProducts.every((product) => {
+      const sizeKey = getSizeKey(participantIndex, product.id);
+      return selectedSizes[sizeKey] && selectedSizes[sizeKey] !== null;
+    });
+  };
+
+  // Verificar se todos os produtos obrigatórios têm tamanho selecionado
+  const isParticipantComplete = (participantIndex: number): boolean => {
+    // Verificar se já está marcado como concluído
+    if (completedParticipants[participantIndex]) {
+      return true;
+    }
+    // Verificar se todos os produtos obrigatórios têm tamanho selecionado
+    return hasAllRequiredSizes(participantIndex);
+  };
+
+  // Salvar e marcar participante como concluído
+  const handleSaveAndNext = (participantIndex: number) => {
+    // Verificar se todos os produtos obrigatórios têm tamanho
+    if (hasAllRequiredSizes(participantIndex)) {
+      // Marcar como concluído
+      setCompletedParticipants((prev) => ({
+        ...prev,
+        [participantIndex]: true,
+      }));
+      // Colapsar este participante
+      setExpandedParticipants((prev) => {
+        const newState = { ...prev };
+        delete newState[participantIndex];
+        return newState;
+      });
+      // Encontrar próximo participante não concluído
+      const nextParticipant = participantsWithRaces.find(
+        (p) =>
+          !completedParticipants[p.participantIndex] &&
+          p.participantIndex !== participantIndex
+      );
+      if (nextParticipant) {
+        setSelectedParticipant(nextParticipant.participantIndex);
+        setExpandedParticipants((prev) => ({
+          ...prev,
+          [nextParticipant.participantIndex]: true,
+        }));
+      }
+    }
   };
 
   const formatDateShort = (date: string) => {
@@ -204,254 +318,34 @@ export function SubscriptionStep({
           </p>
         </div>
 
-        {/* Participant Card */}
-        <div className="pb-6">
-          <div className="border border-gray-6 rounded-xl bg-white">
-            <div className="p-4 border-b border-gray-6">
-              <h2 className="text-lg font-extrabold text-gray-12">
-                Participante {selectedParticipant + 1}
-              </h2>
-            </div>
-
-            {/* Participant Info */}
-            <div className="p-2 border-b border-gray-6">
-              <div className="flex items-center gap-2 p-2 border border-gray-6 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0">
-                  {currentParticipant.name ? (
-                    <span className="text-sm font-bold text-gray-12">
-                      {currentParticipant.name.charAt(0).toUpperCase()}
-                    </span>
-                  ) : (
-                    <Image
-                      src={event.bannerUrl}
-                      alt={currentParticipant.name || "Participante"}
-                      width={40}
-                      height={40}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-12">
-                    {currentParticipant.name ||
-                      `Participante ${selectedParticipant + 1}`}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-gray-11">
-                    {currentParticipant.birthDate && (
-                      <>
-                        {formatDateShort(currentParticipant.birthDate)}
-                        <span className="size-1 bg-gray-11 rounded-full" />
-                      </>
-                    )}
-                    {currentParticipant.gender && (
-                      <>
-                        {currentParticipant.gender}
-                        {currentParticipant.cpf && (
-                          <span className="size-1 bg-gray-11 rounded-full" />
-                        )}
-                      </>
-                    )}
-                    {currentParticipant.cpf && maskCPF(currentParticipant.cpf)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Participant Items Summary */}
-            <div className="px-3 py-5 border-b border-gray-6">
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-sm font-semibold text-gray-12">
-                  2x Itens adicionais:
-                </p>
-                <p className="text-base font-bold text-gray-12">
-                  {formatPrice(50)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-12">
-                  {currentParticipantRace?.race.name || "Corrida"}
-                </p>
-                <p className="text-base font-bold text-gray-12">
-                  {formatPrice(currentParticipantRace?.race.price || 0)}
-                </p>
-              </div>
-            </div>
-
-            {/* Required Products */}
-            <div className="p-4 border-b border-gray-6">
-              <h3 className="text-base font-bold text-gray-12 mb-4">
-                Produtos do kit (obrigatório)
-              </h3>
-              <div className="flex flex-col gap-3">
-                {requiredProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-gray-2 border border-gray-6 rounded-xl"
-                  >
-                    <div className="flex gap-3 p-4 border-b border-gray-6">
-                      <Image
-                        src={product.image}
-                        alt={product.name}
-                        width={100}
-                        height={100}
-                        className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
-                        draggable={false}
-                      />
-                      <div className="flex flex-col justify-between flex-1 min-w-0">
-                        <p className="text-base font-semibold text-gray-12">
-                          {product.name}
-                        </p>
-                        <p className="text-sm font-semibold text-gray-11">
-                          {product.price === 0
-                            ? "Grátis"
-                            : formatPrice(product.price)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-base text-gray-12 mb-2">
-                        Escolha o tamanho
-                      </p>
-                      <Dropdown
-                        options={sizeOptions}
-                        dataAttribute={`size-${product.id}`}
-                        width="w-full"
-                        maxHeight="max-h-[200px]"
-                        selectedIds={
-                          selectedSizes[
-                            getSizeKey(selectedParticipant, product.id)
-                          ]
-                            ? [
-                                selectedSizes[
-                                  getSizeKey(selectedParticipant, product.id)
-                                ]!,
-                              ]
-                            : []
-                        }
-                        onSelect={handleSizeSelect(product.id)}
-                        trigger={() => (
-                          <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                            <p className="text-base text-gray-11">
-                              {selectedSizes[
-                                getSizeKey(selectedParticipant, product.id)
-                              ]
-                                ? sizeOptions.find(
-                                    (size) =>
-                                      size.id ===
-                                      selectedSizes[
-                                        getSizeKey(
-                                          selectedParticipant,
-                                          product.id
-                                        )
-                                      ]
-                                  )?.label
-                                : "Selecione a opção"}
-                            </p>
-                            <span className="text-gray-12">›</span>
-                          </div>
-                        )}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Optional Products */}
-            <div className="p-4">
-              <h3 className="text-base font-bold text-gray-12 mb-4">
-                Produtos adicionais (opcional)
-              </h3>
-              <div className="flex flex-col gap-3">
-                {additionalProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-gray-2 border border-gray-6 rounded-xl overflow-hidden"
-                  >
-                    <div className="flex gap-3 p-4 border-b border-gray-6">
-                      <Image
-                        src={product.image}
-                        alt={product.name}
-                        width={100}
-                        height={100}
-                        className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
-                        draggable={false}
-                      />
-                      <div className="flex flex-col justify-between flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-12 line-clamp-2">
-                          {product.name}
-                        </p>
-                        <p className="text-base font-semibold text-gray-12">
-                          {formatPrice(product.price)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-base text-gray-12 mb-2">
-                        Escolha o tamanho
-                      </p>
-                      <Dropdown
-                        options={sizeOptions}
-                        dataAttribute={`size-${product.id}`}
-                        width="w-full"
-                        maxHeight="max-h-[200px]"
-                        selectedIds={
-                          selectedSizes[
-                            getSizeKey(selectedParticipant, product.id)
-                          ]
-                            ? [
-                                selectedSizes[
-                                  getSizeKey(selectedParticipant, product.id)
-                                ]!,
-                              ]
-                            : []
-                        }
-                        onSelect={handleSizeSelect(product.id)}
-                        trigger={() => (
-                          <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                            <p className="text-base text-gray-11">
-                              {selectedSizes[
-                                getSizeKey(selectedParticipant, product.id)
-                              ]
-                                ? sizeOptions.find(
-                                    (size) =>
-                                      size.id ===
-                                      selectedSizes[
-                                        getSizeKey(
-                                          selectedParticipant,
-                                          product.id
-                                        )
-                                      ]
-                                  )?.label
-                                : "Selecione a opção"}
-                            </p>
-                            <span className="text-gray-12">›</span>
-                          </div>
-                        )}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Other Participants List */}
-        <div className="px-4 pb-6 flex flex-col gap-4">
+        {/* Participants List with Expand/Collapse */}
+        <div className="pb-6 flex flex-col gap-4">
           {participantsWithRaces.map(({ race, participantIndex }, index) => {
-            if (participantIndex === selectedParticipant) return null;
             const participant = participants[participantIndex];
+            const isExpanded = expandedParticipants[participantIndex] || false;
             const racePrice = race.price || 0;
-            const isCompleted = false; // You can add logic to determine this
+            const isCompleted = isParticipantComplete(participantIndex);
 
             return (
               <div
                 key={participantIndex}
-                className="border border-gray-6 rounded-xl overflow-hidden bg-white"
+                className={`border border-gray-6 rounded-xl  bg-white ${
+                  !isExpanded ? "" : ""
+                }`}
               >
-                <div className="p-2 border-b border-gray-6">
+                {/* Header - Always Visible */}
+                <div
+                  className={`p-2 border-b border-gray-6 ${
+                    !isExpanded
+                      ? "hover:bg-gray-2 transition-colors cursor-pointer"
+                      : ""
+                  }`}
+                  onClick={
+                    !isExpanded
+                      ? () => handleParticipantSelect(participantIndex)
+                      : undefined
+                  }
+                >
                   <div className="flex items-center gap-2 p-2 border border-gray-6 rounded-xl">
                     <div className="w-10 h-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0">
                       {participant?.name ? (
@@ -493,45 +387,287 @@ export function SubscriptionStep({
                   </div>
                 </div>
 
-                <div className="px-3 py-5 border-b border-gray-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-sm font-semibold text-gray-12">
-                      2x Itens adicionais:
-                    </p>
-                    <p className="text-base font-bold text-gray-12">
-                      {formatPrice(50)}
-                    </p>
+                {/* Collapsed View - Summary */}
+                <div
+                  className={`transition-all duration-300 ease-in-out ${
+                    !isExpanded
+                      ? "max-h-[200px] opacity-100"
+                      : "max-h-0 opacity-0 overflow-hidden"
+                  }`}
+                >
+                  <div className="px-3 py-5 border-b border-gray-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <p className="text-sm font-semibold text-gray-12">
+                        2x Itens adicionais:
+                      </p>
+                      <p className="text-base font-bold text-gray-12">
+                        {formatPrice(50)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-12">
+                        {race.name}
+                      </p>
+                      <p className="text-base font-bold text-gray-12">
+                        {formatPrice(racePrice)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-gray-12">
-                      {race.name}
-                    </p>
-                    <p className="text-base font-bold text-gray-12">
-                      {formatPrice(racePrice)}
-                    </p>
+
+                  <div className="px-3 py-4 flex items-center justify-between">
+                    <div
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        isCompleted
+                          ? "bg-primary-3 text-primary-12"
+                          : "bg-yellow-3 text-yellow-12"
+                      }`}
+                    >
+                      {isCompleted ? "Concluído" : "Pendente"}
+                    </div>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleParticipantSelect(participantIndex);
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="border border-gray-6"
+                    >
+                      {isCompleted ? "Editar" : "Selecionar"}
+                    </Button>
                   </div>
                 </div>
 
-                <div className="px-3 py-4 flex items-center justify-between">
-                  <div
-                    className={`${
-                      isCompleted
-                        ? "bg-green-3 text-green-12"
-                        : "bg-yellow-3 text-yellow-12"
-                    } rounded-full px-4 py-3`}
-                  >
-                    <p className="text-base font-medium">
-                      {isCompleted ? "Concluído" : "Pendente"}
-                    </p>
+                {/* Expanded View - Full Details */}
+                <div
+                  className={`transition-all duration-300 ease-in-out ${
+                    isExpanded
+                      ? "max-h-[5000px] opacity-100"
+                      : "max-h-0 opacity-0 overflow-hidden pointer-events-none"
+                  }`}
+                >
+                  <div className="p-4 border-b border-gray-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-lg font-extrabold text-gray-12">
+                          Participante {participantIndex + 1}
+                        </h2>
+                        <div
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            isCompleted
+                              ? "bg-primary-3 text-primary-12"
+                              : "bg-yellow-3 text-yellow-12"
+                          }`}
+                        >
+                          {isCompleted ? "Concluído" : "Pendente"}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleParticipant(participantIndex);
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="border border-gray-6"
+                      >
+                        Minimizar
+                      </Button>
+                    </div>
+
+                    {/* Participant Items Summary */}
+                    <div className="py-5 border-b border-gray-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-gray-12">
+                          2x Itens adicionais:
+                        </p>
+                        <p className="text-base font-bold text-gray-12">
+                          {formatPrice(50)}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-12">
+                          {race.name}
+                        </p>
+                        <p className="text-base font-bold text-gray-12">
+                          {formatPrice(racePrice)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Required Products */}
+                    <div className="py-4 border-b border-gray-6">
+                      <h3 className="text-base font-bold text-gray-12 mb-4">
+                        Produtos do kit (obrigatório)
+                      </h3>
+                      <div className="flex flex-col gap-3">
+                        {requiredProducts.map((product) => (
+                          <div
+                            key={product.id}
+                            className="bg-gray-2 border border-gray-6 rounded-xl"
+                          >
+                            <div className="flex gap-3 p-4 border-b border-gray-6">
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                width={100}
+                                height={100}
+                                className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
+                                draggable={false}
+                              />
+                              <div className="flex flex-col justify-between flex-1 min-w-0">
+                                <p className="text-base font-semibold text-gray-12">
+                                  {product.name}
+                                </p>
+                                <p className="text-sm font-semibold text-gray-11">
+                                  {product.price === 0
+                                    ? "Grátis"
+                                    : formatPrice(product.price)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <p className="text-base text-gray-12 mb-2">
+                                Escolha o tamanho
+                              </p>
+                              <Dropdown
+                                options={getSizeOptionsWithPrices()}
+                                dataAttribute={`size-${product.id}`}
+                                width="w-full"
+                                maxHeight="max-h-[200px]"
+                                selectedIds={
+                                  selectedSizes[
+                                    getSizeKey(participantIndex, product.id)
+                                  ]
+                                    ? [
+                                        selectedSizes[
+                                          getSizeKey(
+                                            participantIndex,
+                                            product.id
+                                          )
+                                        ]!,
+                                      ]
+                                    : []
+                                }
+                                onSelect={handleSizeSelect(
+                                  participantIndex,
+                                  product.id
+                                )}
+                                trigger={() => (
+                                  <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
+                                    <p className="text-base text-gray-11">
+                                      {selectedSizes[
+                                        getSizeKey(participantIndex, product.id)
+                                      ]
+                                        ? formatSizeLabel(
+                                            selectedSizes[
+                                              getSizeKey(
+                                                participantIndex,
+                                                product.id
+                                              )
+                                            ]!
+                                          )
+                                        : "Selecione a opção"}
+                                    </p>
+                                    <span className="text-gray-12">›</span>
+                                  </div>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Optional Products */}
+                    <div className="py-4">
+                      <h3 className="text-base font-bold text-gray-12 mb-4">
+                        Produtos adicionais (opcional)
+                      </h3>
+                      <div className="flex flex-col gap-3">
+                        {additionalProducts.map((product) => (
+                          <div
+                            key={product.id}
+                            className="bg-gray-2 border border-gray-6 rounded-xl"
+                          >
+                            <div className="flex gap-3 p-4 border-b border-gray-6">
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                width={100}
+                                height={100}
+                                className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
+                                draggable={false}
+                              />
+                              <div className="flex flex-col justify-between flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-12 line-clamp-2">
+                                  {product.name}
+                                </p>
+                                <p className="text-base font-semibold text-gray-12">
+                                  {formatPrice(product.price)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <p className="text-base text-gray-12 mb-2">
+                                Escolha o tamanho
+                              </p>
+                              <Dropdown
+                                options={getSizeOptionsWithPrices()}
+                                dataAttribute={`size-${product.id}`}
+                                width="w-full"
+                                maxHeight="max-h-[200px]"
+                                selectedIds={
+                                  selectedSizes[
+                                    getSizeKey(participantIndex, product.id)
+                                  ]
+                                    ? [
+                                        selectedSizes[
+                                          getSizeKey(
+                                            participantIndex,
+                                            product.id
+                                          )
+                                        ]!,
+                                      ]
+                                    : []
+                                }
+                                onSelect={handleSizeSelect(
+                                  participantIndex,
+                                  product.id
+                                )}
+                                trigger={() => (
+                                  <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
+                                    <p className="text-base text-gray-11">
+                                      {selectedSizes[
+                                        getSizeKey(participantIndex, product.id)
+                                      ]
+                                        ? formatSizeLabel(
+                                            selectedSizes[
+                                              getSizeKey(
+                                                participantIndex,
+                                                product.id
+                                              )
+                                            ]!
+                                          )
+                                        : "Selecione a opção"}
+                                    </p>
+                                    <span className="text-gray-12">›</span>
+                                  </div>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      className="w-full mt-4"
+                      onClick={() => handleSaveAndNext(participantIndex)}
+                      disabled={!hasAllRequiredSizes(participantIndex)}
+                    >
+                      Salvar e próximo
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => setSelectedParticipant(participantIndex)}
-                    variant="ghost"
-                    size="sm"
-                    className="border border-gray-6"
-                  >
-                    {isCompleted ? "Editar" : "Selecionar"}
-                  </Button>
                 </div>
               </div>
             );
@@ -544,7 +680,8 @@ export function SubscriptionStep({
         <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
           <div className="flex flex-col gap-2">
             <p className="text-sm">
-              Participantes: <span className="font-semibold">{totalParticipants}</span>
+              Participantes:{" "}
+              <span className="font-semibold">{totalParticipants}</span>
             </p>
             <p className="text-sm">
               Valor do ingresso: {formatPrice(event.price || 0)}
@@ -553,10 +690,21 @@ export function SubscriptionStep({
               Taxa de serviço: {formatPrice(event.serviceFee || 0)}
             </p>
             <p className="text-base">
-              Valor total: <span className="font-bold">{formatPrice(totalPrice + (event.serviceFee || 0))}</span>
+              Valor total:{" "}
+              <span className="font-bold">
+                {formatPrice(totalPrice + (event.serviceFee || 0))}
+              </span>
             </p>
           </div>
-          <Button onClick={onNext} disabled={totalParticipants === 0}>
+          <Button
+            onClick={onNext}
+            disabled={
+              totalParticipants === 0 ||
+              !participantsWithRaces.every(({ participantIndex }) =>
+                isParticipantComplete(participantIndex)
+              )
+            }
+          >
             Salvar e próximo
           </Button>
         </div>
@@ -661,7 +809,7 @@ export function SubscriptionStep({
                     <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
                       <p className="text-sm text-gray-12">Escolha o tamanho</p>
                       <Dropdown
-                        options={sizeOptions}
+                        options={getSizeOptionsWithPrices()}
                         dataAttribute={`size-${product.id}`}
                         width="w-full"
                         maxHeight="max-h-[200px]"
@@ -676,23 +824,24 @@ export function SubscriptionStep({
                               ]
                             : []
                         }
-                        onSelect={handleSizeSelect(product.id)}
+                        onSelect={handleSizeSelect(
+                          selectedParticipant,
+                          product.id
+                        )}
                         trigger={() => (
                           <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
                             <p className="text-sm text-gray-12">
                               {selectedSizes[
                                 getSizeKey(selectedParticipant, product.id)
                               ]
-                                ? sizeOptions.find(
-                                    (size) =>
-                                      size.id ===
-                                      selectedSizes[
-                                        getSizeKey(
-                                          selectedParticipant,
-                                          product.id
-                                        )
-                                      ]
-                                  )?.label
+                                ? formatSizeLabel(
+                                    selectedSizes[
+                                      getSizeKey(
+                                        selectedParticipant,
+                                        product.id
+                                      )
+                                    ]!
+                                  )
                                 : "Selecione a opção"}
                             </p>
                             <span className="text-gray-12">›</span>
@@ -737,7 +886,7 @@ export function SubscriptionStep({
                     <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
                       <p className="text-sm text-gray-12">Escolha o tamanho</p>
                       <Dropdown
-                        options={sizeOptions}
+                        options={getSizeOptionsWithPrices()}
                         dataAttribute={`size-${product.id}`}
                         width="w-full"
                         maxHeight="max-h-[200px]"
@@ -752,23 +901,24 @@ export function SubscriptionStep({
                               ]
                             : []
                         }
-                        onSelect={handleSizeSelect(product.id)}
+                        onSelect={handleSizeSelect(
+                          selectedParticipant,
+                          product.id
+                        )}
                         trigger={() => (
                           <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
                             <p className="text-sm text-gray-12">
                               {selectedSizes[
                                 getSizeKey(selectedParticipant, product.id)
                               ]
-                                ? sizeOptions.find(
-                                    (size) =>
-                                      size.id ===
-                                      selectedSizes[
-                                        getSizeKey(
-                                          selectedParticipant,
-                                          product.id
-                                        )
-                                      ]
-                                  )?.label
+                                ? formatSizeLabel(
+                                    selectedSizes[
+                                      getSizeKey(
+                                        selectedParticipant,
+                                        product.id
+                                      )
+                                    ]!
+                                  )
                                 : "Selecione a opção"}
                             </p>
                             <span className="text-gray-12">›</span>
@@ -866,8 +1016,16 @@ export function SubscriptionStep({
 
                         {/* Status e botão */}
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium bg-yellow-3 text-yellow-12 rounded-full px-3 py-1">
-                            Pendente
+                          <p
+                            className={`text-sm font-medium rounded-full px-3 py-1 ${
+                              isParticipantComplete(participantIndex)
+                                ? "bg-primary-3 text-primary-12"
+                                : "bg-yellow-3 text-yellow-12"
+                            }`}
+                          >
+                            {isParticipantComplete(participantIndex)
+                              ? "Concluído"
+                              : "Pendente"}
                           </p>
                           <Button
                             onClick={(e) => {
@@ -878,7 +1036,9 @@ export function SubscriptionStep({
                             size="sm"
                             className="border border-gray-6"
                           >
-                            Selecionar
+                            {isParticipantComplete(participantIndex)
+                              ? "Editar"
+                              : "Selecionar"}
                           </Button>
                         </div>
                       </div>
@@ -910,7 +1070,16 @@ export function SubscriptionStep({
                 </p>
               </div>
 
-              <Button onClick={onNext} className="w-full mt-8 font-bold">
+              <Button
+                onClick={onNext}
+                className="w-full mt-8 font-bold"
+                disabled={
+                  totalParticipants === 0 ||
+                  !participantsWithRaces.every(({ participantIndex }) =>
+                    isParticipantComplete(participantIndex)
+                  )
+                }
+              >
                 Salvar e próximo
               </Button>
             </div>

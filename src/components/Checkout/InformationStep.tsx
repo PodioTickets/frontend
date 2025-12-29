@@ -692,10 +692,10 @@ export function InformationStep({
                         className={`transition-all duration-300 ease-in-out ${
                           isExpanded
                             ? "max-h-[2000px] opacity-100"
-                            : "max-h-0 opacity-0"
+                            : "max-h-0 opacity-0 pointer-events-none"
                         }`}
                       >
-                        <div className="flex items-start justify-between w-full">
+                        <div className="flex items-start justify-between w-full relative z-10">
                           <div className="flex flex-col gap-2 pb-3">
                             <p className="text-sm text-gray-11">
                               Participante {index + 1}
@@ -708,7 +708,7 @@ export function InformationStep({
                             )}
                           </div>
 
-                          <div className="flex items-center h-full gap-2">
+                          <div className="flex items-center h-full gap-2 relative z-20">
                             <div
                               className={`px-3 py-1 rounded-full text-sm font-medium transition-opacity duration-300 ${
                                 isComplete
@@ -721,11 +721,13 @@ export function InformationStep({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                e.preventDefault();
                                 toggleParticipant(participantIndex);
                               }}
-                              className="p-2 rounded-lg border border-gray-6 hover:bg-gray-2 transition-colors cursor-pointer"
+                              className="p-2  flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-2 active:bg-gray-2 transition-colors cursor-pointer touch-manipulation"
+                              type="button"
                             >
-                              <PencilIcon className="size-4 text-gray-12 cursor-pointer" />
+                              <PencilIcon className="size-4 text-gray-12 pointer-events-none" />
                             </button>
                             <button
                               onClick={(e) => {
@@ -735,9 +737,10 @@ export function InformationStep({
                                   raceId
                                 );
                               }}
-                              className="p-2 rounded-lg border border-red-6 hover:bg-red-1 transition-colors cursor-pointer"
+                              className="p-2 rounded-lg border border-red-6 hover:bg-red-1 active:bg-red-1 transition-colors cursor-pointer touch-manipulation"
+                              type="button"
                             >
-                              <TrashIcon className="size-4 text-red-6 cursor-pointer" />
+                              <TrashIcon className="size-4 text-red-6 cursor-pointer pointer-events-none" />
                             </button>
                           </div>
                         </div>
