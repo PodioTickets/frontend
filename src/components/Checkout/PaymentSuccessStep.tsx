@@ -136,25 +136,11 @@ export function PaymentSuccessStep({
     <>
       {/* Mobile Layout */}
       <div className="w-full md:hidden bg-gray-2 min-h-screen">
-        {/* Mobile Header */}
-        <div className="w-full bg-white border-b border-gray-6">
-          <div className="flex items-center justify-center px-4 pb-4 relative">
-            <button
-              onClick={() => router.push("/user/tickets")}
-              className="absolute left-4 flex items-center justify-center"
-            >
-              <ArrowLeft className="size-5 text-gray-12" />
-            </button>
-            <h1 className="text-base font-medium text-gray-12">Informações</h1>
-            <div className="absolute right-4 w-6" />{" "}
-            {/* Spacer for centering */}
-          </div>
-        </div>
 
         {/* Mobile Content */}
         <div className="flex flex-col items-center pb-24 pt-0 px-4 w-full">
           {/* Success Header */}
-          <div className="flex flex-col items-center justify-center pb-12 pt-12 w-full">
+          <div className="flex flex-col items-center justify-center pb-12 pt-10 w-full">
             <div className="flex flex-col gap-2 items-center">
               <Image
                 src="/images/approved_payment.png"
