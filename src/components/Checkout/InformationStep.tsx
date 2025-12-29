@@ -955,13 +955,12 @@ export function InformationStep({
                                   }
                                   maxLength={15}
                                   className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-dm-sans text-base placeholder:text-gray-11"
-                                  placeholder="Opcional"
+                                  placeholder="(00) 99999-9999"
                                 />
                               </div>
                             </div>
                           ) : null}
                         </div>
-                        {/* Perguntas do Organizador */}
                         {sortedQuestions.length > 0 && (
                           <>
                             <div className="w-full h-px bg-gray-6 my-6" />
