@@ -174,6 +174,15 @@ export function LoginModal() {
                   </div>
                 </div>
 
+                {/* Close button */}
+                <button
+                  onClick={closeLoginModal}
+                  className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                  aria-label="Fechar modal"
+                >
+                  <X className="size-5 text-gray-12" />
+                </button>
+
                 {/* Left decorative */}
                 <div className="absolute left-0 top-0 w-[162px] h-[80px]">
                   <Image
@@ -400,6 +409,15 @@ export function LoginModal() {
               className="bg-gray-1 rounded-xl shadow-2xl w-full max-w-[600px] mx-4 relative overflow-hidden"
             >
               <div className="relative pt-8 pb-3 px-6 flex items-center justify-center">
+                {/* Close button */}
+                <button
+                  onClick={closeLoginModal}
+                  className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                  aria-label="Fechar modal"
+                >
+                  <X className="size-5 text-gray-12" />
+                </button>
+
                 <div className="absolute left-0 top-0 w-[162px] h-[80px] flex items-center justify-center">
                   <Image
                     src="/images/login_left.png"
