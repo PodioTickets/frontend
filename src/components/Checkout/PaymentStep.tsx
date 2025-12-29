@@ -36,7 +36,6 @@ interface PaymentOption {
   icons?: React.ReactNode;
 }
 
-// Componentes dos formulários
 function CreditCardForm({
   installmentOptions,
   selectedInstallments,
@@ -1048,21 +1047,33 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
                     <div className="mt-4">
                       {option.id === "credit" && (
-                        <CreditCardForm
-                          installmentOptions={installmentOptions}
-                          selectedInstallments={selectedInstallments}
-                          setSelectedInstallments={setSelectedInstallments}
-                          onSuccess={onSuccess}
-                          cardName={cardName}
-                          setCardName={setCardName}
-                          cardNumber={cardNumber}
-                          setCardNumber={setCardNumber}
-                          cardExpiry={cardExpiry}
-                          setCardExpiry={setCardExpiry}
-                          cardCVV={cardCVV}
-                          setCardCVV={setCardCVV}
-                          isMobile={false}
-                        />
+                        <>
+                          <CreditCardForm
+                            installmentOptions={installmentOptions}
+                            selectedInstallments={selectedInstallments}
+                            setSelectedInstallments={setSelectedInstallments}
+                            onSuccess={onSuccess}
+                            cardName={cardName}
+                            setCardName={setCardName}
+                            cardNumber={cardNumber}
+                            setCardNumber={setCardNumber}
+                            cardExpiry={cardExpiry}
+                            setCardExpiry={setCardExpiry}
+                            cardCVV={cardCVV}
+                            setCardCVV={setCardCVV}
+                            isMobile={false}
+                          />
+                          <Button
+                            onClick={() => {
+                              if (onSuccess) {
+                                onSuccess();
+                              }
+                            }}
+                            className="w-full mt-4 font-bold font-manrope"
+                          >
+                            Finalizar compra
+                          </Button>
+                        </>
                       )}
                       {option.id === "pix" && (
                         <PixForm
@@ -1107,17 +1118,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       {isParticipantsModalOpen && (
         <>
           {/* Backdrop */}
-          <div 
+          <div
             className={`fixed inset-0 z-50 bg-black/90 md:hidden transition-opacity duration-300 ease-out ${
-              isModalAnimating ? 'opacity-100' : 'opacity-0'
+              isModalAnimating ? "opacity-100" : "opacity-0"
             }`}
             onClick={closeModal}
           />
-          
+
           {/* Modal Content */}
-          <div 
+          <div
             className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-xl max-h-[90vh] flex flex-col md:hidden transition-transform duration-300 ease-out ${
-              isModalAnimating ? 'translate-y-0' : 'translate-y-full'
+              isModalAnimating ? "translate-y-0" : "translate-y-full"
             }`}
           >
             {/* Close Button */}
@@ -1131,9 +1142,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             </div>
 
             {/* Scrollable Content */}
-            <div className={`flex-1 overflow-y-auto transition-opacity duration-300 ${
-              isModalAnimating ? 'opacity-100' : 'opacity-0'
-            }`}>
+            <div
+              className={`flex-1 overflow-y-auto transition-opacity duration-300 ${
+                isModalAnimating ? "opacity-100" : "opacity-0"
+              }`}
+            >
               <div className="bg-gray-1">
                 {/* Participants List */}
                 <div className="px-4 flex flex-col">
@@ -1152,12 +1165,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                         className={`py-5 transition-all duration-300 ease-out ${
                           index > 0 ? "border-t border-gray-6" : ""
                         } ${
-                          isModalAnimating 
-                            ? 'opacity-100 translate-y-0' 
-                            : 'opacity-0 translate-y-4'
+                          isModalAnimating
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-4"
                         }`}
                         style={{
-                          transitionDelay: `${index * 50}ms`
+                          transitionDelay: `${index * 50}ms`,
                         }}
                       >
                         <p className="text-base font-semibold text-gray-12 mb-5 font-dm-sans">
@@ -1352,9 +1365,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               </div>
 
               {/* Summary Footer - Fixed */}
-              <div className={`bg-gray-1 border-t border-gray-6 px-4 py-5 shrink-0 transition-opacity duration-300 delay-200 ${
-                isModalAnimating ? 'opacity-100' : 'opacity-0'
-              }`}>
+              <div
+                className={`bg-gray-1 border-t border-gray-6 px-4 py-5 shrink-0 transition-opacity duration-300 delay-200 ${
+                  isModalAnimating ? "opacity-100" : "opacity-0"
+                }`}
+              >
                 <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
                   <div className="flex gap-1 items-center">
                     <p className="text-sm text-gray-12 font-dm-sans">
