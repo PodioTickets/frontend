@@ -177,36 +177,23 @@ export default function EventKitsPage() {
         return;
       }
 
-      const data = {
-        ...kit,
-        items: editingItem
-          ? kit.items.map((item: any) =>
-              item.id === editingItem.id
-                ? {
-                    ...item,
-                    name: itemForm.name,
-                    description: itemForm.description,
-                    sizes,
-                    isActive: itemForm.isActive,
-                  }
-                : item
-            )
-          : [
-              ...kit.items,
-              {
-                name: itemForm.name,
-                description: itemForm.description,
-                sizes,
-                isActive: itemForm.isActive,
-              },
-            ],
+      const itemData = {
+        name: itemForm.name,
+        description: itemForm.description || undefined,
+        sizes,
+        isActive: itemForm.isActive,
       };
 
       if (editingItem) {
-        await organizerService.updateKit(eventId, kit.id, data);
+        await organizerService.updateKitItem(
+          eventId,
+          kit.id,
+          editingItem.id,
+          itemData
+        );
         toast.success("Item atualizado com sucesso!");
       } else {
-        await organizerService.updateKit(eventId, kit.id, data);
+        await organizerService.createKitItem(eventId, kit.id, itemData);
         toast.success("Item adicionado com sucesso!");
       }
 
@@ -247,16 +234,14 @@ export default function EventKitsPage() {
     }
 
     try {
-      const data = {
-        ...kit,
-        items: kit.items.filter((item: any) => item.id !== itemId),
-      };
-      await organizerService.updateKit(eventId, kit.id, data);
+      await organizerService.deleteKitItem(eventId, kit.id, itemId);
       toast.success("Item excluído com sucesso!");
       loadData();
     } catch (error: any) {
       console.error("Error deleting item:", error);
-      toast.error("Erro ao excluir item");
+      toast.error(
+        error.response?.data?.message || "Erro ao excluir item"
+      );
     }
   };
 

@@ -21,9 +21,14 @@ import {
   BarChart3,
   Eye,
   Save,
+  Upload,
+  X,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import Image from "next/image";
+import { useRef } from "react";
 
 export default function EditEventPage() {
   const router = useRouter();
@@ -32,6 +37,9 @@ export default function EditEventPage() {
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [bannerPreview, setBannerPreview] = useState<string>("");
+  const bannerInputRef = useRef<HTMLInputElement>(null);
   const [event, setEvent] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -87,12 +95,86 @@ export default function EditEventPage() {
         googleMapsLink: event.googleMapsLink || "",
         bannerUrl: event.bannerUrl || "",
       });
+
+      // Set banner preview if banner exists
+      if (event.bannerUrl) {
+        setBannerPreview(event.bannerUrl);
+      }
     } catch (error: any) {
       console.error("Error loading event:", error);
       toast.error("Erro ao carregar evento");
       router.push("/organizer/events");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Upload de banner
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
+      return;
+    }
+
+    // Validar tamanho (10MB conforme documentação)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo de 10MB.");
+      return;
+    }
+
+    setUploadingBanner(true);
+    try {
+      // Criar preview local
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBannerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Fazer upload para o servidor
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const token = localStorage.getItem("token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Erro ao fazer upload");
+      }
+
+      if (result.success && result.imageUrl) {
+        // Usar a URL retornada pelo servidor
+        setFormData((prev) => ({ ...prev, bannerUrl: apiUrl +result.imageUrl }));
+        toast.success("Banner enviado com sucesso!");
+      } else {
+        throw new Error(result.message || "Erro ao fazer upload");
+      }
+    } catch (error: any) {
+      console.error("Error uploading banner:", error);
+      toast.error(error.message || "Erro ao fazer upload do banner");
+      setBannerPreview(formData.bannerUrl || "");
+    } finally {
+      setUploadingBanner(false);
     }
   };
 
@@ -201,6 +283,11 @@ export default function EditEventPage() {
       icon: Settings,
       href: `/organizer/events/${eventId}/edit`,
       active: true,
+    },
+    {
+      label: "Tópicos",
+      icon: FileText,
+      href: `/organizer/events/${eventId}/topics`,
     },
     {
       label: "Modalidades",
@@ -486,21 +573,90 @@ export default function EditEventPage() {
               </div>
             </div>
 
-            {/* Banner URL */}
+            {/* Banner Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-12 mb-2">
-                URL do Banner
+                Banner do Evento
               </label>
-              <div className="relative">
-                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                <Input
-                  type="url"
-                  name="bannerUrl"
-                  value={formData.bannerUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://exemplo.com/banner.jpg"
-                  className="pl-10"
-                />
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={handleBannerUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={uploadingBanner}
+                    className="text-gray-12 border-gray-6"
+                  >
+                    {uploadingBanner ? (
+                      <>
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="size-4 mr-2" />
+                        {formData.bannerUrl
+                          ? "Alterar Banner"
+                          : "Upload do Banner"}
+                      </>
+                    )}
+                  </Button>
+                  {formData.bannerUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, bannerUrl: "" }));
+                        setBannerPreview("");
+                        if (bannerInputRef.current) {
+                          bannerInputRef.current.value = "";
+                        }
+                      }}
+                      className="text-red-10 hover:text-red-11"
+                    >
+                      <X className="size-4 mr-2" />
+                      Remover
+                    </Button>
+                  )}
+                </div>
+                {bannerPreview && (
+                  <div className="border border-gray-6 rounded-lg p-4 bg-gray-3">
+                    <p className="text-sm text-gray-11 mb-2">
+                      Preview do Banner:
+                    </p>
+                    <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-2">
+                      <Image
+                        src={bannerPreview}
+                        alt="Preview do banner"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="relative">
+                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
+                  <Input
+                    type="url"
+                    name="bannerUrl"
+                    value={formData.bannerUrl}
+                    onChange={handleInputChange}
+                    placeholder="URL do banner (preenchida automaticamente após upload)"
+                    className="pl-10"
+                    disabled={uploadingBanner}
+                  />
+                </div>
+                <p className="text-xs text-gray-10">
+                  Faça upload de uma imagem ou cole a URL diretamente. Formatos
+                  aceitos: JPG, PNG, GIF, WebP. Máximo: 10MB.
+                </p>
               </div>
             </div>
 

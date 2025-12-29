@@ -28,6 +28,7 @@ export default function EventModalitiesPage() {
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<any>(null);
   const [modalities, setModalities] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [showModalityModal, setShowModalityModal] = useState(false);
   const [editingModality, setEditingModality] = useState<any>(null);
   const [modalityForm, setModalityForm] = useState({
@@ -52,15 +53,15 @@ export default function EventModalitiesPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [eventData, modalitiesData] = await Promise.all([
+      const [eventData, modalitiesData, templatesData] = await Promise.all([
         organizerService.getEventById(eventId),
         organizerService.getModalities(eventId),
+        organizerService.getModalityTemplates().catch(() => []), // Fallback se não houver templates
       ]);
-      console.log("events", eventData);
-      console.log("modalities", modalitiesData);
 
       setEvent(eventData);
       setModalities(modalitiesData.sort((a, b) => a.order - b.order));
+      setTemplates(templatesData);
     } catch (error: any) {
       console.error("Error loading data:", error);
       toast.error("Erro ao carregar dados");
@@ -82,11 +83,15 @@ export default function EventModalitiesPage() {
       }
 
       const data = {
-        ...modalityForm,
+        templateId: modalityForm.templateId || undefined,
+        name: modalityForm.name,
+        description: modalityForm.description || undefined,
         price: parseFloat(modalityForm.price),
         maxParticipants: modalityForm.maxParticipants
           ? parseInt(modalityForm.maxParticipants)
           : undefined,
+        isActive: modalityForm.isActive,
+        order: modalityForm.order,
       };
 
       if (editingModality) {
@@ -319,6 +324,52 @@ export default function EventModalitiesPage() {
               </div>
 
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-12 mb-2">
+                    Template de Modalidade {templates.length > 0 && "(Opcional)"}
+                  </label>
+                  {loading ? (
+                    <div className="w-full rounded-lg border border-gray-6 bg-gray-3 px-3 py-2 text-sm text-gray-11">
+                      Carregando templates...
+                    </div>
+                  ) : templates.length > 0 ? (
+                    <select
+                      value={modalityForm.templateId}
+                      onChange={(e) => {
+                        const selectedTemplate = templates.find(
+                          (t) => t.id === e.target.value
+                        );
+                        setModalityForm({
+                          ...modalityForm,
+                          templateId: e.target.value,
+                          name: selectedTemplate
+                            ? selectedTemplate.label
+                            : modalityForm.name,
+                        });
+                      }}
+                      className="w-full rounded-lg border border-gray-6 bg-transparent px-3 py-2 text-sm text-gray-12 focus:outline-none focus:ring-2 focus:ring-primary-11/50 focus:border-primary-11"
+                    >
+                      <option value="">Selecione um template (opcional)</option>
+                      {templates
+                        .filter((t) => t.isActive)
+                        .map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.label}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <div className="w-full rounded-lg border border-gray-6 bg-gray-3 px-3 py-2 text-sm text-gray-11">
+                      Nenhum template disponível
+                    </div>
+                  )}
+                  {modalityForm.templateId && (
+                    <p className="mt-1 text-xs text-gray-10">
+                      Template selecionado: {templates.find(t => t.id === modalityForm.templateId)?.label}
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-12 mb-2">
                     Nome *

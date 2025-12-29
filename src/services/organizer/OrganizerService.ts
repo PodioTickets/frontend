@@ -33,6 +33,34 @@ export interface CreateEventRequest {
   status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
 }
 
+export interface EventTopic {
+  id: string;
+  eventId: string;
+  title: string;
+  content: string;
+  isEnabled: boolean;
+  isDefault: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventLocation {
+  id: string;
+  eventId: string;
+  name?: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  zipCode?: string;
+  googleMapsLink?: string;
+  latitude?: number;
+  longitude?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Event {
   id: string;
   name: string;
@@ -50,6 +78,8 @@ export interface Event {
   organizerId: string;
   createdAt: string;
   updatedAt: string;
+  topics?: EventTopic[];
+  locations?: EventLocation[];
   _count?: {
     registrations?: number;
     modalities?: number;
@@ -72,7 +102,16 @@ export interface ModalityGroup {
   updatedAt: string;
 }
 
+export interface ModalityTemplate {
+  id: string;
+  code: string;
+  label: string;
+  icon?: string;
+  isActive: boolean;
+}
+
 export interface CreateModalityRequest {
+  templateId?: string;
   name: string;
   description?: string;
   price: number;
@@ -83,7 +122,8 @@ export interface CreateModalityRequest {
 
 export interface Modality {
   id: string;
-  groupId: string;
+  eventId: string;
+  templateId?: string;
   name: string;
   description?: string;
   price: number;
@@ -91,9 +131,9 @@ export interface Modality {
   currentParticipants?: number;
   isActive: boolean;
   order: number;
-  eventId: string;
   createdAt: string;
   updatedAt: string;
+  template?: ModalityTemplate;
 }
 
 export interface CreateKitRequest {
@@ -373,6 +413,14 @@ export class OrganizerService {
     );
   }
 
+  // Modality Template methods
+  async getModalityTemplates(): Promise<ModalityTemplate[]> {
+    const { data: response } = await this.apiClient.get<{
+      data: { templates: ModalityTemplate[] };
+    }>("/api/v1/modalities/templates");
+    return response.data.templates;
+  }
+
   // Kit methods
   async createKit(eventId: string, data: CreateKitRequest): Promise<Kit> {
     const { data: response } = await this.apiClient.post<{ data: Kit }>(
@@ -403,6 +451,42 @@ export class OrganizerService {
 
   async deleteKit(eventId: string, kitId: string): Promise<void> {
     await this.apiClient.delete(`/api/v1/kits/events/${eventId}/${kitId}`);
+  }
+
+  // Kit Item methods
+  async createKitItem(
+    eventId: string,
+    kitId: string,
+    data: CreateKitItemRequest
+  ): Promise<KitItem> {
+    const { data: response } = await this.apiClient.post<{ data: KitItem }>(
+      `/api/v1/kits/events/${eventId}/kits/${kitId}/items`,
+      data
+    );
+    return response.data;
+  }
+
+  async updateKitItem(
+    eventId: string,
+    kitId: string,
+    itemId: string,
+    data: Partial<CreateKitItemRequest>
+  ): Promise<KitItem> {
+    const { data: response } = await this.apiClient.patch<{ data: KitItem }>(
+      `/api/v1/kits/events/${eventId}/kits/${kitId}/items/${itemId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteKitItem(
+    eventId: string,
+    kitId: string,
+    itemId: string
+  ): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/kits/events/${eventId}/kits/${kitId}/items/${itemId}`
+    );
   }
 
   // Question methods
@@ -470,5 +554,89 @@ export class OrganizerService {
       data: { total: number; breakdown: any[] };
     }>(`/api/v1/events/${eventId}/revenue`);
     return response.data;
+  }
+
+  // Topic methods
+  async createTopic(
+    eventId: string,
+    data: {
+      title: string;
+      content: string;
+      isEnabled?: boolean;
+      order?: number;
+    }
+  ): Promise<EventTopic> {
+    const { data: response } = await this.apiClient.post<{
+      data: { topic: EventTopic };
+    }>(`/api/v1/events/${eventId}/topics`, data);
+    return response.data.topic;
+  }
+
+  async updateTopic(
+    eventId: string,
+    topicId: string,
+    data: Partial<{
+      title: string;
+      content: string;
+      isEnabled: boolean;
+      order: number;
+    }>
+  ): Promise<EventTopic> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { topic: EventTopic };
+    }>(`/api/v1/events/${eventId}/topics/${topicId}`, data);
+    return response.data.topic;
+  }
+
+  async deleteTopic(eventId: string, topicId: string): Promise<void> {
+    await this.apiClient.delete(`/api/v1/events/${eventId}/topics/${topicId}`);
+  }
+
+  // Location methods
+  async createLocation(
+    eventId: string,
+    data: {
+      name?: string;
+      address: string;
+      city: string;
+      state: string;
+      country: string;
+      zipCode?: string;
+      googleMapsLink?: string;
+      latitude?: number;
+      longitude?: number;
+    }
+  ): Promise<EventLocation> {
+    const { data: response } = await this.apiClient.post<{
+      data: { location: EventLocation };
+    }>(`/api/v1/events/${eventId}/locations`, data);
+    return response.data.location;
+  }
+
+  async updateLocation(
+    eventId: string,
+    locationId: string,
+    data: Partial<{
+      name: string;
+      address: string;
+      city: string;
+      state: string;
+      country: string;
+      zipCode: string;
+      googleMapsLink: string;
+      latitude: number;
+      longitude: number;
+    }>
+  ): Promise<EventLocation> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { location: EventLocation };
+    }>(`/api/v1/events/${eventId}/locations/${locationId}`, data);
+    return response.data.location;
+  }
+
+  async deleteLocation(eventId: string, locationId: string): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/events/${eventId}/locations/${locationId}`
+    );
   }
 }

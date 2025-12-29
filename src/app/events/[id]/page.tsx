@@ -14,7 +14,7 @@ import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import { EventCard } from "@/components/Event/Card";
-import { Fragment, useState, useMemo } from "react";
+import { Fragment, useState, useMemo, useEffect } from "react";
 
 export default function EventPage() {
   const params = useParams();
@@ -25,6 +25,7 @@ export default function EventPage() {
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
+  const [showFixedButton, setShowFixedButton] = useState(false);
 
   // Buscar eventos do mesmo organizador
   const { events: organizerEvents } = useEvents({ limit: 10 });
@@ -57,6 +58,18 @@ export default function EventPage() {
       [sectionId]: !prev[sectionId],
     }));
   };
+
+  // Controlar visibilidade do botão fixado ao scrollar
+  useEffect(() => {
+    const handleScroll = () => {
+      // Mostrar botão quando scrollar mais de 200px
+      const scrollPosition = window.scrollY || document.documentElement.scrollTop;
+      setShowFixedButton(scrollPosition > 200);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   if (!event || isLoading) {
     return (
@@ -187,7 +200,7 @@ export default function EventPage() {
             </div>
 
             {/* Action Buttons */}
-            <Link href={`/checkout?eventId=${event.id}`} className="block mb-3">
+            <Link href={`/checkout?eventId=${event.id}`} className="hidden md:block mb-3">
               <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
                 Inscreva-se
               </Button>
@@ -308,8 +321,14 @@ export default function EventPage() {
           )}
         </div>
 
-        {/* Fixed Bottom Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
+        {/* Fixed Bottom Bar - Only shows when scrolling */}
+        <div
+          className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${
+            showFixedButton
+              ? "translate-y-0 opacity-100"
+              : "translate-y-full opacity-0 pointer-events-none"
+          }`}
+        >
           <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
             <div className="flex flex-col w-full gap-2">
               <h1 className="text-gray-12 font-extrabold">{event.name}</h1>
@@ -331,7 +350,7 @@ export default function EventPage() {
             </div>
 
             <Link href={`/checkout?eventId=${event.id}`} className="w-full">
-              <Button className="w-full bg-[#5CC870] hover:bg-[#4db860">
+              <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
                 Inscreva-se
               </Button>
             </Link>

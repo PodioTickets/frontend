@@ -125,7 +125,7 @@ export function ShareModal({
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-6 mb-6 px-4">
+        <div className="flex items-center justify-between gap-2 md:gap-6 mb-6 px-4">
           {shareOptions.map((option) => {
             const Icon = option.icon;
             return (

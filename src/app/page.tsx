@@ -20,7 +20,7 @@ export default function Home() {
           <EventCarousel
             items={20}
             itemsPerView={4.1}
-            itemsPerViewMobile={1.2}
+            itemsPerViewMobile={1.8}
             itemsPerViewTablet={2.5}
           />
         </div>
