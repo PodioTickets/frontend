@@ -934,7 +934,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
         {/* Summary Content - Always Visible */}
         <div className="bg-gray-1 border-t border-gray-6 px-4 py-5">
-          <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
+          <div className="flex flex-col gap-2 items-start justify-between mb-4">
+            <h1 className="text-base font-bold">{event.name}</h1>
             <div className="flex gap-1 items-center">
               <p className="text-sm text-gray-12 font-dm-sans">
                 Participantes:
@@ -943,14 +944,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 {totalParticipants}
               </p>
             </div>
-            <div className="flex gap-1 items-center">
-              <p className="text-sm text-gray-12 font-dm-sans">
-                Taxa de serviço:
-              </p>
-              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
-                {formatPrice(serviceFee)}
-              </p>
-            </div>
+
             {additionalProductsCount > 0 && (
               <div className="flex gap-1 items-center">
                 <p className="text-sm text-gray-12 font-dm-sans">
@@ -961,6 +955,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </p>
               </div>
             )}
+            <div className="flex gap-1 items-center">
+              <p className="text-sm text-gray-12 font-dm-sans">
+                Taxa de serviço:
+              </p>
+              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                {formatPrice(serviceFee)}
+              </p>
+            </div>
             {isCouponApplied && couponDiscount > 0 && (
               <div className="flex gap-1 items-center">
                 <p className="text-sm text-gray-12 font-dm-sans">Cupom:</p>
@@ -1370,7 +1372,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   isModalAnimating ? "opacity-100" : "opacity-0"
                 }`}
               >
-                <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
+                <div className="flex flex-col gap-2 items-start justify-between mb-4">
+                  <h1 className="text-base font-bold">{event.name}</h1>
                   <div className="flex gap-1 items-center">
                     <p className="text-sm text-gray-12 font-dm-sans">
                       Participantes:
@@ -1379,14 +1382,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       {totalParticipants}
                     </p>
                   </div>
-                  <div className="flex gap-1 items-center">
-                    <p className="text-sm text-gray-12 font-dm-sans">
-                      Taxa de serviço:
-                    </p>
-                    <p className="text-sm font-semibold text-gray-12 font-dm-sans">
-                      {formatPrice(serviceFee)}
-                    </p>
-                  </div>
+
                   {additionalProductsCount > 0 && (
                     <div className="flex gap-1 items-center">
                       <p className="text-sm text-gray-12 font-dm-sans">
@@ -1397,6 +1393,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       </p>
                     </div>
                   )}
+                  <div className="flex gap-1 items-center">
+                    <p className="text-sm text-gray-12 font-dm-sans">
+                      Taxa de serviço:
+                    </p>
+                    <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                      {formatPrice(serviceFee)}
+                    </p>
+                  </div>
                   {isCouponApplied && couponDiscount > 0 && (
                     <div className="flex gap-1 items-center">
                       <p className="text-sm text-gray-12 font-dm-sans">

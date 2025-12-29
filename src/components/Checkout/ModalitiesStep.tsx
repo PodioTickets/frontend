@@ -76,23 +76,20 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
         <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
           <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
             <div className="flex flex-col gap-2">
+              <h1 className="text-base font-bold">{event.name}</h1>
               <p className="text-sm">
-                Participantes: <span className="font-semibold">{totalParticipants}</span>
+                Participantes:{" "}
+                <span className="font-semibold">{totalParticipants}</span>
               </p>
               <p className="text-sm">
                 Valor do ingresso: {formatPrice(event.price || 0)}
               </p>
-              <p className="text-sm">
-                Taxa de serviço: {formatPrice(event.serviceFee || 0)}
-              </p>
               <p className="text-base">
-                Valor total: <span className="font-bold">{formatPrice(totalPrice)}</span>
+                Valor total:{" "}
+                <span className="font-bold">{formatPrice(totalPrice)}</span>
               </p>
             </div>
-            <Button
-              onClick={onNext}
-              disabled={totalParticipants === 0}
-            >
+            <Button onClick={onNext} disabled={totalParticipants === 0}>
               Selecionar
             </Button>
           </div>
