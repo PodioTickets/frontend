@@ -187,7 +187,7 @@ export function LoginModal() {
                 </div>
 
                 {/* Logo */}
-                <div className="relative z-10 flex items-center gap-2.5">
+                <div className="relative w-full z-10 flex items-center justify-center gap-2.5">
                   <Image
                     src="/images/logo_horizontal_black.png"
                     alt="Pódio Ticket"
@@ -433,176 +433,176 @@ export function LoginModal() {
                 </div>
               </div>
 
-            {/* Content */}
-            <div className="flex flex-col items-center w-full">
-              {/* Welcome text */}
-              <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
-                <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
-                  Bem-vindo de volta
-                </h2>
-                <p className="font-normal text-lg leading-[1.3] text-gray-11 font-dm-sans">
-                  Por favor, preencha os campos para conectar-se
-                </p>
-              </div>
-
-              {/* Form inputs */}
-              <form
-                onSubmit={handleSubmit}
-                className="flex flex-col gap-5 items-start p-6 w-full"
-              >
-                <div className="flex flex-col gap-5 items-start w-full">
-                  {/* Email input */}
-                  <div className="flex flex-col gap-1 items-start w-full">
-                    <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
-                      Email
-                    </label>
-                    <div className="relative w-full">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                      <Input
-                        type="email"
-                        placeholder="Digite seu email"
-                        value={formData.email}
-                        onChange={(e) =>
-                          handleInputChange("email", e.target.value)
-                        }
-                        className={`pl-10 h-12 ${
-                          errors.email
-                            ? "border-red-9 focus-visible:border-red-9"
-                            : ""
-                        }`}
-                        aria-invalid={!!errors.email}
-                      />
-                    </div>
-                    {errors.email && (
-                      <p className="text-sm text-red-9 font-dm-sans">
-                        {errors.email}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Password input */}
-                  <div className="flex flex-col gap-1 items-start w-full">
-                    <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
-                      Senha
-                    </label>
-                    <div className="relative w-full">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                      <Input
-                        type="password"
-                        placeholder="Digite sua senha"
-                        value={formData.password}
-                        onChange={(e) =>
-                          handleInputChange("password", e.target.value)
-                        }
-                        className={`pl-10 h-12 ${
-                          errors.password
-                            ? "border-red-9 focus-visible:border-red-9"
-                            : ""
-                        }`}
-                        aria-invalid={!!errors.password}
-                      />
-                    </div>
-                    {errors.password && (
-                      <p className="text-sm text-red-9 font-dm-sans">
-                        {errors.password}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Forgot password link */}
-                  <button
-                    type="button"
-                    className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-dm-sans cursor-pointer underline"
-                  >
-                    Esqueci minha senha
-                  </button>
-                </div>
-
-                {/* Login button */}
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || authLoading}
-                  className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting || authLoading
-                    ? "Conectando..."
-                    : "Conectar-se"}
-                </Button>
-              </form>
-
-              {/* Social login section */}
-              <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
-                <div className="flex flex-col gap-6 items-start w-full">
-                  {/* Divider */}
-                  <div className="flex gap-2.5 items-center justify-center w-full">
-                    <div className="flex-1 h-px bg-gray-6" />
-                    <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-dm-sans whitespace-nowrap">
-                      Ou conecte-se com
-                    </p>
-                    <div className="flex-1 h-px bg-gray-6" />
-                  </div>
-
-                  {/* Social login buttons */}
-                  <div className="flex gap-2 items-center w-full">
-                    <Button
-                      variant="ghost"
-                      className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                    >
-                      <FacebookIcon />
-                      <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
-                        Entrar Facebook
-                      </span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                    >
-                      <GoogleIcon />
-                      <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
-                        Entrar Google
-                      </span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                    >
-                      <AppleIcon />
-                      <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
-                        Entrar Apple
-                      </span>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Sign up link */}
-                <div className="flex gap-1 items-start">
-                  <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-dm-sans">
-                    Ainda não possui uma conta?
+              {/* Content */}
+              <div className="flex flex-col items-center w-full">
+                {/* Welcome text */}
+                <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
+                  <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
+                    Bem-vindo de volta
+                  </h2>
+                  <p className="font-normal text-lg leading-[1.3] text-gray-11 font-dm-sans">
+                    Por favor, preencha os campos para conectar-se
                   </p>
-                  <button
-                    onClick={() => {
-                      closeLoginModal();
-                      openRegisterModal();
-                    }}
-                    className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-dm-sans cursor-pointer"
-                  >
-                    Cadastrar-se
-                  </button>
                 </div>
 
-                {/* Terms and privacy */}
-                <p className="text-xs leading-[1.3] text-gray-11 text-center font-dm-sans">
-                  Ao continuar você concorda com nossos{" "}
-                  <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                    Termos de serviço
-                  </button>{" "}
-                  e{" "}
-                  <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                    Política de privacidade
-                  </button>
-                </p>
+                {/* Form inputs */}
+                <form
+                  onSubmit={handleSubmit}
+                  className="flex flex-col gap-5 items-start p-6 w-full"
+                >
+                  <div className="flex flex-col gap-5 items-start w-full">
+                    {/* Email input */}
+                    <div className="flex flex-col gap-1 items-start w-full">
+                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                        Email
+                      </label>
+                      <div className="relative w-full">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                        <Input
+                          type="email"
+                          placeholder="Digite seu email"
+                          value={formData.email}
+                          onChange={(e) =>
+                            handleInputChange("email", e.target.value)
+                          }
+                          className={`pl-10 h-12 ${
+                            errors.email
+                              ? "border-red-9 focus-visible:border-red-9"
+                              : ""
+                          }`}
+                          aria-invalid={!!errors.email}
+                        />
+                      </div>
+                      {errors.email && (
+                        <p className="text-sm text-red-9 font-dm-sans">
+                          {errors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Password input */}
+                    <div className="flex flex-col gap-1 items-start w-full">
+                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                        Senha
+                      </label>
+                      <div className="relative w-full">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                        <Input
+                          type="password"
+                          placeholder="Digite sua senha"
+                          value={formData.password}
+                          onChange={(e) =>
+                            handleInputChange("password", e.target.value)
+                          }
+                          className={`pl-10 h-12 ${
+                            errors.password
+                              ? "border-red-9 focus-visible:border-red-9"
+                              : ""
+                          }`}
+                          aria-invalid={!!errors.password}
+                        />
+                      </div>
+                      {errors.password && (
+                        <p className="text-sm text-red-9 font-dm-sans">
+                          {errors.password}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Forgot password link */}
+                    <button
+                      type="button"
+                      className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-dm-sans cursor-pointer underline"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+
+                  {/* Login button */}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || authLoading}
+                    className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting || authLoading
+                      ? "Conectando..."
+                      : "Conectar-se"}
+                  </Button>
+                </form>
+
+                {/* Social login section */}
+                <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
+                  <div className="flex flex-col gap-6 items-start w-full">
+                    {/* Divider */}
+                    <div className="flex gap-2.5 items-center justify-center w-full">
+                      <div className="flex-1 h-px bg-gray-6" />
+                      <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-dm-sans whitespace-nowrap">
+                        Ou conecte-se com
+                      </p>
+                      <div className="flex-1 h-px bg-gray-6" />
+                    </div>
+
+                    {/* Social login buttons */}
+                    <div className="flex gap-2 items-center w-full">
+                      <Button
+                        variant="ghost"
+                        className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                      >
+                        <FacebookIcon />
+                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                          Entrar Facebook
+                        </span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                      >
+                        <GoogleIcon />
+                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                          Entrar Google
+                        </span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                      >
+                        <AppleIcon />
+                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                          Entrar Apple
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Sign up link */}
+                  <div className="flex gap-1 items-start">
+                    <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-dm-sans">
+                      Ainda não possui uma conta?
+                    </p>
+                    <button
+                      onClick={() => {
+                        closeLoginModal();
+                        openRegisterModal();
+                      }}
+                      className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-dm-sans cursor-pointer"
+                    >
+                      Cadastrar-se
+                    </button>
+                  </div>
+
+                  {/* Terms and privacy */}
+                  <p className="text-xs leading-[1.3] text-gray-11 text-center font-dm-sans">
+                    Ao continuar você concorda com nossos{" "}
+                    <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                      Termos de serviço
+                    </button>{" "}
+                    e{" "}
+                    <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                      Política de privacidade
+                    </button>
+                  </p>
+                </div>
               </div>
-            </div>
             </motion.div>
           </motion.div>
         </>
