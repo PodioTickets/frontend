@@ -11,6 +11,7 @@ import { PriceRangeSlider } from "../PriceRangeSlider";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
+import Link from "next/link";
 
 interface HomeFiltersProps {
   initialLocation?: string | null;
@@ -208,127 +209,19 @@ export function HomeFilters({
   return (
     <div className="w-full md:px-0 mt-6 md:mt-14">
       {/* Mobile Layout */}
-      <div className="flex flex-col gap-3 md:hidden relative">
-        {/* Local Filter */}
-        <Dropdown
-          options={locationsOptions}
-          dataAttribute="location"
-          width="w-full"
-          maxHeight="max-h-[430px]"
-          className="top-20"
-          selectedIds={selectedLocation ? [selectedLocation] : []}
-          onSelect={handleLocationSelect}
-          trigger={() => (
-            <div className="flex items-center gap-3 px-4 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
-              <div className="rounded-full flex items-center justify-center shrink-0">
-                <LocationIcon className="size-6 lg:size-4" />
-              </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <h1 className="font-family-manrope font-bold text-sm text-gray-12">
-                  Local
-                </h1>
-                <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                  {selectedLocationOption
-                    ? selectedLocationOption.label
-                    : "Selecione um local"}
-                </p>
-              </div>
-            </div>
-          )}
-        />
-
-        {/* Datas Filter */}
-        <Dropdown
-          dataAttribute="dates"
-          width="w-full"
-          maxHeight="max-h-[500px]"
-          className="top-20"
-          trigger={() => (
-            <div className="flex items-center gap-3 px-4 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
-              <div className="rounded-full flex items-center justify-center shrink-0">
-                <CalendarIcon className="size-6 lg:size-4" />
-              </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <h1 className="font-family-manrope font-bold text-sm text-gray-12">
-                  Datas
-                </h1>
-                <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                  {formatDateRange()}
-                </p>
-              </div>
-            </div>
-          )}
-        >
-          <DateRangePicker
-            onSelect={handleDateRangeSelect}
-            value={selectedDateRange}
-          />
-        </Dropdown>
-
-        {/* Modalidade and Preço - Two Columns */}
-        <div className="grid grid-cols-2 gap-3">
-          <Dropdown
-            dataAttribute="modalities"
-            width="w-full md:w-[311px]"
-            maxHeight="max-h-[430px]"
-            className="top-20 md:left-auto"
-            align="start"
-            columns={modalitiesColumns}
-            multiSelect={true}
-            selectedIds={memoizedSelectedModalities}
-            onMultiSelectChange={handleModalitiesChange}
-            trigger={() => (
-              <div className="flex items-center gap-2 px-3 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
-                <div className="rounded-full flex items-center justify-center shrink-0">
-                  <SneakersIcon className="size-6 lg:size-4" />
-                </div>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <h1 className="font-family-manrope font-bold text-xs text-gray-12">
-                    Modalidade
-                  </h1>
-                  <p className="font-family-dm-sans font-normal text-[10px] text-gray-11 truncate">
-                    {selectedModalities.length > 0
-                      ? `${selectedModalities.length} selecionada${
-                          selectedModalities.length > 1 ? "s" : ""
-                        }`
-                      : "Qual modalidade?"}
-                  </p>
-                </div>
-              </div>
-            )}
-          />
-
-          <Dropdown
-            dataAttribute="price"
-            width="w-full md:w-full"
-            maxHeight="max-h-[300px]"
-            className="top-20 md:right-auto"
-            align="end"
-            trigger={() => (
-              <div className="flex items-center gap-2 px-3 py-3 bg-gray-2 border border-gray-6 rounded-lg shadow-sm hover:bg-gray-3 transition-all duration-200 cursor-pointer">
-                <div className="rounded-full flex items-center justify-center shrink-0">
-                  <MoneyIcon className="size-6 lg:size-4" />
-                </div>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <h1 className="font-family-manrope font-bold text-xs text-gray-12">
-                    Preço
-                  </h1>
-                  <p className="font-family-dm-sans font-normal text-[10px] text-gray-11 truncate">
-                    {formatPriceRange()}
-                  </p>
-                </div>
-              </div>
-            )}
-          >
-            <PriceRangeSlider
-              min={0}
-              max={10000}
-              defaultValue={priceRange}
-              onChange={handlePriceRangeChange}
-            />
-          </Dropdown>
+      <Link href="/search" className="flex flex-col gap-3 md:hidden relative">
+        <div className="rounded-full border border-gray-6 p-3 px-4 flex items-center gap-4">
+          <div className="flex items-center justify-between">
+            <SearchIcon className="size-5 text-gray-11 shrink-0" />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-sm font-medium">
+              Encontre sua próxima corrida
+            </h1>
+            <p className="text-xs text-gray-11">Local - Data - Modalidade</p>
+          </div>
         </div>
-      </div>
+      </Link>
 
       {/* Desktop Layout */}
       <div className="hidden md:flex relative items-center justify-between shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
@@ -456,4 +349,3 @@ export function HomeFilters({
     </div>
   );
 }
-

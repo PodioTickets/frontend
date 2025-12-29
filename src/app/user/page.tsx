@@ -66,7 +66,6 @@ export default function UserProfilePage() {
         emergencyPhone: (user as any)?.emergencyPhone ?? prev.emergencyPhone,
         gender: (user as any)?.gender ?? prev.gender,
         email: user?.email ?? prev.email,
-        // Don't update passwords
         currentPassword: prev.currentPassword,
         newPassword: prev.newPassword,
       }));
@@ -98,10 +97,10 @@ export default function UserProfilePage() {
       return;
     }
 
-    // Validate file size (5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    // Validate file size (2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
     if (file.size > maxSize) {
-      toast.error("Arquivo muito grande. Tamanho máximo: 5MB.");
+      toast.error("Arquivo muito grande. Tamanho máximo: 2MB.");
       return;
     }
 
@@ -155,77 +154,26 @@ export default function UserProfilePage() {
     openChangeEmailModal();
   };
 
-  const handleCodeChange = (index: number, value: string) => {
-    // Only allow numbers and limit to 1 character
-    if (value && !/^\d$/.test(value)) return;
-
-    const newCode = [...verificationCode];
-    newCode[index] = value;
-    setVerificationCode(newCode);
-    setCodeError(false);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`code-input-${index + 1}`);
-      nextInput?.focus();
-    }
-  };
-
-  const handleCodeKeyDown = (
-    index: number,
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key === "Backspace" && !verificationCode[index] && index > 0) {
-      const prevInput = document.getElementById(`code-input-${index - 1}`);
-      prevInput?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").slice(0, 6);
-    if (/^\d+$/.test(pastedData)) {
-      const newCode = pastedData
-        .split("")
-        .concat(Array(6 - pastedData.length).fill(""));
-      setVerificationCode(newCode);
-      setCodeError(false);
-      // Focus last filled input
-      const lastIndex = Math.min(pastedData.length - 1, 5);
-      const lastInput = document.getElementById(`code-input-${lastIndex}`);
-      lastInput?.focus();
-    }
-  };
-
-  const handleResendCode = () => {
-    // TODO: Implement resend code logic
-    console.log("Resending code");
-    setVerificationCode(["", "", "", "", "", ""]);
-    setCodeError(false);
-  };
-
-  const handleConfirmCode = () => {
-    const code = verificationCode.join("");
-    if (code.length !== 6) {
-      setCodeError(true);
-      return;
-    }
-    console.log("Verifying code:", code);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-2 pb-32">
-      <div className="mx-auto flex max-w-[842px] flex-col items-center justify-center px-5 py-[52px]">
+    <div className="min-h-screen bg-gray-2 md:pb-32">
+      <div className="mx-auto flex max-w-[842px] flex-col items-center justify-center px-4 py-10 md:px-5 md:py-[52px]">
         {/* Profile Card */}
-        <div className="w-full rounded-xl bg-gray-2 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+        <div className="w-full rounded-xl bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
           {/* Header */}
           <div className="flex flex-col gap-6 border-b border-gray-6 px-4 pb-8 pt-6">
-            <h1 className="text-[28px] font-extrabold leading-[1.1] text-gray-12">
+            {/* Mobile: Centered title */}
+            <div className="flex items-center justify-center px-4 py-0 md:hidden">
+              <h1 className="text-2xl font-extrabold leading-[1.1] text-gray-12 font-manrope">
+                Meu perfil
+              </h1>
+            </div>
+            {/* Desktop: Left aligned title */}
+            <h1 className="hidden md:block text-[28px] font-extrabold leading-[1.1] text-gray-12">
               Meu perfil
             </h1>
 
             {/* Profile Picture Section */}
-            <div className="flex items-end gap-4">
+            <div className="flex flex-col gap-6 items-center px-4 py-0 md:flex-row md:items-end md:gap-4 md:px-0">
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full">
                 <Image
                   src={
@@ -242,7 +190,7 @@ export default function UserProfilePage() {
                   }}
                 />
               </div>
-              <div className="flex flex-1 flex-col gap-4">
+              <div className="flex flex-col gap-4 items-start justify-center w-full md:flex-1 md:items-start">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -251,7 +199,28 @@ export default function UserProfilePage() {
                   className="hidden"
                   disabled={isUploadingAvatar}
                 />
-                <div className="flex gap-[17px]">
+                {/* Mobile: Column layout */}
+                <div className="flex flex-col gap-3 items-start w-full md:hidden">
+                  <Button
+                    variant="default"
+                    className="w-full h-11 gap-2 px-5 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                  >
+                    <Plus className="size-5" />
+                    {isUploadingAvatar ? "Enviando..." : "Alterar imagem"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full h-11 gap-2 px-5 text-gray-12 border-[1.5px] border-gray-6 font-bold text-base font-manrope"
+                    onClick={handleRemoveAvatar}
+                    disabled={isUploadingAvatar || !user?.avatarUrl}
+                  >
+                    Remover imagem
+                  </Button>
+                </div>
+                {/* Desktop: Row layout */}
+                <div className="hidden md:flex gap-[17px]">
                   <Button
                     variant="default"
                     className="h-10 gap-2 px-5"
@@ -270,59 +239,99 @@ export default function UserProfilePage() {
                     Remover imagem
                   </Button>
                 </div>
-                <p className="text-sm text-gray-11">
-                  Suportamos imagens em PNGs, JPEGs até 5MB
+                <p className="text-sm text-gray-11 font-dm-sans md:text-sm">
+                  Suportamos imagens em PNGs, JPEGs até 2MB
                 </p>
               </div>
             </div>
           </div>
 
           {/* Personal Data Section */}
-          <div className="flex flex-col gap-8 border-b border-gray-6 px-4 py-8">
-            <div className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold leading-[1.1] text-gray-12">
+          <div className="flex flex-col gap-8 border-b border-gray-6 px-4 py-8 md:gap-8">
+            {/* Mobile: Left aligned */}
+            <div className="flex flex-col gap-3 items-start w-full md:flex-col md:gap-3">
+              <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
                 Dados pessoais
               </h2>
-              <p className="text-base text-gray-11">
+              <p className="text-sm text-gray-11 font-dm-sans md:text-base">
                 Usamos esses dados nas inscrições de eventos. Preencha
                 exatamente como está no seu documento.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-wrap gap-6 items-start w-full md:grid md:grid-cols-2 md:gap-3">
               {/* Name */}
-              <div className="flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">Nome</label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
+              <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Nome</label>
+                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
                   <User className="size-5 shrink-0 text-gray-11" />
+                  {/* Mobile Input */}
                   <Input
                     type="text"
                     name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
+                    value={`${formData.firstName || ""} ${formData.lastName || ""}`.trim() || ""}
+                    onChange={(e) => {
+                      const fullName = e.target.value;
+                      const parts = fullName.split(" ");
+                      setFormData((prev) => ({
+                        ...prev,
+                        firstName: parts[0] || "",
+                        lastName: parts.slice(1).join(" ") || "",
+                      }));
+                    }}
+                    placeholder="Seu nome"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                  />
+                  {/* Desktop Input */}
+                  <Input
+                    type="text"
+                    name="firstName"
+                    value={`${formData.firstName || ""} ${formData.lastName || ""}`.trim() || ""}
+                    onChange={(e) => {
+                      const fullName = e.target.value;
+                      const parts = fullName.split(" ");
+                      setFormData((prev) => ({
+                        ...prev,
+                        firstName: parts[0] || "",
+                        lastName: parts.slice(1).join(" ") || "",
+                      }));
+                    }}
                     placeholder="Nome completo"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                    className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
               </div>
 
               {/* Date of Birth */}
-              <div className="flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">
+              <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
                   Data de nascimento
                 </label>
-                <DateOfBirthPicker
-                  value={formData.dateOfBirth}
-                  onChange={(value) =>
-                    setFormData((prev) => ({ ...prev, dateOfBirth: value }))
-                  }
-                  placeholder="Selecione sua data de nascimento"
-                />
+                {/* Mobile DateOfBirthPicker */}
+                <div className="md:hidden">
+                  <DateOfBirthPicker
+                    value={formData.dateOfBirth}
+                    onChange={(value) =>
+                      setFormData((prev) => ({ ...prev, dateOfBirth: value }))
+                    }
+                    placeholder="Selecione sua data de nascimento"
+                  />
+                </div>
+                {/* Desktop DateOfBirthPicker */}
+                <div className="hidden md:block">
+                  <DateOfBirthPicker
+                    value={formData.dateOfBirth}
+                    onChange={(value) =>
+                      setFormData((prev) => ({ ...prev, dateOfBirth: value }))
+                    }
+                    placeholder="Selecione sua data de nascimento"
+                  />
+                </div>
               </div>
 
               {/* Nationality */}
-              <div className="relative flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">Nacionalidade</label>
+              <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Nacionalidade</label>
                 <button
                   type="button"
                   onClick={() =>
@@ -330,13 +339,15 @@ export default function UserProfilePage() {
                   }
                   className="flex h-12 items-center justify-between rounded-lg border border-gray-7 bg-transparent px-3"
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1 md:gap-2.5">
                     <FlagIcon className="size-5 shrink-0 text-gray-11" />
-                    <span className="text-base text-gray-11">
-                      {formData.nationality}
+                    <span className="text-base text-gray-11 font-dm-sans">
+                      {formData.nationality || "Selecione"}
                     </span>
                   </div>
-                  <ArrowButton isOpen={showNationalityDropdown} />
+                  <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
+                    <ArrowButton isOpen={showNationalityDropdown} />
+                  </div>
                 </button>
                 {showNationalityDropdown && (
                   <div className="absolute top-[76px] z-10 w-full rounded-lg border border-gray-6 bg-gray-1 shadow-[0px_2px_4px_0px_rgba(0,0,0,0.25)]">
@@ -371,51 +382,101 @@ export default function UserProfilePage() {
               </div>
 
               {/* Phone */}
-              <div className="flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">Telefone</label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
+              <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Telefone</label>
+                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
                   <Phone className="size-5 shrink-0 text-gray-11" />
+                  {/* Mobile Input */}
                   <Input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="(00) 00000-0000"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                  />
+                  {/* Desktop Input */}
+                  <Input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="(00) 00000-0000"
+                    className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
               </div>
 
-              <div className="flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">CPF</label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
+              {/* Emergency Phone */}
+              <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                  Telefone de emergência <span className="text-gray-11">(Opcional)</span>
+                </label>
+                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
+                  <Phone className="size-5 shrink-0 text-gray-11" />
+                  {/* Mobile Input */}
+                  <Input
+                    type="tel"
+                    name="emergencyPhone"
+                    value={formData.emergencyPhone}
+                    onChange={handleInputChange}
+                    placeholder="(00) 00000-0000"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                  />
+                  {/* Desktop Input */}
+                  <Input
+                    type="tel"
+                    name="emergencyPhone"
+                    value={formData.emergencyPhone}
+                    onChange={handleInputChange}
+                    placeholder="(00) 00000-0000"
+                    className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">CPF</label>
+                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
                   <CPFIcon className="size-5 shrink-0 text-gray-11" />
+                  {/* Mobile Input */}
                   <Input
                     type="text"
                     name="documentNumber"
                     value={formData.documentNumber}
                     onChange={handleInputChange}
                     placeholder="000.000.000-00"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                  />
+                  {/* Desktop Input */}
+                  <Input
+                    type="text"
+                    name="documentNumber"
+                    value={formData.documentNumber}
+                    onChange={handleInputChange}
+                    placeholder="000.000.000-00"
+                    className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
               </div>
 
               {/* Gender */}
-              <div className="relative flex min-w-[283px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">Sexo</label>
+              <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
+                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">Sexo</label>
                 <button
                   type="button"
                   onClick={() => setShowGenderDropdown(!showGenderDropdown)}
                   className="flex h-12 items-center justify-between rounded-lg border border-gray-7 bg-transparent px-3"
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1 md:gap-2.5">
                     <HeartIcon className="size-5 shrink-0 text-gray-11" />
-                    <span className="text-base text-gray-11">
+                    <span className="text-base text-gray-11 font-dm-sans">
                       {formData.gender || "Selecione"}
                     </span>
                   </div>
-                  <ArrowButton isOpen={showGenderDropdown} />
+                  <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
+                    <ArrowButton isOpen={showGenderDropdown} />
+                  </div>
                 </button>
                 {showGenderDropdown && (
                   <div className="absolute top-[76px] z-10 w-full rounded-lg border border-gray-6 bg-gray-1 shadow-[0px_2px_4px_0px_rgba(0,0,0,0.25)]">
@@ -444,25 +505,23 @@ export default function UserProfilePage() {
                 )}
               </div>
 
-              <div className="flex min-w-[283px] w-full flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">
-                  Telefone de emergência
-                </label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
-                  <Phone className="size-5 shrink-0 text-gray-11" />
-                  <Input
-                    type="tel"
-                    name="emergencyPhone"
-                    value={formData.emergencyPhone}
-                    onChange={handleInputChange}
-                    placeholder="Opcional"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                  />
-                </div>
-              </div>
             </div>
 
-            <div className="flex justify-end">
+            {/* Mobile: Divider */}
+            <div className="h-px bg-gray-6 w-full my-0 md:hidden" />
+            
+            {/* Mobile: Full width button */}
+            <div className="flex justify-start w-full md:hidden">
+              <Button
+                variant="default"
+                className="w-full h-11 gap-2 px-5 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
+                onClick={handleSavePersonalData}
+              >
+                Salvar alterações
+              </Button>
+            </div>
+            {/* Desktop: Right aligned button */}
+            <div className="hidden md:flex md:justify-end">
               <Button
                 variant="default"
                 className="h-12 gap-2 px-5"
@@ -473,8 +532,8 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          {/* Change Password Section */}
-          <div className="flex flex-col gap-8 border-b border-gray-6 px-4 py-8">
+          {/* Change Password Section - Desktop Only */}
+          <div className="hidden md:flex flex-col gap-8 border-b border-gray-6 px-4 py-8">
             <h2 className="text-xl font-bold leading-[1.1] text-gray-12">
               Alterar senha
             </h2>
@@ -555,21 +614,54 @@ export default function UserProfilePage() {
           </div>
 
           {/* Account and Security Section */}
-          <div className="flex flex-col gap-8 border-b border-gray-6 px-4 py-8">
-            <div className="flex flex-col gap-3">
-              <h2 className="text-xl font-bold leading-[1.1] text-gray-12">
+          <div className="flex flex-col gap-8 border-b border-gray-6 px-4 py-8 md:gap-8">
+            {/* Mobile: Left aligned */}
+            <div className="flex flex-col gap-3 items-start w-full md:flex-col md:gap-3">
+              <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
                 Conta e segurança
               </h2>
-              <p className="text-base text-gray-11">
+              <p className="text-sm text-gray-11 font-dm-sans md:text-base">
                 Gerencie o e-mail e a senha que você usa para entrar no
                 PódioTicket.
               </p>
             </div>
 
+            {/* Mobile: Column layout */}
+            <div className="flex flex-col gap-4 items-center w-full md:hidden">
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.5px] border-gray-6 bg-transparent px-3"
+              >
+                <div className="flex items-center gap-1">
+                  <Mail className="size-6 shrink-0 text-gray-12" />
+                  <span className="text-base text-gray-12 font-dm-sans">
+                    Deseja alterar seu email?
+                  </span>
+                </div>
+                <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleChangePassword}
+                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.25px] border-gray-6 bg-transparent px-3"
+              >
+                <div className="flex items-center gap-1">
+                  <Lock className="size-6 shrink-0 text-gray-12" />
+                  <span className="text-base text-gray-12 font-medium font-dm-sans">
+                    Deseja alterar sua senha?
+                  </span>
+                </div>
+                <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
+              </button>
+            </div>
+            
+            {/* Desktop: Single button */}
             <button
               type="button"
               onClick={handleChangeEmail}
-              className="flex h-12 w-full max-w-[400px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3"
+              className="hidden md:flex h-12 w-full max-w-[400px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3"
             >
               <div className="flex items-center gap-2.5">
                 <Mail className="size-6 shrink-0 text-gray-12" />
@@ -582,16 +674,46 @@ export default function UserProfilePage() {
           </div>
 
           {/* Security Section */}
-          <div className="flex flex-col gap-10 border-t border-gray-6 px-4 py-8">
-            <div className="flex flex-col gap-4">
-              <h2 className="text-xl font-bold leading-[1.1] text-gray-12">
+          <div className="flex flex-col gap-8 px-4 py-8 md:gap-10">
+            <div className="flex flex-col gap-4 items-start w-full md:flex-col md:gap-4">
+              <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
                 Segurança
               </h2>
 
+              {/* Mobile: Full width button */}
               <button
                 type="button"
                 onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                className="flex h-12 w-full max-w-[400px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3"
+                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.5px] border-gray-6 bg-transparent px-3 md:hidden"
+              >
+                <div className="flex items-center gap-1 flex-1">
+                  <Shield className="size-6 shrink-0 text-gray-12" />
+                  <span className="text-sm text-gray-12 font-dm-sans text-left">
+                    Ligar dois fatores de segurança
+                  </span>
+                </div>
+                <div
+                  className={cn(
+                    "relative h-5 w-[37px] rounded-full transition-colors shrink-0",
+                    twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
+                      twoFactorEnabled
+                        ? "translate-x-[17px]"
+                        : "translate-x-0.5"
+                    )}
+                  />
+                </div>
+              </button>
+              
+              {/* Desktop: Original button */}
+              <button
+                type="button"
+                onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+                className="hidden md:flex h-12 w-full max-w-[400px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3"
               >
                 <div className="flex items-center gap-2.5">
                   <Shield className="size-6 shrink-0 text-gray-12" />

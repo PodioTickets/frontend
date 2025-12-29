@@ -8,7 +8,7 @@ export default function Home() {
 
       {/* Hero Banner */}
       <div className="w-full mt-6 md:mt-14">
-        <div className="bg-[url('/banners/banner_1.png')] bg-cover bg-center bg-no-repeat w-full h-[200px] md:h-[400px] lg:h-[388px] rounded-lg" />
+        <div className="md:bg-[url('/banners/banner_1.png')] bg-[url('/banners/banner_1_mobile.png')] md:bg-cover bg-contain bg-center bg-no-repeat w-full h-[200px] md:h-[400px] lg:h-[388px] rounded-lg" />
       </div>
 
       {/* Featured Events Section */}
@@ -47,4 +47,3 @@ export default function Home() {
     </section>
   );
 }
-

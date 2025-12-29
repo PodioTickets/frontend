@@ -13,6 +13,16 @@ interface DateRangePickerProps {
 
 export function DateRangePicker({ onSelect, className, value }: DateRangePickerProps) {
   const [date, setDate] = React.useState<DateRange | undefined>(value);
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   
   React.useEffect(() => {
     setDate(value);
@@ -24,7 +34,7 @@ export function DateRangePicker({ onSelect, className, value }: DateRangePickerP
       onSelect(range);
     }
   };
-
+  
   return (
     <div className={cn("p-2 transition-all duration-300", className)}>
       <Calendar
@@ -32,7 +42,7 @@ export function DateRangePicker({ onSelect, className, value }: DateRangePickerP
         defaultMonth={date?.from}
         selected={date}
         onSelect={handleSelect}
-        numberOfMonths={2}
+        numberOfMonths={isMobile ? 1 : 2}
         className="rounded-md border-0 bg-transparent"
       />
     </div>

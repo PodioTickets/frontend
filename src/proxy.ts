@@ -102,17 +102,8 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  /* if (pathname.startsWith("/admin")) {
-    const adminSecret = request.headers.get("x-admin-secret");
-    if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-  } */
-
   const response = NextResponse.next();
 
-  // Removed X-Frame-Options: DENY to allow Google Maps iframe
-  // Using CSP frame-ancestors instead for better control
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-XSS-Protection", "1; mode=block");
@@ -151,13 +142,7 @@ export async function proxy(request: NextRequest) {
     "https://api.podioticket.com.br",
     "https://t.me",
     "https://x.com",
-    "wss://relay.walletconnect.com",
-    "wss://relay.walletconnect.org",
-    "https://registry.walletconnect.com",
-    "https://explorer-api.walletconnect.com",
-    "https://rpc.helius.xyz",
     "https://api.solana.fm",
-    "https://api.loot4.fun",
     "https://prod.spline.design",
   ];
 
@@ -174,8 +159,8 @@ export async function proxy(request: NextRequest) {
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://api.web3modal.org https://pulse.walletconnect.org https://rpc.walletconnect.org https://data-seed-prebsc-1-s1.bnbchain.org https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
-    `frame-src 'self' https://secure.walletconnect.org https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com`,
+    )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
+    `frame-src 'self' https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com`,
     `img-src ${trustedDomains.join(" ")} data: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     `object-src 'none'`,

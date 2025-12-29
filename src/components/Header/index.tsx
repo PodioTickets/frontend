@@ -22,6 +22,7 @@ import { MedalIcon } from "../Icons/MedalIcon";
 import { SneakersIcon } from "../Icons/SneakersIcon";
 import { getApiClient } from "@/services/base/ApiClient";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
+import { UserIcon } from "../Icons/UserIcon";
 
 function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
   const { language, setLanguage } = useLanguage();
@@ -342,7 +343,7 @@ export function Header() {
               {/* Scrollable Content */}
               <div className="overflow-y-auto h-[calc(100vh-64px)]">
                 {/* Menu Items */}
-                <div className="bg-[#222] border-b border-[#3a3a3a] p-4 space-y-2">
+                <div className="bg-[#222] border-b border-[#3a3a3a] space-y-2 font-family-dm-sans">
                   {isAuthenticated && user ? (
                     <>
                       <button
@@ -350,10 +351,10 @@ export function Header() {
                           push("/user");
                           setMobileMenuOpen(false);
                         }}
-                        className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-gray-12 hover:bg-[#2a2a2a] transition-colors"
+                        className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors"
                       >
-                        <User className="w-5 h-5 text-gray-12" />
-                        <span className="text-base font-medium text-gray-12">
+                        <UserIcon className="size-5 text-[#EEE]" />
+                        <span className="text-base font-medium text-[#EEE]">
                           Perfil e configurações
                         </span>
                       </button>
@@ -362,37 +363,41 @@ export function Header() {
                           push("/user/tickets");
                           setMobileMenuOpen(false);
                         }}
-                        className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-gray-12 hover:bg-[#2a2a2a] transition-colors"
+                        className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors"
                       >
-                        <TicketIcon className="w-5 h-5 text-gray-12" />
-                        <span className="text-base font-medium text-gray-12">
+                        <TicketIcon className="w-5 h-5 text-[#EEE]" />
+                        <span className="text-base font-medium text-[#EEE]">
                           Ingressos
                         </span>
                       </button>
-                      <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-gray-12 hover:bg-[#2a2a2a] transition-colors">
-                        <InfoIcon className="w-5 h-5 text-gray-12" />
-                        <span className="text-base font-medium text-gray-12">
+                      <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
+                        <InfoIcon className="w-5 h-5 text-[#EEE]" />
+                        <span className="text-base font-medium text-[#EEE]">
                           Central de ajuda
                         </span>
                       </button>
-                      <MobileLanguageToggle
-                        onClose={() => setMobileMenuOpen(false)}
-                      />
+
                       <button
                         onClick={() => {
                           logout();
                           setMobileMenuOpen(false);
                         }}
-                        className="w-full flex gap-2 items-center h-[52px] px-4 text-gray-12 hover:bg-[#2a2a2a] transition-colors"
+                        className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors"
                       >
-                        <LogOut className="w-5 h-5 text-gray-12" />
-                        <span className="text-base font-medium text-gray-12">
+                        <LogOut className="w-5 h-5 text-[#EEE]" />
+                        <span className="text-base font-medium text-[#EEE]">
                           Sair
                         </span>
                       </button>
+
+                      <div className="p-4">
+                        <MobileLanguageToggle
+                          onClose={() => setMobileMenuOpen(false)}
+                        />
+                      </div>
                     </>
                   ) : (
-                    <>
+                    <div className="flex flex-col gap-2 p-4">
                       <Button
                         onClick={() => openModal("login")}
                         variant="default"
@@ -412,7 +417,7 @@ export function Header() {
                       <MobileLanguageToggle
                         onClose={() => setMobileMenuOpen(false)}
                       />
-                    </>
+                    </div>
                   )}
                 </div>
 
