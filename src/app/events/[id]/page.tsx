@@ -202,7 +202,7 @@ export default function EventPage() {
 
             {/* Action Buttons */}
             <Link
-              href={`/checkout?eventId=${event.id}`}
+              href={`/checkout/ingressos?eventId=${event.id}`}
               className="hidden md:block mb-3"
             >
               <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
@@ -336,7 +336,7 @@ export default function EventPage() {
               </div>
             </div>
 
-            <Link href={`/checkout?eventId=${event.id}`} className="w-full">
+            <Link href={`/checkout/ingressos?eventId=${event.id}`} className="w-full">
               <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
                 Inscreva-se
               </Button>
@@ -468,7 +468,7 @@ export default function EventPage() {
                       )}
                     </div>
 
-                    <Link href={`/checkout?eventId=${event.id}`}>
+                    <Link href={`/checkout/ingressos?eventId=${event.id}`}>
                       <Button className="w-full mt-8">Inscrever-se</Button>
                     </Link>
                   </div>
@@ -650,7 +650,7 @@ export default function EventPage() {
                     )}
                   </div>
 
-                  <Link href={`/checkout?eventId=${event.id}`}>
+                  <Link href={`/checkout/ingressos?eventId=${event.id}`}>
                     <Button className="w-full mt-8">Inscrever-se</Button>
                   </Link>
                 </div>

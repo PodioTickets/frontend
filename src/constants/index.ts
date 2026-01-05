@@ -181,18 +181,22 @@ export const checkoutHeaderOptions = [
   {
     id: 1,
     label: "Ingressos",
+    path: "ingressos",
   },
   {
     id: 2,
     label: "Informações",
+    path: "informacoes",
   },
   {
     id: 3,
     label: "Produtos",
+    path: "produtos",
   },
   {
     id: 4,
     label: "Pagamento",
+    path: "pagamento",
   },
 ];
 
