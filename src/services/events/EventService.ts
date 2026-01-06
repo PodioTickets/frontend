@@ -50,6 +50,11 @@ export class EventService {
     return data.data.event || null;
   }
 
+  async getEventBySlug(slug: string): Promise<Event> {
+    const { data } = await this.apiClient.get(`/api/v1/events/slug/${slug}`);
+    return data.data.event || null;
+  }
+
   async searchEvents(params?: SearchEventsParams): Promise<SearchEventsResponse> {
     const {
       q,

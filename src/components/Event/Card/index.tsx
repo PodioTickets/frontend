@@ -92,7 +92,7 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] transition-transform hover:scale-[1.02] duration-200">
       {event ? (
-        <Link href={`/events/${event.id}`} className="block">
+        <Link href={`/events/${event.slug}`} className="block">
           {cardContent}
         </Link>
       ) : (

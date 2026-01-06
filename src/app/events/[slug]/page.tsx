@@ -8,7 +8,7 @@ import { ArrowLeft, Phone } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
-import { useEvent } from "@/hooks/useEvent";
+import { useEventBySlug } from "@/hooks/useEvent";
 import { useEvents } from "@/hooks/useEvents";
 import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
@@ -18,24 +18,15 @@ import { Fragment, useState, useMemo, useEffect } from "react";
 
 export default function EventPage() {
   const params = useParams();
-  const eventId = params.id as string;
-  const { event, isLoading } = useEvent(eventId);
+  const eventSlug = params.slug as string;
+  const { event, isLoading } = useEventBySlug(eventSlug);
   const [showBanner, setShowBanner] = useState(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
   const [showFixedButton, setShowFixedButton] = useState(false);
-
-  // Buscar eventos do mesmo organizador
-  const { events: organizerEvents } = useEvents({ limit: 10 });
-  const sameOrganizerEvents = useMemo(() => {
-    if (!event?.organizerId) return [];
-    return organizerEvents.filter(
-      (e) => e.organizerId === event.organizerId && e.id !== event.id
-    );
-  }, [organizerEvents, event]);
-
+  
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
@@ -678,7 +669,7 @@ export default function EventPage() {
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         eventName={event.name}
-        eventUrl={`/events/${event.id}`}
+        eventUrl={`/events/${event.slug}`}
       />
     </>
   );

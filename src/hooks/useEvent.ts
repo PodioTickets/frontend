@@ -8,3 +8,11 @@ export function useEvent(id: string) {
   );
   return { event: data, isLoading, error };
 }
+
+export function useEventBySlug(slug: string) {
+  const { data, isLoading, error } = useApiQuery<Event>(
+    ["event", "slug", slug],
+    () => eventService.getEventBySlug(slug)
+  );
+  return { event: data, isLoading, error };
+}

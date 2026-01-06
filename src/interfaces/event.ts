@@ -2,6 +2,7 @@ import type { Organizer } from "./user";
 
 export interface Event {
   id: string;
+  slug: string;
   organizerId: string;
   name: string;
   description: string;
