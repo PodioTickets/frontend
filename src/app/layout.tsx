@@ -18,26 +18,26 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "PodioTickets",
+  title: "PodioTicket",
   description:
-    "PodioTickets is a platform for creating and managing tickets for your events.",
+    "PodioTicket is a platform for creating and managing tickets for your events.",
   keywords: ["podio tickets", "tickets", "events", "management"],
-  authors: [{ name: "PodioTickets Team" }],
-  creator: "PodioTickets",
-  publisher: "PodioTickets",
+  authors: [{ name: "PodioTicket Team" }],
+  creator: "PodioTicket",
+  publisher: "PodioTicket",
   robots: "index, follow",
   openGraph: {
-    title: "PodioTickets",
+    title: "PodioTicket",
     description:
-      "PodioTickets is a platform for creating and managing tickets for your events.",
+      "PodioTicket is a platform for creating and managing tickets for your events.",
     type: "website",
     locale: "pt-BR",
   },
   twitter: {
     card: "summary_large_image",
-    title: "PodioTickets",
+    title: "PodioTicket",
     description:
-      "PodioTickets is a platform for creating and managing tickets for your events.",
+      "PodioTicket is a platform for creating and managing tickets for your events.",
   },
   icons: {
     icon: [
