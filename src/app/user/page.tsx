@@ -24,7 +24,7 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { useChangeEmailModal } from "@/stores/modalStore";
 import { CPFIcon } from "@/components/Icons/CPFIcon";
 import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
-import { getApiClient } from "@/services/base/ApiClient";
+import { getAvatarUrl } from "@/utils/avatar";
 
 export default function UserProfilePage() {
   const { user, refetchUser } = useAuth();
@@ -176,11 +176,7 @@ export default function UserProfilePage() {
             <div className="flex flex-col gap-6 items-center px-4 py-0 md:flex-row md:items-end md:gap-4 md:px-0">
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full">
                 <Image
-                  src={
-                    user?.avatarUrl
-                      ? `${getApiClient().getBaseURL()}${user?.avatarUrl}`
-                      : "/images/default-avatar.png"
-                  }
+                  src={getAvatarUrl(user?.avatarUrl)}
                   alt="Profile"
                   fill
                   className="object-cover"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
@@ -15,17 +15,33 @@ import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import { EventCard } from "@/components/Event/Card";
 import { Fragment, useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoginModal } from "@/stores/modalStore";
 
 export default function EventPage() {
   const params = useParams();
+  const router = useRouter();
   const eventSlug = params.slug as string;
   const { event, isLoading } = useEventBySlug(eventSlug);
+  const { isAuthenticated } = useAuth();
+  const { openLoginModal } = useLoginModal();
   const [showBanner, setShowBanner] = useState(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
   const [showFixedButton, setShowFixedButton] = useState(false);
+
+  const handleCheckoutClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!event) return;
+    
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    router.push(`/checkout/ingressos?eventId=${event.id}`);
+  };
   
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -192,14 +208,12 @@ export default function EventPage() {
             </div>
 
             {/* Action Buttons */}
-            <Link
-              href={`/checkout/ingressos?eventId=${event.id}`}
-              className="hidden md:block mb-3"
+            <Button
+              onClick={handleCheckoutClick}
+              className="w-full bg-[#5CC870] hover:bg-[#4db860] mb-3"
             >
-              <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
-                Inscreva-se
-              </Button>
-            </Link>
+              Inscreva-se
+            </Button>
           </div>
         </div>
 
@@ -327,11 +341,12 @@ export default function EventPage() {
               </div>
             </div>
 
-            <Link href={`/checkout/ingressos?eventId=${event.id}`} className="w-full">
-              <Button className="w-full bg-[#5CC870] hover:bg-[#4db860]">
-                Inscreva-se
-              </Button>
-            </Link>
+            <Button
+              onClick={handleCheckoutClick}
+              className="w-full bg-[#5CC870] hover:bg-[#4db860]"
+            >
+              Inscreva-se
+            </Button>
           </div>
         </div>
       </div>
@@ -459,9 +474,12 @@ export default function EventPage() {
                       )}
                     </div>
 
-                    <Link href={`/checkout/ingressos?eventId=${event.id}`}>
-                      <Button className="w-full mt-8">Inscrever-se</Button>
-                    </Link>
+                    <Button
+                      onClick={handleCheckoutClick}
+                      className="w-full mt-8"
+                    >
+                      Inscrever-se
+                    </Button>
                   </div>
                   <div className="flex flex-col items-center justify-center gap-4">
                     <Button
@@ -641,9 +659,12 @@ export default function EventPage() {
                     )}
                   </div>
 
-                  <Link href={`/checkout/ingressos?eventId=${event.id}`}>
-                    <Button className="w-full mt-8">Inscrever-se</Button>
-                  </Link>
+                  <Button
+                    onClick={handleCheckoutClick}
+                    className="w-full mt-8"
+                  >
+                    Inscrever-se
+                  </Button>
                 </div>
                 <div className="flex flex-col items-center justify-center gap-4">
                   <Button

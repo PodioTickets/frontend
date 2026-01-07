@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import type { Event } from "@/interfaces/event";
+import { getAvatarUrl } from "@/utils/avatar";
 
 interface EventCardProps {
   event: Event;
@@ -61,7 +62,7 @@ export function EventCard({ event }: EventCardProps) {
         <h1 className="flex items-center gap-2 text-sm text-gray-12">
           {event.organizer?.user?.avatarUrl ? (
             <Image
-              src={event.organizer?.user?.avatarUrl}
+              src={getAvatarUrl(event.organizer?.user?.avatarUrl)}
               alt={event.organizer.name}
               width={20}
               height={20}

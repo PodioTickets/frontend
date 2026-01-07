@@ -84,6 +84,11 @@ export function LoginModal() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleGoogleLogin = () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+    window.location.href = `${apiUrl}/api/v1/auth/google`;
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -331,6 +336,7 @@ export function LoginModal() {
                     <div className="flex flex-wrap gap-2 items-center w-full">
                       <Button
                         variant="ghost"
+                        onClick={handleGoogleLogin}
                         className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors flex-1 min-w-[167px]"
                       >
                         <GoogleIcon />
@@ -573,6 +579,7 @@ export function LoginModal() {
                       </Button>
                       <Button
                         variant="ghost"
+                        onClick={handleGoogleLogin}
                         className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
                       >
                         <GoogleIcon />

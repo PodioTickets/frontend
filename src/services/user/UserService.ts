@@ -288,6 +288,81 @@ export class UserService {
     }
   }
 
+  async validateGoogleCode(code: string, redirectUri: string): Promise<{
+    success: boolean;
+    data?: {
+      access_token: string;
+      refresh_token: string;
+      user: {
+        id: string;
+        email: string;
+        firstName?: string;
+        lastName?: string;
+        documentNumber?: string;
+        role: string;
+      };
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await this.apiClient.post<LoginResponse>(
+        "/api/v1/auth/google/validate",
+        { code, redirectUri }
+      );
+      const responseBody = response.data as LoginResponse;
+      let loginData: {
+        access_token: string;
+        refresh_token: string;
+        user: {
+          id: string;
+          email: string;
+          firstName?: string;
+          lastName?: string;
+          documentNumber?: string;
+          role: string;
+        };
+      } | null = null;
+
+      if (responseBody?.data?.access_token && responseBody?.data?.user) {
+        loginData = {
+          access_token: responseBody.data.access_token,
+          refresh_token: responseBody.data.refresh_token,
+          user: responseBody.data.user,
+        };
+      } else if (responseBody?.access_token && responseBody?.user) {
+        loginData = {
+          access_token: responseBody.access_token,
+          refresh_token: responseBody.refresh_token || "",
+          user: responseBody.user,
+        };
+      }
+
+      if (!loginData || !loginData.access_token || !loginData.user) {
+        throw new Error(
+          "Resposta do servidor não contém dados de login válidos"
+        );
+      }
+
+      return {
+        success: true,
+        data: loginData,
+      };
+    } catch (error: any) {
+      let errorMessage = "Erro ao fazer login com Google. Tente novamente.";
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
   async updateUser(id: string, data: any): Promise<any> {
     try {
       const response = await this.apiClient.patch(`/api/v1/user/${id}`, data);
@@ -370,12 +445,94 @@ export class UserService {
           ...(status && { status }),
         },
       });
-      return response.data.data || {
-        registrations: [],
-        pagination: { page, limit, total: 0, totalPages: 1 },
-      };
+      return (
+        response.data.data || {
+          registrations: [],
+          pagination: { page, limit, total: 0, totalPages: 1 },
+        }
+      );
     } catch (error: any) {
       throw this.handleError(error);
+    }
+  }
+
+  async getLinkedUsers(): Promise<{
+    users: Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      documentNumber: string;
+      phone: string;
+      dateOfBirth: string;
+      gender: string;
+      isMainUser?: boolean;
+    }>;
+  }> {
+    try {
+      const response = await this.apiClient.get("/api/v1/user/linked-users");
+      return response.data.data || { users: [] };
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async createOrLinkUser(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    documentNumber: string;
+    phone: string;
+    dateOfBirth: string;
+    gender: string;
+  }): Promise<{
+    success: boolean;
+    data?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      documentNumber: string;
+      phone: string;
+      dateOfBirth: string;
+      gender: string;
+      wasCreated: boolean;
+      wasLinked: boolean;
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await this.apiClient.post<{
+        success: boolean;
+        data?: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          email: string;
+          documentNumber: string;
+          phone: string;
+          dateOfBirth: string;
+          gender: string;
+          wasCreated: boolean;
+          wasLinked: boolean;
+        };
+        error?: string;
+      }>("/api/v1/user/linked-users", data);
+      
+      return response.data;
+    } catch (error: any) {
+      let errorMessage = "Erro ao salvar usuário. Tente novamente.";
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
   }
 

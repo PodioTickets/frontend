@@ -161,7 +161,7 @@ export async function proxy(request: NextRequest) {
       " "
     )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
     `frame-src 'self' https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     `object-src 'none'`,
     `base-uri 'self'`,

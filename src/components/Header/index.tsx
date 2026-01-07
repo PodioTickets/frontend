@@ -20,9 +20,9 @@ import { InstagramIcon } from "../Icons/InstagramIcon";
 import { FacebookIcon } from "../Icons/FacebookIcon";
 import { MedalIcon } from "../Icons/MedalIcon";
 import { SneakersIcon } from "../Icons/SneakersIcon";
-import { getApiClient } from "@/services/base/ApiClient";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { UserIcon } from "../Icons/UserIcon";
+import { getAvatarUrl } from "@/utils/avatar";
 
 function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
   const { language, setLanguage } = useLanguage();
@@ -188,11 +188,7 @@ export function Header() {
                   <div className="flex items-center gap-2 cursor-pointer h-full text-gray-2">
                     {user?.avatarUrl ? (
                       <Image
-                        src={
-                          user?.avatarUrl
-                            ? `${getApiClient().getBaseURL()}${user?.avatarUrl}`
-                            : "/images/default-avatar.png"
-                        }
+                        src={getAvatarUrl(user.avatarUrl)}
                         alt="User"
                         width={40}
                         height={40}

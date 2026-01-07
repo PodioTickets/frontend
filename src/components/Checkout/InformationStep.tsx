@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { ArrowButton } from "../ArrowButton";
 import type { Event } from "@/interfaces/event";
@@ -16,6 +16,12 @@ import type { Question } from "@/interfaces/event";
 import { eventService } from "@/services";
 import { useApiQuery } from "@/hooks/base/useApiQuery";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
+import { UserAutocomplete } from "../UserAutocomplete";
+import type { LinkedUser } from "@/hooks/useLinkedUsers";
+import { useLinkedUsers } from "@/hooks/useLinkedUsers";
+import { userService } from "@/services";
+import toast from "react-hot-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface InformationStepProps {
   event: Event;
@@ -43,6 +49,8 @@ export function InformationStep({
     updateRaceQuantity,
   } = useCheckout();
   const { openDeleteParticipantModal } = useDeleteParticipantModal();
+  const { linkedUsers } = useLinkedUsers();
+  const { user: currentUser } = useAuth();
   const [expandedParticipants, setExpandedParticipants] = useState<
     Record<number, boolean>
   >({
@@ -52,6 +60,17 @@ export function InformationStep({
   // Estado para armazenar respostas das perguntas por participante
   const [questionAnswers, setQuestionAnswers] = useState<
     Record<number, Record<string, string | string[]>>
+  >({});
+
+  // Estado para rastrear quais participantes foram selecionados da lista de usuários vinculados
+  // Isso evita tentar salvar novamente usuários que já estão vinculados
+  const [selectedLinkedUserIds, setSelectedLinkedUserIds] = useState<
+    Record<number, string>
+  >({});
+
+  // Estado para rastrear quais participantes já foram salvos
+  const [savedParticipantIds, setSavedParticipantIds] = useState<
+    Record<number, boolean>
   >({});
 
   // Criar lista de participantes baseada nas races selecionadas
@@ -75,6 +94,28 @@ export function InformationStep({
 
     return result;
   }, [raceQuantities]);
+
+  // Garantir que o array de participantes tenha pelo menos o número necessário de elementos
+  useEffect(() => {
+    const totalParticipantsNeeded = participantsWithRaces.length;
+    if (totalParticipantsNeeded > 0 && participants.length < totalParticipantsNeeded) {
+      // Expandir o array de participantes se necessário
+      // Usar updateParticipant para cada índice faltante, que já cria o participante se não existir
+      for (let i = participants.length; i < totalParticipantsNeeded; i++) {
+        updateParticipant(i, {
+          name: "",
+          cpf: "",
+          email: "",
+          birthDate: "",
+          phone: "",
+          gender: "",
+          emergencyPhone: "",
+          emergencyContactName: "",
+          hasEmergencyContact: false,
+        });
+      }
+    }
+  }, [participantsWithRaces.length, participants.length, updateParticipant]);
 
   // Calculate totals same way as ModalitiesStep
   const { totalParticipants, totalPrice } = useMemo(() => {
@@ -103,7 +144,158 @@ export function InformationStep({
     }).format(price);
   };
 
-  const toggleParticipant = (index: number) => {
+  const toggleParticipant = async (index: number) => {
+    // Garantir que o participante existe (fallback caso o useEffect não tenha executado)
+    // O updateParticipant já cria o participante se não existir, mas vamos garantir
+    let participant = participants[index];
+    
+    if (!participant) {
+      // Criar participante vazio se não existir
+      updateParticipant(index, {
+        name: "",
+        cpf: "",
+        email: "",
+        birthDate: "",
+        phone: "",
+        gender: "",
+        emergencyPhone: "",
+        emergencyContactName: "",
+        hasEmergencyContact: false,
+      });
+      // Usar um objeto vazio temporário para continuar
+      participant = {
+        name: "",
+        cpf: "",
+        email: "",
+        birthDate: "",
+        phone: "",
+        gender: "",
+        emergencyPhone: "",
+        emergencyContactName: "",
+        hasEmergencyContact: false,
+      };
+    }
+    
+    // Verificar se está tentando fechar (participante já está expandido)
+    const isCurrentlyExpanded = expandedParticipants[index];
+    
+    // Se está tentando fechar E o participante está completo, tentar salvar
+    if (isCurrentlyExpanded && isParticipantComplete(index)) {
+      // Limpar CPF (remover formatação) para comparação
+      const cleanCPF = (participant.cpf || "").replace(/\D/g, "");
+      const participantEmail = (participant.email || "").trim().toLowerCase();
+
+      // Verificar se o participante já está na lista de usuários vinculados
+      const isAlreadyLinked = linkedUsers.some((linkedUser) => {
+        const linkedUserCPF = (linkedUser.documentNumber || "").replace(/\D/g, "");
+        const linkedUserEmail = (linkedUser.email || "").trim().toLowerCase();
+        
+        // Comparar por CPF ou email
+        return (
+          (cleanCPF && linkedUserCPF && cleanCPF === linkedUserCPF) ||
+          (participantEmail && linkedUserEmail && participantEmail === linkedUserEmail)
+        );
+      });
+
+      // Verificar se é o próprio usuário atual
+      const isCurrentUser = currentUser && (
+        (cleanCPF && currentUser.documentNumber && cleanCPF === currentUser.documentNumber.replace(/\D/g, "")) ||
+        (participantEmail && currentUser.email && participantEmail === currentUser.email.trim().toLowerCase())
+      );
+
+      // Se já está vinculado ou é o próprio usuário, não tentar vincular novamente
+      if (isAlreadyLinked || isCurrentUser) {
+        // Marcar como já vinculado para evitar tentativas futuras
+        if (isAlreadyLinked) {
+          const linkedUser = linkedUsers.find((linkedUser) => {
+            const linkedUserCPF = (linkedUser.documentNumber || "").replace(/\D/g, "");
+            const linkedUserEmail = (linkedUser.email || "").trim().toLowerCase();
+            return (
+              (cleanCPF && linkedUserCPF && cleanCPF === linkedUserCPF) ||
+              (participantEmail && linkedUserEmail && participantEmail === linkedUserEmail)
+            );
+          });
+          
+          if (linkedUser) {
+            setSelectedLinkedUserIds((prev) => ({
+              ...prev,
+              [index]: linkedUser.id,
+            }));
+          }
+        }
+        
+        // Não precisa fazer nada, já está vinculado
+        // Apenas fecha o participante
+      } else if (!selectedLinkedUserIds[index] && !savedParticipantIds[index]) {
+        // Se não está vinculado, criar/vincular usuário
+        try {
+          // Separar nome em firstName e lastName
+          const nameParts = (participant.name || "").trim().split(" ");
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+
+          // Normalizar gênero para o formato esperado pelo backend (minúsculas)
+          // O dropdown usa labels como "Masculino", "Feminino", etc., mas o backend espera minúsculas
+          let normalizedGender = (participant.gender || "").trim();
+          const genderLower = normalizedGender.toLowerCase();
+          
+          // Mapear valores possíveis para os formatos esperados pelo backend
+          if (genderLower === "masculino") {
+            normalizedGender = "masculino";
+          } else if (genderLower === "feminino") {
+            normalizedGender = "feminino";
+          } else if (genderLower === "outro") {
+            normalizedGender = "outro";
+          } else if (genderLower === "prefiro não dizer" || genderLower === "prefiro-nao-dizer" || genderLower === "prefiro-nao-informar") {
+            normalizedGender = "prefiro-nao-dizer";
+          } else {
+            // Se não for um dos valores esperados, usar o valor em minúsculas
+            normalizedGender = genderLower || "";
+          }
+
+          const response = await userService.createOrLinkUser({
+            firstName,
+            lastName,
+            email: participant.email || "",
+            documentNumber: cleanCPF,
+            phone: (participant.phone || "").replace(/\D/g, ""),
+            dateOfBirth: participant.birthDate || "",
+            gender: normalizedGender,
+          });
+
+          if (response.success && response.data) {
+            // Marcar como salvo
+            setSavedParticipantIds((prev) => ({
+              ...prev,
+              [index]: true,
+            }));
+
+            // Se foi criado ou vinculado, marcar também como selecionado para evitar duplicação
+            if (response.data.wasCreated || response.data.wasLinked) {
+              setSelectedLinkedUserIds((prev) => ({
+                ...prev,
+                [index]: response.data!.id,
+              }));
+            }
+
+            toast.success(
+              response.data.wasCreated
+                ? "Usuário criado e vinculado com sucesso!"
+                : "Usuário vinculado com sucesso!"
+            );
+          } else {
+            toast.error(response.error || "Erro ao salvar usuário");
+            return; // Não fecha o participante se houver erro
+          }
+        } catch (error) {
+          console.error("Erro ao salvar usuário:", error);
+          toast.error("Erro ao salvar usuário. Tente novamente.");
+          return; // Não fecha o participante se houver erro
+        }
+      }
+    }
+
+    // Fechar/abrir o participante (sempre permite abrir, só valida ao fechar)
     setExpandedParticipants((prev) => ({
       ...prev,
       [index]: !prev[index],
@@ -166,13 +358,22 @@ export function InformationStep({
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];
     if (!participant) return false;
+    
+    // Verificar se os campos obrigatórios estão preenchidos (não vazios)
+    const name = participant.name?.trim();
+    const cpf = participant.cpf?.trim();
+    const email = participant.email?.trim();
+    const birthDate = participant.birthDate?.trim();
+    const phone = participant.phone?.trim();
+    const gender = participant.gender?.trim();
+    
     return !!(
-      participant.name &&
-      participant.cpf &&
-      participant.email &&
-      participant.birthDate &&
-      participant.phone &&
-      participant.gender
+      name &&
+      cpf &&
+      email &&
+      birthDate &&
+      phone &&
+      gender
     );
   };
 
@@ -750,15 +951,56 @@ export function InformationStep({
                             <label className="text-sm font-medium text-gray-12">
                               Nome
                             </label>
-                            <input
-                              type="text"
-                              name="name"
+                            <UserAutocomplete
                               value={participant.name}
-                              onChange={(e) =>
-                                handleInputChange(participantIndex, e)
+                              onChange={(value) =>
+                                updateParticipant(participantIndex, { name: value })
                               }
-                              className="w-full px-4 py-3 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
-                              placeholder="Digite seu nome completo"
+                              onSelectUser={(user: LinkedUser) => {
+                                // Preencher automaticamente os campos quando um usuário é selecionado
+                                // Formatar CPF se necessário
+                                const formattedCPF = user.documentNumber
+                                  ? maskCPF(user.documentNumber.replace(/\D/g, ""))
+                                  : "";
+                                
+                                // Formatar telefone se necessário (pode vir sem formatação da API)
+                                const formattedPhone = user.phone
+                                  ? maskPhone(user.phone.replace(/\D/g, ""))
+                                  : "";
+                                
+                                // Normalizar gênero (pode vir em diferentes formatos)
+                                let normalizedGender = user.gender || "";
+                                if (normalizedGender) {
+                                  // Verificar se é um dos valores esperados
+                                  const genderLower = normalizedGender.toLowerCase();
+                                  if (genderLower === "masculino") {
+                                    normalizedGender = "Masculino";
+                                  } else if (genderLower === "feminino") {
+                                    normalizedGender = "Feminino";
+                                  } else if (genderLower === "outro") {
+                                    normalizedGender = "Outro";
+                                  } else if (genderLower === "prefiro-nao-dizer" || genderLower === "prefiro-nao-informar") {
+                                    normalizedGender = "Prefiro não dizer";
+                                  }
+                                }
+                                
+                                updateParticipant(participantIndex, {
+                                  name: `${user.firstName} ${user.lastName}`.trim(),
+                                  email: user.email || "",
+                                  cpf: formattedCPF,
+                                  phone: formattedPhone,
+                                  birthDate: user.dateOfBirth || "",
+                                  gender: normalizedGender,
+                                });
+
+                                // Marcar que este participante foi selecionado da lista (já está vinculado)
+                                setSelectedLinkedUserIds((prev) => ({
+                                  ...prev,
+                                  [participantIndex]: user.id,
+                                }));
+                              }}
+                              placeholder="Digite o nome ou selecione um usuário"
+                              className="w-full"
                             />
                           </div>
                           <div className="flex flex-col gap-2">
