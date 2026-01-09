@@ -98,9 +98,9 @@ export default function UserProfilePage() {
     }
 
     // Validate file size (2MB)
-    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
     if (file.size > maxSize) {
-      toast.error("Arquivo muito grande. Tamanho máximo: 2MB.");
+      toast.error("Arquivo muito grande. Tamanho máximo: 10MB.");
       return;
     }
 
@@ -236,7 +236,7 @@ export default function UserProfilePage() {
                   </Button>
                 </div>
                 <p className="text-sm text-gray-11 font-dm-sans md:text-sm">
-                  Suportamos imagens em PNGs, JPEGs até 2MB
+                  Suportamos imagens em PNGs, JPEGs até 10MB
                 </p>
               </div>
             </div>
