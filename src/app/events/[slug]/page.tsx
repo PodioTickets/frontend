@@ -17,12 +17,13 @@ import { EventCard } from "@/components/Event/Card";
 import { Fragment, useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
+import { Loading } from "@/components/Loading";
 
 export default function EventPage() {
   const params = useParams();
   const router = useRouter();
   const eventSlug = params.slug as string;
-  const { event, isLoading } = useEventBySlug(eventSlug);
+  const { event, isLoading, error } = useEventBySlug(eventSlug);
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
   const [showBanner, setShowBanner] = useState(true);
@@ -35,14 +36,14 @@ export default function EventPage() {
   const handleCheckoutClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!event) return;
-    
+
     if (!isAuthenticated) {
       openLoginModal();
       return;
     }
     router.push(`/checkout/ingressos?eventId=${event.id}`);
   };
-  
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
@@ -79,7 +80,13 @@ export default function EventPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (!event || isLoading) {
+  // Mostrar loading enquanto está carregando (incluindo quando ainda não tem dados)
+  if (isLoading || (event === undefined && !error)) {
+    return <Loading />;
+  }
+
+  // Só mostrar "não encontrado" quando terminou de carregar e realmente não tem evento
+  if (!isLoading && !event) {
     return (
       <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto lg:px-8 py-20">
         <div className="flex flex-col items-center justify-center">
@@ -97,6 +104,10 @@ export default function EventPage() {
         </div>
       </section>
     );
+  }
+
+  if (!event) {
+    return null;
   }
 
   return (
@@ -659,10 +670,7 @@ export default function EventPage() {
                     )}
                   </div>
 
-                  <Button
-                    onClick={handleCheckoutClick}
-                    className="w-full mt-8"
-                  >
+                  <Button onClick={handleCheckoutClick} className="w-full mt-8">
                     Inscrever-se
                   </Button>
                 </div>

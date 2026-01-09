@@ -10,9 +10,9 @@ export function useEvent(id: string) {
 }
 
 export function useEventBySlug(slug: string) {
-  const { data, isLoading, error } = useApiQuery<Event>(
+  const { data, isLoading, isFetching, error } = useApiQuery<Event>(
     ["event", "slug", slug],
     () => eventService.getEventBySlug(slug)
   );
-  return { event: data, isLoading, error };
+  return { event: data, isLoading: isLoading || isFetching, error };
 }

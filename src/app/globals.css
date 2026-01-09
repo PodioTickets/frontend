@@ -183,3 +183,44 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+@keyframes spin-dots {
+  0% {
+    transform: rotate(0deg) translateX(16px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateX(16px) rotate(-360deg);
+  }
+}
+
+.loading-container {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.loading-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  margin-left: -5px;
+  background-color: #59E373;
+  border-radius: 50%;
+  transform-origin: 0 24px;
+  animation: spin-dots 1.4s linear infinite;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: 0.47s;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 0.94s;
+}

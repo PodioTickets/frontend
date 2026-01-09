@@ -6,6 +6,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "react-hot-toast";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Suspense } from "react";
+import { Loading } from "@/components/Loading";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -66,7 +68,9 @@ export default function RootLayout({
           <div className="flex flex-col min-h-screen bg-gray-2">
             <Header />
 
-            <div className="mt-[64px] md:mt-[68px] mb-12">{children}</div>
+            <Suspense fallback={<Loading />}>
+              <div className="mt-[64px] md:mt-[68px] mb-12">{children}</div>
+            </Suspense>
 
             <Footer />
           </div>
