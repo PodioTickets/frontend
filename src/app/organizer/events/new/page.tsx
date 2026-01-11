@@ -369,8 +369,6 @@ export default function CreateEventPage() {
         registrationEndDate: formData.registrationEndDate,
         googleMapsLink: formData.googleMapsLink,
         bannerUrl: formData.bannerUrl,
-        officialWebsiteUrl: formData.officialWebsiteUrl,
-        // TODO: Adicionar cardImageUrl quando backend suportar
       };
 
       const event = await organizerService.createEvent(eventData);
