@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loading } from "@/components/Loading";
 
 export default function CheckoutPage() {
   const searchParams = useSearchParams();
@@ -18,9 +18,5 @@ export default function CheckoutPage() {
     }
   }, [eventId, router]);
 
-  return (
-    <div className="w-full max-w-[1280px] mx-auto flex items-center justify-center min-h-screen">
-      <Loader2 className="size-4 animate-spin" />
-    </div>
-  );
+  return <Loading />;
 }

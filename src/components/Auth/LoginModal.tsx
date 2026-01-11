@@ -85,6 +85,14 @@ export function LoginModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleGoogleLogin = () => {
+    // Salva a URL atual para redirecionar após o login
+    if (typeof window !== "undefined") {
+      const currentPath = window.location.pathname + window.location.search;
+      // Não salvar se já estiver na página de callback ou auth
+      if (!currentPath.startsWith("/auth/")) {
+        sessionStorage.setItem("redirectAfterLogin", currentPath);
+      }
+    }
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
     window.location.href = `${apiUrl}/api/v1/auth/google`;
   };

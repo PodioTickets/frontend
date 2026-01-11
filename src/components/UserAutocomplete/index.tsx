@@ -186,28 +186,16 @@ export function UserAutocomplete({
       />
 
       {/* Dropdown de sugestões */}
-      {isOpen && !disabled && (
+      {isOpen && !disabled && filteredUsers.length > 0 && !isLoading && (
         <div
           ref={dropdownRef}
           className="absolute z-50 w-full mt-1 bg-gray-1 border border-gray-6 rounded-lg shadow-lg max-h-60 overflow-y-auto"
         >
-          {isLoading ? (
-            <div className="px-4 py-3 text-sm text-gray-11 text-center">
-              Carregando...
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-11 text-center">
-              {searchTerm.trim()
-                ? "Nenhum usuário encontrado"
-                : "Nenhum usuário vinculado"}
-            </div>
-          ) : (
-            <div className="py-1">
-              {filteredUsers.map((user) => (
-                <UserItem key={user.id} user={user} />
-              ))}
-            </div>
-          )}
+          <div className="py-1">
+            {filteredUsers.map((user) => (
+              <UserItem key={user.id} user={user} />
+            ))}
+          </div>
         </div>
       )}
     </div>

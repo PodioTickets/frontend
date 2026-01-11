@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
 import { useMemo, Suspense } from "react";
-import { Loader2 } from "lucide-react";
+import { Loading } from "@/components/Loading";
 
 function CheckoutIngressosContent() {
   const searchParams = useSearchParams();
@@ -43,11 +43,7 @@ function CheckoutIngressosContent() {
   }
 
   if (isLoading) {
-    return (
-      <div className="w-full max-w-[1280px] mx-auto flex items-center justify-center min-h-screen">
-        <Loader2 className="size-4 animate-spin" />
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!event) {
@@ -79,13 +75,7 @@ function CheckoutIngressosContent() {
 
 export default function CheckoutIngressosPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full max-w-[1280px] mx-auto flex items-center justify-center min-h-screen">
-          <Loader2 className="size-4 animate-spin" />
-        </div>
-      }
-    >
+    <Suspense fallback={<Loading />}>
       <CheckoutIngressosContent />
     </Suspense>
   );

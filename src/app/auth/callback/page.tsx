@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import toast from "react-hot-toast";
+import { isProfileComplete } from "@/utils/checkProfileComplete";
 
 function CallbackContent() {
   const router = useRouter();
@@ -63,12 +64,32 @@ function CallbackContent() {
             window.history.replaceState(null, "", window.location.pathname);
 
             // Busca o perfil do usuário e atualiza o contexto
-            await refetchUser();
+            const updatedUser = await refetchUser();
+            
+            // Verifica se o perfil está completo
+            if (!isProfileComplete(updatedUser)) {
+              // Se não estiver completo, redireciona para finalização de cadastro
+              toast.success("Login realizado com sucesso! Complete seu cadastro para continuar.");
+              setTimeout(() => {
+                router.push("/complete-profile");
+              }, 500);
+              return;
+            }
+            
             toast.success("Login realizado com sucesso!");
             
-            // Redireciona para a página principal após um pequeno delay
+            // Redireciona para a URL salva antes do login ou para home
+            const redirectPath = typeof window !== "undefined" 
+              ? sessionStorage.getItem("redirectAfterLogin") || "/"
+              : "/";
+            
+            // Remove a URL salva após usar
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem("redirectAfterLogin");
+            }
+            
             setTimeout(() => {
-              router.push("/");
+              router.push(redirectPath);
             }, 500);
             return;
           } catch (validateError) {
@@ -94,12 +115,32 @@ function CallbackContent() {
 
           // Busca o perfil do usuário e atualiza o contexto
           try {
-            await refetchUser();
+            const updatedUser = await refetchUser();
+            
+            // Verifica se o perfil está completo
+            if (!isProfileComplete(updatedUser)) {
+              // Se não estiver completo, redireciona para finalização de cadastro
+              toast.success("Login realizado com sucesso! Complete seu cadastro para continuar.");
+              setTimeout(() => {
+                router.push("/complete-profile");
+              }, 500);
+              return;
+            }
+            
             toast.success("Login realizado com sucesso!");
             
-            // Redireciona para a página principal após um pequeno delay
+            // Redireciona para a URL salva antes do login ou para home
+            const redirectPath = typeof window !== "undefined" 
+              ? sessionStorage.getItem("redirectAfterLogin") || "/"
+              : "/";
+            
+            // Remove a URL salva após usar
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem("redirectAfterLogin");
+            }
+            
             setTimeout(() => {
-              router.push("/");
+              router.push(redirectPath);
             }, 500);
           } catch (profileError) {
             console.error("Erro ao buscar perfil:", profileError);
