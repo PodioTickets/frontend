@@ -29,7 +29,12 @@ const MODALITY_OPTIONS = [
   { id: "triathlon", label: "Triathlon", code: "triathlon", disabled: true },
   { id: "cycling", label: "Cycling", code: "cycling", disabled: false },
   { id: "swimming", label: "Swimming", code: "swimming", disabled: false },
-  { id: "trail-running", label: "Trail Running", code: "trail-running", disabled: false },
+  {
+    id: "trail-running",
+    label: "Trail Running",
+    code: "trail-running",
+    disabled: false,
+  },
   { id: "outros", label: "Outros", code: "outros", disabled: false },
 ];
 
@@ -50,7 +55,7 @@ export default function CreateEventPage() {
   const [loadingCEP, setLoadingCEP] = useState(false);
   const [uploadingCardImage, setUploadingCardImage] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
-  
+
   const cardImageInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +72,6 @@ export default function CreateEventPage() {
     registrationStartDate: "",
     registrationEndDate: "",
     googleMapsLink: "",
-    officialWebsiteUrl: "",
     bannerUrl: "",
     cardImageUrl: "",
     selectedModalities: [] as string[],
@@ -128,17 +132,25 @@ export default function CreateEventPage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
     const code = Math.random().toString(36).substring(2, 6);
-    
+
     return `podioticket.com.br/${slug}-${year}-${code}`;
   };
 
   // Upload de imagem do card
-  const handleCardImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Validar tipo de arquivo
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
     if (!validTypes.includes(file.type)) {
       toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
       return;
@@ -161,15 +173,15 @@ export default function CreateEventPage() {
 
       // Fazer upload para o servidor
       const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
+      uploadFormData.append("file", file);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
-      const token = localStorage.getItem('token');
-      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const token = localStorage.getItem("token");
+
       const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: uploadFormData,
       });
@@ -177,7 +189,7 @@ export default function CreateEventPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Erro ao fazer upload');
+        throw new Error(result.message || "Erro ao fazer upload");
       }
 
       if (result.success && result.imageUrl) {
@@ -185,7 +197,7 @@ export default function CreateEventPage() {
         setFormData((prev) => ({ ...prev, cardImageUrl: result.imageUrl }));
         toast.success("Imagem do card enviada com sucesso!");
       } else {
-        throw new Error(result.message || 'Erro ao fazer upload');
+        throw new Error(result.message || "Erro ao fazer upload");
       }
     } catch (error: any) {
       console.error("Error uploading card image:", error);
@@ -202,7 +214,13 @@ export default function CreateEventPage() {
     if (!file) return;
 
     // Validar tipo de arquivo
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
     if (!validTypes.includes(file.type)) {
       toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
       return;
@@ -225,15 +243,15 @@ export default function CreateEventPage() {
 
       // Fazer upload para o servidor
       const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
+      uploadFormData.append("file", file);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
-      const token = localStorage.getItem('token');
-      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const token = localStorage.getItem("token");
+
       const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: uploadFormData,
       });
@@ -241,7 +259,7 @@ export default function CreateEventPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Erro ao fazer upload');
+        throw new Error(result.message || "Erro ao fazer upload");
       }
 
       if (result.success && result.imageUrl) {
@@ -249,7 +267,7 @@ export default function CreateEventPage() {
         setFormData((prev) => ({ ...prev, bannerUrl: result.imageUrl }));
         toast.success("Banner enviado com sucesso!");
       } else {
-        throw new Error(result.message || 'Erro ao fazer upload');
+        throw new Error(result.message || "Erro ao fazer upload");
       }
     } catch (error: any) {
       console.error("Error uploading banner:", error);
@@ -266,16 +284,16 @@ export default function CreateEventPage() {
     const { name, value } = e.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      
+
       // Gerar URL quando nome ou data mudarem
       if (name === "name" || name === "eventDate") {
         const url = generateEventUrl(updated.name, updated.eventDate);
         setGeneratedUrl(url);
       }
-      
+
       return updated;
     });
-    
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -421,9 +439,7 @@ export default function CreateEventPage() {
                     URL de divulgação no PodioTicket
                   </label>
                 </div>
-                <p className="text-sm text-gray-11 font-mono">
-                  {generatedUrl}
-                </p>
+                <p className="text-sm text-gray-11 font-mono">{generatedUrl}</p>
                 <p className="text-xs text-gray-10 mt-1">
                   Esta URL será gerada automaticamente após criar o evento
                 </p>
@@ -440,7 +456,9 @@ export default function CreateEventPage() {
                   <button
                     key={modality.id}
                     type="button"
-                    onClick={() => !modality.disabled && handleModalityToggle(modality.id)}
+                    onClick={() =>
+                      !modality.disabled && handleModalityToggle(modality.id)
+                    }
                     disabled={modality.disabled}
                     className={`
                       p-3 rounded-lg border-2 transition-all text-left
@@ -510,7 +528,8 @@ export default function CreateEventPage() {
                 )}
               </div>
               <p className="mt-1 text-xs text-gray-10">
-                Ao preencher o CEP, os campos de endereço serão preenchidos automaticamente
+                Ao preencher o CEP, os campos de endereço serão preenchidos
+                automaticamente
               </p>
             </div>
 
@@ -610,27 +629,6 @@ export default function CreateEventPage() {
                   className="pl-10"
                 />
               </div>
-            </div>
-
-            {/* URL do Site Oficial */}
-            <div>
-              <label className="block text-sm font-medium text-gray-12 mb-2">
-                URL do Site Oficial do Evento
-              </label>
-              <div className="relative">
-                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                <Input
-                  type="url"
-                  name="officialWebsiteUrl"
-                  value={formData.officialWebsiteUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://exemplo.com/evento"
-                  className="pl-10"
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-10">
-                Se preenchido, aparecerá um botão na página do evento para visitar o site oficial
-              </p>
             </div>
 
             {/* Datas */}
@@ -749,7 +747,9 @@ export default function CreateEventPage() {
                 </div>
                 {cardImagePreview && (
                   <div className="border border-gray-6 rounded-lg p-4 bg-gray-3">
-                    <p className="text-sm text-gray-11 mb-2">Preview do Card:</p>
+                    <p className="text-sm text-gray-11 mb-2">
+                      Preview do Card:
+                    </p>
                     <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-2">
                       <Image
                         src={cardImagePreview}
@@ -761,8 +761,8 @@ export default function CreateEventPage() {
                   </div>
                 )}
                 <p className="text-xs text-gray-10">
-                  Esta imagem aparecerá nos cards do evento e no link de compartilhamento.
-                  Recomendado: 800x600px, máximo 2MB
+                  Esta imagem aparecerá nos cards do evento e no link de
+                  compartilhamento. Recomendado: 800x600px, máximo 2MB
                 </p>
               </div>
             </div>
@@ -796,7 +796,9 @@ export default function CreateEventPage() {
                     ) : (
                       <>
                         <Upload className="size-4 mr-2" />
-                        {formData.bannerUrl ? "Alterar Banner" : "Upload do Banner"}
+                        {formData.bannerUrl
+                          ? "Alterar Banner"
+                          : "Upload do Banner"}
                       </>
                     )}
                   </Button>
@@ -820,7 +822,9 @@ export default function CreateEventPage() {
                 </div>
                 {bannerPreview && (
                   <div className="border border-gray-6 rounded-lg p-4 bg-gray-3">
-                    <p className="text-sm text-gray-11 mb-2">Preview do Banner:</p>
+                    <p className="text-sm text-gray-11 mb-2">
+                      Preview do Banner:
+                    </p>
                     <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-2">
                       <Image
                         src={bannerPreview}
@@ -844,7 +848,8 @@ export default function CreateEventPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-10">
-                  Faça upload de uma imagem ou cole a URL diretamente. Formatos aceitos: JPG, PNG, GIF, WebP. Máximo: 10MB.
+                  Faça upload de uma imagem ou cole a URL diretamente. Formatos
+                  aceitos: JPG, PNG, GIF, WebP. Máximo: 10MB.
                 </p>
               </div>
             </div>

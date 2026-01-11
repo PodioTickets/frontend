@@ -10,7 +10,7 @@ export function isProfileComplete(user: any | null): boolean {
   const hasDocumentNumber = !!user?.documentNumber?.trim();
   const hasDateOfBirth = !!user?.dateOfBirth?.trim();
   const hasPhone = !!user?.phone?.trim();
-  const hasGender = !!user?.gender?.trim();
+  const hasGender = !!(user?.gender?.trim() || user?.sex?.trim());
 
   return hasDocumentNumber && hasDateOfBirth && hasPhone && hasGender;
 }

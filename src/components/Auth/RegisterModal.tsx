@@ -91,7 +91,7 @@ export function RegisterModal() {
         dataNascimento: birthDate,
         telefone: (user as any)?.phone || "",
         telefoneEmergencia: (user as any)?.emergencyPhone || "",
-        sexo: (user as any)?.gender || "",
+        sexo: (user as any)?.gender || (user as any)?.sex || "",
         email: user.email || "",
         senha: "",
         confirmarSenha: "",
@@ -210,11 +210,16 @@ export function RegisterModal() {
   const handleNext = async () => {
     if (currentStep === 1) {
       if (validateStep1()) {
-        setCurrentStep(2);
+        // Se for completar cadastro, salva direto (pula step 2 de dados de acesso)
+        if (isCompletingProfile) {
+          await handleRegister();
+        } else {
+          setCurrentStep(2);
+        }
       }
     } else if (currentStep === 2) {
       if (validateStep2()) {
-        // Quando valida o passo 2, faz o registro ou atualiza o perfil
+        // Quando valida o passo 2, faz o registro
         await handleRegister();
       }
     }
@@ -269,7 +274,6 @@ export function RegisterModal() {
           updateData.dateOfBirth = `${year}-${month}-${day}`;
         }
         if (formData.nacionalidade) {
-          updateData.nationality = formData.nacionalidade;
           updateData.country = formData.nacionalidade;
         }
         if (formData.cpf) {

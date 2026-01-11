@@ -32,17 +32,40 @@ export default function UserProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
+  // Mask functions (declared before useMemo to use in it)
+  const maskCPFForInit = (value: string) => {
+    if (!value) return "";
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length === 0) return "";
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6)
+      return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9)
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const maskPhoneForInit = (value: string) => {
+    if (!value) return "";
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length === 0) return "";
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7)
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
   // Initialize formData with user data when available
   const initialFormData = useMemo(
     () => ({
       firstName: (user as any)?.firstName ?? "",
       lastName: (user as any)?.lastName ?? "",
-      documentNumber: (user as any)?.documentNumber ?? "",
+      documentNumber: maskCPFForInit((user as any)?.documentNumber || ""),
       dateOfBirth: (user as any)?.dateOfBirth ?? "",
-      nationality: (user as any)?.nationality ?? "Brasileira",
-      phone: (user as any)?.phone ?? "",
-      emergencyPhone: (user as any)?.emergencyPhone ?? "",
-      gender: (user as any)?.gender ?? "",
+      nationality: (user as any)?.nationality || (user as any)?.country || "Brasileira",
+      phone: maskPhoneForInit((user as any)?.phone || ""),
+      emergencyPhone: maskPhoneForInit((user as any)?.emergencyPhone || ""),
+      gender: (user as any)?.gender || (user as any)?.sex || "",
       email: user?.email ?? "",
       currentPassword: "",
       newPassword: "",
@@ -55,16 +78,21 @@ export default function UserProfilePage() {
   // Update formData when user data is loaded
   useEffect(() => {
     if (user) {
+      // Formata CPF e telefones ao carregar do backend
+      const rawDocumentNumber = (user as any)?.documentNumber || "";
+      const rawPhone = (user as any)?.phone || "";
+      const rawEmergencyPhone = (user as any)?.emergencyPhone || "";
+      
       setFormData((prev) => ({
         ...prev,
         firstName: (user as any)?.firstName ?? prev.firstName,
         lastName: (user as any)?.lastName ?? prev.lastName,
-        documentNumber: (user as any)?.documentNumber ?? prev.documentNumber,
+        documentNumber: rawDocumentNumber ? maskCPFForInit(rawDocumentNumber) : prev.documentNumber,
         dateOfBirth: (user as any)?.dateOfBirth ?? prev.dateOfBirth,
-        nationality: (user as any)?.nationality ?? prev.nationality,
-        phone: (user as any)?.phone ?? prev.phone,
-        emergencyPhone: (user as any)?.emergencyPhone ?? prev.emergencyPhone,
-        gender: (user as any)?.gender ?? prev.gender,
+        nationality: (user as any)?.nationality || (user as any)?.country || prev.nationality,
+        phone: rawPhone ? maskPhoneForInit(rawPhone) : prev.phone,
+        emergencyPhone: rawEmergencyPhone ? maskPhoneForInit(rawEmergencyPhone) : prev.emergencyPhone,
+        gender: (user as any)?.gender || (user as any)?.sex || prev.gender,
         email: user?.email ?? prev.email,
         currentPassword: prev.currentPassword,
         newPassword: prev.newPassword,
@@ -130,19 +158,136 @@ export default function UserProfilePage() {
     toast.error("Funcionalidade de remover avatar ainda não implementada.");
   };
 
+  // Mask functions
+  const maskCPF = (value: string) => {
+    if (!value) return "";
+    // Se já está formatado, retorna como está
+    if (value.includes(".") || value.includes("-")) {
+      // Remove formatação e reaplica para garantir consistência
+      const numbers = value.replace(/\D/g, "");
+      if (numbers.length === 0) return "";
+      if (numbers.length <= 3) return numbers;
+      if (numbers.length <= 6)
+        return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+      if (numbers.length <= 9)
+        return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+    }
+    // Se não está formatado, aplica máscara
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length === 0) return "";
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6)
+      return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9)
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const maskPhone = (value: string) => {
+    if (!value) return "";
+    // Se já está formatado, retorna como está
+    if (value.includes("(") || value.includes(")")) {
+      // Remove formatação e reaplica para garantir consistência
+      const numbers = value.replace(/\D/g, "");
+      if (numbers.length === 0) return "";
+      if (numbers.length <= 2) return numbers;
+      if (numbers.length <= 7)
+        return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    }
+    // Se não está formatado, aplica máscara
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length === 0) return "";
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7)
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    
+    // Aplica máscara para CPF e telefones
+    let processedValue = value;
+    if (name === "documentNumber") {
+      processedValue = maskCPF(value);
+    } else if (name === "phone" || name === "emergencyPhone") {
+      processedValue = maskPhone(value);
+    }
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue,
     }));
   };
 
-  const handleSavePersonalData = () => {
-    // TODO: Implement save logic
-    console.log("Saving personal data:", formData);
+  const handleSavePersonalData = async () => {
+    if (!user) return;
+
+    try {
+      // Prepara os dados para atualização
+      const updateData: any = {};
+
+      // Parse nome completo em firstName e lastName
+      const fullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
+      if (fullName) {
+        const nameParts = fullName.split(" ");
+        if (nameParts.length > 0) {
+          updateData.firstName = nameParts[0];
+          updateData.lastName = nameParts.slice(1).join(" ") || "";
+        }
+      }
+
+      if (formData.documentNumber) {
+        updateData.documentNumber = formData.documentNumber.replace(/\D/g, "");
+        updateData.documentType = "CPF";
+      }
+
+      if (formData.dateOfBirth) {
+        updateData.dateOfBirth = formData.dateOfBirth;
+      }
+
+      if (formData.nationality) {
+        updateData.country = formData.nationality;
+      }
+
+      if (formData.phone) {
+        updateData.phone = formData.phone.replace(/\D/g, "");
+      }
+
+      if (formData.emergencyPhone) {
+        updateData.emergencyPhone = formData.emergencyPhone.replace(/\D/g, "");
+      }
+
+      if (formData.gender) {
+        // Normalizar gênero
+        const genderLower = formData.gender.toLowerCase();
+        if (genderLower === "masculino") {
+          updateData.gender = "masculino";
+        } else if (genderLower === "feminino") {
+          updateData.gender = "feminino";
+        } else if (genderLower === "outro") {
+          updateData.gender = "outro";
+        } else if (genderLower === "prefiro não informar" || genderLower === "prefiro não dizer" || genderLower === "prefiro-nao-dizer") {
+          updateData.gender = "prefiro-nao-dizer";
+        } else {
+          updateData.gender = formData.gender;
+        }
+      }
+
+      await userService.updateUser(user.id, updateData);
+      await refetchUser();
+      
+      toast.success("Dados atualizados com sucesso!");
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error(
+        error?.message || "Erro ao atualizar dados. Tente novamente."
+      );
+    }
   };
 
   const handleChangePassword = () => {
@@ -403,6 +548,7 @@ export default function UserProfilePage() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
@@ -412,6 +558,7 @@ export default function UserProfilePage() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
@@ -432,6 +579,7 @@ export default function UserProfilePage() {
                     value={formData.emergencyPhone}
                     onChange={handleInputChange}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
@@ -441,6 +589,7 @@ export default function UserProfilePage() {
                     value={formData.emergencyPhone}
                     onChange={handleInputChange}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
