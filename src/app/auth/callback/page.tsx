@@ -6,11 +6,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import toast from "react-hot-toast";
 import { isProfileComplete } from "@/utils/checkProfileComplete";
+import { useRegisterModal } from "@/stores/modalStore";
 
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refetchUser } = useAuth();
+  const { refetchUser, user } = useAuth();
+  const { openRegisterModal } = useRegisterModal();
   const [isProcessing, setIsProcessing] = useState(true);
   const hasProcessedRef = useRef(false);
 
@@ -40,12 +42,18 @@ function CallbackContent() {
           try {
             hasProcessedRef.current = true;
             // Monta a URL completa do callback (ex: http://localhost:3000/auth/callback)
-            const redirectUri = window.location.origin + window.location.pathname;
-            
-            const response = await userService.validateGoogleCode(code, redirectUri);
-            
+            const redirectUri =
+              window.location.origin + window.location.pathname;
+
+            const response = await userService.validateGoogleCode(
+              code,
+              redirectUri
+            );
+
             if (!response.success || !response.data) {
-              const errorMessage = response.error || "Erro ao fazer login com Google. Tente novamente.";
+              const errorMessage =
+                response.error ||
+                "Erro ao fazer login com Google. Tente novamente.";
               toast.error(errorMessage);
               setTimeout(() => {
                 router.push("/");
@@ -55,39 +63,38 @@ function CallbackContent() {
 
             // Salva os tokens no ApiClient (que usa cookies)
             const apiClient = (userService as any).apiClient;
-            if (apiClient && apiClient.setAccessToken && apiClient.setRefreshToken) {
+            if (
+              apiClient &&
+              apiClient.setAccessToken &&
+              apiClient.setRefreshToken
+            ) {
               apiClient.setAccessToken(response.data.access_token);
               apiClient.setRefreshToken(response.data.refresh_token);
             }
-
-            // Limpa o código da URL para segurança
             window.history.replaceState(null, "", window.location.pathname);
 
-            // Busca o perfil do usuário e atualiza o contexto
             const updatedUser = await refetchUser();
-            
-            // Verifica se o perfil está completo
             if (!isProfileComplete(updatedUser)) {
-              // Se não estiver completo, redireciona para finalização de cadastro
-              toast.success("Login realizado com sucesso! Complete seu cadastro para continuar.");
-              setTimeout(() => {
-                router.push("/complete-profile");
-              }, 500);
+              toast.success(
+                "Login realizado com sucesso! Complete seu cadastro para continuar."
+              );
+              openRegisterModal({ completeProfile: true });
               return;
             }
-            
+
             toast.success("Login realizado com sucesso!");
-            
+
             // Redireciona para a URL salva antes do login ou para home
-            const redirectPath = typeof window !== "undefined" 
-              ? sessionStorage.getItem("redirectAfterLogin") || "/"
-              : "/";
-            
+            const redirectPath =
+              typeof window !== "undefined"
+                ? sessionStorage.getItem("redirectAfterLogin") || "/"
+                : "/";
+
             // Remove a URL salva após usar
             if (typeof window !== "undefined") {
               sessionStorage.removeItem("redirectAfterLogin");
             }
-            
+
             setTimeout(() => {
               router.push(redirectPath);
             }, 500);
@@ -108,7 +115,11 @@ function CallbackContent() {
           hasProcessedRef.current = true;
           // Salva os tokens no ApiClient (que usa cookies)
           const apiClient = (userService as any).apiClient;
-          if (apiClient && apiClient.setAccessToken && apiClient.setRefreshToken) {
+          if (
+            apiClient &&
+            apiClient.setAccessToken &&
+            apiClient.setRefreshToken
+          ) {
             apiClient.setAccessToken(accessToken);
             apiClient.setRefreshToken(refreshToken);
           }
@@ -116,29 +127,32 @@ function CallbackContent() {
           // Busca o perfil do usuário e atualiza o contexto
           try {
             const updatedUser = await refetchUser();
-            
+
             // Verifica se o perfil está completo
             if (!isProfileComplete(updatedUser)) {
-              // Se não estiver completo, redireciona para finalização de cadastro
-              toast.success("Login realizado com sucesso! Complete seu cadastro para continuar.");
-              setTimeout(() => {
-                router.push("/complete-profile");
-              }, 500);
+              // Se não estiver completo, abre o modal de registro para completar cadastro
+              toast.success(
+                "Login realizado com sucesso! Complete seu cadastro para continuar."
+              );
+              // Abre o modal sem redirecionar - o modal pode aparecer em qualquer página
+              openRegisterModal({ completeProfile: true });
+              // Não redireciona, mantém o usuário na página atual
               return;
             }
-            
+
             toast.success("Login realizado com sucesso!");
-            
+
             // Redireciona para a URL salva antes do login ou para home
-            const redirectPath = typeof window !== "undefined" 
-              ? sessionStorage.getItem("redirectAfterLogin") || "/"
-              : "/";
-            
+            const redirectPath =
+              typeof window !== "undefined"
+                ? sessionStorage.getItem("redirectAfterLogin") || "/"
+                : "/";
+
             // Remove a URL salva após usar
             if (typeof window !== "undefined") {
               sessionStorage.removeItem("redirectAfterLogin");
             }
-            
+
             setTimeout(() => {
               router.push(redirectPath);
             }, 500);
@@ -205,4 +219,3 @@ export default function AuthCallbackPage() {
     </Suspense>
   );
 }
-
