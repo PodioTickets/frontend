@@ -23,8 +23,8 @@ import { HeartIcon } from "@/components/Icons/HeartIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useChangeEmailModal } from "@/stores/modalStore";
 import { CPFIcon } from "@/components/Icons/CPFIcon";
-import { DateOfBirthPicker } from "@/components/DateOfBirthPicker";
 import { getAvatarUrl } from "@/utils/avatar";
+import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
 
 export default function UserProfilePage() {
   const { user, refetchUser } = useAuth();
@@ -41,8 +41,13 @@ export default function UserProfilePage() {
     if (numbers.length <= 6)
       return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
     if (numbers.length <= 9)
-      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
-    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(
+        6
+      )}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(
+      6,
+      9
+    )}-${numbers.slice(9, 11)}`;
   };
 
   const maskPhoneForInit = (value: string) => {
@@ -52,7 +57,10 @@ export default function UserProfilePage() {
     if (numbers.length <= 2) return numbers;
     if (numbers.length <= 7)
       return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(
+      7,
+      11
+    )}`;
   };
 
   // Initialize formData with user data when available
@@ -62,7 +70,8 @@ export default function UserProfilePage() {
       lastName: (user as any)?.lastName ?? "",
       documentNumber: maskCPFForInit((user as any)?.documentNumber || ""),
       dateOfBirth: (user as any)?.dateOfBirth ?? "",
-      nationality: (user as any)?.nationality || (user as any)?.country || "Brasileira",
+      nationality:
+        (user as any)?.nationality || (user as any)?.country || "Brasileira",
       phone: maskPhoneForInit((user as any)?.phone || ""),
       emergencyPhone: maskPhoneForInit((user as any)?.emergencyPhone || ""),
       gender: (user as any)?.gender || (user as any)?.sex || "",
@@ -82,16 +91,23 @@ export default function UserProfilePage() {
       const rawDocumentNumber = (user as any)?.documentNumber || "";
       const rawPhone = (user as any)?.phone || "";
       const rawEmergencyPhone = (user as any)?.emergencyPhone || "";
-      
+
       setFormData((prev) => ({
         ...prev,
         firstName: (user as any)?.firstName ?? prev.firstName,
         lastName: (user as any)?.lastName ?? prev.lastName,
-        documentNumber: rawDocumentNumber ? maskCPFForInit(rawDocumentNumber) : prev.documentNumber,
+        documentNumber: rawDocumentNumber
+          ? maskCPFForInit(rawDocumentNumber)
+          : prev.documentNumber,
         dateOfBirth: (user as any)?.dateOfBirth ?? prev.dateOfBirth,
-        nationality: (user as any)?.nationality || (user as any)?.country || prev.nationality,
+        nationality:
+          (user as any)?.nationality ||
+          (user as any)?.country ||
+          prev.nationality,
         phone: rawPhone ? maskPhoneForInit(rawPhone) : prev.phone,
-        emergencyPhone: rawEmergencyPhone ? maskPhoneForInit(rawEmergencyPhone) : prev.emergencyPhone,
+        emergencyPhone: rawEmergencyPhone
+          ? maskPhoneForInit(rawEmergencyPhone)
+          : prev.emergencyPhone,
         gender: (user as any)?.gender || (user as any)?.sex || prev.gender,
         email: user?.email ?? prev.email,
         currentPassword: prev.currentPassword,
@@ -170,8 +186,13 @@ export default function UserProfilePage() {
       if (numbers.length <= 6)
         return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
       if (numbers.length <= 9)
-        return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
-      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+        return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(
+          6
+        )}`;
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(
+        6,
+        9
+      )}-${numbers.slice(9, 11)}`;
     }
     // Se não está formatado, aplica máscara
     const numbers = value.replace(/\D/g, "");
@@ -180,8 +201,13 @@ export default function UserProfilePage() {
     if (numbers.length <= 6)
       return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
     if (numbers.length <= 9)
-      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
-    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(
+        6
+      )}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(
+      6,
+      9
+    )}-${numbers.slice(9, 11)}`;
   };
 
   const maskPhone = (value: string) => {
@@ -194,7 +220,10 @@ export default function UserProfilePage() {
       if (numbers.length <= 2) return numbers;
       if (numbers.length <= 7)
         return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(
+        7,
+        11
+      )}`;
     }
     // Se não está formatado, aplica máscara
     const numbers = value.replace(/\D/g, "");
@@ -202,14 +231,17 @@ export default function UserProfilePage() {
     if (numbers.length <= 2) return numbers;
     if (numbers.length <= 7)
       return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(
+      7,
+      11
+    )}`;
   };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    
+
     // Aplica máscara para CPF e telefones
     let processedValue = value;
     if (name === "documentNumber") {
@@ -217,7 +249,7 @@ export default function UserProfilePage() {
     } else if (name === "phone" || name === "emergencyPhone") {
       processedValue = maskPhone(value);
     }
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]: processedValue,
@@ -232,7 +264,9 @@ export default function UserProfilePage() {
       const updateData: any = {};
 
       // Parse nome completo em firstName e lastName
-      const fullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
+      const fullName = `${formData.firstName || ""} ${
+        formData.lastName || ""
+      }`.trim();
       if (fullName) {
         const nameParts = fullName.split(" ");
         if (nameParts.length > 0) {
@@ -271,7 +305,11 @@ export default function UserProfilePage() {
           updateData.gender = "feminino";
         } else if (genderLower === "outro") {
           updateData.gender = "outro";
-        } else if (genderLower === "prefiro não informar" || genderLower === "prefiro não dizer" || genderLower === "prefiro-nao-dizer") {
+        } else if (
+          genderLower === "prefiro não informar" ||
+          genderLower === "prefiro não dizer" ||
+          genderLower === "prefiro-nao-dizer"
+        ) {
           updateData.gender = "prefiro-nao-dizer";
         } else {
           updateData.gender = formData.gender;
@@ -280,7 +318,7 @@ export default function UserProfilePage() {
 
       await userService.updateUser(user.id, updateData);
       await refetchUser();
-      
+
       toast.success("Dados atualizados com sucesso!");
     } catch (error: any) {
       console.error("Error updating profile:", error);
@@ -460,22 +498,27 @@ export default function UserProfilePage() {
                 </label>
                 {/* Mobile DateOfBirthPicker */}
                 <div className="md:hidden">
-                  <DateOfBirthPicker
+                  <DatePickerWithConfirm
                     value={formData.dateOfBirth}
-                    onChange={(value) =>
-                      setFormData((prev) => ({ ...prev, dateOfBirth: value }))
-                    }
-                    placeholder="Selecione sua data de nascimento"
+                    onChange={(value) => {
+                      // Convert Date to YYYY-MM-DD string format
+                      const dateString = value
+                        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
+                        : "";
+                      setFormData((prev) => ({ ...prev, dateOfBirth: dateString }));
+                    }}
                   />
                 </div>
                 {/* Desktop DateOfBirthPicker */}
                 <div className="hidden md:block">
-                  <DateOfBirthPicker
+                  <DatePickerWithConfirm
                     value={formData.dateOfBirth}
-                    onChange={(value) =>
-                      setFormData((prev) => ({ ...prev, dateOfBirth: value }))
-                    }
-                    placeholder="Selecione sua data de nascimento"
+                    onChange={(value) => {
+                      const dateString = value
+                        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
+                        : "";
+                      setFormData((prev) => ({ ...prev, dateOfBirth: dateString }));
+                    }}
                   />
                 </div>
               </div>

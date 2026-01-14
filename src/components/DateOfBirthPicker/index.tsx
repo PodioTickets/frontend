@@ -12,7 +12,7 @@ import { cn } from "@/utils/cn";
 import { ArrowButton } from "@/components/ArrowButton";
 
 interface DateOfBirthPickerProps {
-  value?: string;
+  value?: string | Date | null;
   onChange?: (value: string) => void;
   placeholder?: string;
   className?: string;
@@ -35,8 +35,19 @@ export function DateOfBirthPicker({
 
   // Parse YYYY-MM-DD to Date using local timezone (not UTC)
   const parseValueToDate = React.useCallback(
-    (dateString: string): Date | undefined => {
+    (dateString: string | Date | null | undefined): Date | undefined => {
       if (!dateString) return undefined;
+      
+      // If it's already a Date, return it
+      if (dateString instanceof Date) {
+        // Validate the date
+        if (isNaN(dateString.getTime())) return undefined;
+        return dateString;
+      }
+      
+      // If it's a string, parse it
+      if (typeof dateString !== 'string') return undefined;
+      
       const parts = dateString.split("-");
       if (parts.length !== 3) return undefined;
 

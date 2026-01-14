@@ -152,7 +152,7 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       disabled={isDateDisabled}
       captionLayout={captionLayout}
-      className={cn("p-3", className)}
+      className={cn("", className)}
       formatters={
         captionLayout === "dropdown"
           ? {
@@ -183,7 +183,7 @@ function Calendar({
             : "hidden",
         dropdown:
           captionLayout === "dropdown"
-            ? "w-full h-full cursor-pointer appearance-none bg-transparent border-0 text-sm font-medium text-gray-12 px-2 pr-7"
+            ? "w-full h-full cursor-pointer appearance-none bg-transparent border-0 outline-none focus:border-0 focus:outline-none focus-visible:border-0 focus-visible:outline-none text-sm font-medium text-gray-12 px-2 pr-7"
             : "hidden",
         nav: "hidden",
         button_previous: "hidden",

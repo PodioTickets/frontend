@@ -7,22 +7,10 @@ import { userService } from "@/services";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Dropdown } from "@/components/Dropdown";
-import {
-  Mail,
-  Lock,
-  User,
-  Phone,
-  Calendar as CalendarIconLucide,
-  Flag,
-  Heart,
-  CreditCard,
-  ArrowRight,
-} from "lucide-react";
+import { Mail, Lock, User, Phone } from "lucide-react";
 import { ArrowButton } from "../ArrowButton";
-import { CalendarIcon } from "../Icons/CalendarIcon";
 import { FlagIcon } from "../Icons/FlagIcon";
 import { SuccessIcon } from "../Icons/SuccessIcon";
-import { Calendar } from "@/components/ui/calendar";
 import {
   registerStep1Schema,
   registerStep2Schema,
@@ -35,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { CPFIcon } from "../Icons/CPFIcon";
 import { HeartIcon } from "../Icons/HeartIcon";
+import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
 
 type RegisterStep = 1 | 2 | 3;
 
@@ -115,15 +104,6 @@ export function RegisterModal() {
       setCurrentStep(1);
     }
   }, [isCompletingProfile, user, isOpen]);
-
-  // Format date for display
-  const formatDate = (date: Date | null) => {
-    if (!date) return "00/00/0000";
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
 
   const handleBack = () => {
     if (currentStep === 1) {
@@ -493,7 +473,13 @@ export function RegisterModal() {
                   <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
+                      <span
+                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                          formData.nacionalidade
+                            ? "text-gray-12"
+                            : "text-gray-11"
+                        }`}
+                      >
                         {formData.nacionalidade || "Selecione"}
                       </span>
                     </div>
@@ -545,57 +531,23 @@ export function RegisterModal() {
               Data de nascimento
             </label>
             <div className="w-full">
-              <Dropdown
-                width="w-full"
-                className="z-60"
-                trigger={(open: boolean) => (
-                  <div
-                    className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer ${
-                      errors.dataNascimento ? "border-red-9" : "border-gray-7"
-                    }`}
-                  >
-                    <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <CalendarIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
-                        {formatDate(formData.dataNascimento) === "00/00/0000"
-                          ? "00/00/0000"
-                          : formatDate(formData.dataNascimento)}
-                      </span>
-                    </div>
-                    <div className="flex-none -scale-y-100 shrink-0">
-                      <ArrowButton isOpen={open} />
-                    </div>
-                  </div>
-                )}
-              >
-                <Calendar
-                  mode="single"
-                  captionLayout="dropdown"
-                  fromYear={1900}
-                  toYear={new Date().getFullYear()}
-                  selected={formData.dataNascimento || undefined}
-                  onSelect={(date: Date | undefined) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      dataNascimento: date || null,
-                    }));
-                    // Clear error when date is selected
-                    if (errors.dataNascimento && date) {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors.dataNascimento;
-                        return newErrors;
-                      });
-                    }
-                  }}
-                  disabled={(date: Date) => {
-                    const today = new Date();
-                    today.setHours(23, 59, 59, 999);
-                    return date > today;
-                  }}
-                  className="rounded-md border-0 bg-transparent w-full"
-                />
-              </Dropdown>
+              <DatePickerWithConfirm
+                value={formData.dataNascimento}
+                onChange={(date) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    dataNascimento: date,
+                  }));
+                  if (errors.dataNascimento && date) {
+                    setErrors((prev) => {
+                      const newErrors = { ...prev };
+                      delete newErrors.dataNascimento;
+                      return newErrors;
+                    });
+                  }
+                }}
+                error={!!errors.dataNascimento}
+              />
             </div>
             {errors.dataNascimento && (
               <p className="text-sm text-red-9 font-dm-sans">
@@ -645,7 +597,11 @@ export function RegisterModal() {
                   <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
+                      <span
+                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                          formData.sexo ? "text-gray-12" : "text-gray-11"
+                        }`}
+                      >
                         {formData.sexo || "Selecione"}
                       </span>
                     </div>
@@ -732,7 +688,13 @@ export function RegisterModal() {
                   <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
+                      <span
+                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                          formData.nacionalidade
+                            ? "text-gray-12"
+                            : "text-gray-11"
+                        }`}
+                      >
                         {formData.nacionalidade || "Selecione"}
                       </span>
                     </div>
@@ -782,53 +744,23 @@ export function RegisterModal() {
               Data de nascimento
             </label>
             <div className="w-full">
-              <Dropdown
-                width="w-full"
-                className="z-60"
-                trigger={(open: boolean) => (
-                  <div
-                    className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer ${
-                      errors.dataNascimento ? "border-red-9" : "border-gray-7"
-                    }`}
-                  >
-                    <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <CalendarIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
-                        {formatDate(formData.dataNascimento)}
-                      </span>
-                    </div>
-                    <ArrowButton isOpen={open} />
-                  </div>
-                )}
-              >
-                <Calendar
-                  mode="single"
-                  captionLayout="dropdown"
-                  fromYear={1900}
-                  toYear={new Date().getFullYear()}
-                  selected={formData.dataNascimento || undefined}
-                  onSelect={(date: Date | undefined) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      dataNascimento: date || null,
-                    }));
-                    // Clear error when date is selected
-                    if (errors.dataNascimento && date) {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors.dataNascimento;
-                        return newErrors;
-                      });
-                    }
-                  }}
-                  disabled={(date: Date) => {
-                    const today = new Date();
-                    today.setHours(23, 59, 59, 999);
-                    return date > today;
-                  }}
-                  className="rounded-md border-0 bg-transparent w-full"
-                />
-              </Dropdown>
+              <DatePickerWithConfirm
+                value={formData.dataNascimento}
+                onChange={(date) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    dataNascimento: date,
+                  }));
+                  if (errors.dataNascimento && date) {
+                    setErrors((prev) => {
+                      const newErrors = { ...prev };
+                      delete newErrors.dataNascimento;
+                      return newErrors;
+                    });
+                  }
+                }}
+                error={!!errors.dataNascimento}
+              />
             </div>
             {errors.dataNascimento && (
               <p className="text-sm text-red-9 font-dm-sans">
@@ -865,36 +797,6 @@ export function RegisterModal() {
             )}
           </div>
 
-          {/* Telefone de emergência */}
-          <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
-              Telefone de emergência
-            </label>
-            <div className="relative w-full">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-              <Input
-                type="tel"
-                placeholder="(00) 99999-9999"
-                value={formData.telefoneEmergencia}
-                onChange={(e) =>
-                  handlePhoneChange("telefoneEmergencia", e.target.value)
-                }
-                maxLength={15}
-                className={`pl-10 h-12 ${
-                  errors.telefoneEmergencia
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
-                }`}
-                aria-invalid={!!errors.telefoneEmergencia}
-              />
-            </div>
-            {errors.telefoneEmergencia && (
-              <p className="text-sm text-red-9 font-dm-sans">
-                {errors.telefoneEmergencia}
-              </p>
-            )}
-          </div>
-
           {/* Sexo */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
@@ -908,7 +810,11 @@ export function RegisterModal() {
                   <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
+                      <span
+                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                          formData.sexo ? "text-gray-12" : "text-gray-11"
+                        }`}
+                      >
                         {formData.sexo || "Selecione"}
                       </span>
                     </div>
