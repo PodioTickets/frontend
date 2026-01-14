@@ -36,6 +36,34 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
     return { totalParticipants: participants, totalPrice: total };
   }, [raceQuantities]);
 
+  // Agrupa ingressos por race para exibição
+  const groupedTickets = useMemo(() => {
+    const grouped: Array<{
+      quantity: number;
+      raceName: string;
+      distance: string;
+      price: number;
+      total: number;
+    }> = [];
+
+    mockKits.forEach((kit) => {
+      kit.races.forEach((race) => {
+        const quantity = raceQuantities[race.id] || 0;
+        if (quantity > 0) {
+          grouped.push({
+            quantity,
+            raceName: race.name,
+            distance: race.distance,
+            price: race.price,
+            total: race.price * quantity,
+          });
+        }
+      });
+    });
+
+    return grouped;
+  }, [raceQuantities]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -81,9 +109,14 @@ export function ModalitiesStep({ event, kits, onNext }: ModalitiesStepProps) {
                 Participantes:{" "}
                 <span className="font-semibold">{totalParticipants}</span>
               </p>
-              <p className="text-sm">
-                Valor do ingresso: {formatPrice(event.price || 0)}
-              </p>
+              {groupedTickets.map((ticket, index) => (
+                <p key={index} className="text-sm">
+                  ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:{" "}
+                  <span className="font-semibold">
+                    {formatPrice(ticket.total)}
+                  </span>
+                </p>
+              ))}
               <p className="text-base">
                 Valor total:{" "}
                 <span className="font-bold">{formatPrice(totalPrice)}</span>

@@ -4,6 +4,7 @@ import { QueryProvider } from "./QueryProvider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ModalsProvider } from "./ModalsProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ProfileCompleteChecker } from "./ProfileCompleteChecker";
 
 const Providers = ({ children }: PropsWithChildren) => {
   return (
@@ -11,6 +12,7 @@ const Providers = ({ children }: PropsWithChildren) => {
       <QueryProvider>
         <AuthProvider>
           <ModalsProvider />
+          <ProfileCompleteChecker />
           {children}
         </AuthProvider>
       </QueryProvider>

@@ -135,6 +135,34 @@ export function InformationStep({
     return { totalParticipants: participants, totalPrice: total };
   }, [raceQuantities]);
 
+  // Agrupa ingressos por race para exibição
+  const groupedTickets = useMemo(() => {
+    const grouped: Array<{
+      quantity: number;
+      raceName: string;
+      distance: string;
+      price: number;
+      total: number;
+    }> = [];
+
+    mockKits.forEach((kit) => {
+      kit.races.forEach((race) => {
+        const quantity = raceQuantities[race.id] || 0;
+        if (quantity > 0) {
+          grouped.push({
+            quantity,
+            raceName: race.name,
+            distance: race.distance,
+            price: race.price,
+            total: race.price * quantity,
+          });
+        }
+      });
+    });
+
+    return grouped;
+  }, [raceQuantities]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -722,22 +750,29 @@ export function InformationStep({
 
               <div className="w-2/5 shrink-0 flex flex-col justify-center px-4 py-6">
                 <div className="flex flex-col gap-5 pb-6">
-                  <div className="flex items-center justify-between text-base text-gray-12">
-                    <p className="font-semibold">Valor dos ingressos:</p>
-                    <p className="font-bold">
-                      R$ {event.price?.toFixed(2) || "0,00"}
-                    </p>
-                  </div>
+                  {groupedTickets.map((ticket, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between text-base text-gray-12"
+                    >
+                      <p className="font-semibold">
+                        ({ticket.quantity}x) {ticket.raceName}:
+                      </p>
+                      <p className="font-bold">
+                        {formatPrice(ticket.total)}
+                      </p>
+                    </div>
+                  ))}
                   <div className="flex items-center justify-between text-base text-gray-12">
                     <p className="font-semibold">Taxa de serviço:</p>
                     <p className="font-bold">
-                      R$ {event.serviceFee?.toFixed(2) || "0,00"}
+                      {formatPrice(event.serviceFee || 0)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xl font-bold text-gray-12 border-t border-gray-6 pt-6">
                   <p>Total:</p>
-                  <p>R$ {(event.price + event.serviceFee || 0).toFixed(2)}</p>
+                  <p>{formatPrice(totalPrice + (event.serviceFee || 0))}</p>
                 </div>
               </div>
             </div>
@@ -1275,8 +1310,19 @@ export function InformationStep({
               Participantes:{" "}
               <span className="font-semibold">{totalParticipants}</span>
             </p>
+            {groupedTickets.map((ticket, index) => (
+              <p key={index} className="text-sm">
+                ({ticket.quantity}x) {ticket.raceName}:{" "}
+                <span className="font-semibold">
+                  {formatPrice(ticket.total)}
+                </span>
+              </p>
+            ))}
             <p className="text-sm">
-              Valor do ingresso: {formatPrice(event.price || 0)}
+              Taxa de serviço:{" "}
+              <span className="font-semibold">
+                {formatPrice(event.serviceFee || 0)}
+              </span>
             </p>
             <p className="text-base">
               Valor total:{" "}

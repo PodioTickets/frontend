@@ -428,6 +428,34 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const { participants, raceQuantities } = useCheckout();
 
+  // Agrupa ingressos por race para exibição
+  const groupedTickets = useMemo(() => {
+    const grouped: Array<{
+      quantity: number;
+      raceName: string;
+      distance: string;
+      price: number;
+      total: number;
+    }> = [];
+
+    mockKits.forEach((kit) => {
+      kit.races.forEach((race) => {
+        const quantity = raceQuantities[race.id] || 0;
+        if (quantity > 0) {
+          grouped.push({
+            quantity,
+            raceName: race.name,
+            distance: race.distance,
+            price: race.price,
+            total: race.price * quantity,
+          });
+        }
+      });
+    });
+
+    return grouped;
+  }, [raceQuantities]);
+
   // Generate participants data for the list
   const participantsData = useMemo(() => {
     const data: Array<{
@@ -945,6 +973,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               </p>
             </div>
 
+            {groupedTickets.map((ticket, index) => (
+              <div key={index} className="flex gap-1 items-center">
+                <p className="text-sm text-gray-12 font-dm-sans">
+                  ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:
+                </p>
+                <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                  {formatPrice(ticket.total)}
+                </p>
+              </div>
+            ))}
+
             {additionalProductsCount > 0 && (
               <div className="flex gap-1 items-center">
                 <p className="text-sm text-gray-12 font-dm-sans">
@@ -1382,6 +1421,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       {totalParticipants}
                     </p>
                   </div>
+
+                  {groupedTickets.map((ticket, index) => (
+                    <div key={index} className="flex gap-1 items-center">
+                      <p className="text-sm text-gray-12 font-dm-sans">
+                        ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:
+                      </p>
+                      <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                        {formatPrice(ticket.total)}
+                      </p>
+                    </div>
+                  ))}
 
                   {additionalProductsCount > 0 && (
                     <div className="flex gap-1 items-center">

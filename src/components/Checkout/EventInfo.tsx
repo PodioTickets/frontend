@@ -1,7 +1,12 @@
+"use client";
+
 import { Button } from "../Button";
 import type { Event } from "@/interfaces/event";
 import Image from "next/image";
 import { MessageIcon } from "../Icons/MessageIcon";
+import { useCheckout } from "@/contexts/CheckoutContext";
+import { mockKits } from "@/constants/kits";
+import { useMemo } from "react";
 
 interface EventInfoProps {
   event: Event;
@@ -9,6 +14,8 @@ interface EventInfoProps {
 }
 
 export function EventInfo({ event, onNext }: EventInfoProps) {
+  const { raceQuantities } = useCheckout();
+
   const formatDate = (date: string) => {
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
@@ -16,6 +23,56 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
       year: "numeric",
     }).format(new Date(date));
   };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
+  };
+
+  // Agrupa ingressos por race para exibição
+  const groupedTickets = useMemo(() => {
+    const grouped: Array<{
+      quantity: number;
+      raceName: string;
+      distance: string;
+      price: number;
+      total: number;
+    }> = [];
+
+    mockKits.forEach((kit) => {
+      kit.races.forEach((race) => {
+        const quantity = raceQuantities[race.id] || 0;
+        if (quantity > 0) {
+          grouped.push({
+            quantity,
+            raceName: race.name,
+            distance: race.distance,
+            price: race.price,
+            total: race.price * quantity,
+          });
+        }
+      });
+    });
+
+    return grouped;
+  }, [raceQuantities]);
+
+  const totalPrice = useMemo(() => {
+    let total = 0;
+    mockKits.forEach((kit) => {
+      kit.races.forEach((race) => {
+        const quantity = raceQuantities[race.id] || 0;
+        if (quantity > 0) {
+          total += race.price * quantity;
+        }
+      });
+    });
+    return total;
+  }, [raceQuantities]);
 
   return (
     <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
@@ -59,16 +116,21 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
         </div>
 
         <div className="flex flex-col w-full mt-4 gap-2">
-          <p className="text-sm font-medium text-gray-11 flex items-center justify-between w-full">
-            Valor dos ingressos:{" "}
-            <span className="text-gray-12">
-              R$ {event.price?.toFixed(2) || 0}
-            </span>
-          </p>
+          {groupedTickets.map((ticket, index) => (
+            <p
+              key={index}
+              className="text-sm font-medium text-gray-11 flex items-center justify-between w-full"
+            >
+              ({ticket.quantity}x) {ticket.raceName}:{" "}
+              <span className="text-gray-12">
+                {formatPrice(ticket.total)}
+              </span>
+            </p>
+          ))}
           <p className="text-sm font-medium text-gray-11 flex items-center justify-between w-full">
             Taxa de serviço:{" "}
             <span className="text-gray-12">
-              R$ {event.serviceFee?.toFixed(2) || 0}
+              {formatPrice(event.serviceFee || 0)}
             </span>
           </p>
         </div>
@@ -76,7 +138,7 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
         <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
           Total:{" "}
           <span className="text-gray-12">
-            R$ {(event.price + event.serviceFee || 0).toFixed(2)}
+            {formatPrice(totalPrice + (event.serviceFee || 0))}
           </span>
         </h1>
 
