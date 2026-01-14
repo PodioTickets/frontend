@@ -30,7 +30,7 @@ function CalendarDayButton({ day, modifiers, ...props }: DayButtonProps) {
       {...props}
       className={cn(
         buttonVariants({ variant: "ghost" }),
-        "h-9! w-9! p-0! font-normal! text-gray-12 rounded-md!",
+        "h-8! w-8! p-0! font-normal! text-gray-12 rounded-md! text-sm!",
         "transition-all duration-200 ease-out",
         "hover:bg-primary-9 hover:text-primary-1 hover:scale-110 active:scale-95",
         "focus-visible:ring-2 focus-visible:ring-primary-9 focus-visible:ring-offset-2",
@@ -192,9 +192,9 @@ function Calendar({
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
         weekday:
-          "text-gray-11 rounded w-9 font-normal text-[0.8rem] transition-colors duration-200",
+          "text-gray-11 rounded w-8 font-normal text-[0.8rem] transition-colors duration-200",
         week: "flex w-full mt-2 gap-0.5",
-        day: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20 transition-all duration-200",
+        day: "h-8 w-8 text-center text-sm p-0 relative focus-within:relative focus-within:z-20 transition-all duration-200",
         day_button: "",
         range_start: "day-range-start",
         range_end: "day-range-end",

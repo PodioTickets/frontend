@@ -93,7 +93,7 @@ export default function OrganizerDashboardPage() {
     };
 
     loadData();
-  }, [isAuthenticated]);
+  }, [router, refetchUser]);
 
   if (loading) {
     return (

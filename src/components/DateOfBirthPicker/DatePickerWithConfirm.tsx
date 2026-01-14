@@ -211,7 +211,7 @@ export function DatePickerWithConfirm({
               type="button"
               onClick={handleConfirm}
               disabled={!tempDate}
-              className="w-1/2"
+              className="w-1/2 h-8 text-xs"
             >
               Confirmar
             </Button>

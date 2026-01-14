@@ -36,6 +36,30 @@ export async function proxy(request: NextRequest) {
     );
   }
 
+  // Proteção de rotas autenticadas
+  const publicRoutes = ["/auth", "/api"];
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  if (!isPublicRoute) {
+    const protectedRoutes = ["/user", "/checkout", "/organizer"];
+    const isProtectedRoute = protectedRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+
+    if (isProtectedRoute) {
+      const accessToken = request.cookies.get("access_token");
+
+      if (!accessToken) {
+        // Redireciona para a página inicial se não estiver autenticado
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
     return new NextResponse(null, {
       status: 204,
@@ -62,43 +86,6 @@ export async function proxy(request: NextRequest) {
           headers: { "Content-Type": "application/json" },
         }
       );
-    }
-
-    if (pathname.includes("/lootbox")) {
-      const botPatterns = [
-        /curl/i,
-        /wget/i,
-        /python/i,
-        /postman/i,
-        /insomnia/i,
-        /httpie/i,
-        /bot/i,
-      ];
-
-      if (botPatterns.some((pattern) => pattern.test(userAgent))) {
-        console.log("❌ Blocked: Bot pattern detected", { userAgent });
-        return new NextResponse(
-          JSON.stringify({
-            success: false,
-            error: "Access denied",
-          }),
-          {
-            status: 403,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      if (
-        request.method === "POST" &&
-        (!referer || !referer.includes(host || ""))
-      ) {
-        console.warn("⚠️ POST request to lootbox without proper referer:", {
-          referer,
-          host,
-          userAgent: userAgent?.substring(0, 100),
-        });
-      }
     }
   }
 
