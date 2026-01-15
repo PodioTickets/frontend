@@ -26,6 +26,91 @@ import { CPFIcon } from "@/components/Icons/CPFIcon";
 import { getAvatarUrl } from "@/utils/avatar";
 import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
 
+// Função para converter gênero do backend para a tela
+const formatGenderFromBackend = (
+  backendGender: string | null | undefined
+): string => {
+  console.log("🔍 formatGenderFromBackend chamado com:", backendGender);
+  
+  if (!backendGender || backendGender.trim() === "") {
+    console.log("❌ Valor vazio, retornando string vazia");
+    return "";
+  }
+
+  const genderUpper = backendGender.toUpperCase().trim();
+  console.log("🔍 genderUpper:", genderUpper);
+
+  switch (genderUpper) {
+    case "MALE":
+      console.log("✅ Convertendo MALE para Masculino");
+      return "Masculino";
+    case "FEMALE":
+      console.log("✅ Convertendo FEMALE para Feminino");
+      return "Feminino";
+    case "OTHER":
+      console.log("✅ Convertendo OTHER para Outro");
+      return "Outro";
+    case "PREFER_NOT_TO_SAY":
+      console.log("✅ Convertendo PREFER_NOT_TO_SAY para Prefiro não informar");
+      return "Prefiro não informar";
+    default:
+      // Se já estiver no formato da tela, retorna como está
+      const genderLower = backendGender.toLowerCase().trim();
+      console.log("⚠️ Valor não reconhecido no switch, tentando lowercase:", genderLower);
+      if (genderLower === "masculino") return "Masculino";
+      if (genderLower === "feminino") return "Feminino";
+      if (genderLower === "outro") return "Outro";
+      if (
+        genderLower === "prefiro não informar" ||
+        genderLower === "prefiro não dizer" ||
+        genderLower === "prefiro-nao-dizer" ||
+        genderLower === "prefiro-nao-informar"
+      ) {
+        return "Prefiro não informar";
+      }
+      // Se não reconhecer, retorna o valor original (pode ser um valor não mapeado)
+      console.log("❌ Valor não reconhecido, retornando original:", backendGender);
+      return backendGender;
+  }
+};
+
+// Função para converter gênero da tela para o backend
+const formatGenderToBackend = (
+  displayGender: string | null | undefined
+): string => {
+  if (!displayGender) return "";
+
+  const genderLower = displayGender.toLowerCase().trim();
+
+  // Se já estiver no formato do backend, retorna como está
+  if (
+    genderLower === "male" ||
+    genderLower === "female" ||
+    genderLower === "other" ||
+    genderLower === "prefer_not_to_say"
+  ) {
+    return displayGender.toUpperCase();
+  }
+
+  // Converte do formato da tela para o formato do backend
+  if (genderLower === "masculino") {
+    return "MALE";
+  } else if (genderLower === "feminino") {
+    return "FEMALE";
+  } else if (genderLower === "outro") {
+    return "OTHER";
+  } else if (
+    genderLower === "prefiro não informar" ||
+    genderLower === "prefiro não dizer" ||
+    genderLower === "prefiro-nao-dizer" ||
+    genderLower === "prefiro-nao-informar"
+  ) {
+    return "PREFER_NOT_TO_SAY";
+  }
+
+  return displayGender;
+};
+
 export default function UserProfilePage() {
   const { user, refetchUser } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
@@ -74,7 +159,9 @@ export default function UserProfilePage() {
         (user as any)?.nationality || (user as any)?.country || "Brasileira",
       phone: maskPhoneForInit((user as any)?.phone || ""),
       emergencyPhone: maskPhoneForInit((user as any)?.emergencyPhone || ""),
-      gender: (user as any)?.gender || (user as any)?.sex || "",
+      gender:
+        formatGenderFromBackend((user as any)?.gender || (user as any)?.sex) ||
+        "",
       email: user?.email ?? "",
       currentPassword: "",
       newPassword: "",
@@ -83,6 +170,29 @@ export default function UserProfilePage() {
   );
 
   const [formData, setFormData] = useState(initialFormData);
+
+  // Garantir que o gênero formatado seja sempre usado
+  // Usa o valor do user diretamente se disponível, senão usa o formData
+  const displayGender = useMemo(() => {
+    const userGender = (user as any)?.gender;
+    const userSex = (user as any)?.sex;
+    const formDataGender = formData.gender;
+    
+    console.log("🔍 displayGender useMemo:", {
+      userGender,
+      userSex,
+      formDataGender,
+      user: user ? "existe" : "não existe",
+    });
+    
+    const genderValue = userGender || userSex || formDataGender;
+    console.log("🔍 genderValue escolhido:", genderValue);
+    
+    const formatted = formatGenderFromBackend(genderValue);
+    console.log("🔍 formatted result:", formatted);
+    
+    return formatted;
+  }, [formData.gender, user]);
 
   // Update formData when user data is loaded
   useEffect(() => {
@@ -108,7 +218,25 @@ export default function UserProfilePage() {
         emergencyPhone: rawEmergencyPhone
           ? maskPhoneForInit(rawEmergencyPhone)
           : prev.emergencyPhone,
-        gender: (user as any)?.gender || (user as any)?.sex || prev.gender,
+        gender: (() => {
+          const userGender = (user as any)?.gender;
+          const userSex = (user as any)?.sex;
+          const genderValue = userGender || userSex;
+          
+          console.log("🔍 useEffect atualizando gender:", {
+            userGender,
+            userSex,
+            genderValue,
+            prevGender: prev.gender,
+          });
+          
+          if (genderValue) {
+            const formatted = formatGenderFromBackend(genderValue);
+            console.log("🔍 gender formatado no useEffect:", formatted);
+            return formatted;
+          }
+          return prev.gender;
+        })(),
         email: user?.email ?? prev.email,
         currentPassword: prev.currentPassword,
         newPassword: prev.newPassword,
@@ -119,16 +247,6 @@ export default function UserProfilePage() {
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorMethod, setTwoFactorMethod] = useState<"email">("email");
-  const [verificationCode, setVerificationCode] = useState([
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-  ]);
-  const [codeError, setCodeError] = useState(false);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -297,23 +415,8 @@ export default function UserProfilePage() {
       }
 
       if (formData.gender) {
-        // Normalizar gênero
-        const genderLower = formData.gender.toLowerCase();
-        if (genderLower === "masculino") {
-          updateData.gender = "masculino";
-        } else if (genderLower === "feminino") {
-          updateData.gender = "feminino";
-        } else if (genderLower === "outro") {
-          updateData.gender = "outro";
-        } else if (
-          genderLower === "prefiro não informar" ||
-          genderLower === "prefiro não dizer" ||
-          genderLower === "prefiro-nao-dizer"
-        ) {
-          updateData.gender = "prefiro-nao-dizer";
-        } else {
-          updateData.gender = formData.gender;
-        }
+        // Converter do formato da tela para o formato do backend
+        updateData.gender = formatGenderToBackend(formData.gender);
       }
 
       await userService.updateUser(user.id, updateData);
@@ -503,9 +606,16 @@ export default function UserProfilePage() {
                     onChange={(value) => {
                       // Convert Date to YYYY-MM-DD string format
                       const dateString = value
-                        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
+                        ? `${value.getFullYear()}-${String(
+                            value.getMonth() + 1
+                          ).padStart(2, "0")}-${String(
+                            value.getDate()
+                          ).padStart(2, "0")}`
                         : "";
-                      setFormData((prev) => ({ ...prev, dateOfBirth: dateString }));
+                      setFormData((prev) => ({
+                        ...prev,
+                        dateOfBirth: dateString,
+                      }));
                     }}
                   />
                 </div>
@@ -515,9 +625,16 @@ export default function UserProfilePage() {
                     value={formData.dateOfBirth}
                     onChange={(value) => {
                       const dateString = value
-                        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`
+                        ? `${value.getFullYear()}-${String(
+                            value.getMonth() + 1
+                          ).padStart(2, "0")}-${String(
+                            value.getDate()
+                          ).padStart(2, "0")}`
                         : "";
-                      setFormData((prev) => ({ ...prev, dateOfBirth: dateString }));
+                      setFormData((prev) => ({
+                        ...prev,
+                        dateOfBirth: dateString,
+                      }));
                     }}
                   />
                 </div>
@@ -678,7 +795,7 @@ export default function UserProfilePage() {
                   <div className="flex items-center gap-1 md:gap-2.5">
                     <HeartIcon className="size-5 shrink-0 text-gray-11" />
                     <span className="text-base text-gray-11 font-dm-sans">
-                      {formData.gender || "Selecione"}
+                      {displayGender || "Selecione"}
                     </span>
                   </div>
                   <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
