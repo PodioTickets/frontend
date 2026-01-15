@@ -26,12 +26,20 @@ export default function EventPage() {
   const { event, isLoading, error } = useEventBySlug(eventSlug);
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
-  const [showBanner, setShowBanner] = useState(true);
+  const [imageError, setImageError] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
   const [showFixedButton, setShowFixedButton] = useState(false);
+
+  // Resetar estado da imagem quando o evento mudar
+  useEffect(() => {
+    if (event?.id) {
+      // Resetar estado de erro quando mudar de evento
+      setImageError(false);
+    }
+  }, [event?.id, event?.bannerUrl]);
 
   const handleCheckoutClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -114,7 +122,7 @@ export default function EventPage() {
     <>
       {/* Mobile Layout */}
       <div className="md:hidden bg-gray-2 min-h-screen pb-24">
-        {showBanner && event.bannerUrl && (
+        {event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError && (
           <div
             className="absolute top-0 left-0 w-full max-h-[300px] h-full blur-sm"
             style={{
@@ -128,20 +136,40 @@ export default function EventPage() {
           </div>
         )}
         {/* Hero Image */}
-        {showBanner && event.bannerUrl && (
-          <div className="relative w-full h-[174px] md:h-[174px] mt-10 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
-            <Image
-              src={event.bannerUrl}
-              alt={event.name}
-              fill
-              className="object-cover"
-              onError={(e) => {
-                setShowBanner(false);
-              }}
-              priority
-            />
-          </div>
-        )}
+        {(() => {
+          const hasBannerUrl = event.bannerUrl && event.bannerUrl.trim() !== "";
+          const shouldShowImage = hasBannerUrl && !imageError;
+
+          return shouldShowImage ? (
+            <div className="relative w-full h-[174px] md:h-[174px] mt-10 shadow-[0_5px_10px_rgba(0,0,0,0.3)] z-10 rounded-xl overflow-hidden bg-gray-3">
+              <Image
+                src={event.bannerUrl}
+                alt={event.name}
+                fill
+                className="object-cover rounded-xl"
+                style={{ position: 'absolute' }}
+                onError={(e) => {
+                  setImageError(true);
+                }}
+                onLoad={() => {
+                  setImageError(false);
+                }}
+                priority
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div className="relative w-full h-[174px] md:h-[174px] mt-10 shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden bg-gray-3 flex items-center justify-center">
+              <Image
+                src="/banners/placeholder.png"
+                alt="Placeholder"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+          );
+        })()}
 
         {/* Main Event Card */}
         <div className="px-4">
@@ -364,7 +392,7 @@ export default function EventPage() {
 
       {/* Desktop Layout - Original */}
       <div className="hidden md:block">
-        {showBanner && event.bannerUrl && (
+        {event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError && (
           <div
             className="absolute top-0 left-0 w-full max-h-[600px] h-full blur-sm"
             style={{
@@ -380,19 +408,35 @@ export default function EventPage() {
 
         <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8 pt-20 relative">
           {/* Banner Image Section - Only when image exists */}
-          {showBanner && event.bannerUrl && (
-            <div className="w-full z-10 relative h-full max-h-[400px] flex flex-col items-center justify-center mt-0 2xl:mt-14">
-              <div className="w-full h-full flex items-start justify-center gap-8">
-                <Image
-                  src={event.bannerUrl}
-                  alt={event.name}
-                  width={100000}
-                  height={100000}
-                  onError={(e) => {
-                    setShowBanner(false);
-                  }}
-                  className="w-full h-full object-cover shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl"
-                />
+          {(() => {
+            const hasBannerUrl = event.bannerUrl && event.bannerUrl.trim() !== "";
+            const shouldShowImage = hasBannerUrl && !imageError;
+
+            if (!shouldShowImage) {
+              return null;
+            }
+
+            return (
+              <div className="w-full z-10 relative flex flex-col items-center justify-center mt-0 2xl:mt-14">
+                <div className="w-full flex items-start justify-center gap-8">
+                  <div className="relative w-full h-[400px] rounded-xl overflow-hidden bg-gray-3">
+                    <Image
+                      src={event.bannerUrl}
+                      alt={event.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 66vw"
+                      style={{ position: 'absolute' }}
+                      onError={(e) => {
+                        setImageError(true);
+                      }}
+                      onLoad={() => {
+                        setImageError(false);
+                      }}
+                      className="object-cover shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl"
+                      priority
+                      unoptimized
+                    />
+                  </div>
 
                 <div className="min-w-1/4 w-1/4">
                   <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full">
@@ -509,18 +553,19 @@ export default function EventPage() {
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Content Layout - Different when no image */}
           <div
             className={`w-full z-10 flex items-start gap-8 ${
-              showBanner && event.bannerUrl ? "mt-0 2xl:mt-0" : "mt-0 2xl:mt-14"
+              event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "mt-0 2xl:mt-0" : "mt-0 2xl:mt-14"
             }`}
           >
             {/* Topics Section */}
             <div
               className={`${
-                showBanner && event.bannerUrl ? "w-3/4 pr-8" : "flex-1 pr-8"
+                event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "w-3/4 pr-8" : "flex-1 pr-8"
               }`}
             >
               {event.topics?.map((topic, index) => (
@@ -579,7 +624,7 @@ export default function EventPage() {
             </div>
 
             {/* Info Card Section - Only shown when no image */}
-            {(!showBanner || !event.bannerUrl) && (
+            {(!event.bannerUrl || event.bannerUrl.trim() === "" || imageError) && (
               <div className="min-w-1/4 w-1/4 shrink-0">
                 <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] sticky top-24">
                   <h1 className="text-lg font-bold mb-4">{event.name}</h1>
