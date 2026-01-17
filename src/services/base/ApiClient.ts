@@ -138,7 +138,7 @@ export class ApiClient {
     refreshToken: string
   ): Promise<AxiosResponse<{ access_token: string; refresh_token: string }>> {
     try {
-      const response = await this.client.post("api/v1/auth/refresh", {
+      const response = await this.client.post("/api/v1/auth/refresh", {
         refresh_token: refreshToken,
       });
       return response.data;
@@ -181,7 +181,7 @@ export class ApiClient {
 
   setAccessToken(token: string): void {
     Cookies.set("access_token", token, {
-      expires: 60 / (24 * 60),
+      expires: 30, // 30 days
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
@@ -189,7 +189,7 @@ export class ApiClient {
 
   setRefreshToken(token: string): void {
     Cookies.set("refresh_token", token, {
-      expires: 7, // 7 days
+      expires: 90, // 90 days
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });

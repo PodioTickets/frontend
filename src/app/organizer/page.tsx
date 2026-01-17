@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService } from "@/services";
@@ -21,7 +21,7 @@ import toast from "react-hot-toast";
 
 export default function OrganizerDashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, refetchUser } = useAuth();
+  const { isAuthenticated, refetchUser, user } = useAuth();
   const [organizer, setOrganizer] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,13 +31,24 @@ export default function OrganizerDashboardPage() {
     totalRegistrations: 0,
     totalRevenue: 0,
   });
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    // Evita múltiplas execuções
+    if (hasLoadedRef.current) return;
+
     const loadData = async () => {
       try {
+        hasLoadedRef.current = true;
         setLoading(true);
-        const user = await refetchUser();
-        const userRole = user?.role;
+
+        // Usa o user atual se disponível, senão busca
+        let currentUser = user;
+        if (!currentUser) {
+          currentUser = await refetchUser();
+        }
+
+        const userRole = currentUser?.role;
         if (userRole !== "ORGANIZER" && userRole !== "ADMIN") {
           router.push("/organizer/create");
           return;
@@ -87,13 +98,16 @@ export default function OrganizerDashboardPage() {
       } catch (error: any) {
         console.error("Error loading organizer data:", error);
         toast.error("Erro ao carregar dados do organizador");
+        hasLoadedRef.current = false;
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
-  }, [router, refetchUser]);
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, router]);
 
   if (loading) {
     return (

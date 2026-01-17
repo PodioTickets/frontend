@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { organizerService } from "@/services";
+import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import {
@@ -23,7 +23,8 @@ export default function EventQuestionsPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -39,13 +40,24 @@ export default function EventQuestionsPage() {
   const [newOption, setNewOption] = useState("");
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Aguarda a verificação de autenticação terminar
+    if (authLoading) return;
+
+    const hasToken = userService.isAuthenticated();
+    if (!hasToken && !isAuthenticated) {
       router.push("/");
       return;
     }
 
+    if (!authChecked) {
+      setAuthChecked(true);
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!authChecked || authLoading || !eventId) return;
     loadData();
-  }, [eventId, isAuthenticated]);
+  }, [authChecked, eventId]);
 
   const loadData = async () => {
     try {

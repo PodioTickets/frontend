@@ -3,7 +3,7 @@ import { Button } from "../Button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
 import { Dropdown, DropdownOption } from "../Dropdown";
@@ -69,6 +69,8 @@ function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const pathname = usePathname();
+  const isOrganizer = pathname.includes("/organizer");
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
@@ -123,6 +125,10 @@ export function Header() {
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
+
+  if (isOrganizer) {
+    return null;
+  }
 
   return (
     <>

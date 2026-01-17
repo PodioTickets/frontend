@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { organizerService } from "@/services";
+import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import {
@@ -19,7 +19,8 @@ import toast from "react-hot-toast";
 
 export default function OrganizerSettingsPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [organizer, setOrganizer] = useState<any>(null);
@@ -32,13 +33,24 @@ export default function OrganizerSettingsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Aguarda a verificação de autenticação terminar
+    if (authLoading) return;
+
+    const hasToken = userService.isAuthenticated();
+    if (!hasToken && !isAuthenticated) {
       router.push("/");
       return;
     }
 
+    if (!authChecked) {
+      setAuthChecked(true);
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!authChecked || authLoading) return;
     loadOrganizer();
-  }, [isAuthenticated]);
+  }, [authChecked]);
 
   const loadOrganizer = async () => {
     try {

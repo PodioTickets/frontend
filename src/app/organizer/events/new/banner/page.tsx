@@ -1,0 +1,440 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { userService } from "@/services";
+import { organizerService } from "@/services";
+import { useCreateEvent } from "@/contexts/CreateEventContext";
+import { Button } from "@/components/Button";
+import { ArrowButton } from "@/components/ArrowButton";
+import { CalendarIcon } from "@/components/Icons/CalendarIcon";
+import { LocationIcon } from "@/components/Icons/LocationIcon";
+import { MessageIcon } from "@/components/Icons/MessageIcon";
+import Image from "next/image";
+import toast from "react-hot-toast";
+import { ShareIcon } from "@/components/Icons/ShareIcon";
+import { ArrowRightIcon } from "lucide-react";
+
+export default function BannerPage() {
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
+  const { formData, updateFormData } = useCreateEvent();
+  const [bannerPreview, setBannerPreview] = useState<string>("");
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Verificar autenticação
+  useEffect(() => {
+    const hasToken = userService.isAuthenticated();
+    if (!hasToken) {
+      router.push("/");
+      return;
+    }
+    const timer = setTimeout(() => {
+      setAuthChecked(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [router]);
+
+  useEffect(() => {
+    if (authChecked && !isAuthenticated) {
+      const hasToken = userService.isAuthenticated();
+      if (!hasToken) {
+        router.push("/");
+      }
+    }
+  }, [authChecked, isAuthenticated, router]);
+
+  // Verificar se tem evento criado
+  useEffect(() => {
+    if (authChecked && !formData.createdEventId) {
+      router.push("/organizer/events/new/informacoes");
+    }
+  }, [authChecked, formData.createdEventId, router]);
+
+  // Carregar preview do banner se já existir
+  useEffect(() => {
+    if (formData.bannerUrl) {
+      setBannerPreview(formData.bannerUrl);
+    }
+  }, [formData.bannerUrl]);
+
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-11">Carregando...</div>
+      </div>
+    );
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const input = document.createElement("input");
+      input.type = "file";
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      input.files = dataTransfer.files;
+      const fakeEvent = {
+        target: input,
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      handleBannerUpload(fakeEvent);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo de 10MB.");
+      return;
+    }
+
+    setUploadingBanner(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBannerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const apiClient = (userService as any).apiClient;
+      const token = apiClient?.getAccessToken();
+
+      const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataUpload,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Erro ao fazer upload");
+      }
+
+      if (result.success && result.imageUrl) {
+        const fullUrl = result.imageUrl.startsWith("http")
+          ? result.imageUrl
+          : `${apiUrl}${result.imageUrl}`;
+        updateFormData({ bannerUrl: fullUrl });
+
+        if (formData.createdEventId) {
+          try {
+            await organizerService.updateEvent(formData.createdEventId, {
+              bannerUrl: fullUrl,
+            });
+          } catch (updateError) {
+            console.error("Error updating event with banner:", updateError);
+          }
+        }
+
+        toast.success("Banner enviado com sucesso!");
+      } else {
+        throw new Error(result.message || "Erro ao fazer upload");
+      }
+    } catch (error: any) {
+      console.error("Error uploading banner:", error);
+      toast.error(error.message || "Erro ao fazer upload do banner");
+      setBannerPreview("");
+    } finally {
+      setUploadingBanner(false);
+      if (bannerInputRef.current) {
+        bannerInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleBack = () => {
+    router.push("/organizer/events/new/informacoes");
+  };
+
+  const handleNext = () => {
+    if (!formData.bannerUrl) {
+      toast.error("Por favor, faça upload do banner antes de continuar");
+      return;
+    }
+    router.push("/organizer/events/new/previa");
+  };
+
+  const eventLocation =
+    formData.street && formData.city && formData.state
+      ? `${formData.street}, ${formData.city}, ${formData.state}`
+      : "";
+
+  return (
+    <div className="bg-gray-2 flex-1 pb-44 px-5 md:px-[124px] mt-10">
+      <div className="max-w-[1060px] mx-auto flex flex-col gap-9">
+        {/* Title Section */}
+        <div className="flex flex-col gap-4 items-center">
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={handleBack}
+              className="border border-gray-6 rounded-[52px] size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
+            >
+              <ArrowButton isOpen={false} />
+            </button>
+            <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+              Banner principal do evento
+            </h1>
+          </div>
+          <p className="text-gray-11 text-base font-dm-sans leading-[1.3] text-center">
+            Essa é a imagem grande que aparece no topo da página do seu evento
+          </p>
+        </div>
+
+        {/* Upload Area and Preview */}
+        <div className="flex flex-col gap-11 items-center">
+          {/* Upload Field */}
+          {bannerPreview ? (
+            <div className="border-2 border-gray-6 border-dashed rounded-xl p-6 flex gap-6 items-center w-[710px]">
+              <div className="relative rounded-2xl shrink-0 size-[128px] overflow-hidden">
+                <Image
+                  src={bannerPreview}
+                  alt="Banner preview"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-6">
+                <div className="flex flex-col gap-4">
+                  <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                    Tamanho recomendado: 843 × 404 px
+                  </p>
+                  <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                    Use uma arte com boa resolução e pouco texto, para ficar
+                    legível em diferentes telas.
+                  </p>
+                </div>
+                <button
+                  onClick={() => bannerInputRef.current?.click()}
+                  className="border-[1.5px] border-gray-6 rounded-lg h-11 flex gap-2 items-center justify-center px-6 hover:bg-gray-3 transition-colors"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="shrink-0"
+                  >
+                    <path
+                      d="M10 3.33325V13.3333M10 13.3333L6.66667 9.99992M10 13.3333L13.3333 9.99992M3.33333 13.3333V15.8333C3.33333 16.7538 4.07952 17.5 5 17.5H15C15.9205 17.5 16.6667 16.7538 16.6667 15.8333V13.3333"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <p className="text-gray-12 text-base font-bold font-dm-sans leading-[1.3]">
+                    Trocar imagem
+                  </p>
+                </button>
+              </div>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBannerUpload}
+                className="hidden"
+              />
+            </div>
+          ) : (
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="border-2 border-dashed border-gray-6 rounded-xl p-6 flex flex-col gap-6 items-center justify-center min-h-[300px] cursor-pointer hover:border-primary-8 transition-colors w-[710px]"
+              onClick={() => bannerInputRef.current?.click()}
+            >
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBannerUpload}
+                className="hidden"
+              />
+              <p className="text-primary-11 text-base font-bold font-dm-sans leading-[1.3]">
+                Arraste uma imagem para este campo ou clique aqui
+              </p>
+              <div className="flex flex-col gap-4 items-center text-center">
+                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                  Tamanho recomendado: 843 × 404 px
+                </p>
+                <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                  Use uma arte com boa resolução e pouco texto, para ficar
+                  legível em diferentes telas.
+                </p>
+              </div>
+              {uploadingBanner && (
+                <p className="text-gray-11 text-sm">Enviando...</p>
+              )}
+            </div>
+          )}
+
+          {/* Preview Section */}
+          <div className="flex flex-col gap-5 items-center w-full">
+            <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+              Prévia
+            </h2>
+            <div className="flex gap-8 items-start w-full">
+              {/* Left: Banner Preview and Content Placeholders */}
+              <div className="flex flex-col gap-[52px] flex-1">
+                {/* Banner Preview */}
+                {bannerPreview ? (
+                  <div className="h-[300px] relative rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] w-[625px]">
+                    <Image
+                      src={bannerPreview}
+                      alt="Banner preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-[300px] bg-gray-4 rounded-2xl w-[625px]" />
+                )}
+
+                {/* Content Preview Placeholder */}
+                <div className="flex flex-col gap-4">
+                  <div className="bg-gray-8 h-4 w-full rounded" />
+                  <div className="bg-gray-4 h-2 w-full rounded" />
+                  <div className="bg-gray-4 h-2 w-[501px] rounded" />
+                  <div className="bg-gray-4 h-2 w-[377px] rounded" />
+                  <div className="bg-gray-4 h-2 w-[253px] rounded" />
+                  <div className="bg-gray-4 h-2 w-[129px] rounded" />
+                  <div className="bg-gray-4 h-2 w-[65px] rounded" />
+                </div>
+              </div>
+
+              {/* Right: Event Card Preview */}
+              <div className="sticky top-0 w-[402px] flex flex-col gap-6 shrink-0">
+                <div className="bg-gray-2 flex flex-col gap-8 p-6 rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+                  <h3 className="text-gray-12 text-2xl font-extrabold font-manrope leading-[1.1]">
+                    {formData.name || "Nome do evento"}
+                  </h3>
+
+                  <div className="flex flex-col gap-4">
+                    {/* Location */}
+                    {eventLocation && (
+                      <div className="flex gap-2 items-center">
+                        <LocationIcon className="size-6 text-gray-12 shrink-0" />
+                        <p className="text-gray-12 font-medium font-dm-sans leading-[1.3] flex-1">
+                          {eventLocation}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Date */}
+                    {formData.eventDate && (
+                      <div className="flex gap-2 items-center">
+                        <CalendarIcon className="size-6 text-gray-12 shrink-0" />
+                        <p className="text-gray-12 font-medium font-dm-sans leading-[1.3]">
+                          {formatDate(formData.eventDate)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Organizer Section */}
+                    <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 flex flex-col gap-4">
+                      <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                        Organizador
+                      </p>
+                      <div className="flex gap-2 items-center">
+                        {user?.avatarUrl ? (
+                          <Image
+                            src={user?.avatarUrl}
+                            alt="Organizer avatar"
+                            width={40}
+                            height={40}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <div className="size-12 rounded-full bg-gray-6 shrink-0" />
+                        )}
+                        <div className="flex flex-col">
+                          <p className="text-gray-12 text-lg font-semibold font-dm-sans leading-[1.3]">
+                            {user?.firstName}
+                          </p>
+                          <p className="text-gray-11 text-sm font-dm-sans leading-[1.3]">
+                            CNPJ: {user?.documentNumber}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full text-gray-12 border-gray-6"
+                      >
+                        <MessageIcon className="min-w-5 min-h-5" />
+                        Falar com organizador
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button className="w-full">Inscrever-se</Button>
+                </div>
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <Button
+                    variant="outline"
+                    className="text-gray-11 border-gray-6"
+                  >
+                    <ShareIcon className="size-5" />
+                    Compartilhar
+                  </Button>
+
+                  <h1 className="underline font-semibold text-gray-11 text-sm cursor-pointer">
+                    Denunciar evento
+                  </h1>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Next Button */}
+        <div className="flex justify-center">
+          <Button
+            onClick={handleNext}
+            disabled={!formData.bannerUrl || uploadingBanner}
+            className="w-[270px] font-bold text-lg"
+          >
+            {uploadingBanner ? "Enviando..." : "Confirmar imagem"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { organizerService } from "@/services";
+import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import {
@@ -22,7 +22,8 @@ import toast from "react-hot-toast";
 
 export default function OrganizerEventsPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [authChecked, setAuthChecked] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,13 +36,24 @@ export default function OrganizerEventsPage() {
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Aguarda a verificação de autenticação terminar
+    if (authLoading) return;
+
+    const hasToken = userService.isAuthenticated();
+    if (!hasToken && !isAuthenticated) {
       router.push("/");
       return;
     }
 
+    if (!authChecked) {
+      setAuthChecked(true);
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!authChecked || authLoading) return;
     loadEvents();
-  }, [isAuthenticated, statusFilter, pagination.page]);
+  }, [authChecked, statusFilter, pagination.page]);
 
   const loadEvents = async () => {
     try {
@@ -110,6 +122,14 @@ export default function OrganizerEventsPage() {
     };
     return statusMap[status] || statusMap.DRAFT;
   };
+
+  if (authLoading || (!authChecked && !authLoading)) {
+    return (
+      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
+        <div className="text-gray-11">Carregando...</div>
+      </div>
+    );
+  }
 
   if (loading && events.length === 0) {
     return (

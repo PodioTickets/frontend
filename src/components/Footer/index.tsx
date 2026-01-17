@@ -5,9 +5,16 @@ import { TwitterIcon } from "../Icons/TwitterIcon";
 import { FacebookIcon } from "../Icons/FacebookIcon";
 import Link from "next/link";
 import { useModalStore } from "@/stores/modalStore";
+import { usePathname } from "next/navigation";
 
 export function Footer() {
   const { openModal } = useModalStore();
+  const pathname = usePathname();
+  const isOrganizer = pathname.startsWith("/organizer");
+
+  if (isOrganizer) {
+    return null;
+  }
 
   return (
     <footer className="w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] border-t border-gray-6 px-4 py-6 md:p-20 md:pt-[52px]">
@@ -289,4 +296,3 @@ export function Footer() {
     </footer>
   );
 }
-

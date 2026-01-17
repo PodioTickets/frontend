@@ -82,37 +82,84 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const { data: profile } = await userService.getProfile();
-        const hasToken = userService.isAuthenticated();
-        if (hasToken) {
-          try {
-            const { data: profile } = await userService.getProfile();
-            const userWithCache = { ...profile, _cachedAt: Date.now() };
-            localStorage.setItem("user", JSON.stringify(userWithCache));
-            setUser(profile);
-          } catch (profileError) {
-            console.error("Profile fetch failed:", profileError);
-            if (profile) {
-              try {
-                const cachedUser = JSON.parse(profile);
-                setUser(cachedUser);
-              } catch (parseError) {
-                console.warn(
-                  "Failed to restore from cache after profile error"
-                );
-                clearAuthData();
-              }
+      const hasToken = userService.isAuthenticated();
+      
+      // Se não há token, tenta restaurar do cache
+      if (!hasToken) {
+        try {
+          const cachedUser = localStorage.getItem("user");
+          if (cachedUser) {
+            const user = JSON.parse(cachedUser);
+            // Verifica se o cache não está muito antigo (30 dias)
+            const cacheAge = Date.now() - (user._cachedAt || 0);
+            if (cacheAge < 30 * 24 * 60 * 60 * 1000) {
+              setUser(user);
+              return;
             }
           }
+        } catch (e) {
+          console.warn("Failed to restore user from cache:", e);
         }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        clearAuthData();
+        return;
+      }
+
+      // Se há token, tenta buscar o perfil
+      try {
+        const { data: profile } = await userService.getProfile();
+        const userWithCache = { ...profile, _cachedAt: Date.now() };
+        localStorage.setItem("user", JSON.stringify(userWithCache));
+        setUser(profile);
+      } catch (profileError: any) {
+        console.error("Profile fetch failed:", profileError);
+        
+        // Se o erro não for 401/403, tenta usar cache
+        if (profileError?.response?.status !== 401 && profileError?.response?.status !== 403) {
+          try {
+            const cachedUser = localStorage.getItem("user");
+            if (cachedUser) {
+              const user = JSON.parse(cachedUser);
+              setUser(user);
+              return;
+            }
+          } catch (parseError) {
+            console.warn("Failed to restore from cache after profile error");
+          }
+        }
+        
+        // Só limpa dados se for erro de autenticação e não houver refresh token
+        if ((profileError?.response?.status === 401 || profileError?.response?.status === 403)) {
+          const apiClient = (userService as any).apiClient;
+          const refreshToken = apiClient?.getRefreshToken?.();
+          if (!refreshToken) {
+            clearAuthData();
+          }
+        }
       }
     };
 
     checkAuth();
+
+    // Refresh automático do token a cada 12 horas para manter sessão ativa
+    const refreshInterval = setInterval(async () => {
+      try {
+        const apiClient = (userService as any).apiClient;
+        const refreshToken = apiClient?.getRefreshToken?.();
+        if (refreshToken && userService.isAuthenticated()) {
+          const response = await userService.refreshToken(refreshToken);
+          if (response?.access_token) {
+            apiClient.setAccessToken(response.access_token);
+            if (response.refresh_token) {
+              apiClient.setRefreshToken(response.refresh_token);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Automatic token refresh failed:", error);
+        // Não limpa tokens em caso de erro de rede ou temporário
+      }
+    }, 12 * 60 * 60 * 1000); // 12 horas
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const clearAuthData = () => {
@@ -132,9 +179,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       localStorage.setItem("user", JSON.stringify(userWithCache));
       setUser(data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error refetching user:", error);
-      clearAuthData();
+      
+      // Só limpa dados se for erro de autenticação (401/403)
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        clearAuthData();
+      } else {
+        // Para outros erros, tenta usar cache
+        try {
+          const cachedUser = localStorage.getItem("user");
+          if (cachedUser) {
+            const user = JSON.parse(cachedUser);
+            setUser(user);
+            return user;
+          }
+        } catch (parseError) {
+          console.warn("Failed to restore from cache");
+        }
+      }
       throw error;
     }
   };
