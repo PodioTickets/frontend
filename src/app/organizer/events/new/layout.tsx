@@ -4,32 +4,32 @@ import { CreateEventProvider } from "@/contexts/CreateEventContext";
 import { ReactNode, Suspense } from "react";
 import { Loading } from "@/components/Loading";
 import { usePathname } from "next/navigation";
-import { InfoIcon } from "@/components/Icons/InfoIcon";
-import { TicketIcon } from "@/components/Icons/TicketIcon";
-import { HelpIcon } from "@/components/Icons/HelpIcon";
-import { CheckCircleIcon } from "@/components/Icons/CheckCircleIcon";
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
+import { CheckIcon } from "@/components/Icons/CheckIcon";
+import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
+import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
+import { QuestionIcon } from "@/components/Icons/QuestionIcon";
+import { TopicsIcon } from "@/components/Icons/TopicsIcon";
+import { RevisionIcon } from "@/components/Icons/RevisionIcon";
 
 function ProgressBar() {
   const pathname = usePathname();
 
   const getStepStatus = (step: number): "completed" | "active" | "default" => {
-    // Banner e Prévia fazem parte da etapa de Informações
-    const isInformacoesStep =
-      pathname.startsWith("/organizer/events/new/informacoes") ||
+    const isInformationStep =
+      pathname.startsWith("/organizer/events/new/information") ||
       pathname.startsWith("/organizer/events/new/banner") ||
-      pathname.startsWith("/organizer/events/new/previa");
+      pathname.startsWith("/organizer/events/new/preview");
 
     const stepPaths = [
-      "/organizer/events/new/informacoes", // ou banner
-      "/organizer/events/new/ingressos",
-      "/organizer/events/new/evento",
-      "/organizer/events/new/questionario",
+      "/organizer/events/new/information",
+      "/organizer/events/new/tickets",
+      "/organizer/events/new/topics",
+      "/organizer/events/new/questionnaire",
     ];
 
     let currentStepIndex = -1;
 
-    if (isInformacoesStep) {
+    if (isInformationStep) {
       currentStepIndex = 0;
     } else {
       currentStepIndex = stepPaths.findIndex((path) =>
@@ -44,40 +44,86 @@ function ProgressBar() {
     return "default";
   };
 
+  const getCurrentStepIndex = (): number => {
+    const isInformationStep =
+      pathname.startsWith("/organizer/events/new/information") ||
+      pathname.startsWith("/organizer/events/new/banner") ||
+      pathname.startsWith("/organizer/events/new/preview");
+
+    const stepPaths = [
+      "/organizer/events/new/information",
+      "/organizer/events/new/tickets",
+      "/organizer/events/new/topics",
+      "/organizer/events/new/questionnaire",
+    ];
+
+    if (isInformationStep) {
+      return 0;
+    }
+
+    const index = stepPaths.findIndex((path) =>
+      pathname.startsWith(path)
+    );
+
+    return index !== -1 ? index : 0;
+  };
+
+  const getProgressWidth = (): string => {
+    const currentStepIndex = getCurrentStepIndex();
+    console.log(currentStepIndex);
+    if (currentStepIndex === 0) {
+      return "0%";
+    } else if (currentStepIndex === 1) {
+      return "25%";
+    } else if (currentStepIndex === 2) {
+      return "50%";
+    } else if (currentStepIndex === 3) {
+      return "75%";
+    } else if (currentStepIndex === 4) {
+      return "100%";
+    }
+
+    return "0%";
+  };
+
   return (
     <div className="border-b border-gray-6 bg-gray-2">
       <div className="max-w-3xl mx-auto px-5 md:px-[80px] py-8">
-        <div className="relative flex items-center justify-evenly">
-          {/* Step 1: Informações */}
+        <div className="relative flex items-center justify-between">
+          <div className="absolute h-px top-[24px] left-0 w-full px-8">
+            <div className="h-px bg-gray-6 w-full relative">
+              <div
+                style={{ width: getProgressWidth() }}
+                className="absolute h-px top-0 left-0 bg-[#46a758] transition-all duration-300"
+              />
+            </div>
+          </div>
           {(() => {
             const status = getStepStatus(1);
             return (
-              <div className="flex flex-col gap-3 items-center relative z-10 flex-1">
+              <div className="flex flex-col gap-[12px] items-center relative z-10">
                 <div
-                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${
-                    status === "completed"
-                      ? "border border-[#3e7949]"
-                      : status === "active"
+                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
+                    ? "border border-[#3e7949]"
+                    : status === "active"
                       ? "border border-[#3a3a3a]"
-                      : "border border-gray-6"
-                  }`}
+                      : ""
+                    }`}
                 >
                   <div
-                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${
-                      status === "completed"
-                        ? "bg-[#3e7949]"
-                        : status === "active"
+                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
+                      ? "bg-[#3e7949]"
+                      : status === "active"
                         ? "bg-[#3a3a3a]"
                         : "bg-gray-6"
-                    }`}
+                      }`}
                   >
                     {status === "completed" ? (
-                      <CheckCircleIcon className="size-6 text-white" />
+                      <CheckIcon className="size-5 text-white" />
                     ) : (
-                      <InfoIcon
-                        className={`size-6 ${
-                          status === "active" ? "text-white" : "text-gray-12"
-                        }`}
+                      <OrganizerInfoIcon
+                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
+                          }`}
                       />
                     )}
                   </div>
@@ -89,36 +135,32 @@ function ProgressBar() {
             );
           })()}
 
-          {/* Step 2: Ingressos */}
           {(() => {
             const status = getStepStatus(2);
             return (
-              <div className="flex flex-col gap-3 items-center relative z-10 flex-1">
+              <div className="flex flex-col gap-[12px] items-center relative z-10">
                 <div
-                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${
-                    status === "completed"
-                      ? "border border-[#3e7949]"
-                      : status === "active"
+                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
+                    ? "border border-[#3e7949]"
+                    : status === "active"
                       ? "border border-[#3a3a3a]"
-                      : "border border-gray-6"
-                  }`}
+                      : ""
+                    }`}
                 >
                   <div
-                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${
-                      status === "completed"
-                        ? "bg-[#3e7949]"
-                        : status === "active"
+                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
+                      ? "bg-[#3e7949]"
+                      : status === "active"
                         ? "bg-[#3a3a3a]"
                         : "bg-gray-6"
-                    }`}
+                      }`}
                   >
                     {status === "completed" ? (
-                      <CheckCircleIcon className="size-6 text-white" />
+                      <CheckIcon className="size-5 text-white" />
                     ) : (
-                      <TicketIcon
-                        className={`size-6 ${
-                          status === "active" ? "text-white" : "text-gray-12"
-                        }`}
+                      <OrganizerTicketIcon
+                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
+                          }`}
                       />
                     )}
                   </div>
@@ -130,77 +172,69 @@ function ProgressBar() {
             );
           })()}
 
-          {/* Step 3: Evento */}
           {(() => {
             const status = getStepStatus(3);
             return (
-              <div className="flex flex-col gap-3 items-center relative z-10 flex-1">
+              <div className="flex flex-col gap-[12px] items-center relative z-10">
                 <div
-                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${
-                    status === "completed"
-                      ? "border border-[#3e7949]"
-                      : status === "active"
+                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
+                    ? "border border-[#3e7949]"
+                    : status === "active"
                       ? "border border-[#3a3a3a]"
-                      : "border border-gray-6"
-                  }`}
+                      : ""
+                    }`}
                 >
                   <div
-                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${
-                      status === "completed"
-                        ? "bg-[#3e7949]"
-                        : status === "active"
+                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
+                      ? "bg-[#3e7949]"
+                      : status === "active"
                         ? "bg-[#3a3a3a]"
                         : "bg-gray-6"
-                    }`}
+                      }`}
                   >
                     {status === "completed" ? (
-                      <CheckCircleIcon className="size-6 text-white" />
+                      <CheckIcon className="size-5 text-white" />
                     ) : (
-                      <CalendarIcon
-                        className={`size-6 ${
-                          status === "active" ? "text-white" : "text-gray-12"
-                        }`}
+                      <TopicsIcon
+                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
+                          }`}
                       />
                     )}
                   </div>
                 </div>
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
-                  Evento
+                  Tópicos
                 </p>
               </div>
             );
           })()}
 
-          {/* Step 4: Questionário */}
           {(() => {
             const status = getStepStatus(4);
             return (
-              <div className="flex flex-col gap-3 items-center relative z-10 flex-1">
+              <div className="flex flex-col gap-[12px] items-center relative z-10">
                 <div
-                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${
-                    status === "completed"
-                      ? "border border-[#3e7949]"
-                      : status === "active"
+                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
+                    ? "border border-[#3e7949]"
+                    : status === "active"
                       ? "border border-[#3a3a3a]"
-                      : "border border-gray-6"
-                  }`}
+                      : ""
+                    }`}
                 >
                   <div
-                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${
-                      status === "completed"
-                        ? "bg-[#3e7949]"
-                        : status === "active"
+                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
+                      ? "bg-[#3e7949]"
+                      : status === "active"
                         ? "bg-[#3a3a3a]"
                         : "bg-gray-6"
-                    }`}
+                      }`}
                   >
                     {status === "completed" ? (
-                      <CheckCircleIcon className="size-6 text-white" />
+                      <CheckIcon className="size-5 text-white" />
                     ) : (
-                      <HelpIcon
-                        className={`size-6 ${
-                          status === "active" ? "text-white" : "text-gray-12"
-                        }`}
+                      <QuestionIcon
+                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
+                          }`}
                       />
                     )}
                   </div>
@@ -212,22 +246,42 @@ function ProgressBar() {
             );
           })()}
 
-          {/* Connecting Lines */}
-          <div
-            className={`absolute h-px top-[23px] left-[calc(16.66%+24px)] right-[calc(58.33%+24px)] ${
-              getStepStatus(1) === "completed" ? "bg-[#46a758]" : "bg-gray-6"
-            }`}
-          />
-          <div
-            className={`absolute h-px top-[23px] left-[calc(41.66%+24px)] right-[calc(33.33%+24px)] ${
-              getStepStatus(2) === "completed" ? "bg-[#46a758]" : "bg-gray-6"
-            }`}
-          />
-          <div
-            className={`absolute h-px top-[23px] left-[calc(66.66%+24px)] right-[calc(8.33%+24px)] ${
-              getStepStatus(3) === "completed" ? "bg-[#46a758]" : "bg-gray-6"
-            }`}
-          />
+          {(() => {
+            const status = getStepStatus(5);
+            return (
+              <div className="flex flex-col gap-[12px] items-center relative z-10">
+                <div
+                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
+                    ? "border border-[#3e7949]"
+                    : status === "active"
+                      ? "border border-[#3a3a3a]"
+                      : ""
+                    }`}
+                >
+                  <div
+                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
+                      ? "bg-[#3e7949]"
+                      : status === "active"
+                        ? "bg-[#3a3a3a]"
+                        : "bg-gray-6"
+                      }`}
+                  >
+                    {status === "completed" ? (
+                      <CheckIcon className="size-5 text-white" />
+                    ) : (
+                      <RevisionIcon
+                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
+                          }`}
+                      />
+                    )}
+                  </div>
+                </div>
+                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
+                  Revisão
+                </p>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

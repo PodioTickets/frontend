@@ -22,6 +22,7 @@ export default function BannerPage() {
   const { formData, updateFormData } = useCreateEvent();
   const [bannerPreview, setBannerPreview] = useState<string>("");
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -50,7 +51,7 @@ export default function BannerPage() {
   // Verificar se tem evento criado
   useEffect(() => {
     if (authChecked && !formData.createdEventId) {
-      router.push("/organizer/events/new/informacoes");
+      router.push("/organizer/events/new/information");
     }
   }, [authChecked, formData.createdEventId, router]);
 
@@ -81,7 +82,7 @@ export default function BannerPage() {
       const fakeEvent = {
         target: input,
       } as unknown as React.ChangeEvent<HTMLInputElement>;
-      handleBannerUpload(fakeEvent);
+      handleBannerSelect(fakeEvent);
     }
   };
 
@@ -98,7 +99,7 @@ export default function BannerPage() {
     return `${day}/${month}/${year}`;
   };
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -119,16 +120,29 @@ export default function BannerPage() {
       return;
     }
 
+    // Apenas criar preview, não fazer upload ainda
+    setSelectedBannerFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBannerPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    if (bannerInputRef.current) {
+      bannerInputRef.current.value = "";
+    }
+  };
+
+  const handleBannerUpload = async () => {
+    if (!selectedBannerFile) {
+      toast.error("Por favor, selecione uma imagem antes de continuar");
+      return;
+    }
+
     setUploadingBanner(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
       const formDataUpload = new FormData();
-      formDataUpload.append("file", file);
+      formDataUpload.append("file", selectedBannerFile);
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
       const apiClient = (userService as any).apiClient;
@@ -165,31 +179,40 @@ export default function BannerPage() {
         }
 
         toast.success("Banner enviado com sucesso!");
+        setSelectedBannerFile(null);
       } else {
         throw new Error(result.message || "Erro ao fazer upload");
       }
     } catch (error: any) {
       console.error("Error uploading banner:", error);
       toast.error(error.message || "Erro ao fazer upload do banner");
-      setBannerPreview("");
     } finally {
       setUploadingBanner(false);
-      if (bannerInputRef.current) {
-        bannerInputRef.current.value = "";
-      }
     }
   };
 
   const handleBack = () => {
-    router.push("/organizer/events/new/informacoes");
+    router.push("/organizer/events/new/information");
   };
 
-  const handleNext = () => {
-    if (!formData.bannerUrl) {
-      toast.error("Por favor, faça upload do banner antes de continuar");
+  const handleNext = async () => {
+    // Se já tem bannerUrl salvo, apenas navega
+    if (formData.bannerUrl && !selectedBannerFile) {
+      router.push("/organizer/events/new/preview");
       return;
     }
-    router.push("/organizer/events/new/previa");
+
+    // Se tem arquivo selecionado mas não foi feito upload, faz upload primeiro
+    if (selectedBannerFile) {
+      await handleBannerUpload();
+      // Aguarda um pouco para garantir que o upload foi processado
+      setTimeout(() => {
+        router.push("/organizer/events/new/preview");
+      }, 500);
+      return;
+    }
+
+    toast.error("Por favor, selecione uma imagem antes de continuar");
   };
 
   const eventLocation =
@@ -205,7 +228,7 @@ export default function BannerPage() {
           <div className="flex gap-3 items-center">
             <button
               onClick={handleBack}
-              className="border border-gray-6 rounded-[52px] size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
+              className="border border-gray-6 rounded-[52px] cursor-pointer size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
             >
               <ArrowButton isOpen={false} />
             </button>
@@ -270,7 +293,7 @@ export default function BannerPage() {
                 ref={bannerInputRef}
                 type="file"
                 accept="image/*"
-                onChange={handleBannerUpload}
+                onChange={handleBannerSelect}
                 className="hidden"
               />
             </div>
@@ -285,7 +308,7 @@ export default function BannerPage() {
                 ref={bannerInputRef}
                 type="file"
                 accept="image/*"
-                onChange={handleBannerUpload}
+                onChange={handleBannerSelect}
                 className="hidden"
               />
               <p className="text-primary-11 text-base font-bold font-dm-sans leading-[1.3]">
@@ -300,9 +323,6 @@ export default function BannerPage() {
                   legível em diferentes telas.
                 </p>
               </div>
-              {uploadingBanner && (
-                <p className="text-gray-11 text-sm">Enviando...</p>
-              )}
             </div>
           )}
 
@@ -404,7 +424,7 @@ export default function BannerPage() {
                     </div>
                   </div>
 
-                  <Button className="w-full">Inscrever-se</Button>
+                  <Button className="w-full" disabled>Inscrever-se</Button>
                 </div>
                 <div className="flex flex-col items-center justify-center gap-4">
                   <Button
@@ -428,7 +448,7 @@ export default function BannerPage() {
         <div className="flex justify-center">
           <Button
             onClick={handleNext}
-            disabled={!formData.bannerUrl || uploadingBanner}
+            disabled={(!bannerPreview && !formData.bannerUrl) || uploadingBanner}
             className="w-[270px] font-bold text-lg"
           >
             {uploadingBanner ? "Enviando..." : "Confirmar imagem"}

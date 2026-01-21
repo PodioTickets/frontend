@@ -94,7 +94,6 @@ export function DatePicker({
       return val;
     }
 
-    // If it's a string in YYYY-MM-DD format, parse it manually to avoid timezone issues
     if (typeof val === "string") {
       const parts = val.split("-");
       if (parts.length === 3) {
@@ -160,29 +159,26 @@ export function DatePicker({
         <button
           type="button"
           disabled={disabled}
-          className={`border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-            className || ""
-          }`}
+          className={`border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className || ""
+            }`}
         >
           <div
-            className={`flex gap-1 items-center flex-1 min-w-0 ${
-              hideIcon ? "justify-center" : ""
-            }`}
+            className={`flex gap-2 items-center flex-1 min-w-0 ${hideIcon ? "justify-center" : ""
+              }`}
           >
             {!hideIcon && (
               <CalendarIcon className="w-5 h-5 text-gray-11 shrink-0" />
             )}
             <span
-              className={`font-normal text-base leading-[1.3] font-dm-sans ${
-                hideIcon ? "text-center" : "truncate"
-              } ${validDate ? "text-gray-12" : "text-gray-11"}`}
+              className={`font-normal text-base leading-[1.3] font-dm-sans ${hideIcon ? "text-center" : "truncate"
+                } ${validDate ? "text-gray-12" : "text-gray-11"}`}
             >
               {validDate ? formatDate(validDate) : placeholder}
             </span>
           </div>
-          <div className="flex-none -scale-y-100 shrink-0">
+          {/*  <div className="flex-none shrink-0">
             <ArrowButton isOpen={isOpen} />
-          </div>
+          </div> */}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-2 z-100000" align="start">
@@ -199,22 +195,22 @@ export function DatePicker({
             disabled={
               minDate || maxDate
                 ? (date: Date) => {
-                    if (minDate) {
-                      const min = new Date(minDate);
-                      min.setHours(0, 0, 0, 0);
-                      const checkDate = new Date(date);
-                      checkDate.setHours(0, 0, 0, 0);
-                      if (checkDate < min) return true;
-                    }
-                    if (maxDate) {
-                      const max = new Date(maxDate);
-                      max.setHours(23, 59, 59, 999);
-                      const checkDate = new Date(date);
-                      checkDate.setHours(0, 0, 0, 0);
-                      if (checkDate > max) return true;
-                    }
-                    return false;
+                  if (minDate) {
+                    const min = new Date(minDate);
+                    min.setHours(0, 0, 0, 0);
+                    const checkDate = new Date(date);
+                    checkDate.setHours(0, 0, 0, 0);
+                    if (checkDate < min) return true;
                   }
+                  if (maxDate) {
+                    const max = new Date(maxDate);
+                    max.setHours(23, 59, 59, 999);
+                    const checkDate = new Date(date);
+                    checkDate.setHours(0, 0, 0, 0);
+                    if (checkDate > max) return true;
+                  }
+                  return false;
+                }
                 : () => false
             }
             className="rounded-md border-0 bg-transparent w-full"

@@ -17,6 +17,7 @@ interface CreateEventFormData {
   googleMapsLink: string;
   bannerUrl: string;
   cardImageUrl: string;
+  regulationUrl: string;
   createdEventId: string | null;
 }
 
@@ -48,6 +49,7 @@ const initialFormData: CreateEventFormData = {
   googleMapsLink: "",
   bannerUrl: "",
   cardImageUrl: "",
+  regulationUrl: "",
   createdEventId: null,
 };
 

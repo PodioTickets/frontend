@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | null;
 
 interface ModalData {
   amount?: number;
@@ -23,6 +23,10 @@ interface ModalState {
   closeModal: () => void;
   setLoading: (loading: boolean, message?: string) => void;
   updateModalData: (data: Partial<ModalData>) => void;
+
+  // Callback para salvar dados do modal
+  onModalSave?: (data: any) => void;
+  setOnModalSave: (callback?: (data: any) => void) => void;
 }
 
 export const useModalStore = create<ModalState>()(
@@ -51,6 +55,13 @@ export const useModalStore = create<ModalState>()(
           data: null,
           isLoading: false,
           loadingMessage: "",
+          onModalSave: undefined,
+        });
+      },
+
+      setOnModalSave: (callback) => {
+        set({
+          onModalSave: callback,
         });
       },
 
@@ -115,5 +126,18 @@ export const useDeleteParticipantModal = () => {
     data: data as ModalData | null,
     openDeleteParticipantModal: (data?: ModalData) => openModal("deleteParticipant", data),
     closeDeleteParticipantModal: closeModal,
+  };
+};
+
+export const useTopicModal = () => {
+  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "topic",
+    data: data as ModalData | null,
+    openTopicModal: (data?: ModalData) => openModal("topic", data),
+    closeTopicModal: closeModal,
+    onModalSave,
+    setOnModalSave,
   };
 };

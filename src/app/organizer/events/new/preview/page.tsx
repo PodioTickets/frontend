@@ -22,6 +22,7 @@ export default function PreviaPage() {
     formData.cardImageUrl || ""
   );
   const [uploadingCard, setUploadingCard] = useState(false);
+  const [selectedCardFile, setSelectedCardFile] = useState<File | null>(null);
   const cardInputRef = useRef<HTMLInputElement>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -47,14 +48,6 @@ export default function PreviaPage() {
     }
   }, [authChecked, isAuthenticated, router]);
 
-  // Verificar se tem evento criado e banner
-  useEffect(() => {
-    if (authChecked && (!formData.createdEventId || !formData.bannerUrl)) {
-      router.push("/organizer/events/new/informacoes");
-    }
-  }, [authChecked, formData.createdEventId, formData.bannerUrl, router]);
-
-  // Carregar preview do card se já existir
   useEffect(() => {
     if (formData.cardImageUrl) {
       setCardPreview(formData.cardImageUrl);
@@ -81,7 +74,7 @@ export default function PreviaPage() {
       const fakeEvent = {
         target: input,
       } as unknown as React.ChangeEvent<HTMLInputElement>;
-      handleCardUpload(fakeEvent);
+      handleCardSelect(fakeEvent);
     }
   };
 
@@ -98,7 +91,7 @@ export default function PreviaPage() {
     return `${day}/${month}/${year}`;
   };
 
-  const handleCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -119,16 +112,29 @@ export default function PreviaPage() {
       return;
     }
 
+    // Apenas criar preview, não fazer upload ainda
+    setSelectedCardFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCardPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    if (cardInputRef.current) {
+      cardInputRef.current.value = "";
+    }
+  };
+
+  const handleCardUpload = async () => {
+    if (!selectedCardFile) {
+      toast.error("Por favor, selecione uma imagem antes de continuar");
+      return;
+    }
+
     setUploadingCard(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCardPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
       const formDataUpload = new FormData();
-      formDataUpload.append("file", file);
+      formDataUpload.append("file", selectedCardFile);
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
       const apiClient = (userService as any).apiClient;
@@ -166,18 +172,15 @@ export default function PreviaPage() {
         }
 
         toast.success("Imagem do card enviada com sucesso!");
+        setSelectedCardFile(null);
       } else {
         throw new Error(result.message || "Erro ao fazer upload");
       }
     } catch (error: any) {
       console.error("Error uploading card image:", error);
       toast.error(error.message || "Erro ao fazer upload da imagem do card");
-      setCardPreview("");
     } finally {
       setUploadingCard(false);
-      if (cardInputRef.current) {
-        cardInputRef.current.value = "";
-      }
     }
   };
 
@@ -185,14 +188,24 @@ export default function PreviaPage() {
     router.push("/organizer/events/new/banner");
   };
 
-  const handleNext = () => {
-    if (!formData.cardImageUrl) {
-      toast.error(
-        "Por favor, faça upload da imagem do card antes de continuar"
-      );
+  const handleNext = async () => {
+    // Se já tem cardImageUrl salvo, apenas navega
+    if (formData.cardImageUrl && !selectedCardFile) {
+      router.push("/organizer/events/new/tickets");
       return;
     }
-    router.push("/organizer/events/new/ingressos");
+
+    // Se tem arquivo selecionado mas não foi feito upload, faz upload primeiro
+    if (selectedCardFile) {
+      await handleCardUpload();
+      // Aguarda um pouco para garantir que o upload foi processado
+      setTimeout(() => {
+        router.push("/organizer/events/new/tickets");
+      }, 500);
+      return;
+    }
+
+    toast.error("Por favor, selecione uma imagem antes de continuar");
   };
 
   const eventLocation =
@@ -208,7 +221,7 @@ export default function PreviaPage() {
           <div className="flex gap-3 items-center">
             <button
               onClick={handleBack}
-              className="border border-gray-6 rounded-[52px] size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
+              className="border border-gray-6 rounded-[52px] cursor-pointer size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
             >
               <ArrowButton isOpen={false} />
             </button>
@@ -270,7 +283,7 @@ export default function PreviaPage() {
                 ref={cardInputRef}
                 type="file"
                 accept="image/*"
-                onChange={handleCardUpload}
+                onChange={handleCardSelect}
                 className="hidden"
               />
             </div>
@@ -285,7 +298,7 @@ export default function PreviaPage() {
                 ref={cardInputRef}
                 type="file"
                 accept="image/*"
-                onChange={handleCardUpload}
+                onChange={handleCardSelect}
                 className="hidden"
               />
               <p className="text-primary-11 text-base font-bold font-dm-sans leading-[1.3]">
@@ -296,9 +309,6 @@ export default function PreviaPage() {
                   Imagem 308 × 232
                 </p>
               </div>
-              {uploadingCard && (
-                <p className="text-gray-11 text-sm">Enviando...</p>
-              )}
             </div>
           )}
 
@@ -309,7 +319,7 @@ export default function PreviaPage() {
             </h2>
             <div className="bg-gray-2 flex flex-col items-start overflow-hidden rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
               {/* Card Image */}
-              <div className="aspect-[213/165] relative rounded-t-lg shrink-0 w-full">
+              <div className="aspect-213/165 relative rounded-t-lg shrink-0 w-full">
                 {cardPreview ? (
                   <Image
                     src={cardPreview}
@@ -387,7 +397,7 @@ export default function PreviaPage() {
           {/* Next Button */}
           <Button
             onClick={handleNext}
-            disabled={!formData.cardImageUrl || uploadingCard}
+            disabled={(!cardPreview && !formData.cardImageUrl) || uploadingCard}
             className="h-[52px] px-11 text-xl font-bold font-manrope"
           >
             {uploadingCard ? "Enviando..." : "Confirmar imagem"}

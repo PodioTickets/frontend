@@ -8,7 +8,7 @@ export default function CreateEventRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/organizer/events/new/informacoes");
+    router.replace("/organizer/events/new/information");
   }, [router]);
 
   return <Loading />;

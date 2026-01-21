@@ -77,6 +77,12 @@ export default function EditEventPage() {
     loadEvent();
   }, [authChecked, eventId]);
 
+  // Função para determinar qual etapa do fluxo de criação deve começar
+  // Para eventos rascunhos, sempre começamos do início para permitir revisão completa
+  const getNextStep = (event: any) => {
+    return "/organizer/events/new/information";
+  };
+
   const formatDateForInput = (dateString: string | null | undefined) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -93,6 +99,39 @@ export default function EditEventPage() {
       setLoading(true);
       const event = await organizerService.getEventById(eventId);
       setEvent(event);
+
+      // Se o evento está como rascunho, redirecionar para o fluxo de criação
+      if (event.status === "DRAFT") {
+        const nextStep = getNextStep(event);
+        console.log("Evento rascunho detectado, redirecionando para:", nextStep);
+
+        // Preencher o contexto de criação com os dados existentes
+        const createEventData = {
+          name: event.name || "",
+          eventDate: formatDateForInput(event.eventDate) || "",
+          registrationStartDate: "",
+          registrationStartTime: "",
+          registrationEndDate: formatDateForInput(event.registrationEndDate) || "",
+          registrationEndTime: "",
+          cep: "",
+          street: event.location || "",
+          neighborhood: "",
+          city: event.city || "",
+          state: event.state || "",
+          googleMapsLink: event.googleMapsLink || "",
+          bannerUrl: event.bannerUrl || "",
+          cardImageUrl: "",
+          regulationUrl: "",
+          createdEventId: eventId,
+        };
+
+        // Salvar no localStorage para o contexto de criação
+        localStorage.setItem("createEventFormData", JSON.stringify(createEventData));
+
+        // Redirecionar para a etapa apropriada
+        router.replace(nextStep);
+        return;
+      }
 
       setFormData({
         name: event.name || "",
