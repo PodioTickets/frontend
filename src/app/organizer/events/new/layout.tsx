@@ -18,7 +18,12 @@ function ProgressBar() {
     const isInformationStep =
       pathname.startsWith("/organizer/events/new/information") ||
       pathname.startsWith("/organizer/events/new/banner") ||
-      pathname.startsWith("/organizer/events/new/preview");
+      (pathname.startsWith("/organizer/events/new/preview") && 
+       !pathname.startsWith("/organizer/events/new/preview-event"));
+
+    const isTopicsStep =
+      pathname.startsWith("/organizer/events/new/topics") ||
+      pathname.startsWith("/organizer/events/new/preview-event");
 
     const stepPaths = [
       "/organizer/events/new/information",
@@ -31,6 +36,8 @@ function ProgressBar() {
 
     if (isInformationStep) {
       currentStepIndex = 0;
+    } else if (isTopicsStep) {
+      currentStepIndex = 2;
     } else {
       currentStepIndex = stepPaths.findIndex((path) =>
         pathname.startsWith(path)
@@ -48,7 +55,12 @@ function ProgressBar() {
     const isInformationStep =
       pathname.startsWith("/organizer/events/new/information") ||
       pathname.startsWith("/organizer/events/new/banner") ||
-      pathname.startsWith("/organizer/events/new/preview");
+      (pathname.startsWith("/organizer/events/new/preview") && 
+       !pathname.startsWith("/organizer/events/new/preview-event"));
+
+    const isTopicsStep =
+      pathname.startsWith("/organizer/events/new/topics") ||
+      pathname.startsWith("/organizer/events/new/preview-event");
 
     const stepPaths = [
       "/organizer/events/new/information",
@@ -59,6 +71,8 @@ function ProgressBar() {
 
     if (isInformationStep) {
       return 0;
+    } else if (isTopicsStep) {
+      return 2;
     }
 
     const index = stepPaths.findIndex((path) =>

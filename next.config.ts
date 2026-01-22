@@ -25,7 +25,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com",
       "img-src 'self' data: https: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com",
       "font-src 'self' data: https://fonts.gstatic.com https://*.google.com",

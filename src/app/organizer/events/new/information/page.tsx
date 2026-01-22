@@ -358,7 +358,7 @@ export default function InformacoesPage() {
 
   return (
     <div className="bg-gray-2 flex-1 pb-44 px-5 md:px-[124px] mt-10">
-      <div className="max-w-[1060px] mx-auto flex flex-col gap-[44px] pt-[52px]">
+      <div className="max-w-[1060px] mx-auto flex flex-col gap-[44px]">
         {/* Title Section */}
         <div className="flex flex-col gap-[16px]">
           <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">

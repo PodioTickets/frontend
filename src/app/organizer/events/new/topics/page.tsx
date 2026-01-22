@@ -381,7 +381,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
           <div className="flex gap-2 items-start justify-end w-full pb-4">
             <Button
               variant="outline"
-              onClick={undefined}
+              onClick={() => router.push("/organizer/events/new/preview-event")}
               className="border-gray-6 text-gray-12 text-[20px] font-bold px-11 h-[52px]"
             >
               Prévia

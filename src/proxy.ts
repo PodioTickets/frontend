@@ -147,7 +147,7 @@ export async function proxy(request: NextRequest) {
     `default-src ${trustedDomains.join(" ")}`,
     `script-src ${trustedDomains.join(" ")} ${
       isDev ? "'unsafe-eval'" : ""
-    } 'unsafe-inline' https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
+    } 'unsafe-inline' blob: https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
     `style-src ${trustedDomains.join(
       " "
     )} 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com`,

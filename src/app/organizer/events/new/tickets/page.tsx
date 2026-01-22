@@ -139,7 +139,7 @@ export default function IngressosPage() {
             Lista de ingressos
           </h2>
           <Button
-            onClick={() => setShowCreateGroupModal(true)}
+            onClick={() => router.push("/organizer/events/new/tickets/create")}
             variant="default"
             className="text-base font-bold font-manrope leading-[1.1]"
           >
@@ -231,8 +231,8 @@ export default function IngressosPage() {
               </Button>
               <Button
                 onClick={() => router.push("/organizer/events/new/topics")}
-                variant="outline"
-                className="border-gray-6 text-gray-12 text-[20px] font-bold px-10"
+                variant="default"
+                className="text-gray-12 text-[20px] font-bold px-10"
               >
                 Confirmar ingressos
               </Button>
