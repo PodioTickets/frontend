@@ -11,6 +11,8 @@ import { QuestionIcon } from "@/components/Icons/QuestionIcon";
 import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { RevisionIcon } from "@/components/Icons/RevisionIcon";
 
+export const dynamic = 'force-dynamic';
+
 function ProgressBar() {
   const pathname = usePathname();
 

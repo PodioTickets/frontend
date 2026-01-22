@@ -3,7 +3,7 @@ import { Manrope, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { Analytics } from "@vercel/analytics/next";
-import { Toaster } from "react-hot-toast";
+import { ToasterWrapper } from "@/components/ToasterWrapper";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Suspense } from "react";
@@ -63,7 +63,7 @@ export default function RootLayout({
       </head>
 
       <body suppressHydrationWarning className="scroll-smooth antialiased">
-        <Toaster position="bottom-right" />
+        <ToasterWrapper />
         <Providers>
           <div className="flex flex-col min-h-screen bg-gray-2">
             <Header />

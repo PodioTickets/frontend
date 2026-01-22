@@ -63,20 +63,24 @@ export function CreateEventProvider({
 
   // Load from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem("createEventFormData");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setFormData((prev) => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error("Error loading form data from localStorage:", e);
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("createEventFormData");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setFormData((prev) => ({ ...prev, ...parsed }));
+        } catch (e) {
+          console.error("Error loading form data from localStorage:", e);
+        }
       }
     }
   }, []);
 
   // Save to localStorage whenever formData changes
   useEffect(() => {
-    localStorage.setItem("createEventFormData", JSON.stringify(formData));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("createEventFormData", JSON.stringify(formData));
+    }
   }, [formData]);
 
   const updateFormData = (data: Partial<CreateEventFormData>) => {
@@ -85,7 +89,9 @@ export function CreateEventProvider({
 
   const clearFormData = () => {
     setFormData(initialFormData);
-    localStorage.removeItem("createEventFormData");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("createEventFormData");
+    }
   };
 
   return (

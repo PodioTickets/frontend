@@ -5,15 +5,16 @@ import { useTopicModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Quill from "quill";
-import "quill/dist/quill.snow.css";
+
+type QuillInstance = InstanceType<typeof import("quill").default>;
 
 export function TopicModal() {
   const { isOpen, closeTopicModal, data, onModalSave } = useTopicModal();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const quillRef = useRef<HTMLDivElement>(null);
-  const quillInstanceRef = useRef<Quill | null>(null);
+  const quillInstanceRef = useRef<QuillInstance | null>(null);
+  const quillLoadedRef = useRef(false);
 
   const initialTitle = data?.title || "";
   const initialContent = data?.content || "";
@@ -21,22 +22,39 @@ export function TopicModal() {
 
   // Initialize Quill
   useEffect(() => {
-    if (isOpen && quillRef.current) {
-      // Clean up previous instance if exists
-      if (quillInstanceRef.current) {
-        quillInstanceRef.current = null;
-      }
+    if (isOpen && quillRef.current && typeof window !== 'undefined') {
+      // Dynamically import Quill only when modal is open
+      const initQuill = async () => {
+        // Load CSS only once
+        if (!quillLoadedRef.current) {
+          try {
+            // @ts-ignore - CSS import doesn't have type declarations
+            await import("quill/dist/quill.snow.css");
+          } catch (e) {
+            // CSS import might fail in SSR, that's okay
+          }
+          quillLoadedRef.current = true;
+        }
 
-      // Clear the ref content
-      if (quillRef.current) {
-        quillRef.current.innerHTML = '';
-      }
+        // Import Quill dynamically
+        const QuillModule = await import("quill");
+        const Quill = QuillModule.default;
 
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        if (!quillRef.current) return;
+        // Clean up previous instance if exists
+        if (quillInstanceRef.current) {
+          quillInstanceRef.current = null;
+        }
 
-        const quill = new Quill(quillRef.current!, {
+        // Clear the ref content
+        if (quillRef.current) {
+          quillRef.current.innerHTML = '';
+        }
+
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          if (!quillRef.current) return;
+
+          const quill = new Quill(quillRef.current!, {
           theme: 'snow',
           placeholder: 'Descreva sobre o tópico...',
           modules: {
@@ -178,16 +196,19 @@ export function TopicModal() {
           });
         }, 150);
 
-        quillInstanceRef.current = quill;
+          quillInstanceRef.current = quill;
 
-        // Set initial content if provided
-        if (initialContent) {
-          quill.root.innerHTML = initialContent;
-          setContent(initialContent);
-        } else {
-          setContent("");
-        }
-      }, 100);
+          // Set initial content if provided
+          if (initialContent) {
+            quill.root.innerHTML = initialContent;
+            setContent(initialContent);
+          } else {
+            setContent("");
+          }
+        }, 100);
+      };
+
+      initQuill();
     }
 
     return () => {

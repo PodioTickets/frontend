@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { devtools } from "zustand/middleware";
 
 export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | null;
 
@@ -29,61 +28,54 @@ interface ModalState {
   setOnModalSave: (callback?: (data: any) => void) => void;
 }
 
-export const useModalStore = create<ModalState>()(
-  devtools(
-    (set, get) => ({
+export const useModalStore = create<ModalState>()((set, get) => ({
+  isOpen: false,
+  type: null,
+  data: null,
+  isLoading: false,
+  loadingMessage: "",
+
+  openModal: (type, data) => {
+    set({
+      isOpen: true,
+      type,
+      data: data || null,
+      isLoading: false,
+      loadingMessage: "",
+    });
+  },
+
+  closeModal: () => {
+    set({
       isOpen: false,
       type: null,
       data: null,
       isLoading: false,
       loadingMessage: "",
+      onModalSave: undefined,
+    });
+  },
 
-      openModal: (type, data) => {
-        set({
-          isOpen: true,
-          type,
-          data: data || null,
-          isLoading: false,
-          loadingMessage: "",
-        });
-      },
+  setOnModalSave: (callback) => {
+    set({
+      onModalSave: callback,
+    });
+  },
 
-      closeModal: () => {
-        set({
-          isOpen: false,
-          type: null,
-          data: null,
-          isLoading: false,
-          loadingMessage: "",
-          onModalSave: undefined,
-        });
-      },
+  setLoading: (loading, message = "") => {
+    set({
+      isLoading: loading,
+      loadingMessage: message,
+    });
+  },
 
-      setOnModalSave: (callback) => {
-        set({
-          onModalSave: callback,
-        });
-      },
-
-      setLoading: (loading, message = "") => {
-        set({
-          isLoading: loading,
-          loadingMessage: message,
-        });
-      },
-
-      updateModalData: (newData) => {
-        const currentData = get().data;
-        set({
-          data: { ...currentData, ...newData },
-        });
-      },
-    }),
-    {
-      name: "modal-store",
-    }
-  )
-);
+  updateModalData: (newData) => {
+    const currentData = get().data;
+    set({
+      data: { ...currentData, ...newData },
+    });
+  },
+}));
 
 export const useLoginModal = () => {
   const { openModal, closeModal, isOpen, type, data } = useModalStore();
