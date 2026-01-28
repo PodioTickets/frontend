@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | null;
 
 interface ModalData {
   amount?: number;
@@ -129,6 +129,45 @@ export const useTopicModal = () => {
     data: data as ModalData | null,
     openTopicModal: (data?: ModalData) => openModal("topic", data),
     closeTopicModal: closeModal,
+    onModalSave,
+    setOnModalSave,
+  };
+};
+
+export const useCreateQuestionModal = () => {
+  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "createQuestion",
+    data: data as ModalData | null,
+    openCreateQuestionModal: (data?: ModalData) => openModal("createQuestion", data),
+    closeCreateQuestionModal: closeModal,
+    onModalSave,
+    setOnModalSave,
+  };
+};
+
+export const useCreateProductModal = () => {
+  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "createProduct",
+    data: data as ModalData | null,
+    openCreateProductModal: (data?: ModalData) => openModal("createProduct", data),
+    closeCreateProductModal: closeModal,
+    onModalSave,
+    setOnModalSave,
+  };
+};
+
+export const useAddExistingProductsModal = () => {
+  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "addExistingProducts",
+    data: data as ModalData | null,
+    openAddExistingProductsModal: (data?: ModalData) => openModal("addExistingProducts", data),
+    closeAddExistingProductsModal: closeModal,
     onModalSave,
     setOnModalSave,
   };

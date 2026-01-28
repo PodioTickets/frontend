@@ -315,7 +315,7 @@ export function TopicModal() {
 
                     {/* Content Editor */}
                     <div className="flex flex-col gap-2">
-                      <div className="rounded-lg overflow-hidden">
+                      <div className="overflow-hidden">
                         <div
                           ref={quillRef}
                           className="min-h-[300px]"

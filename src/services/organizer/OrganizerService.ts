@@ -179,7 +179,7 @@ export interface KitItem {
 
 export interface CreateQuestionRequest {
   question: string;
-  type: "text" | "select" | "radio" | "checkbox";
+  type: "text" | "true_false" | "number" | "select" | "multiple_choice";
   options?: string[];
   isRequired?: boolean;
   order?: number;
@@ -188,7 +188,7 @@ export interface CreateQuestionRequest {
 export interface Question {
   id: string;
   question: string;
-  type: "text" | "select" | "radio" | "checkbox";
+  type: "text" | "true_false" | "number" | "select" | "multiple_choice";
   options?: string[];
   isRequired: boolean;
   order: number;

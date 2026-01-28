@@ -259,7 +259,7 @@ export default function UserProfilePage() {
       return;
     }
 
-    // Validate file size (2MB)
+    // Validate file size (10MB)
     const maxSize = 10 * 1024 * 1024; // 10MB in bytes
     if (file.size > maxSize) {
       toast.error("Arquivo muito grande. Tamanho máximo: 10MB.");

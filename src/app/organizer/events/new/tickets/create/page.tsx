@@ -15,7 +15,10 @@ import { Radio } from "@/components/Radio";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Plus, Trash2 } from "lucide-react";
+import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { TrashIcon } from "@/components/Icons/TrashIcon";
 import type { ModalityTemplate, ModalityGroup } from "@/services/organizer/OrganizerService";
+import { useCreateProductModal, useAddExistingProductsModal } from "@/stores/modalStore";
 
 interface Batch {
   id: string;
@@ -32,8 +35,9 @@ export default function CreateTicketPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const groupId = searchParams.get("groupId");
-  const { isAuthenticated } = useAuth();
   const { formData } = useCreateEvent();
+  const { openCreateProductModal, setOnModalSave: setOnCreateProductSave } = useCreateProductModal();
+  const { openAddExistingProductsModal, setOnModalSave: setOnAddProductsSave } = useAddExistingProductsModal();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -48,6 +52,7 @@ export default function CreateTicketPage() {
   const [minAge, setMinAge] = useState("");
   const [maxAge, setMaxAge] = useState("");
   const [hasKit, setHasKit] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
 
   // Data
   const [modalityTemplates, setModalityTemplates] = useState<ModalityTemplate[]>([]);
@@ -59,27 +64,64 @@ export default function CreateTicketPage() {
     { id: "1", quantity: "", price: "", startType: "date" }
   ]);
 
-  // Load form data from localStorage on mount
+  // Load ticket data if editing
   useEffect(() => {
-    const saved = localStorage.getItem("createTicketFormData");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.ticketName) setTicketName(parsed.ticketName);
-        if (parsed.selectedModality) setSelectedModality(parsed.selectedModality);
-        if (parsed.distance) setDistance(parsed.distance);
-        if (parsed.distanceUnit) setDistanceUnit(parsed.distanceUnit);
-        if (parsed.gender) setGender(parsed.gender);
-        if (parsed.hasAgeRestriction !== undefined) setHasAgeRestriction(parsed.hasAgeRestriction);
-        if (parsed.minAge) setMinAge(parsed.minAge);
-        if (parsed.maxAge) setMaxAge(parsed.maxAge);
-        if (parsed.hasKit !== undefined) setHasKit(parsed.hasKit);
-        if (parsed.batches && Array.isArray(parsed.batches)) setBatches(parsed.batches);
-      } catch (e) {
-        console.error("Error loading ticket form data from localStorage:", e);
+    const ticketId = searchParams.get("ticketId");
+    if (ticketId && formData.createdEventId) {
+      const savedTickets = localStorage.getItem(`tickets_${formData.createdEventId}`);
+      if (savedTickets) {
+        try {
+          const tickets = JSON.parse(savedTickets);
+          const ticket = tickets.find((t: any) => t.id === ticketId);
+          if (ticket) {
+            setTicketName(ticket.name);
+            const modalityTemplate = modalityTemplates.find(t => t.label === ticket.modality);
+            if (modalityTemplate) setSelectedModality(modalityTemplate.id);
+            setDistance(ticket.distance || "");
+            setDistanceUnit(ticket.distanceUnit || "KM");
+            setGender(ticket.gender || "");
+            if (ticket.ageLimit) {
+              setHasAgeRestriction(true);
+              setMinAge(ticket.ageLimit.min?.toString() || "");
+              setMaxAge(ticket.ageLimit.max?.toString() || "");
+            }
+            if (ticket.batches && ticket.batches.length > 0) {
+              setBatches(ticket.batches.map((b: any, idx: number) => ({
+                id: b.id || (idx + 1).toString(),
+                quantity: b.quantity || "",
+                price: b.price || "",
+                startType: "date" as const,
+              })));
+            }
+            if (ticket.groupId) setSelectedGroupId(ticket.groupId);
+          }
+        } catch (e) {
+          console.error("Error loading ticket:", e);
+        }
+      }
+    } else {
+      // Load form data from localStorage on mount (for new tickets)
+      const saved = localStorage.getItem("createTicketFormData");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.ticketName) setTicketName(parsed.ticketName);
+          if (parsed.selectedModality) setSelectedModality(parsed.selectedModality);
+          if (parsed.distance) setDistance(parsed.distance);
+          if (parsed.distanceUnit) setDistanceUnit(parsed.distanceUnit);
+          if (parsed.gender) setGender(parsed.gender);
+          if (parsed.hasAgeRestriction !== undefined) setHasAgeRestriction(parsed.hasAgeRestriction);
+          if (parsed.minAge) setMinAge(parsed.minAge);
+          if (parsed.maxAge) setMaxAge(parsed.maxAge);
+          if (parsed.hasKit !== undefined) setHasKit(parsed.hasKit);
+          if (parsed.batches && Array.isArray(parsed.batches)) setBatches(parsed.batches);
+          if (parsed.selectedGroupId) setSelectedGroupId(parsed.selectedGroupId);
+        } catch (e) {
+          console.error("Error loading ticket form data from localStorage:", e);
+        }
       }
     }
-  }, []);
+  }, [searchParams, formData.createdEventId, modalityTemplates]);
 
   // Save form data to localStorage whenever it changes
   useEffect(() => {
@@ -93,10 +135,11 @@ export default function CreateTicketPage() {
       minAge,
       maxAge,
       hasKit,
-      batches
+      batches,
+      selectedGroupId
     };
     localStorage.setItem("createTicketFormData", JSON.stringify(formDataToSave));
-  }, [ticketName, selectedModality, distance, distanceUnit, gender, hasAgeRestriction, minAge, maxAge, hasKit, batches]);
+  }, [ticketName, selectedModality, distance, distanceUnit, gender, hasAgeRestriction, minAge, maxAge, hasKit, batches, selectedGroupId]);
 
   // Verificar autenticação
   useEffect(() => {
@@ -137,6 +180,63 @@ export default function CreateTicketPage() {
 
     loadData();
   }, [authChecked, formData.createdEventId]);
+
+  // Setup modal callbacks - always keep them updated
+  useEffect(() => {
+    const createProductCallback = (data: any) => {
+      // Add newly created/updated product to the ticket in real-time
+      if (data?.product) {
+        const { product } = data;
+        setProducts((prevProducts) => {
+          // Check if product already exists (in case of edit or if already added)
+          const existingIndex = prevProducts.findIndex((p: any) => p.id === product.id);
+          if (existingIndex >= 0) {
+            // Update existing product
+            const updated = [...prevProducts];
+            updated[existingIndex] = product;
+            return updated;
+          } else {
+            // Add new product
+            return [...prevProducts, product];
+          }
+        });
+      }
+    };
+
+    const addProductsCallback = (data: any) => {
+      console.log("addProductsCallback called with:", data);
+      // Add selected products to the ticket, avoiding duplicates
+      if (data?.products && Array.isArray(data.products) && data.products.length > 0) {
+        console.log("Processing products:", data.products);
+        setProducts((prevProducts) => {
+          console.log("Previous products:", prevProducts);
+          const existingIds = new Set(prevProducts.map((p: any) => p.id));
+          const newProducts = data.products.filter((p: any) => p && p.id && !existingIds.has(p.id));
+          console.log("New products to add:", newProducts);
+          if (newProducts.length > 0) {
+            const updated = [...prevProducts, ...newProducts];
+            console.log("Updated products:", updated);
+            toast.success(`${newProducts.length} produto(s) adicionado(s) ao ingresso`);
+            return updated;
+          } else {
+            toast.error("Produto(s) já adicionado(s) ao ingresso");
+            return prevProducts;
+          }
+        });
+      } else {
+        console.error("Invalid data format:", data);
+      }
+    };
+
+    setOnCreateProductSave(createProductCallback);
+    setOnAddProductsSave(addProductsCallback);
+
+    // Cleanup function to reset callbacks when component unmounts
+    return () => {
+      setOnCreateProductSave(undefined);
+      setOnAddProductsSave(undefined);
+    };
+  }, [setOnCreateProductSave, setOnAddProductsSave]);
 
   const handleBack = () => {
     router.push("/organizer/events/new/tickets");
@@ -187,10 +287,56 @@ export default function CreateTicketPage() {
       return;
     }
 
+    if (!formData.createdEventId) {
+      toast.error("Evento não encontrado");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Aqui você implementaria a lógica de criação do ingresso
-      // Por enquanto, apenas redireciona
+      // Criar ticket no localStorage (frontend only)
+      const ticketId = searchParams.get("ticketId") || `ticket_${Date.now()}`;
+      const savedTickets = localStorage.getItem(`tickets_${formData.createdEventId}`);
+      const existingTickets: any[] = savedTickets ? JSON.parse(savedTickets) : [];
+
+      const modalityLabel = modalityTemplates.find(t => t.id === selectedModality)?.label || selectedModality;
+
+      const newTicket = {
+        id: ticketId,
+        name: ticketName.trim(),
+        groupId: selectedGroupId || groupId || "uncategorized",
+        modality: modalityLabel,
+        distance: distance,
+        distanceUnit: distanceUnit,
+        price: batches[0].price,
+        ageLimit: hasAgeRestriction && (minAge || maxAge) ? {
+          min: minAge ? parseInt(minAge) : undefined,
+          max: maxAge ? parseInt(maxAge) : undefined,
+        } : undefined,
+        gender: gender || undefined,
+        products: [], // Produtos serão adicionados depois
+        batches: batches.map(b => ({
+          id: b.id,
+          quantity: b.quantity,
+          price: b.price,
+        })),
+        createdAt: new Date().toISOString(),
+      };
+
+      // Se está editando, remover o ticket antigo
+      const updatedTickets = searchParams.get("ticketId")
+        ? existingTickets.filter((t: any) => t.id !== ticketId)
+        : existingTickets;
+
+      // Adicionar o novo ticket
+      updatedTickets.push(newTicket);
+
+      // Salvar no localStorage
+      localStorage.setItem(`tickets_${formData.createdEventId}`, JSON.stringify(updatedTickets));
+
+      // Disparar evento customizado para atualizar a página de tickets
+      window.dispatchEvent(new CustomEvent("ticketCreated"));
+
       toast.success("Ingresso criado com sucesso!");
       // Clear saved form data after successful submission
       localStorage.removeItem("createTicketFormData");
@@ -227,6 +373,17 @@ export default function CreateTicketPage() {
   const selectedModalityLabel = modalityTemplates.find(t => t.id === selectedModality)?.label || "Selecione";
   const selectedGenderLabel = genderOptions.find(g => g.id === gender)?.label || "Selecione";
 
+  const groupOptions: DropdownOption[] = [
+    { id: "", label: "Sem categoria", onClick: () => setSelectedGroupId("") },
+    ...modalityGroups.map(group => ({
+      id: group.id,
+      label: group.name,
+      onClick: () => setSelectedGroupId(group.id)
+    }))
+  ];
+
+  const selectedGroupLabel = modalityGroups.find(g => g.id === selectedGroupId)?.name || (groupId ? modalityGroups.find(g => g.id === groupId)?.name : "Sem categoria");
+
   return (
     <div className="bg-gray-2 flex-1 pb-[176px] px-5 md:px-[124px] pt-[52px]">
       <div className="max-w-[1192px] mx-auto flex flex-col gap-9">
@@ -261,6 +418,27 @@ export default function CreateTicketPage() {
               Limite de 25 Caracteres
             </p>
           </div>
+
+          {/* Categoria */}
+          {modalityGroups.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                Categoria (opcional)
+              </label>
+              <Dropdown
+                options={groupOptions}
+                trigger={(isOpen) => (
+                  <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
+                    <span className={`text-base font-dm-sans ${selectedGroupId || groupId ? "text-gray-12" : "text-gray-11"}`}>
+                      {selectedGroupId || groupId ? selectedGroupLabel : "Sem categoria"}
+                    </span>
+                    <ArrowButton isOpen={isOpen} />
+                  </button>
+                )}
+                onSelect={(option) => setSelectedGroupId(option.id || "")}
+              />
+            </div>
+          )}
 
           <div className="flex gap-4">
             {/* Modalidades */}
@@ -297,7 +475,7 @@ export default function CreateTicketPage() {
                       setDistance(value);
                     }}
                     placeholder="10"
-                    className="h-auto border-0 p-0 focus-visible:ring-0 focus-visible:border-0 text-base font-dm-sans text-gray-11 placeholder:text-gray-11"
+                    className="h-auto border-0 p-0 focus-visible:ring-0 focus-visible:border-0 shadow-none text-base font-dm-sans text-gray-11 placeholder:text-gray-11 focus:outline-none focus:border-0 rounded-none"
                   />
                 </div>
                 <div className="relative shrink-0">
@@ -405,7 +583,7 @@ export default function CreateTicketPage() {
           {/* Lotes do ingresso */}
           <div className="flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-4">
             <div className="flex flex-col gap-2">
-              <h2 className="text-gray-12 text-xl font-bold font-family-dm-sans leading-[1.1]">
+              <h2 className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.1]">
                 Lotes do ingresso
               </h2>
               <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
@@ -566,45 +744,128 @@ export default function CreateTicketPage() {
             </div>
           </div>
 
-          {/* Produtos do Ingresso */}
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-2">
-                <h2 className="text-gray-12 text-xl font-bold font-family-dm-sans leading-[1.1]">
-                  Produtos do Ingresso
-                </h2>
-                <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
-                  Adicione e gerencie os produtos que ficarão disponíveis neste ingresso
-                </p>
+          {hasKit && (
+            <div className="flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2">
+                  <h2 className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.1]">
+                    Produtos do Ingresso
+                  </h2>
+                  <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                    Adicione e gerencie os produtos que ficarão disponíveis neste ingresso
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="border-gray-6 text-gray-12"
+                    onClick={() => {
+                      if (!formData.createdEventId) {
+                        toast.error("Evento não encontrado");
+                        return;
+                      }
+                      openAddExistingProductsModal({
+                        eventId: formData.createdEventId,
+                      });
+                    }}
+                  >
+                    Adicionar produtos existentes
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (!formData.createdEventId) {
+                        toast.error("Evento não encontrado");
+                        return;
+                      }
+                      openCreateProductModal({
+                        eventId: formData.createdEventId,
+                      });
+                    }}
+                  >
+                    <Plus className="size-5" />
+                    Criar um novo produto
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="border-gray-6 text-gray-12">
-                  Adicionar produtos existentes
-                </Button>
-                <Button>
-                  <Plus className="size-5" />
-                  Criar um novo produto
-                </Button>
-              </div>
-            </div>
 
-            {/* Grid de produtos - placeholder */}
-            {products.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 border border-gray-6 rounded-xl">
-                <p className="text-gray-11 text-base font-dm-sans">
-                  Nenhum produto adicionado ainda
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-4">
-                {products.map((product) => (
-                  <div key={product.id} className="border border-gray-6 rounded-lg p-4">
-                    {/* Product card content */}
+              {/* Grid de produtos */}
+              {products.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 border border-gray-6 rounded-xl">
+                  <p className="text-gray-11 text-base font-dm-sans">
+                    Nenhum produto adicionado ainda
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-gray-2 border border-gray-6 rounded-xl p-5">
+                  <div className="flex flex-wrap gap-3">
+                    {products.map((product) => (
+                      <div
+                        key={product.id}
+                        className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px]"
+                      >
+                        {/* Header com imagem e informações */}
+                        <div className="border-b border-gray-6 flex gap-3 items-center p-4">
+                          <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
+                            {product.image ? (
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                fill
+                                className="object-cover rounded"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-4" />
+                            )}
+                          </div>
+                          <div className="flex flex-col justify-between h-full py-2 gap-2 flex-1 min-w-0">
+                            <h3 className="text-gray-12 text-base font-semibold font-dm-sans leading-[1.1]">
+                              {product.name}
+                            </h3>
+                            <p className="text-gray-11 text-sm font-semibold font-dm-sans leading-[1.3]">
+                              {product.isIncludedInTicket
+                                ? "Valor incluso no ingresso"
+                                : `R$ ${product.basePrice || "0,00"}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Footer com botões de ação */}
+                        <div className="flex flex-col items-end justify-center p-4">
+                          <div className="flex gap-2 items-center">
+                            <button
+                              onClick={() => {
+                                if (!formData.createdEventId) {
+                                  toast.error("Evento não encontrado");
+                                  return;
+                                }
+                                openCreateProductModal({
+                                  eventId: formData.createdEventId,
+                                  productId: product.id,
+                                  product: product,
+                                });
+                              }}
+                              className="bg-gray-2 border border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors"
+                            >
+                              <PencilIcon className="size-5 text-gray-11" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setProducts(products.filter((p) => p.id !== product.id));
+                                toast.success("Produto removido do ingresso");
+                              }}
+                              className="bg-red-2 border border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
+                            >
+                              <TrashIcon className="size-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer Button */}

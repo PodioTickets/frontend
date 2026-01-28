@@ -129,7 +129,7 @@ export function TimePicker({
         align="start"
       >
         <div className="space-y-4 w-full">
-          <div className="flex items-center justify-center w-full gap-2">
+          <div className="flex items-center justify-center w-full gap-1">
             <WheelPickerWrapper className="flex-1 w-full">
               <WheelPicker
                 options={hourOptions}
@@ -137,6 +137,11 @@ export function TimePicker({
                 onValueChange={setTempHour}
                 infinite
               />
+
+            </WheelPickerWrapper>
+
+            <span className="text-gray-12 text-lg">:</span>
+            <WheelPickerWrapper className="flex-1 w-full">
               <WheelPicker
                 options={minuteOptions}
                 value={tempMinute}

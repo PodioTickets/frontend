@@ -32,7 +32,7 @@ export default function EventQuestionsPage() {
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [questionForm, setQuestionForm] = useState({
     question: "",
-    type: "text" as "text" | "select" | "radio" | "checkbox",
+    type: "text" as "text" | "true_false" | "number" | "select" | "multiple_choice",
     options: [] as string[],
     isRequired: false,
     order: 0,

@@ -104,7 +104,7 @@ function ProgressBar() {
 
   return (
     <div className="border-b border-gray-6 bg-gray-2">
-      <div className="max-w-3xl mx-auto px-5 md:px-[80px] py-8">
+      <div className="max-w-3xl mx-auto px-5 md:px-[80px] pb-8">
         <div className="relative flex items-center justify-between">
           <div className="absolute h-px top-[24px] left-0 w-full px-8">
             <div className="h-px bg-gray-6 w-full relative">

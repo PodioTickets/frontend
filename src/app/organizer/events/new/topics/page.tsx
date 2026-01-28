@@ -286,7 +286,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
             <ArrowButton isOpen={false} />
           </button>
           <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
-            Criar evento
+            Criar tópicos
           </h1>
         </div>
 

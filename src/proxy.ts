@@ -18,7 +18,6 @@ function isValidOrigin(origin: string | null, host: string | null): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get("origin");
-  const referer = request.headers.get("referer");
   const host = request.headers.get("host");
   const userAgent = request.headers.get("user-agent");
 
@@ -135,9 +134,6 @@ export async function proxy(request: NextRequest) {
   const trustedDomains = [
     "'self'",
     "https://api.podioticket.com.br",
-    "https://t.me",
-    "https://x.com",
-    "https://api.solana.fm",
     "https://prod.spline.design",
   ];
 
@@ -154,7 +150,7 @@ export async function proxy(request: NextRequest) {
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
+    )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com`,
     `frame-src 'self' https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com`,
     `img-src ${trustedDomains.join(" ")} data: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
