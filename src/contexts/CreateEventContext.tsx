@@ -53,30 +53,37 @@ const initialFormData: CreateEventFormData = {
   createdEventId: null,
 };
 
+// Helper function to load initial data from localStorage
+function loadInitialFormData(): CreateEventFormData {
+  if (typeof window === 'undefined') {
+    return initialFormData;
+  }
+  
+  try {
+    const saved = localStorage.getItem("createEventFormData");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge with initialFormData to ensure all fields exist
+      return { ...initialFormData, ...parsed };
+    }
+  } catch (e) {
+    console.error("Error loading form data from localStorage:", e);
+  }
+  
+  return initialFormData;
+}
+
 export function CreateEventProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [formData, setFormData] = useState<CreateEventFormData>(initialFormData);
+  // Initialize state directly from localStorage to avoid race conditions
+  const [formData, setFormData] = useState<CreateEventFormData>(loadInitialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem("createEventFormData");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setFormData((prev) => ({ ...prev, ...parsed }));
-        } catch (e) {
-          console.error("Error loading form data from localStorage:", e);
-        }
-      }
-    }
-  }, []);
-
   // Save to localStorage whenever formData changes
+  // Always save to ensure createdEventId is persisted even if other fields are empty
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem("createEventFormData", JSON.stringify(formData));

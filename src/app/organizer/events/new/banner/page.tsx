@@ -152,20 +152,49 @@ export default function BannerPage() {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          // Don't set Content-Type - browser will set it automatically with boundary
         },
         body: formDataUpload,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Erro ao fazer upload");
+      // Log response for debugging
+      console.log("Banner upload response status:", response.status, response.statusText);
+      
+      let result;
+      try {
+        const text = await response.text();
+        console.log("Banner upload raw response:", text);
+        result = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error("Error parsing response:", parseError);
+        result = {};
       }
 
-      if (result.success && result.imageUrl) {
-        const fullUrl = result.imageUrl.startsWith("http")
-          ? result.imageUrl
-          : `${apiUrl}${result.imageUrl}`;
+      // Log full result for debugging
+      console.log("Banner upload parsed result:", result);
+
+      if (!response.ok) {
+        const errorMessage = result.message || result.error?.message || "Erro ao fazer upload";
+        console.error("Banner upload error:", {
+          status: response.status,
+          statusText: response.statusText,
+          result,
+        });
+        throw new Error(errorMessage);
+      }
+
+      // Handle banner upload response - try multiple possible formats
+      // Backend might return:
+      // - { success: true, imageUrl: "..." }
+      // - { url: "..." }
+      // - { imageUrl: "..." }
+      // - { data: { url: "..." } }
+      const imageUrl = result.imageUrl || result.url || result.data?.url || result.data?.imageUrl;
+      
+      if (imageUrl) {
+        const fullUrl = imageUrl.startsWith("http")
+          ? imageUrl
+          : `${apiUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
         updateFormData({ bannerUrl: fullUrl });
 
         if (formData.createdEventId) {
@@ -181,7 +210,41 @@ export default function BannerPage() {
         toast.success("Banner enviado com sucesso!");
         setSelectedBannerFile(null);
       } else {
-        throw new Error(result.message || "Erro ao fazer upload");
+        // If upload was successful (status 200/201) but no URL in response, 
+        // check if file was actually uploaded by checking response structure
+        console.warn("Banner upload response missing URL, but status was OK:", result);
+        
+        // If response indicates success but no URL, maybe the backend returns differently
+        if (response.status === 200 || response.status === 201) {
+          // Try to extract URL from any field
+          const possibleUrl = Object.values(result).find((v: any) => 
+            typeof v === 'string' && (v.startsWith('http') || v.startsWith('/'))
+          ) as string | undefined;
+          
+          if (possibleUrl) {
+            const fullUrl = possibleUrl.startsWith("http")
+              ? possibleUrl
+              : `${apiUrl}${possibleUrl.startsWith('/') ? '' : '/'}${possibleUrl}`;
+            updateFormData({ bannerUrl: fullUrl });
+
+            if (formData.createdEventId) {
+              try {
+                await organizerService.updateEvent(formData.createdEventId, {
+                  bannerUrl: fullUrl,
+                });
+              } catch (updateError) {
+                console.error("Error updating event with banner:", updateError);
+              }
+            }
+
+            toast.success("Banner enviado com sucesso!");
+            setSelectedBannerFile(null);
+            return;
+          }
+        }
+        
+        console.error("Banner upload response missing URL:", result);
+        throw new Error(result.message || "Resposta do servidor inválida - URL não encontrada");
       }
     } catch (error: any) {
       console.error("Error uploading banner:", error);

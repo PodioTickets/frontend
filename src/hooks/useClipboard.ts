@@ -37,13 +37,12 @@ export function useClipboard(): UseClipboardResult {
         }
       }
       setIsCopied(true);
-      toast.success("Copied to clipboard!", { icon: "✅", duration: 3000 });
+      toast.success("Copiado para a área de transferência!", { duration: 3000 });
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
-      const errorMessage = "Failed to copy address";
+      const errorMessage = "Erro ao copiar";
       setError(errorMessage);
       toast.error(errorMessage, {
-        icon: "❌",
         duration: 3000,
       });
       throw err;

@@ -53,23 +53,48 @@ export const queryClient = new QueryClient({
 });
 
 export const queryKeys = {
-  lootbox: {
-    all: ["lootbox"] as const,
-    lists: () => [...queryKeys.lootbox.all, "list"] as const,
-    list: (filters: any) => [...queryKeys.lootbox.lists(), filters] as const,
-    details: () => [...queryKeys.lootbox.all, "detail"] as const,
-    detail: (id: string) => [...queryKeys.lootbox.details(), id] as const,
-    purchases: (wallet: string) =>
-      [...queryKeys.lootbox.all, "purchases", wallet] as const,
+  events: {
+    all: ["events"] as const,
+    details: () => [...queryKeys.events.all, "detail"] as const,
+    detail: (id: string) => [...queryKeys.events.details(), id] as const,
+    tickets: (eventId: string) => [...queryKeys.events.all, "tickets", eventId] as const,
+    ticketCategories: (eventId: string) => [...queryKeys.events.all, "ticketCategories", eventId] as const,
+    topics: (eventId: string) => [...queryKeys.events.all, "topics", eventId] as const,
+    questions: (eventId: string) => [...queryKeys.events.all, "questions", eventId] as const,
+    coupons: (eventId: string) => [...queryKeys.events.all, "coupons", eventId] as const,
+    vouchers: (eventId: string) => [...queryKeys.events.all, "vouchers", eventId] as const,
+    products: (eventId: string) => [...queryKeys.events.all, "products", eventId] as const,
+    kits: (eventId: string) => [...queryKeys.events.all, "kits", eventId] as const,
+    modalities: {
+      templates: () => [...queryKeys.events.all, "modalities", "templates"] as const,
+    },
   },
 };
 
 export const invalidateQueries = {
-  lootbox: () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.lootbox.all }),
+  events: {
+    all: () => queryClient.invalidateQueries({ queryKey: queryKeys.events.all }),
+    detail: (id: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
+    tickets: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.tickets(eventId) }),
+    ticketCategories: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.ticketCategories(eventId) }),
+    topics: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.topics(eventId) }),
+    questions: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.questions(eventId) }),
+    coupons: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.coupons(eventId) }),
+    vouchers: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.vouchers(eventId) }),
+    products: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.products(eventId) }),
+    kits: (eventId: string) =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.kits(eventId) }),
+  },
   all: () => queryClient.invalidateQueries(),
 };
 
 export const removeQueries = {
-  lootbox: () => queryClient.removeQueries({ queryKey: queryKeys.lootbox.all }),
 };

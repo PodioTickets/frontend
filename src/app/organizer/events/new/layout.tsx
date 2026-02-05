@@ -9,7 +9,6 @@ import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
 import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
 import { QuestionIcon } from "@/components/Icons/QuestionIcon";
 import { TopicsIcon } from "@/components/Icons/TopicsIcon";
-import { RevisionIcon } from "@/components/Icons/RevisionIcon";
 
 export const dynamic = 'force-dynamic';
 
@@ -86,16 +85,13 @@ function ProgressBar() {
 
   const getProgressWidth = (): string => {
     const currentStepIndex = getCurrentStepIndex();
-    console.log(currentStepIndex);
     if (currentStepIndex === 0) {
       return "0%";
     } else if (currentStepIndex === 1) {
-      return "25%";
+      return "33.33%";
     } else if (currentStepIndex === 2) {
-      return "50%";
+      return "66.66%";
     } else if (currentStepIndex === 3) {
-      return "75%";
-    } else if (currentStepIndex === 4) {
       return "100%";
     }
 
@@ -262,42 +258,6 @@ function ProgressBar() {
             );
           })()}
 
-          {(() => {
-            const status = getStepStatus(5);
-            return (
-              <div className="flex flex-col gap-[12px] items-center relative z-10">
-                <div
-                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
-                    ? "border border-[#3e7949]"
-                    : status === "active"
-                      ? "border border-[#3a3a3a]"
-                      : ""
-                    }`}
-                >
-                  <div
-                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
-                      ? "bg-[#3e7949]"
-                      : status === "active"
-                        ? "bg-[#3a3a3a]"
-                        : "bg-gray-6"
-                      }`}
-                  >
-                    {status === "completed" ? (
-                      <CheckIcon className="size-5 text-white" />
-                    ) : (
-                      <RevisionIcon
-                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
-                          }`}
-                      />
-                    )}
-                  </div>
-                </div>
-                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
-                  Revisão
-                </p>
-              </div>
-            );
-          })()}
         </div>
       </div>
     </div>

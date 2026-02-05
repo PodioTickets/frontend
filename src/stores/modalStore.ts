@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | null;
 
 interface ModalData {
   amount?: number;
@@ -23,9 +23,14 @@ interface ModalState {
   setLoading: (loading: boolean, message?: string) => void;
   updateModalData: (data: Partial<ModalData>) => void;
 
-  // Callback para salvar dados do modal
+  // Callback para salvar dados do modal (mantido para compatibilidade)
   onModalSave?: (data: any) => void;
   setOnModalSave: (callback?: (data: any) => void) => void;
+
+  // Callbacks específicos por tipo de modal
+  callbacks: Record<string, ((data: any) => void | Promise<void>) | undefined>;
+  setCallback: (modalType: string, callback?: (data: any) => void | Promise<void>) => void;
+  getCallback: (modalType: string) => ((data: any) => void | Promise<void>) | undefined;
 }
 
 export const useModalStore = create<ModalState>()((set, get) => ({
@@ -34,6 +39,7 @@ export const useModalStore = create<ModalState>()((set, get) => ({
   data: null,
   isLoading: false,
   loadingMessage: "",
+  callbacks: {},
 
   openModal: (type, data) => {
     set({
@@ -52,7 +58,8 @@ export const useModalStore = create<ModalState>()((set, get) => ({
       data: null,
       isLoading: false,
       loadingMessage: "",
-      onModalSave: undefined,
+      // Não resetar onModalSave aqui - ele deve ser mantido para permitir callbacks
+      // onModalSave: undefined,
     });
   },
 
@@ -60,6 +67,20 @@ export const useModalStore = create<ModalState>()((set, get) => ({
     set({
       onModalSave: callback,
     });
+  },
+
+  setCallback: (modalType, callback) => {
+    const callbacks = get().callbacks;
+    set({
+      callbacks: {
+        ...callbacks,
+        [modalType]: callback,
+      },
+    });
+  },
+
+  getCallback: (modalType) => {
+    return get().callbacks[modalType];
   },
 
   setLoading: (loading, message = "") => {
@@ -148,27 +169,99 @@ export const useCreateQuestionModal = () => {
 };
 
 export const useCreateProductModal = () => {
-  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+  const { openModal, closeModal, isOpen, type, data, setCallback } = useModalStore();
+  const callbacks = useModalStore((state) => state.callbacks);
 
   return {
     isOpen: isOpen && type === "createProduct",
     data: data as ModalData | null,
     openCreateProductModal: (data?: ModalData) => openModal("createProduct", data),
     closeCreateProductModal: closeModal,
-    onModalSave,
-    setOnModalSave,
+    onModalSave: callbacks["createProduct"],
+    setOnModalSave: (callback?: (data: any) => void | Promise<void>) => setCallback("createProduct", callback),
   };
 };
 
 export const useAddExistingProductsModal = () => {
-  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+  const { openModal, closeModal, isOpen, type, data, setCallback } = useModalStore();
+  const callbacks = useModalStore((state) => state.callbacks);
 
   return {
     isOpen: isOpen && type === "addExistingProducts",
     data: data as ModalData | null,
     openAddExistingProductsModal: (data?: ModalData) => openModal("addExistingProducts", data),
     closeAddExistingProductsModal: closeModal,
+    onModalSave: callbacks["addExistingProducts"],
+    setOnModalSave: (callback?: (data: any) => void | Promise<void>) => setCallback("addExistingProducts", callback),
+  };
+};
+
+export const useCreateCouponModal = () => {
+  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "createCoupon",
+    data: data as ModalData | null,
+    openCreateCouponModal: (data?: ModalData) => openModal("createCoupon", data),
+    closeCreateCouponModal: closeModal,
     onModalSave,
     setOnModalSave,
+  };
+};
+
+export const useDeleteCouponModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "deleteCoupon",
+    data: data as ModalData | null,
+    openDeleteCouponModal: (data?: ModalData) => openModal("deleteCoupon", data),
+    closeDeleteCouponModal: closeModal,
+  };
+};
+
+export const useCreateVoucherModal = () => {
+  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "createVoucher",
+    data: data as ModalData | null,
+    openCreateVoucherModal: (data?: ModalData) => openModal("createVoucher", data),
+    closeCreateVoucherModal: closeModal,
+    onModalSave,
+    setOnModalSave,
+  };
+};
+
+export const useDeleteVoucherModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "deleteVoucher",
+    data: data as ModalData | null,
+    openDeleteVoucherModal: (data?: ModalData) => openModal("deleteVoucher", data),
+    closeDeleteVoucherModal: closeModal,
+  };
+};
+
+export const useViewVoucherModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "viewVoucher",
+    data: data as ModalData | null,
+    openViewVoucherModal: (data?: ModalData) => openModal("viewVoucher", data),
+    closeViewVoucherModal: closeModal,
+  };
+};
+
+export const usePublishEventModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "publishEvent",
+    data: data as ModalData | null,
+    openPublishEventModal: (data?: ModalData) => openModal("publishEvent", data),
+    closePublishEventModal: closeModal,
   };
 };

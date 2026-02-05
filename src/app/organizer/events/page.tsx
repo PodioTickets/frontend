@@ -6,19 +6,24 @@ import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
+import { FlagIcon } from "@/components/Icons/FlagIcon";
+import { SneakersIcon } from "@/components/Icons/SneakersIcon";
 import {
   Plus,
   Search,
   Calendar,
-  MapPin,
-  Edit,
-  Trash2,
+  BarChart3,
+  Pencil,
+  DollarSign,
   Eye,
-  MoreVertical,
-  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { PencilIcon } from "@/components/Icons/PencilIcon";
+import Image from "next/image";
+import { Loading, LoadingAnimation } from "@/components/Loading";
 
 export default function OrganizerEventsPage() {
   const router = useRouter();
@@ -92,27 +97,16 @@ export default function OrganizerEventsPage() {
     }
   };
 
-  const handlePublish = async (eventId: string) => {
-    try {
-      await organizerService.publishEvent(eventId);
-      toast.success("Evento publicado com sucesso");
-      loadEvents();
-    } catch (error: any) {
-      console.error("Error publishing event:", error);
-      toast.error("Erro ao publicar evento");
-    }
-  };
-
   const filteredEvents = events.filter((event) =>
     event.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      DRAFT: { label: "Rascunho", className: "bg-yellow-10/20 text-yellow-11" },
+      DRAFT: { label: "Rascunhos", className: "bg-gray-5 text-gray-12" },
       PUBLISHED: {
-        label: "Publicado",
-        className: "bg-green-10/20 text-green-11",
+        label: "Públicado",
+        className: "bg-[#21835D] text-[#FBFEFB]",
       },
       CANCELLED: { label: "Cancelado", className: "bg-red-10/20 text-red-11" },
       COMPLETED: {
@@ -123,10 +117,27 @@ export default function OrganizerEventsPage() {
     return statusMap[status] || statusMap.DRAFT;
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  const getEventSales = (event: any) => {
+    // TODO: Replace with actual sales data from API
+    // For now, using a placeholder or calculating from registrations
+    return event.totalRevenue || 0;
+  };
+
+  const getEventRegistrations = (event: any) => {
+    return event._count?.registrations || 0;
+  };
+
   if (authLoading || (!authChecked && !authLoading)) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
-        <div className="text-gray-11">Carregando...</div>
+        <LoadingAnimation />
       </div>
     );
   }
@@ -134,67 +145,30 @@ export default function OrganizerEventsPage() {
   if (loading && events.length === 0) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
-        <div className="text-gray-11">Carregando eventos...</div>
+        <LoadingAnimation />
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-2 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-2 py-8 px-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/organizer"
-            className="inline-flex items-center text-gray-11 hover:text-gray-12 mb-4"
-          >
-            <ArrowLeft className="size-4 mr-2" />
-            Voltar ao Dashboard
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FlagIcon className="size-6 text-gray-12" />
+            <h1 className="text-2xl font-extrabold text-gray-12 font-dm-sans">
+              Meus eventos
+            </h1>
+          </div>
+          <Link href="/organizer/events/new">
+            <Button className="">
+              Criar evento
+            </Button>
           </Link>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-12 mb-2">
-                Meus Eventos
-              </h1>
-              <p className="text-gray-11">
-                Gerencie todos os seus eventos em um só lugar
-              </p>
-            </div>
-            <Link href="/organizer/events/new">
-              <Button>Criar Evento</Button>
-            </Link>
-          </div>
         </div>
 
-        {/* Filters */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-            <Input
-              type="text"
-              placeholder="Buscar eventos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPagination((prev) => ({ ...prev, page: 1 }));
-            }}
-            className="px-4 py-2 rounded-lg border border-gray-6 bg-gray-1 text-gray-12 focus:outline-none focus:ring-2 focus:ring-primary-11/50"
-          >
-            <option value="all">Todos os status</option>
-            <option value="DRAFT">Rascunho</option>
-            <option value="PUBLISHED">Publicado</option>
-            <option value="CANCELLED">Cancelado</option>
-            <option value="COMPLETED">Concluído</option>
-          </select>
-        </div>
-
-        {/* Events List */}
+        {/* Events Table */}
         {filteredEvents.length === 0 ? (
           <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center">
             <Calendar className="size-12 text-gray-11 mx-auto mb-4" />
@@ -213,115 +187,146 @@ export default function OrganizerEventsPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredEvents.map((event) => {
-              const statusBadge = getStatusBadge(event.status);
-              return (
-                <div
-                  key={event.id}
-                  className="bg-gray-1 rounded-lg border border-gray-6 p-6 hover:border-primary-10 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-12 flex-1">
-                      {event.name}
-                    </h3>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${statusBadge.className}`}
-                    >
-                      {statusBadge.label}
-                    </span>
-                  </div>
-
-                  {event.description && (
-                    <p className="text-sm text-gray-11 mb-4 line-clamp-2">
-                      {event.description}
-                    </p>
-                  )}
-
-                  <div className="space-y-2 mb-4">
-                    {event.city && event.state && (
-                      <div className="flex items-center text-sm text-gray-11">
-                        <MapPin className="size-4 mr-2" />
-                        {event.city}, {event.state}
-                      </div>
-                    )}
-                    {event.eventDate && (
-                      <div className="flex items-center text-sm text-gray-11">
-                        <Calendar className="size-4 mr-2" />
-                        {new Date(event.eventDate).toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 pt-4 border-t border-gray-6">
-                    <Link
-                      href={`/organizer/events/${event.id}/edit`}
-                      className="flex-1"
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-gray-12 border-gray-6"
-                      >
-                        <Edit className="size-4 mr-2" />
-                        Editar
-                      </Button>
-                    </Link>
-                    {event.status === "DRAFT" && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handlePublish(event.id)}
-                        className="flex-1"
-                      >
-                        Publicar
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(event.id, event.name)}
-                      className="text-red-10 hover:text-red-11"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <>
+            <h2 className="text-lg font-semibold text-gray-12 mb-4 font-dm-sans">
+              Lista de eventos
+            </h2>
+            <div className="bg-gray-1 rounded-lg border border-gray-6 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-3 border-b border-gray-6">
+                    <tr>
+                      <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                        Nome do evento
+                      </th>
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                        Status
+                      </th>
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                        Inscritos
+                      </th>
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                        Vendas
+                      </th>
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-6">
+                    {filteredEvents.map((event) => {
+                      const statusBadge = getStatusBadge(event.status);
+                      const registrations = getEventRegistrations(event);
+                      const sales = getEventSales(event);
+                      return (
+                        <tr
+                          key={event.id}
+                          className="hover:bg-gray-2 transition-colors"
+                        >
+                          <td className="py-4 px-5">
+                            <div className="flex items-center gap-3">
+                              {event.bannerUrl ? (
+                                <Image src={event.bannerUrl} alt={event.name} width={36} height={36} className="rounded-lg" />
+                              ) : (
+                                <FlagIcon className="size-5 text-gray-12" />
+                              )}
+                              <span className="text-sm text-gray-12 font-semibold font-dm-sans">
+                                {event.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            <span
+                              className={`px-3 py-1 rounded text-xs font-medium text-center ${statusBadge.className}`}
+                            >
+                              {statusBadge.label}
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            <span className="text-sm font-semibold text-gray-12 font-dm-sans">
+                              {registrations}
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            <span className="text-sm font-semibold text-gray-12 font-dm-sans">
+                              {formatCurrency(sales)}
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-center">
+                            <div className="flex items-center gap-1 justify-center">
+                              <Link
+                                href={`/organizer/events/${event.id}/stats`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title="Estatísticas"
+                              >
+                                <BarChart3 className="size-4 text-gray-11" />
+                              </Link>
+                              <Link
+                                href={`/organizer/events/${event.id}/edit`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title="Editar"
+                              >
+                                <PencilIcon className="size-4 text-gray-11" />
+                              </Link>
+                              <Link
+                                href={`/organizer/events/${event.id}/stats`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title="Ver vendas"
+                              >
+                                <div className="relative">
+                                  <DollarSign className="size-4 text-gray-11" />
+                                  <Eye className="size-3 text-gray-11 absolute -top-1 -right-1" />
+                                </div>
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
           <div className="mt-8 flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={() =>
                 setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
               }
               disabled={pagination.page === 1}
+              className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
             >
-              Anterior
-            </Button>
-            <span className="text-sm text-gray-11">
-              Página {pagination.page} de {pagination.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
+              <ChevronLeft className="size-4 text-gray-11" />
+            </button>
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
+              (page) => (
+                <button
+                  key={page}
+                  onClick={() =>
+                    setPagination((prev) => ({ ...prev, page }))
+                  }
+                  className={`size-8 rounded-full border transition-colors font-dm-sans text-sm ${pagination.page === page
+                    ? "bg-primary-11 text-white border-primary-11"
+                    : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
+                    }`}
+                >
+                  {page}
+                </button>
+              )
+            )}
+            <button
               onClick={() =>
                 setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
               }
               disabled={pagination.page === pagination.totalPages}
+              className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
             >
-              Próxima
-            </Button>
+              <ChevronRight className="size-4 text-gray-11" />
+            </button>
           </div>
         )}
       </div>

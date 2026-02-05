@@ -12,7 +12,7 @@ function CheckoutIngressosContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const eventId = searchParams.get("eventId");
-  const { event, isLoading } = useEvent(eventId ?? "");
+  const { event, loading: isLoading } = useEvent(eventId ?? "");
 
   const kits = useMemo(() => {
     if (!eventId || !event || !event.kits) return [];

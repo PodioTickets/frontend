@@ -596,7 +596,7 @@ export function InformationStep({
           </div>
         );
 
-      case "radio":
+      case "multiple_choice":
         return (
           <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-dm-sans">
@@ -647,7 +647,7 @@ export function InformationStep({
           </div>
         );
 
-      case "checkbox":
+      case "true_false":
         return (
           <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-dm-sans">

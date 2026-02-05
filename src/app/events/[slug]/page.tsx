@@ -9,12 +9,10 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
-import { useEvents } from "@/hooks/useEvents";
 import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
-import { EventCard } from "@/components/Event/Card";
-import { Fragment, useState, useMemo, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
@@ -23,7 +21,7 @@ export default function EventPage() {
   const params = useParams();
   const router = useRouter();
   const eventSlug = params.slug as string;
-  const { event, isLoading, error } = useEventBySlug(eventSlug);
+  const { event, loading: isLoading, error } = useEventBySlug(eventSlug);
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
   const [imageError, setImageError] = useState(false);
@@ -354,11 +352,10 @@ export default function EventPage() {
         </div>
 
         <div
-          className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${
-            showFixedButton
+          className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${showFixedButton
               ? "translate-y-0 opacity-100"
               : "translate-y-full opacity-0 pointer-events-none"
-          }`}
+            }`}
         >
           <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
             <div className="flex flex-col w-full gap-2">
@@ -438,142 +435,139 @@ export default function EventPage() {
                     />
                   </div>
 
-                <div className="min-w-1/4 w-1/4">
-                  <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full">
-                    <h1 className="text-lg font-bold mb-4">{event.name}</h1>
-                    <div className="flex flex-col gap-4">
-                      <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-                        <LocationIcon className="size-5" />{" "}
-                        <span className="text-sm">
-                          {event.city}, {event.state}
-                        </span>
-                      </h1>
-                      <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
-                        <CalendarIcon className="size-5" />{" "}
-                        <span>{formatDateLong(new Date(event.eventDate))}</span>
-                      </h1>
-                      {event.modalities
-                        ?.filter((modality) => modality.isActive)
-                        .map((modality) => {
-                          const icon = modality.template?.icon;
-                          const label = modality.template?.label;
-                          if (!icon || !label) return null;
-                          return (
-                            <h1
-                              key={modality.id}
-                              className="flex items-center gap-2 text-sm text-gray-12 font-medium"
-                            >
-                              <Image
-                                src={icon}
-                                alt={label}
-                                width={20}
-                                height={20}
-                                draggable={false}
-                              />
-                              <span className="text-sm">{label}</span>
-                            </h1>
-                          );
-                        })}
-                    </div>
+                  <div className="min-w-1/4 w-1/4">
+                    <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full">
+                      <h1 className="text-lg font-bold mb-4">{event.name}</h1>
+                      <div className="flex flex-col gap-4">
+                        <h1 className="flex items-center gap-2 text-gray-12 font-medium">
+                          <LocationIcon className="size-5" />{" "}
+                          <span className="text-sm">
+                            {event.city}, {event.state}
+                          </span>
+                        </h1>
+                        <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
+                          <CalendarIcon className="size-5" />{" "}
+                          <span>{formatDateLong(new Date(event.eventDate))}</span>
+                        </h1>
+                        {event.modalities
+                          ?.filter((modality) => modality.isActive)
+                          .map((modality) => {
+                            const icon = modality.template?.icon;
+                            const label = modality.template?.label;
+                            if (!icon || !label) return null;
+                            return (
+                              <h1
+                                key={modality.id}
+                                className="flex items-center gap-2 text-sm text-gray-12 font-medium"
+                              >
+                                <Image
+                                  src={icon}
+                                  alt={label}
+                                  width={20}
+                                  height={20}
+                                  draggable={false}
+                                />
+                                <span className="text-sm">{label}</span>
+                              </h1>
+                            );
+                          })}
+                      </div>
 
-                    <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
-                      <p className="text-sm font-medium text-gray-11 mb-3">
-                        Organizador
-                      </p>
-
-                      {event.organizer ? (
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                              <span className="text-primary-11 font-semibold text-sm">
-                                {event.organizer.name
-                                  ?.charAt(0)
-                                  .toUpperCase() || "O"}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-12 truncate">
-                                {event.organizer.name}
-                              </p>
-                              {event.organizer.phone && (
-                                <div className="flex items-center gap-1.5 mt-1">
-                                  <Phone className="size-3.5 text-gray-11 shrink-0" />
-                                  <a
-                                    href={`tel:${event.organizer.phone}`}
-                                    className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
-                                  >
-                                    {event.organizer.phone}
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <Button
-                            variant="outline"
-                            className="w-full text-gray-12 border-gray-6"
-                            onClick={() => {
-                              if (event.organizer?.email) {
-                                window.location.href = `mailto:${event.organizer.email}?subject=Contato sobre ${event.name}`;
-                              }
-                            }}
-                          >
-                            <MessageIcon className="min-w-5 min-h-5" />
-                            Falar com organizador
-                          </Button>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-11">
-                          Informações não disponíveis
+                      <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
+                        <p className="text-sm font-medium text-gray-11 mb-3">
+                          Organizador
                         </p>
-                      )}
+
+                        {event.organizer ? (
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
+                                <span className="text-primary-11 font-semibold text-sm">
+                                  {event.organizer.name
+                                    ?.charAt(0)
+                                    .toUpperCase() || "O"}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-12 truncate">
+                                  {event.organizer.name}
+                                </p>
+                                {event.organizer.phone && (
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <Phone className="size-3.5 text-gray-11 shrink-0" />
+                                    <a
+                                      href={`tel:${event.organizer.phone}`}
+                                      className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
+                                    >
+                                      {event.organizer.phone}
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <Button
+                              variant="outline"
+                              className="w-full text-gray-12 border-gray-6"
+                              onClick={() => {
+                                if (event.organizer?.email) {
+                                  window.location.href = `mailto:${event.organizer.email}?subject=Contato sobre ${event.name}`;
+                                }
+                              }}
+                            >
+                              <MessageIcon className="min-w-5 min-h-5" />
+                              Falar com organizador
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-11">
+                            Informações não disponíveis
+                          </p>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={handleCheckoutClick}
+                        className="w-full mt-8"
+                      >
+                        Inscrever-se
+                      </Button>
                     </div>
+                    <div className="flex flex-col items-center justify-center gap-4">
+                      <Button
+                        variant="outline"
+                        className="mt-8 text-gray-11 border-gray-6"
+                        onClick={() => setIsShareModalOpen(true)}
+                      >
+                        <ShareIcon className="size-5" />
+                        Compartilhar
+                      </Button>
 
-                    <Button
-                      onClick={handleCheckoutClick}
-                      className="w-full mt-8"
-                    >
-                      Inscrever-se
-                    </Button>
-                  </div>
-                  <div className="flex flex-col items-center justify-center gap-4">
-                    <Button
-                      variant="outline"
-                      className="mt-8 text-gray-11 border-gray-6"
-                      onClick={() => setIsShareModalOpen(true)}
-                    >
-                      <ShareIcon className="size-5" />
-                      Compartilhar
-                    </Button>
-
-                    <h1 className="underline font-semibold text-gray-11 text-sm cursor-pointer">
-                      Denunciar evento
-                    </h1>
+                      <h1 className="underline font-semibold text-gray-11 text-sm cursor-pointer">
+                        Denunciar evento
+                      </h1>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             );
           })()}
 
           {/* Content Layout - Different when no image */}
           <div
-            className={`w-full z-10 flex items-start gap-8 ${
-              event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "mt-0 2xl:mt-0" : "mt-0 2xl:mt-14"
-            }`}
+            className={`w-full z-10 flex items-start gap-8 ${event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "mt-0 2xl:mt-0" : "mt-0 2xl:mt-14"
+              }`}
           >
             {/* Topics Section */}
             <div
-              className={`${
-                event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "w-3/4 pr-8" : "flex-1 pr-8"
-              }`}
+              className={`${event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "w-3/4 pr-8" : "flex-1 pr-8"
+                }`}
             >
               {event.topics?.map((topic, index) => (
                 <Fragment key={topic.id}>
                   <div
-                    className={`flex flex-col gap-2 ${
-                      index === 0 ? "mb-10" : "my-10"
-                    }`}
+                    className={`flex flex-col gap-2 ${index === 0 ? "mb-10" : "my-10"
+                      }`}
                   >
                     <h1 className="text-2xl font-bold text-gray-12">
                       {topic.title}

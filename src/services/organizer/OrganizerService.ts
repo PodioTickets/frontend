@@ -1,4 +1,5 @@
 import type { ApiClient } from "../base/ApiClient";
+import type { Event } from "@/interfaces/event";
 
 export interface CreateOrganizerRequest {
   name: string;
@@ -61,31 +62,6 @@ export interface EventLocation {
   updatedAt: string;
 }
 
-export interface Event {
-  id: string;
-  name: string;
-  description?: string;
-  location?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  eventDate?: string;
-  registrationStartDate?: string;
-  registrationEndDate?: string;
-  googleMapsLink?: string;
-  bannerUrl?: string;
-  status: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
-  organizerId: string;
-  createdAt: string;
-  updatedAt: string;
-  topics?: EventTopic[];
-  locations?: EventLocation[];
-  _count?: {
-    registrations?: number;
-    modalities?: number;
-  };
-}
-
 export interface CreateModalityGroupRequest {
   name: string;
   description?: string;
@@ -108,6 +84,9 @@ export interface ModalityTemplate {
   label: string;
   icon?: string;
   isActive: boolean;
+  templates: any[]
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateModalityRequest {
@@ -245,7 +224,7 @@ export interface EventStats {
 }
 
 export class OrganizerService {
-  constructor(private apiClient: ApiClient) {}
+  constructor(private apiClient: ApiClient) { }
 
   // Organizer methods
   async createOrganizer(data: CreateOrganizerRequest): Promise<Organizer> {
@@ -502,10 +481,10 @@ export class OrganizerService {
   }
 
   async getQuestions(eventId: string): Promise<Question[]> {
-    const { data: response } = await this.apiClient.get<{ data: Question[] }>(
+    const { data: response } = await this.apiClient.get<{ data: { questions: Question[] } }>(
       `/api/v1/questions/events/${eventId}`
     );
-    return response.data;
+    return response.data.questions;
   }
 
   async updateQuestion(
@@ -638,5 +617,249 @@ export class OrganizerService {
     await this.apiClient.delete(
       `/api/v1/events/${eventId}/locations/${locationId}`
     );
+  }
+
+  // Ticket Category methods
+  async createTicketCategory(
+    eventId: string,
+    data: { name: string; order?: number }
+  ): Promise<any> {
+    const { data: response } = await this.apiClient.post<{ data: any }>(
+      `/api/v1/tickets/events/${eventId}/categories`,
+      data
+    );
+    return response.data;
+  }
+
+  async getTicketCategories(eventId: string): Promise<any[]> {
+    const { data: response } = await this.apiClient.get<{ data: { categories: any[] } }>(
+      `/api/v1/tickets/events/${eventId}/categories`
+    );
+    console.log("response", response);
+    return response.data.categories;
+  }
+
+  async updateTicketCategory(
+    eventId: string,
+    categoryId: string,
+    data: Partial<{ name: string; order: number }>
+  ): Promise<any> {
+    const { data: response } = await this.apiClient.patch<{ data: any }>(
+      `/api/v1/tickets/events/${eventId}/categories/${categoryId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteTicketCategory(
+    eventId: string,
+    categoryId: string
+  ): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/tickets/events/${eventId}/categories/${categoryId}`
+    );
+  }
+
+  // Ticket methods
+  async createTicket(eventId: string, data: any): Promise<any> {
+    const { data: response } = await this.apiClient.post<{ data: any }>(
+      `/api/v1/tickets/events/${eventId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async getTickets(
+    eventId: string,
+    params?: { categoryId?: string; page?: number; limit?: number }
+  ): Promise<{ tickets: any[]; pagination: any }> {
+    const { data: response } = await this.apiClient.get<{
+      data: { tickets: any[]; pagination: any };
+    }>(`/api/v1/tickets/events/${eventId}`, { params });
+    return response.data;
+  }
+
+  async getTicketById(id: string): Promise<any> {
+    const { data: response } = await this.apiClient.get<{ data: any }>(
+      `/api/v1/tickets/${id}`
+    );
+    return response.data;
+  }
+
+  async updateTicket(
+    eventId: string,
+    ticketId: string,
+    data: Partial<any>
+  ): Promise<any> {
+    const { data: response } = await this.apiClient.patch<{ data: any }>(
+      `/api/v1/tickets/events/${eventId}/${ticketId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteTicket(eventId: string, ticketId: string): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/tickets/events/${eventId}/${ticketId}`
+    );
+  }
+
+  async duplicateTicket(eventId: string, ticketId: string): Promise<any> {
+    const { data: response } = await this.apiClient.post<{ data: { ticket: any } }>(
+      `/api/v1/tickets/events/${eventId}/${ticketId}/duplicate`
+    );
+    return response.data.ticket;
+  }
+
+  // Product methods
+  async createProduct(eventId: string, data: any): Promise<any> {
+    const { data: response } = await this.apiClient.post<{ data: any }>(
+      `/api/v1/products/events/${eventId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async getProducts(
+    eventId: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<{ products: any[]; pagination: any }> {
+    const { data: response } = await this.apiClient.get<{
+      data: { products: any[]; pagination: any };
+    }>(`/api/v1/products/events/${eventId}`, { params });
+    return response.data;
+  }
+
+  async getProductById(id: string): Promise<any> {
+    const { data: response } = await this.apiClient.get<{ data: any }>(
+      `/api/v1/products/${id}`
+    );
+    return response.data;
+  }
+
+  async updateProduct(
+    eventId: string,
+    productId: string,
+    data: Partial<any>
+  ): Promise<any> {
+    const { data: response } = await this.apiClient.patch<{ data: any }>(
+      `/api/v1/products/events/${eventId}/${productId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteProduct(eventId: string, productId: string): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/products/events/${eventId}/${productId}`
+    );
+  }
+
+  // Coupon methods
+  async createCoupon(eventId: string, data: any): Promise<any> {
+    const { data: response } = await this.apiClient.post<{ data: any }>(
+      `/api/v1/coupons/events/${eventId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async getCoupons(
+    eventId: string,
+    params?: { page?: number; limit?: number; status?: string }
+  ): Promise<{ coupons: any[]; pagination: any }> {
+    const { data: response } = await this.apiClient.get<{
+      data: { coupons: any[]; pagination: any };
+    }>(`/api/v1/coupons/events/${eventId}`, { params });
+    return response.data;
+  }
+
+  async getCouponById(id: string): Promise<any> {
+    const { data: response } = await this.apiClient.get<{ data: any }>(
+      `/api/v1/coupons/${id}`
+    );
+    return response.data;
+  }
+
+  async updateCoupon(
+    eventId: string,
+    couponId: string,
+    data: Partial<any>
+  ): Promise<any> {
+    const { data: response } = await this.apiClient.patch<{ data: any }>(
+      `/api/v1/coupons/events/${eventId}/${couponId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteCoupon(eventId: string, couponId: string): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/coupons/events/${eventId}/${couponId}`
+    );
+  }
+
+  // Voucher methods
+  async createVoucher(eventId: string, data: any): Promise<any> {
+    const { data: response } = await this.apiClient.post<{ data: any }>(
+      `/api/v1/vouchers/events/${eventId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async getVouchers(
+    eventId: string,
+    params?: { page?: number; limit?: number; status?: string }
+  ): Promise<{ groups: any[]; pagination: any }> {
+    const { data: response } = await this.apiClient.get<{
+      data: { groups: any[]; pagination: any };
+    }>(`/api/v1/vouchers/events/${eventId}`, { params });
+    return response.data;
+  }
+
+  async getVoucherById(id: string): Promise<any> {
+    const { data: response } = await this.apiClient.get<{ data: any }>(
+      `/api/v1/vouchers/${id}`
+    );
+    return response.data;
+  }
+
+  async updateVoucher(
+    eventId: string,
+    voucherId: string,
+    data: Partial<any>
+  ): Promise<any> {
+    const { data: response } = await this.apiClient.patch<{ data: any }>(
+      `/api/v1/vouchers/events/${eventId}/${voucherId}`,
+      data
+    );
+    return response.data;
+  }
+
+  async deleteVoucher(eventId: string, voucherId: string): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/vouchers/events/${eventId}/${voucherId}`
+    );
+  }
+
+  async getVoucherGroup(
+    eventId: string,
+    groupName: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<{
+    groupName: string;
+    vouchers: any[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      message: string;
+      data: {
+        groupName: string;
+        vouchers: any[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      };
+    }>(`/api/v1/vouchers/events/${eventId}/groups/${groupName}`, { params });
+    return response.data;
   }
 }

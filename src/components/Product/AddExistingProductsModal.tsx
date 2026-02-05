@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Checkbox } from "../CheckBox";
+import { organizerService } from "@/services";
 
 interface Product {
   id: string;
@@ -39,45 +40,38 @@ export function AddExistingProductsModal() {
   // Load products and tickets
   useEffect(() => {
     if (isOpen && eventId) {
+      console.log("Modal opened, onModalSave:", onModalSave);
       loadProducts();
       loadTickets();
     }
-  }, [isOpen, eventId]);
+  }, [isOpen, eventId, onModalSave]);
 
-  const loadProducts = () => {
+  const loadProducts = async () => {
     if (!eventId) return;
 
     try {
-      const savedProducts = localStorage.getItem(`products_${eventId}`);
-      if (savedProducts) {
-        const parsed = JSON.parse(savedProducts);
-        setProducts(parsed);
+      const response = await organizerService.getProducts(eventId);
+      setProducts(response.products || []);
 
-        // Load linked tickets for each product
-        const linked: Record<string, Set<string>> = {};
-        parsed.forEach((product: Product) => {
-          if (product.linkedTickets) {
-            linked[product.id] = new Set(product.linkedTickets);
-          }
-        });
-        setProductLinkedTickets(linked);
-      }
+      // Load linked tickets for each product (from productIds in tickets)
+      const linked: Record<string, Set<string>> = {};
+      // TODO: implementar lógica de tickets vinculados se necessário
+      setProductLinkedTickets(linked);
     } catch (error) {
       console.error("Error loading products:", error);
+      toast.error("Erro ao carregar produtos");
     }
   };
 
-  const loadTickets = () => {
+  const loadTickets = async () => {
     if (!eventId) return;
 
     try {
-      const savedTickets = localStorage.getItem(`tickets_${eventId}`);
-      if (savedTickets) {
-        const parsed = JSON.parse(savedTickets);
-        setTickets(parsed);
-      }
+      const response = await organizerService.getTickets(eventId);
+      setTickets(response.tickets || []);
     } catch (error) {
       console.error("Error loading tickets:", error);
+      toast.error("Erro ao carregar ingressos");
     }
   };
 
@@ -139,10 +133,19 @@ export function AddExistingProductsModal() {
 
       if (onModalSave) {
         console.log("Calling onModalSave with:", selectedProductsData);
-        await onModalSave({ products: selectedProductsData });
-        console.log("onModalSave completed");
+        try {
+          await onModalSave({ products: selectedProductsData });
+          console.log("onModalSave completed");
+          // Toast será exibido pelo callback, não precisa aqui
+        } catch (error) {
+          console.error("Error in onModalSave callback:", error);
+          toast.error("Erro ao adicionar produtos");
+          return; // Don't close modal if there was an error
+        }
       } else {
         console.error("onModalSave is undefined!");
+        toast.error("Erro: callback não configurado");
+        return; // Don't close modal if callback is missing
       }
 
       closeAddExistingProductsModal();

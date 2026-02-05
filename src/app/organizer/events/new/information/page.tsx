@@ -172,6 +172,12 @@ export default function InformacoesPage() {
   const uploadPDF = async (): Promise<string | null> => {
     if (!pdfFile) return null;
 
+    // Verify file type before upload
+    if (pdfFile.type !== "application/pdf") {
+      toast.error("Formato inválido. Use apenas PDF.");
+      return null;
+    }
+
     setUploadingPDF(true);
     try {
       const formDataUpload = new FormData();
@@ -181,43 +187,107 @@ export default function InformacoesPage() {
       const apiClient = (userService as any).apiClient;
       const token = apiClient?.getAccessToken();
 
-      // Try file upload endpoint first, fallback to image endpoint
-      let response = await fetch(`${apiUrl}/api/v1/upload/file`, {
+      // Log for debugging
+      console.log("Uploading PDF:", {
+        fileName: pdfFile.name,
+        fileType: pdfFile.type,
+        fileSize: pdfFile.size,
+        endpoint: `${apiUrl}/api/v1/upload/pdf`,
+      });
+
+      // Use PDF upload endpoint
+      // Note: Don't set Content-Type header - let browser set it with boundary for multipart/form-data
+      const response = await fetch(`${apiUrl}/api/v1/upload/pdf`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          // Don't set Content-Type - browser will set it automatically with boundary
         },
         body: formDataUpload,
       });
 
-      // If file endpoint doesn't exist, try image endpoint as fallback
-      if (!response.ok && response.status === 404) {
-        response = await fetch(`${apiUrl}/api/v1/upload/image`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formDataUpload,
-        });
+      // Log response for debugging
+      console.log("PDF upload response status:", response.status, response.statusText);
+      
+      let result;
+      try {
+        const text = await response.text();
+        console.log("PDF upload raw response:", text);
+        result = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error("Error parsing response:", parseError);
+        result = {};
       }
 
-      const result = await response.json();
+      // Log full result for debugging
+      console.log("PDF upload parsed result:", result);
 
       if (!response.ok) {
-        throw new Error(result.message || "Erro ao fazer upload");
+        // Log error details for debugging
+        console.error("PDF upload error:", {
+          status: response.status,
+          statusText: response.statusText,
+          result,
+          fileType: pdfFile.type,
+        });
+        
+        // Check if error is about image files (backend validation issue)
+        const errorMessage = result.message || result.error?.message || "Erro ao fazer upload";
+        if (errorMessage.includes("image") || errorMessage.includes("Only image")) {
+          toast.error("Erro: O backend está rejeitando PDFs. Verifique a configuração do servidor.");
+        } else {
+          toast.error(errorMessage);
+        }
+        throw new Error(errorMessage);
       }
 
-      // Handle both fileUrl and imageUrl responses
-      const fileUrl = result.fileUrl || result.imageUrl;
-      if (result.success && fileUrl) {
-        const fullUrl = fileUrl.startsWith('http') ? fileUrl : apiUrl + fileUrl;
+      // Handle PDF upload response - try multiple possible formats
+      // Backend might return:
+      // - { url: "..." }
+      // - { fileUrl: "..." }
+      // - { data: { url: "..." } }
+      // - { success: true, url: "..." }
+      // - { success: true, fileUrl: "..." }
+      const fileUrl = result.url || result.fileUrl || result.data?.url || result.data?.fileUrl;
+      
+      if (fileUrl) {
+        const fullUrl = fileUrl.startsWith('http') 
+          ? fileUrl 
+          : `${apiUrl}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
         setPdfUrl(fullUrl);
+        toast.success("PDF enviado com sucesso!");
         return fullUrl;
       } else {
-        throw new Error(result.message || "Erro ao fazer upload");
+        // If upload was successful (status 200/201) but no URL in response, 
+        // check if file was actually uploaded by checking response structure
+        console.warn("PDF upload response missing URL, but status was OK:", result);
+        
+        // If response indicates success but no URL, maybe the backend returns differently
+        if (response.status === 200 || response.status === 201) {
+          // Try to extract URL from any field
+          const possibleUrl = Object.values(result).find((v: any) => 
+            typeof v === 'string' && (v.startsWith('http') || v.startsWith('/'))
+          ) as string | undefined;
+          
+          if (possibleUrl) {
+            const fullUrl = possibleUrl.startsWith('http') 
+              ? possibleUrl 
+              : `${apiUrl}${possibleUrl.startsWith('/') ? '' : '/'}${possibleUrl}`;
+            setPdfUrl(fullUrl);
+            toast.success("PDF enviado com sucesso!");
+            return fullUrl;
+          }
+        }
+        
+        console.error("PDF upload response missing URL:", result);
+        throw new Error(result.message || "Resposta do servidor inválida - URL não encontrada");
       }
     } catch (error: any) {
       console.error("Error uploading PDF:", error);
+      // Don't show toast here if it was already shown above
+      if (!error.message?.includes("image")) {
+        toast.error(error.message || "Erro ao fazer upload do PDF");
+      }
       throw error;
     } finally {
       setUploadingPDF(false);

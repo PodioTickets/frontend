@@ -12,6 +12,7 @@ import { useCreateQuestionModal } from "@/stores/modalStore";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { Question } from "@/services/organizer/OrganizerService";
+import { TrashIcon } from "@/components/Icons/TrashIcon";
 
 export default function QuestionnairePage() {
   const router = useRouter();
@@ -22,51 +23,6 @@ export default function QuestionnairePage() {
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  // Mock data para desenvolvimento/teste
-  const mockQuestions: Question[] = useMemo(() => [
-    {
-      id: "mock-1",
-      question: "Título da pergunta Título da pergunta Título da pergunta Título da pergunta",
-      type: "text",
-      isRequired: true,
-      order: 1,
-      eventId: "mock-event",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "mock-2",
-      question: "Qual é sua experiência prévia em corridas?",
-      type: "select",
-      options: ["Iniciante", "Intermediário", "Avançado", "Profissional"],
-      isRequired: true,
-      order: 2,
-      eventId: "mock-event",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "mock-3",
-      question: "Você possui alguma alergia alimentar?",
-      type: "text",
-      isRequired: false,
-      order: 3,
-      eventId: "mock-event",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "mock-4",
-      question: "Qual tamanho de camiseta você prefere?",
-      type: "radio",
-      options: ["PP", "P", "M", "G", "GG", "XG"],
-      isRequired: true,
-      order: 4,
-      eventId: "mock-event",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ], []);
 
   // Verificar autenticação
   useEffect(() => {
@@ -87,6 +43,7 @@ export default function QuestionnairePage() {
     setLoading(true);
     try {
       const loadedQuestions = await organizerService.getQuestions(formData.createdEventId).catch(() => []);
+      console.log(loadedQuestions);
       setQuestions(loadedQuestions.sort((a, b) => a.order - b.order));
     } catch (error: any) {
       console.error("Error loading questions:", error);
@@ -97,17 +54,8 @@ export default function QuestionnairePage() {
 
   useEffect(() => {
     if (!authChecked) return;
-    
-    // Temporariamente sempre usa dados mockados para desenvolvimento
-    setQuestions(mockQuestions);
-    
-    // Quando tiver eventId real, descomente a linha abaixo e remova a linha acima
-    // if (!formData.createdEventId) {
-    //   setQuestions(mockQuestions);
-    //   return;
-    // }
-    // loadQuestions();
-  }, [authChecked, formData.createdEventId, mockQuestions]);
+    loadQuestions();
+  }, [authChecked, formData.createdEventId]);
 
   // Setup modal save callback
   useEffect(() => {
@@ -128,16 +76,6 @@ export default function QuestionnairePage() {
   };
 
   const handleEditQuestion = (question: Question) => {
-    // Se for pergunta mockada, permite editar mesmo sem eventId
-    if (question.id.startsWith("mock-")) {
-      openCreateQuestionModal({
-        eventId: formData.createdEventId || "mock-event",
-        questionId: question.id,
-        question: question,
-      });
-      return;
-    }
-
     if (!formData.createdEventId) {
       toast.error("Evento não encontrado");
       return;
@@ -154,21 +92,15 @@ export default function QuestionnairePage() {
       return;
     }
 
-    // Se for pergunta mockada, apenas remove do estado
-    if (questionId.startsWith("mock-")) {
-      setQuestions(questions.filter(q => q.id !== questionId));
-      toast.success("Pergunta excluída com sucesso!");
-      return;
-    }
-
     if (!formData.createdEventId) {
+      toast.error("Evento não encontrado");
       return;
     }
 
     try {
       await organizerService.deleteQuestion(formData.createdEventId, questionId);
-      setQuestions(questions.filter(q => q.id !== questionId));
       toast.success("Pergunta excluída com sucesso!");
+      loadQuestions(); // Recarregar perguntas da API
     } catch (error: any) {
       console.error("Error deleting question:", error);
       toast.error(error.response?.data?.message || "Erro ao excluir pergunta");
@@ -176,11 +108,11 @@ export default function QuestionnairePage() {
   };
 
   const handleSkip = () => {
-    router.push("/organizer/events/new/review");
+    router.push("/organizer/events/new/coupons");
   };
 
   const handleNext = () => {
-    router.push("/organizer/events/new/review");
+    router.push("/organizer/events/new/coupons");
   };
 
   if (!authChecked || loading) {
@@ -245,39 +177,38 @@ export default function QuestionnairePage() {
                   <p className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
                     Pergunta {index + 1}
                   </p>
-                  
+
                   <div className="flex flex-col gap-5">
                     <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                       {question.question}
                     </h3>
-                    
+
                     <div className="flex gap-2 items-center flex-wrap">
-                      {question.isRequired && (
+                      {question.isRequired ? (
                         <span className="bg-yellow-3 px-4 py-3 rounded-[32px] text-yellow-12 text-base font-medium font-dm-sans leading-[1.3]">
                           Obrigatório
+                        </span>
+                      ) : (
+                        <span className="bg-gray-4 px-4 py-3 rounded-[32px] text-gray-12 text-base font-medium font-dm-sans leading-[1.3]">
+                          Opcional
                         </span>
                       )}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between mt-auto">
-                    {index === 0 && (
-                      <div className="bg-gray-5 px-4 py-3 rounded-[32px] text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
-                        Rascunhos
-                      </div>
-                    )}
-                    <div className={`flex gap-2.5 items-center ${index === 0 ? '' : 'ml-auto'}`}>
+                    <div className={`flex gap-2.5 items-center ml-auto`}>
                       <button
                         onClick={() => handleEditQuestion(question)}
-                        className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors"
+                        className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                       >
                         <Pencil className="size-5 text-gray-11" />
                       </button>
                       <button
                         onClick={() => handleDeleteQuestion(question.id)}
-                        className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
+                        className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors cursor-pointer"
                       >
-                        <Trash2 className="size-5 text-red-12" />
+                        <TrashIcon className="size-5 text-red-12" />
                       </button>
                     </div>
                   </div>

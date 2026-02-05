@@ -12,6 +12,7 @@ import { TrashIcon } from "../Icons/TrashIcon";
 import Image from "next/image";
 import { ArrowButton } from "../ArrowButton";
 import { Dropdown } from "../Dropdown";
+import { organizerService } from "@/services";
 
 interface ProductVariation {
   id: string;
@@ -116,9 +117,9 @@ export function CreateProductModal() {
   const handleAddVariation = () => {
     const newVariation: ProductVariation = {
       id: Date.now().toString(),
-      name: "Nome aqui...", // Nome individual da variação (ex: "P", "M", "G")
-      price: "0,00",
-      stock: "0",
+      name: "",
+      price: "",
+      stock: "",
     };
     setVariations([...variations, newVariation]);
   };
@@ -191,33 +192,26 @@ export function CreateProductModal() {
         })),
       };
 
-      // Por enquanto, salva no localStorage (será integrado com API depois)
-      const savedProducts = localStorage.getItem(`products_${eventId}`);
-      const existingProducts: any[] = savedProducts ? JSON.parse(savedProducts) : [];
+      let savedProduct;
+      if (isEditing && data?.productId) {
+        // Atualizar produto existente
+        savedProduct = await organizerService.updateProduct(eventId, data.productId, productData);
+        toast.success("Produto atualizado com sucesso!");
+      } else {
+        // Criar novo produto
+        savedProduct = await organizerService.createProduct(eventId, productData);
+        toast.success("Produto criado com sucesso!");
+      }
 
-      const productId = isEditing && data?.productId
-        ? data.productId
-        : `product_${Date.now()}`;
-
-      const newProduct = {
-        id: productId,
-        ...productData,
-        eventId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      const updatedProducts = isEditing && data?.productId
-        ? existingProducts.map(p => p.id === data.productId ? newProduct : p)
-        : [...existingProducts, newProduct];
-
-      localStorage.setItem(`products_${eventId}`, JSON.stringify(updatedProducts));
-
-      toast.success(isEditing ? "Produto atualizado com sucesso!" : "Produto criado com sucesso!");
-
+      // Call the callback if it exists, but don't fail the whole operation if it errors
       if (onModalSave) {
-        // Pass the created/updated product to the callback
-        await onModalSave({ product: newProduct, isEditing });
+        try {
+          await onModalSave({ product: savedProduct, isEditing });
+        } catch (callbackError) {
+          console.error("Error in onModalSave callback:", callbackError);
+          // Don't show error toast here - the product was already saved successfully
+          // The callback error is logged but doesn't prevent the modal from closing
+        }
       }
 
       closeCreateProductModal();
@@ -406,7 +400,7 @@ export function CreateProductModal() {
                           </span>
                         </div>
                       </div>
-                      {isIncludedInTicket && (
+                      {!isIncludedInTicket && (
                         <div className="flex flex-col gap-2.5 w-[259px]">
                           <div className="flex flex-col gap-2">
                             <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
@@ -526,6 +520,7 @@ export function CreateProductModal() {
                                 type="text"
                                 value={variation.name}
                                 onChange={(e) => handleVariationChange(variation.id, "name", e.target.value)}
+                                placeholder="Ex: P, M, G"
                                 className="h-auto border-0 bg-transparent px-0 focus:ring-0 text-sm font-medium font-inter text-gray-12 focus:outline-none focus:border-0 w-full"
                               />
                             </div>

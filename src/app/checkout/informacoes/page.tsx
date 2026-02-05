@@ -12,7 +12,7 @@ function CheckoutInformacoesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const eventId = searchParams.get("eventId");
-  const { event, isLoading } = useEvent(eventId ?? "");
+  const { event, loading: isLoading } = useEvent(eventId ?? "");
 
   const handleNext = () => {
     if (eventId) {

@@ -11,7 +11,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 function CheckoutSucessoContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
-  const { event, isLoading } = useEvent(eventId ?? "");
+  const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { resetCheckout } = useCheckout();
 
   // Limpar dados do checkout quando a página de sucesso for carregada

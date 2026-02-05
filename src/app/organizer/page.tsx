@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { LoadingAnimation } from "@/components/Loading";
 
 export default function OrganizerDashboardPage() {
   const router = useRouter();
@@ -112,7 +113,7 @@ export default function OrganizerDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
-        <div className="text-gray-11">Carregando...</div>
+        <LoadingAnimation />
       </div>
     );
   }
@@ -255,19 +256,18 @@ export default function OrganizerDashboardPage() {
                       {event.name}
                     </h3>
                     <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        event.status === "PUBLISHED"
+                      className={`px-2 py-1 rounded text-xs font-medium ${event.status === "PUBLISHED"
                           ? "bg-green-10/20 text-green-11"
                           : event.status === "DRAFT"
-                          ? "bg-yellow-10/20 text-yellow-11"
-                          : "bg-gray-10/20 text-gray-11"
-                      }`}
+                            ? "bg-yellow-10/20 text-yellow-11"
+                            : "bg-gray-10/20 text-gray-11"
+                        }`}
                     >
                       {event.status === "PUBLISHED"
                         ? "Publicado"
                         : event.status === "DRAFT"
-                        ? "Rascunho"
-                        : event.status}
+                          ? "Rascunho"
+                          : event.status}
                     </span>
                   </div>
                   {event.city && event.state && (

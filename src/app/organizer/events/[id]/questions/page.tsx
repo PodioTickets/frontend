@@ -87,8 +87,8 @@ export default function EventQuestionsPage() {
 
       if (
         (questionForm.type === "select" ||
-          questionForm.type === "radio" ||
-          questionForm.type === "checkbox") &&
+          questionForm.type === "multiple_choice" ||
+          questionForm.type === "true_false") &&
         questionForm.options.length === 0
       ) {
         toast.error("Adicione pelo menos uma opção");
@@ -189,8 +189,9 @@ export default function EventQuestionsPage() {
     const types: Record<string, string> = {
       text: "Texto Livre",
       select: "Seleção (Dropdown)",
-      radio: "Escolha Única",
-      checkbox: "Múltipla Escolha",
+      multiple_choice: "Escolha Única",
+      true_false: "Múltipla Escolha",
+      number: "Número",
     };
     return types[type] || type;
   };
@@ -382,70 +383,71 @@ export default function EventQuestionsPage() {
                   >
                     <option value="text">Texto Livre</option>
                     <option value="select">Seleção (Dropdown)</option>
-                    <option value="radio">Escolha Única</option>
-                    <option value="checkbox">Múltipla Escolha</option>
+                    <option value="multiple_choice">Escolha Única</option>
+                    <option value="true_false">Múltipla Escolha</option>
+                    <option value="number">Número</option>
                   </select>
                 </div>
 
                 {(questionForm.type === "select" ||
-                  questionForm.type === "radio" ||
-                  questionForm.type === "checkbox") && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-12 mb-2">
-                      Opções *
-                    </label>
-                    <div className="space-y-2 mb-2">
-                      {questionForm.options.map((option, index) => (
-                        <div key={index} className="flex gap-2">
-                          <Input
-                            value={option}
-                            onChange={(e) => {
-                              const newOptions = [...questionForm.options];
-                              newOptions[index] = e.target.value;
-                              setQuestionForm({
-                                ...questionForm,
-                                options: newOptions,
-                              });
-                            }}
-                            placeholder={`Opção ${index + 1}`}
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveOption(index)}
-                            className="text-red-10 hover:text-red-11"
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
-                      ))}
+                  questionForm.type === "multiple_choice" ||
+                  questionForm.type === "true_false") && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-12 mb-2">
+                        Opções *
+                      </label>
+                      <div className="space-y-2 mb-2">
+                        {questionForm.options.map((option, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...questionForm.options];
+                                newOptions[index] = e.target.value;
+                                setQuestionForm({
+                                  ...questionForm,
+                                  options: newOptions,
+                                });
+                              }}
+                              placeholder={`Opção ${index + 1}`}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveOption(index)}
+                              className="text-red-10 hover:text-red-11"
+                            >
+                              <X className="size-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newOption}
+                          onChange={(e) => setNewOption(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddOption();
+                            }
+                          }}
+                          placeholder="Nova opção..."
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddOption}
+                        >
+                          <PlusCircle className="size-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newOption}
-                        onChange={(e) => setNewOption(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAddOption();
-                          }
-                        }}
-                        placeholder="Nova opção..."
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleAddOption}
-                      >
-                        <PlusCircle className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                  )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-12 mb-2">

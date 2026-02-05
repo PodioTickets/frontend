@@ -16,6 +16,7 @@ export interface Event {
   googleMapsLink: string;
   stravaRouteId?: string;
   eventDate: string;
+  registrationStartDate: string;
   registrationEndDate: string;
   status: string;
   createdAt: string;
@@ -26,6 +27,10 @@ export interface Event {
   modalities: Modality[];
   kits: [];
   questions: Question[];
+  _count?: {
+    registrations?: number;
+    modalities?: number;
+  };
 }
 
 export interface Question {

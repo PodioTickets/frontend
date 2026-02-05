@@ -11,6 +11,7 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { useTopicModal } from "@/stores/modalStore";
 import { Plus, Download } from "lucide-react";
 import toast from "react-hot-toast";
+import { TrashIcon } from "@/components/Icons/TrashIcon";
 
 export default function TopicosPage() {
   const router = useRouter();
@@ -66,7 +67,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
       setLoading(true);
       try {
         const event = await organizerService.getEventById(formData.createdEventId);
-        
+
         // Carregar description como conteúdo padrão
         if (event.description) {
           setContent(event.description);
@@ -275,7 +276,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
   }
 
   return (
-    <div className="bg-gray-2 flex-1 pb-[176px] px-5 md:px-[124px] pt-[52px]">
+    <div className="bg-gray-2 flex-1 px-5 pt-[52px]">
       <div className="max-w-[843px] mx-auto flex flex-col gap-9">
         {/* Title Section */}
         <div className="flex gap-3 items-center">
@@ -308,7 +309,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
                     topicId: "default"
                   });
                 }}
-                className="bg-gray-2 border-[1.5px] border-gray-6 p-3 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center"
+                className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg p-2 hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
               >
                 <PencilIcon className="size-5 text-gray-11" />
               </button>
@@ -319,7 +320,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
               <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
                 Detalhes do evento (Obrigatório)
               </h2>
-              <div 
+              <div
                 className="text-gray-11 text-base font-dm-sans leading-[1.3] prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: content }}
               />
@@ -337,17 +338,15 @@ Come and be part of this collaborative approach to professional learning. Togeth
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEditTopic(topic.id)}
-                    className="bg-gray-2 border-[1.5px] border-gray-6 p-3 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center"
+                    className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
                   >
                     <PencilIcon className="size-5 text-gray-11" />
                   </button>
                   <button
                     onClick={() => handleDeleteTopic(topic.id)}
-                    className="bg-red-2 border-[1.5px] border-red-6 p-3 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center"
+                    className="bg-red-2 border-[1.5px] border-red-6 p-2 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
                   >
-                    <svg className="size-5 text-red-11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <TrashIcon className="size-5 text-red-11" />
                   </button>
                 </div>
               </div>
@@ -357,7 +356,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
                 <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                   {topic.title}
                 </h3>
-                <div 
+                <div
                   className="text-gray-11 text-base font-dm-sans leading-[1.3] prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{ __html: topic.content }}
                 />
@@ -373,27 +372,18 @@ Come and be part of this collaborative approach to professional learning. Togeth
               className="border-gray-6 text-gray-12 text-lg font-bold px-11 h-12"
             >
               <Plus className="size-5 mr-2" />
-              Adicionar seção
+              Adicionar tópico
             </Button>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 items-start justify-end w-full pb-4">
+          <div className="flex gap-2 items-start justify-end w-full pb-4 mt-10">
             <Button
               variant="outline"
               onClick={() => router.push("/organizer/events/new/preview-event")}
               className="border-gray-6 text-gray-12 text-[20px] font-bold px-11 h-[52px]"
             >
               Prévia
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                // Lógica para download
-              }}
-              className="border-[1.5px] border-gray-6 text-gray-12 text-[20px] font-bold px-11 h-[52px]"
-            >
-              Salvar rascunho
             </Button>
             <Button
               onClick={handleSave}

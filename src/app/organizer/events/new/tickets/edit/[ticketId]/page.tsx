@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { userService, organizerService } from "@/services";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
@@ -33,22 +33,23 @@ interface Batch {
   endTime?: string;
 }
 
-export default function CreateTicketPage() {
+export default function EditTicketPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const groupId = searchParams.get("groupId");
+  const params = useParams();
+  const ticketId = params.ticketId as string;
   const { formData } = useCreateEvent();
   const queryClient = useQueryClient();
   const { openCreateProductModal, setOnModalSave: setOnCreateProductSave } = useCreateProductModal();
   const { openAddExistingProductsModal, setOnModalSave: setOnAddProductsSave } = useAddExistingProductsModal();
-  
+
   // Use refs to store stable references to the setter functions
   const setOnCreateProductSaveRef = useRef(setOnCreateProductSave);
   const setOnAddProductsSaveRef = useRef(setOnAddProductsSave);
-  
+
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [ticketLoaded, setTicketLoaded] = useState(false);
 
   // Form fields
   const [ticketName, setTicketName] = useState("");
@@ -68,7 +69,7 @@ export default function CreateTicketPage() {
   const [products, setProducts] = useState<any[]>([]);
   const productsRef = useRef(products);
   const isProcessingRef = useRef(false);
-  
+
   // Keep productsRef in sync with products state
   useEffect(() => {
     productsRef.current = products;
@@ -77,56 +78,6 @@ export default function CreateTicketPage() {
   const [batches, setBatches] = useState<Batch[]>([
     { id: "1", quantity: "", price: "", startType: "date" }
   ]);
-
-  // Load form data from localStorage on mount (for new tickets - apenas para persistência temporária)
-  useEffect(() => {
-    if (!authChecked || !formData.createdEventId) return;
-    
-    const saved = localStorage.getItem("createTicketFormData");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.ticketName) setTicketName(parsed.ticketName);
-        if (parsed.selectedModality) setSelectedModality(parsed.selectedModality);
-        if (parsed.distance) setDistance(parsed.distance);
-        if (parsed.distanceUnit) setDistanceUnit(parsed.distanceUnit);
-        if (parsed.gender) setGender(parsed.gender);
-        if (parsed.hasAgeRestriction !== undefined) setHasAgeRestriction(parsed.hasAgeRestriction);
-        if (parsed.minAge) setMinAge(parsed.minAge);
-        if (parsed.maxAge) setMaxAge(parsed.maxAge);
-        if (parsed.hasKit !== undefined) setHasKit(parsed.hasKit);
-        if (parsed.batches && Array.isArray(parsed.batches)) setBatches(parsed.batches);
-        if (parsed.selectedGroupId) setSelectedGroupId(parsed.selectedGroupId);
-      } catch (e) {
-        console.error("Error loading ticket form data from localStorage:", e);
-      }
-    }
-  }, [authChecked, formData.createdEventId]);
-
-  // Save form data to localStorage whenever it changes
-  const prevFormDataRef = useRef<string>("");
-  useEffect(() => {
-    const formDataToSave = {
-      ticketName,
-      selectedModality,
-      distance,
-      distanceUnit,
-      gender,
-      hasAgeRestriction,
-      minAge,
-      maxAge,
-      hasKit,
-      batches,
-      selectedGroupId
-    };
-    const formDataString = JSON.stringify(formDataToSave);
-    
-    // Only save if data actually changed to avoid infinite loops
-    if (formDataString !== prevFormDataRef.current) {
-      prevFormDataRef.current = formDataString;
-      localStorage.setItem("createTicketFormData", formDataString);
-    }
-  }, [ticketName, selectedModality, distance, distanceUnit, gender, hasAgeRestriction, minAge, maxAge, hasKit, batches, selectedGroupId]);
 
   // Verificar autenticação
   useEffect(() => {
@@ -141,7 +92,7 @@ export default function CreateTicketPage() {
     return () => clearTimeout(timer);
   }, [router]);
 
-  // Carregar dados
+  // Carregar dados (templates e categorias)
   useEffect(() => {
     const loadData = async () => {
       if (!authChecked) return;
@@ -168,72 +119,167 @@ export default function CreateTicketPage() {
     loadData();
   }, [authChecked, formData.createdEventId]);
 
+  // Load ticket data
+  useEffect(() => {
+    const loadTicket = async () => {
+      if (!ticketId || !formData.createdEventId || !authChecked || ticketLoaded) return;
 
-  // Setup modal callbacks - always keep them updated
-  // Setup modal callbacks - use useCallback to prevent recreation
+      setLoading(true);
+      try {
+        console.log("Loading ticket with ID:", ticketId);
+        const { ticket } = await organizerService.getTicketById(ticketId);
+        console.log("Ticket loaded from API:", ticket);
+
+        if (!ticket) {
+          console.error("Ticket is null or undefined");
+          toast.error("Ingresso não encontrado");
+          router.push("/organizer/events/new/tickets");
+          return;
+        }
+
+        // Preencher campos do formulário
+        if (ticket.name) setTicketName(ticket.name);
+
+        // Encontrar modalidade
+        if (modalityTemplates.length > 0) {
+          const modalityTemplate = modalityTemplates.find(t => t.label === ticket.modality);
+          if (modalityTemplate) {
+            setSelectedModality(modalityTemplate.id);
+          }
+        }
+
+        if (ticket.distance !== undefined && ticket.distance !== null) {
+          setDistance(ticket.distance.toString());
+        }
+        if (ticket.distanceUnit) {
+          setDistanceUnit(ticket.distanceUnit);
+        }
+        if (ticket.gender) {
+          setGender(ticket.gender);
+        }
+
+        if (ticket.ageLimit) {
+          setHasAgeRestriction(true);
+          if (ticket.ageLimit.min !== undefined && ticket.ageLimit.min !== null) {
+            setMinAge(ticket.ageLimit.min.toString());
+          }
+          if (ticket.ageLimit.max !== undefined && ticket.ageLimit.max !== null) {
+            setMaxAge(ticket.ageLimit.max.toString());
+          }
+        }
+
+        if (ticket.batches && Array.isArray(ticket.batches) && ticket.batches.length > 0) {
+          const formattedBatches = ticket.batches.map((b: any, idx: number) => ({
+            id: b.id || (idx + 1).toString(),
+            quantity: b.quantity?.toString() || "",
+            price: typeof b.price === 'number'
+              ? `R$${b.price.toFixed(2).replace('.', ',')}`
+              : (b.price?.toString() || ""),
+            startType: "date" as const,
+            startDate: b.startDate || undefined,
+            startTime: b.startTime || undefined,
+            endDate: b.endDate || undefined,
+            endTime: b.endTime || undefined,
+          }));
+          setBatches(formattedBatches);
+        }
+
+        if (ticket.categoryId) {
+          setSelectedGroupId(ticket.categoryId);
+        }
+        if (ticket.hasKit !== undefined) {
+          setHasKit(ticket.hasKit);
+        }
+
+        // Carregar produtos vinculados
+        if (ticket.productIds && Array.isArray(ticket.productIds) && ticket.productIds.length > 0 && formData.createdEventId) {
+          try {
+            const productsResponse = await organizerService.getProducts(formData.createdEventId);
+            if (productsResponse.products && Array.isArray(productsResponse.products)) {
+              const ticketProducts = productsResponse.products.filter((p: any) =>
+                ticket.productIds.includes(p.id)
+              );
+              setProducts(ticketProducts);
+            }
+          } catch (error) {
+            console.error("Error loading products:", error);
+          }
+        }
+
+        setTicketLoaded(true);
+        setLoading(false);
+        console.log("Ticket data loaded successfully");
+      } catch (error: any) {
+        console.error("Error loading ticket:", error);
+        console.error("Error details:", error.response?.data || error.message);
+        toast.error(error.response?.data?.message || "Erro ao carregar ingresso");
+        setLoading(false);
+        router.push("/organizer/events/new/tickets");
+      }
+    };
+
+    if (authChecked && formData.createdEventId && modalityTemplates.length > 0) {
+      loadTicket();
+    }
+  }, [ticketId, formData.createdEventId, authChecked, modalityTemplates, ticketLoaded, router]);
+
+  // Atualizar modalidade quando templates forem carregados
+  useEffect(() => {
+    if (ticketLoaded && modalityTemplates.length > 0 && !selectedModality && ticketId) {
+      organizerService.getTicketById(ticketId).then((ticket) => {
+        const modalityTemplate = modalityTemplates.find(t => t.label === ticket.modality);
+        if (modalityTemplate) {
+          setSelectedModality(modalityTemplate.id);
+        }
+      }).catch(console.error);
+    }
+  }, [modalityTemplates, ticketLoaded, selectedModality, ticketId]);
+
+  // Setup modal callbacks
   useEffect(() => {
     const createProductCallback = async (data: any) => {
       console.log("createProductCallback called with:", data);
       try {
-        // Add newly created/updated product to the ticket in real-time
         if (data?.product) {
           const { product } = data;
           setProducts((prevProducts) => {
-            // Check if product already exists (in case of edit or if already added)
             const existingIndex = prevProducts.findIndex((p: any) => p.id === product.id);
             if (existingIndex >= 0) {
-              // Update existing product
               const updated = [...prevProducts];
               updated[existingIndex] = product;
-              console.log("Updated existing product:", updated);
               return updated;
             } else {
-              // Add new product
-              const updated = [...prevProducts, product];
-              console.log("Added new product:", updated);
-              return updated;
+              return [...prevProducts, product];
             }
           });
-        } else {
-          console.warn("createProductCallback: data.product is missing", data);
         }
       } catch (error) {
         console.error("Error in createProductCallback:", error);
-        // Não lançar erro aqui para não quebrar o fluxo do modal
       }
     };
-    
+
     const addProductsCallback = async (data: any) => {
       console.log("addProductsCallback called with:", data);
-      
-      // Prevent duplicate processing
+
       if (isProcessingRef.current) {
         console.warn("addProductsCallback: Already processing, ignoring duplicate call");
         return;
       }
-      
+
       isProcessingRef.current = true;
-      
+
       try {
-        // Add selected products to the ticket, avoiding duplicates
         if (data?.products && Array.isArray(data.products) && data.products.length > 0) {
-          console.log("Processing products:", data.products);
-          
-          // Calculate new products using current state from ref (before setState)
           const currentProducts = productsRef.current;
           const existingIds = new Set(currentProducts.map((p: any) => p.id));
           const newProducts = data.products.filter((p: any) => p && p.id && !existingIds.has(p.id));
-          console.log("New products to add:", newProducts);
-          
+
           if (newProducts.length > 0) {
             setProducts((prevProducts) => {
-              // Double-check to avoid duplicates (in case state changed between ref read and setState)
               const prevIds = new Set(prevProducts.map((p: any) => p.id));
               const finalNewProducts = newProducts.filter((p: any) => !prevIds.has(p.id));
               if (finalNewProducts.length > 0) {
-                const updated = [...prevProducts, ...finalNewProducts];
-                console.log("Updated products:", updated);
-                return updated;
+                return [...prevProducts, ...finalNewProducts];
               }
               return prevProducts;
             });
@@ -242,7 +288,6 @@ export default function CreateTicketPage() {
             toast.error("Produto(s) já adicionado(s) ao ingresso");
           }
         } else {
-          console.error("Invalid data format:", data);
           toast.error("Erro: formato de dados inválido");
           throw new Error("Invalid data format");
         }
@@ -250,25 +295,20 @@ export default function CreateTicketPage() {
         console.error("Error in addProductsCallback:", error);
         throw error;
       } finally {
-        // Reset processing flag after a short delay to allow state updates to complete
         setTimeout(() => {
           isProcessingRef.current = false;
         }, 100);
       }
     };
 
-    // Set callbacks immediately using refs to avoid infinite loops
-    console.log("Setting up modal callbacks");
     setOnCreateProductSaveRef.current(createProductCallback);
     setOnAddProductsSaveRef.current(addProductsCallback);
 
-    // Cleanup function to reset callbacks when component unmounts
     return () => {
-      console.log("Cleaning up modal callbacks");
       setOnCreateProductSaveRef.current(undefined);
       setOnAddProductsSaveRef.current(undefined);
     };
-  }, []); // Empty dependency array - callbacks are set up once and use refs for stable function references
+  }, []);
 
   const handleBack = () => {
     router.push("/organizer/events/new/tickets");
@@ -330,7 +370,7 @@ export default function CreateTicketPage() {
 
       const ticketData = {
         name: ticketName.trim(),
-        categoryId: selectedGroupId || groupId || undefined,
+        categoryId: selectedGroupId || undefined,
         modality: modalityLabel,
         distance: distance || undefined,
         distanceUnit: distanceUnit || "KM",
@@ -340,7 +380,7 @@ export default function CreateTicketPage() {
           max: maxAge ? parseInt(maxAge) : undefined,
         } : undefined,
         hasKit: hasKit || false,
-        kitId: hasKit ? undefined : undefined, // TODO: implementar seleção de kit
+        kitId: hasKit ? undefined : undefined,
         productIds: products.map((p: any) => p.id),
         batches: batches.map(b => ({
           quantity: parseInt(b.quantity) || 0,
@@ -350,25 +390,21 @@ export default function CreateTicketPage() {
         })),
       };
 
-      // Criar novo ticket
-      await organizerService.createTicket(formData.createdEventId, ticketData);
-      toast.success("Ingresso criado com sucesso!");
+      // Atualizar ticket existente
+      await organizerService.updateTicket(formData.createdEventId, ticketId, ticketData);
+      toast.success("Ingresso atualizado com sucesso!");
 
-      // Invalidar e refetch queries para atualizar a lista imediatamente
+      // Invalidar e refetch queries
       await queryClient.invalidateQueries({
         queryKey: queryKeys.events.tickets(formData.createdEventId),
       });
-      
-      // Aguardar o refetch para garantir que os dados estejam atualizados
+
       await queryClient.refetchQueries({
         queryKey: queryKeys.events.tickets(formData.createdEventId),
       });
 
-      // Disparar evento customizado para atualizar a página de tickets (backup)
       window.dispatchEvent(new CustomEvent("ticketCreated"));
 
-      // Clear saved form data after successful submission
-      localStorage.removeItem("createTicketFormData");
       router.push("/organizer/events/new/tickets");
     } catch (error: any) {
       console.error("Error saving ticket:", error);
@@ -412,7 +448,7 @@ export default function CreateTicketPage() {
   ];
 
   const selectedGroupLabel = Array.isArray(ticketCategories)
-    ? (ticketCategories.find(g => g.id === selectedGroupId)?.name || (groupId ? ticketCategories.find(g => g.id === groupId)?.name : "Sem categoria"))
+    ? (ticketCategories.find(g => g.id === selectedGroupId)?.name || "Sem categoria")
     : "Sem categoria";
 
   return (
@@ -427,7 +463,7 @@ export default function CreateTicketPage() {
             <ArrowButton isOpen={false} />
           </button>
           <h1 className="text-gray-12 text-[28px] font-bold font-family-dm-sans leading-[1.1]">
-            Criação de ingresso
+            Edição de ingresso
           </h1>
         </div>
 
@@ -460,8 +496,8 @@ export default function CreateTicketPage() {
                 options={groupOptions}
                 trigger={(isOpen) => (
                   <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
-                    <span className={`text-base font-dm-sans ${selectedGroupId || groupId ? "text-gray-12" : "text-gray-11"}`}>
-                      {selectedGroupId || groupId ? selectedGroupLabel : "Sem categoria"}
+                    <span className={`text-base font-dm-sans ${selectedGroupId ? "text-gray-12" : "text-gray-11"}`}>
+                      {selectedGroupId ? selectedGroupLabel : "Sem categoria"}
                     </span>
                     <ArrowButton isOpen={isOpen} />
                   </button>
@@ -830,9 +866,9 @@ export default function CreateTicketPage() {
               ) : (
                 <div className="bg-gray-2 border border-gray-6 rounded-xl p-5">
                   <div className="flex flex-wrap gap-3">
-                    {products.map((product, index) => (
+                    {products.map((product) => (
                       <div
-                        key={product.id || `product-${index}`}
+                        key={product.id}
                         className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px]"
                       >
                         {/* Header com imagem e informações */}
@@ -907,7 +943,7 @@ export default function CreateTicketPage() {
             disabled={saving}
             className="text-xl font-bold px-11 h-[52px]"
           >
-            {saving ? "Criando..." : "Criar ingresso"}
+            {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
         </div>
       </div>
