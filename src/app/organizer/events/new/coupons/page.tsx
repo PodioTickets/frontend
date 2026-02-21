@@ -216,7 +216,7 @@ export default function CouponsPage() {
               Cupons de desconto
             </h1>
           </div>
-          <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
             Crie e gerencie cupons para aplicar desconto nas inscrições
           </p>
         </div>
@@ -241,7 +241,7 @@ export default function CouponsPage() {
           {coupons.length === 0 ? (
             <div className="border border-gray-6 rounded-xl p-12 flex flex-col items-center justify-center gap-4">
               <CouponIcon className="size-12 text-gray-11" />
-              <p className="text-gray-11 text-base font-dm-sans">
+              <p className="text-gray-11 text-base font-family-dm-sans">
                 Nenhum cupom criado ainda
               </p>
             </div>
@@ -251,22 +251,22 @@ export default function CouponsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-3 border-b border-gray-6">
                     <tr>
-                      <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Código
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Tipo
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Valor
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Validade
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Status
                       </th>
-                      <th className="text-end py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-end py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Ações
                       </th>
                     </tr>
@@ -281,7 +281,7 @@ export default function CouponsPage() {
                         >
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-12 font-semibold font-dm-sans">
+                              <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                                 {coupon.code}
                               </span>
                               <button
@@ -294,17 +294,17 @@ export default function CouponsPage() {
                             </div>
                           </td>
                           <td className="py-4 px-5 text-center">
-                            <span className="text-sm text-gray-12 font-semibold font-dm-sans">
+                            <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                               {getTypeLabel(coupon.type)}
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
-                            <span className="text-sm text-gray-12 font-semibold font-dm-sans">
+                            <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                               {getValueDisplay(coupon)}
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
-                            <span className="text-sm text-gray-12 font-semibold font-dm-sans">
+                            <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                               {formatDate(coupon.expiryDate)}
                             </span>
                           </td>
@@ -362,7 +362,7 @@ export default function CouponsPage() {
                   onClick={() =>
                     setPagination((prev) => ({ ...prev, page }))
                   }
-                  className={`size-8 rounded-full border transition-colors font-dm-sans text-sm ${pagination.page === page
+                  className={`size-8 rounded-full border transition-colors font-family-dm-sans text-sm ${pagination.page === page
                     ? "bg-primary-11 text-white border-primary-11"
                     : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
                     }`}

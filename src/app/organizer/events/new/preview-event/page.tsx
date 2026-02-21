@@ -131,7 +131,7 @@ export default function PreviewEventPage() {
                       {defaultTopic.title || "Detalhes do evento"}
                     </h2>
                     <div
-                      className="text-gray-11 text-base font-dm-sans leading-[1.3] prose prose-sm max-w-none"
+                      className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: defaultTopic.content || event?.description || "" }}
                     />
                     <div className="bg-gray-2 flex flex-col items-center justify-center pt-7 w-full">
@@ -154,7 +154,7 @@ export default function PreviewEventPage() {
                       {topic.title}
                     </h2>
                     <div
-                      className="text-gray-11 text-base font-dm-sans leading-[1.3] prose prose-sm max-w-none"
+                      className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: topic.content }}
                     />
                   </div>
@@ -169,7 +169,7 @@ export default function PreviewEventPage() {
                       Kits
                     </h2>
                     <div
-                      className="text-gray-11 text-base font-dm-sans leading-[1.3] prose prose-sm max-w-none"
+                      className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{
                         __html: kits.map((kit) => kit.description || "").filter(Boolean).join(" ") || "Informações sobre os kits do evento."
                       }}

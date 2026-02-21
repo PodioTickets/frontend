@@ -184,7 +184,7 @@ export function CreateVoucherModal() {
               <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
                 {/* Header */}
                 <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                  <h2 className="text-gray-12 text-[20px] font-semibold font-dm-sans leading-[1.3]">
+                  <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                     Criar voucher
                   </h2>
                   <button
@@ -202,7 +202,7 @@ export function CreateVoucherModal() {
                       {/* Nome do voucher */}
                       <div className="flex flex-col gap-2.5">
                         <div className="flex flex-col gap-2">
-                          <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                          <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                             Nome do voucher
                           </label>
                           <Input
@@ -215,7 +215,7 @@ export function CreateVoucherModal() {
                         </div>
                         <div className="flex items-center gap-1">
                           <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                          <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                             Limite de X caracteres
                           </p>
                         </div>
@@ -224,7 +224,7 @@ export function CreateVoucherModal() {
                       {/* Quantidade de vouchers */}
                       <div className="flex flex-col gap-2.5">
                         <div className="flex flex-col gap-2">
-                          <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                          <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                             Quantidade de vouchers
                           </label>
                           <Input
@@ -240,7 +240,7 @@ export function CreateVoucherModal() {
                         </div>
                         <div className="flex items-center gap-1">
                           <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                          <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                             Geraremos um código único por voucher.
                           </p>
                         </div>
@@ -248,7 +248,7 @@ export function CreateVoucherModal() {
 
                       {/* Qual ingresso aplicar */}
                       <div className="flex flex-col gap-2 w-[276px]">
-                        <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                           Qual ingresso aplicar?
                         </label>
                         <button
@@ -256,7 +256,7 @@ export function CreateVoucherModal() {
                           onClick={() => setShowSelectTicketsModal(true)}
                           className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
                         >
-                          <span className="text-base font-dm-sans leading-[1.3] text-gray-11">
+                          <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                             {appliesTo === "all"
                               ? "Todos os ingressos"
                               : selectedTicketIds.length > 0
@@ -273,7 +273,7 @@ export function CreateVoucherModal() {
                           onClick={() => setShowAdvanced(!showAdvanced)}
                           className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
                         >
-                          <span className="text-base font-medium font-dm-sans leading-[1.3]">
+                          <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
                             Mostrar conteúdo avançado opcionais
                           </span>
                           <ArrowButton isOpen={showAdvanced} />
@@ -294,7 +294,7 @@ export function CreateVoucherModal() {
                                   <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                     Validade do voucher
                                   </h3>
-                                  <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                     Após essa data, o voucher não poderá ser usado
                                   </p>
                                 </div>
@@ -309,7 +309,7 @@ export function CreateVoucherModal() {
                                         }
                                       }}
                                     />
-                                    <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                       Desabilitado
                                     </span>
                                   </label>
@@ -322,14 +322,14 @@ export function CreateVoucherModal() {
                                         }
                                       }}
                                     />
-                                    <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                       Habilitar
                                     </span>
                                   </label>
                                 </div>
                                 {expiryStatus === "ENABLED" && (
                                   <div className="flex flex-col gap-3">
-                                    <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                       Expira em:
                                     </label>
                                     <DatePicker
@@ -345,10 +345,10 @@ export function CreateVoucherModal() {
                               {/* Lista exclusiva por CPF */}
                               <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-3">
-                                  <h3 className="text-gray-12 text-lg font-medium font-dm-sans leading-[1.3]">
+                                  <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                     Deseja ativar lista exclusiva por CPF?
                                   </h3>
-                                  <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                     Restrinja o cupom para uma lista específica de CPFs
                                   </p>
                                 </div>
@@ -363,7 +363,7 @@ export function CreateVoucherModal() {
                                         }
                                       }}
                                     />
-                                    <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                       Desabilitado
                                     </span>
                                   </label>
@@ -376,7 +376,7 @@ export function CreateVoucherModal() {
                                         }
                                       }}
                                     />
-                                    <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                       Habilitar
                                     </span>
                                   </label>
@@ -388,7 +388,7 @@ export function CreateVoucherModal() {
                                       <h4 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                         Lista exclusiva
                                       </h4>
-                                      <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                         Se habilitar, apenas CPFs desta lista poderão usar qualquer voucher deste lote. Importe um CSV com 1 CPF por linha (apenas números)
                                       </p>
                                     </div>
@@ -437,7 +437,7 @@ export function CreateVoucherModal() {
                                           className="flex items-center gap-1 px-11 py-2 text-gray-11 hover:text-gray-12 transition-colors"
                                         >
                                           <Plus className="size-6" />
-                                          <span className="text-base font-semibold font-dm-sans leading-[1.3]">
+                                          <span className="text-base font-semibold font-family-dm-sans leading-[1.3]">
                                             Importar CSV
                                           </span>
                                         </button>

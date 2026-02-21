@@ -90,10 +90,10 @@ export function DeleteParticipantModal() {
 
                 {/* Conteúdo */}
                 <div className="flex flex-col gap-4 items-center justify-center w-full">
-                  <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-dm-sans text-center">
+                  <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans text-center">
                     Remover participante da inscrição?
                   </p>
-                  <p className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans text-center max-w-[400px]">
+                  <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center max-w-[400px]">
                     Ao remover este participante, todos os ingressos e produtos
                     vinculados a ele serão excluídos do seu pedido. O valor
                     total será atualizado antes do pagamento.

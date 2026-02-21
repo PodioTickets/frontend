@@ -70,7 +70,7 @@ export function SelectTicketsModal({
             >
               <ArrowLeft className="size-5 text-gray-12" />
             </button>
-            <h2 className="text-gray-12 text-xl font-semibold font-dm-sans leading-[1.3]">
+            <h2 className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]">
               Vincular ingressos
             </h2>
           </div>
@@ -87,23 +87,23 @@ export function SelectTicketsModal({
           <div className="flex-1 overflow-y-auto p-5">
             {/* Info bar */}
             <div className="flex items-center justify-between mb-7">
-              <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                 Selecione os ingressos que deseja vincular a este cupom
               </p>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-1">
-                  <span className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                  <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                     Total de ingressos:
                   </span>
-                  <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                  <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                     {tickets.length}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                  <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                     Selecionados:
                   </span>
-                  <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                  <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                     {selectedIds.length}
                   </span>
                 </div>
@@ -113,7 +113,7 @@ export function SelectTicketsModal({
             {/* Tickets grid */}
             {loading ? (
               <div className="flex items-center justify-center py-20">
-                <p className="text-gray-11 text-base font-dm-sans">
+                <p className="text-gray-11 text-base font-family-dm-sans">
                   Carregando ingressos...
                 </p>
               </div>
@@ -175,7 +175,7 @@ function TicketCard({ ticket, categoryName, isSelected, onToggle }: TicketCardPr
       onClick={onToggle}
     >
       <div className="flex flex-col gap-2 mb-4">
-        <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
           {categoryName}
         </p>
         <div className="flex items-center gap-2">

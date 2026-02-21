@@ -63,7 +63,7 @@ function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {
     >
       {/* Nome do ingresso */}
       <div className="flex h-full items-center p-4 w-[318px]">
-        <p className="flex-1 font-dm-sans font-semibold leading-[1.3] min-h-px min-w-px overflow-hidden text-sm text-gray-12 text-ellipsis whitespace-nowrap">
+        <p className="flex-1 font-family-dm-sans font-semibold leading-[1.3] min-h-px min-w-px overflow-hidden text-sm text-gray-12 text-ellipsis whitespace-nowrap">
           {ticket.name}
         </p>
       </div>
@@ -81,7 +81,7 @@ function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {
           {ticket.modality || "—"}
         </p>
         {ticket.distance && (
-          <p className="font-dm-sans font-medium text-gray-11">
+          <p className="font-family-dm-sans font-medium text-gray-11">
             {ticket.distance}{ticket.distanceUnit || "KM"}
           </p>
         )}

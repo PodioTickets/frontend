@@ -51,7 +51,7 @@ export function TicketCards({
               </div>
             </div>
 
-            <div className="flex gap-4 items-center text-sm text-gray-11 font-dm-sans">
+            <div className="flex gap-4 items-center text-sm text-gray-11 font-family-dm-sans">
               {ticket.distance && (
                 <div className="flex gap-1 items-center">
                   <DistanceIcon className="size-4" />
@@ -70,7 +70,7 @@ export function TicketCards({
 
             {ticket.ageLimit && (
               <div className="bg-yellow-2 border border-yellow-6 rounded-full px-3 py-1 w-fit">
-                <span className="text-yellow-12 text-xs font-dm-sans">
+                <span className="text-yellow-12 text-xs font-family-dm-sans">
                   Limite de idade: de {ticket.ageLimit.min || 0} a {ticket.ageLimit.max || 0} anos
                 </span>
               </div>
@@ -84,7 +84,7 @@ export function TicketCards({
               <button className="size-8 border border-gray-6 rounded-lg flex items-center justify-center hover:bg-gray-3">
                 <Minus className="size-4 text-gray-11" />
               </button>
-              <span className="text-gray-12 font-dm-sans">0</span>
+              <span className="text-gray-12 font-family-dm-sans">0</span>
               <button className="size-8 border border-gray-6 rounded-lg flex items-center justify-center hover:bg-gray-3">
                 <Plus className="size-4 text-gray-11" />
               </button>
@@ -106,7 +106,7 @@ export function TicketCards({
             )}
 
             {index === 0 && ticket.ageLimit && (
-              <button className="w-fit px-4 py-2 bg-gray-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-dm-sans hover:bg-gray-4 transition-colors">
+              <button className="w-fit px-4 py-2 bg-gray-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-family-dm-sans hover:bg-gray-4 transition-colors">
                 Rascunhos
               </button>
             )}

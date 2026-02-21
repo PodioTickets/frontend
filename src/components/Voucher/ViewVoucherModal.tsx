@@ -182,7 +182,7 @@ export function ViewVoucherModal() {
             >
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-dm-sans leading-[1.3]">
+                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   Lista de vouchers
                 </h2>
                 <button
@@ -207,7 +207,7 @@ export function ViewVoucherModal() {
                       {linkedTickets.length > 0 ? (
                         linkedTickets.map((ticket) => (
                           <div key={ticket.id} className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 shrink-0 w-[343px]">
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               {categoryMap.get(ticket.groupId) || "Sem categoria"}
                             </p>
                             <div className="flex gap-1.5 items-center">
@@ -225,7 +225,7 @@ export function ViewVoucherModal() {
                         ))
                       ) : groupInfo?.appliesTo === "all" ? (
                         <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 shrink-0 w-[343px]">
-                          <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                             Todos os ingressos
                           </p>
                           <div className="flex gap-1.5 items-center">
@@ -237,7 +237,7 @@ export function ViewVoucherModal() {
                         </div>
                       ) : (
                         <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 shrink-0 w-[343px]">
-                          <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                             Nome da categoria
                           </p>
                           <div className="flex gap-1.5 items-center">
@@ -259,12 +259,12 @@ export function ViewVoucherModal() {
                       {/* Group Details */}
                       <div className="flex flex-col gap-4 flex-1">
                         <div>
-                          <p className="text-gray-12 text-lg font-semibold font-dm-sans leading-[1.3] mb-2">
+                          <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] mb-2">
                             {groupInfo?.name || groupName}
                           </p>
                           <div className="flex gap-2.5 items-center flex-wrap">
                             <div className="flex gap-1 items-center">
-                              <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                              <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Totais:
                               </span>
                               <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
@@ -273,7 +273,7 @@ export function ViewVoucherModal() {
                             </div>
                             <div className="size-1.5 rounded-full bg-gray-11" />
                             <div className="flex gap-1 items-center">
-                              <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                              <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Disponíveis:
                               </span>
                               <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
@@ -282,7 +282,7 @@ export function ViewVoucherModal() {
                             </div>
                             <div className="size-1.5 rounded-full bg-gray-11" />
                             <div className="flex gap-1 items-center">
-                              <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                              <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Usados:
                               </span>
                               <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
@@ -294,16 +294,16 @@ export function ViewVoucherModal() {
 
                         <div className="flex gap-2.5 items-center flex-wrap">
                           <div className="flex gap-1 items-center">
-                            <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Status:
                             </span>
-                            <span className={`px-3 py-2 rounded-full text-sm font-semibold font-dm-sans leading-[1.3] ${groupInfo?.expiryDate && new Date(groupInfo.expiryDate) > new Date() ? "bg-primary-5 text-primary-12" : "bg-gray-5 text-gray-12"}`}>
+                            <span className={`px-3 py-2 rounded-full text-sm font-semibold font-family-dm-sans leading-[1.3] ${groupInfo?.expiryDate && new Date(groupInfo.expiryDate) > new Date() ? "bg-primary-5 text-primary-12" : "bg-gray-5 text-gray-12"}`}>
                               {groupInfo?.expiryDate && new Date(groupInfo.expiryDate) > new Date() ? "Ativo" : "Inativo"}
                             </span>
                           </div>
                           <div className="size-1.5 rounded-full bg-gray-11" />
                           <div className="flex gap-1 items-center">
-                            <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Validade:
                             </span>
                             <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
@@ -312,7 +312,7 @@ export function ViewVoucherModal() {
                           </div>
                           <div className="size-1.5 rounded-full bg-gray-11" />
                           <div className="flex gap-1 items-center">
-                            <span className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Benefício:
                             </span>
                             <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
@@ -342,7 +342,7 @@ export function ViewVoucherModal() {
                               >
                                 <div className="flex gap-1 items-center flex-1">
                                   <p
-                                    className={`text-sm font-semibold font-dm-sans leading-[1.3] flex-1 ${voucher.status === "USED" || voucher.status === "EXPIRED"
+                                    className={`text-sm font-semibold font-family-dm-sans leading-[1.3] flex-1 ${voucher.status === "USED" || voucher.status === "EXPIRED"
                                       ? "text-gray-9"
                                       : "text-gray-12"
                                       }`}
@@ -382,7 +382,7 @@ export function ViewVoucherModal() {
                             <button
                               key={page}
                               onClick={() => setCurrentPage(page)}
-                              className={`size-8 rounded-full border transition-colors font-dm-sans text-sm ${currentPage === page
+                              className={`size-8 rounded-full border transition-colors font-family-dm-sans text-sm ${currentPage === page
                                 ? "bg-primary-11 text-white border-primary-11"
                                 : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
                                 }`}

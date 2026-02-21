@@ -287,7 +287,7 @@ export function TopicModal() {
             <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-dm-sans leading-[1.3]">
+                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   {isEditing ? "Editar seção" : "Criar seção"}
                 </h2>
                 <button

@@ -157,7 +157,7 @@ export default function OrganizerEventsPage() {
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FlagIcon className="size-6 text-gray-12" />
-            <h1 className="text-2xl font-extrabold text-gray-12 font-dm-sans">
+            <h1 className="text-2xl font-extrabold text-gray-12 font-family-dm-sans">
               Meus eventos
             </h1>
           </div>
@@ -188,7 +188,7 @@ export default function OrganizerEventsPage() {
           </div>
         ) : (
           <>
-            <h2 className="text-lg font-semibold text-gray-12 mb-4 font-dm-sans">
+            <h2 className="text-lg font-semibold text-gray-12 mb-4 font-family-dm-sans">
               Lista de eventos
             </h2>
             <div className="bg-gray-1 rounded-lg border border-gray-6 overflow-hidden">
@@ -196,19 +196,19 @@ export default function OrganizerEventsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-3 border-b border-gray-6">
                     <tr>
-                      <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Nome do evento
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Status
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Inscritos
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Vendas
                       </th>
-                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">
+                      <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Ações
                       </th>
                     </tr>
@@ -230,7 +230,7 @@ export default function OrganizerEventsPage() {
                               ) : (
                                 <FlagIcon className="size-5 text-gray-12" />
                               )}
-                              <span className="text-sm text-gray-12 font-semibold font-dm-sans">
+                              <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                                 {event.name}
                               </span>
                             </div>
@@ -243,21 +243,21 @@ export default function OrganizerEventsPage() {
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
-                            <span className="text-sm font-semibold text-gray-12 font-dm-sans">
+                            <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                               {registrations}
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
-                            <span className="text-sm font-semibold text-gray-12 font-dm-sans">
+                            <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                               {formatCurrency(sales)}
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
                             <div className="flex items-center gap-1 justify-center">
                               <Link
-                                href={`/organizer/events/${event.id}/stats`}
+                                href={`/organizer/events/${event.id}/financial`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Estatísticas"
+                                title="Financeiro"
                               >
                                 <BarChart3 className="size-4 text-gray-11" />
                               </Link>
@@ -269,9 +269,9 @@ export default function OrganizerEventsPage() {
                                 <PencilIcon className="size-4 text-gray-11" />
                               </Link>
                               <Link
-                                href={`/organizer/events/${event.id}/stats`}
+                                href={`/organizer/events/${event.id}/registrations`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Ver vendas"
+                                title="Ver inscrições"
                               >
                                 <div className="relative">
                                   <DollarSign className="size-4 text-gray-11" />
@@ -309,7 +309,7 @@ export default function OrganizerEventsPage() {
                   onClick={() =>
                     setPagination((prev) => ({ ...prev, page }))
                   }
-                  className={`size-8 rounded-full border transition-colors font-dm-sans text-sm ${pagination.page === page
+                  className={`size-8 rounded-full border transition-colors font-family-dm-sans text-sm ${pagination.page === page
                     ? "bg-primary-11 text-white border-primary-11"
                     : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
                     }`}

@@ -434,7 +434,7 @@ export default function InformacoesPage() {
           <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
             Criar evento
           </h1>
-          <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
             Comece pelo básico. Defina nome, data, local e as imagens
             principais. Você poderá ajustar os detalhes depois.
           </p>
@@ -446,7 +446,7 @@ export default function InformacoesPage() {
           <div className="flex gap-10 w-full items-start">
             <div className="flex flex-col gap-[12px] w-full">
               <div className="flex flex-col gap-2">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Nome do evento
                 </label>
                 <Input
@@ -461,7 +461,7 @@ export default function InformacoesPage() {
               </div>
               <div className="flex items-center gap-1">
                 <InfoIcon className="size-5 text-gray-11" />
-                <p className="text-gray-11 text-base font-dm-sans">
+                <p className="text-gray-11 text-base font-family-dm-sans">
                   Limite de 25 Caracteres
                 </p>
               </div>
@@ -471,7 +471,7 @@ export default function InformacoesPage() {
             </div>
             <div className="flex flex-col gap-[12px]">
               <div className="flex flex-col w-[300px] gap-2">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Data do evento
                 </label>
                 <DatePicker
@@ -484,7 +484,7 @@ export default function InformacoesPage() {
               </div>
               <div className="flex items-center gap-1">
                 <InfoIcon className="size-5 text-gray-11" />
-                <p className="text-gray-11 text-base font-dm-sans flex-1">
+                <p className="text-gray-11 text-base font-family-dm-sans flex-1">
                   Use a data e o horário oficiais de início do evento. As largadas
                   por modalidade podem ser detalhadas depois
                 </p>
@@ -504,7 +504,7 @@ export default function InformacoesPage() {
             <div className="flex gap-[72px] items-start">
               {/* Data de início das inscrições */}
               <div className="flex flex-col gap-[12px]">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Data de início das inscrições
                 </label>
                 <div className="flex gap-3 items-end">
@@ -526,7 +526,7 @@ export default function InformacoesPage() {
 
               {/* Data de encerramento das inscrições */}
               <div className="flex flex-col gap-[12px]">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Data de encerramento das inscrições
                 </label>
                 <div className="flex gap-3 items-end">
@@ -554,7 +554,7 @@ export default function InformacoesPage() {
               <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                 Local do evento
               </h2>
-              <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                 Informe onde o evento será realizado. Essas informações aparecem
                 na página do evento e ajudam o participante a chegar até o local.
               </p>
@@ -563,7 +563,7 @@ export default function InformacoesPage() {
             <div className="flex flex-wrap gap-5 items-start">
               {/* CEP */}
               <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   CEP
                 </label>
                 <Input
@@ -582,7 +582,7 @@ export default function InformacoesPage() {
 
               {/* Campos de endereço - sempre visíveis */}
               <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Rua
                 </label>
                 <Input
@@ -596,7 +596,7 @@ export default function InformacoesPage() {
               </div>
 
               <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Bairro
                 </label>
                 <Input
@@ -610,7 +610,7 @@ export default function InformacoesPage() {
               </div>
 
               <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Cidade
                 </label>
                 <Input
@@ -624,7 +624,7 @@ export default function InformacoesPage() {
               </div>
 
               <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   Estado
                 </label>
                 <Input
@@ -639,7 +639,7 @@ export default function InformacoesPage() {
 
               {/* URL do Google Maps */}
               <div className="flex flex-col gap-2 w-full">
-                <label className="text-gray-12 text-base font-dm-sans">
+                <label className="text-gray-12 text-base font-family-dm-sans">
                   URL do google
                 </label>
                 <div className="relative">
@@ -670,7 +670,7 @@ export default function InformacoesPage() {
               </div>
               <div className="flex flex-col gap-4 items-start justify-center flex-1">
                 <div className="flex flex-col gap-2 items-start justify-center w-full">
-                  <p className="text-primary-11 text-base font-bold font-dm-sans leading-[1.3] text-start w-full">
+                  <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">
                     Envie o regulamento do evento em PDF para que os participantes possam baixar na página do evento.
                   </p>
                   <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
@@ -678,7 +678,7 @@ export default function InformacoesPage() {
                   </p>
                 </div>
                 <div className="flex gap-1 items-center justify-center">
-                  <p className="text-gray-12 text-base font-bold font-dm-sans leading-[1.3]">
+                  <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
                     Arraste um arquivo PDF para este campo ou clique aqui
                   </p>
                 </div>

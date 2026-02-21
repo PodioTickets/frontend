@@ -5,15 +5,18 @@ import type { Event } from "@/interfaces/event";
 import Image from "next/image";
 import { MessageIcon } from "../Icons/MessageIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
-import { mockKits } from "@/constants/kits";
 import { useMemo } from "react";
+import type { Ticket } from "@/hooks/useTickets";
 
 interface EventInfoProps {
   event: Event;
   onNext: () => void;
+  tickets?: Ticket[];
+  categorizedTickets?: Array<{ id: string; name: string; tickets: Ticket[] }>;
+  uncategorizedTickets?: Ticket[];
 }
 
-export function EventInfo({ event, onNext }: EventInfoProps) {
+export function EventInfo({ event, onNext, tickets = [], categorizedTickets = [], uncategorizedTickets = [] }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
 
   const formatDate = (date: string) => {
@@ -33,46 +36,106 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
     }).format(price);
   };
 
-  // Agrupa ingressos por race para exibição
+  const getTicketPrice = (ticket: Ticket): number => {
+    try {
+      return parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
+    } catch {
+      return 0;
+    }
+  };
+
+  // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
       quantity: number;
-      raceName: string;
+      ticketName: string;
       distance: string;
       price: number;
       total: number;
     }> = [];
 
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
+          const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
           grouped.push({
             quantity,
-            raceName: race.name,
-            distance: race.distance,
-            price: race.price,
-            total: race.price * quantity,
+            ticketName: ticket.name,
+            distance,
+            price: getTicketPrice(ticket),
+            total: getTicketPrice(ticket) * quantity,
           });
         }
       });
     });
 
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) {
+        const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+        grouped.push({
+          quantity,
+          ticketName: ticket.name,
+          distance,
+          price: getTicketPrice(ticket),
+          total: getTicketPrice(ticket) * quantity,
+        });
+      }
+    });
+
     return grouped;
-  }, [raceQuantities]);
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   const totalPrice = useMemo(() => {
     let total = 0;
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
+
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
-          total += race.price * quantity;
+          total += getTicketPrice(ticket) * quantity;
         }
       });
     });
+
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) {
+        total += getTicketPrice(ticket) * quantity;
+      }
+    });
+
     return total;
-  }, [raceQuantities]);
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
+
+  const totalParticipants = useMemo(() => {
+    let participants = 0;
+
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        if (quantity > 0) {
+          participants += quantity;
+        }
+      });
+    });
+
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) {
+        participants += quantity;
+      }
+    });
+
+    return participants;
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   return (
     <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
@@ -116,33 +179,47 @@ export function EventInfo({ event, onNext }: EventInfoProps) {
         </div>
 
         <div className="flex flex-col w-full mt-4 gap-2">
-          {groupedTickets.map((ticket, index) => (
-            <p
-              key={index}
-              className="text-sm font-medium text-gray-11 flex items-center justify-between w-full"
-            >
-              ({ticket.quantity}x) {ticket.raceName}:{" "}
-              <span className="text-gray-12">
-                {formatPrice(ticket.total)}
-              </span>
+          {groupedTickets.length > 0 ? (
+            <>
+              {groupedTickets.map((ticket, index) => (
+                <p
+                  key={index}
+                  className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full"
+                >
+                  ({ticket.quantity}x) {ticket.distance ? `${ticket.distance} ` : ""}{ticket.ticketName}:{" "}
+                  <span className="text-gray-12">
+                    {formatPrice(ticket.total)}
+                  </span>
+                </p>
+              ))}
+              <p className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full">
+                Taxa de serviço:{" "}
+                <span className="text-gray-12">
+                  {formatPrice(event.serviceFee || 0)}
+                </span>
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-11 text-center py-2">
+              Nenhum ingresso selecionado
             </p>
-          ))}
-          <p className="text-sm font-medium text-gray-11 flex items-center justify-between w-full">
-            Taxa de serviço:{" "}
-            <span className="text-gray-12">
-              {formatPrice(event.serviceFee || 0)}
-            </span>
-          </p>
+          )}
         </div>
 
-        <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
-          Total:{" "}
-          <span className="text-gray-12">
-            {formatPrice(totalPrice + (event.serviceFee || 0))}
-          </span>
-        </h1>
+        {groupedTickets.length > 0 && (
+          <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
+            Total:{" "}
+            <span className="text-gray-12">
+              {formatPrice(totalPrice + (event.serviceFee || 0))}
+            </span>
+          </h1>
+        )}
 
-        <Button onClick={onNext} className="w-full mt-8 font-bold">
+        <Button
+          onClick={onNext}
+          className="w-full mt-8 font-bold"
+          disabled={totalParticipants === 0}
+        >
           Proximo
         </Button>
       </div>

@@ -195,7 +195,7 @@ function CallbackContent() {
     <div className="flex items-center justify-center min-h-screen bg-gray-2">
       <div className="flex flex-col items-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-11"></div>
-        <p className="text-gray-11 font-dm-sans">
+        <p className="text-gray-11 font-family-dm-sans">
           {isProcessing ? "Processando autenticação..." : "Redirecionando..."}
         </p>
       </div>
@@ -210,7 +210,7 @@ export default function AuthCallbackPage() {
         <div className="flex items-center justify-center min-h-screen bg-gray-2">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-11"></div>
-            <p className="text-gray-11 font-dm-sans">Carregando...</p>
+            <p className="text-gray-11 font-family-dm-sans">Carregando...</p>
           </div>
         </div>
       }

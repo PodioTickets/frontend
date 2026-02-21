@@ -111,7 +111,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
         </h3>
         <div className="flex gap-1 items-center justify-center">
           <MapPin className="size-5 shrink-0 text-gray-12" />
-          <p className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+          <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
             {ticket.event.location.city}, {ticket.event.location.state}
           </p>
         </div>
@@ -130,7 +130,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
               width={20}
               height={20}
             />
-            <p className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans line-clamp-1">
+            <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans line-clamp-1">
               {ticket.modality.name}
             </p>
           </div>
@@ -139,13 +139,13 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           <div className="flex items-center justify-between w-full">
             <div className="flex gap-1 items-center justify-center">
               <Calendar className="size-5 shrink-0 text-gray-12" />
-              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                 {formatDate(ticket.event.eventDate)}
               </p>
             </div>
             <div className="flex gap-1 items-center justify-center">
               <Clock className="size-5 shrink-0 text-gray-12" />
-              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                 {formatTime(ticket.event.eventDate)}
               </p>
             </div>
@@ -155,7 +155,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           {ticket.distance && (
             <div className="flex gap-1 items-center justify-center">
               <Navigation className="size-5 shrink-0 text-gray-12" />
-              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                 {ticket.distance}
               </p>
             </div>
@@ -173,7 +173,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
             )}
           >
             <div className="relative shrink-0 size-3 rounded-full bg-current" />
-            <p className="font-semibold text-sm leading-[1.3] font-dm-sans whitespace-nowrap">
+            <p className="font-semibold text-sm leading-[1.3] font-family-dm-sans whitespace-nowrap">
               {status.label}
             </p>
           </div>

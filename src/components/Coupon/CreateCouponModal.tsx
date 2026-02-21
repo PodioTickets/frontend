@@ -290,7 +290,7 @@ export function CreateCouponModal() {
             <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-dm-sans leading-[1.3]">
+                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   Criar cupom
                 </h2>
                 <button
@@ -311,7 +311,7 @@ export function CreateCouponModal() {
                         <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                           O que você quer criar?
                         </h3>
-                        <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                           Escolha um tipo de desconto para configurar
                         </p>
                       </div>
@@ -329,7 +329,7 @@ export function CreateCouponModal() {
                             }`}
                         >
                           <Checkbox checked={couponType === "DISCOUNT"} />
-                          <span className={`text-sm font-dm-sans leading-[1.3] ${couponType === "DISCOUNT" ? "text-gray-12" : "text-gray-11"
+                          <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "DISCOUNT" ? "text-gray-12" : "text-gray-11"
                             }`}>
                             Cupom de desconto
                           </span>
@@ -346,7 +346,7 @@ export function CreateCouponModal() {
                             }`}
                         >
                           <Checkbox checked={couponType === "QUANTITY"} />
-                          <span className={`text-sm font-dm-sans leading-[1.3] ${couponType === "QUANTITY" ? "text-gray-12" : "text-gray-11"
+                          <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "QUANTITY" ? "text-gray-12" : "text-gray-11"
                             }`}>
                             Cupom por quantidade
                           </span>
@@ -362,13 +362,13 @@ export function CreateCouponModal() {
                             }`}
                         >
                           <Checkbox checked={couponType === "AGE"} />
-                          <span className={`text-sm font-dm-sans leading-[1.3] ${couponType === "AGE" ? "text-gray-12" : "text-gray-11"
+                          <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "AGE" ? "text-gray-12" : "text-gray-11"
                             }`}>
                             Cupom por idade
                           </span>
                         </button>
                       </div>
-                      <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                         {couponType === "DISCOUNT" && "O participante digita um código no pagamento"}
                         {couponType === "QUANTITY" && "Aplica ao comprar uma quantidade mínima de ingressos"}
                         {couponType === "AGE" && "Aplica conforme a idade do participante na data do evento"}
@@ -384,7 +384,7 @@ export function CreateCouponModal() {
                             <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                               Cupom de desconto
                             </h3>
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               Crie um código para o participante digitar no pagamento e receber o desconto
                             </p>
                           </div>
@@ -395,7 +395,7 @@ export function CreateCouponModal() {
                             <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                               Cupom por quantidade (automático)
                             </h3>
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos
                             </p>
                           </div>
@@ -406,7 +406,7 @@ export function CreateCouponModal() {
                             <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                               Cupom por idade (automático)
                             </h3>
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               Desconto automático para participantes dentro de uma faixa de idade na data do evento
                             </p>
                           </div>
@@ -416,7 +416,7 @@ export function CreateCouponModal() {
                         {couponType === "QUANTITY" && (
                           <div className="flex flex-col gap-2.5 w-[596px]">
                             <div className="flex flex-col gap-2">
-                              <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Quantidade mínima de ingressos
                               </label>
                               <Input
@@ -430,7 +430,7 @@ export function CreateCouponModal() {
                                 className="h-12"
                               />
                             </div>
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
                             </p>
                           </div>
@@ -443,7 +443,7 @@ export function CreateCouponModal() {
                               <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                 Regra de idade
                               </h3>
-                              <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Aplica para participantes com idade a partir de X
                               </p>
                             </div>
@@ -455,7 +455,7 @@ export function CreateCouponModal() {
                                     if (checked) setAgeRule("MIN");
                                   }}
                                 />
-                                <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                   Idade mínima
                                 </span>
                               </label>
@@ -466,13 +466,13 @@ export function CreateCouponModal() {
                                     if (checked) setAgeRule("MAX");
                                   }}
                                 />
-                                <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                   Idade máxima
                                 </span>
                               </label>
                             </div>
                             <div className="flex flex-col gap-2 w-[132px]">
-                              <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Título
                               </label>
                               <Input
@@ -493,7 +493,7 @@ export function CreateCouponModal() {
                         {couponType === "DISCOUNT" && (
                           <div className="flex flex-col gap-2.5">
                             <div className="flex flex-col gap-2">
-                              <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Título
                               </label>
                               <Input
@@ -512,7 +512,7 @@ export function CreateCouponModal() {
                             </div>
                             <div className="flex items-center gap-1">
                               <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                              <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Limite de 25 Caracteres, use letras e números, sem espaços
                               </p>
                             </div>
@@ -523,7 +523,7 @@ export function CreateCouponModal() {
                         {couponType === "QUANTITY" && (
                           <div className="flex flex-col gap-2.5">
                             <div className="flex flex-col gap-2">
-                              <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Título
                               </label>
                               <Input
@@ -542,7 +542,7 @@ export function CreateCouponModal() {
                             </div>
                             <div className="flex items-center gap-1">
                               <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                              <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Limite de 25 Caracteres, use letras e números, sem espaços
                               </p>
                             </div>
@@ -552,8 +552,8 @@ export function CreateCouponModal() {
                         {/* Nota (opcional) */}
                         <div className="flex flex-col gap-2.5">
                           <div className="flex flex-col gap-2">
-                            <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
-                              Nota <span className="text-gray-11 text-base font-dm-sans leading-[1.3]">(opcional)</span>
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                              Nota <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">(opcional)</span>
                             </label>
                             <Input
                               type="text"
@@ -565,7 +565,7 @@ export function CreateCouponModal() {
                           </div>
                           <div className="flex items-center gap-1">
                             <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               Essa nota é só para organização interna
                             </p>
                           </div>
@@ -574,10 +574,10 @@ export function CreateCouponModal() {
                         {/* Tipo de desconto */}
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-col gap-3">
-                            <h3 className="text-gray-12 text-lg font-medium font-dm-sans leading-[1.3]">
+                            <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                               Tipo de desconto
                             </h3>
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               Escolha como o desconto será aplicado
                             </p>
                           </div>
@@ -587,7 +587,7 @@ export function CreateCouponModal() {
                                 checked={discountType === "PERCENTAGE"}
                                 onChange={() => setDiscountType("PERCENTAGE")}
                               />
-                              <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                              <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                 Percentual (%)
                               </span>
                             </label>
@@ -596,13 +596,13 @@ export function CreateCouponModal() {
                                 checked={discountType === "FIXED"}
                                 onChange={() => setDiscountType("FIXED")}
                               />
-                              <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                              <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                 Valor fixo (R$)
                               </span>
                             </label>
                           </div>
                           <div className="flex flex-col gap-2 w-[259px]">
-                            <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Valor
                             </label>
                             <Input
@@ -636,10 +636,10 @@ export function CreateCouponModal() {
                         {couponType === "DISCOUNT" && (
                           <div className="flex flex-col gap-4">
                             <div className="flex flex-col gap-3">
-                              <h3 className="text-gray-12 text-lg font-medium font-dm-sans leading-[1.3]">
+                              <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                 Aplicar em ingressos
                               </h3>
-                              <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Deseja aplicar em todos os ingressos?
                               </p>
                             </div>
@@ -651,7 +651,7 @@ export function CreateCouponModal() {
                                     if (checked) setAppliesTo("all");
                                   }}
                                 />
-                                <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                   Sim
                                 </span>
                               </label>
@@ -662,7 +662,7 @@ export function CreateCouponModal() {
                                     if (checked) setAppliesTo("specific");
                                   }}
                                 />
-                                <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                   Ingressos específicos
                                 </span>
                               </label>
@@ -674,7 +674,7 @@ export function CreateCouponModal() {
                                   onClick={() => setShowSelectTicketsModal(true)}
                                   className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
                                 >
-                                  <span className="text-base font-dm-sans leading-[1.3] text-gray-11">
+                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                                     {selectedTicketIds.length > 0
                                       ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
                                       : "Selecione os ingressos"}
@@ -689,13 +689,13 @@ export function CreateCouponModal() {
                         {/* Aplicar em ingressos - para QUANTITY */}
                         {couponType === "QUANTITY" && (
                           <div className="flex flex-col gap-2 w-[276px]">
-                            <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Aplicar em quais ingressos?
                             </label>
                             <Dropdown
                               trigger={
                                 <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
-                                  <span className="text-base font-dm-sans leading-[1.3] text-gray-11">
+                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                                     {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
                                   </span>
                                   <ChevronDown className="size-6 text-gray-11" />
@@ -716,13 +716,13 @@ export function CreateCouponModal() {
                         {/* Aplicar em ingressos - para AGE */}
                         {couponType === "AGE" && (
                           <div className="flex flex-col gap-2 w-[276px]">
-                            <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Aplicar em quais ingressos?
                             </label>
                             <Dropdown
                               trigger={
                                 <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
-                                  <span className="text-base font-dm-sans leading-[1.3] text-gray-11">
+                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                                     {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
                                   </span>
                                   <ChevronDown className="size-6 text-gray-11" />
@@ -746,7 +746,7 @@ export function CreateCouponModal() {
                             onClick={() => setShowAdvanced(!showAdvanced)}
                             className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
                           >
-                            <span className="text-base font-medium font-dm-sans leading-[1.3]">
+                            <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
                               Mostrar conteúdo avançado opcionais
                             </span>
                             <ArrowButton isOpen={showAdvanced} />
@@ -767,7 +767,7 @@ export function CreateCouponModal() {
                                     <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                       Validade do cupom
                                     </h3>
-                                    <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                       Após essa data, o cupom não poderá ser usado
                                     </p>
                                   </div>
@@ -782,7 +782,7 @@ export function CreateCouponModal() {
                                           }
                                         }}
                                       />
-                                      <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                         Desabilitar
                                       </span>
                                     </label>
@@ -793,14 +793,14 @@ export function CreateCouponModal() {
                                           if (checked) setExpiryEnabled(true);
                                         }}
                                       />
-                                      <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                         Habilitar
                                       </span>
                                     </label>
                                   </div>
                                   {expiryEnabled && (
                                     <div className="flex flex-col gap-3">
-                                      <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                         Expira em:
                                       </label>
                                       <DatePicker
@@ -819,7 +819,7 @@ export function CreateCouponModal() {
                                     <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                       Valor mínimo do carrinho
                                     </h3>
-                                    <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                       O cupom só será aplicado se o carrinho atingir esse valor
                                     </p>
                                   </div>
@@ -834,7 +834,7 @@ export function CreateCouponModal() {
                                           }
                                         }}
                                       />
-                                      <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                         Desabilitar
                                       </span>
                                     </label>
@@ -845,14 +845,14 @@ export function CreateCouponModal() {
                                           if (checked) setMinCartEnabled(true);
                                         }}
                                       />
-                                      <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                         Habilitar
                                       </span>
                                     </label>
                                   </div>
                                   {minCartEnabled && (
                                     <div className="flex flex-col gap-2 w-[259px]">
-                                      <label className="text-gray-12 text-base font-dm-sans leading-[1.3]">
+                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                         Valor mínimo do carrinho
                                       </label>
                                       <Input
@@ -877,10 +877,10 @@ export function CreateCouponModal() {
                                 {/* Lista exclusiva por CPF */}
                                 <div className="flex flex-col gap-4">
                                   <div className="flex flex-col gap-3">
-                                    <h3 className="text-gray-12 text-lg font-medium font-dm-sans leading-[1.3]">
+                                    <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                       Deseja ativar lista exclusiva por CPF?
                                     </h3>
-                                    <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                       Restrinja o cupom para uma lista específica de CPFs
                                     </p>
                                   </div>
@@ -892,7 +892,7 @@ export function CreateCouponModal() {
                                           if (checked) setCpfListStatus("DISABLED");
                                         }}
                                       />
-                                      <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                         Desabilitado
                                       </span>
                                     </label>
@@ -903,7 +903,7 @@ export function CreateCouponModal() {
                                           if (checked) setCpfListStatus("ENABLED");
                                         }}
                                       />
-                                      <span className="text-sm font-dm-sans leading-[1.3] text-gray-12">
+                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                         Habilitar
                                       </span>
                                     </label>
@@ -915,7 +915,7 @@ export function CreateCouponModal() {
                                         <h4 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                           Lista exclusiva
                                         </h4>
-                                        <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                                        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                           Restrinja o cupom para uma lista específica de CPFs. Importe um CSV com 1 CPF por linha (apenas números)
                                         </p>
                                       </div>
@@ -964,7 +964,7 @@ export function CreateCouponModal() {
                                             className="flex items-center gap-2 px-4 py-2 text-gray-11 hover:text-gray-12 transition-colors"
                                           >
                                             <Plus className="size-5" />
-                                            <span className="text-base font-semibold font-dm-sans leading-[1.3]">
+                                            <span className="text-base font-semibold font-family-dm-sans leading-[1.3]">
                                               Adicionar campo
                                             </span>
                                           </button>

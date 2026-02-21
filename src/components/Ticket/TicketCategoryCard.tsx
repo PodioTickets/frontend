@@ -131,7 +131,7 @@ export function TicketCategoryCard({
                     <p className="font-manrope font-bold leading-[1.1] text-xl text-primary-11 w-full">
                       Arraste um ingresso para este campo
                     </p>
-                    <p className="font-dm-sans font-normal leading-[1.3] text-base text-gray-12 w-full">
+                    <p className="font-family-dm-sans font-normal leading-[1.3] text-base text-gray-12 w-full">
                       Você também pode deixar tudo em "Ingressos geral"
                     </p>
                   </div>

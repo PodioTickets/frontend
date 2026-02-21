@@ -154,7 +154,7 @@ export function PaymentSuccessStep({
                 <h1 className="font-extrabold text-xl leading-[1.1] font-manrope">
                   Pagamento aprovado
                 </h1>
-                <p className="font-medium text-base leading-[1.3] font-dm-sans">
+                <p className="font-medium text-base leading-[1.3] font-family-dm-sans">
                   Sua inscrição foi confirmada. Enviamos o comprovante para o
                   seu e-mail.
                 </p>
@@ -300,7 +300,7 @@ export function PaymentSuccessStep({
                 <h2 className="font-bold text-lg leading-[1.1] text-gray-12 font-manrope">
                   Detalhes do seu ingresso
                 </h2>
-                <p className="font-normal text-sm leading-[1.3] text-gray-11 font-dm-sans">
+                <p className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
                   Apresente este QR Code na retirada do kit ou na entrada do
                   evento para validar sua inscrição.
                 </p>
@@ -349,7 +349,7 @@ export function PaymentSuccessStep({
                               )}
                             </div>
                             <div className="flex-1 flex flex-col gap-4 items-start px-0 py-3 text-gray-12 text-start">
-                              <p className="font-normal text-base leading-[1.3] font-dm-sans">
+                              <p className="font-normal text-base leading-[1.3] font-family-dm-sans">
                                 Participante{" "}
                                 {participantData.participantIndex + 1}
                               </p>
@@ -361,19 +361,19 @@ export function PaymentSuccessStep({
                           <div className="flex flex-wrap gap-4 items-start w-full">
                             <div className="flex gap-2 items-center">
                               <DistanceIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                 0.3 Km
                               </span>
                             </div>
                             <div className="flex gap-2 items-center">
                               <CalendarIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                 {formatDate(event.eventDate)}
                               </span>
                             </div>
                             <div className="flex gap-2 items-center">
                               <ClockIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                 {formatTime(event.eventDate)}
                               </span>
                             </div>
@@ -401,13 +401,13 @@ export function PaymentSuccessStep({
                                 )}
                               </div>
                               <div className="flex flex-col gap-3 items-start justify-center flex-1">
-                                <p className="font-semibold text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                                <p className="font-semibold text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                                   {participant.name || "Sem nome"}
                                 </p>
                                 <div className="flex gap-2 items-center justify-center w-full">
                                   {participant.birthDate && (
                                     <>
-                                      <span className="font-normal text-xs leading-[1.3] text-gray-11 font-dm-sans">
+                                      <span className="font-normal text-xs leading-[1.3] text-gray-11 font-family-dm-sans">
                                         {formatDate(participant.birthDate)}
                                       </span>
                                       <div className="size-1 rounded-full bg-gray-11" />
@@ -415,14 +415,14 @@ export function PaymentSuccessStep({
                                   )}
                                   {participant.gender && (
                                     <>
-                                      <span className="font-normal text-xs leading-[1.3] text-gray-11 font-dm-sans">
+                                      <span className="font-normal text-xs leading-[1.3] text-gray-11 font-family-dm-sans">
                                         {getGenderLabel(participant.gender)}
                                       </span>
                                       <div className="size-1 rounded-full bg-gray-11" />
                                     </>
                                   )}
                                   {participant.cpf && (
-                                    <span className="font-normal text-xs leading-[1.3] text-gray-11 font-dm-sans flex-1 truncate">
+                                    <span className="font-normal text-xs leading-[1.3] text-gray-11 font-family-dm-sans flex-1 truncate">
                                       {maskCPF(participant.cpf)}
                                     </span>
                                   )}
@@ -507,19 +507,19 @@ export function PaymentSuccessStep({
                                     key={idx}
                                     className="flex flex-col items-start rounded-lg w-full"
                                   >
-                                    <label className="font-normal text-sm text-gray-12 font-dm-sans">
+                                    <label className="font-normal text-sm text-gray-12 font-family-dm-sans">
                                       {field.label}
                                     </label>
                                     <input
                                       type="text"
                                       value={field.value}
                                       readOnly
-                                      className="w-full font-medium text-base text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                      className="w-full font-medium text-base text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
                                     />
                                   </div>
                                 ))}
                                 <div className="flex flex-col items-start rounded-lg w-full">
-                                  <label className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                                  <label className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                                     Telefone de emergência
                                   </label>
                                   <input
@@ -528,7 +528,7 @@ export function PaymentSuccessStep({
                                       participant.emergencyPhone || "Opcional"
                                     }
                                     readOnly
-                                    className="w-full font-medium text-base leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                    className="w-full font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
                                   />
                                 </div>
                               </div>
@@ -559,22 +559,22 @@ export function PaymentSuccessStep({
                                               className="object-cover rounded-lg"
                                             />
                                           </div>
-                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans w-[170px]">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans w-[170px]">
                                             {product.name}
                                           </p>
                                         </div>
                                         <div className="flex items-center pl-0 pr-[37px] py-0 w-full">
-                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans mr-[-37px]">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans mr-[-37px]">
                                             {formatCurrency(product.price)}
                                           </p>
                                           <div className="basis-0 flex gap-1 grow items-center justify-end min-w-[147px] mr-[-37px] rounded-lg">
                                             <div className="flex gap-1 items-center">
-                                              <p className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                              <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                                 Tamanho:
                                               </p>
                                             </div>
                                             <div className="flex gap-1 h-[11px] items-center">
-                                              <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                              <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                                 {(product as any).size || "XL"}
                                               </p>
                                             </div>
@@ -620,7 +620,7 @@ export function PaymentSuccessStep({
                 <h1 className="font-extrabold text-[32px] leading-[1.1] font-manrope">
                   Pagamento aprovado
                 </h1>
-                <p className="font-medium text-[18px] leading-[1.3] font-dm-sans">
+                <p className="font-medium text-[18px] leading-[1.3] font-family-dm-sans">
                   Sua inscrição foi confirmada. Enviamos o comprovante para o
                   seu e-mail.
                 </p>
@@ -766,7 +766,7 @@ export function PaymentSuccessStep({
                 <h2 className="font-bold text-[28px] leading-[1.1] text-gray-12 font-manrope">
                   Detalhes do seu ingresso
                 </h2>
-                <p className="font-normal text-[16px] leading-[1.3] text-gray-11 font-dm-sans">
+                <p className="font-normal text-[16px] leading-[1.3] text-gray-11 font-family-dm-sans">
                   Apresente este QR Code na retirada do kit ou na entrada do
                   evento para validar sua inscrição.
                 </p>
@@ -797,7 +797,7 @@ export function PaymentSuccessStep({
                         {/* Content */}
                         <div className="flex items-center justify-between px-[16px] py-[24px] w-full">
                           <div className="flex flex-col gap-[20px] items-start">
-                            <p className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
+                            <p className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
                               Participante{" "}
                               {participantData.participantIndex + 1}
                             </p>
@@ -807,19 +807,19 @@ export function PaymentSuccessStep({
                             <div className="flex gap-[32px] items-start">
                               <div className="flex gap-[8px] items-center">
                                 <DistanceIcon className="size-6 text-gray-12" />
-                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
+                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-family-dm-sans">
                                   0.3 Km
                                 </span>
                               </div>
                               <div className="flex gap-[8px] items-center">
                                 <CalendarIcon className="size-6 text-gray-12" />
-                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
+                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-family-dm-sans">
                                   {formatDate(event.eventDate)}
                                 </span>
                               </div>
                               <div className="flex gap-[8px] items-center">
                                 <ClockIcon className="size-6 text-gray-12" />
-                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-dm-sans">
+                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-family-dm-sans">
                                   {formatTime(event.eventDate)}
                                 </span>
                               </div>
@@ -867,13 +867,13 @@ export function PaymentSuccessStep({
                                 )}
                               </div>
                               <div className="flex flex-col gap-[12px] items-start justify-center">
-                                <p className="font-semibold text-[14px] leading-[1.3] text-gray-12 font-dm-sans">
+                                <p className="font-semibold text-[14px] leading-[1.3] text-gray-12 font-family-dm-sans">
                                   {participant.name || "Sem nome"}
                                 </p>
                                 <div className="flex gap-[8px] items-center justify-center">
                                   {participant.birthDate && (
                                     <>
-                                      <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
+                                      <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-family-dm-sans">
                                         {formatDate(participant.birthDate)}
                                       </span>
                                       <div className="size-1 rounded-full bg-gray-11" />
@@ -881,14 +881,14 @@ export function PaymentSuccessStep({
                                   )}
                                   {participant.gender && (
                                     <>
-                                      <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
+                                      <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-family-dm-sans">
                                         {getGenderLabel(participant.gender)}
                                       </span>
                                       <div className="size-1 rounded-full bg-gray-11" />
                                     </>
                                   )}
                                   {participant.cpf && (
-                                    <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-dm-sans">
+                                    <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-family-dm-sans">
                                       {maskCPF(participant.cpf)}
                                     </span>
                                   )}
@@ -980,19 +980,19 @@ export function PaymentSuccessStep({
                                     key={idx}
                                     className="flex flex-col gap-2 items-start rounded-[8px] min-w-[313px]"
                                   >
-                                    <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
+                                    <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
                                       {field.label}
                                     </label>
                                     <input
                                       type="text"
                                       value={field.value}
                                       readOnly
-                                      className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                      className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
                                     />
                                   </div>
                                 ))}
                                 <div className="flex flex-col gap-2 items-start rounded-[8px] col-span-2">
-                                  <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-dm-sans">
+                                  <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
                                     Telefone de emergência
                                   </label>
                                   <input
@@ -1001,7 +1001,7 @@ export function PaymentSuccessStep({
                                       participant.emergencyPhone || "Opcional"
                                     }
                                     readOnly
-                                    className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-dm-sans bg-transparent border-0 outline-none"
+                                    className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
                                   />
                                 </div>
                               </div>
@@ -1032,22 +1032,22 @@ export function PaymentSuccessStep({
                                               className="object-cover rounded-lg"
                                             />
                                           </div>
-                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans w-[170px]">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans w-[170px]">
                                             {product.name}
                                           </p>
                                         </div>
                                         <div className="flex items-center pl-0 pr-[37px] py-0 w-full">
-                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans mr-[-37px]">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans mr-[-37px]">
                                             {formatCurrency(product.price)}
                                           </p>
                                           <div className="basis-0 flex gap-1 grow items-center justify-end min-w-[147px] mr-[-37px] rounded-lg">
                                             <div className="flex gap-1 items-center">
-                                              <p className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                              <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                                 Tamanho:
                                               </p>
                                             </div>
                                             <div className="flex gap-1 h-[11px] items-center">
-                                              <p className="font-semibold text-base leading-[1.3] text-gray-12 font-dm-sans">
+                                              <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                                 {(product as any).size || "XL"}
                                               </p>
                                             </div>

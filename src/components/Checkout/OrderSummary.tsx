@@ -1,13 +1,23 @@
 import { useState, useEffect } from "react";
 import { Button } from "../Button";
 import Image from "next/image";
-import { ParticipantsList } from "./ParticipantsList";
+import { ArrowButton } from "../ArrowButton";
+import { TicketIcon } from "../Icons/TicketIcon";
+import { StarIcon } from "../Icons/StarIcon";
 
 interface OrderItem {
   name: string;
   price: number;
   image?: string;
   size?: string;
+}
+
+interface GroupedTicket {
+  quantity: number;
+  raceName: string;
+  distance: string;
+  price: number;
+  total: number;
 }
 
 interface ParticipantData {
@@ -19,34 +29,57 @@ interface ParticipantData {
     price: number;
     quantity: number;
   }>;
+  participant?: {
+    name: string;
+    cpf: string;
+    email: string;
+    birthDate: string;
+    phone: string;
+    gender?: string;
+  };
+  couponCode?: string;
+  couponDiscount?: number;
+  voucherCode?: string;
+  voucherDiscount?: number;
 }
 
 interface OrderSummaryProps {
-  items: OrderItem[];
+  items?: OrderItem[]; // Produtos opcionais
+  groupedTickets?: GroupedTicket[]; // Ingressos selecionados
   serviceFee: number;
   total: number;
   couponCode?: string;
   couponDiscount?: number;
+  couponName?: string;
   couponError?: string | null;
   isCouponApplied?: boolean;
+  voucherCode?: string;
+  voucherDiscount?: number;
+  voucherName?: string;
   onApplyCoupon: () => void;
   onCouponChange?: (coupon: string) => void;
   participantsData?: ParticipantData[];
 }
 
 export function OrderSummary({
-  items,
+  items = [],
+  groupedTickets = [],
   serviceFee,
   total,
   couponCode: externalCouponCode = "",
   couponDiscount = 0,
+  couponName,
   couponError = null,
   isCouponApplied = false,
+  voucherCode,
+  voucherDiscount = 0,
+  voucherName,
   onApplyCoupon,
   onCouponChange,
   participantsData = [],
 }: OrderSummaryProps) {
   const [couponCode, setCouponCode] = useState(externalCouponCode);
+  const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
 
   // Sync external coupon code
   useEffect(() => {
@@ -55,98 +88,302 @@ export function OrderSummary({
     }
   }, [externalCouponCode]);
 
-  const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
+  };
+
+  const formatDate = (date: string) => {
+    if (!date) return "";
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(date));
+  };
+
+  const maskCPF = (cpf: string) => {
+    if (!cpf) return "";
+    const cleaned = cpf.replace(/\D/g, "");
+    if (cleaned.length !== 11) return cpf;
+    return `${cleaned.slice(0, 3)}.***.***-${cleaned.slice(9)}`;
+  };
+
+  const getGenderLabel = (gender?: string) => {
+    if (!gender) return "";
+    const labels: Record<string, string> = {
+      male: "Masculino",
+      female: "Feminino",
+      other: "Outro",
+    };
+    return labels[gender] || gender;
+  };
+
+  // Calcular subtotal dos produtos opcionais
+  const productsSubtotal = items.reduce((sum, item) => sum + item.price, 0);
+
+  // Calcular subtotal dos ingressos
+  const ticketsSubtotal = groupedTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+
+  // Subtotal total (ingressos + produtos + taxa)
+  const subtotal = ticketsSubtotal + productsSubtotal + serviceFee;
+
+  const toggleParticipant = (index: number) => {
+    setExpandedParticipants((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg flex flex-col h-[600px] overflow-hidden">
-      {/* Resumo Financeiro */}
-      <div className="border-b border-gray-5 pb-4 mb-4 p-4">
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between text-gray-12">
-            <span>{items.length}x Itens adicionais:</span>
-            <span className="font-bold">
-              R${" "}
-              {items
-                .reduce((sum, item) => sum + item.price, 0)
-                .toFixed(2)
-                .replace(".", ",")}
-            </span>
-          </div>
-          <div className="flex justify-between text-gray-12">
-            <span>Taxa de serviço:</span>
-            <span className="font-bold">
-              R$ {serviceFee.toFixed(2).replace(".", ",")}
-            </span>
-          </div>
-          <div className="flex justify-between text-gray-12">
-            <span>Subtotal:</span>
-            <span className="font-bold">
-              R$ {(subtotal + serviceFee).toFixed(2).replace(".", ",")}
-            </span>
-          </div>
-          {isCouponApplied && couponDiscount > 0 && (
-            <div className="flex justify-between text-gray-12">
-              <span>Cupom:</span>
-              <span className="font-bold text-primary-11">
-                -R$ {couponDiscount.toFixed(2).replace(".", ",")}
-              </span>
+    <div className="flex flex-col gap-6 w-full">
+      {/* Seção de Valores */}
+      <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] p-6">
+        <div className="flex flex-col gap-5 pb-6">
+          {/* Itens adicionais */}
+          {items.length > 0 && (
+            <div className="flex gap-8 items-center">
+              <div className="flex flex-1 flex-col">
+                <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                  {items.length}x Itens adicionais:
+                </p>
+              </div>
+              <div className="flex flex-col items-end">
+                <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                  {formatPrice(productsSubtotal)}
+                </p>
+              </div>
             </div>
           )}
-        </div>
 
-        <div className="flex justify-between text-lg font-bold text-gray-12 mt-4 pt-4 border-t border-gray-5">
-          <span>Total:</span>
-          <span>R$ {total.toFixed(2).replace(".", ",")}</span>
-        </div>
-      </div>
-
-      {/* Campo Cupom */}
-      <div className="mb-2 p-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2 h-12">
-            <input
-              type="text"
-              placeholder="Digite o código"
-              value={couponCode}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "").substring(0, 6);
-                setCouponCode(value);
-                if (onCouponChange) {
-                  onCouponChange(value);
-                }
-              }}
-              maxLength={6}
-              className={`flex-1 px-3 py-2 text-gray-12 font-medium border rounded-lg text-sm focus:outline-none focus:border-primary-10 ${
-                couponError ? "border-red-6" : "border-gray-6"
-              }`}
-            />
-            <Button
-              size="sm"
-              className="h-full w-1/3"
-              onClick={onApplyCoupon}
-            >
-              Aplicar
-            </Button>
+          {/* Taxa de serviço */}
+          <div className="flex items-center justify-between text-base text-gray-12">
+            <p className="font-manrope font-semibold">Taxa de serviço:</p>
+            <p className="font-manrope font-bold">{formatPrice(serviceFee)}</p>
           </div>
-          {couponError && (
-            <p className="text-sm font-medium text-red-11">
-              {couponError}
-            </p>
+
+          {/* Cupom aplicado */}
+          {isCouponApplied && couponDiscount > 0 && couponName && (
+            <div className="flex items-center justify-between text-base text-gray-12">
+              <p className="font-manrope font-semibold">
+                Cupom {couponName} ({couponDiscount > 0 ? `${Math.round((couponDiscount / subtotal) * 100)}% OFF` : ""}):
+              </p>
+              <p className="font-manrope font-bold">{formatPrice(couponDiscount)}</p>
+            </div>
           )}
-          {isCouponApplied && couponDiscount > 0 && (
-            <p className="text-sm font-medium text-primary-11">
-              Cupom aplicado! Desconto de R$ {couponDiscount.toFixed(2).replace(".", ",")}
-            </p>
+
+          {/* Voucher aplicado */}
+          {voucherCode && voucherDiscount > 0 && voucherName && (
+            <div className="flex items-center justify-between text-base text-gray-12">
+              <p className="font-manrope font-semibold w-[241px] whitespace-pre-wrap">
+                Voucher {voucherName}:
+              </p>
+              <p className="font-manrope font-bold">{formatPrice(voucherDiscount)}</p>
+            </div>
           )}
+
+          {/* Subtotal */}
+          <div className="flex items-center justify-between text-base text-gray-12">
+            <p className="font-manrope font-semibold">Subtotal:</p>
+            <p className="font-manrope font-bold">{formatPrice(subtotal)}</p>
+          </div>
+        </div>
+
+        {/* Total */}
+        <div className="border-t border-gray-6 flex font-manrope font-bold items-center justify-between py-6 text-xl text-gray-12">
+          <p>Total:</p>
+          <p>{formatPrice(total)}</p>
+        </div>
+
+        {/* Campo Cupom */}
+        <div className="border-t border-gray-8 flex flex-col gap-5 items-end justify-center pt-6">
+          <div className="flex flex-col items-start w-full">
+            <div className="flex gap-3 items-center w-full">
+              <div className="border-[1.5px] border-gray-8 flex flex-1 h-12 items-center px-3 rounded-lg">
+                <input
+                  type="text"
+                  placeholder="Código de cupom (opcional)"
+                  value={couponCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "").substring(0, 25);
+                    setCouponCode(value);
+                    if (onCouponChange) {
+                      onCouponChange(value);
+                    }
+                  }}
+                  maxLength={25}
+                  className="flex-1 text-base text-gray-11 font-family-dm-sans font-normal leading-[1.3] bg-transparent border-none outline-none"
+                />
+              </div>
+              <Button
+                onClick={onApplyCoupon}
+              >
+                Aplicar
+              </Button>
+            </div>
+            {couponError && (
+              <p className="text-sm font-medium text-red-11 mt-2">{couponError}</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Lista de Participantes com Scroll */}
-      {participantsData.length > 0 && (
-        <div className=" w-full bg-gray-3 overflow-hidden border-t border-gray-6">
-          <ParticipantsList participantsData={participantsData} />
+      {/* Resumo da Compra */}
+      <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] overflow-hidden">
+        <div className="flex flex-col items-start px-4 py-1">
+          {/* Título */}
+          <div className="flex items-center justify-center py-4 w-full">
+            <p className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
+              Resumo da sua compra
+            </p>
+          </div>
+
+          {/* Lista de Participantes */}
+          <div className="flex flex-col gap-4 items-start w-full pb-4">
+            {participantsData.map((participantData, index) => {
+              const isExpanded = expandedParticipants[index] ?? false;
+              const additionalProductsTotal = participantData.additionalProducts?.reduce(
+                (sum, p) => sum + p.price * p.quantity,
+                0
+              ) || 0;
+
+              return (
+                <div
+                  key={index}
+                  className="border border-gray-6 flex flex-col items-start min-w-[400px] overflow-hidden rounded-xl w-full"
+                >
+                  {/* Conteúdo do Card */}
+                  <div className="flex items-center px-4 py-6 w-full">
+                    <div className="flex flex-1 flex-col gap-5 items-start">
+                      <div className="flex items-center w-full">
+                        <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                          Participante {participantData.participantIndex + 1}
+                        </p>
+                      </div>
+                      <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
+                        {participantData.ticketName}
+                      </p>
+                      <div className="flex items-end justify-between w-full text-gray-12">
+                        <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
+                          Valor do ingresso:
+                        </p>
+                        <p className="font-manrope font-bold text-lg leading-[1.1]">
+                          {formatPrice(participantData.ticketPrice)}
+                        </p>
+                      </div>
+                      {participantData.additionalProducts && participantData.additionalProducts.length > 0 && (
+                        <div className="flex items-end justify-between w-full text-gray-12">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
+                            Produtos adicionais ({participantData.additionalProducts.length}):
+                          </p>
+                          <p className="font-manrope font-bold text-lg leading-[1.1]">
+                            {formatPrice(additionalProductsTotal)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Perfil do Participante */}
+                  {participantData.participant && (
+                    <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="border border-gray-6 flex items-center p-3 rounded-xl">
+                          <div className="flex gap-2 items-center">
+                            <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
+                              {participantData.participant.name ? (
+                                <span className="text-sm font-bold text-gray-12">
+                                  {participantData.participant.name.charAt(0).toUpperCase()}
+                                </span>
+                              ) : (
+                                <div className="size-10 rounded-full bg-gray-5" />
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-3 items-start justify-center">
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
+                                {participantData.participant.name || `Participante ${participantData.participantIndex + 1}`}
+                              </p>
+                              <div className="flex gap-2 items-center justify-center">
+                                {participantData.participant.birthDate && (
+                                  <>
+                                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                      {formatDate(participantData.participant.birthDate)}
+                                    </p>
+                                    <div className="size-1 bg-gray-11 rounded-full" />
+                                  </>
+                                )}
+                                {participantData.participant.gender && (
+                                  <>
+                                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                      {getGenderLabel(participantData.participant.gender)}
+                                    </p>
+                                    {participantData.participant.cpf && (
+                                      <div className="size-1 bg-gray-11 rounded-full" />
+                                    )}
+                                  </>
+                                )}
+                                {participantData.participant.cpf && (
+                                  <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                    {maskCPF(participantData.participant.cpf)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          <button
+                            onClick={() => toggleParticipant(index)}
+                            className="flex items-center justify-center size-6"
+                          >
+                            <div className={`transform transition-transform -scale-y-100 ${isExpanded ? "rotate-180" : ""}`}>
+                              <ArrowButton isOpen={false} />
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Badge de Cupom */}
+                      {participantData.couponCode && participantData.couponDiscount && (
+                        <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                          <div className="flex gap-1 items-center">
+                            <TicketIcon className="size-6 text-yellow-12" />
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                              Cupom: {participantData.couponCode}
+                            </p>
+                          </div>
+                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                            {Math.round((participantData.couponDiscount / participantData.ticketPrice) * 100)}% OFF
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Badge de Voucher */}
+                      {participantData.voucherCode && participantData.voucherDiscount && (
+                        <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                          <div className="flex gap-1 items-center">
+                            <StarIcon className="size-6 text-yellow-12" />
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                              Voucher: {participantData.voucherCode}
+                            </p>
+                          </div>
+                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                            100% Cortesia
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

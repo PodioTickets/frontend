@@ -377,7 +377,7 @@ export function DateOfBirthPicker({
             placeholder={placeholder}
             maxLength={10}
             className={cn(
-              "flex h-12 w-full items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3 text-left hover:bg-gray-3 focus:bg-gray-3 focus:outline-none focus:border-primary-10 transition-colors text-base font-normal font-dm-sans",
+              "flex h-12 w-full items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3 text-left hover:bg-gray-3 focus:bg-gray-3 focus:outline-none focus:border-primary-10 transition-colors text-base font-normal font-family-dm-sans",
               icon && "pl-10",
               "pr-10",
               disabled && "cursor-not-allowed opacity-50",

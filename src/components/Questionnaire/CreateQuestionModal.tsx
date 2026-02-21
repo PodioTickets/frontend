@@ -193,7 +193,7 @@ export function CreateQuestionModal() {
             <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[982px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-dm-sans leading-[1.3]">
+                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   {isEditing ? "Editar pergunta" : "Criar pergunta"}
                 </h2>
                 <button
@@ -210,7 +210,7 @@ export function CreateQuestionModal() {
                     {/* Pergunta Input */}
                     <div className="flex flex-col gap-2.5">
                       <div className="flex flex-col gap-2">
-                        <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Pergunta
                         </label>
                         <div className="relative">
@@ -226,7 +226,7 @@ export function CreateQuestionModal() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Info className="size-5 text-gray-11" />
-                        <span className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                        <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Limite de 25 Caracteres
                         </span>
                       </div>
@@ -235,7 +235,7 @@ export function CreateQuestionModal() {
                     {/* Tipo de resposta */}
                     <div className="flex flex-col gap-6">
                       <div className="flex flex-col gap-2 w-[276px]">
-                        <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Tipo de resposta
                         </label>
                         <Dropdown
@@ -246,7 +246,7 @@ export function CreateQuestionModal() {
                           }))}
                           trigger={
                             <div className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors">
-                              <span className="text-gray-11 text-base font-normal font-dm-sans">
+                              <span className="text-gray-11 text-base font-normal font-family-dm-sans">
                                 {selectedTypeLabel}
                               </span>
                               <ChevronDown className="size-6 text-gray-11" />
@@ -266,7 +266,7 @@ export function CreateQuestionModal() {
                               <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                 Lista
                               </h3>
-                              <p className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                              <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                                 Objetivo: participante escolhe uma opção num dropdown. Adicione pelo menos 2 opções para o participante escolher
                               </p>
                             </div>
@@ -318,7 +318,7 @@ export function CreateQuestionModal() {
                             <div className="p-4 flex justify-center">
                               <button
                                 onClick={handleAddOption}
-                                className="flex items-center gap-1 h-11 px-11 text-gray-11 text-base font-semibold font-dm-sans hover:text-gray-12 transition-colors"
+                                className="flex items-center gap-1 h-11 px-11 text-gray-11 text-base font-semibold font-family-dm-sans hover:text-gray-12 transition-colors"
                               >
                                 <Plus className="size-6" />
                                 Adicionar opção
@@ -335,7 +335,7 @@ export function CreateQuestionModal() {
                             <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                               Verdadeiro/Falso
                             </h3>
-                            <p className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                               Objetivo: participante escolhe entre verdadeiro ou falso
                             </p>
                             <div className="flex gap-4 mt-2">
@@ -347,7 +347,7 @@ export function CreateQuestionModal() {
                                   disabled
                                   className="size-6"
                                 />
-                                <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                                <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                                   Verdadeiro
                                 </span>
                               </div>
@@ -359,7 +359,7 @@ export function CreateQuestionModal() {
                                   disabled
                                   className="size-6"
                                 />
-                                <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                                <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                                   Falso
                                 </span>
                               </div>
@@ -375,7 +375,7 @@ export function CreateQuestionModal() {
                             <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                               Número inteiro
                             </h3>
-                            <p className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                               Objetivo: participante digita um número inteiro como resposta
                             </p>
                             <div className="mt-2">
@@ -393,7 +393,7 @@ export function CreateQuestionModal() {
 
                     {/* Obrigatório/Opcional */}
                     <div className="flex flex-col gap-3">
-                      <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                      <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                         Participante é obrigado a responder?
                       </label>
                       <div className="flex gap-2.5">
@@ -405,7 +405,7 @@ export function CreateQuestionModal() {
                             value="required"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                             Obrigatório
                           </span>
                         </label>
@@ -417,7 +417,7 @@ export function CreateQuestionModal() {
                             value="optional"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                             Opcional
                           </span>
                         </label>
@@ -426,7 +426,7 @@ export function CreateQuestionModal() {
 
                     {/* Aplicar em quais ingressos */}
                     <div className="flex flex-col gap-2 w-[276px]">
-                      <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                      <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                         Aplicar em quais ingressos?
                       </label>
                       <Dropdown
@@ -435,7 +435,7 @@ export function CreateQuestionModal() {
                         ]}
                         trigger={
                           <div className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors">
-                            <span className="text-gray-11 text-base font-normal font-dm-sans">
+                            <span className="text-gray-11 text-base font-normal font-family-dm-sans">
                               {appliesTo}
                             </span>
                             <ChevronDown className="size-6 text-gray-11" />

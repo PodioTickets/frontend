@@ -223,8 +223,8 @@ export function CreateProductModal() {
     }
   };
 
-  const previewPrice = variations.length > 0 && variations.some(v => parseFloat(v.price.replace(",", ".")) > 0)
-    ? variations.find(v => parseFloat(v.price.replace(",", ".")) > 0)?.price || basePrice || "0,00"
+  const previewPrice = variations.length > 0 && variations.some(v => parseFloat(String(v.price || "0").replace(",", ".")) > 0)
+    ? variations.find(v => parseFloat(String(v.price || "0").replace(",", ".")) > 0)?.price || basePrice || "0,00"
     : basePrice || "0,00";
 
   return (
@@ -253,7 +253,7 @@ export function CreateProductModal() {
             <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1192px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-4 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-dm-sans leading-[1.3]">
+                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   {isEditing ? "Editar produto" : "Criação de produto"}
                 </h2>
                 <button
@@ -275,7 +275,7 @@ export function CreateProductModal() {
                         <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                           Adicione uma imagem do produto
                         </h3>
-                        <p className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                        <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Boas fotos ajudam na decisão do participante
                         </p>
                       </div>
@@ -294,7 +294,7 @@ export function CreateProductModal() {
                               <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                                 Arraste uma imagem para este campo ou clique abaixo
                               </p>
-                              <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 PNG ou JPG, máximo 10MB
                               </p>
                             </div>
@@ -303,7 +303,7 @@ export function CreateProductModal() {
                               variant="outline"
                               className="w-full border-gray-6 text-gray-12"
                             >
-                              <p className="text-gray-12 text-base font-bold font-dm-sans leading-[1.3]">
+                              <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
                                 Trocar imagem
                               </p>
                             </Button>
@@ -330,14 +330,14 @@ export function CreateProductModal() {
                             onChange={handleImageSelect}
                             className="hidden"
                           />
-                          <p className="text-primary-11 text-base font-bold font-dm-sans leading-[1.3]">
+                          <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">
                             Arraste uma imagem para este campo ou clique aqui
                           </p>
                           <div className="flex flex-col gap-4 items-center text-center">
                             <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                               Adicionar foto
                             </p>
-                            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                               PNG ou JPG, máximo 10MB
                             </p>
                           </div>
@@ -348,7 +348,7 @@ export function CreateProductModal() {
                     {/* Product Name */}
                     <div className="flex flex-col gap-2.5">
                       <div className="flex flex-col gap-2">
-                        <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Título
                         </label>
                         <Input
@@ -362,7 +362,7 @@ export function CreateProductModal() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Info className="size-5 text-gray-11" />
-                        <span className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                        <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Limite de 25 Caracteres
                         </span>
                       </div>
@@ -371,7 +371,7 @@ export function CreateProductModal() {
                     {/* Is Included in Ticket */}
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-1">
-                        <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Este produto está incluso no ingresso?
                         </label>
                         <Info className="size-5 text-gray-11" />
@@ -384,7 +384,7 @@ export function CreateProductModal() {
                             name="included"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                             Sim
                           </span>
                         </div>
@@ -395,7 +395,7 @@ export function CreateProductModal() {
                             name="included"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                             Não
                           </span>
                         </div>
@@ -403,7 +403,7 @@ export function CreateProductModal() {
                       {!isIncludedInTicket && (
                         <div className="flex flex-col gap-2.5 w-[259px]">
                           <div className="flex flex-col gap-2">
-                            <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                            <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                               Preço
                             </label>
                             <Input
@@ -416,7 +416,7 @@ export function CreateProductModal() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Info className="size-5 text-gray-11" />
-                            <span className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3] flex-1">
+                            <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] flex-1">
                               Você ainda poderá escolher um preço específico nas variações
                             </span>
                           </div>
@@ -427,7 +427,7 @@ export function CreateProductModal() {
                     {/* Is Required */}
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-1">
-                        <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Este produto é obrigatório ou opcional?
                         </label>
                         <Info className="size-5 text-gray-11" />
@@ -440,7 +440,7 @@ export function CreateProductModal() {
                             name="required"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                             Obrigatório
                           </span>
                         </div>
@@ -451,7 +451,7 @@ export function CreateProductModal() {
                             name="required"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-dm-sans leading-[1.3]">
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
                             Opcional
                           </span>
                         </div>
@@ -464,14 +464,14 @@ export function CreateProductModal() {
                         <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                           Variações e estoque
                         </h3>
-                        <p className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                        <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Crie opções como tamanhos e controle estoque por variação. Você pode reaproveitar um conjunto de variações para não repetir trabalho.
                         </p>
                       </div>
 
                       {/* Variation Name Input */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-gray-12 text-base font-normal font-dm-sans leading-[1.3]">
+                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Digite o nome da variação:
                         </label>
                         <Input
@@ -560,7 +560,7 @@ export function CreateProductModal() {
                         <div className="p-4 flex justify-center">
                           <button
                             onClick={handleAddVariation}
-                            className="flex items-center gap-1 h-11 px-11 text-gray-11 text-base font-semibold font-dm-sans hover:text-gray-12 transition-colors"
+                            className="flex items-center gap-1 h-11 px-11 text-gray-11 text-base font-semibold font-family-dm-sans hover:text-gray-12 transition-colors"
                           >
                             <Plus className="size-6" />
                             Adicionar variação

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | "viewRegistration" | "exportData" | "paymentDetails" | "requestTransfer" | null;
 
 interface ModalData {
   amount?: number;
@@ -263,5 +263,49 @@ export const usePublishEventModal = () => {
     data: data as ModalData | null,
     openPublishEventModal: (data?: ModalData) => openModal("publishEvent", data),
     closePublishEventModal: closeModal,
+  };
+};
+
+export const useViewRegistrationModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "viewRegistration",
+    data: data as ModalData | null,
+    openViewRegistrationModal: (data?: ModalData) => openModal("viewRegistration", data),
+    closeViewRegistrationModal: closeModal,
+  };
+};
+
+export const usePaymentDetailsModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "paymentDetails",
+    data: data as ModalData | null,
+    openPaymentDetailsModal: (data?: ModalData) => openModal("paymentDetails", data),
+    closePaymentDetailsModal: closeModal,
+  };
+};
+
+export const useExportDataModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "exportData",
+    data: data as ModalData | null,
+    openExportDataModal: (data?: ModalData) => openModal("exportData", data),
+    closeExportDataModal: closeModal,
+  };
+};
+
+export const useRequestTransferModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "requestTransfer",
+    data: data as ModalData | null,
+    openRequestTransferModal: (data?: ModalData) => openModal("requestTransfer", data),
+    closeRequestTransferModal: closeModal,
   };
 };

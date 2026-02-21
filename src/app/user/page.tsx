@@ -521,7 +521,7 @@ export default function UserProfilePage() {
                     Remover imagem
                   </Button>
                 </div>
-                <p className="text-sm text-gray-11 font-dm-sans md:text-sm">
+                <p className="text-sm text-gray-11 font-family-dm-sans md:text-sm">
                   Suportamos imagens em PNGs, JPEGs até 10MB
                 </p>
               </div>
@@ -535,7 +535,7 @@ export default function UserProfilePage() {
               <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
                 Dados pessoais
               </h2>
-              <p className="text-sm text-gray-11 font-dm-sans md:text-base">
+              <p className="text-sm text-gray-11 font-family-dm-sans md:text-base">
                 Usamos esses dados nas inscrições de eventos. Preencha
                 exatamente como está no seu documento.
               </p>
@@ -544,7 +544,7 @@ export default function UserProfilePage() {
             <div className="flex flex-wrap gap-6 items-start w-full md:grid md:grid-cols-2 md:gap-3">
               {/* Name */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Nome
                 </label>
                 <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
@@ -568,7 +568,7 @@ export default function UserProfilePage() {
                       }));
                     }}
                     placeholder="Seu nome"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
                   <Input
@@ -596,7 +596,7 @@ export default function UserProfilePage() {
 
               {/* Date of Birth */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Data de nascimento
                 </label>
                 {/* Mobile DateOfBirthPicker */}
@@ -642,7 +642,7 @@ export default function UserProfilePage() {
 
               {/* Nationality */}
               <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Nacionalidade
                 </label>
                 <button
@@ -654,7 +654,7 @@ export default function UserProfilePage() {
                 >
                   <div className="flex items-center gap-1 md:gap-2.5">
                     <FlagIcon className="size-5 shrink-0 text-gray-11" />
-                    <span className="text-base text-gray-11 font-dm-sans">
+                    <span className="text-base text-gray-11 font-family-dm-sans">
                       {formData.nationality || "Selecione"}
                     </span>
                   </div>
@@ -696,7 +696,7 @@ export default function UserProfilePage() {
 
               {/* Phone */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Telefone
                 </label>
                 <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
@@ -709,7 +709,7 @@ export default function UserProfilePage() {
                     onChange={handleInputChange}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
                   <Input
@@ -726,7 +726,7 @@ export default function UserProfilePage() {
 
               {/* Emergency Phone */}
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Telefone de emergência{" "}
                   <span className="text-gray-11">(Opcional)</span>
                 </label>
@@ -740,7 +740,7 @@ export default function UserProfilePage() {
                     onChange={handleInputChange}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
                   <Input
@@ -756,7 +756,7 @@ export default function UserProfilePage() {
               </div>
 
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   CPF
                 </label>
                 <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
@@ -768,7 +768,7 @@ export default function UserProfilePage() {
                     value={formData.documentNumber}
                     onChange={handleInputChange}
                     placeholder="000.000.000-00"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-dm-sans placeholder:text-gray-11 md:hidden"
+                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
                   <Input
@@ -784,7 +784,7 @@ export default function UserProfilePage() {
 
               {/* Gender */}
               <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-dm-sans md:text-base md:text-gray-12">
+                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Sexo
                 </label>
                 <button
@@ -794,7 +794,7 @@ export default function UserProfilePage() {
                 >
                   <div className="flex items-center gap-1 md:gap-2.5">
                     <HeartIcon className="size-5 shrink-0 text-gray-11" />
-                    <span className="text-base text-gray-11 font-dm-sans">
+                    <span className="text-base text-gray-11 font-family-dm-sans">
                       {displayGender || "Selecione"}
                     </span>
                   </div>
@@ -943,7 +943,7 @@ export default function UserProfilePage() {
               <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
                 Conta e segurança
               </h2>
-              <p className="text-sm text-gray-11 font-dm-sans md:text-base">
+              <p className="text-sm text-gray-11 font-family-dm-sans md:text-base">
                 Gerencie o e-mail e a senha que você usa para entrar no
                 PódioTicket.
               </p>
@@ -958,7 +958,7 @@ export default function UserProfilePage() {
               >
                 <div className="flex items-center gap-1">
                   <Mail className="size-6 shrink-0 text-gray-12" />
-                  <span className="text-base text-gray-12 font-dm-sans">
+                  <span className="text-base text-gray-12 font-family-dm-sans">
                     Deseja alterar seu email?
                   </span>
                 </div>
@@ -972,7 +972,7 @@ export default function UserProfilePage() {
               >
                 <div className="flex items-center gap-1">
                   <Lock className="size-6 shrink-0 text-gray-12" />
-                  <span className="text-base text-gray-12 font-medium font-dm-sans">
+                  <span className="text-base text-gray-12 font-medium font-family-dm-sans">
                     Deseja alterar sua senha?
                   </span>
                 </div>
@@ -1010,7 +1010,7 @@ export default function UserProfilePage() {
               >
                 <div className="flex items-center gap-1 flex-1">
                   <Shield className="size-6 shrink-0 text-gray-12" />
-                  <span className="text-sm text-gray-12 font-dm-sans text-left">
+                  <span className="text-sm text-gray-12 font-family-dm-sans text-left">
                     Ligar dois fatores de segurança
                   </span>
                 </div>
@@ -1031,7 +1031,7 @@ export default function UserProfilePage() {
                 </div>
               </button>
 
-              <p className="text-base text-gray-11 font-dm-sans">
+              <p className="text-base text-gray-11 font-family-dm-sans">
                 Ative o 2FA para adicionar uma camada extra de segurança à sua
                 conta. Sempre que fizer login em um novo dispositivo, você
                 precisará informar um código enviado para o seu e-mail.

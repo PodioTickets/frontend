@@ -321,7 +321,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
                 Detalhes do evento (Obrigatório)
               </h2>
               <div
-                className="text-gray-11 text-base font-dm-sans leading-[1.3] prose prose-sm max-w-none"
+                className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: content }}
               />
             </div>
@@ -357,7 +357,7 @@ Come and be part of this collaborative approach to professional learning. Togeth
                   {topic.title}
                 </h3>
                 <div
-                  className="text-gray-11 text-base font-dm-sans leading-[1.3] prose prose-sm max-w-none"
+                  className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{ __html: topic.content }}
                 />
               </div>

@@ -5,6 +5,9 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
+  useRef,
+  useMemo,
   ReactNode,
 } from "react";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +22,8 @@ interface ParticipantFormData {
   emergencyPhone?: string;
   emergencyContactName?: string;
   hasEmergencyContact?: boolean;
+  questionAnswers?: Record<string, string | string[]>;
+  productVariations?: Record<string, string | null>;
 }
 
 interface CheckoutState {
@@ -82,27 +87,30 @@ function loadFromStorage(eventId: string | null): {
   }
 }
 
-function saveToStorage(
+function saveToStorageAsync(
   eventId: string | null,
   raceQuantities: Record<string, number>,
   participants: ParticipantFormData[]
 ) {
   if (typeof window === "undefined" || !eventId) return;
 
-  try {
-    const storageKey = getStorageKey(eventId);
-    if (!storageKey) return;
+  // Use microtask queue for non-blocking save
+  Promise.resolve().then(() => {
+    try {
+      const storageKey = getStorageKey(eventId);
+      if (!storageKey) return;
 
-    const data = {
-      raceQuantities,
-      participants,
-      savedAt: Date.now(),
-    };
+      const data = {
+        raceQuantities,
+        participants,
+        savedAt: Date.now(),
+      };
 
-    localStorage.setItem(storageKey, JSON.stringify(data));
-  } catch (error) {
-    console.error("Error saving checkout data to storage:", error);
-  }
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    } catch (error) {
+      console.error("Error saving checkout data to storage:", error);
+    }
+  });
 }
 
 function clearStorage(eventId: string | null) {
@@ -128,6 +136,8 @@ const DEFAULT_PARTICIPANT: ParticipantFormData = {
   emergencyPhone: "",
   emergencyContactName: "",
   hasEmergencyContact: false,
+  questionAnswers: {},
+  productVariations: {},
 };
 
 function CheckoutProviderContent({ children }: { children: ReactNode }) {
@@ -149,6 +159,26 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
     return stored?.participants || [DEFAULT_PARTICIPANT];
   });
 
+  // Refs for debounced save
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const eventIdRef = useRef(eventId);
+  const raceQuantitiesRef = useRef(raceQuantities);
+  const participantsRef = useRef(participants);
+
+  // Keep refs in sync
+  useEffect(() => {
+    eventIdRef.current = eventId;
+  }, [eventId]);
+
+  useEffect(() => {
+    raceQuantitiesRef.current = raceQuantities;
+  }, [raceQuantities]);
+
+  useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
+
+  // Load from storage when eventId changes
   useEffect(() => {
     if (eventId) {
       const stored = loadFromStorage(eventId);
@@ -165,86 +195,102 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
     }
   }, [eventId]);
 
-  // Save to storage whenever data changes
-  useEffect(() => {
-    if (eventId) {
-      saveToStorage(eventId, raceQuantities, participants);
+  // Debounced async save - completely non-blocking
+  const scheduleSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [eventId, raceQuantities, participants]);
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      const currentEventId = eventIdRef.current;
+      const currentQuantities = raceQuantitiesRef.current;
+      const currentParticipants = participantsRef.current;
+      
+      if (currentEventId) {
+        saveToStorageAsync(currentEventId, currentQuantities, currentParticipants);
+      }
+    }, 500);
+  }, []);
 
-  const updateRaceQuantity = (raceId: string, quantity: number) => {
-    setRaceQuantities((prev) => ({
-      ...prev,
-      [raceId]: quantity,
-    }));
-  };
+  // Direct immediate state update - no delays, no async
+  const updateRaceQuantity = useCallback((raceId: string, quantity: number) => {
+    const newQuantity = Math.max(0, quantity);
+    
+    // Immediate synchronous update
+    setRaceQuantities((prev) => {
+      const updated = {
+        ...prev,
+        [raceId]: newQuantity,
+      };
+      raceQuantitiesRef.current = updated;
+      return updated;
+    });
+    
+    // Schedule async save (doesn't block UI)
+    scheduleSave();
+  }, [scheduleSave]);
 
-  const updateParticipant = (
+  const updateParticipant = useCallback((
     index: number,
     data: Partial<ParticipantFormData>
   ) => {
     setParticipants((prev) => {
       const updated = [...prev];
-      // Ensure participant exists at this index
       if (!updated[index]) {
-        updated[index] = {
-          name: "",
-          cpf: "",
-          email: "",
-          birthDate: "",
-          phone: "",
-          gender: "",
-          emergencyPhone: "",
-          emergencyContactName: "",
-          hasEmergencyContact: false,
-        };
+        updated[index] = { ...DEFAULT_PARTICIPANT };
       }
       updated[index] = { ...updated[index], ...data };
+      participantsRef.current = updated;
       return updated;
     });
-  };
+    scheduleSave();
+  }, [scheduleSave]);
 
-  const addParticipant = () => {
-    setParticipants((prev) => [
-      ...prev,
-      {
-        name: "",
-        cpf: "",
-        email: "",
-        birthDate: "",
-        phone: "",
-        gender: "",
-        emergencyPhone: "",
-        emergencyContactName: "",
-        hasEmergencyContact: false,
-      },
-    ]);
-  };
+  const addParticipant = useCallback(() => {
+    setParticipants((prev) => {
+      const updated = [...prev, { ...DEFAULT_PARTICIPANT }];
+      participantsRef.current = updated;
+      return updated;
+    });
+    scheduleSave();
+  }, [scheduleSave]);
 
-  const removeParticipant = (index: number) => {
-    setParticipants((prev) => prev.filter((_, i) => i !== index));
-  };
+  const removeParticipant = useCallback((index: number) => {
+    setParticipants((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      participantsRef.current = updated;
+      return updated;
+    });
+    scheduleSave();
+  }, [scheduleSave]);
 
-  const resetCheckout = () => {
+  const resetCheckout = useCallback(() => {
     setRaceQuantities({});
     setParticipants([DEFAULT_PARTICIPANT]);
+    raceQuantitiesRef.current = {};
+    participantsRef.current = [DEFAULT_PARTICIPANT];
+    
     if (eventId) {
       clearStorage(eventId);
     }
-  };
+  }, [eventId]);
+
+  // Memoize context value
+  const contextValue = useMemo(
+    () => ({
+      raceQuantities,
+      participants,
+      updateRaceQuantity,
+      updateParticipant,
+      addParticipant,
+      removeParticipant,
+      resetCheckout,
+    }),
+    [raceQuantities, participants, updateRaceQuantity, updateParticipant, addParticipant, removeParticipant, resetCheckout]
+  );
 
   return (
-    <CheckoutContext.Provider
-      value={{
-        raceQuantities,
-        participants,
-        updateRaceQuantity,
-        updateParticipant,
-        addParticipant,
-        removeParticipant,
-        resetCheckout,
-      }}
-    >
+    <CheckoutContext.Provider value={contextValue}>
       {children}
     </CheckoutContext.Provider>
   );

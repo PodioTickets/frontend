@@ -268,8 +268,10 @@ export default function EventPage() {
           </button>
         </div>
 
+
+
         {/* Content Cards */}
-        <div className="px-4 space-y-4 mt-4">
+        <div className="px-4 space-y-4">
           {event.topics?.map((topic, index) => {
             const isExpanded = expandedSections[topic.id] || false;
             const shouldTruncate = topic.content.length > 150;
@@ -353,8 +355,8 @@ export default function EventPage() {
 
         <div
           className={`fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden transition-all duration-300 ease-in-out ${showFixedButton
-              ? "translate-y-0 opacity-100"
-              : "translate-y-full opacity-0 pointer-events-none"
+            ? "translate-y-0 opacity-100"
+            : "translate-y-full opacity-0 pointer-events-none"
             }`}
         >
           <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
@@ -560,9 +562,18 @@ export default function EventPage() {
           >
             {/* Topics Section */}
             <div
-              className={`${event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "w-3/4 pr-8" : "flex-1 pr-8"
+              className={`${event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "-mt-14 w-3/4 pr-8" : "flex-1 pr-8"
                 }`}
             >
+              <div
+                className={`flex flex-col gap-2 mb-10`}
+              >
+                <h1 className="text-2xl font-bold text-gray-12">
+                  Descrição do evento
+                </h1>
+                <p className="text-gray-11 text-sm" dangerouslySetInnerHTML={{ __html: event.description }} />
+              </div>
+              <div className="w-full h-px bg-gray-6" />
               {event.topics?.map((topic, index) => (
                 <Fragment key={topic.id}>
                   <div

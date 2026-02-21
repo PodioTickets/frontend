@@ -683,7 +683,7 @@ export class OrganizerService {
     const { data: response } = await this.apiClient.get<{ data: any }>(
       `/api/v1/tickets/${id}`
     );
-    return response.data;
+    return response.data.ticket;
   }
 
   async updateTicket(

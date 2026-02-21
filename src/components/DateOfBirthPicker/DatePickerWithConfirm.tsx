@@ -176,7 +176,7 @@ export function DatePickerWithConfirm({
           <div className="flex gap-1 items-center flex-1 min-w-0">
             <CalendarIcon className="w-5 h-5 text-gray-11 shrink-0" />
             <span
-              className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+              className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
                 validDate ? "text-gray-12" : "text-gray-11"
               }`}
             >

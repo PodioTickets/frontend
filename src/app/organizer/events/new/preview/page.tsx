@@ -293,7 +293,7 @@ export default function PreviaPage() {
               Pré-visualização do evento
             </h1>
           </div>
-          <p className="text-gray-11 text-base font-dm-sans leading-[1.3] text-center">
+          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3] text-center">
             Está imagem aparece na pré-visualização do seu evento
           </p>
         </div>
@@ -338,7 +338,7 @@ export default function PreviaPage() {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <p className="text-gray-12 text-base font-bold font-dm-sans leading-[1.3]">
+                  <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
                     Trocar imagem
                   </p>
                 </button>
@@ -365,7 +365,7 @@ export default function PreviaPage() {
                 onChange={handleCardSelect}
                 className="hidden"
               />
-              <p className="text-primary-11 text-base font-bold font-dm-sans leading-[1.3]">
+              <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">
                 Arraste uma imagem para este campo ou clique aqui
               </p>
               <div className="flex flex-col gap-4 items-center text-center">
@@ -404,7 +404,7 @@ export default function PreviaPage() {
                 {eventLocation && (
                   <div className="flex gap-1 items-center">
                     <LocationIcon className="size-5 shrink-0 text-gray-12" />
-                    <p className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                    <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                       {eventLocation}
                     </p>
                   </div>
@@ -427,7 +427,7 @@ export default function PreviaPage() {
                     ) : (
                       <FlagIcon className="size-5 shrink-0 text-gray-12" />
                     )}
-                    <p className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                    <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                       {user?.firstName || "Organizador"}
                     </p>
                   </div>
@@ -436,7 +436,7 @@ export default function PreviaPage() {
                   {formData.eventDate && (
                     <div className="flex gap-1 items-center">
                       <CalendarIcon className="size-5 shrink-0 text-gray-12" />
-                      <p className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                      <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                         {formatDate(formData.eventDate)}
                       </p>
                     </div>
@@ -449,7 +449,7 @@ export default function PreviaPage() {
                     <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
                       <div className="bg-primary-12 rounded-full size-1" />
                     </div>
-                    <p className="text-sm font-semibold font-dm-sans leading-[1.3] text-primary-12">
+                    <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-primary-12">
                       Inscrições abertas
                     </p>
                   </div>

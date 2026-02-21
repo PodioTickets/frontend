@@ -170,7 +170,7 @@ export function DatePicker({
               <CalendarIcon className="w-5 h-5 text-gray-11 shrink-0" />
             )}
             <span
-              className={`font-normal text-base leading-[1.3] font-dm-sans ${hideIcon ? "text-center" : "truncate"
+              className={`font-normal text-base leading-[1.3] font-family-dm-sans ${hideIcon ? "text-center" : "truncate"
                 } ${validDate ? "text-gray-12" : "text-gray-11"}`}
             >
               {validDate ? formatDate(validDate) : placeholder}

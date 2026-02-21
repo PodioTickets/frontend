@@ -139,7 +139,7 @@ export default function QuestionnairePage() {
               Questionário
             </h1>
           </div>
-          <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
             Crie perguntas extras para coletar informações dos participantes. Você pode pular esta etapa se desejar
           </p>
         </div>
@@ -163,7 +163,7 @@ export default function QuestionnairePage() {
           {/* Questions List */}
           {questions.length === 0 ? (
             <div className="border border-gray-6 rounded-xl p-12 flex flex-col items-center justify-center gap-4">
-              <p className="text-gray-11 text-base font-dm-sans">
+              <p className="text-gray-11 text-base font-family-dm-sans">
                 Nenhuma pergunta criada ainda
               </p>
             </div>
@@ -174,7 +174,7 @@ export default function QuestionnairePage() {
                   key={question.id}
                   className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-6 flex-1 min-w-[519px]"
                 >
-                  <p className="text-gray-11 text-base font-normal font-dm-sans leading-[1.3]">
+                  <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                     Pergunta {index + 1}
                   </p>
 
@@ -185,11 +185,11 @@ export default function QuestionnairePage() {
 
                     <div className="flex gap-2 items-center flex-wrap">
                       {question.isRequired ? (
-                        <span className="bg-yellow-3 px-4 py-3 rounded-[32px] text-yellow-12 text-base font-medium font-dm-sans leading-[1.3]">
+                        <span className="bg-yellow-3 px-4 py-3 rounded-[32px] text-yellow-12 text-base font-medium font-family-dm-sans leading-[1.3]">
                           Obrigatório
                         </span>
                       ) : (
-                        <span className="bg-gray-4 px-4 py-3 rounded-[32px] text-gray-12 text-base font-medium font-dm-sans leading-[1.3]">
+                        <span className="bg-gray-4 px-4 py-3 rounded-[32px] text-gray-12 text-base font-medium font-family-dm-sans leading-[1.3]">
                           Opcional
                         </span>
                       )}

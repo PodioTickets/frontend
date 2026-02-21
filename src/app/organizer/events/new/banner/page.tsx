@@ -299,7 +299,7 @@ export default function BannerPage() {
               Banner principal do evento
             </h1>
           </div>
-          <p className="text-gray-11 text-base font-dm-sans leading-[1.3] text-center">
+          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3] text-center">
             Essa é a imagem grande que aparece no topo da página do seu evento
           </p>
         </div>
@@ -322,7 +322,7 @@ export default function BannerPage() {
                   <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                     Tamanho recomendado: 843 × 404 px
                   </p>
-                  <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                     Use uma arte com boa resolução e pouco texto, para ficar
                     legível em diferentes telas.
                   </p>
@@ -347,7 +347,7 @@ export default function BannerPage() {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <p className="text-gray-12 text-base font-bold font-dm-sans leading-[1.3]">
+                  <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
                     Trocar imagem
                   </p>
                 </button>
@@ -374,14 +374,14 @@ export default function BannerPage() {
                 onChange={handleBannerSelect}
                 className="hidden"
               />
-              <p className="text-primary-11 text-base font-bold font-dm-sans leading-[1.3]">
+              <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">
                 Arraste uma imagem para este campo ou clique aqui
               </p>
               <div className="flex flex-col gap-4 items-center text-center">
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                   Tamanho recomendado: 843 × 404 px
                 </p>
-                <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                   Use uma arte com boa resolução e pouco texto, para ficar
                   legível em diferentes telas.
                 </p>
@@ -435,7 +435,7 @@ export default function BannerPage() {
                     {eventLocation && (
                       <div className="flex gap-2 items-center">
                         <LocationIcon className="size-6 text-gray-12 shrink-0" />
-                        <p className="text-gray-12 font-medium font-dm-sans leading-[1.3] flex-1">
+                        <p className="text-gray-12 font-medium font-family-dm-sans leading-[1.3] flex-1">
                           {eventLocation}
                         </p>
                       </div>
@@ -445,7 +445,7 @@ export default function BannerPage() {
                     {formData.eventDate && (
                       <div className="flex gap-2 items-center">
                         <CalendarIcon className="size-6 text-gray-12 shrink-0" />
-                        <p className="text-gray-12 font-medium font-dm-sans leading-[1.3]">
+                        <p className="text-gray-12 font-medium font-family-dm-sans leading-[1.3]">
                           {formatDate(formData.eventDate)}
                         </p>
                       </div>
@@ -453,7 +453,7 @@ export default function BannerPage() {
 
                     {/* Organizer Section */}
                     <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 flex flex-col gap-4">
-                      <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                         Organizador
                       </p>
                       <div className="flex gap-2 items-center">
@@ -469,10 +469,10 @@ export default function BannerPage() {
                           <div className="size-12 rounded-full bg-gray-6 shrink-0" />
                         )}
                         <div className="flex flex-col">
-                          <p className="text-gray-12 text-lg font-semibold font-dm-sans leading-[1.3]">
+                          <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3]">
                             {user?.firstName}
                           </p>
-                          <p className="text-gray-11 text-sm font-dm-sans leading-[1.3]">
+                          <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
                             CNPJ: {user?.documentNumber}
                           </p>
                         </div>

@@ -515,7 +515,7 @@ export default function IngressosPage() {
                 Ingressos
               </h1>
             </div>
-            <p className="text-gray-11 text-base font-dm-sans leading-[1.3]">
+            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
               Crie categorias e ingressos com lotes, valores e regras. Depois,
               vincule um kit para o participante configurar durante a inscrição
             </p>
@@ -631,11 +631,11 @@ export default function IngressosPage() {
                   <table className="w-full">
                     <thead className="bg-gray-2 border-b border-gray-6">
                       <tr>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">Nome do ingresso</th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">Preço</th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">Modalidade/Distância</th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">Produtos relacionados</th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-dm-sans">Ações</th>
+                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">Nome do ingresso</th>
+                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">Preço</th>
+                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">Modalidade/Distância</th>
+                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">Produtos relacionados</th>
+                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">Ações</th>
                       </tr>
                     </thead>
                     <tbody>

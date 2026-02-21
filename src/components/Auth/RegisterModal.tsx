@@ -431,7 +431,7 @@ export function RegisterModal() {
           >
             <ArrowButton isOpen={true} />
           </button>
-          <p className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
             Informações pessoais
           </p>
         </div>
@@ -442,7 +442,7 @@ export function RegisterModal() {
         <div className="flex flex-col gap-5 items-start relative shrink-0 w-full">
           {/* Nome */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Nome
             </label>
             <div className="relative w-full">
@@ -459,13 +459,13 @@ export function RegisterModal() {
               />
             </div>
             {errors.nome && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.nome}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.nome}</p>
             )}
           </div>
 
           {/* Nacionalidade */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Nacionalidade
             </label>
             <div className="w-full">
@@ -477,7 +477,7 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
                           formData.nacionalidade
                             ? "text-gray-12"
                             : "text-gray-11"
@@ -498,7 +498,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.nacionalidade && (
-              <p className="text-sm text-red-9 font-dm-sans">
+              <p className="text-sm text-red-9 font-family-dm-sans">
                 {errors.nacionalidade}
               </p>
             )}
@@ -506,7 +506,7 @@ export function RegisterModal() {
 
           {/* CPF */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               CPF
             </label>
             <div className="relative w-full">
@@ -524,13 +524,13 @@ export function RegisterModal() {
               />
             </div>
             {errors.cpf && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.cpf}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.cpf}</p>
             )}
           </div>
 
           {/* Data de nascimento */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Data de nascimento
             </label>
             <div className="w-full">
@@ -553,7 +553,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.dataNascimento && (
-              <p className="text-sm text-red-9 font-dm-sans">
+              <p className="text-sm text-red-9 font-family-dm-sans">
                 {errors.dataNascimento}
               </p>
             )}
@@ -561,7 +561,7 @@ export function RegisterModal() {
 
           {/* Telefone */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Telefone
             </label>
             <div className="relative w-full">
@@ -581,7 +581,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.telefone && (
-              <p className="text-sm text-red-9 font-dm-sans">
+              <p className="text-sm text-red-9 font-family-dm-sans">
                 {errors.telefone}
               </p>
             )}
@@ -589,7 +589,7 @@ export function RegisterModal() {
 
           {/* Sexo */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Sexo
             </label>
             <div className="w-full">
@@ -601,7 +601,7 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
                           formData.sexo ? "text-gray-12" : "text-gray-11"
                         }`}
                       >
@@ -618,7 +618,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.sexo && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.sexo}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.sexo}</p>
             )}
           </div>
         </div>
@@ -647,7 +647,7 @@ export function RegisterModal() {
         >
           <ArrowButton isOpen={true} />
         </button>
-        <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-dm-sans">
+        <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
           Informações pessoais
         </p>
       </div>
@@ -657,7 +657,7 @@ export function RegisterModal() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start p-6 relative shrink-0 w-full overflow-visible">
           {/* Nome */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Nome
             </label>
             <div className="relative w-full">
@@ -674,13 +674,13 @@ export function RegisterModal() {
               />
             </div>
             {errors.nome && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.nome}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.nome}</p>
             )}
           </div>
 
           {/* Nacionalidade */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Nacionalidade
             </label>
             <div className="w-full">
@@ -692,7 +692,7 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
                           formData.nacionalidade
                             ? "text-gray-12"
                             : "text-gray-11"
@@ -711,7 +711,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.nacionalidade && (
-              <p className="text-sm text-red-9 font-dm-sans">
+              <p className="text-sm text-red-9 font-family-dm-sans">
                 {errors.nacionalidade}
               </p>
             )}
@@ -719,7 +719,7 @@ export function RegisterModal() {
 
           {/* CPF */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               CPF
             </label>
             <div className="relative w-full">
@@ -737,13 +737,13 @@ export function RegisterModal() {
               />
             </div>
             {errors.cpf && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.cpf}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.cpf}</p>
             )}
           </div>
 
           {/* Data de nascimento */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Data de nascimento
             </label>
             <div className="w-full">
@@ -766,7 +766,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.dataNascimento && (
-              <p className="text-sm text-red-9 font-dm-sans">
+              <p className="text-sm text-red-9 font-family-dm-sans">
                 {errors.dataNascimento}
               </p>
             )}
@@ -774,7 +774,7 @@ export function RegisterModal() {
 
           {/* Telefone */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Telefone
             </label>
             <div className="relative w-full">
@@ -794,7 +794,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.telefone && (
-              <p className="text-sm text-red-9 font-dm-sans">
+              <p className="text-sm text-red-9 font-family-dm-sans">
                 {errors.telefone}
               </p>
             )}
@@ -802,7 +802,7 @@ export function RegisterModal() {
 
           {/* Sexo */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Sexo
             </label>
             <div className="w-full">
@@ -814,7 +814,7 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-dm-sans truncate ${
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
                           formData.sexo ? "text-gray-12" : "text-gray-11"
                         }`}
                       >
@@ -831,7 +831,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.sexo && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.sexo}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.sexo}</p>
             )}
           </div>
         </div>
@@ -858,7 +858,7 @@ export function RegisterModal() {
           >
             <ArrowButton isOpen={true} />
           </button>
-          <p className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans">
+          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
             Dados de acesso a conta
           </p>
         </div>
@@ -869,7 +869,7 @@ export function RegisterModal() {
         <div className="flex flex-col gap-5 items-start relative shrink-0 w-full">
           {/* Email input */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Email
             </label>
             <div className="relative w-full">
@@ -889,13 +889,13 @@ export function RegisterModal() {
               />
             </div>
             {errors.email && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.email}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.email}</p>
             )}
           </div>
 
           {/* Password input */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Criar uma senha
             </label>
             <div className="relative w-full">
@@ -912,13 +912,13 @@ export function RegisterModal() {
               />
             </div>
             {errors.senha && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.senha}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.senha}</p>
             )}
           </div>
 
           {/* Confirm password input */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Sua senha novamente
             </label>
             <div className="relative w-full">
@@ -939,7 +939,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.confirmarSenha && (
-              <p className="text-sm text-red-9 font-dm-sans">
+              <p className="text-sm text-red-9 font-family-dm-sans">
                 {errors.confirmarSenha}
               </p>
             )}
@@ -977,7 +977,7 @@ export function RegisterModal() {
         >
           <ArrowButton isOpen={true} />
         </button>
-        <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-dm-sans">
+        <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
           Dados de acesso a conta
         </p>
       </div>
@@ -988,7 +988,7 @@ export function RegisterModal() {
         <div className="flex flex-col gap-6 items-start p-6 relative shrink-0 w-full">
           {/* Email input */}
           <div className="flex flex-col gap-2 items-start min-w-[230px] relative shrink-0 w-full">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Email
             </label>
             <div className="relative w-full">
@@ -1008,7 +1008,7 @@ export function RegisterModal() {
               />
             </div>
             {errors.email && (
-              <p className="text-sm text-red-9 font-dm-sans">{errors.email}</p>
+              <p className="text-sm text-red-9 font-family-dm-sans">{errors.email}</p>
             )}
           </div>
 
@@ -1016,7 +1016,7 @@ export function RegisterModal() {
           {!isCompletingProfile && (
             <>
               <div className="flex flex-col gap-2 items-start min-w-[230px] relative shrink-0 w-full">
-                <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                   Criar uma senha
                 </label>
                 <div className="relative w-full">
@@ -1035,7 +1035,7 @@ export function RegisterModal() {
                   />
                 </div>
                 {errors.senha && (
-                  <p className="text-sm text-red-9 font-dm-sans">
+                  <p className="text-sm text-red-9 font-family-dm-sans">
                     {errors.senha}
                   </p>
                 )}
@@ -1043,7 +1043,7 @@ export function RegisterModal() {
 
               {/* Confirm password input */}
               <div className="flex flex-col gap-2 items-start min-w-[230px] relative shrink-0 w-full">
-                <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                   Sua senha novamente
                 </label>
                 <div className="relative w-full">
@@ -1064,7 +1064,7 @@ export function RegisterModal() {
                   />
                 </div>
                 {errors.confirmarSenha && (
-                  <p className="text-sm text-red-9 font-dm-sans">
+                  <p className="text-sm text-red-9 font-family-dm-sans">
                     {errors.confirmarSenha}
                   </p>
                 )}
@@ -1119,7 +1119,7 @@ export function RegisterModal() {
             <h2 className="font-extrabold text-xl leading-[1.1] text-gray-12 font-manrope text-center">
               Cadastro realizado!
             </h2>
-            <div className="font-normal text-base leading-[1.3] text-gray-11 text-center font-dm-sans">
+            <div className="font-normal text-base leading-[1.3] text-gray-11 text-center font-family-dm-sans">
               <p className="mb-0">Sua conta PódioTicket foi criada.</p>
             </div>
           </div>

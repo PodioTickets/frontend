@@ -112,7 +112,7 @@ export function CVVTooltip({
       </div>
 
       {/* Explanation text */}
-      <p className="font-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-center shrink-0">
+      <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-center shrink-0">
         Este é um número especial de 3 ou 4 dígitos que fica no verso do seu
         cartão de débito ou crédito, próximo à área de assinatura
       </p>

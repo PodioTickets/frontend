@@ -207,19 +207,19 @@ export function KitCard({ kit, index }: KitCardProps) {
                         <div className="grid grid-cols-2 gap-4 items-center">
                           <div className="flex items-center gap-2">
                             <DistanceIcon className="size-6 shrink-0" />
-                            <p className="text-base font-medium text-gray-12 font-dm-sans leading-[1.3]">
+                            <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
                               {race.distanceKm} Km
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <CalendarIcon className="size-6 shrink-0" />
-                            <p className="text-base font-medium text-gray-12 font-dm-sans leading-[1.3]">
+                            <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
                               {formatDate(race.date)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <ClockIcon className="size-6 shrink-0" />
-                            <p className="text-base font-medium text-gray-12 font-dm-sans leading-[1.3]">
+                            <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
                               {race.time}
                             </p>
                           </div>
@@ -228,7 +228,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                         {/* Age Limit Tag */}
                         {ageLimitText && (
                           <div className="bg-yellow-3 rounded-full px-4 py-3 w-fit">
-                            <p className="text-xs font-medium text-yellow-12 font-dm-sans leading-[1.3]">
+                            <p className="text-xs font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
                               Limite de idade: {ageLimitText}
                             </p>
                           </div>

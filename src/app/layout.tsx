@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Suspense } from "react";
 import { Loading } from "@/components/Loading";
+import { ContentWrapper } from "@/components/ContentWrapper";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -69,7 +70,7 @@ export default function RootLayout({
             <Header />
 
             <Suspense fallback={<Loading />}>
-              <div className="mt-[64px] md:mt-[68px] mb-12">{children}</div>
+              <ContentWrapper>{children}</ContentWrapper>
             </Suspense>
 
             <Footer />

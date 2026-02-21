@@ -14,6 +14,10 @@ import { CreateVoucherModal } from "@/components/Voucher/CreateVoucherModal";
 import { DeleteVoucherModal } from "@/components/Voucher/DeleteVoucherModal";
 import { ViewVoucherModal } from "@/components/Voucher/ViewVoucherModal";
 import { PublishEventModal } from "@/components/Event/PublishEventModal";
+import { ViewRegistrationModal } from "@/components/Registrations/ViewRegistrationModal";
+import { ExportDataModal } from "@/components/Registrations/ExportDataModal";
+import { PaymentDetailsModal } from "@/components/Registrations/PaymentDetailsModal";
+import { RequestTransferModal } from "@/components/Financial/RequestTransferModal";
 
 export function ModalsProvider() {
   return (
@@ -32,8 +36,12 @@ export function ModalsProvider() {
       <DeleteVoucherModal />
       <ViewVoucherModal />
       <PublishEventModal />
+      <ViewRegistrationModal />
+      <ExportDataModal />
+      <PaymentDetailsModal />
+      <RequestTransferModal />
     </>
   );
 }
 
-export { useLoginModal, useRegisterModal, useChangeEmailModal, useDeleteParticipantModal, useTopicModal, useCreateQuestionModal, useCreateProductModal, useAddExistingProductsModal, useViewVoucherModal, usePublishEventModal } from "@/stores/modalStore";
+export { useLoginModal, useRegisterModal, useChangeEmailModal, useDeleteParticipantModal, useTopicModal, useCreateQuestionModal, useCreateProductModal, useAddExistingProductsModal, useViewVoucherModal, usePublishEventModal, useViewRegistrationModal, useExportDataModal, usePaymentDetailsModal, useRequestTransferModal } from "@/stores/modalStore";

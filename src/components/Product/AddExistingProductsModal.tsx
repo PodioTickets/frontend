@@ -181,7 +181,7 @@ export function AddExistingProductsModal() {
             <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1192px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-6 py-4 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-dm-sans leading-[1.3]">
+                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   Lista de produtos
                 </h2>
                 <button
@@ -210,7 +210,7 @@ export function AddExistingProductsModal() {
                   {/* Products Grid */}
                   {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20">
-                      <p className="text-gray-11 text-base font-dm-sans">
+                      <p className="text-gray-11 text-base font-family-dm-sans">
                         {searchQuery ? "Nenhum produto encontrado" : "Nenhum produto cadastrado"}
                       </p>
                     </div>
@@ -244,14 +244,14 @@ export function AddExistingProductsModal() {
 
                               {/* Product Info */}
                               <div className="flex flex-col justify-between h-full py-2 gap-2">
-                                <h3 className="text-gray-12 text-base font-semibold font-dm-sans leading-[1.3]">
+                                <h3 className="text-gray-12 text-base font-semibold font-family-dm-sans leading-[1.3]">
                                   {product.name}
                                 </h3>
                                 <div className="flex flex-col gap-1">
-                                  <span className={`text-sm font-dm-sans text-gray-11`}>
+                                  <span className={`text-sm font-family-dm-sans text-gray-11`}>
                                     {product.isRequired ? "Obrigatório" : "Opcional"}
                                   </span>
-                                  <span className="text-gray-11 text-sm font-semibold font-dm-sans">
+                                  <span className="text-gray-11 text-sm font-semibold font-family-dm-sans">
                                     {product.isIncludedInTicket
                                       ? "Valor incluso no ingresso"
                                       : `R$ ${product.basePrice || "0,00"}`}
@@ -269,7 +269,7 @@ export function AddExistingProductsModal() {
                                   className="flex items-center gap-2 text-gray-11 hover:text-gray-12 transition-colors"
                                 >
                                   <Link2 className="size-4" />
-                                  <span className="text-sm font-normal font-dm-sans">
+                                  <span className="text-sm font-normal font-family-dm-sans">
                                     Ingressos vínculados
                                   </span>
 
@@ -291,13 +291,13 @@ export function AddExistingProductsModal() {
                                     className="absolute top-full left-0 right-0 mt-2 border border-gray-6 rounded-lg shadow-lg z-10 p-2 max-h-[200px] overflow-y-auto flex flex-wrap gap-2"
                                   >
                                     {tickets.length === 0 ? (
-                                      <p className="text-gray-11 text-sm font-dm-sans p-2">
+                                      <p className="text-gray-11 text-sm font-family-dm-sans p-2">
                                         Nenhum ingresso disponível
                                       </p>
                                     ) : (
                                       tickets.map((ticket) => {
                                         return (
-                                          <span className="text-gray-12 text-sm font-normal font-dm-sans bg-gray-3 p-2 rounded-full">
+                                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans bg-gray-3 p-2 rounded-full">
                                             {ticket.name}
                                           </span>
                                         );

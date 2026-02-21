@@ -1,260 +1,232 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
-import { organizerService, userService } from "@/services";
+import { organizerService } from "@/services";
+import { useEditEvent } from "@/contexts/EditEventContext";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import {
-  ArrowLeft,
-  Calendar,
-  MapPin,
-  Globe,
-  FileText,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  Settings,
-  Users,
-  Package,
-  HelpCircle,
-  BarChart3,
-  Eye,
-  Save,
-  Upload,
-  X,
-  Loader2,
-} from "lucide-react";
-import Link from "next/link";
+import { DatePicker } from "@/components/DatePicker";
+import { TimePicker } from "@/components/TimePicker";
+import { InfoIcon } from "@/components/Icons/InfoIcon";
+import { LocationIcon } from "@/components/Icons/LocationIcon";
+import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
-import Image from "next/image";
-import { useRef } from "react";
 
-export default function EditEventPage() {
+interface ViaCEPResponse {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  erro?: boolean;
+}
+
+export default function EditInformationPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [authChecked, setAuthChecked] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { formData, updateFormData, errors, setErrors } = useEditEvent();
+
   const [saving, setSaving] = useState(false);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [bannerPreview, setBannerPreview] = useState<string>("");
-  const bannerInputRef = useRef<HTMLInputElement>(null);
-  const [event, setEvent] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    location: "",
-    city: "",
-    state: "",
-    country: "BR",
-    eventDate: "",
-    registrationStartDate: "",
-    registrationEndDate: "",
-    googleMapsLink: "",
-    bannerUrl: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loadingCEP, setLoadingCEP] = useState(false);
+  const [cepFetched, setCepFetched] = useState(false);
+  const [uploadingPDF, setUploadingPDF] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string>(formData.regulationUrl || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    // Aguarda a verificação de autenticação terminar
-    if (authLoading) return;
-
-    const hasToken = userService.isAuthenticated();
-    if (!hasToken && !isAuthenticated) {
-      router.push("/");
-      return;
-    }
-
-    if (!authChecked) {
-      setAuthChecked(true);
-    }
-  }, [authLoading, isAuthenticated, router]);
-
-  useEffect(() => {
-    if (!authChecked || authLoading || !eventId) return;
-    loadEvent();
-  }, [authChecked, eventId]);
-
-  // Função para determinar qual etapa do fluxo de criação deve começar
-  // Para eventos rascunhos, sempre começamos do início para permitir revisão completa
-  const getNextStep = (event: any) => {
-    return "/organizer/events/new/information";
+  const getCurrentDatePlaceholder = () => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
-  const formatDateForInput = (dateString: string | null | undefined) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  // Formatar CEP
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
   };
 
-  const loadEvent = async () => {
-    try {
-      setLoading(true);
-      const event = await organizerService.getEventById(eventId);
-      setEvent(event);
+  // Buscar CEP
+  const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    const formattedValue = formatCEP(rawValue);
+    updateFormData({ cep: formattedValue });
 
-      // Se o evento está como rascunho, redirecionar para o fluxo de criação
-      if (event.status === "DRAFT") {
-        const nextStep = getNextStep(event);
-        console.log("Evento rascunho detectado, redirecionando para:", nextStep);
+    if (rawValue.length === 8) {
+      setLoadingCEP(true);
+      try {
+        const response = await fetch(`/api/cep?cep=${rawValue}`);
+        if (!response.ok) {
+          throw new Error("Erro na requisição: " + response.status);
+        }
+        const data: ViaCEPResponse = await response.json();
 
-        // Preencher o contexto de criação com os dados existentes
-        const createEventData = {
-          name: event.name || "",
-          eventDate: formatDateForInput(event.eventDate) || "",
-          registrationStartDate: "",
-          registrationStartTime: "",
-          registrationEndDate: formatDateForInput(event.registrationEndDate) || "",
-          registrationEndTime: "",
-          cep: "",
-          street: event.location || "",
-          neighborhood: "",
-          city: event.city || "",
-          state: event.state || "",
-          googleMapsLink: event.googleMapsLink || "",
-          bannerUrl: event.bannerUrl || "",
-          cardImageUrl: "",
-          regulationUrl: "",
-          createdEventId: eventId,
-        };
-
-        // Salvar no localStorage para o contexto de criação
-        localStorage.setItem("createEventFormData", JSON.stringify(createEventData));
-
-        // Redirecionar para a etapa apropriada
-        router.replace(nextStep);
-        return;
+        if (data.erro) {
+          toast.error("CEP não encontrado");
+          setCepFetched(false);
+        } else {
+          updateFormData({
+            street: data.logradouro || "",
+            neighborhood: data.bairro || "",
+            city: data.localidade || "",
+            state: data.uf || "",
+          });
+          setCepFetched(true);
+          toast.success("Endereço encontrado!");
+        }
+      } catch (error: any) {
+        console.error("Error fetching CEP:", error);
+        toast.error("Erro ao buscar CEP");
+        setCepFetched(false);
+      } finally {
+        setLoadingCEP(false);
       }
-
-      setFormData({
-        name: event.name || "",
-        description: event.description || "",
-        location: event.location || "",
-        city: event.city || "",
-        state: event.state || "",
-        country: event.country || "BR",
-        eventDate: formatDateForInput(event.eventDate),
-        registrationStartDate: formatDateForInput(event.registrationStartDate),
-        registrationEndDate: formatDateForInput(event.registrationEndDate),
-        googleMapsLink: event.googleMapsLink || "",
-        bannerUrl: event.bannerUrl || "",
-      });
-
-      // Set banner preview if banner exists
-      if (event.bannerUrl) {
-        setBannerPreview(event.bannerUrl);
-      }
-    } catch (error: any) {
-      console.error("Error loading event:", error);
-      toast.error("Erro ao carregar evento");
-      router.push("/organizer/events");
-    } finally {
-      setLoading(false);
+    } else {
+      setCepFetched(false);
     }
   };
 
-  // Upload de banner
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validar tipo de arquivo
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
-      return;
-    }
-
-    // Validar tamanho (10MB conforme documentação)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo de 10MB.");
-      return;
-    }
-
-    setUploadingBanner(true);
-    try {
-      // Criar preview local
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBannerPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // Fazer upload para o servidor
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const token = localStorage.getItem("token");
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
-      const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Erro ao fazer upload");
-      }
-
-      if (result.success && result.imageUrl) {
-        // Usar a URL retornada pelo servidor
-        setFormData((prev) => ({ ...prev, bannerUrl: apiUrl +result.imageUrl }));
-        toast.success("Banner enviado com sucesso!");
-      } else {
-        throw new Error(result.message || "Erro ao fazer upload");
-      }
-    } catch (error: any) {
-      console.error("Error uploading banner:", error);
-      toast.error(error.message || "Erro ao fazer upload do banner");
-      setBannerPreview(formData.bannerUrl || "");
-    } finally {
-      setUploadingBanner(false);
-    }
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "name" && value.length > 25) {
+      return;
+    }
+    updateFormData({ [name]: value });
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
+  const handleTimeChange = (name: string, value: string) => {
+    updateFormData({ [name]: value });
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleDateChange = (name: string, value: string) => {
+    updateFormData({ [name]: value });
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handlePDFSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Formato inválido. Use apenas PDF.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo de 10MB.");
+      return;
+    }
+
+    setPdfFile(file);
+    setPdfUrl("");
+  };
+
+  const uploadPDF = async (): Promise<string | null> => {
+    if (!pdfFile) return null;
+
+    if (pdfFile.type !== "application/pdf") {
+      toast.error("Formato inválido. Use apenas PDF.");
+      return null;
+    }
+
+    setUploadingPDF(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", pdfFile);
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${apiUrl}/api/v1/upload/pdf`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataUpload,
+      });
+
+      let result;
+      try {
+        const text = await response.text();
+        result = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error("Error parsing response:", parseError);
+        result = {};
+      }
+
+      if (!response.ok) {
+        const errorMessage = result.message || result.error?.message || "Erro ao fazer upload";
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const fileUrl = result.url || result.fileUrl || result.data?.url || result.data?.fileUrl;
+
+      if (fileUrl) {
+        const fullUrl = fileUrl.startsWith("http")
+          ? fileUrl
+          : `${apiUrl}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
+        setPdfUrl(fullUrl);
+        toast.success("PDF enviado com sucesso!");
+        return fullUrl;
+      } else {
+        throw new Error(result.message || "Resposta do servidor inválida - URL não encontrada");
+      }
+    } catch (error: any) {
+      console.error("Error uploading PDF:", error);
+      throw error;
+    } finally {
+      setUploadingPDF(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "application/pdf") {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Máximo de 10MB.");
+        return;
+      }
+      setPdfFile(file);
+      setPdfUrl("");
+    } else {
+      toast.error("Formato inválido. Use apenas PDF.");
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.name.trim()) {
       newErrors.name = "Nome do evento é obrigatório";
     }
-
     if (!formData.eventDate) {
       newErrors.eventDate = "Data do evento é obrigatória";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!validateForm()) {
       toast.error("Por favor, corrija os erros no formulário");
       return;
@@ -262,466 +234,377 @@ export default function EditEventPage() {
 
     setSaving(true);
     try {
-      const updatedEvent = await organizerService.updateEvent(
-        eventId,
-        formData
-      );
-      console.log("updatedEvent", updatedEvent);
-      setEvent(updatedEvent);
-      toast.success("Evento atualizado com sucesso!");
-      setFormData({
-        name: updatedEvent.name || "",
-        description: updatedEvent.description || "",
-        location: updatedEvent.location || "",
-        city: updatedEvent.city || "",
-        state: updatedEvent.state || "",
-        country: updatedEvent.country || "BR",
-        eventDate: formatDateForInput(updatedEvent.eventDate),
-        registrationStartDate: formatDateForInput(
-          updatedEvent.registrationStartDate
-        ),
-        registrationEndDate: formatDateForInput(
-          updatedEvent.registrationEndDate
-        ),
-        googleMapsLink: updatedEvent.googleMapsLink || "",
-        bannerUrl: updatedEvent.bannerUrl || "",
-      });
+      // Upload do PDF se houver arquivo selecionado
+      let regulationUrl: string | null = formData.regulationUrl || null;
+      if (pdfFile && !pdfUrl) {
+        try {
+          const uploadedUrl = await uploadPDF();
+          if (uploadedUrl) {
+            regulationUrl = uploadedUrl;
+            updateFormData({ regulationUrl: uploadedUrl });
+          }
+        } catch (error: any) {
+          toast.error(error?.message || "Erro ao fazer upload do PDF");
+          setSaving(false);
+          return;
+        }
+      }
+
+      const registrationStartDateTime =
+        formData.registrationStartDate && formData.registrationStartTime
+          ? `${formData.registrationStartDate}T${formData.registrationStartTime}:00`
+          : undefined;
+
+      const registrationEndDateTime =
+        formData.registrationEndDate && formData.registrationEndTime
+          ? `${formData.registrationEndDate}T${formData.registrationEndTime}:00`
+          : undefined;
+
+      const eventData: any = {
+        name: formData.name,
+        eventDate: formData.eventDate,
+        country: "BR",
+      };
+
+      if (formData.street) {
+        eventData.location = formData.street;
+        eventData.city = formData.city;
+        eventData.state = formData.state;
+      }
+
+      if (formData.googleMapsLink) {
+        eventData.googleMapsLink = formData.googleMapsLink;
+      }
+
+      if (registrationStartDateTime) {
+        eventData.registrationStartDate = registrationStartDateTime;
+      }
+
+      if (registrationEndDateTime) {
+        eventData.registrationEndDate = registrationEndDateTime;
+      }
+
+      if (regulationUrl && typeof regulationUrl === "string") {
+        eventData.regulationUrl = regulationUrl;
+      }
+
+      await organizerService.updateEvent(eventId, eventData);
+      toast.success("Informações salvas com sucesso!");
+
+      // Navigate to banner step
+      router.push(`/organizer/events/${eventId}/edit/banner`);
     } catch (error: any) {
-      console.error("Error updating event:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Erro ao atualizar evento";
+      console.error("Error saving event:", error);
+      let errorMessage = "Erro ao salvar evento";
+
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+          const validationErrors = errorData.errors
+            .map((err: any) => err.message || err)
+            .join(", ");
+          if (validationErrors) {
+            errorMessage = validationErrors;
+          }
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePublish = async () => {
-    if (
-      !confirm(
-        "Tem certeza que deseja publicar este evento? Após publicar, algumas alterações podem ser limitadas."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await organizerService.publishEvent(eventId);
-      toast.success("Evento publicado com sucesso!");
-    } catch (error: any) {
-      console.error("Error publishing event:", error);
-      toast.error(error.response?.data?.message || "Erro ao publicar evento");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
-        <div className="text-gray-11">Carregando evento...</div>
-      </div>
-    );
-  }
-
-  if (!event) {
-    return null;
-  }
-
-  const navigationItems = [
-    {
-      label: "Informações Básicas",
-      icon: Settings,
-      href: `/organizer/events/${eventId}/edit`,
-      active: true,
-    },
-    {
-      label: "Tópicos",
-      icon: FileText,
-      href: `/organizer/events/${eventId}/topics`,
-    },
-    {
-      label: "Modalidades",
-      icon: Users,
-      href: `/organizer/events/${eventId}/modalities`,
-    },
-    {
-      label: "Kits",
-      icon: Package,
-      href: `/organizer/events/${eventId}/kits`,
-    },
-    {
-      label: "Perguntas",
-      icon: HelpCircle,
-      href: `/organizer/events/${eventId}/questions`,
-    },
-    {
-      label: "Inscrições",
-      icon: Users,
-      href: `/organizer/events/${eventId}/registrations`,
-    },
-    {
-      label: "Estatísticas",
-      icon: BarChart3,
-      href: `/organizer/events/${eventId}/stats`,
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-2 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Link
-          href="/organizer/events"
-          className="inline-flex items-center text-gray-11 hover:text-gray-12 mb-6"
-        >
-          <ArrowLeft className="size-4 mr-2" />
-          Voltar para Eventos
-        </Link>
-
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-12 mb-2">
-                {event.name}
-              </h1>
-              <p className="text-gray-11">
-                Status:{" "}
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${
-                    event.status === "PUBLISHED"
-                      ? "bg-green-10/20 text-green-11"
-                      : event.status === "DRAFT"
-                      ? "bg-yellow-10/20 text-yellow-11"
-                      : "bg-gray-10/20 text-gray-11"
-                  }`}
-                >
-                  {event.status === "PUBLISHED"
-                    ? "Publicado"
-                    : event.status === "DRAFT"
-                    ? "Rascunho"
-                    : event.status}
-                </span>
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {event.status === "DRAFT" && (
-                <Button onClick={handlePublish}>Publicar Evento</Button>
-              )}
-              <Link href={`/events/${eventId}`} target="_blank">
-                <Button
-                  variant="outline"
-                  className="text-gray-12 border-gray-6"
-                >
-                  Visualizar
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex flex-wrap gap-2 border-b border-gray-6 pb-4">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    item.active
-                      ? "bg-primary-10/20 text-primary-11"
-                      : "text-gray-11 hover:text-gray-12 hover:bg-gray-4"
-                  }`}
-                >
-                  <Icon className="size-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
+    <div className="pb-20">
+      <div className="w-full flex flex-col gap-11">
+        {/* Title Section */}
+        <div className="flex flex-col gap-4">
+          <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+            Editar evento
+          </h1>
+          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+            Comece pelo básico. Defina nome, data, local e as imagens principais. Você poderá
+            ajustar os detalhes depois.
+          </p>
         </div>
 
         {/* Form */}
-        <div className="bg-gray-1 rounded-lg border border-gray-6 p-8">
-          <h2 className="text-xl font-bold text-gray-12 mb-6">
-            Informações Básicas
-          </h2>
-
-          <form className="space-y-6">
-            {/* Nome do Evento */}
-            <div>
-              <label className="block text-sm font-medium text-gray-12 mb-2">
-                Nome do Evento *
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-11">
+          {/* Nome do Evento e Data */}
+          <div className="flex gap-6 w-full items-start">
+            <div className="flex flex-col gap-3 flex-1">
+              <div className="flex flex-col gap-2">
+                <label className="text-gray-12 text-base font-family-dm-sans">Nome do evento</label>
                 <Input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  placeholder="Ex: Maratona de São Paulo 2025"
-                  className={`pl-10 ${errors.name ? "border-red-10" : ""}`}
+                  placeholder="Ex: Corrida Pena Nubas 2025"
+                  className={`h-12 ${errors.name ? "border-red-10" : ""}`}
+                  maxLength={25}
                 />
               </div>
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-10">{errors.name}</p>
-              )}
+              <div className="flex items-center gap-1">
+                <InfoIcon className="size-5 text-gray-11" />
+                <p className="text-gray-11 text-base font-family-dm-sans">Limite de 25 Caracteres</p>
+              </div>
+              {errors.name && <p className="text-red-10 text-sm">{errors.name}</p>}
             </div>
-
-            {/* Descrição */}
-            <div>
-              <label className="block text-sm font-medium text-gray-12 mb-2">
-                Descrição
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Descreva seu evento..."
-                rows={4}
-                className="w-full rounded-lg border border-gray-6 bg-transparent px-3 py-2 text-sm text-gray-12 placeholder:text-gray-11 focus:outline-none focus:ring-2 focus:ring-primary-11/50 focus:border-primary-11"
-              />
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-gray-12 text-base font-family-dm-sans">Data do evento</label>
+                <DatePicker
+                  value={formData.eventDate}
+                  onChange={(value) => handleDateChange("eventDate", value || "")}
+                  placeholder={getCurrentDatePlaceholder()}
+                  className="w-max"
+                  hideIcon={false}
+                />
+              </div>
+              <div className="flex items-center gap-1 max-w-[350px]">
+                <InfoIcon className="size-5 text-gray-11 shrink-0" />
+                <p className="text-gray-11 text-base font-family-dm-sans flex-1">
+                  Use a data e o horário oficiais de início do evento. As largadas por modalidade
+                  podem ser detalhadas depois
+                </p>
+              </div>
+              {errors.eventDate && <p className="text-red-10 text-sm">{errors.eventDate}</p>}
             </div>
+          </div>
 
-            {/* Localização */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-12 mb-2">
-                  Local
+          {/* Inscrição Section */}
+          <div className="flex flex-col gap-5">
+            <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+              Inscrição
+            </h2>
+
+            <div className="flex gap-[72px] items-start">
+              {/* Data de início das inscrições */}
+              <div className="flex flex-col gap-3">
+                <label className="text-gray-12 text-base font-family-dm-sans">
+                  Data de início das inscrições
                 </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                  <Input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    placeholder="Ex: Parque Ibirapuera"
-                    className="pl-10"
+                <div className="flex gap-3 items-end">
+                  <DatePicker
+                    value={formData.registrationStartDate}
+                    onChange={(value) => handleDateChange("registrationStartDate", value || "")}
+                    placeholder={getCurrentDatePlaceholder()}
+                    className="w-max"
+                  />
+                  <TimePicker
+                    value={formData.registrationStartTime}
+                    onChange={(value) => handleTimeChange("registrationStartTime", value)}
+                    className="w-max"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-12 mb-2">
-                  Cidade
+              {/* Data de encerramento das inscrições */}
+              <div className="flex flex-col gap-3">
+                <label className="text-gray-12 text-base font-family-dm-sans">
+                  Data de encerramento das inscrições
                 </label>
+                <div className="flex gap-3 items-end">
+                  <DatePicker
+                    value={formData.registrationEndDate}
+                    onChange={(value) => handleDateChange("registrationEndDate", value || "")}
+                    placeholder={getCurrentDatePlaceholder()}
+                    className="w-max"
+                  />
+                  <TimePicker
+                    value={formData.registrationEndTime}
+                    onChange={(value) => handleTimeChange("registrationEndTime", value)}
+                    className="w-max"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Local do Evento Section */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
+              <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                Local do evento
+              </h2>
+              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                Informe onde o evento será realizado. Essas informações aparecem na página do evento
+                e ajudam o participante a chegar até o local.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 items-start">
+              {/* CEP */}
+              <div className="flex flex-col gap-2">
+                <label className="text-gray-12 text-base font-family-dm-sans">CEP</label>
+                <Input
+                  type="text"
+                  name="cep"
+                  value={formData.cep}
+                  onChange={handleCEPChange}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  className="h-12"
+                />
+                {loadingCEP && <p className="text-gray-11 text-sm">Buscando endereço...</p>}
+              </div>
+
+              {/* Rua */}
+              <div className="flex flex-col gap-2">
+                <label className="text-gray-12 text-base font-family-dm-sans">Rua</label>
+                <Input
+                  type="text"
+                  name="street"
+                  value={formData.street}
+                  onChange={handleInputChange}
+                  placeholder="Digite o nome da rua"
+                  className="h-12"
+                />
+              </div>
+
+              {/* Bairro */}
+              <div className="flex flex-col gap-2">
+                <label className="text-gray-12 text-base font-family-dm-sans">Bairro</label>
+                <Input
+                  type="text"
+                  name="neighborhood"
+                  value={formData.neighborhood}
+                  onChange={handleInputChange}
+                  placeholder="Digite o nome do bairro"
+                  className="h-12"
+                />
+              </div>
+
+              {/* Cidade */}
+              <div className="flex flex-col gap-2">
+                <label className="text-gray-12 text-base font-family-dm-sans">Cidade</label>
                 <Input
                   type="text"
                   name="city"
                   value={formData.city}
                   onChange={handleInputChange}
-                  placeholder="São Paulo"
+                  placeholder="Digite o nome da cidade"
+                  className="h-12"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-12 mb-2">
-                  Estado
-                </label>
+              {/* Estado */}
+              <div className="flex flex-col gap-2">
+                <label className="text-gray-12 text-base font-family-dm-sans">Estado</label>
                 <Input
                   type="text"
                   name="state"
                   value={formData.state}
                   onChange={handleInputChange}
-                  placeholder="SP"
-                  maxLength={2}
+                  placeholder="Digite o nome do estado"
+                  className="h-12"
                 />
               </div>
             </div>
 
-            {/* País */}
-            <div>
-              <label className="block text-sm font-medium text-gray-12 mb-2">
-                País
-              </label>
+            {/* URL do Google Maps */}
+            <div className="flex flex-col gap-2 w-full">
+              <label className="text-gray-12 text-base font-family-dm-sans">URL do google</label>
               <div className="relative">
-                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                <Input
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleInputChange}
-                  placeholder="BR"
-                  maxLength={2}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Datas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-12 mb-2">
-                  Data do Evento *
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                  <Input
-                    type="datetime-local"
-                    name="eventDate"
-                    value={formData.eventDate}
-                    onChange={handleInputChange}
-                    className={`pl-10 ${
-                      errors.eventDate ? "border-red-10" : ""
-                    }`}
-                  />
-                </div>
-                {errors.eventDate && (
-                  <p className="mt-1 text-sm text-red-10">{errors.eventDate}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-12 mb-2">
-                  Início das Inscrições
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                  <Input
-                    type="datetime-local"
-                    name="registrationStartDate"
-                    value={formData.registrationStartDate}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-12 mb-2">
-                  Fim das Inscrições
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                  <Input
-                    type="datetime-local"
-                    name="registrationEndDate"
-                    value={formData.registrationEndDate}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Google Maps Link */}
-            <div>
-              <label className="block text-sm font-medium text-gray-12 mb-2">
-                Link do Google Maps
-              </label>
-              <div className="relative">
-                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
+                <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12" />
                 <Input
                   type="url"
                   name="googleMapsLink"
                   value={formData.googleMapsLink}
                   onChange={handleInputChange}
-                  placeholder="https://maps.google.com/..."
-                  className="pl-10"
+                  placeholder="Ex: www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP"
+                  className="h-12 pl-10"
                 />
               </div>
             </div>
+          </div>
 
-            {/* Banner Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-12 mb-2">
-                Banner do Evento
-              </label>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <input
-                    ref={bannerInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                    onChange={handleBannerUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => bannerInputRef.current?.click()}
-                    disabled={uploadingBanner}
-                    className="text-gray-12 border-gray-6"
-                  >
-                    {uploadingBanner ? (
-                      <>
-                        <Loader2 className="size-4 mr-2 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="size-4 mr-2" />
-                        {formData.bannerUrl
-                          ? "Alterar Banner"
-                          : "Upload do Banner"}
-                      </>
-                    )}
-                  </Button>
-                  {formData.bannerUrl && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        setFormData((prev) => ({ ...prev, bannerUrl: "" }));
-                        setBannerPreview("");
-                        if (bannerInputRef.current) {
-                          bannerInputRef.current.value = "";
-                        }
-                      }}
-                      className="text-red-10 hover:text-red-11"
-                    >
-                      <X className="size-4 mr-2" />
-                      Remover
-                    </Button>
-                  )}
+          {/* PDF Upload Section */}
+          <div className="flex flex-col items-start justify-center w-full">
+            <div
+              className="border-2 border-dashed border-gray-6 rounded-[12px] p-6 flex gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-7 transition-colors"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="flex items-center justify-center size-16 shrink-0">
+                <Plus className="size-16 text-primary-11" strokeWidth={1.5} />
+              </div>
+              <div className="flex flex-col gap-4 items-start justify-center flex-1">
+                <div className="flex flex-col gap-2 items-start justify-center w-full">
+                  <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">
+                    Envie o regulamento do evento em PDF para que os participantes possam baixar na
+                    página do evento.
+                  </p>
+                  <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
+                    Formato aceito: PDF
+                  </p>
                 </div>
-                {bannerPreview && (
-                  <div className="border border-gray-6 rounded-lg p-4 bg-gray-3">
-                    <p className="text-sm text-gray-11 mb-2">
-                      Preview do Banner:
-                    </p>
-                    <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-2">
-                      <Image
-                        src={bannerPreview}
-                        alt="Preview do banner"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="relative">
-                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
-                  <Input
-                    type="url"
-                    name="bannerUrl"
-                    value={formData.bannerUrl}
-                    onChange={handleInputChange}
-                    placeholder="URL do banner (preenchida automaticamente após upload)"
-                    className="pl-10"
-                    disabled={uploadingBanner}
-                  />
+                <div className="flex gap-1 items-center justify-center">
+                  <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
+                    Arraste um arquivo PDF para este campo ou clique aqui
+                  </p>
                 </div>
-                <p className="text-xs text-gray-10">
-                  Faça upload de uma imagem ou cole a URL diretamente. Formatos
-                  aceitos: JPG, PNG, GIF, WebP. Máximo: 10MB.
-                </p>
               </div>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handlePDFSelect}
+              className="hidden"
+            />
+            {pdfFile && (
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-gray-11 text-sm">Arquivo selecionado: {pdfFile.name}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPdfFile(null);
+                    setPdfUrl("");
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                  className="text-red-10 text-sm hover:text-red-11"
+                >
+                  Remover
+                </button>
+              </div>
+            )}
+            {(pdfUrl || formData.regulationUrl) && !pdfFile && (
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-gray-11 text-sm">PDF atual do regulamento</p>
+                <a
+                  href={pdfUrl || formData.regulationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-11 text-sm hover:underline"
+                >
+                  Ver PDF
+                </a>
+              </div>
+            )}
+          </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button
-                onClick={handleSubmit}
-                disabled={saving}
-                className="flex-1"
-              >
-                {saving ? "Salvando..." : "Salvar Alterações"}
-              </Button>
-            </div>
-          </form>
-        </div>
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="h-[52px] px-11 text-xl font-bold font-manrope"
+            >
+              {saving ? "Salvando..." : "Próxima etapa"}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

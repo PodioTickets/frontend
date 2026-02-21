@@ -74,14 +74,14 @@ function ParticipantCard({
       {/* Content */}
       <div className="flex flex-col gap-5 px-4 py-6">
         <div className="flex flex-col gap-5 grow items-start">
-          <p className="font-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
             Participante {participantIndex + 1}
           </p>
           <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
             {ticketName}
           </p>
           <div className="flex items-end justify-between w-full text-gray-12">
-            <p className="font-dm-sans font-normal text-base leading-[1.3]">
+            <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
               Valor do ingresso:
             </p>
             <p className="font-manrope font-bold text-lg leading-[1.1]">
@@ -90,7 +90,7 @@ function ParticipantCard({
           </div>
           {additionalProducts.length > 0 && (
             <div className="flex items-end justify-between w-full text-gray-12">
-              <p className="font-dm-sans font-normal text-base leading-[1.3]">
+              <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
                 Produtos adicionais ({additionalProducts.length}):
               </p>
               <p className="font-manrope font-bold text-lg leading-[1.1]">
@@ -122,13 +122,13 @@ function ParticipantCard({
               )}
             </div>
             <div className="flex flex-col gap-3 items-start justify-center">
-              <p className="font-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
+              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
                 {participant.name || "Sem nome"}
               </p>
               <div className="flex gap-2 items-center justify-center">
                 {participant.birthDate && (
                   <>
-                    <p className="font-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
                       {formatDate(participant.birthDate)}
                     </p>
                     <div className="relative shrink-0 size-1 rounded-full bg-gray-11" />
@@ -136,14 +136,14 @@ function ParticipantCard({
                 )}
                 {participant.gender && (
                   <>
-                    <p className="font-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
                       {getGenderLabel(participant.gender)}
                     </p>
                     <div className="relative shrink-0 size-1 rounded-full bg-gray-11" />
                   </>
                 )}
                 {participant.cpf && (
-                  <p className="font-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                  <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
                     {maskCPF(participant.cpf)}
                   </p>
                 )}

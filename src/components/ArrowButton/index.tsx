@@ -1,4 +1,4 @@
-export function ArrowButton({ isOpen = false }: { isOpen?: boolean }) {
+export function ArrowButton({ isOpen = false, className }: { isOpen?: boolean, className?: string }) {
   return (
     <svg
       width="6"
@@ -6,7 +6,7 @@ export function ArrowButton({ isOpen = false }: { isOpen?: boolean }) {
       viewBox="0 0 6 10"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`transition-transform duration-200 ${
+      className={`transition-transform duration-200 ${className} ${
         isOpen ? "rotate-90" : ""
       }`}
     >

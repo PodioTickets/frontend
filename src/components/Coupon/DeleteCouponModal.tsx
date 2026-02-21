@@ -44,10 +44,10 @@ export function DeleteCouponModal() {
             <div className="flex flex-col items-center justify-center px-5 pt-6 pb-5 gap-11">
               {/* Conteúdo */}
               <div className="flex flex-col gap-4 items-center justify-center w-full">
-                <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-dm-sans text-center">
+                <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
                   Deletar cupom permanentemente?
                 </p>
-                <p className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans text-center">
+                <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
                   Esta ação remove o cupom do evento. Você só pode excluir se ele ainda não tiver sido utilizado. Depois de excluir, não será possível recuperar
                 </p>
               </div>

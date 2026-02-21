@@ -1,20 +1,24 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import { ArrowButton } from "../ArrowButton";
 import type { Event } from "@/interfaces/event";
 import { Button } from "../Button";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { TrashIcon } from "../Icons/TrashIcon";
-import { mockKits, type Race } from "@/constants/kits";
+import type { Ticket } from "@/hooks/useTickets";
+import { useTickets } from "@/hooks/useTickets";
+import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { PencilIcon } from "../Icons/PencilIcon";
 import { Dropdown } from "../Dropdown";
 import { DateOfBirthPicker } from "../DateOfBirthPicker";
 import { Checkbox } from "../CheckBox";
 import type { Question } from "@/interfaces/event";
 import { eventService } from "@/services";
-import { useApiQuery } from "@/hooks/base/useApiQuery";
+import { useQuery } from "@tanstack/react-query";
+import { organizerService } from "@/services";
+import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { UserAutocomplete } from "../UserAutocomplete";
 import type { LinkedUser } from "@/hooks/useLinkedUsers";
@@ -22,6 +26,9 @@ import { useLinkedUsers } from "@/hooks/useLinkedUsers";
 import { userService } from "@/services";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Loading } from "../Loading";
+import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 
 interface InformationStepProps {
   event: Event;
@@ -29,9 +36,9 @@ interface InformationStepProps {
   onBack: () => void;
 }
 
-interface ParticipantWithRace {
-  raceId: string;
-  race: Race;
+interface ParticipantWithTicket {
+  ticketId: string;
+  ticket: Ticket;
   participantIndex: number;
   isExpanded: boolean;
 }
@@ -48,6 +55,14 @@ export function InformationStep({
     removeParticipant,
     updateRaceQuantity,
   } = useCheckout();
+
+  const eventId = event?.id;
+
+  // Buscar tickets e categorias do servidor
+  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+  const { categories, loading: categoriesLoading } = useTicketCategories(eventId, !!eventId);
+
+  const loading = ticketsLoading || categoriesLoading;
   const { openDeleteParticipantModal } = useDeleteParticipantModal();
   const { linkedUsers } = useLinkedUsers();
   const { user: currentUser } = useAuth();
@@ -57,10 +72,50 @@ export function InformationStep({
     0: true,
   });
 
+  const [showAllTicketsModal, setShowAllTicketsModal] = useState(false);
+
   // Estado para armazenar respostas das perguntas por participante
+  // Inicializar com dados do contexto
   const [questionAnswers, setQuestionAnswers] = useState<
     Record<number, Record<string, string | string[]>>
-  >({});
+  >(() => {
+    const initial: Record<number, Record<string, string | string[]>> = {};
+    participants.forEach((participant, index) => {
+      if (participant.questionAnswers) {
+        initial[index] = participant.questionAnswers;
+      }
+    });
+    return initial;
+  });
+
+  // Sincronizar questionAnswers quando participants mudarem (ex: carregamento do storage)
+  // Usar ref para evitar loops infinitos
+  const isUpdatingFromContextRef = useRef(false);
+  
+  useEffect(() => {
+    if (isUpdatingFromContextRef.current) {
+      isUpdatingFromContextRef.current = false;
+      return;
+    }
+    
+    const updated: Record<number, Record<string, string | string[]>> = {};
+    participants.forEach((participant, index) => {
+      if (participant.questionAnswers) {
+        updated[index] = participant.questionAnswers;
+      }
+    });
+    
+    // Só atualizar se houver diferenças
+    setQuestionAnswers((prev) => {
+      const hasChanges = Object.keys(updated).some(
+        (index) => JSON.stringify(prev[Number(index)]) !== JSON.stringify(updated[Number(index)])
+      );
+      if (!hasChanges && Object.keys(prev).length === Object.keys(updated).length) {
+        return prev;
+      }
+      return { ...prev, ...updated };
+    });
+  }, [participants]);
 
   // Estado para rastrear quais participantes foram selecionados da lista de usuários vinculados
   // Isso evita tentar salvar novamente usuários que já estão vinculados
@@ -73,18 +128,84 @@ export function InformationStep({
     Record<number, boolean>
   >({});
 
-  // Criar lista de participantes baseada nas races selecionadas
+  // Separar tickets com categoria dos avulsos
+  const { categorizedTickets, uncategorizedTickets } = useMemo(() => {
+    const categorized: Array<{ id: string; name: string; tickets: Ticket[] }> = [];
+    const uncategorized: Ticket[] = [];
+
+    // Mapear categorias por ID
+    const categoryMap = new Map(categories.map((cat) => [cat.id, cat.name]));
+
+    // Agrupar tickets por categoria
+    const ticketsByCategory: Record<string, Ticket[]> = {};
+    tickets.forEach((ticket) => {
+      const categoryId = ticket.groupId;
+      if (categoryId && categoryMap.has(categoryId)) {
+        if (!ticketsByCategory[categoryId]) {
+          ticketsByCategory[categoryId] = [];
+        }
+        ticketsByCategory[categoryId].push(ticket);
+      } else {
+        uncategorized.push(ticket);
+      }
+    });
+
+    // Processar categorias com tickets
+    categories.forEach((category) => {
+      const categoryTickets = ticketsByCategory[category.id] || [];
+      if (categoryTickets.length > 0) {
+        categorized.push({
+          id: category.id,
+          name: category.name,
+          tickets: categoryTickets.filter((ticket) => {
+            try {
+              const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
+              return !isNaN(price) && price > 0;
+            } catch {
+              return false;
+            }
+          }),
+        });
+      }
+    });
+
+    // Filtrar tickets avulsos válidos
+    const validUncategorized = uncategorized.filter((ticket) => {
+      try {
+        const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
+        return !isNaN(price) && price > 0;
+      } catch {
+        return false;
+      }
+    });
+
+    return {
+      categorizedTickets: categorized,
+      uncategorizedTickets: validUncategorized,
+    };
+  }, [tickets, categories]);
+
+  const getTicketPrice = (ticket: Ticket): number => {
+    try {
+      return parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
+    } catch {
+      return 0;
+    }
+  };
+
+  // Criar lista de participantes baseada nos tickets selecionados
   const participantsWithRaces = useMemo(() => {
-    const result: ParticipantWithRace[] = [];
+    const result: ParticipantWithTicket[] = [];
     let participantIndex = 0;
 
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
         for (let i = 0; i < quantity; i++) {
           result.push({
-            raceId: race.id,
-            race,
+            ticketId: ticket.id,
+            ticket,
             participantIndex: participantIndex++,
             isExpanded: false,
           });
@@ -92,8 +213,21 @@ export function InformationStep({
       });
     });
 
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      for (let i = 0; i < quantity; i++) {
+        result.push({
+          ticketId: ticket.id,
+          ticket,
+          participantIndex: participantIndex++,
+          isExpanded: false,
+        });
+      }
+    });
+
     return result;
-  }, [raceQuantities]);
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   // Garantir que o array de participantes tenha pelo menos o número necessário de elementos
   useEffect(() => {
@@ -122,20 +256,30 @@ export function InformationStep({
     let participants = 0;
     let total = 0;
 
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
           participants += quantity;
-          total += race.price * quantity;
+          total += getTicketPrice(ticket) * quantity;
         }
       });
     });
 
-    return { totalParticipants: participants, totalPrice: total };
-  }, [raceQuantities]);
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) {
+        participants += quantity;
+        total += getTicketPrice(ticket) * quantity;
+      }
+    });
 
-  // Agrupa ingressos por race para exibição
+    return { totalParticipants: participants, totalPrice: total };
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
+
+  // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
       quantity: number;
@@ -145,23 +289,40 @@ export function InformationStep({
       total: number;
     }> = [];
 
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
+          const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
           grouped.push({
             quantity,
-            raceName: race.name,
-            distance: race.distance,
-            price: race.price,
-            total: race.price * quantity,
+            raceName: ticket.name,
+            distance,
+            price: getTicketPrice(ticket),
+            total: getTicketPrice(ticket) * quantity,
           });
         }
       });
     });
 
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) {
+        const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
+        grouped.push({
+          quantity,
+          raceName: ticket.name,
+          distance,
+          price: getTicketPrice(ticket),
+          total: getTicketPrice(ticket) * quantity,
+        });
+      }
+    });
+
     return grouped;
-  }, [raceQuantities]);
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -176,7 +337,7 @@ export function InformationStep({
     // Garantir que o participante existe (fallback caso o useEffect não tenha executado)
     // O updateParticipant já cria o participante se não existir, mas vamos garantir
     let participant = participants[index];
-    
+
     if (!participant) {
       // Criar participante vazio se não existir
       updateParticipant(index, {
@@ -203,10 +364,10 @@ export function InformationStep({
         hasEmergencyContact: false,
       };
     }
-    
+
     // Verificar se está tentando fechar (participante já está expandido)
     const isCurrentlyExpanded = expandedParticipants[index];
-    
+
     // Se está tentando fechar E o participante está completo, tentar salvar
     if (isCurrentlyExpanded && isParticipantComplete(index)) {
       // Limpar CPF (remover formatação) para comparação
@@ -217,7 +378,7 @@ export function InformationStep({
       const isAlreadyLinked = linkedUsers.some((linkedUser) => {
         const linkedUserCPF = (linkedUser.documentNumber || "").replace(/\D/g, "");
         const linkedUserEmail = (linkedUser.email || "").trim().toLowerCase();
-        
+
         // Comparar por CPF ou email
         return (
           (cleanCPF && linkedUserCPF && cleanCPF === linkedUserCPF) ||
@@ -243,7 +404,7 @@ export function InformationStep({
               (participantEmail && linkedUserEmail && participantEmail === linkedUserEmail)
             );
           });
-          
+
           if (linkedUser) {
             setSelectedLinkedUserIds((prev) => ({
               ...prev,
@@ -251,7 +412,7 @@ export function InformationStep({
             }));
           }
         }
-        
+
         // Não precisa fazer nada, já está vinculado
         // Apenas fecha o participante
       } else if (!selectedLinkedUserIds[index] && !savedParticipantIds[index]) {
@@ -266,7 +427,7 @@ export function InformationStep({
           // O dropdown usa labels como "Masculino", "Feminino", etc., mas o backend espera minúsculas
           let normalizedGender = (participant.gender || "").trim();
           const genderLower = normalizedGender.toLowerCase();
-          
+
           // Mapear valores possíveis para os formatos esperados pelo backend
           if (genderLower === "masculino") {
             normalizedGender = "masculino";
@@ -386,7 +547,7 @@ export function InformationStep({
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];
     if (!participant) return false;
-    
+
     // Verificar se os campos obrigatórios estão preenchidos (não vazios)
     const name = participant.name?.trim();
     const cpf = participant.cpf?.trim();
@@ -394,7 +555,7 @@ export function InformationStep({
     const birthDate = participant.birthDate?.trim();
     const phone = participant.phone?.trim();
     const gender = participant.gender?.trim();
-    
+
     return !!(
       name &&
       cpf &&
@@ -407,19 +568,19 @@ export function InformationStep({
 
   const handleDeleteParticipant = (
     participantIndex: number,
-    raceId: string
+    ticketId: string
   ) => {
     openDeleteParticipantModal({
       participantIndex,
-      raceId,
+      raceId: ticketId,
       onConfirm: () => {
         // Remover o participante
         removeParticipant(participantIndex);
 
-        // Atualizar a quantidade da race correspondente
-        const currentQuantity = raceQuantities[raceId] || 0;
+        // Atualizar a quantidade do ticket correspondente
+        const currentQuantity = raceQuantities[ticketId] || 0;
         if (currentQuantity > 0) {
-          updateRaceQuantity(raceId, currentQuantity - 1);
+          updateRaceQuantity(ticketId, currentQuantity - 1);
         }
       },
     });
@@ -485,34 +646,51 @@ export function InformationStep({
     return gender;
   };
 
-  // Buscar perguntas do evento via API
-  const { data: questions = [], isLoading: isLoadingQuestions } = useApiQuery<
-    Question[]
-  >(
-    ["event-questions", event.id],
-    () => eventService.getEventQuestions(event.id),
-    {
-      enabled: !!event.id,
-    }
-  );
+  // Buscar perguntas do evento via API - já vem no formato correto com isRequired, order, etc.
+  const { data: questions = [], isLoading: isLoadingQuestions } = useQuery<Question[]>({
+    queryKey: queryKeys.events.questions(eventId || ""),
+    queryFn: async () => {
+      if (!eventId) return [];
+      try {
+        const loadedQuestions = await organizerService.getQuestions(eventId);
+        return Array.isArray(loadedQuestions) ? loadedQuestions : [];
+      } catch (error) {
+        console.error("Error loading questions:", error);
+        return [];
+      }
+    },
+    enabled: !!eventId,
+  });
 
   // Ordenar perguntas por ordem
   const sortedQuestions = useMemo(() => {
-    return [...questions].sort((a, b) => a.order - b.order);
+    if (!questions || questions.length === 0) return [];
+    return [...questions].sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [questions]);
+
 
   const updateQuestionAnswer = (
     participantIndex: number,
     questionId: string,
     answer: string | string[]
   ) => {
-    setQuestionAnswers((prev) => ({
-      ...prev,
-      [participantIndex]: {
-        ...prev[participantIndex],
-        [questionId]: answer,
-      },
-    }));
+    isUpdatingFromContextRef.current = true;
+    setQuestionAnswers((prev) => {
+      const updated = {
+        ...prev,
+        [participantIndex]: {
+          ...prev[participantIndex],
+          [questionId]: answer,
+        },
+      };
+      
+      // Salvar no contexto
+      updateParticipant(participantIndex, {
+        questionAnswers: updated[participantIndex],
+      });
+      
+      return updated;
+    });
   };
 
   // Obter resposta de pergunta
@@ -535,7 +713,7 @@ export function InformationStep({
       case "text":
         return (
           <div className="flex flex-col gap-2">
-            <label className="text-base font-normal text-gray-12 font-dm-sans">
+            <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
@@ -549,7 +727,7 @@ export function InformationStep({
                   e.target.value
                 )
               }
-              className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 focus:bg-gray-3 transition-colors font-dm-sans text-base placeholder:text-gray-11"
+              className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
               placeholder="Digite sua resposta"
             />
           </div>
@@ -558,7 +736,7 @@ export function InformationStep({
       case "select":
         return (
           <div className="flex flex-col gap-2">
-            <label className="text-base font-normal text-gray-12 font-dm-sans">
+            <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
@@ -569,7 +747,7 @@ export function InformationStep({
                 trigger={(open: boolean) => (
                   <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
+                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans truncate">
                         {typeof answer === "string" && answer
                           ? answer
                           : "Selecione"}
@@ -599,7 +777,7 @@ export function InformationStep({
       case "multiple_choice":
         return (
           <div className="flex flex-col gap-2">
-            <label className="text-base font-normal text-gray-12 font-dm-sans">
+            <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
@@ -613,11 +791,10 @@ export function InformationStep({
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <div
-                      className={`size-6 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${
-                        isSelected
-                          ? "bg-primary-11 border-primary-11"
-                          : "bg-transparent border-gray-6"
-                      }`}
+                      className={`size-6 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${isSelected
+                        ? "bg-primary-11 border-primary-11"
+                        : "bg-transparent border-gray-6"
+                        }`}
                     >
                       {isSelected && (
                         <div className="size-2.5 rounded-full bg-primary-2" />
@@ -637,7 +814,7 @@ export function InformationStep({
                       }
                       className="sr-only"
                     />
-                    <span className="text-sm text-gray-12 font-dm-sans">
+                    <span className="text-sm text-gray-12 font-family-dm-sans">
                       {option}
                     </span>
                   </label>
@@ -648,48 +825,28 @@ export function InformationStep({
         );
 
       case "true_false":
+        const trueFalseOptions = ["Verdadeiro", "Falso"];
         return (
           <div className="flex flex-col gap-2">
-            <label className="text-base font-normal text-gray-12 font-dm-sans">
+            <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
             <div className="flex flex-col gap-3">
-              {question.options?.map((option) => {
-                const selectedAnswers = Array.isArray(answer)
-                  ? answer
-                  : answer
-                  ? [answer]
-                  : [];
-                const isChecked = selectedAnswers.includes(option);
+              {trueFalseOptions.map((option) => {
+                const isSelected = typeof answer === "string" && answer === option;
                 return (
                   <label
                     key={option}
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <Checkbox
-                      checked={isChecked}
-                      onCheckedChange={(checked) => {
-                        const currentAnswers = Array.isArray(answer)
-                          ? answer
-                          : answer
-                          ? [answer]
-                          : [];
-                        if (checked) {
-                          updateQuestionAnswer(participantIndex, question.id, [
-                            ...currentAnswers,
-                            option,
-                          ]);
-                        } else {
-                          updateQuestionAnswer(
-                            participantIndex,
-                            question.id,
-                            currentAnswers.filter((a) => a !== option)
-                          );
-                        }
-                      }}
+                      checked={isSelected}
+                      onCheckedChange={(checked) =>
+                        updateQuestionAnswer(participantIndex, question.id, checked ? option : "")
+                      }
                     />
-                    <span className="text-sm text-gray-12 font-dm-sans">
+                    <span className="text-sm text-gray-12 font-family-dm-sans">
                       {option}
                     </span>
                   </label>
@@ -699,10 +856,37 @@ export function InformationStep({
           </div>
         );
 
+      case "number":
+        return (
+          <div className="flex flex-col gap-2">
+            <label className="text-base font-normal text-gray-12 font-family-dm-sans">
+              {question.question}
+              {isRequired && <span className="text-red-9 ml-1">*</span>}
+            </label>
+            <input
+              type="number"
+              value={typeof answer === "string" ? answer : ""}
+              onChange={(e) =>
+                updateQuestionAnswer(
+                  participantIndex,
+                  question.id,
+                  e.target.value
+                )
+              }
+              className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
+              placeholder="Digite um número"
+            />
+          </div>
+        );
+
       default:
         return null;
     }
   };
+
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
     <>
@@ -727,7 +911,7 @@ export function InformationStep({
 
           <div className="w-full">
             <div className="hidden md:flex gap-2 items-stretch rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
-              <div className="h-[200px] w-1/4 relative shrink-0">
+              <div className="h-auto w-1/3 relative shrink-0">
                 <Image
                   src={event.bannerUrl}
                   alt={event.name}
@@ -750,19 +934,27 @@ export function InformationStep({
 
               <div className="w-2/5 shrink-0 flex flex-col justify-center px-4 py-6">
                 <div className="flex flex-col gap-5 pb-6">
-                  {groupedTickets.map((ticket, index) => (
+                  {groupedTickets.slice(0, 3).map((ticket, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between text-base text-gray-12"
                     >
                       <p className="font-semibold">
-                        ({ticket.quantity}x) {ticket.raceName}:
+                        ({ticket.quantity}x) {ticket.distance ? `${ticket.distance} ` : ""}{ticket.raceName}:
                       </p>
                       <p className="font-bold">
                         {formatPrice(ticket.total)}
                       </p>
                     </div>
                   ))}
+                  {groupedTickets.length > 3 && (
+                    <button
+                      onClick={() => setShowAllTicketsModal(true)}
+                      className="text-base text-primary-11 font-semibold hover:text-primary-12 transition-colors text-left"
+                    >
+                      Ver mais {groupedTickets.length - 3} ingresso{groupedTickets.length - 3 > 1 ? "s" : ""}
+                    </button>
+                  )}
                   <div className="flex items-center justify-between text-base text-gray-12">
                     <p className="font-semibold">Taxa de serviço:</p>
                     <p className="font-bold">
@@ -780,7 +972,7 @@ export function InformationStep({
 
           {/* Cards de participantes */}
           {participantsWithRaces.map(
-            ({ race, participantIndex, raceId }, index) => {
+            ({ ticket, participantIndex, ticketId }, index) => {
               const participant = participants[participantIndex] || {
                 name: "",
                 cpf: "",
@@ -795,21 +987,19 @@ export function InformationStep({
               const isExpanded =
                 expandedParticipants[participantIndex] ?? false;
               const isComplete = isParticipantComplete(participantIndex);
-              const ageLimitText = formatAgeLimit(race.ageLimit);
+              const ageLimitText = formatAgeLimit(ticket.ageLimit);
 
               return (
                 <div
-                  key={`${race.id}-${index}`}
-                  className={`flex flex-col w-full rounded-lg border border-gray-6 ${
-                    !isExpanded ? "overflow-hidden" : ""
-                  }`}
+                  key={`${ticket.id}-${index}`}
+                  className={`flex flex-col w-full rounded-lg border border-gray-6 ${!isExpanded ? "overflow-hidden" : ""
+                    }`}
                 >
                   <div
-                    className={`flex items-start  justify-between w-full px-4 py-3 ${
-                      !isExpanded
-                        ? "hover:bg-gray-2 transition-colors cursor-pointer"
-                        : ""
-                    }`}
+                    className={`flex items-start  justify-between w-full px-4 py-3 ${!isExpanded
+                      ? "hover:bg-gray-2 transition-colors cursor-pointer"
+                      : ""
+                      }`}
                     onClick={
                       !isExpanded
                         ? () => toggleParticipant(participantIndex)
@@ -818,16 +1008,14 @@ export function InformationStep({
                   >
                     <div className="flex flex-col gap-2 flex-1 w-full relative">
                       <div
-                        className={`transition-all duration-300 ease-in-out ${
-                          !isExpanded
-                            ? "max-h-[200px] opacity-100"
-                            : "max-h-0 opacity-0"
-                        }`}
+                        className={`transition-all duration-300 ease-in-out ${!isExpanded
+                          ? "max-h-[200px] opacity-100"
+                          : "max-h-0 opacity-0"
+                          }`}
                       >
                         <div
-                          className={`flex items-start justify-between w-full relative ${
-                            participant.name ? "min-h-[100px]" : ""
-                          }`}
+                          className={`flex items-start justify-between w-full relative ${participant.name ? "min-h-[100px]" : ""
+                            }`}
                         >
                           <div className="flex flex-col gap-3">
                             <div className="flex flex-col">
@@ -836,15 +1024,14 @@ export function InformationStep({
                                   `Participante ${index + 1}`}
                               </p>
                               <p className="font-bold text-2xl text-gray-12 mb-2">
-                                {race.name}
+                                {ticket.name}
                               </p>
                             </div>
                             <div
-                              className={`flex items-center gap-2 p-2 ${
-                                participant.name
-                                  ? "border border-gray-6 rounded-xl mt-4 md:mt-0"
-                                  : ""
-                              }`}
+                              className={`flex items-center gap-2 p-2 ${participant.name
+                                ? "border border-gray-6 rounded-xl mt-4 md:mt-0"
+                                : ""
+                                }`}
                             >
                               {participant.name && (
                                 <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
@@ -880,16 +1067,14 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col justify-between items-end gap-2 absolute top-0 right-0 h-full">
                             <div
-                              className={`flex md:flex-row flex-col items-end md:items-center gap-2 transition-all duration-300 ease-in-out ${
-                                !isExpanded ? "opacity-100" : "opacity-0"
-                              }`}
+                              className={`flex md:flex-row flex-col items-end md:items-center gap-2 transition-all duration-300 ease-in-out ${!isExpanded ? "opacity-100" : "opacity-0"
+                                }`}
                             >
                               <div
-                                className={`px-3 py-1 rounded-full text-sm font-medium transition-opacity duration-300 flex items-center justify-center ${
-                                  isComplete
-                                    ? "bg-primary-3 text-primary-12"
-                                    : "bg-yellow-3 text-yellow-12"
-                                }`}
+                                className={`px-3 py-1 rounded-full text-sm font-medium transition-opacity duration-300 flex items-center justify-center ${isComplete
+                                  ? "bg-primary-3 text-primary-12"
+                                  : "bg-yellow-3 text-yellow-12"
+                                  }`}
                               >
                                 {isComplete ? "Concluído" : "Pendente"}
                               </div>
@@ -907,7 +1092,7 @@ export function InformationStep({
                                   e.stopPropagation();
                                   handleDeleteParticipant(
                                     participantIndex,
-                                    raceId
+                                    ticketId
                                   );
                                 }}
                                 className="p-2 hidden md:block rounded-lg border border-red-6 hover:bg-red-1 transition-colors cursor-pointer"
@@ -916,8 +1101,7 @@ export function InformationStep({
                               </button>
                             </div>
                             <h1 className="hidden md:block text-xl font-bold text-gray-12">
-                              R${" "}
-                              {(event.price + event.serviceFee || 0).toFixed(2)}
+                              {formatPrice(getTicketPrice(ticket) + (event.serviceFee || 0))}
                             </h1>
                           </div>
                         </div>
@@ -925,18 +1109,17 @@ export function InformationStep({
 
                       {/* Conteúdo expandido */}
                       <div
-                        className={`transition-all duration-300 ease-in-out ${
-                          isExpanded
-                            ? "max-h-[2000px] opacity-100"
-                            : "max-h-0 opacity-0 pointer-events-none"
-                        }`}
+                        className={`transition-all duration-300 ease-in-out ${isExpanded
+                          ? "max-h-[2000px] opacity-100"
+                          : "max-h-0 opacity-0 pointer-events-none"
+                          }`}
                       >
                         <div className="flex items-start justify-between w-full relative z-10">
                           <div className="flex flex-col gap-2 pb-3">
                             <p className="text-sm text-gray-11">
                               Participante {index + 1}
                             </p>
-                            <h1 className="text-lg font-bold">{race.name}</h1>
+                            <h1 className="text-lg font-bold">{ticket.name}</h1>
                             {ageLimitText && (
                               <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-2 w-fit text-sm">
                                 Limite de idade: {ageLimitText}
@@ -946,11 +1129,10 @@ export function InformationStep({
 
                           <div className="flex items-center h-full gap-2 relative z-20">
                             <div
-                              className={`px-3 py-1 rounded-full text-sm font-medium transition-opacity duration-300 ${
-                                isComplete
-                                  ? "bg-primary-3 text-primary-12"
-                                  : "bg-yellow-3 text-yellow-12"
-                              }`}
+                              className={`px-3 py-1 rounded-full text-sm font-medium transition-opacity duration-300 ${isComplete
+                                ? "bg-primary-3 text-primary-12"
+                                : "bg-yellow-3 text-yellow-12"
+                                }`}
                             >
                               {isComplete ? "Concluído" : "Pendente"}
                             </div>
@@ -970,7 +1152,7 @@ export function InformationStep({
                                 e.stopPropagation();
                                 handleDeleteParticipant(
                                   participantIndex,
-                                  raceId
+                                  ticketId
                                 );
                               }}
                               className="p-2 rounded-lg border border-red-6 hover:bg-red-1 active:bg-red-1 transition-colors cursor-pointer touch-manipulation"
@@ -997,12 +1179,12 @@ export function InformationStep({
                                 const formattedCPF = user.documentNumber
                                   ? maskCPF(user.documentNumber.replace(/\D/g, ""))
                                   : "";
-                                
+
                                 // Formatar telefone se necessário (pode vir sem formatação da API)
                                 const formattedPhone = user.phone
                                   ? maskPhone(user.phone.replace(/\D/g, ""))
                                   : "";
-                                
+
                                 // Normalizar gênero (pode vir em diferentes formatos)
                                 let normalizedGender = user.gender || "";
                                 if (normalizedGender) {
@@ -1018,7 +1200,7 @@ export function InformationStep({
                                     normalizedGender = "Prefiro não dizer";
                                   }
                                 }
-                                
+
                                 updateParticipant(participantIndex, {
                                   name: `${user.firstName} ${user.lastName}`.trim(),
                                   email: user.email || "",
@@ -1118,7 +1300,7 @@ export function InformationStep({
                                 trigger={(open: boolean) => (
                                   <div className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                                     <div className="flex gap-1 items-center flex-1 min-w-0">
-                                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans truncate">
+                                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans truncate">
                                         {getGenderDisplayValue(
                                           participant.gender
                                         ) || "Selecione"}
@@ -1140,7 +1322,7 @@ export function InformationStep({
 
                         {/* Seção de Contato de Emergência */}
                         <div className="flex flex-col gap-3 mt-4 w-full">
-                          <p className="text-base font-normal text-gray-12 font-dm-sans leading-[1.3]">
+                          <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
                             Deseja adicionar um número de emergência ?
                           </p>
                           <div className="flex gap-2.5 items-start">
@@ -1156,7 +1338,7 @@ export function InformationStep({
                                 }}
                               />
                               <label
-                                className="text-sm font-normal text-gray-12 font-dm-sans cursor-pointer leading-[1.3]"
+                                className="text-sm font-normal text-gray-12 font-family-dm-sans cursor-pointer leading-[1.3]"
                                 onClick={() => {
                                   updateParticipant(participantIndex, {
                                     hasEmergencyContact: true,
@@ -1178,7 +1360,7 @@ export function InformationStep({
                                 }}
                               />
                               <label
-                                className="text-sm font-normal text-gray-12 font-dm-sans cursor-pointer leading-[1.3]"
+                                className="text-sm font-normal text-gray-12 font-family-dm-sans cursor-pointer leading-[1.3]"
                                 onClick={() => {
                                   updateParticipant(participantIndex, {
                                     hasEmergencyContact: false,
@@ -1196,7 +1378,7 @@ export function InformationStep({
                           {participant.hasEmergencyContact === true ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mt-4">
                               <div className="flex flex-col gap-2">
-                                <label className="text-base font-normal text-gray-12 font-dm-sans">
+                                <label className="text-base font-normal text-gray-12 font-family-dm-sans">
                                   Nome do contato de emergência
                                 </label>
                                 <input
@@ -1209,12 +1391,12 @@ export function InformationStep({
                                   onChange={(e) =>
                                     handleInputChange(participantIndex, e)
                                   }
-                                  className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-dm-sans text-base placeholder:text-gray-11"
+                                  className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
                                   placeholder="Nome do contato"
                                 />
                               </div>
                               <div className="flex flex-col gap-2">
-                                <label className="text-base font-normal text-gray-12 font-dm-sans">
+                                <label className="text-base font-normal text-gray-12 font-family-dm-sans">
                                   Telefone de emergência
                                 </label>
                                 <input
@@ -1231,7 +1413,7 @@ export function InformationStep({
                                     )
                                   }
                                   maxLength={15}
-                                  className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-dm-sans text-base placeholder:text-gray-11"
+                                  className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
                                   placeholder="(00) 99999-9999"
                                 />
                               </div>
@@ -1264,7 +1446,7 @@ export function InformationStep({
 
                         <div className="flex items-center justify-between gap-2 mt-10">
                           <h1 className="text-xl font-bold text-gray-12">
-                            R$ {event.price?.toFixed(2) || "0,00"}
+                            {formatPrice(getTicketPrice(ticket))}
                           </h1>
                           <Button
                             onClick={() => toggleParticipant(participantIndex)}
@@ -1344,6 +1526,85 @@ export function InformationStep({
           </Button>
         </div>
       </div>
+
+      {/* Modal para mostrar todos os ingressos */}
+      <AnimatePresence>
+        {showAllTicketsModal && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setShowAllTicketsModal(false)}
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[600px] max-h-[90vh] flex flex-col shadow-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-6">
+                  <h2 className="text-xl font-bold text-gray-12">Todos os ingressos</h2>
+                  <button
+                    onClick={() => setShowAllTicketsModal(false)}
+                    className="p-2 hover:bg-gray-3 rounded-lg transition-colors"
+                  >
+                    <X className="size-5 text-gray-11" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex flex-col gap-4">
+                    {groupedTickets.map((ticket, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between text-base text-gray-12 pb-4 border-b border-gray-6 last:border-b-0 last:pb-0"
+                      >
+                        <p className="font-semibold">
+                          ({ticket.quantity}x) {ticket.distance ? `${ticket.distance} ` : ""}{ticket.raceName}:
+                        </p>
+                        <p className="font-bold">
+                          {formatPrice(ticket.total)}
+                        </p>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">Taxa de serviço:</p>
+                      <p className="font-bold">
+                        {formatPrice(event.serviceFee || 0)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-xl font-bold text-gray-12 pt-4 border-t border-gray-6">
+                      <p>Total:</p>
+                      <p>{formatPrice(totalPrice + (event.serviceFee || 0))}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t border-gray-6">
+                  <Button
+                    onClick={() => setShowAllTicketsModal(false)}
+                    className="w-full"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }

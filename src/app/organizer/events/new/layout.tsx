@@ -19,8 +19,8 @@ function ProgressBar() {
     const isInformationStep =
       pathname.startsWith("/organizer/events/new/information") ||
       pathname.startsWith("/organizer/events/new/banner") ||
-      (pathname.startsWith("/organizer/events/new/preview") && 
-       !pathname.startsWith("/organizer/events/new/preview-event"));
+      (pathname.startsWith("/organizer/events/new/preview") &&
+        !pathname.startsWith("/organizer/events/new/preview-event"));
 
     const isTopicsStep =
       pathname.startsWith("/organizer/events/new/topics") ||
@@ -56,8 +56,8 @@ function ProgressBar() {
     const isInformationStep =
       pathname.startsWith("/organizer/events/new/information") ||
       pathname.startsWith("/organizer/events/new/banner") ||
-      (pathname.startsWith("/organizer/events/new/preview") && 
-       !pathname.startsWith("/organizer/events/new/preview-event"));
+      (pathname.startsWith("/organizer/events/new/preview") &&
+        !pathname.startsWith("/organizer/events/new/preview-event"));
 
     const isTopicsStep =
       pathname.startsWith("/organizer/events/new/topics") ||
@@ -272,7 +272,7 @@ export default function CreateEventLayout({
   return (
     <Suspense fallback={<Loading />}>
       <CreateEventProvider>
-        <div className="min-h-screen bg-gray-2 flex flex-col">
+        <div className="min-h-screen bg-gray-2 flex flex-col mt-6">
           <ProgressBar />
           {children}
         </div>

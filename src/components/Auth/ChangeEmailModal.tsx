@@ -253,10 +253,10 @@ export function ChangeEmailModal() {
 
                     {/* Content */}
                     <div className="flex flex-col gap-4 items-center justify-center w-full">
-                      <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-dm-sans text-center">
+                      <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
                         Deseja alterar seu email?
                       </h2>
-                      <p className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans text-center w-full">
+                      <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center w-full">
                         Você usa este e-mail para entrar no PódioTicket e
                         receber confirmações de inscrição. Ao continuar, será
                         preciso informar e validar um novo email
@@ -294,7 +294,7 @@ export function ChangeEmailModal() {
                 >
                   {/* Header */}
                   <div className="border-b border-gray-6 flex items-center justify-between p-4 w-full">
-                    <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-dm-sans">
+                    <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
                       Confirme seu e-mail atual
                     </h2>
                     <button
@@ -310,7 +310,7 @@ export function ChangeEmailModal() {
                     {/* Inputs Section */}
                     <div className="flex flex-col gap-8 items-start pb-6 pt-4 px-6 w-full">
                       {/* Instruction Text */}
-                      <p className="font-medium text-base leading-[1.3] text-gray-12 font-dm-sans w-full">
+                      <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans w-full">
                         Enviamos um código de 6 dígitos para{" "}
                         {maskEmail(user?.email || "")}. Digite o código abaixo
                         para liberar a alteração do seu e-mail.
@@ -353,7 +353,7 @@ export function ChangeEmailModal() {
                         <button
                           type="button"
                           onClick={handleResendCode}
-                          className="text-primary-10 font-semibold text-base leading-[1.3] underline font-dm-sans hover:text-primary-11 transition-colors"
+                          className="text-primary-10 font-semibold text-base leading-[1.3] underline font-family-dm-sans hover:text-primary-11 transition-colors"
                         >
                           Reenviar código
                         </button>
@@ -399,7 +399,7 @@ export function ChangeEmailModal() {
                       >
                         <ChevronLeft className="w-5 h-5 text-gray-11" />
                       </button>
-                      <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-dm-sans">
+                      <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
                         Novo email
                       </h2>
                     </div>
@@ -416,7 +416,7 @@ export function ChangeEmailModal() {
                     {/* Input Section */}
                     <div className="flex flex-col items-start p-6 w-full">
                       <div className="flex flex-col gap-2 items-start w-full">
-                        <label className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                        <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                           Digite o novo e-mail
                         </label>
                         <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
@@ -447,7 +447,7 @@ export function ChangeEmailModal() {
                             )}
                         </div>
                         {emailError && (
-                          <p className="text-sm text-red-9 font-dm-sans">
+                          <p className="text-sm text-red-9 font-family-dm-sans">
                             {emailError}
                           </p>
                         )}

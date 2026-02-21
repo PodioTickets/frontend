@@ -5,7 +5,7 @@ import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { useMemo, Suspense } from "react";
+import { Suspense } from "react";
 import { Loading } from "@/components/Loading";
 
 function CheckoutIngressosContent() {
@@ -13,11 +13,6 @@ function CheckoutIngressosContent() {
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
-
-  const kits = useMemo(() => {
-    if (!eventId || !event || !event.kits) return [];
-    return event.kits;
-  }, [eventId, event]);
 
   const handleNext = () => {
     if (eventId) {
@@ -67,7 +62,7 @@ function CheckoutIngressosContent() {
     <div className="w-full gap-4">
       <CheckoutHeader activeStep={1} />
       <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
-        <ModalitiesStep event={event} kits={kits} onNext={handleNext} />
+        <ModalitiesStep event={event} onNext={handleNext} />
       </div>
     </div>
   );

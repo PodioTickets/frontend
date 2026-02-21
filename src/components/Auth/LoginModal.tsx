@@ -251,7 +251,7 @@ export function LoginModal() {
                   <div className="flex flex-col gap-5 items-start w-full">
                     {/* Email input */}
                     <div className="flex flex-col gap-2 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
                         Email
                       </label>
                       <div className="relative w-full">
@@ -272,7 +272,7 @@ export function LoginModal() {
                         />
                       </div>
                       {errors.email && (
-                        <p className="text-sm text-red-9 font-dm-sans">
+                        <p className="text-sm text-red-9 font-family-dm-sans">
                           {errors.email}
                         </p>
                       )}
@@ -280,7 +280,7 @@ export function LoginModal() {
 
                     {/* Password input */}
                     <div className="flex flex-col gap-2 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
                         Senha
                       </label>
                       <div className="relative w-full">
@@ -301,7 +301,7 @@ export function LoginModal() {
                         />
                       </div>
                       {errors.password && (
-                        <p className="text-sm text-red-9 font-dm-sans">
+                        <p className="text-sm text-red-9 font-family-dm-sans">
                           {errors.password}
                         </p>
                       )}
@@ -310,7 +310,7 @@ export function LoginModal() {
                     {/* Forgot password link */}
                     <button
                       type="button"
-                      className="font-semibold text-sm leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-dm-sans cursor-pointer underline"
+                      className="font-semibold text-sm leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
                     >
                       Esqueci minha senha
                     </button>
@@ -334,7 +334,7 @@ export function LoginModal() {
                     {/* Divider */}
                     <div className="flex gap-2.5 items-center justify-center w-full">
                       <div className="flex-1 h-px bg-gray-6" />
-                      <p className="font-normal text-sm leading-[1.3] text-gray-11 text-center font-dm-sans whitespace-nowrap">
+                      <p className="font-normal text-sm leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
                         Ou conecte-se com
                       </p>
                       <div className="flex-1 h-px bg-gray-6" />
@@ -348,7 +348,7 @@ export function LoginModal() {
                         className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors flex-1 min-w-[167px]"
                       >
                         <GoogleIcon />
-                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                           Entrar Google
                         </span>
                       </Button>
@@ -357,7 +357,7 @@ export function LoginModal() {
                         className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors flex-1 min-w-[167px]"
                       >
                         <FacebookIcon />
-                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                           Entrar Facebook
                         </span>
                       </Button>
@@ -366,7 +366,7 @@ export function LoginModal() {
                         className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors w-full"
                       >
                         <AppleIcon />
-                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-dm-sans">
+                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                           Entrar Apple
                         </span>
                       </Button>
@@ -375,7 +375,7 @@ export function LoginModal() {
 
                   {/* Sign up link */}
                   <div className="flex gap-1 items-center">
-                    <p className="font-medium text-sm leading-[1.3] text-gray-12 text-center font-dm-sans">
+                    <p className="font-medium text-sm leading-[1.3] text-gray-12 text-center font-family-dm-sans">
                       Ainda não possui uma conta?
                     </p>
                     <button
@@ -383,14 +383,14 @@ export function LoginModal() {
                         closeLoginModal();
                         openRegisterModal();
                       }}
-                      className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-dm-sans cursor-pointer"
+                      className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
                     >
                       Cadastrar-se
                     </button>
                   </div>
 
                   {/* Terms and privacy */}
-                  <p className="text-xs leading-[1.3] text-gray-11 text-center font-dm-sans">
+                  <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
                     Ao continuar você concorda com nossos{" "}
                     <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
                       Termos de serviço
@@ -472,7 +472,7 @@ export function LoginModal() {
                   <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
                     Bem-vindo de volta
                   </h2>
-                  <p className="font-normal text-lg leading-[1.3] text-gray-11 font-dm-sans">
+                  <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
                     Por favor, preencha os campos para conectar-se
                   </p>
                 </div>
@@ -485,7 +485,7 @@ export function LoginModal() {
                   <div className="flex flex-col gap-5 items-start w-full">
                     {/* Email input */}
                     <div className="flex flex-col gap-1 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
                         Email
                       </label>
                       <div className="relative w-full">
@@ -506,7 +506,7 @@ export function LoginModal() {
                         />
                       </div>
                       {errors.email && (
-                        <p className="text-sm text-red-9 font-dm-sans">
+                        <p className="text-sm text-red-9 font-family-dm-sans">
                           {errors.email}
                         </p>
                       )}
@@ -514,7 +514,7 @@ export function LoginModal() {
 
                     {/* Password input */}
                     <div className="flex flex-col gap-1 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-dm-sans">
+                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
                         Senha
                       </label>
                       <div className="relative w-full">
@@ -535,7 +535,7 @@ export function LoginModal() {
                         />
                       </div>
                       {errors.password && (
-                        <p className="text-sm text-red-9 font-dm-sans">
+                        <p className="text-sm text-red-9 font-family-dm-sans">
                           {errors.password}
                         </p>
                       )}
@@ -544,7 +544,7 @@ export function LoginModal() {
                     {/* Forgot password link */}
                     <button
                       type="button"
-                      className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-dm-sans cursor-pointer underline"
+                      className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
                     >
                       Esqueci minha senha
                     </button>
@@ -568,7 +568,7 @@ export function LoginModal() {
                     {/* Divider */}
                     <div className="flex gap-2.5 items-center justify-center w-full">
                       <div className="flex-1 h-px bg-gray-6" />
-                      <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-dm-sans whitespace-nowrap">
+                      <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
                         Ou conecte-se com
                       </p>
                       <div className="flex-1 h-px bg-gray-6" />
@@ -581,7 +581,7 @@ export function LoginModal() {
                         className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
                       >
                         <FacebookIcon />
-                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                           Entrar Facebook
                         </span>
                       </Button>
@@ -591,7 +591,7 @@ export function LoginModal() {
                         className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
                       >
                         <GoogleIcon />
-                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                           Entrar Google
                         </span>
                       </Button>
@@ -600,7 +600,7 @@ export function LoginModal() {
                         className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
                       >
                         <AppleIcon />
-                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-dm-sans">
+                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                           Entrar Apple
                         </span>
                       </Button>
@@ -609,7 +609,7 @@ export function LoginModal() {
 
                   {/* Sign up link */}
                   <div className="flex gap-1 items-start">
-                    <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-dm-sans">
+                    <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-family-dm-sans">
                       Ainda não possui uma conta?
                     </p>
                     <button
@@ -617,14 +617,14 @@ export function LoginModal() {
                         closeLoginModal();
                         openRegisterModal();
                       }}
-                      className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-dm-sans cursor-pointer"
+                      className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
                     >
                       Cadastrar-se
                     </button>
                   </div>
 
                   {/* Terms and privacy */}
-                  <p className="text-xs leading-[1.3] text-gray-11 text-center font-dm-sans">
+                  <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
                     Ao continuar você concorda com nossos{" "}
                     <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
                       Termos de serviço

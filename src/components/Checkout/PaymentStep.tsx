@@ -17,8 +17,14 @@ import { Tooltip, CVVTooltip } from "../Tooltip";
 import type { Event } from "@/interfaces/event";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { ArrowLeft } from "lucide-react";
-import { mockKits } from "@/constants/kits";
 import { Input } from "../Input";
+import { useTickets } from "@/hooks/useTickets";
+import { useTicketCategories } from "@/hooks/useTicketCategories";
+import type { Ticket } from "@/hooks/useTickets";
+import { useQuery } from "@tanstack/react-query";
+import { organizerService } from "@/services";
+import { queryKeys } from "@/services/cache/QueryClient";
+import { Loading } from "../Loading";
 
 interface PaymentStepProps {
   event: Event;
@@ -106,7 +112,7 @@ function CreditCardForm({
   return (
     <div className={`${isMobile ? "flex flex-col gap-4" : "space-y-4"}`}>
       <div className="flex flex-col gap-2 w-full">
-        <label className="text-base text-gray-12 font-dm-sans">
+        <label className="text-base text-gray-12 font-family-dm-sans">
           Nome impresso no cartão
         </label>
         <div className="relative">
@@ -121,7 +127,7 @@ function CreditCardForm({
       </div>
 
       <div className="flex flex-col gap-2 w-full">
-        <label className="text-base text-gray-12 font-dm-sans">
+        <label className="text-base text-gray-12 font-family-dm-sans">
           Número do cartão
         </label>
         <div className="relative">
@@ -144,7 +150,7 @@ function CreditCardForm({
         <div
           className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}
         >
-          <label className="text-base text-gray-12 font-dm-sans">
+          <label className="text-base text-gray-12 font-family-dm-sans">
             Data de validade
           </label>
           <Input
@@ -160,7 +166,7 @@ function CreditCardForm({
           className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}
         >
           <div className="flex items-center gap-2">
-            <label className="text-base text-gray-12 font-dm-sans">CVV</label>
+            <label className="text-base text-gray-12 font-family-dm-sans">CVV</label>
             <Tooltip
               content={<CVVTooltip />}
               position="topRight"
@@ -189,7 +195,7 @@ function CreditCardForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-base text-gray-12 font-dm-sans">Parcelas</label>
+        <label className="text-base text-gray-12 font-family-dm-sans">Parcelas</label>
         <Dropdown
           options={installmentOptions}
           dataAttribute="installments"
@@ -199,7 +205,7 @@ function CreditCardForm({
           onSelect={(option) => setSelectedInstallments(option.id || "1")}
           trigger={() => (
             <div className="w-full h-12 px-3 rounded-lg border border-gray-7 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between">
-              <p className="text-base text-gray-11 font-dm-sans">
+              <p className="text-base text-gray-11 font-family-dm-sans">
                 {installmentOptions.find(
                   (opt: DropdownOption) => opt.id === selectedInstallments
                 )?.label || "Quanto deseja parcelar?"}
@@ -329,18 +335,18 @@ function PixForm({
       <div className="flex flex-col gap-4">
         <div className="text-center space-y-4 rounded-lg border border-gray-6 p-4">
           <div className="flex items-center justify-center gap-1">
-            <p className="text-base text-gray-12 font-dm-sans">
+            <p className="text-base text-gray-12 font-family-dm-sans">
               Valor à vista:
             </p>
             <p className="text-lg font-bold text-gray-12 font-manrope">
               {formatPrice(pixValue || 301.92)}
             </p>
           </div>
-          <p className="text-base text-gray-12 font-dm-sans">
+          <p className="text-base text-gray-12 font-family-dm-sans">
             Prazo de até 30 minutos para compensar
           </p>
         </div>
-        <p className="text-base font-medium text-gray-12 text-center font-dm-sans">
+        <p className="text-base font-medium text-gray-12 text-center font-family-dm-sans">
           Clique em "finalizar compra" para gerar o PIX
         </p>
         {!isMobile && (
@@ -427,8 +433,87 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [isCouponApplied, setIsCouponApplied] = useState(false);
 
   const { participants, raceQuantities } = useCheckout();
+  const eventId = event?.id;
 
-  // Agrupa ingressos por race para exibição
+  // Buscar tickets e categorias do servidor
+  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+  const { categories, loading: categoriesLoading } = useTicketCategories(eventId, !!eventId);
+
+  // Buscar produtos do evento
+  const { data: productsData, isLoading: productsLoading } = useQuery({
+    queryKey: queryKeys.events.products(eventId || ""),
+    queryFn: async () => {
+      if (!eventId) return { products: [] };
+      return organizerService.getProducts(eventId);
+    },
+    enabled: !!eventId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const loading = ticketsLoading || categoriesLoading || productsLoading;
+
+  // Separar tickets com categoria dos avulsos
+  const { categorizedTickets, uncategorizedTickets } = useMemo(() => {
+    const categorized: Array<{ id: string; name: string; tickets: Ticket[] }> = [];
+    const uncategorized: Ticket[] = [];
+
+    const categoryMap = new Map(categories.map((cat) => [cat.id, cat.name]));
+
+    const ticketsByCategory: Record<string, Ticket[]> = {};
+    tickets.forEach((ticket) => {
+      const categoryId = ticket.groupId;
+      if (categoryId && categoryMap.has(categoryId)) {
+        if (!ticketsByCategory[categoryId]) {
+          ticketsByCategory[categoryId] = [];
+        }
+        ticketsByCategory[categoryId].push(ticket);
+      } else {
+        uncategorized.push(ticket);
+      }
+    });
+
+    categories.forEach((category) => {
+      const categoryTickets = ticketsByCategory[category.id] || [];
+      if (categoryTickets.length > 0) {
+        categorized.push({
+          id: category.id,
+          name: category.name,
+          tickets: categoryTickets.filter((ticket) => {
+            try {
+              const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
+              return !isNaN(price) && price > 0;
+            } catch {
+              return false;
+            }
+          }),
+        });
+      }
+    });
+
+    const validUncategorized = uncategorized.filter((ticket) => {
+      try {
+        const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
+        return !isNaN(price) && price > 0;
+      } catch {
+        return false;
+      }
+    });
+
+    return {
+      categorizedTickets: categorized,
+      uncategorizedTickets: validUncategorized,
+    };
+  }, [tickets, categories]);
+
+  const getTicketPrice = (ticket: Ticket): number => {
+    try {
+      return parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
+    } catch {
+      return 0;
+    }
+  };
+
+  // Agrupa ingressos por ticket para exibição
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
       quantity: number;
@@ -438,23 +523,86 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       total: number;
     }> = [];
 
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
+    const ticketMap = new Map<string, { ticket: Ticket; quantity: number }>();
+
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
-          grouped.push({
-            quantity,
-            raceName: race.name,
-            distance: race.distance,
-            price: race.price,
-            total: race.price * quantity,
+          const existing = ticketMap.get(ticket.id);
+          if (existing) {
+            existing.quantity += quantity;
+          } else {
+            ticketMap.set(ticket.id, { ticket, quantity });
+          }
+        }
+      });
+    });
+
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) {
+        const existing = ticketMap.get(ticket.id);
+        if (existing) {
+          existing.quantity += quantity;
+        } else {
+          ticketMap.set(ticket.id, { ticket, quantity });
+        }
+      }
+    });
+
+    ticketMap.forEach(({ ticket, quantity }) => {
+      grouped.push({
+        quantity,
+        raceName: ticket.name,
+        distance: ticket.distance ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
+        price: getTicketPrice(ticket),
+        total: getTicketPrice(ticket) * quantity,
+      });
+    });
+
+    return grouped;
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
+
+  // Criar lista de participantes baseada nos tickets selecionados
+  const participantsWithTickets = useMemo(() => {
+    const result: Array<{
+      ticketId: string;
+      ticket: Ticket;
+      participantIndex: number;
+    }> = [];
+    let participantIndex = 0;
+
+    // Tickets com categoria
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        for (let i = 0; i < quantity; i++) {
+          result.push({
+            ticketId: ticket.id,
+            ticket,
+            participantIndex: participantIndex++,
           });
         }
       });
     });
 
-    return grouped;
-  }, [raceQuantities]);
+    // Tickets avulsos
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      for (let i = 0; i < quantity; i++) {
+        result.push({
+          ticketId: ticket.id,
+          ticket,
+          participantIndex: participantIndex++,
+        });
+      }
+    });
+
+    return result;
+  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   // Generate participants data for the list
   const participantsData = useMemo(() => {
@@ -467,73 +615,69 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         price: number;
         quantity: number;
       }>;
+      participant?: {
+        name: string;
+        cpf: string;
+        email: string;
+        birthDate: string;
+        phone: string;
+        gender?: string;
+      };
+      couponCode?: string;
+      couponDiscount?: number;
+      voucherCode?: string;
+      voucherDiscount?: number;
     }> = [];
 
-    // Mock data for now - in real app, this would come from the checkout context
-    participants.forEach((participant, index) => {
-      if (participant.name || participant.cpf) {
+    participantsWithTickets.forEach(({ ticket, participantIndex }) => {
+      const participant = participants[participantIndex];
+      if (participant && (participant.name || participant.cpf)) {
         data.push({
-          participantIndex: index,
-          ticketName: "Kit inscrição - 3K Caminhada",
-          ticketPrice: 438.34,
-          additionalProducts:
-            index === 0
-              ? [
-                  { name: "Camiseta Regata", price: 29.9, quantity: 1 },
-                  { name: "Viseira", price: 29.9, quantity: 1 },
-                ]
-              : undefined,
+          participantIndex,
+          ticketName: ticket.name,
+          ticketPrice: getTicketPrice(ticket),
+          participant: {
+            name: participant.name || "",
+            cpf: participant.cpf || "",
+            email: participant.email || "",
+            birthDate: participant.birthDate || "",
+            phone: participant.phone || "",
+            gender: participant.gender,
+          },
+          // TODO: Adicionar produtos opcionais quando estiverem no contexto
+          additionalProducts: undefined,
+          // TODO: Adicionar cupom e voucher quando estiverem no contexto
+          couponCode: undefined,
+          couponDiscount: undefined,
+          voucherCode: undefined,
+          voucherDiscount: undefined,
         });
       }
     });
 
-    // If no participants, show mock data
-    if (data.length === 0) {
-      return [
-        {
-          participantIndex: 0,
-          ticketName: "Kit inscrição - 3K Caminhada",
-          ticketPrice: 438.34,
-          additionalProducts: [
-            { name: "Camiseta Regata", price: 29.9, quantity: 1 },
-            { name: "Viseira", price: 29.9, quantity: 1 },
-          ],
-        },
-        {
-          participantIndex: 1,
-          ticketName: "Kit inscrição - 3K Caminhada",
-          ticketPrice: 438.34,
-        },
-      ];
-    }
-
     return data;
-  }, [participants]);
+  }, [participantsWithTickets, participants]);
 
-  const orderItems = [
-    {
-      name: "Camiseta Regata",
-      price: 29.9,
-      image: "/images/camisa.png",
-      size: "M",
-    },
-    { name: "Viseira", price: 29.9, image: "/images/mochila.png" },
-  ];
+  // Calcular produtos opcionais selecionados (por enquanto vazio, pois não estão no contexto)
+  // TODO: Adicionar produtos selecionados ao contexto quando necessário
+  const orderItems = useMemo((): Array<{
+    name: string;
+    price: number;
+    image?: string;
+    size?: string;
+  }> => {
+    // Por enquanto retorna array vazio, produtos opcionais serão adicionados quando estiverem no contexto
+    return [];
+  }, []);
 
-  const installmentOptions: DropdownOption[] = [
-    { id: "1", label: "1x de R$ 438,34 (à vista)" },
-    { id: "2", label: "2x de R$ 219,17 sem juros" },
-    { id: "3", label: "3x de R$ 146,11 sem juros" },
-    { id: "4", label: "4x de R$ 109,59 sem juros" },
-    { id: "5", label: "5x de R$ 87,67 sem juros" },
-    { id: "6", label: "6x de R$ 73,06 sem juros" },
-    { id: "7", label: "7x de R$ 62,62 sem juros" },
-    { id: "8", label: "8x de R$ 54,79 sem juros" },
-    { id: "9", label: "9x de R$ 48,70 sem juros" },
-    { id: "10", label: "10x de R$ 43,83 sem juros" },
-    { id: "11", label: "11x de R$ 39,85 sem juros" },
-    { id: "12", label: "12x de R$ 36,53 sem juros" },
-  ];
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
+  };
 
   const paymentOptions: PaymentOption[] = [
     {
@@ -570,32 +714,18 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     },
   ];
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(price);
-  };
-
-  // Calculate totals same way as ModalitiesStep
+  // Calculate totals
   const { totalParticipants, totalPrice } = useMemo(() => {
     let participants = 0;
     let total = 0;
 
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
-        if (quantity > 0) {
-          participants += quantity;
-          total += race.price * quantity;
-        }
-      });
+    participantsWithTickets.forEach(({ ticket }) => {
+      participants++;
+      total += getTicketPrice(ticket);
     });
 
     return { totalParticipants: participants, totalPrice: total };
-  }, [raceQuantities]);
+  }, [participantsWithTickets]);
 
   const serviceFee = event.serviceFee || 0;
   const additionalProductsTotal = orderItems.reduce(
@@ -604,6 +734,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   );
   const subtotalValue = totalPrice + serviceFee + additionalProductsTotal;
   const totalValue = subtotalValue - couponDiscount;
+
+  // Calcular opções de parcelamento baseado no valor total
+  const installmentOptions = useMemo(() => {
+    const options: DropdownOption[] = [];
+    for (let i = 1; i <= 12; i++) {
+      const installmentValue = totalValue / i;
+      const label =
+        i === 1
+          ? `1x de ${formatPrice(totalValue)} (à vista)`
+          : `${i}x de ${formatPrice(installmentValue)} sem juros`;
+      options.push({ id: String(i), label });
+    }
+    return options;
+  }, [totalValue]);
 
   const calculatePixValue = () => {
     const discount = totalValue * 0.05;
@@ -674,12 +818,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }, 300);
   };
 
-  // Generate participants with races dynamically
-  const participantsWithRaces = useMemo(() => {
+  // Generate participants with tickets dynamically
+  const participantsWithTicketsForDisplay = useMemo(() => {
     const result: Array<{
       participantIndex: number;
       participant: (typeof participants)[0];
-      race: { id: string; name: string; price: number };
+      ticket: Ticket;
       additionalProducts?: Array<{
         name: string;
         price: number;
@@ -688,60 +832,22 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         image?: string;
       }>;
     }> = [];
-    let participantIndex = 0;
 
-    mockKits.forEach((kit) => {
-      kit.races.forEach((race) => {
-        const quantity = raceQuantities[race.id] || 0;
-        for (let i = 0; i < quantity; i++) {
-          const participant = participants[participantIndex];
-          if (participant) {
-            result.push({
-              participantIndex,
-              participant,
-              race: {
-                id: race.id,
-                name: race.name,
-                price: race.price,
-              },
-              additionalProducts:
-                participantIndex === 0
-                  ? [
-                      {
-                        name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-                        price: 29.9,
-                        quantity: 1,
-                        size: "XL",
-                        image: "/images/camisa.png",
-                      },
-                      {
-                        name: "ITEM EXTRA - Viseira - Compra Opcional",
-                        price: 29.9,
-                        quantity: 1,
-                        size: "M",
-                        image: "/images/mochila.png",
-                      },
-                    ]
-                  : participantIndex === 1
-                  ? [
-                      {
-                        name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-                        price: 29.9,
-                        quantity: 1,
-                        size: "M",
-                        image: "/images/camisa.png",
-                      },
-                    ]
-                  : undefined,
-            });
-          }
-          participantIndex++;
-        }
-      });
+    participantsWithTickets.forEach(({ ticket, participantIndex }) => {
+      const participant = participants[participantIndex];
+      if (participant) {
+        result.push({
+          participantIndex,
+          participant,
+          ticket,
+          // TODO: Adicionar produtos opcionais quando estiverem no contexto
+          additionalProducts: undefined,
+        });
+      }
     });
 
     return result;
-  }, [participants, raceQuantities]);
+  }, [participantsWithTickets, participants]);
 
   const formatDateShort = (date: string) => {
     if (!date) return "";
@@ -757,13 +863,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
   };
 
+  if (loading) {
+    return <Loading />;
+  }
+
   return (
     <>
       {/* Mobile Layout */}
       <div className="w-full md:hidden flex flex-col pb-24">
         {/* Instructional Text */}
         <div className="pb-6">
-          <p className="text-sm text-gray-11 font-dm-sans">
+          <p className="text-sm text-gray-11 font-family-dm-sans">
             Revise seu pedido e conclua com cartão, Pix ou boleto. Os ingressos
             são liberados após aprovação.
           </p>
@@ -927,12 +1037,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               }
             />
             {couponError && (
-              <p className="text-base font-medium text-red-11 font-dm-sans">
+              <p className="text-base font-medium text-red-11 font-family-dm-sans">
                 {couponError}
               </p>
             )}
             {isCouponApplied && (
-              <p className="text-base font-medium text-primary-11 font-dm-sans">
+              <p className="text-base font-medium text-primary-11 font-family-dm-sans">
                 Cupom aplicado com sucesso!
               </p>
             )}
@@ -955,7 +1065,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           className="bg-gray-2 place-self-end w-1/3 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 cursor-pointer transition-transform active:scale-95"
           onClick={openModal}
         >
-          <p className="text-sm font-medium text-gray-11 text-center font-dm-sans">
+          <p className="text-sm font-medium text-gray-11 text-center font-family-dm-sans">
             Mostrar resumo
           </p>
         </div>
@@ -965,20 +1075,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           <div className="flex flex-col gap-2 items-start justify-between mb-4">
             <h1 className="text-base font-bold">{event.name}</h1>
             <div className="flex gap-1 items-center">
-              <p className="text-sm text-gray-12 font-dm-sans">
+              <p className="text-sm text-gray-12 font-family-dm-sans">
                 Participantes:
               </p>
-              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+              <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                 {totalParticipants}
               </p>
             </div>
 
             {groupedTickets.map((ticket, index) => (
               <div key={index} className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-dm-sans">
+                <p className="text-sm text-gray-12 font-family-dm-sans">
                   ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:
                 </p>
-                <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                   {formatPrice(ticket.total)}
                 </p>
               </div>
@@ -986,26 +1096,26 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
             {additionalProductsCount > 0 && (
               <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-dm-sans">
+                <p className="text-sm text-gray-12 font-family-dm-sans">
                   Produtos adicionais:
                 </p>
-                <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                   {additionalProductsCount}
                 </p>
               </div>
             )}
             <div className="flex gap-1 items-center">
-              <p className="text-sm text-gray-12 font-dm-sans">
+              <p className="text-sm text-gray-12 font-family-dm-sans">
                 Taxa de serviço:
               </p>
-              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+              <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                 {formatPrice(serviceFee)}
               </p>
             </div>
             {isCouponApplied && couponDiscount > 0 && (
               <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-dm-sans">Cupom:</p>
-                <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                <p className="text-sm text-gray-12 font-family-dm-sans">Cupom:</p>
+                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                   -{formatPrice(couponDiscount)}
                 </p>
               </div>
@@ -1013,7 +1123,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex gap-1 items-center">
-              <p className="text-base text-gray-12 font-dm-sans">Total:</p>
+              <p className="text-base text-gray-12 font-family-dm-sans">Total:</p>
               <p className="text-base font-bold text-gray-12 font-manrope">
                 {formatPrice(totalValue)}
               </p>
@@ -1135,6 +1245,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         <div className="max-w-1/3 w-full">
           <OrderSummary
             items={orderItems}
+            groupedTickets={groupedTickets}
             serviceFee={serviceFee}
             total={totalValue}
             couponCode={couponCode}
@@ -1176,7 +1287,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             <div className="bg-gray-2 w-1/3 place-self-end border-t border-l border-r border-gray-6 rounded-tl-xl px-4 py-2 flex items-center justify-center shrink-0">
               <button
                 onClick={closeModal}
-                className="text-sm font-medium text-gray-11 font-dm-sans transition-colors hover:text-gray-12 active:scale-95"
+                className="text-sm font-medium text-gray-11 font-family-dm-sans transition-colors hover:text-gray-12 active:scale-95"
               >
                 Fechar resumo
               </button>
@@ -1191,12 +1302,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               <div className="bg-gray-1">
                 {/* Participants List */}
                 <div className="px-4 flex flex-col">
-                  {participantsWithRaces.map(
+                  {participantsWithTicketsForDisplay.map(
                     (
                       {
                         participantIndex,
                         participant,
-                        race,
+                        ticket,
                         additionalProducts,
                       },
                       index
@@ -1214,7 +1325,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           transitionDelay: `${index * 50}ms`,
                         }}
                       >
-                        <p className="text-base font-semibold text-gray-12 mb-5 font-dm-sans">
+                        <p className="text-base font-semibold text-gray-12 mb-5 font-family-dm-sans">
                           Participantes {participantIndex + 1}
                         </p>
 
@@ -1240,11 +1351,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                              <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                                 {participant.name ||
                                   `Participante ${participantIndex + 1}`}
                               </p>
-                              <div className="flex items-center gap-2 text-xs text-gray-11 font-dm-sans">
+                              <div className="flex items-center gap-2 text-xs text-gray-11 font-family-dm-sans">
                                 {participant.birthDate && (
                                   <>
                                     {formatDateShort(participant.birthDate)}
@@ -1265,13 +1376,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           </div>
                         </div>
 
-                        {/* Race Info */}
+                        {/* Ticket Info */}
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-base font-medium text-gray-12 font-dm-sans">
-                            {race.name}
+                          <p className="text-base font-medium text-gray-12 font-family-dm-sans">
+                            {ticket.name}
                           </p>
                           <p className="text-base font-bold text-gray-12 font-manrope">
-                            {formatPrice(race.price)}
+                            {formatPrice(getTicketPrice(ticket))}
                           </p>
                         </div>
 
@@ -1343,7 +1454,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                                         />
                                       </div>
                                       <div className="flex flex-col justify-between flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-gray-12 font-dm-sans line-clamp-2">
+                                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
                                           {product.name}
                                         </p>
                                         <p className="text-base font-semibold text-gray-12 font-manrope">
@@ -1354,7 +1465,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                                     {/* Product Size */}
                                     <div className="p-4">
                                       <div className="flex gap-1 items-center">
-                                        <p className="text-base text-gray-12 font-dm-sans">
+                                        <p className="text-base text-gray-12 font-family-dm-sans">
                                           Tamanho:
                                         </p>
                                         <p className="text-base font-semibold text-gray-12 font-manrope">
@@ -1378,7 +1489,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                                   [participantIndex]: !prev[participantIndex],
                                 }));
                               }}
-                              className="text-base font-medium text-gray-11 font-dm-sans underline mb-4"
+                              className="text-base font-medium text-gray-11 font-family-dm-sans underline mb-4"
                             >
                               {expandedProducts[participantIndex]
                                 ? "Mostrar menos"
@@ -1390,7 +1501,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                         <div className="flex items-center justify-end">
                           <p className="text-base font-bold text-gray-12 font-manrope">
                             {formatPrice(
-                              race.price +
+                              getTicketPrice(ticket) +
                                 (additionalProducts?.reduce(
                                   (sum, item) =>
                                     sum + item.price * item.quantity,
@@ -1414,20 +1525,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 <div className="flex flex-col gap-2 items-start justify-between mb-4">
                   <h1 className="text-base font-bold">{event.name}</h1>
                   <div className="flex gap-1 items-center">
-                    <p className="text-sm text-gray-12 font-dm-sans">
+                    <p className="text-sm text-gray-12 font-family-dm-sans">
                       Participantes:
                     </p>
-                    <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                    <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                       {totalParticipants}
                     </p>
                   </div>
 
                   {groupedTickets.map((ticket, index) => (
                     <div key={index} className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-dm-sans">
+                      <p className="text-sm text-gray-12 font-family-dm-sans">
                         ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:
                       </p>
-                      <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                         {formatPrice(ticket.total)}
                       </p>
                     </div>
@@ -1435,28 +1546,28 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
                   {additionalProductsCount > 0 && (
                     <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-dm-sans">
+                      <p className="text-sm text-gray-12 font-family-dm-sans">
                         Produtos adicionais:
                       </p>
-                      <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                         {additionalProductsCount}
                       </p>
                     </div>
                   )}
                   <div className="flex gap-1 items-center">
-                    <p className="text-sm text-gray-12 font-dm-sans">
+                    <p className="text-sm text-gray-12 font-family-dm-sans">
                       Taxa de serviço:
                     </p>
-                    <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                    <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                       {formatPrice(serviceFee)}
                     </p>
                   </div>
                   {isCouponApplied && couponDiscount > 0 && (
                     <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-dm-sans">
+                      <p className="text-sm text-gray-12 font-family-dm-sans">
                         Cupom:
                       </p>
-                      <p className="text-sm font-semibold text-gray-12 font-dm-sans">
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                         -{formatPrice(couponDiscount)}
                       </p>
                     </div>
@@ -1464,7 +1575,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex gap-1 items-center">
-                    <p className="text-base text-gray-12 font-dm-sans">
+                    <p className="text-base text-gray-12 font-family-dm-sans">
                       Total:
                     </p>
                     <p className="text-base font-bold text-gray-12 font-manrope">
