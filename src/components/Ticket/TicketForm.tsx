@@ -286,9 +286,14 @@ export function TicketForm({
               const productIdsToLoad = ticketData.productIds;
               const productsResponse = await organizerService.getProducts(eventId);
               const allProducts = productsResponse?.products || [];
-              const loadedProducts = allProducts.filter((p: Product) =>
-                productIdsToLoad.includes(p.id)
-              );
+              const loadedProducts = allProducts
+                .filter((p: Product) => productIdsToLoad.includes(p.id))
+                .map((p: Product): ProductData => ({
+                  id: p.id,
+                  product: p,
+                  productId: p.id,
+                  ticketId: ticketId || "",
+                }));
               setProducts(loadedProducts);
             } catch (e) {
               console.error("Error loading products:", e);
@@ -309,18 +314,63 @@ export function TicketForm({
 
   // Setup modal callbacks
   useEffect(() => {
-    const createProductCallback = async (data: { product?: Product }) => {
+    const createProductCallback = async (data: { product?: Product | any }) => {
       try {
         if (data?.product) {
-          const { product } = data;
+          const rawProduct = data.product;
+
+          // Debug: log the raw product to understand its structure
+          console.log("Raw product received from modal:", rawProduct);
+
+          // Normalize product data - convert basePrice from number to formatted string if needed
+          let formattedBasePrice: string | undefined = undefined;
+          if (rawProduct.basePrice !== undefined && rawProduct.basePrice !== null) {
+            if (typeof rawProduct.basePrice === "number") {
+              // If it's a number, format it (assuming it's in reais, not cents)
+              formattedBasePrice = rawProduct.basePrice.toFixed(2).replace(".", ",");
+            } else if (typeof rawProduct.basePrice === "string") {
+              // If it's already a string, use it as is
+              formattedBasePrice = rawProduct.basePrice;
+            }
+          }
+
+          const normalizedProduct: Product = {
+            id: rawProduct.id || "",
+            name: rawProduct.name || "",
+            image: rawProduct.image || undefined,
+            isIncludedInTicket: rawProduct.isIncludedInTicket ?? true,
+            basePrice: formattedBasePrice,
+          };
+
+          console.log("Normalized product:", normalizedProduct);
+
+          // Validate that we have at least an id and name
+          if (!normalizedProduct.id || !normalizedProduct.name) {
+            console.error("Invalid product data received:", rawProduct);
+            toast.error("Dados do produto inválidos");
+            return;
+          }
+
           setProducts((prevProducts) => {
-            const existingIndex = prevProducts.findIndex((p) => p.productId === product.id);
+            const existingIndex = prevProducts.findIndex((p) => p.productId === normalizedProduct.id);
             if (existingIndex >= 0) {
               const updated = [...prevProducts];
-              updated[existingIndex] = { id: product.id, product, productId: product.id, ticketId: prevProducts[existingIndex].ticketId };
+              updated[existingIndex] = {
+                id: normalizedProduct.id,
+                product: normalizedProduct,
+                productId: normalizedProduct.id,
+                ticketId: prevProducts[existingIndex].ticketId
+              };
               return updated;
             } else {
-              return [...prevProducts, { id: product.id, product, productId: product.id, ticketId: prevProducts[existingIndex].ticketId }];
+              // When creating a new product, use ticketId from props or empty string if creating a new ticket
+              const newTicketId = ticketId || "";
+              return [...prevProducts, {
+                id: normalizedProduct.id,
+                product: normalizedProduct,
+                productId: normalizedProduct.id,
+                ticketId: newTicketId
+              }];
             }
           });
         } else {
@@ -432,7 +482,6 @@ export function TicketForm({
     try {
       const modalityLabel =
         modalityTemplates.find((t) => t.id === selectedModality)?.label || selectedModality;
-
       const ticketData = {
         name: ticketName.trim(),
         categoryId: selectedGroupId || initialGroupId || undefined,
@@ -448,7 +497,7 @@ export function TicketForm({
             }
             : undefined,
         hasKit: hasKit || false,
-        productIds: products.map((p) => p.id),
+        productIds: products.map((p) => p.productId),
         batches: batches.map((b) => ({
           quantity: parseInt(b.quantity) || 0,
           price: parseFloat(b.price.replace(/[^\d,]/g, "").replace(",", ".")) || 0,
