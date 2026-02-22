@@ -498,12 +498,20 @@ export function TicketForm({
             : undefined,
         hasKit: hasKit || false,
         productIds: products.map((p) => p.productId),
-        batches: batches.map((b) => ({
-          quantity: parseInt(b.quantity) || 0,
-          price: parseFloat(b.price.replace(/[^\d,]/g, "").replace(",", ".")) || 0,
-          startDate: b.startDate || undefined,
-          endDate: b.endDate || undefined,
-        })),
+        batches: batches.map((b) => {
+          // Convert price from "R$129,90" format to number in cents
+          const priceString = b.price.replace(/[^\d,]/g, "").replace(",", ".");
+          const priceInReais = parseFloat(priceString) || 0;
+          // Convert to cents (multiply by 100) to ensure 2 decimal places are preserved
+          const priceInCents = Math.round(priceInReais * 100);
+          
+          return {
+            quantity: parseInt(b.quantity) || 0,
+            price: priceInCents,
+            startDate: b.startDate || undefined,
+            endDate: b.endDate || undefined,
+          };
+        }),
       };
 
       if (mode === "edit" && ticketId) {
