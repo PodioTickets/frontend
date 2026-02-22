@@ -219,7 +219,7 @@ export function CreateQuestionModal() {
                             value={question}
                             onChange={(e) => setQuestion(e.target.value)}
                             placeholder="Digite uma pergunta aos participantes"
-                            maxLength={25}
+                            maxLength={200}
                             className="h-12 px-3 pr-24"
                           />
                         </div>
@@ -227,7 +227,7 @@ export function CreateQuestionModal() {
                       <div className="flex items-center gap-1">
                         <Info className="size-5 text-gray-11" />
                         <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Limite de 25 Caracteres
+                          Limite de 200 Caracteres
                         </span>
                       </div>
                     </div>
