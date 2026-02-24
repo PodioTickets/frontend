@@ -1,7 +1,7 @@
 "use client";
 
 import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Drawer,
   DrawerClose,
@@ -15,115 +15,59 @@ import { TransferDetailsDrawer } from "./TransferDetailsDrawer";
 import { RepasseIcon } from "../Icons/RepasseIcon";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
+import { organizerService } from "@/services";
+import type { Transfer } from "@/services/organizer/OrganizerService";
+import toast from "react-hot-toast";
 
 interface TransferHistoryDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   totalTransferred: number;
+  eventId: string;
   eventName?: string;
   categoryName?: string;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
 }
 
-// Mock data - substituir com dados reais da API
-const mockTransfers = [
-  {
-    id: "Rep_10392",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Pendente",
-  },
-  {
-    id: "Rep_10391",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Concluído",
-  },
-  {
-    id: "Rep_10390",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Concluído",
-  },
-  {
-    id: "Rep_10389",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Pendente",
-  },
-  {
-    id: "Rep_10388",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Concluído",
-  },
-  {
-    id: "Rep_10387",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Pendente",
-  },
-  {
-    id: "Rep_10386",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Concluído",
-  },
-  {
-    id: "Rep_10385",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Concluído",
-  },
-  {
-    id: "Rep_10384",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Pendente",
-  },
-  {
-    id: "Rep_10383",
-    pixKey: "118.423.912-42",
-    requestDate: "12 Out, 2024",
-    requestTime: "12:30",
-    value: 150.0,
-    status: "Concluído",
-  },
-];
-
 export function TransferHistoryDrawer({
   isOpen,
   onClose,
   totalTransferred,
+  eventId,
   eventName = "Maratona 2024",
   categoryName = "Nome da categoria",
   onNavigatePrev,
   onNavigateNext,
 }: TransferHistoryDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedTransfer, setSelectedTransfer] = useState<typeof mockTransfers[0] | null>(null);
+  const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [loading, setLoading] = useState(false);
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(mockTransfers.length / itemsPerPage);
+  
+  useEffect(() => {
+    if (isOpen && eventId) {
+      loadTransfers();
+    }
+  }, [isOpen, eventId]);
+
+  const loadTransfers = async () => {
+    try {
+      setLoading(true);
+      const data = await organizerService.getEventTransferHistory(eventId);
+      setTransfers(data.transfers);
+    } catch (error: any) {
+      console.error("Error loading transfers:", error);
+      toast.error("Erro ao carregar histórico de repasses");
+      setTransfers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalPages = Math.ceil(transfers.length / itemsPerPage);
 
   const getStatusBadge = (status: string) => {
     if (status === "Concluído") {
@@ -132,10 +76,27 @@ export function TransferHistoryDrawer({
     return "bg-yellow-11 text-yellow-1";
   };
 
-  const paginatedTransfers = mockTransfers.slice(
+  const paginatedTransfers = transfers.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const formatTransferForDisplay = (transfer: Transfer) => {
+    const date = new Date(transfer.requestedAt);
+    const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    const formattedTime = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    
+    return {
+      id: transfer.id,
+      pixKey: transfer.bankAccount?.account || "N/A",
+      requestDate: formattedDate,
+      requestTime: formattedTime,
+      value: transfer.amount / 100, // Converter de centavos
+      status: transfer.status === "COMPLETED" ? "Concluído" : 
+              transfer.status === "PROCESSING" ? "Processando" :
+              transfer.status === "FAILED" ? "Falhou" : "Pendente",
+    };
+  };
 
   return (
     <>
@@ -244,7 +205,18 @@ export function TransferHistoryDrawer({
 
                 {/* Table Rows */}
                 <div className="flex flex-col items-start w-full">
-                  {paginatedTransfers.map((transfer) => (
+                  {loading ? (
+                    <div className="w-full p-8 text-center text-gray-11">
+                      Carregando...
+                    </div>
+                  ) : paginatedTransfers.length === 0 ? (
+                    <div className="w-full p-8 text-center text-gray-11">
+                      Nenhum repasse encontrado
+                    </div>
+                  ) : (
+                    paginatedTransfers.map((transfer) => {
+                      const displayTransfer = formatTransferForDisplay(transfer);
+                      return (
                     <div
                       key={transfer.id}
                       className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[56px]"
@@ -252,14 +224,14 @@ export function TransferHistoryDrawer({
                       {/* ID pedido */}
                       <div className="flex h-full items-center p-4 w-[120px]">
                         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {transfer.id}
+                          {displayTransfer.id}
                         </p>
                       </div>
 
                       {/* Chave pix */}
                       <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center w-full">
-                          {transfer.pixKey}
+                          {displayTransfer.pixKey}
                         </p>
                       </div>
 
@@ -267,10 +239,10 @@ export function TransferHistoryDrawer({
                       <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                         <div className="flex flex-col items-center w-full">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {transfer.requestDate}
+                            {displayTransfer.requestDate}
                           </p>
                           <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
-                            {transfer.requestTime}
+                            {displayTransfer.requestTime}
                           </p>
                         </div>
                       </div>
@@ -282,7 +254,7 @@ export function TransferHistoryDrawer({
                             R$
                           </span>
                           <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {transfer.value.toFixed(2).replace(".", ",")}
+                            {displayTransfer.value.toFixed(2).replace(".", ",")}
                           </span>
                         </div>
                       </div>
@@ -292,10 +264,10 @@ export function TransferHistoryDrawer({
                         <div className="flex justify-center w-full">
                           <span
                             className={`inline-flex items-center justify-center px-3 py-1 rounded text-[10px] font-medium ${getStatusBadge(
-                              transfer.status
+                              displayTransfer.status
                             )}`}
                           >
-                            {transfer.status}
+                            {displayTransfer.status}
                           </span>
                         </div>
                       </div>
@@ -304,7 +276,7 @@ export function TransferHistoryDrawer({
                       <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[64px]">
                         <button
                           onClick={() => {
-                            setSelectedTransfer(transfer);
+                            setSelectedTransfer(transfer as Transfer);
                             setIsDetailsOpen(true);
                           }}
                           className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
@@ -313,7 +285,9 @@ export function TransferHistoryDrawer({
                         </button>
                       </div>
                     </div>
-                  ))}
+                      );
+                    })
+                  )}
                 </div>
 
                 {/* Pagination */}
@@ -365,7 +339,16 @@ export function TransferHistoryDrawer({
             setIsDetailsOpen(false);
             setSelectedTransfer(null);
           }}
-          transfer={selectedTransfer}
+          transfer={{
+            id: selectedTransfer.id,
+            pixKey: selectedTransfer.bankAccount?.account || "N/A",
+            requestDate: new Date(selectedTransfer.requestedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }),
+            requestTime: new Date(selectedTransfer.requestedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+            value: selectedTransfer.amount / 100,
+            status: selectedTransfer.status === "COMPLETED" ? "Concluído" : 
+                    selectedTransfer.status === "PROCESSING" ? "Processando" :
+                    selectedTransfer.status === "FAILED" ? "Falhou" : "Pendente",
+          }}
           eventName={eventName}
           categoryName={categoryName}
         />

@@ -21,6 +21,7 @@ import { Loading } from "@/components/Loading";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { RevenueChart } from "@/components/Organizer/RevenueChart";
 import { SalesHeatmap } from "@/components/Organizer/SalesHeatmap";
+import type { SalesHeatmapData, TicketRanking, TopCity, LotNearDepletion, RegistrationsTrend } from "@/services/organizer/OrganizerService";
 import { ArrowButton } from "@/components/ArrowButton";
 import { SelectTicketsFilterModal } from "@/components/Registrations/SelectTicketsFilterModal";
 import { useTickets } from "@/hooks/useTickets";
@@ -39,39 +40,74 @@ export default function EventDashboardPage() {
   const { tickets } = useTickets(eventId, true);
 
   // Mock data - substituir com dados reais da API
-  const [dashboardData, setDashboardData] = useState({
-    netRevenue: 145200.0,
-    netRevenueChange: 12.5,
-    averageTicket: 150.0,
-    averageTicketChange: -5.2,
-    totalRegistrations: 968,
-    totalRegistrationsChange: 8.3,
-    cancellations: 29,
-    cancellationsStatus: "Crítico",
-    refunds: 15,
+  const [dashboardData, setDashboardData] = useState<{
+    netRevenue: number;
+    netRevenueChange: number;
+    averageTicket: number;
+    averageTicketChange: number;
+    totalRegistrations: number;
+    totalRegistrationsChange: number;
+    cancellations: number;
+    cancellationsStatus: string;
+    refunds: number;
+    refundsStatus: string;
+    registrationsTrend: {
+      amount: number;
+      change: number;
+      confirmed: number;
+      canceled: number;
+      refunded: number;
+      chartData: {
+        labels: string[];
+        revenue: number[];
+      };
+    };
+    ticketRanking: Array<{
+      name: string;
+      category: string;
+      quantity: number;
+      total: number;
+    }>;
+    topCities: Array<{
+      city: string;
+      buyers: number;
+    }>;
+    lotsNearDepletion: Array<{
+      name: string;
+      status: "Normal" | "Atenção" | "Crítico";
+      sold: number;
+      total: number;
+      remaining: number;
+    }>;
+    salesHeatmap: SalesHeatmapData[];
+    dailyData: any[];
+  }>({
+    netRevenue: 0,
+    netRevenueChange: 0,
+    averageTicket: 0,
+    averageTicketChange: 0,
+    totalRegistrations: 0,
+    totalRegistrationsChange: 0,
+    cancellations: 0,
+    cancellationsStatus: "Normal",
+    refunds: 0,
     refundsStatus: "Normal",
     registrationsTrend: {
-      amount: 10000,
-      change: 12.5,
-      confirmed: 850,
-      canceled: 29,
-      refunded: 15,
+      amount: 0,
+      change: 0,
+      confirmed: 0,
+      canceled: 0,
+      refunded: 0,
+      chartData: {
+        labels: [],
+        revenue: [],
+      },
     },
-    ticketRanking: [
-      { name: "Ingresso VIP", category: "Categoria Premium", quantity: 245, total: 36750 },
-      { name: "Ingresso Standard", category: "Categoria Básica", quantity: 523, total: 52300 },
-      { name: "Ingresso Estudante", category: "Categoria Estudante", quantity: 200, total: 20000 },
-    ],
-    topCities: [
-      { city: "São Paulo", buyers: 245 },
-      { city: "Rio de Janeiro", buyers: 189 },
-    ],
-    lotsNearDepletion: [
-      { name: "Lote 1", status: "Crítico", sold: 222, total: 250, remaining: 28 },
-      { name: "Lote 2", status: "Atenção", sold: 302, total: 400, remaining: 98 },
-      { name: "Lote 3", status: "Crítico", sold: 50, total: 100, remaining: 50 },
-      { name: "Lote 4", status: "Crítico", sold: 222, total: 250, remaining: 28 },
-    ],
+    ticketRanking: [],
+    topCities: [],
+    lotsNearDepletion: [],
+    salesHeatmap: [],
+    dailyData: [],
   });
 
   useEffect(() => {
@@ -91,18 +127,62 @@ export default function EventDashboardPage() {
   useEffect(() => {
     if (!authChecked || authLoading || !eventId) return;
     loadData();
-  }, [authChecked, eventId]);
+  }, [authChecked, eventId, periodFilter, selectedTicketIds]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const eventData = await organizerService.getEventById(eventId);
+      const [eventData, dashboardDataResponse] = await Promise.all([
+        organizerService.getEventById(eventId),
+        organizerService.getEventDashboard(eventId, {
+          period: periodFilter as "geral" | "24h" | "7d" | "15d" | "1m" | "2m",
+          ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
+        }),
+      ]);
       setEvent(eventData);
-      // TODO: Carregar dados reais do dashboard
+      setDashboardData({
+        netRevenue: dashboardDataResponse.metrics.netRevenue,
+        netRevenueChange: dashboardDataResponse.metrics.netRevenueChange,
+        averageTicket: dashboardDataResponse.metrics.averageTicket,
+        averageTicketChange: dashboardDataResponse.metrics.averageTicketChange,
+        totalRegistrations: dashboardDataResponse.metrics.totalRegistrations,
+        totalRegistrationsChange: dashboardDataResponse.metrics.totalRegistrationsChange,
+        cancellations: dashboardDataResponse.metrics.cancellations,
+        cancellationsStatus: dashboardDataResponse.metrics.cancellationsStatus,
+        refunds: dashboardDataResponse.metrics.refunds,
+        refundsStatus: dashboardDataResponse.metrics.refundsStatus,
+        registrationsTrend: {
+          amount: dashboardDataResponse.registrationsTrend.amount,
+          change: dashboardDataResponse.registrationsTrend.change,
+          confirmed: dashboardDataResponse.registrationsTrend.confirmed,
+          canceled: dashboardDataResponse.registrationsTrend.canceled,
+          refunded: dashboardDataResponse.registrationsTrend.refunded,
+          chartData: dashboardDataResponse.registrationsTrend.chartData,
+        },
+        ticketRanking: dashboardDataResponse.ticketRanking.map((t) => ({
+          name: t.name,
+          category: t.category,
+          quantity: t.quantity,
+          total: t.total,
+        })),
+        topCities: dashboardDataResponse.topCities.map((c) => ({
+          city: c.city,
+          buyers: c.buyers,
+        })),
+        lotsNearDepletion: dashboardDataResponse.lotsNearDepletion.map((l) => ({
+          name: l.name,
+          status: l.status,
+          sold: l.sold,
+          total: l.total,
+          remaining: l.remaining,
+        })),
+        salesHeatmap: dashboardDataResponse.salesHeatmap,
+        dailyData: [],
+      });
     } catch (error: any) {
       console.error("Error loading data:", error);
       toast.error("Erro ao carregar dados");
-      router.push("/organizer/events");
+      // Não redirecionar, apenas mostrar erro - manter dados mockados como fallback
     } finally {
       setLoading(false);
     }
@@ -199,7 +279,7 @@ export default function EventDashboardPage() {
             </div>
             <div className="px-4 h-[49px] flex items-center">
               <p className="font-manrope font-bold text-[24px] leading-[1.1] text-gray-12">
-                R$ {dashboardData.netRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                R$ {(dashboardData.netRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
@@ -224,7 +304,7 @@ export default function EventDashboardPage() {
             </div>
             <div className="px-4 h-[49px] flex items-center">
               <p className="font-manrope font-bold text-[24px] leading-[1.1] text-gray-12">
-                R$ {dashboardData.averageTicket.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                R$ {(dashboardData.averageTicket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
@@ -306,7 +386,7 @@ export default function EventDashboardPage() {
             </div>
             <div className="flex items-center gap-3 mb-4">
               <p className="font-manrope font-bold text-[24px] leading-[1.1] text-gray-12">
-                R$ {dashboardData.registrationsTrend.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                R$ {(dashboardData.registrationsTrend.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <div className="flex items-center gap-1">
                 <ArrowUp className="size-6 text-primary-11" />
@@ -318,8 +398,8 @@ export default function EventDashboardPage() {
             <div className="h-[316px]">
               <RevenueChart
                 data={{
-                  labels: ["Jan", "Fev", "Mar", "Abr"],
-                  revenue: [4000, 12000, 8000, 10000],
+                  labels: dashboardData.registrationsTrend.chartData?.labels || ["Jan", "Fev", "Mar", "Abr"],
+                  revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) || [4000, 12000, 8000, 10000],
                 }}
               />
             </div>
@@ -361,7 +441,7 @@ export default function EventDashboardPage() {
                   </div>
                   <div className="px-4 py-3 flex items-center justify-end">
                     <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">
-                      R$ {ticket.total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      R$ {(ticket.total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>

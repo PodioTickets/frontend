@@ -332,7 +332,7 @@ export default function VouchersPage() {
             Pular etapa e publicar
           </Button>
           <Button
-            onClick={handleConfirm}
+            onClick={handleSkip}
             variant="default"
             className="text-gray-12 text-lg font-bold px-11 h-[52px]"
           >

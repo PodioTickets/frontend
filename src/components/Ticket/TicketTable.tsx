@@ -18,7 +18,20 @@ interface TicketTableProps {
 
 const formatPrice = (price: string) => {
   if (!price) return "R$ 0,00";
-  return price.startsWith("R$") ? price : `R$ ${price}`;
+  
+  // Se já está formatado com R$, retorna como está
+  if (price.startsWith("R$")) {
+    return price;
+  }
+  
+  // Se é um número (em centavos), converte para reais
+  const numericValue = parseFloat(price);
+  if (!isNaN(numericValue)) {
+    return `R$ ${(numericValue / 100).toFixed(2).replace(".", ",")}`;
+  }
+  
+  // Caso contrário, apenas adiciona R$
+  return `R$ ${price}`;
 };
 
 function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {

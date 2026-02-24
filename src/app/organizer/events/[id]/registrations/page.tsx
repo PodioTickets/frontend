@@ -38,6 +38,8 @@ import { DolarIcon } from "@/components/Icons/Organizer/DolarIcon";
 import { Loading } from "@/components/Loading";
 import { useViewRegistrationModal, useExportDataModal, usePaymentDetailsModal } from "@/stores/modalStore";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
+import Image from "next/image";
+import { getAvatarUrl } from "@/utils/avatar";
 
 export default function EventRegistrationsPage() {
   const router = useRouter();
@@ -87,8 +89,13 @@ export default function EventRegistrationsPage() {
 
   useEffect(() => {
     if (!authChecked || authLoading || !eventId) return;
-    loadData();
-  }, [authChecked, eventId, statusFilter, pagination.page, dateRange, selectedTicketIds]);
+    // Debounce search term
+    const timeoutId = setTimeout(() => {
+      loadData();
+    }, searchTerm ? 500 : 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [authChecked, eventId, statusFilter, pagination.page, dateRange, selectedTicketIds, searchTerm]);
 
   const loadData = async () => {
     try {
@@ -100,25 +107,28 @@ export default function EventRegistrationsPage() {
       };
 
       try {
-        [eventData, registrationsData] = await Promise.all([
+        const [eventData, registrationsData] = await Promise.all([
           organizerService.getEventById(eventId),
-          organizerService.getEventRegistrations(eventId, {
+          organizerService.getEventRegistrationsEnhanced(eventId, {
             page: pagination.page,
             limit: pagination.limit,
-            status: statusFilter !== "all" ? statusFilter : undefined,
+            status: statusFilter !== "all" ? statusFilter as any : undefined,
+            search: searchTerm || undefined,
+            ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
+            startDate: dateRange?.from?.toISOString(),
+            endDate: dateRange?.to?.toISOString(),
           }),
         ]);
+
+        setEvent(eventData || { id: eventId, name: "Evento de Exemplo" });
+        setRegistrations(registrationsData.registrations);
+        setPagination(registrationsData.pagination);
+        setStats(registrationsData.stats);
       } catch (apiError) {
         // Usar mocks quando API falhar
-        eventData = { id: eventId, name: "Evento de Exemplo" };
-        registrationsData = { registrations: [], pagination: {} };
-      }
+        const eventData = { id: eventId, name: "Evento de Exemplo" };
+        setEvent(eventData);
 
-      setEvent(eventData || { id: eventId, name: "Evento de Exemplo" });
-
-      const regs = registrationsData.registrations || [];
-      if (regs.length === 0) {
-        // Usar mocks quando não houver inscrições (API vazia ou falhou)
         const filteredMocks =
           statusFilter === "all"
             ? mockRegistrations
@@ -136,18 +146,6 @@ export default function EventRegistrationsPage() {
         const paid = filteredMocks.filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED").length;
         const cancelled = filteredMocks.filter((r) => r.status === "CANCELLED").length;
         const totalCollected = filteredMocks
-          .filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED")
-          .reduce((sum, r) => sum + (r.finalAmount || 0), 0);
-        setStats({ total, paid, cancelled, totalCollected });
-      } else {
-        setRegistrations(regs);
-        setPagination(registrationsData.pagination || pagination);
-
-        // Calcular estatísticas dos dados reais
-        const total = regs.length;
-        const paid = regs.filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED").length;
-        const cancelled = regs.filter((r) => r.status === "CANCELLED").length;
-        const totalCollected = regs
           .filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED")
           .reduce((sum, r) => sum + (r.finalAmount || 0), 0);
         setStats({ total, paid, cancelled, totalCollected });
@@ -206,8 +204,17 @@ export default function EventRegistrationsPage() {
         className: "bg-purple-10/20 text-purple-11",
         icon: XCircle,
       },
+      PENDING: {
+        label: "Pendente",
+        className: "bg-yellow-10/20 text-yellow-11",
+        icon: XCircle,
+      },
     };
-    return statusMap[status] || statusMap.PENDING;
+    return statusMap[status] || statusMap.PENDING || {
+      label: "Desconhecido",
+      className: "bg-gray-10/20 text-gray-11",
+      icon: XCircle,
+    };
   };
 
   const filteredRegistrations = registrations.filter((reg) => {
@@ -325,7 +332,7 @@ export default function EventRegistrationsPage() {
           </div>
 
           {/* Pagos */}
-          <div className="bg-gray-1 -lg-lg px-4 py-3 border border-gray-6">
+          <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
             <div className="mb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-11 mb-1">Pagos</p>
@@ -369,7 +376,7 @@ export default function EventRegistrationsPage() {
               </div>
 
               <p className="text-2xl font-bold text-gray-12">
-                R$ {stats.totalCollected.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                R$ {(stats.totalCollected / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <div className="flex items-center gap-1 text-sm text-primary-11">
@@ -569,24 +576,19 @@ export default function EventRegistrationsPage() {
                       {/* Cliente */}
                       <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
                         <div className="relative shrink-0">
-                          {/*  <Image
+                          <Image
                             src={getAvatarUrl(registration.user?.avatarUrl)}
                             alt={`${registration.user?.firstName} ${registration.user?.lastName}`}
                             width={32}
                             height={32}
                             className="rounded-full object-cover"
-                          /> */}
-                          <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center">
-                            <span className="text-gray-12 font-semibold text-sm">
-                              {registration.user?.firstName?.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          />
 
                         </div>
                         <div className="flex flex-col min-w-0">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
                             {registration.user?.firstName}{" "}
-                            {registration.user?.lastName}
+                            {registration.user?.lastName && `${registration.user?.lastName} `}
                           </p>
                           <p className="font-family-dm-sans font-medium leading-[1.3] text-xs text-gray-11 truncate">
                             {registration.user?.email}
@@ -595,31 +597,34 @@ export default function EventRegistrationsPage() {
                       </div>
 
                       {/* Ticket */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                      <div className="flex flex-1 h-full items-center w-[140px] p-4">
                         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {registration.modalities
-                            ?.map((m: any) => m.modality?.name)
-                            .join(", ") || "—"}
+                          <span className="text-gray-11 text-xs truncate max-w-[140px] block">
+                            {registration.ticket.category.name}
+                          </span>
+                          <span className="text-gray-12">
+                            {registration.ticket.name}
+                          </span>
                         </p>
                       </div>
 
                       {/* Data compra */}
                       <div className="flex h-full items-center p-4 w-[140px]">
-                        <p className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-11">
-                          {registration.purchaseDate
+                        <p className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-12">
+                          <span>{registration.createdAt
                             ? (() => {
-                              const date = new Date(registration.purchaseDate);
+                              const date = new Date(registration.createdAt);
                               const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
                               return `${date.getDate().toString().padStart(2, "0")} ${months[date.getMonth()]}, ${date.getFullYear()}`;
                             })()
-                            : "—"}
+                            : "—"}</span>
                         </p>
                       </div>
 
                       {/* Valor */}
                       <div className="flex h-full items-center justify-center p-4 w-[120px]">
                         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
-                          R$ {registration.finalAmount?.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0,00"}
+                          R$ {(registration.ticket.price ? (registration.ticket.price / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00")}
                         </p>
                       </div>
 
@@ -634,7 +639,7 @@ export default function EventRegistrationsPage() {
                                 ? "bg-orange-11 text-white"
                                 : registration.status === "REFUNDED"
                                   ? "bg-purple-11 text-white"
-                                  : statusBadge.className
+                                  : statusBadge?.className || "bg-gray-10/20 text-gray-11"
                             }`}
                         >
                           {isPaid
@@ -645,7 +650,7 @@ export default function EventRegistrationsPage() {
                                 ? "Charge-back"
                                 : registration.status === "REFUNDED"
                                   ? "Estornado"
-                                  : statusBadge.label}
+                                  : statusBadge?.label || "Desconhecido"}
                         </span>
                       </div>
 

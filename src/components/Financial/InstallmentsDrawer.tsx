@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Drawer,
   DrawerClose,
@@ -15,6 +15,9 @@ import { CardIcon } from "@/components/Icons/CardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
+import { organizerService } from "@/services";
+import type { Installment } from "@/services/organizer/OrganizerService";
+import toast from "react-hot-toast";
 
 interface InstallmentsDrawerProps {
   isOpen: boolean;
@@ -22,119 +25,12 @@ interface InstallmentsDrawerProps {
   totalPending: number;
   releaseToday: number;
   totalTransactions: number;
+  eventId: string;
   eventName?: string;
   categoryName?: string;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
 }
-
-// Mock data - substituir com dados reais da API
-const mockInstallments = [
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "18/10/2024",
-    nextReleaseDate: "18/10/2024",
-    paymentMethod: "Pix",
-    value: 150.0,
-    installment: "1/3",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "18/10/2024",
-    nextReleaseDate: "18/10/2024",
-    paymentMethod: "Mastercard",
-    value: 150.0,
-    installment: "2/3",
-    cardBrand: "Mastercard",
-    cardLast4: "5678",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "18/10/2024",
-    nextReleaseDate: "18/10/2024",
-    paymentMethod: "Pix",
-    value: 150.0,
-    installment: "3/3",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "18/10/2024",
-    nextReleaseDate: "18/10/2024",
-    paymentMethod: "Pix",
-    value: 150.0,
-    installment: "4/4",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "18/10/2024",
-    nextReleaseDate: "18/10/2024",
-    paymentMethod: "Mastercard",
-    value: 150.0,
-    installment: "1/3",
-    cardBrand: "Mastercard",
-    cardLast4: "5678",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "18/10/2024",
-    nextReleaseDate: "18/10/2024",
-    paymentMethod: "Pix",
-    value: 150.0,
-    installment: "1/3",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "18/10/2024",
-    nextReleaseDate: "18/10/2024",
-    paymentMethod: "Mastercard",
-    value: 150.0,
-    installment: "1/3",
-    cardBrand: "Mastercard",
-    cardLast4: "5678",
-  },
-];
 
 export function InstallmentsDrawer({
   isOpen,
@@ -142,6 +38,7 @@ export function InstallmentsDrawer({
   totalPending,
   releaseToday,
   totalTransactions,
+  eventId,
   eventName = "Maratona 2024",
   categoryName = "Nome da categoria",
   onNavigatePrev,
@@ -149,11 +46,66 @@ export function InstallmentsDrawer({
 }: InstallmentsDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<typeof mockInstallments[0] | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+  const [installments, setInstallments] = useState<Installment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [actualData, setActualData] = useState<{
+    totalPending: number;
+    releaseToday: number;
+    totalTransactions: number;
+  }>({ totalPending, releaseToday, totalTransactions });
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(mockInstallments.length / itemsPerPage);
 
-  const paginatedInstallments = mockInstallments.slice(
+  useEffect(() => {
+    if (isOpen && eventId) {
+      loadInstallments();
+    }
+  }, [isOpen, eventId]);
+
+  const loadInstallments = async () => {
+    try {
+      setLoading(true);
+      const data = await organizerService.getEventInstallments(eventId);
+      setInstallments(data.installments);
+      setActualData({
+        totalPending: data.totalPending,
+        releaseToday: data.releaseToday,
+        totalTransactions: data.totalTransactions,
+      });
+    } catch (error: any) {
+      console.error("Error loading installments:", error);
+      // Usar dados mockados como fallback
+      setInstallments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Converter Installment para formato de exibição
+  const formatInstallmentForDisplay = (installment: Installment, registrationId?: string) => {
+    const date = new Date(installment.dueDate);
+    const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    
+    return {
+      orderId: registrationId ? `#${registrationId.slice(0, 6)}...${registrationId.slice(-4)}` : `#${installment.id.slice(0, 6)}...${installment.id.slice(-4)}`,
+      transactionId: installment.id.slice(0, 8),
+      buyer: {
+        name: "Comprador", // TODO: Buscar dados do comprador se disponível
+        email: "email@example.com",
+        avatar: null,
+      },
+      releaseDate: formattedDate,
+      nextReleaseDate: formattedDate, // TODO: Calcular próxima data se disponível
+      paymentMethod: "Pix", // TODO: Buscar método de pagamento se disponível
+      value: installment.amount / 100, // Converter de centavos
+      installment: "1/1", // TODO: Calcular parcela se disponível
+    };
+  };
+
+  const displayInstallments = installments.map(i => formatInstallmentForDisplay(i));
+  const totalPages = Math.ceil(displayInstallments.length / itemsPerPage);
+  
+  const paginatedInstallments = displayInstallments.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -225,7 +177,7 @@ export function InstallmentsDrawer({
                     </div>
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
-                    R$ {totalPending.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -240,7 +192,7 @@ export function InstallmentsDrawer({
                     </div>
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
-                    R$ {releaseToday.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -255,7 +207,7 @@ export function InstallmentsDrawer({
                     </div>
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
-                    {totalTransactions}
+                    {actualData.totalTransactions}
                   </p>
                 </div>
               </div>
@@ -303,7 +255,16 @@ export function InstallmentsDrawer({
 
                 {/* Table Rows */}
                 <div className="flex flex-col items-start w-full">
-                  {paginatedInstallments.map((installment, index) => (
+                  {loading ? (
+                    <div className="w-full p-8 text-center text-gray-11">
+                      Carregando...
+                    </div>
+                  ) : paginatedInstallments.length === 0 ? (
+                    <div className="w-full p-8 text-center text-gray-11">
+                      Nenhuma parcela encontrada
+                    </div>
+                  ) : (
+                    paginatedInstallments.map((installment: any, index: number) => (
                     <div
                       key={`${installment.orderId}-${index}`}
                       className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[60px]"
@@ -395,7 +356,8 @@ export function InstallmentsDrawer({
                         </button>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 {/* Pagination */}

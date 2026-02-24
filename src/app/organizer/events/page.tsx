@@ -18,12 +18,15 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  DollarSignIcon,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import Image from "next/image";
 import { Loading, LoadingAnimation } from "@/components/Loading";
+import { MoneyIcon } from "@/components/Icons/MoneyIcon";
+import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
 
 export default function OrganizerEventsPage() {
   const router = useRouter();
@@ -117,19 +120,6 @@ export default function OrganizerEventsPage() {
     return statusMap[status] || statusMap.DRAFT;
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const getEventSales = (event: any) => {
-    // TODO: Replace with actual sales data from API
-    // For now, using a placeholder or calculating from registrations
-    return event.totalRevenue || 0;
-  };
-
   const getEventRegistrations = (event: any) => {
     return event._count?.registrations || 0;
   };
@@ -217,7 +207,7 @@ export default function OrganizerEventsPage() {
                     {filteredEvents.map((event) => {
                       const statusBadge = getStatusBadge(event.status);
                       const registrations = getEventRegistrations(event);
-                      const sales = getEventSales(event);
+
                       return (
                         <tr
                           key={event.id}
@@ -249,17 +239,17 @@ export default function OrganizerEventsPage() {
                           </td>
                           <td className="py-4 px-5 text-center">
                             <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                              {formatCurrency(sales)}
+                              R$ {(event.totalSales / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
                             <div className="flex items-center gap-1 justify-center">
                               <Link
-                                href={`/organizer/events/${event.id}/financial`}
+                                href={`/organizer/events/${event.id}/dashboard`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
                                 title="Financeiro"
                               >
-                                <BarChart3 className="size-4 text-gray-11" />
+                                <DashboardIcon className="size-4 text-gray-11" />
                               </Link>
                               <Link
                                 href={`/organizer/events/${event.id}/edit`}
@@ -269,14 +259,11 @@ export default function OrganizerEventsPage() {
                                 <PencilIcon className="size-4 text-gray-11" />
                               </Link>
                               <Link
-                                href={`/organizer/events/${event.id}/registrations`}
+                                href={`/organizer/events/${event.id}/financial`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
                                 title="Ver inscrições"
                               >
-                                <div className="relative">
-                                  <DollarSign className="size-4 text-gray-11" />
-                                  <Eye className="size-3 text-gray-11 absolute -top-1 -right-1" />
-                                </div>
+                                <MoneyIcon className="size-5 text-gray-11" />
                               </Link>
                             </div>
                           </td>

@@ -8,6 +8,7 @@ export interface CreateOrganizerRequest {
   description?: string;
 }
 
+// Mantido para compatibilidade - usar Organization quando possível
 export interface Organizer {
   id: string;
   name: string;
@@ -17,6 +18,102 @@ export interface Organizer {
   userId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Nova interface Organization com todos os campos
+export interface CreateOrganizationRequest {
+  name: string; // Razão social (obrigatório)
+  tradeName?: string; // Nome fantasia
+  document?: string; // CPF ou CNPJ (apenas números)
+  logoUrl?: string; // URL da logo/foto
+  email: string; // Email (obrigatório)
+  phone?: string; // Telefone
+  whatsapp?: string; // WhatsApp
+  siteUrl?: string; // Site
+  instagram?: string; // Instagram
+  description?: string; // Descrição
+  zipCode?: string; // CEP
+  street?: string; // Rua
+  number?: string; // Número
+  neighborhood?: string; // Bairro
+  city?: string; // Cidade
+  state?: string; // Estado
+  ownerName?: string; // Nome do responsável
+  pix?: string; // Chave PIX
+  bankName?: string; // Nome do banco
+  bankCode?: string; // Código do banco
+  agency?: string; // Agência
+  account?: string; // Conta
+  accountType?: "CORRENTE" | "POUPANCA"; // Tipo de conta
+  accountHolderName?: string; // Nome do titular
+  accountHolderDocument?: string; // CPF/CNPJ do titular
+}
+
+export interface OrganizationMember {
+  id: string;
+  organizationId: string;
+  userId: string;
+  role: "OWNER" | "EMPLOYEE";
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    mfaEnabled?: boolean;
+  };
+  organization?: Organization;
+}
+
+export interface Organization {
+  id: string;
+  name: string; // Razão social
+  tradeName?: string; // Nome fantasia
+  document?: string; // CPF ou CNPJ
+  logoUrl?: string; // URL da logo/foto
+  email: string;
+  phone?: string;
+  whatsapp?: string;
+  siteUrl?: string;
+  instagram?: string;
+  description?: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  ownerName?: string;
+  pix?: string;
+  bankName?: string;
+  bankCode?: string;
+  agency?: string;
+  account?: string;
+  accountType?: "CORRENTE" | "POUPANCA";
+  accountHolderName?: string;
+  accountHolderDocument?: string;
+  createdAt: string;
+  updatedAt: string;
+  members?: OrganizationMember[];
+  events?: Event[];
+}
+
+export interface CreateOrganizationMemberRequest {
+  userId?: string; // Usar usuário existente
+  // OU criar novo usuário:
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  phone?: string;
+  enable2FA?: boolean;
+  role: "OWNER" | "EMPLOYEE";
+}
+
+export interface UpdateOrganizationMemberRequest {
+  role: "OWNER" | "EMPLOYEE";
 }
 
 export interface CreateEventRequest {
@@ -223,34 +320,311 @@ export interface EventStats {
   }>;
 }
 
+// Dashboard interfaces
+export interface DashboardMetrics {
+  netRevenue: number;
+  netRevenueChange: number;
+  averageTicket: number;
+  averageTicketChange: number;
+  totalRegistrations: number;
+  totalRegistrationsChange: number;
+  cancellations: number;
+  cancellationsStatus: "Normal" | "Atenção" | "Crítico";
+  refunds: number;
+  refundsStatus: "Normal" | "Atenção" | "Crítico";
+}
+
+export interface RegistrationsTrend {
+  amount: number;
+  change: number;
+  confirmed: number;
+  canceled: number;
+  refunded: number;
+  chartData: {
+    labels: string[];
+    revenue: number[];
+    dailyData?: Array<{
+      date: string;
+      revenue: number;
+      confirmed: number;
+      canceled: number;
+      refunded: number;
+    }>;
+  };
+}
+
+export interface TicketRanking {
+  ticketId: string;
+  name: string;
+  category: string;
+  quantity: number;
+  total: number;
+}
+
+export interface TopCity {
+  city: string;
+  state?: string;
+  buyers: number;
+}
+
+export interface LotNearDepletion {
+  lotId: string;
+  name: string;
+  status: "Normal" | "Atenção" | "Crítico";
+  sold: number;
+  total: number;
+  remaining: number;
+  percentageSold: number;
+}
+
+export interface SalesHeatmapData {
+  day: string;
+  hour: number;
+  sales: number;
+}
+
+export interface DashboardData {
+  metrics: DashboardMetrics;
+  registrationsTrend: RegistrationsTrend;
+  ticketRanking: TicketRanking[];
+  topCities: TopCity[];
+  lotsNearDepletion: LotNearDepletion[];
+  salesHeatmap: SalesHeatmapData[];
+}
+
+// Financial interfaces
+export interface FinancialSummary {
+  availableBalance: number;
+  installmentsToReceive: number;
+  awaitingRelease: number;
+  totalTransferred: number;
+  refunded: number;
+  chargebacks: number;
+  grossRevenue: number;
+  revenueChange: number;
+}
+
+export interface RevenueChartData {
+  labels: string[];
+  revenue: number[];
+  dailyData?: Array<{
+    date: string;
+    revenue: number;
+  }>;
+}
+
+export interface FinancialTicket {
+  id: string;
+  type: "category" | "lot";
+  name: string;
+  subtitle?: string;
+  categoryId?: string;
+  sold: string;
+  revenue: number;
+  createdAt: string;
+  lots?: Array<{
+    id: string;
+    name: string;
+    sold: string;
+    revenue: number;
+    createdAt: string;
+  }>;
+}
+
+export interface FinancialData {
+  summary: FinancialSummary;
+  revenueChart: RevenueChartData;
+  tickets: {
+    items: FinancialTicket[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+}
+
+export interface Transfer {
+  id: string;
+  amount: number;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  requestedAt: string;
+  completedAt?: string;
+  paymentMethod: "PIX" | "TED" | "DOC";
+  bankAccount?: {
+    bankName: string;
+    account: string;
+    agency: string;
+  };
+}
+
+export interface Installment {
+  id: string;
+  amount: number;
+  dueDate: string;
+  status: "PENDING" | "RECEIVED";
+  releaseToday?: number;
+}
+
+export interface PendingRelease {
+  id: string;
+  registrationId: string;
+  amount: number;
+  purchaseDate: string;
+  releaseDate: string;
+  daysUntilRelease: number;
+}
+
+// Registration interfaces (extended)
+export interface RegistrationStats {
+  total: number;
+  paid: number;
+  cancelled: number;
+  totalCollected: number;
+  totalChange?: number;
+  paidChange?: number;
+  cancelledChange?: number;
+  totalCollectedChange?: number;
+}
+
 export class OrganizerService {
   constructor(private apiClient: ApiClient) { }
 
-  // Organizer methods
+  // Organizer methods (DEPRECATED - usar getOrganization/createOrganization/updateOrganization)
+  // Mantidos apenas para compatibilidade retroativa
+  /**
+   * @deprecated Use createOrganization() instead
+   */
   async createOrganizer(data: CreateOrganizerRequest): Promise<Organizer> {
-    const { data: response } = await this.apiClient.post<{ data: Organizer }>(
+    // Usa o novo endpoint /organizations através do endpoint de compatibilidade
+    // O backend ainda aceita /organizers mas cria Organization internamente
+    const { data: response } = await this.apiClient.post<{ data: { organization: Organization; member: OrganizationMember } }>(
       "/api/v1/organizers",
       data
     );
-    return response.data;
+    // Retorna no formato antigo para compatibilidade
+    return {
+      id: response.data.organization.id,
+      name: response.data.organization.name,
+      email: response.data.organization.email,
+      phone: response.data.organization.phone || "",
+      description: response.data.organization.description,
+      userId: response.data.member.userId,
+      createdAt: response.data.organization.createdAt,
+      updatedAt: response.data.organization.updatedAt,
+    };
   }
 
+  /**
+   * @deprecated Use getOrganization() instead
+   */
   async getOrganizer(): Promise<Organizer> {
-    const { data: response } = await this.apiClient.get<{ data: Organizer }>(
-      "/api/v1/organizers/me"
-    );
-    return response.data;
+    // Usa o novo endpoint /organizations/me
+    const org = await this.getOrganization();
+    // Retorna no formato antigo para compatibilidade
+    return {
+      id: org.id,
+      name: org.name,
+      email: org.email,
+      phone: org.phone || "",
+      description: org.description,
+      userId: org.members?.find(m => m.role === "OWNER")?.userId || "",
+      createdAt: org.createdAt,
+      updatedAt: org.updatedAt,
+    };
   }
 
+  /**
+   * @deprecated Use updateOrganization() instead
+   */
   async updateOrganizer(
-    id: string,
+    id: string | null,
     data: Partial<CreateOrganizerRequest>
   ): Promise<Organizer> {
-    const { data: response } = await this.apiClient.patch<{ data: Organizer }>(
-      `/api/v1/organizers/${id}`,
+    // Usa o novo endpoint /organizations/me
+    // O parâmetro id é ignorado, mantido apenas para compatibilidade
+    const org = await this.updateOrganization(data);
+    // Retorna no formato antigo para compatibilidade
+    return {
+      id: org.id,
+      name: org.name,
+      email: org.email,
+      phone: org.phone || "",
+      description: org.description,
+      userId: org.members?.find(m => m.role === "OWNER")?.userId || "",
+      createdAt: org.createdAt,
+      updatedAt: org.updatedAt,
+    };
+  }
+
+  // Novos métodos de Organization
+  async getOrganization(): Promise<Organization> {
+    const { data: response } = await this.apiClient.get<{ data: { organization: Organization } }>(
+      "/api/v1/organizations/me"
+    );
+    return response.data.organization;
+  }
+
+  async updateOrganization(
+    data: Partial<CreateOrganizationRequest>
+  ): Promise<Organization> {
+    const { data: response } = await this.apiClient.patch<{ data: { organization: Organization } }>(
+      "/api/v1/organizations/me",
       data
     );
+    return response.data.organization;
+  }
+
+  // Verificar acesso do organizador
+  async checkOrganizerAccess(): Promise<{
+    isMember: boolean;
+    role?: "OWNER" | "EMPLOYEE";
+    organizationId?: string;
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        isMember: boolean;
+        role?: "OWNER" | "EMPLOYEE";
+        organizationId?: string;
+      };
+    }>("/api/v1/organizations/me/check");
     return response.data;
+  }
+
+  // Métodos de gerenciamento de membros
+  async getOrganizationMembers(): Promise<OrganizationMember[]> {
+    const { data: response } = await this.apiClient.get<{ data: { members: OrganizationMember[] } }>(
+      "/api/v1/organizations/me/members"
+    );
+    return response.data.members;
+  }
+
+  async addOrganizationMember(
+    data: CreateOrganizationMemberRequest
+  ): Promise<OrganizationMember> {
+    const { data: response } = await this.apiClient.post<{ data: { member: OrganizationMember } }>(
+      "/api/v1/organizations/me/members",
+      data
+    );
+    return response.data.member;
+  }
+
+  async updateOrganizationMemberRole(
+    memberUserId: string,
+    data: UpdateOrganizationMemberRequest
+  ): Promise<OrganizationMember> {
+    const { data: response } = await this.apiClient.patch<{ data: { member: OrganizationMember } }>(
+      `/api/v1/organizations/me/members/${memberUserId}`,
+      data
+    );
+    return response.data.member;
+  }
+
+  async removeOrganizationMember(memberUserId: string): Promise<void> {
+    await this.apiClient.delete(
+      `/api/v1/organizations/me/members/${memberUserId}`
+    );
   }
 
   async createEvent(data: CreateEventRequest): Promise<Event> {
@@ -860,6 +1234,269 @@ export class OrganizerService {
         pagination: { page: number; limit: number; total: number; totalPages: number };
       };
     }>(`/api/v1/vouchers/events/${eventId}/groups/${groupName}`, { params });
+    return response.data;
+  }
+
+  // Dashboard methods
+  async getEventDashboard(
+    eventId: string,
+    params?: {
+      period?: "geral" | "24h" | "7d" | "15d" | "1m" | "2m";
+      ticketIds?: string[];
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<DashboardData> {
+    const { data: response } = await this.apiClient.get<{
+      data: DashboardData;
+    }>(`/api/v1/events/${eventId}/dashboard`, {
+      params: {
+        period: params?.period,
+        ticketIds: params?.ticketIds,
+        page: params?.page,
+        limit: params?.limit,
+      },
+    });
+    return response.data;
+  }
+
+  // Financial methods
+  async getEventFinancial(
+    eventId: string,
+    params?: {
+      period?: "hoje" | "7d" | "15d" | "1m" | "2m";
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<FinancialData> {
+    const { data: response } = await this.apiClient.get<{
+      data: FinancialData;
+    }>(`/api/v1/events/${eventId}/financial`, {
+      params: {
+        period: params?.period,
+        page: params?.page,
+        limit: params?.limit,
+      },
+    });
+    return response.data;
+  }
+
+  async getEventTransferHistory(eventId: string): Promise<{
+    transfers: Transfer[];
+    totalTransferred: number;
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        transfers: Transfer[];
+        totalTransferred: number;
+      };
+    }>(`/api/v1/events/${eventId}/financial/transfers`);
+    return response.data;
+  }
+
+  async getEventInstallments(eventId: string): Promise<{
+    installments: Installment[];
+    totalPending: number;
+    releaseToday: number;
+    totalTransactions: number;
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        installments: Installment[];
+        totalPending: number;
+        releaseToday: number;
+        totalTransactions: number;
+      };
+    }>(`/api/v1/events/${eventId}/financial/installments`);
+    return response.data;
+  }
+
+  async getEventPendingReleases(eventId: string): Promise<{
+    pending: PendingRelease[];
+    totalPending: number;
+    releaseToday: number;
+    totalTransactions: number;
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        pending: PendingRelease[];
+        totalPending: number;
+        releaseToday: number;
+        totalTransactions: number;
+      };
+    }>(`/api/v1/events/${eventId}/financial/pending`);
+    return response.data;
+  }
+
+  async getEventRefunded(
+    eventId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{
+    items: Array<{
+      id: string;
+      orderId: string;
+      transactionId: string;
+      buyer: {
+        name: string;
+        email: string;
+        avatar: string | null;
+      };
+      refundDate: string;
+      paymentMethod: string;
+      amount: number;
+      cardBrand?: string;
+      cardLast4?: string;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        items: Array<{
+          id: string;
+          orderId: string;
+          transactionId: string;
+          buyer: {
+            name: string;
+            email: string;
+            avatar: string | null;
+          };
+          refundDate: string;
+          paymentMethod: string;
+          amount: number;
+          cardBrand?: string;
+          cardLast4?: string;
+        }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+    }>(`/api/v1/events/${eventId}/financial/refunded`, { params });
+    return response.data;
+  }
+
+  async getEventChargebacks(
+    eventId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{
+    items: Array<{
+      id: string;
+      orderId: string;
+      transactionId: string;
+      buyer: {
+        name: string;
+        email: string;
+        avatar: string | null;
+      };
+      chargebackDate: string;
+      paymentMethod: string;
+      amount: number;
+      cardBrand?: string;
+      cardLast4?: string;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        items: Array<{
+          id: string;
+          orderId: string;
+          transactionId: string;
+          buyer: {
+            name: string;
+            email: string;
+            avatar: string | null;
+          };
+          chargebackDate: string;
+          paymentMethod: string;
+          amount: number;
+          cardBrand?: string;
+          cardLast4?: string;
+        }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+    }>(`/api/v1/events/${eventId}/financial/chargebacks`, { params });
+    return response.data;
+  }
+
+  // Enhanced Registration methods
+  async getEventRegistrationsEnhanced(
+    eventId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "CHARGEBACK" | "REFUNDED";
+      search?: string;
+      ticketIds?: string[];
+      startDate?: string;
+      endDate?: string;
+      sortBy?: "purchaseDate" | "amount" | "status";
+      sortOrder?: "asc" | "desc";
+    }
+  ): Promise<{
+    registrations: Registration[];
+    stats: RegistrationStats;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        registrations: Registration[];
+        stats: RegistrationStats;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+    }>(`/api/v1/events/${eventId}/registrations`, {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        status: params?.status,
+        search: params?.search,
+        ticketIds: params?.ticketIds,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
+        sortBy: params?.sortBy,
+        sortOrder: params?.sortOrder,
+      },
+    });
+    return response.data;
+  }
+
+  async getEventRegistrationStats(eventId: string): Promise<RegistrationStats> {
+    const { data: response } = await this.apiClient.get<{
+      data: RegistrationStats;
+    }>(`/api/v1/events/${eventId}/registrations/stats`);
     return response.data;
   }
 }

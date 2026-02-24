@@ -23,6 +23,15 @@ export interface Ticket {
   };
   status: "CONFIRMED" | "PENDING" | "COMPLETED" | "CANCELLED";
   distance?: string;
+  // Campos adicionais da API
+  qrCode?: string;
+  purchaseDate?: string;
+  payment?: {
+    id: string;
+    method: string;
+    status: string;
+    amount: number;
+  };
 }
 
 interface TicketCardProps {

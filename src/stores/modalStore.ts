@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | "viewRegistration" | "exportData" | "paymentDetails" | "requestTransfer" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | "viewRegistration" | "exportData" | "paymentDetails" | "requestTransfer" | "accessAllOrganizations" | null;
 
 interface ModalData {
   amount?: number;
@@ -307,5 +307,16 @@ export const useRequestTransferModal = () => {
     data: data as ModalData | null,
     openRequestTransferModal: (data?: ModalData) => openModal("requestTransfer", data),
     closeRequestTransferModal: closeModal,
+  };
+};
+
+export const useAccessAllOrganizationsModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "accessAllOrganizations",
+    data: data as ModalData | null,
+    openAccessAllOrganizationsModal: (data?: ModalData) => openModal("accessAllOrganizations", data),
+    closeAccessAllOrganizationsModal: closeModal,
   };
 };

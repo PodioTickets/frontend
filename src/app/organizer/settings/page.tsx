@@ -52,18 +52,18 @@ export default function OrganizerSettingsPage() {
   const loadOrganizer = async () => {
     try {
       setLoading(true);
-      const org = await organizerService.getOrganizer();
+      const org = await organizerService.getOrganization();
       setOrganizer(org);
       setFormData({
         name: org.name || "",
       });
     } catch (error: any) {
-      console.error("Error loading organizer:", error);
+      console.error("Error loading organization:", error);
       if (error.response?.status === 404) {
         router.push("/organizer/create");
         return;
       }
-      toast.error("Erro ao carregar dados do organizador");
+      toast.error("Erro ao carregar dados da organização");
     } finally {
       setLoading(false);
     }
@@ -128,14 +128,14 @@ export default function OrganizerSettingsPage() {
 
     setSaving(true);
     try {
-      await organizerService.updateOrganizer(organizer.id, {
+      await organizerService.updateOrganization({
         name: formData.name,
       });
 
       toast.success("Configurações atualizadas com sucesso!");
       loadOrganizer();
     } catch (error: any) {
-      console.error("Error updating organizer:", error);
+      console.error("Error updating organization:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||

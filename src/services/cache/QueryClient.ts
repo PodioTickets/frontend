@@ -69,6 +69,11 @@ export const queryKeys = {
       templates: () => [...queryKeys.events.all, "modalities", "templates"] as const,
     },
   },
+  user: {
+    all: ["user"] as const,
+    tickets: (params?: { page?: number; limit?: number; status?: string }) => 
+      [...queryKeys.user.all, "tickets", params] as const,
+  },
 };
 
 export const invalidateQueries = {
@@ -92,6 +97,9 @@ export const invalidateQueries = {
       queryClient.invalidateQueries({ queryKey: queryKeys.events.products(eventId) }),
     kits: (eventId: string) =>
       queryClient.invalidateQueries({ queryKey: queryKeys.events.kits(eventId) }),
+  },
+  user: {
+    tickets: () => queryClient.invalidateQueries({ queryKey: queryKeys.user.all }),
   },
   all: () => queryClient.invalidateQueries(),
 };

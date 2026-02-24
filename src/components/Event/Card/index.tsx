@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import type { Event } from "@/interfaces/event";
 import { getAvatarUrl } from "@/utils/avatar";
+import { getEventOrganizer } from "@/utils/organization";
 
 interface EventCardProps {
   event: Event;
@@ -60,17 +61,37 @@ export function EventCard({ event }: EventCardProps) {
 
       <div className="flex flex-col justify-between px-3 gap-3">
         <h1 className="flex items-center gap-2 text-sm text-gray-12">
-          {event.organizer?.user?.avatarUrl ? (
-            <Image
-              src={getAvatarUrl(event.organizer?.user?.avatarUrl)}
-              alt={event.organizer.name}
-              width={20}
-              height={20}
-            />
-          ) : (
-            <FlagIcon className="size-5" />
-          )}
-          <span>{event.organizer.name}</span>
+          {(() => {
+            const organizer = getEventOrganizer(event);
+            if (!organizer) return <FlagIcon className="size-5" />;
+            
+            // Se tiver logoUrl (organization), usa ela, senão usa avatar do user (organizer antigo)
+            if (organizer.logoUrl) {
+              return (
+                <Image
+                  src={getAvatarUrl(organizer.logoUrl)}
+                  alt={organizer.name}
+                  width={20}
+                  height={20}
+                />
+              );
+            }
+            
+            // Fallback para formato antigo
+            if (event.organizer?.user?.avatarUrl) {
+              return (
+                <Image
+                  src={getAvatarUrl(event.organizer.user.avatarUrl)}
+                  alt={organizer.name}
+                  width={20}
+                  height={20}
+                />
+              );
+            }
+            
+            return <FlagIcon className="size-5" />;
+          })()}
+          <span>{getEventOrganizer(event)?.name || "Organizador"}</span>
         </h1>
         <h1 className="flex items-center gap-2 text-sm text-gray-12">
           <CalendarIcon className="size-5" /> <span>{formattedDate}</span>

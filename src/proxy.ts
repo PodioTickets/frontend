@@ -35,38 +35,6 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  if (pathname.startsWith("/api/")) {
-    const publicApiRoutes = ["/api/auth"];
-    const isPublicApiRoute = publicApiRoutes.some((route) =>
-      pathname.startsWith(route)
-    );
-
-    if (!isPublicApiRoute) {
-      const protectedApiRoutes = ["/api/user", "/api/checkout", "/api/organizer"];
-      const isProtectedApiRoute = protectedApiRoutes.some((route) =>
-        pathname.startsWith(route)
-      );
-
-      if (isProtectedApiRoute) {
-        const accessToken = request.cookies.get("access_token");
-
-        if (!accessToken) {
-          // Retorna erro 401 para APIs sem autenticação
-          return new NextResponse(
-            JSON.stringify({
-              success: false,
-              error: "Unauthorized",
-            }),
-            {
-              status: 401,
-              headers: { "Content-Type": "application/json" },
-            }
-          );
-        }
-      }
-    }
-  }
-
   if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
     return new NextResponse(null, {
       status: 204,

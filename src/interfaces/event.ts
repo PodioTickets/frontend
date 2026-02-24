@@ -1,9 +1,10 @@
 import type { Organizer } from "./user";
+import type { Organization } from "@/services/organizer/OrganizerService";
 
 export interface Event {
   id: string;
   slug: string;
-  organizerId: string;
+  organizationId: string; // Mudado de organizerId para organizationId
   name: string;
   description: string;
   location: string;
@@ -21,7 +22,8 @@ export interface Event {
   status: string;
   createdAt: string;
   updatedAt: string;
-  organizer: Organizer;
+  organization: Organization; // Mudado de organizer para organization
+  organizer?: Organizer; // Mantido para compatibilidade retroativa
   topics: Topic[];
   locations: [];
   modalities: Modality[];

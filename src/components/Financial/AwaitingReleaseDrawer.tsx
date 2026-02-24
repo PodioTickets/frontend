@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Drawer,
   DrawerClose,
@@ -16,6 +16,9 @@ import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
+import { organizerService } from "@/services";
+import type { PendingRelease } from "@/services/organizer/OrganizerService";
+import toast from "react-hot-toast";
 
 interface AwaitingReleaseDrawerProps {
   isOpen: boolean;
@@ -23,91 +26,12 @@ interface AwaitingReleaseDrawerProps {
   totalPending: number;
   releaseToday: number;
   totalTransactions: number;
+  eventId: string;
   eventName?: string;
   categoryName?: string;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
 }
-
-// Mock data - substituir com dados reais da API
-const mockAwaitingRelease = [
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "24/10/2026",
-    paymentMethod: "Pix",
-    value: 150.0,
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "24/10/2026",
-    paymentMethod: "Pix",
-    value: 150.0,
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "24/10/2026",
-    paymentMethod: "Mastercard",
-    value: 150.0,
-    cardBrand: "Mastercard",
-    cardLast4: "5678",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "24/10/2026",
-    paymentMethod: "Mastercard",
-    value: 150.0,
-    cardBrand: "Mastercard",
-    cardLast4: "5678",
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "24/10/2026",
-    paymentMethod: "Pix",
-    value: 150.0,
-  },
-  {
-    orderId: "#6b82...51d6",
-    transactionId: "1240-2414",
-    buyer: {
-      name: "Ahmad Ballard",
-      email: "NoahSilva@gmail.com",
-      avatar: null,
-    },
-    releaseDate: "24/10/2026",
-    paymentMethod: "Pix",
-    value: 150.0,
-  },
-];
 
 export function AwaitingReleaseDrawer({
   isOpen,
@@ -115,6 +39,7 @@ export function AwaitingReleaseDrawer({
   totalPending,
   releaseToday,
   totalTransactions,
+  eventId,
   eventName = "Maratona 2024",
   categoryName = "Nome da categoria",
   onNavigatePrev,
@@ -122,11 +47,64 @@ export function AwaitingReleaseDrawer({
 }: AwaitingReleaseDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<typeof mockAwaitingRelease[0] | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+  const [pendingReleases, setPendingReleases] = useState<PendingRelease[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [actualData, setActualData] = useState<{
+    totalPending: number;
+    releaseToday: number;
+    totalTransactions: number;
+  }>({ totalPending, releaseToday, totalTransactions });
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(mockAwaitingRelease.length / itemsPerPage);
 
-  const paginatedItems = mockAwaitingRelease.slice(
+  useEffect(() => {
+    if (isOpen && eventId) {
+      loadPendingReleases();
+    }
+  }, [isOpen, eventId]);
+
+  const loadPendingReleases = async () => {
+    try {
+      setLoading(true);
+      const data = await organizerService.getEventPendingReleases(eventId);
+      setPendingReleases(data.pending);
+      setActualData({
+        totalPending: data.totalPending,
+        releaseToday: data.releaseToday,
+        totalTransactions: data.totalTransactions,
+      });
+    } catch (error: any) {
+      console.error("Error loading pending releases:", error);
+      // Usar dados mockados como fallback
+      setPendingReleases([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Converter PendingRelease para formato de exibição
+  const formatPendingForDisplay = (pending: PendingRelease) => {
+    const releaseDate = new Date(pending.releaseDate);
+    const formattedDate = releaseDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    
+    return {
+      orderId: `#${pending.registrationId.slice(0, 6)}...${pending.registrationId.slice(-4)}`,
+      transactionId: pending.id.slice(0, 8),
+      buyer: {
+        name: "Comprador", // TODO: Buscar dados do comprador se disponível
+        email: "email@example.com",
+        avatar: null,
+      },
+      releaseDate: formattedDate,
+      paymentMethod: "Pix", // TODO: Buscar método de pagamento se disponível
+      value: pending.amount / 100, // Converter de centavos
+    };
+  };
+
+  const displayItems = pendingReleases.map(p => formatPendingForDisplay(p));
+  
+  const totalPages = Math.ceil(displayItems.length / itemsPerPage);
+  const paginatedItems = displayItems.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -198,7 +176,7 @@ export function AwaitingReleaseDrawer({
                     </div>
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
-                    R$ {totalPending.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -213,7 +191,7 @@ export function AwaitingReleaseDrawer({
                     </div>
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
-                    R$ {releaseToday.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -228,7 +206,7 @@ export function AwaitingReleaseDrawer({
                     </div>
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
-                    {totalTransactions}
+                    {actualData.totalTransactions}
                   </p>
                 </div>
               </div>
@@ -276,7 +254,16 @@ export function AwaitingReleaseDrawer({
 
                 {/* Table Rows */}
                 <div className="flex flex-col items-start w-full">
-                  {paginatedItems.map((item, index) => (
+                  {loading ? (
+                    <div className="w-full p-8 text-center text-gray-11">
+                      Carregando...
+                    </div>
+                  ) : paginatedItems.length === 0 ? (
+                    <div className="w-full p-8 text-center text-gray-11">
+                      Nenhum item aguardando liberação
+                    </div>
+                  ) : (
+                    paginatedItems.map((item: any, index: number) => (
                     <div
                       key={`${item.orderId}-${index}`}
                       className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[60px]"
@@ -357,7 +344,8 @@ export function AwaitingReleaseDrawer({
                         </button>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 {/* Pagination */}

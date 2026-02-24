@@ -18,6 +18,7 @@ import { ViewRegistrationModal } from "@/components/Registrations/ViewRegistrati
 import { ExportDataModal } from "@/components/Registrations/ExportDataModal";
 import { PaymentDetailsModal } from "@/components/Registrations/PaymentDetailsModal";
 import { RequestTransferModal } from "@/components/Financial/RequestTransferModal";
+import { AccessAllOrganizationsModal } from "@/components/Organizer/AccessAllOrganizationsModal";
 
 export function ModalsProvider() {
   return (
@@ -40,6 +41,7 @@ export function ModalsProvider() {
       <ExportDataModal />
       <PaymentDetailsModal />
       <RequestTransferModal />
+      <AccessAllOrganizationsModal />
     </>
   );
 }

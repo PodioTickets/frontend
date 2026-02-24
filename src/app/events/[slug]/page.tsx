@@ -16,6 +16,7 @@ import { Fragment, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
+import { getEventOrganizer } from "@/utils/organization";
 
 export default function EventPage() {
   const params = useParams();
@@ -216,32 +217,39 @@ export default function EventPage() {
             {/* Organizer Section */}
             <div className="bg-gray-3 border border-gray-6 rounded-lg p-4 mb-4">
               <p className="text-sm text-gray-11 mb-3">Organizador</p>
-              {event.organizer ? (
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
-                    <span className="text-primary-11 font-semibold text-sm">
-                      {event.organizer.name?.charAt(0).toUpperCase() || "O"}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-12">
-                      {event.organizer.name}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-              <Button
-                variant="outline"
-                className="w-full text-gray-12 border-gray-6 bg-gray-1"
-                onClick={() => {
-                  if (event.organizer?.email) {
-                    window.location.href = `mailto:${event.organizer.email}?subject=Contato sobre ${event.name}`;
-                  }
-                }}
-              >
-                <MessageIcon className="min-w-5 min-h-5" />
-                Falar com o organizador
-              </Button>
+              {(() => {
+                const organizer = getEventOrganizer(event);
+                if (!organizer) return null;
+                
+                return (
+                  <>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
+                        <span className="text-primary-11 font-semibold text-sm">
+                          {organizer.name?.charAt(0).toUpperCase() || "O"}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-12">
+                          {organizer.name}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full text-gray-12 border-gray-6 bg-gray-1"
+                      onClick={() => {
+                        if (organizer.email) {
+                          window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
+                        }
+                      }}
+                    >
+                      <MessageIcon className="min-w-5 min-h-5" />
+                      Falar com o organizador
+                    </Button>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Action Buttons */}
@@ -480,48 +488,52 @@ export default function EventPage() {
                           Organizador
                         </p>
 
-                        {event.organizer ? (
-                          <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                              <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                                <span className="text-primary-11 font-semibold text-sm">
-                                  {event.organizer.name
-                                    ?.charAt(0)
-                                    .toUpperCase() || "O"}
-                                </span>
+                        {(() => {
+                          const organizer = getEventOrganizer(event);
+                          if (!organizer) return null;
+                          
+                          return (
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-3">
+                                <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
+                                  <span className="text-primary-11 font-semibold text-sm">
+                                    {organizer.name?.charAt(0).toUpperCase() || "O"}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-12 truncate">
+                                    {organizer.name}
+                                  </p>
+                                  {organizer.phone && (
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                      <Phone className="size-3.5 text-gray-11 shrink-0" />
+                                      <a
+                                        href={`tel:${organizer.phone}`}
+                                        className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
+                                      >
+                                        {organizer.phone}
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-gray-12 truncate">
-                                  {event.organizer.name}
-                                </p>
-                                {event.organizer.phone && (
-                                  <div className="flex items-center gap-1.5 mt-1">
-                                    <Phone className="size-3.5 text-gray-11 shrink-0" />
-                                    <a
-                                      href={`tel:${event.organizer.phone}`}
-                                      className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
-                                    >
-                                      {event.organizer.phone}
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
 
-                            <Button
-                              variant="outline"
-                              className="w-full text-gray-12 border-gray-6"
-                              onClick={() => {
-                                if (event.organizer?.email) {
-                                  window.location.href = `mailto:${event.organizer.email}?subject=Contato sobre ${event.name}`;
-                                }
-                              }}
-                            >
-                              <MessageIcon className="min-w-5 min-h-5" />
-                              Falar com organizador
-                            </Button>
-                          </div>
-                        ) : (
+                              <Button
+                                variant="outline"
+                                className="w-full text-gray-12 border-gray-6"
+                                onClick={() => {
+                                  if (organizer.email) {
+                                    window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
+                                  }
+                                }}
+                              >
+                                <MessageIcon className="min-w-5 min-h-5" />
+                                Falar com organizador
+                              </Button>
+                            </div>
+                          );
+                        })()}
+                        {!getEventOrganizer(event) && (
                           <p className="text-xs text-gray-11">
                             Informações não disponíveis
                           </p>
@@ -673,51 +685,51 @@ export default function EventPage() {
                       Organizador
                     </p>
 
-                    {event.organizer ? (
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                            <span className="text-primary-11 font-semibold text-sm">
-                              {event.organizer.name?.charAt(0).toUpperCase() ||
-                                "O"}
-                            </span>
+                    {(() => {
+                      const organizer = getEventOrganizer(event);
+                      if (!organizer) return null;
+                      
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
+                              <span className="text-primary-11 font-semibold text-sm">
+                                {organizer.name?.charAt(0).toUpperCase() || "O"}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-12 truncate">
+                                {organizer.name}
+                              </p>
+                              {organizer.phone && (
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <Phone className="size-3.5 text-gray-11 shrink-0" />
+                                  <a
+                                    href={`tel:${organizer.phone}`}
+                                    className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
+                                  >
+                                    {organizer.phone}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-12 truncate">
-                              {event.organizer.name}
-                            </p>
-                            {event.organizer.phone && (
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <Phone className="size-3.5 text-gray-11 shrink-0" />
-                                <a
-                                  href={`tel:${event.organizer.phone}`}
-                                  className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
-                                >
-                                  {event.organizer.phone}
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        </div>
 
-                        <Button
-                          variant="outline"
-                          className="w-full text-gray-12 border-gray-6"
-                          onClick={() => {
-                            if (event.organizer?.email) {
-                              window.location.href = `mailto:${event.organizer.email}?subject=Contato sobre ${event.name}`;
-                            }
-                          }}
-                        >
-                          <MessageIcon className="min-w-5 min-h-5" />
-                          Falar com organizador
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-11">
-                        Informações não disponíveis
-                      </p>
-                    )}
+                          <Button
+                            variant="outline"
+                            className="w-full text-gray-12 border-gray-6"
+                            onClick={() => {
+                              if (organizer.email) {
+                                window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
+                              }
+                            }}
+                          >
+                            <MessageIcon className="min-w-5 min-h-5" />
+                            Falar com organizador
+                          </Button>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <Button onClick={handleCheckoutClick} className="w-full mt-8">

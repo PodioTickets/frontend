@@ -25,8 +25,11 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { TransferHistoryDrawer } from "@/components/Financial/TransferHistoryDrawer";
 import { InstallmentsDrawer } from "@/components/Financial/InstallmentsDrawer";
 import { AwaitingReleaseDrawer } from "@/components/Financial/AwaitingReleaseDrawer";
+import { RefundedDrawer } from "@/components/Financial/RefundedDrawer";
+import { ChargebackDrawer } from "@/components/Financial/ChargebackDrawer";
 import { useRequestTransferModal } from "@/stores/modalStore";
 import { RepasseIcon } from "@/components/Icons/RepasseIcon";
+import { PaymentIcon } from "@/components/Icons/PaymentIcon";
 
 export default function EventFinancialPage() {
   const router = useRouter();
@@ -41,6 +44,8 @@ export default function EventFinancialPage() {
   const [isTransferHistoryOpen, setIsTransferHistoryOpen] = useState(false);
   const [isInstallmentsOpen, setIsInstallmentsOpen] = useState(false);
   const [isAwaitingReleaseOpen, setIsAwaitingReleaseOpen] = useState(false);
+  const [isRefundedOpen, setIsRefundedOpen] = useState(false);
+  const [isChargebackOpen, setIsChargebackOpen] = useState(false);
   const { openRequestTransferModal } = useRequestTransferModal();
   const [pagination, setPagination] = useState({
     page: 1,
@@ -50,7 +55,20 @@ export default function EventFinancialPage() {
   });
 
   // Financial data
-  const [financialData, setFinancialData] = useState({
+  const [financialData, setFinancialData] = useState<{
+    availableBalance: number;
+    installmentsToReceive: number;
+    awaitingRelease: number;
+    totalTransferred: number;
+    refunded: number;
+    chargebacks: number;
+    grossRevenue: number;
+    revenueChange: number;
+    revenueChart?: {
+      labels: string[];
+      revenue: number[];
+    };
+  }>({
     availableBalance: 1240,
     installmentsToReceive: 1240,
     awaitingRelease: 1240,
@@ -59,6 +77,10 @@ export default function EventFinancialPage() {
     chargebacks: 1240,
     grossRevenue: 10000,
     revenueChange: 12,
+    revenueChart: {
+      labels: [],
+      revenue: [],
+    },
   });
 
   // Mock data for tickets/lots
@@ -132,16 +154,48 @@ export default function EventFinancialPage() {
   useEffect(() => {
     if (!authChecked || authLoading || !eventId) return;
     loadData();
-  }, [authChecked, eventId]);
+  }, [authChecked, eventId, periodFilter, pagination.page]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const eventData = await organizerService.getEventById(eventId);
+      const [eventData, financialDataResponse] = await Promise.all([
+        organizerService.getEventById(eventId),
+        organizerService.getEventFinancial(eventId, {
+          period: periodFilter as "hoje" | "7d" | "15d" | "1m" | "2m",
+          page: pagination.page,
+          limit: pagination.limit,
+        }),
+      ]);
       setEvent(eventData);
+      setFinancialData({
+        availableBalance: financialDataResponse.summary.availableBalance,
+        installmentsToReceive: financialDataResponse.summary.installmentsToReceive,
+        awaitingRelease: financialDataResponse.summary.awaitingRelease,
+        totalTransferred: financialDataResponse.summary.totalTransferred,
+        refunded: financialDataResponse.summary.refunded,
+        chargebacks: financialDataResponse.summary.chargebacks,
+        grossRevenue: financialDataResponse.summary.grossRevenue,
+        revenueChange: financialDataResponse.summary.revenueChange,
+        revenueChart: financialDataResponse.revenueChart,
+      });
+      setTicketsData(
+        financialDataResponse.tickets.items.map((item) => ({
+          id: item.id,
+          type: item.type,
+          name: item.name,
+          subtitle: item.subtitle || "",
+          sold: item.sold,
+          revenue: item.revenue,
+          createdAt: item.createdAt,
+          expanded: expandedRows.has(item.id),
+        }))
+      );
+      setPagination(financialDataResponse.tickets.pagination);
     } catch (error: any) {
       console.error("Error loading event:", error);
       toast.error("Erro ao carregar dados do evento");
+      // Manter dados mockados como fallback
     } finally {
       setLoading(false);
     }
@@ -211,11 +265,11 @@ export default function EventFinancialPage() {
                   Saldo disponível
                 </p>
                 <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                  <Wallet className="size-5 text-gray-12" />
+                  <PaymentIcon className="size-5 text-gray-12" />
                 </div>
               </div>
-              <p className="font-manrope font-bold text-[20px] text-gray-12">
-                R$ {financialData.availableBalance.toLocaleString("pt-BR")}
+              <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
+                R$ {(financialData.availableBalance / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
 
@@ -230,8 +284,8 @@ export default function EventFinancialPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
-                  R${financialData.installmentsToReceive.toLocaleString("pt-BR")}
+                <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
+                  R${(financialData.installmentsToReceive / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <button
                   onClick={() => setIsInstallmentsOpen(true)}
@@ -253,8 +307,8 @@ export default function EventFinancialPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
-                  R${financialData.awaitingRelease.toLocaleString("pt-BR")}
+                <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
+                  R${(financialData.awaitingRelease / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <button
                   onClick={() => setIsAwaitingReleaseOpen(true)}
@@ -276,8 +330,8 @@ export default function EventFinancialPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
-                  R${financialData.totalTransferred.toLocaleString("pt-BR")}
+                <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
+                  R${(financialData.totalTransferred / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <button
                   onClick={() => setIsTransferHistoryOpen(true)}
@@ -299,10 +353,13 @@ export default function EventFinancialPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
-                  R${financialData.refunded.toLocaleString("pt-BR")}
+                <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
+                  R${(financialData.refunded / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <button className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline">
+                <button
+                  onClick={() => setIsRefundedOpen(true)}
+                  className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline"
+                >
                   Ver detalhes
                 </button>
               </div>
@@ -319,10 +376,13 @@ export default function EventFinancialPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
-                  R${financialData.chargebacks.toLocaleString("pt-BR")}
+                <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
+                  R${(financialData.chargebacks / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <button className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline">
+                <button
+                  onClick={() => setIsChargebackOpen(true)}
+                  className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline"
+                >
                   Ver detalhes
                 </button>
               </div>
@@ -357,7 +417,7 @@ export default function EventFinancialPage() {
             </div>
             <div className="flex items-center gap-4 mb-4">
               <p className="font-manrope font-bold text-[20px] text-gray-12">
-                R$ {financialData.grossRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                R$ {(financialData.grossRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <div className="flex items-center gap-2">
                 <ArrowUp className="size-6 text-primary-11" />
@@ -369,7 +429,12 @@ export default function EventFinancialPage() {
 
             {/* Chart */}
             <div className="h-[341px] rounded-lg relative">
-              <RevenueChart />
+              <RevenueChart
+                data={{
+                  labels: financialData.revenueChart?.labels || [],
+                  revenue: financialData.revenueChart?.revenue?.map((val: number) => val / 100) || [],
+                }}
+              />
             </div>
           </div>
 
@@ -478,7 +543,7 @@ export default function EventFinancialPage() {
                           R$
                         </span>
                         <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {item.revenue.toFixed(2).replace(".", ",")}
+                          {(item.revenue / 100).toFixed(2).replace(".", ",")}
                         </span>
                       </div>
                     </div>
@@ -526,6 +591,7 @@ export default function EventFinancialPage() {
         isOpen={isTransferHistoryOpen}
         onClose={() => setIsTransferHistoryOpen(false)}
         totalTransferred={financialData.totalTransferred}
+        eventId={eventId}
         eventName={event?.name}
         categoryName="Nome da categoria"
         onNavigatePrev={undefined} // Primeiro drawer, não tem anterior
@@ -540,8 +606,9 @@ export default function EventFinancialPage() {
         isOpen={isAwaitingReleaseOpen}
         onClose={() => setIsAwaitingReleaseOpen(false)}
         totalPending={financialData.awaitingRelease}
-        releaseToday={0} // TODO: Adicionar este valor quando disponível na API
-        totalTransactions={342} // TODO: Adicionar este valor quando disponível na API
+        releaseToday={0} // Será atualizado pelos dados reais do drawer
+        totalTransactions={0} // Será atualizado pelos dados reais do drawer
+        eventId={eventId}
         eventName={event?.name}
         categoryName="Nome da categoria"
         onNavigatePrev={() => {
@@ -559,13 +626,50 @@ export default function EventFinancialPage() {
         isOpen={isInstallmentsOpen}
         onClose={() => setIsInstallmentsOpen(false)}
         totalPending={financialData.installmentsToReceive}
-        releaseToday={0} // TODO: Adicionar este valor quando disponível na API
-        totalTransactions={342} // TODO: Adicionar este valor quando disponível na API
+        releaseToday={0} // Será atualizado pelos dados reais do drawer
+        totalTransactions={0} // Será atualizado pelos dados reais do drawer
+        eventId={eventId}
         eventName={event?.name}
         categoryName="Nome da categoria"
         onNavigatePrev={() => {
           setIsInstallmentsOpen(false);
           setIsAwaitingReleaseOpen(true);
+        }}
+        onNavigateNext={() => {
+          setIsInstallmentsOpen(false);
+          setIsRefundedOpen(true);
+        }}
+      />
+
+      {/* Refunded Drawer */}
+      <RefundedDrawer
+        isOpen={isRefundedOpen}
+        onClose={() => setIsRefundedOpen(false)}
+        totalRefunded={financialData.refunded}
+        eventId={eventId}
+        eventName={event?.name}
+        categoryName="Nome da categoria"
+        onNavigatePrev={() => {
+          setIsRefundedOpen(false);
+          setIsInstallmentsOpen(true);
+        }}
+        onNavigateNext={() => {
+          setIsRefundedOpen(false);
+          setIsChargebackOpen(true);
+        }}
+      />
+
+      {/* Chargeback Drawer */}
+      <ChargebackDrawer
+        isOpen={isChargebackOpen}
+        onClose={() => setIsChargebackOpen(false)}
+        totalChargebacks={financialData.chargebacks}
+        eventId={eventId}
+        eventName={event?.name}
+        categoryName="Nome da categoria"
+        onNavigatePrev={() => {
+          setIsChargebackOpen(false);
+          setIsRefundedOpen(true);
         }}
         onNavigateNext={undefined} // Último drawer, não tem próximo
       />

@@ -16,7 +16,6 @@ import Image from "next/image";
 import { Tooltip, CVVTooltip } from "../Tooltip";
 import type { Event } from "@/interfaces/event";
 import { useCheckout } from "@/contexts/CheckoutContext";
-import { ArrowLeft } from "lucide-react";
 import { Input } from "../Input";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
@@ -25,6 +24,12 @@ import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { Loading } from "../Loading";
+import { useCheckout as useCheckoutPayment } from "@/hooks/useCheckoutPayment";
+import { usePaymentStatusPolling } from "@/hooks/usePaymentStatus";
+import { validateCardNumber, validateExpiry, validateCVV } from "@/utils/cardValidation";
+import type { CheckoutRequest, PixPayment } from "@/interfaces/checkout";
+import toast from "react-hot-toast";
+import { apiClient } from "@/services";
 
 interface PaymentStepProps {
   event: Event;
@@ -222,31 +227,59 @@ function CreditCardForm({
 function PixModal({
   isOpen,
   onClose,
+  pixData,
+  registrationId,
+  onPaymentConfirmed,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  pixData: PixPayment | null;
+  registrationId: string | null;
+  onPaymentConfirmed?: () => void;
 }) {
   const [timeLeft, setTimeLeft] = useState(30 * 60);
+  const expirationDate = pixData ? new Date(pixData.expirationDate) : null;
+
+  // Polling de status do pagamento
+  const { status } = usePaymentStatusPolling(registrationId, (newStatus) => {
+    if (newStatus === 'PAID') {
+      toast.success('Pagamento confirmado!');
+      if (onPaymentConfirmed) {
+        onPaymentConfirmed();
+      }
+    } else if (newStatus === 'FAILED') {
+      toast.error('Pagamento não foi confirmado.');
+    }
+  });
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !expirationDate) return;
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          onClose();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    const updateTimeLeft = () => {
+      const now = new Date();
+      const diff = Math.max(0, Math.floor((expirationDate.getTime() - now.getTime()) / 1000));
+      setTimeLeft(diff);
+      
+      if (diff <= 0) {
+        onClose();
+      }
+    };
+
+    updateTimeLeft();
+    const timer = setInterval(updateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen, onClose]);
+  }, [isOpen, expirationDate, onClose]);
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
+
+  const copyPixCode = () => {
+    if (pixData?.qrCode) {
+      navigator.clipboard.writeText(pixData.qrCode);
+      toast.success('Código PIX copiado!');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -280,17 +313,39 @@ function PixModal({
           {/* QR Code */}
           <div className="space-y-4">
             <div className="bg-gray-2 p-8 rounded-lg mx-auto max-w-xs">
-              <div className="w-48 h-48 bg-gray-5 rounded-lg mx-auto flex items-center justify-center">
-                <span className="text-xs text-gray-11 text-center">
-                  QR Code PIX
-                </span>
-              </div>
+              {pixData?.qrCodeBase64 ? (
+                <Image
+                  src={pixData.qrCodeBase64}
+                  alt="QR Code PIX"
+                  width={192}
+                  height={192}
+                  className="w-48 h-48 mx-auto"
+                />
+              ) : (
+                <div className="w-48 h-48 bg-gray-5 rounded-lg mx-auto flex items-center justify-center">
+                  <span className="text-xs text-gray-11 text-center">
+                    QR Code PIX
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Status do pagamento */}
+          {status === 'PAID' && (
+            <div className="bg-green-2 border border-green-6 rounded-lg p-4">
+              <p className="text-sm font-semibold text-green-11">
+                Pagamento confirmado!
+              </p>
+            </div>
+          )}
+
           {/* Botões */}
           <div className="space-y-3 w-1/2 mx-auto mb-8">
-            <Button className="w-full py-4 text-lg font-bold">
+            <Button 
+              className="w-full py-4 text-lg font-bold"
+              onClick={copyPixCode}
+            >
               Copiar pix
             </Button>
           </div>
@@ -304,23 +359,15 @@ function PixForm({
   onSuccess,
   pixValue,
   isMobile = false,
+  onProcessCheckout,
+  loading = false,
 }: {
   onSuccess?: () => void;
   pixValue?: number;
   isMobile?: boolean;
+  onProcessCheckout?: () => void;
+  loading?: boolean;
 }) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleFinalizePurchase = () => {
-    setIsModalOpen(true);
-
-    setTimeout(() => {
-      if (onSuccess) {
-        onSuccess();
-      }
-    }, 3000);
-  };
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -331,36 +378,33 @@ function PixForm({
   };
 
   return (
-    <>
-      <div className="flex flex-col gap-4">
-        <div className="text-center space-y-4 rounded-lg border border-gray-6 p-4">
-          <div className="flex items-center justify-center gap-1">
-            <p className="text-base text-gray-12 font-family-dm-sans">
-              Valor à vista:
-            </p>
-            <p className="text-lg font-bold text-gray-12 font-manrope">
-              {formatPrice(pixValue || 301.92)}
-            </p>
-          </div>
+    <div className="flex flex-col gap-4">
+      <div className="text-center space-y-4 rounded-lg border border-gray-6 p-4">
+        <div className="flex items-center justify-center gap-1">
           <p className="text-base text-gray-12 font-family-dm-sans">
-            Prazo de até 30 minutos para compensar
+            Valor à vista:
+          </p>
+          <p className="text-lg font-bold text-gray-12 font-manrope">
+            {formatPrice(pixValue || 0)}
           </p>
         </div>
-        <p className="text-base font-medium text-gray-12 text-center font-family-dm-sans">
-          Clique em "finalizar compra" para gerar o PIX
+        <p className="text-base text-gray-12 font-family-dm-sans">
+          Prazo de até 30 minutos para compensar
         </p>
-        {!isMobile && (
-          <Button
-            className="w-full py-4 text-lg font-bold"
-            onClick={handleFinalizePurchase}
-          >
-            Finalizar compra
-          </Button>
-        )}
       </div>
-
-      <PixModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-    </>
+      <p className="text-base font-medium text-gray-12 text-center font-family-dm-sans">
+        Clique em "finalizar compra" para gerar o PIX
+      </p>
+      {!isMobile && (
+        <Button
+          className="w-full py-4 text-lg font-bold"
+          onClick={onProcessCheckout}
+          disabled={loading}
+        >
+          {loading ? 'Processando...' : 'Finalizar compra'}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -432,8 +476,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
 
+  // PIX states
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false);
+  const [pixData, setPixData] = useState<PixPayment | null>(null);
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [pixLoading, setPixLoading] = useState(false);
+
   const { participants, raceQuantities } = useCheckout();
   const eventId = event?.id;
+  const { processCheckout, loading: checkoutLoading } = useCheckoutPayment();
 
   // Buscar tickets e categorias do servidor
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
@@ -794,6 +845,275 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
+  // Mapear gender do formulário para o formato da API
+  const mapGenderToAPI = (gender: string): 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | undefined => {
+    if (!gender) return undefined;
+    
+    const genderLower = gender.toLowerCase().trim();
+    
+    if (genderLower === 'masculino' || genderLower === 'male' || genderLower === 'm') {
+      return 'MALE';
+    }
+    if (genderLower === 'feminino' || genderLower === 'female' || genderLower === 'f') {
+      return 'FEMALE';
+    }
+    if (genderLower === 'outro' || genderLower === 'other' || genderLower === 'o') {
+      return 'OTHER';
+    }
+    if (genderLower === 'prefiro não dizer' || genderLower === 'prefer_not_to_say' || genderLower === 'prefiro-nao-dizer') {
+      return 'PREFER_NOT_TO_SAY';
+    }
+    
+    // Se não corresponder a nenhum, retorna undefined
+    return undefined;
+  };
+
+  // Preparar dados do checkout
+  const prepareCheckoutData = (): CheckoutRequest | null => {
+    if (!eventId) return null;
+
+    // Agrupar tickets por ticketId para criar a lista de tickets
+    const ticketMap = new Map<string, number>();
+    participantsWithTickets.forEach(({ ticketId }) => {
+      const current = ticketMap.get(ticketId) || 0;
+      ticketMap.set(ticketId, current + 1);
+    });
+
+    const checkoutTickets: CheckoutRequest['tickets'] = Array.from(ticketMap.entries()).map(
+      ([ticketId, quantity]) => ({
+        ticketId,
+        quantity,
+      })
+    );
+
+    // Preparar participantes - um para cada ticket
+    const checkoutParticipants: CheckoutRequest['participants'] = participantsWithTickets.map(
+      ({ participantIndex }) => {
+        const participant = participants[participantIndex];
+        if (!participant || !participant.name || !participant.cpf || !participant.email) {
+          throw new Error(`Dados incompletos do participante ${participantIndex + 1}`);
+        }
+
+        // Preparar objeto do participante
+        const participantData: CheckoutRequest['participants'][0] = {
+          name: participant.name,
+          cpf: participant.cpf.replace(/\D/g, ''),
+          email: participant.email,
+          birthDate: participant.birthDate,
+          phone: participant.phone?.replace(/\D/g, '') || '',
+        };
+
+        // Adicionar gender apenas se mapeado corretamente
+        const mappedGender = mapGenderToAPI(participant.gender || '');
+        if (mappedGender) {
+          participantData.gender = mappedGender;
+        }
+
+        // Adicionar campos opcionais apenas se tiverem valor
+        if (participant.emergencyContactName?.trim()) {
+          participantData.emergencyContactName = participant.emergencyContactName.trim();
+        }
+        if (participant.emergencyPhone?.trim()) {
+          participantData.emergencyPhone = participant.emergencyPhone.replace(/\D/g, '');
+        }
+        if (participant.hasEmergencyContact) {
+          participantData.hasEmergencyContact = participant.hasEmergencyContact;
+        }
+
+        // Adicionar questionAnswers se existirem
+        if (participant.questionAnswers && Object.keys(participant.questionAnswers).length > 0) {
+          participantData.questionAnswers = Object.entries(participant.questionAnswers).map(([questionId, answer]) => ({
+            questionId,
+            answer: answer as string | boolean | number,
+          }));
+        }
+
+        return participantData;
+      }
+    );
+
+    if (checkoutTickets.length === 0 || checkoutParticipants.length === 0) {
+      toast.error('Por favor, preencha todos os dados dos participantes');
+      return null;
+    }
+
+    // Validar que todos os participantes têm dados obrigatórios
+    const invalidParticipants = checkoutParticipants.filter(
+      (p) => !p.name || !p.cpf || !p.email || !p.birthDate || !p.phone
+    );
+    if (invalidParticipants.length > 0) {
+      toast.error('Por favor, preencha todos os dados obrigatórios dos participantes');
+      return null;
+    }
+
+    return {
+      eventId,
+      paymentMethod: selectedPaymentMethod === 'credit' ? 'CREDIT_CARD' : 'PIX',
+      payment:
+        selectedPaymentMethod === 'credit'
+          ? {
+              card: {
+                name: cardName.toUpperCase(),
+                number: cardNumber.replace(/\D/g, ''),
+                expiry: cardExpiry,
+                cvv: cardCVV,
+                installments: parseInt(selectedInstallments) || 1,
+              },
+            }
+          : {},
+      tickets: checkoutTickets,
+      participants: checkoutParticipants,
+      couponCode: isCouponApplied && couponCode ? couponCode : undefined,
+    };
+  };
+
+  // Salvar dados do checkout para a página de sucesso
+  const saveCheckoutDataForSuccess = (result: any) => {
+    if (typeof window === 'undefined' || !eventId) return;
+    
+    const successData = {
+      checkoutResponse: result,
+      timestamp: Date.now(),
+    };
+    
+    localStorage.setItem(`checkout_success_${eventId}`, JSON.stringify(successData));
+  };
+
+  // Função auxiliar para buscar dados do PIX
+  const fetchPixDataFromAPI = async (registrationId: string): Promise<PixPayment | null> => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+    const token = apiClient.getAccessToken();
+    
+    if (!token) {
+      throw new Error('Você precisa estar autenticado');
+    }
+
+    // Tentar buscar os dados do PIX com retry (até 5 tentativas, 2s entre cada)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/v1/payments/registration/${registrationId}/summary`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Verificar se há dados do PIX no metadata
+          if (data.payment?.metadata?.pix) {
+            const pixMetadata = data.payment.metadata.pix;
+            
+            if (pixMetadata.qrCode && pixMetadata.qrCodeBase64) {
+              return {
+                qrCode: pixMetadata.qrCode,
+                qrCodeBase64: pixMetadata.qrCodeBase64,
+                expirationDate: pixMetadata.expiresAt || new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao buscar dados do PIX:', err);
+      }
+
+      // Aguardar antes de tentar novamente (exceto na última tentativa)
+      if (attempt < 4) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    return null;
+  };
+
+  // Processar checkout PIX
+  const handleProcessPixCheckout = async () => {
+    try {
+      const checkoutData = prepareCheckoutData();
+      if (!checkoutData) return;
+
+      setPixLoading(true);
+      const result = await processCheckout(checkoutData);
+
+      // Salvar dados para a página de sucesso
+      saveCheckoutDataForSuccess(result);
+      
+      const registrationId = result.registrations[0]?.id || null;
+      setRegistrationId(registrationId);
+
+      // Verificar se os dados do PIX vieram na resposta
+      let pixData: PixPayment | null = result.payment.pix || null;
+
+      // Se não vieram, tentar buscar do endpoint de summary
+      if (!pixData && registrationId) {
+        const loadingToast = toast.loading('Gerando QR Code PIX...', { id: 'pix-loading' });
+        
+        pixData = await fetchPixDataFromAPI(registrationId);
+        
+        toast.dismiss('pix-loading');
+      }
+
+      if (pixData) {
+        setPixData(pixData);
+        setIsPixModalOpen(true);
+      } else {
+        toast.error('Erro ao gerar QR Code PIX. Aguarde alguns instantes e tente novamente.');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao processar checkout PIX');
+    } finally {
+      setPixLoading(false);
+    }
+  };
+
+  // Processar checkout Cartão de Crédito
+  const handleProcessCreditCardCheckout = async () => {
+    // Validar dados do cartão
+    if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
+      toast.error('Por favor, preencha todos os campos do cartão');
+      return;
+    }
+
+    if (!validateCardNumber(cardNumber)) {
+      toast.error('Número do cartão inválido');
+      return;
+    }
+
+    if (!validateExpiry(cardExpiry)) {
+      toast.error('Cartão expirado ou data inválida');
+      return;
+    }
+
+    if (!validateCVV(cardCVV)) {
+      toast.error('CVV inválido');
+      return;
+    }
+
+    try {
+      const checkoutData = prepareCheckoutData();
+      if (!checkoutData) return;
+
+      const result = await processCheckout(checkoutData);
+
+      if (result.payment.status === 'approved') {
+        // Salvar dados para a página de sucesso
+        saveCheckoutDataForSuccess(result);
+        
+        toast.success('Pagamento aprovado!');
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        toast.error('Pagamento não aprovado. Tente novamente.');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao processar pagamento');
+    }
+  };
+
   const pixValue = calculatePixValue();
   const additionalProductsCount = orderItems.length;
 
@@ -942,18 +1262,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   isMobile={true}
                 />
                 <Button
-                  onClick={() => {
-                    if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
-                      alert("Por favor, preencha todos os campos do cartão");
-                      return;
-                    }
-                    if (onSuccess) {
-                      onSuccess();
-                    }
-                  }}
+                  onClick={handleProcessCreditCardCheckout}
+                  disabled={checkoutLoading}
                   className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope"
                 >
-                  Finalizar compra
+                  {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
                 </Button>
               </div>
             )}
@@ -994,16 +1307,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   onSuccess={onSuccess}
                   pixValue={pixValue}
                   isMobile={true}
+                  onProcessCheckout={handleProcessPixCheckout}
+                  loading={checkoutLoading}
                 />
                 <Button
-                  onClick={() => {
-                    if (onSuccess) {
-                      onSuccess();
-                    }
-                  }}
+                  onClick={handleProcessPixCheckout}
+                  disabled={checkoutLoading}
                   className="w-full bg-gray-12 text-gray-1 font-bold font-manrope"
                 >
-                  Gerar QR CODE
+                  {checkoutLoading ? 'Processando...' : 'Gerar QR CODE'}
                 </Button>
               </div>
             )}
@@ -1131,19 +1443,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             <Button
               onClick={() => {
                 if (selectedPaymentMethod === "credit") {
-                  if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
-                    alert("Por favor, preencha todos os campos do cartão");
-                    return;
-                  }
-                }
-                if (onSuccess) {
-                  onSuccess();
+                  handleProcessCreditCardCheckout();
+                } else if (selectedPaymentMethod === "pix") {
+                  handleProcessPixCheckout();
                 }
               }}
-              disabled={totalParticipants === 0}
+              disabled={totalParticipants === 0 || checkoutLoading}
               className="font-bold font-manrope"
             >
-              Finalizar compra
+              {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
             </Button>
           </div>
         </div>
@@ -1215,14 +1523,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                             isMobile={false}
                           />
                           <Button
-                            onClick={() => {
-                              if (onSuccess) {
-                                onSuccess();
-                              }
-                            }}
+                            onClick={handleProcessCreditCardCheckout}
+                            disabled={checkoutLoading}
                             className="w-full mt-4 font-bold font-manrope"
                           >
-                            Finalizar compra
+                            {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
                           </Button>
                         </>
                       )}
@@ -1231,6 +1536,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           onSuccess={onSuccess}
                           pixValue={pixValue}
                           isMobile={false}
+                          onProcessCheckout={handleProcessPixCheckout}
+                          loading={checkoutLoading}
                         />
                       )}
                     </div>
@@ -1598,14 +1905,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           return;
                         }
                       }
-                      if (onSuccess) {
-                        onSuccess();
+                      if (selectedPaymentMethod === "credit") {
+                        handleProcessCreditCardCheckout();
+                      } else if (selectedPaymentMethod === "pix") {
+                        handleProcessPixCheckout();
                       }
                     }}
-                    disabled={totalParticipants === 0}
+                    disabled={totalParticipants === 0 || checkoutLoading}
                     className="bg-primary-11 text-primary-2 font-bold font-manrope"
                   >
-                    Finalizar compra
+                    {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
                   </Button>
                 </div>
               </div>
@@ -1613,6 +1922,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           </div>
         </>
       )}
+
+      {/* PIX Modal */}
+      <PixModal
+        isOpen={isPixModalOpen}
+        onClose={() => setIsPixModalOpen(false)}
+        pixData={pixData}
+        registrationId={registrationId}
+        onPaymentConfirmed={() => {
+          setIsPixModalOpen(false);
+          if (onSuccess) {
+            onSuccess();
+          }
+        }}
+      />
     </>
   );
 }

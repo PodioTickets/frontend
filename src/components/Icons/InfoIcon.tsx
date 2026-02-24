@@ -6,6 +6,7 @@ export function InfoIcon({ className }: { className?: string }) {
       viewBox="0 0 20 20"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      className={className}
     >
       <g clipPath="url(#clip0_924_24546)">
         <circle cx="10.0003" cy="5.83333" r="0.833333" fill="currentColor" />

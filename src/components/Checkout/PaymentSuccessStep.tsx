@@ -12,6 +12,7 @@ import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
 import { LocationIcon } from "../Icons/LocationIcon";
 import { DistanceIcon } from "../Icons/DistanceIcon";
+import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -22,13 +23,39 @@ interface PaymentSuccessStepProps {
     participantIndex: number;
     ticketName: string;
     ticketPrice: number;
-    qrCode?: string;
+    qrCode?: string | {
+      registrationId?: string;
+      eventId?: string;
+      userId?: string;
+      raw?: string;
+    };
     additionalProducts?: Array<{
       name: string;
       price: number;
       quantity: number;
+      variationName?: string | null;
+    }>;
+    includedProducts?: Array<{
+      name: string;
+      price: number;
+      quantity: number;
+      variationName?: string | null;
+      isIncluded?: boolean;
     }>;
   }>;
+  participantsInfo?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    cpf: string;
+    phone: string;
+    birthDate: string;
+    gender: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | null;
+  }>;
+  serviceFee?: number;
+  couponDiscount?: number;
+  voucherDiscount?: number;
+  date?: string;
 }
 
 export function PaymentSuccessStep({
@@ -37,9 +64,29 @@ export function PaymentSuccessStep({
   paymentMethod = "Cartão de crédito",
   totalPaid = 456.27,
   participantsData = [],
+  participantsInfo = [],
+  serviceFee: propServiceFee,
+  couponDiscount: propCouponDiscount = 0,
+  voucherDiscount: propVoucherDiscount = 0,
+  date: paymentDate,
 }: PaymentSuccessStepProps) {
   const router = useRouter();
-  const { participants } = useCheckout();
+  const { participants: contextParticipants } = useCheckout();
+  
+  // Usar participantsInfo se fornecido, senão usar do contexto
+  const participants = participantsInfo.length > 0 
+    ? participantsInfo.map(p => ({
+        name: p.name,
+        cpf: p.cpf,
+        email: p.email,
+        birthDate: p.birthDate,
+        phone: p.phone,
+        gender: p.gender || '',
+        emergencyPhone: '',
+        emergencyContactName: '',
+      }))
+    : contextParticipants;
+    
   const [activeTab, setActiveTab] = useState<"info" | "products">("info");
   const [expandedParticipants, setExpandedParticipants] = useState<
     Record<number, boolean>
@@ -99,8 +146,9 @@ export function PaymentSuccessStep({
       ) || 0),
     0
   );
-  const serviceFee = 39.85;
-  const couponDiscount = 21.99;
+  const serviceFee = propServiceFee ?? event?.serviceFee ?? 0;
+  const couponDiscount = propCouponDiscount ?? 0;
+  const voucherDiscount = propVoucherDiscount ?? 0;
 
   const toggleParticipant = (index: number) => {
     setExpandedParticipants((prev) => ({
@@ -195,10 +243,10 @@ export function PaymentSuccessStep({
                     {/* Date */}
                     <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
                       <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                        Data:
+                        Data do pagamento:
                       </p>
                       <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
-                        {formatDate(event.eventDate)}
+                        {paymentDate || formatDate(event.eventDate)}
                       </p>
                     </div>
 
@@ -259,14 +307,28 @@ export function PaymentSuccessStep({
                     </div>
 
                     {/* Coupon Discount */}
-                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
-                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                        Desconto cupom:
-                      </p>
-                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
-                        – {formatCurrency(couponDiscount)}
-                      </p>
-                    </div>
+                    {couponDiscount > 0 && (
+                      <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                        <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                          Desconto cupom:
+                        </p>
+                        <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                          – {formatCurrency(couponDiscount)}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Voucher Discount */}
+                    {voucherDiscount > 0 && (
+                      <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                        <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                          Desconto voucher:
+                        </p>
+                        <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                          – {formatCurrency(voucherDiscount)}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Total Paid */}
@@ -333,12 +395,10 @@ export function PaymentSuccessStep({
                           <div className="flex gap-3 items-start w-full">
                             <div className="relative shrink-0 size-[120px]">
                               {participantData.qrCode ? (
-                                <Image
-                                  src={participantData.qrCode}
-                                  alt="QR Code"
-                                  draggable={false}
-                                  fill
-                                  className="object-cover rounded-lg"
+                                <RegistrationQRCode
+                                  qrCodeData={participantData.qrCode}
+                                  size={120}
+                                  className="w-full h-full"
                                 />
                               ) : (
                                 <div className="w-full h-full bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center">
@@ -538,9 +598,44 @@ export function PaymentSuccessStep({
                               <p className="font-bold text-xl leading-[1.1] text-gray-12 font-manrope">
                                 Produtos do participante
                               </p>
+                              {/* Produtos incluídos no ticket */}
+                              {participantData.includedProducts && participantData.includedProducts.length > 0 && (
+                                <div className="flex flex-col gap-4 items-start w-full">
+                                  <p className="font-semibold text-base text-gray-11 mb-2">Incluídos no ingresso:</p>
+                                  {participantData.includedProducts.map((product, idx) => (
+                                    <div
+                                      key={`included-${idx}`}
+                                      className="border border-gray-6 flex flex-col gap-6 items-start justify-center pb-6 pt-4 px-4 rounded-lg w-full bg-gray-3"
+                                    >
+                                      <div className="flex gap-3 items-center w-full">
+                                        <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                          <Image
+                                            src="/images/camisa.png"
+                                            alt={product.name}
+                                            fill
+                                            className="object-cover rounded-lg"
+                                          />
+                                        </div>
+                                        <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans w-[170px]">
+                                          {product.name}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center pl-0 pr-[37px] py-0 w-full">
+                                        <p className="font-semibold text-base leading-[1.3] text-gray-11 font-family-dm-sans mr-[-37px]">
+                                          {formatCurrency(product.price)} {product.isIncluded && '(Incluído)'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Produtos adicionais */}
                               {participantData.additionalProducts &&
                               participantData.additionalProducts.length > 0 ? (
                                 <div className="flex flex-col gap-4 items-start w-full">
+                                  {participantData.includedProducts && participantData.includedProducts.length > 0 && (
+                                    <p className="font-semibold text-base text-gray-11 mb-2 mt-4">Produtos adicionais:</p>
+                                  )}
                                   {participantData.additionalProducts.map(
                                     (product, idx) => (
                                       <div
@@ -570,12 +665,12 @@ export function PaymentSuccessStep({
                                           <div className="basis-0 flex gap-1 grow items-center justify-end min-w-[147px] mr-[-37px] rounded-lg">
                                             <div className="flex gap-1 items-center">
                                               <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                                Tamanho:
+                                                {product.variationName ? 'Variação:' : 'Tamanho:'}
                                               </p>
                                             </div>
                                             <div className="flex gap-1 h-[11px] items-center">
                                               <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                                {(product as any).size || "XL"}
+                                                {product.variationName || (product as any).size || "N/A"}
                                               </p>
                                             </div>
                                           </div>
@@ -584,12 +679,12 @@ export function PaymentSuccessStep({
                                     )
                                   )}
                                 </div>
-                              ) : (
+                              ) : participantData.includedProducts && participantData.includedProducts.length === 0 ? (
                                 <p className="text-sm text-gray-11">
                                   Nenhum produto adicional para este
                                   participante.
                                 </p>
-                              )}
+                              ) : null}
                             </div>
                           )}
                         </>
@@ -661,10 +756,10 @@ export function PaymentSuccessStep({
                     {/* Date */}
                     <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
                       <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        Data:
+                        Data do pagamento:
                       </p>
                       <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        {formatDate(event.eventDate)}
+                        {paymentDate || formatDate(event.eventDate)}
                       </p>
                     </div>
 
@@ -725,14 +820,28 @@ export function PaymentSuccessStep({
                     </div>
 
                     {/* Coupon Discount */}
-                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        Desconto cupom:
-                      </p>
-                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        – {formatCurrency(couponDiscount)}
-                      </p>
-                    </div>
+                    {couponDiscount > 0 && (
+                      <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                        <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          Desconto cupom:
+                        </p>
+                        <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          – {formatCurrency(couponDiscount)}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Voucher Discount */}
+                    {voucherDiscount > 0 && (
+                      <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                        <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          Desconto voucher:
+                        </p>
+                        <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          – {formatCurrency(voucherDiscount)}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Total Paid */}
@@ -829,11 +938,10 @@ export function PaymentSuccessStep({
                           <div className="flex flex-row items-center">
                             <div className="aspect-square h-full relative">
                               {participantData.qrCode ? (
-                                <Image
-                                  src={participantData.qrCode}
-                                  alt="QR Code"
-                                  fill
-                                  className="object-cover"
+                                <RegistrationQRCode
+                                  qrCodeData={participantData.qrCode}
+                                  size={128}
+                                  className="w-full h-full"
                                 />
                               ) : (
                                 <div className="w-[128px] h-[128px] bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center">
@@ -1011,9 +1119,44 @@ export function PaymentSuccessStep({
                               <p className="font-bold text-[20px] leading-[1.1] text-gray-12 font-manrope">
                                 Produtos do participante
                               </p>
+                              {/* Produtos incluídos no ticket */}
+                              {participantData.includedProducts && participantData.includedProducts.length > 0 && (
+                                <div className="flex flex-col gap-4 items-start w-full">
+                                  <p className="font-semibold text-base text-gray-11 mb-2">Incluídos no ingresso:</p>
+                                  {participantData.includedProducts.map((product, idx) => (
+                                    <div
+                                      key={`included-${idx}`}
+                                      className="border border-gray-6 flex flex-col gap-6 items-start justify-center pb-6 pt-4 px-4 rounded-lg w-full bg-gray-3"
+                                    >
+                                      <div className="flex gap-3 items-center w-full">
+                                        <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                          <Image
+                                            src="/images/camisa.png"
+                                            alt={product.name}
+                                            fill
+                                            className="object-cover rounded-lg"
+                                          />
+                                        </div>
+                                        <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans w-[170px]">
+                                          {product.name}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center pl-0 pr-[37px] py-0 w-full">
+                                        <p className="font-semibold text-base leading-[1.3] text-gray-11 font-family-dm-sans mr-[-37px]">
+                                          {formatCurrency(product.price)} {product.isIncluded && '(Incluído)'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Produtos adicionais */}
                               {participantData.additionalProducts &&
                               participantData.additionalProducts.length > 0 ? (
                                 <div className="flex flex-col gap-4 items-start w-full">
+                                  {participantData.includedProducts && participantData.includedProducts.length > 0 && (
+                                    <p className="font-semibold text-base text-gray-11 mb-2 mt-4">Produtos adicionais:</p>
+                                  )}
                                   {participantData.additionalProducts.map(
                                     (product, idx) => (
                                       <div
@@ -1043,12 +1186,12 @@ export function PaymentSuccessStep({
                                           <div className="basis-0 flex gap-1 grow items-center justify-end min-w-[147px] mr-[-37px] rounded-lg">
                                             <div className="flex gap-1 items-center">
                                               <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                                Tamanho:
+                                                {product.variationName ? 'Variação:' : 'Tamanho:'}
                                               </p>
                                             </div>
                                             <div className="flex gap-1 h-[11px] items-center">
                                               <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                                {(product as any).size || "XL"}
+                                                {product.variationName || (product as any).size || "N/A"}
                                               </p>
                                             </div>
                                           </div>
@@ -1057,12 +1200,12 @@ export function PaymentSuccessStep({
                                     )
                                   )}
                                 </div>
-                              ) : (
+                              ) : participantData.includedProducts && participantData.includedProducts.length === 0 ? (
                                 <p className="text-sm text-gray-11">
                                   Nenhum produto adicional para este
                                   participante.
                                 </p>
-                              )}
+                              ) : null}
                             </div>
                           )}
                         </>

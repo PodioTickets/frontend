@@ -7,6 +7,7 @@ import { MessageIcon } from "../Icons/MessageIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
+import { getEventOrganizer } from "@/utils/organization";
 
 interface EventInfoProps {
   event: Event;
@@ -158,19 +159,26 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
         <div className="flex flex-col gap-2 bg-gray-3 rounded-lg p-3 border border-gray-6">
           <p className="text-sm font-medium text-gray-11">Organizador</p>
 
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-gray-3 flex items-center justify-center">
-              <span className="text-xs font-bold text-gray-11">
-                {event.organizer.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-12">
-                {event.organizer.name}
-              </p>
-              <p className="text-sm text-gray-11">{event.organizer.email}</p>
-            </div>
-          </div>
+          {(() => {
+            const organizer = getEventOrganizer(event);
+            if (!organizer) return null;
+            
+            return (
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-gray-3 flex items-center justify-center">
+                  <span className="text-xs font-bold text-gray-11">
+                    {organizer.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-12">
+                    {organizer.name}
+                  </p>
+                  <p className="text-sm text-gray-11">{organizer.email}</p>
+                </div>
+              </div>
+            );
+          })()}
 
           <Button variant="ghost" className="w-full border border-gray-6 mt-4">
             <MessageIcon className="size-5" />

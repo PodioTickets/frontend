@@ -13,6 +13,9 @@ import { ArrowButton } from "../ArrowButton";
 import { LogOutIcon } from "../Icons/LogOutIcon";
 import { organizerService } from "@/services";
 import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
+import { InfoIcon } from "../Icons/InfoIcon";
+import { ConfigIcon } from "../Icons/ConfigIcon";
+import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
 
 export function OrganizerSidebar() {
   const pathname = usePathname();
@@ -22,6 +25,7 @@ export function OrganizerSidebar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
   const [organizer, setOrganizer] = useState<any>(null);
+  const { openAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
 
   const handleLogout = async () => {
     await logout();
@@ -31,11 +35,11 @@ export function OrganizerSidebar() {
   useEffect(() => {
     const loadOrganizer = async () => {
       try {
-        const org = await organizerService.getOrganizer();
+        const org = await organizerService.getOrganization();
         setOrganizer(org);
       } catch (error: any) {
-        // Organizer might not exist yet, that's okay
-        console.error("Error loading organizer:", error);
+        // Organization might not exist yet, that's okay
+        console.error("Error loading organization:", error);
       }
     };
     loadOrganizer();
@@ -415,7 +419,13 @@ export function OrganizerSidebar() {
                   )}
 
                   {/* Bottom Options */}
-                  <button className="border-b border-gray-6 flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors">
+                  <button 
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      openAccessAllOrganizationsModal();
+                    }}
+                    className="border-b border-gray-6 flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors cursor-pointer"
+                  >
                     <PlusCircleIcon className="size-[24px] text-gray-12 shrink-0" />
                     <p className="font-family-dm-sans font-medium text-[14px] text-gray-12 leading-[1.3] text-center whitespace-nowrap">
                       Acesse todas as organizações
@@ -426,13 +436,13 @@ export function OrganizerSidebar() {
                     className="border-b border-gray-6 flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors"
                     onClick={() => setIsProfileOpen(false)}
                   >
-                    <PlusCircleIcon className="size-[24px] text-gray-12 shrink-0" />
+                    <ConfigIcon className="size-6 text-gray-12 shrink-0" />
                     <p className="font-family-dm-sans font-medium text-[14px] text-gray-12 leading-[1.3] text-center whitespace-nowrap">
                       Configurações
                     </p>
                   </Link>
                   <button className="flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors">
-                    <PlusCircleIcon className="size-[24px] text-gray-12 shrink-0" />
+                    <InfoIcon className="size-6 text-gray-12 shrink-0" />
                     <p className="font-family-dm-sans font-medium text-[14px] text-gray-12 leading-[1.3] text-center whitespace-nowrap">
                       Central de ajuda
                     </p>

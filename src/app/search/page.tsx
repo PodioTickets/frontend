@@ -625,7 +625,7 @@ function SearchContent() {
           );
       }
     });
-
+    console.log(sortedEvents);
     return sortedEvents;
   }, [events, statusFilter, orderBy]);
 

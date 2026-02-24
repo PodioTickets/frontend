@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { CPFIcon } from "../Icons/CPFIcon";
 import { HeartIcon } from "../Icons/HeartIcon";
 import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
+import Image from "next/image";
 
 type RegisterStep = 1 | 2 | 3;
 
@@ -56,7 +57,19 @@ export function RegisterModal() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Reset step quando modal fecha
   useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep(1);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    // Não resetar se já estivermos no step 3 (sucesso) ou se o modal estiver fechado
+    if (currentStep === 3 || !isOpen) {
+      return;
+    }
+
     if (isCompletingProfile && user && isOpen) {
       let birthDate: Date | null = null;
       if ((user as any)?.dateOfBirth) {
@@ -452,9 +465,8 @@ export function RegisterModal() {
                 placeholder="Digite seu nome completo"
                 value={formData.nome}
                 onChange={(e) => handleInputChange("nome", e.target.value)}
-                className={`pl-10 h-12 ${
-                  errors.nome ? "border-red-9 focus-visible:border-red-9" : ""
-                }`}
+                className={`pl-10 h-12 ${errors.nome ? "border-red-9 focus-visible:border-red-9" : ""
+                  }`}
                 aria-invalid={!!errors.nome}
               />
             </div>
@@ -477,11 +489,10 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
-                          formData.nacionalidade
-                            ? "text-gray-12"
-                            : "text-gray-11"
-                        }`}
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.nacionalidade
+                          ? "text-gray-12"
+                          : "text-gray-11"
+                          }`}
                       >
                         {formData.nacionalidade || "Selecione"}
                       </span>
@@ -517,9 +528,8 @@ export function RegisterModal() {
                 value={formData.cpf}
                 onChange={(e) => handleCPFChange(e.target.value)}
                 maxLength={14}
-                className={`pl-10 h-12 ${
-                  errors.cpf ? "border-red-9 focus-visible:border-red-9" : ""
-                }`}
+                className={`pl-10 h-12 ${errors.cpf ? "border-red-9 focus-visible:border-red-9" : ""
+                  }`}
                 aria-invalid={!!errors.cpf}
               />
             </div>
@@ -572,11 +582,10 @@ export function RegisterModal() {
                 value={formData.telefone}
                 onChange={(e) => handlePhoneChange("telefone", e.target.value)}
                 maxLength={15}
-                className={`pl-10 h-12 ${
-                  errors.telefone
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
-                }`}
+                className={`pl-10 h-12 ${errors.telefone
+                  ? "border-red-9 focus-visible:border-red-9"
+                  : ""
+                  }`}
                 aria-invalid={!!errors.telefone}
               />
             </div>
@@ -601,9 +610,8 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
-                          formData.sexo ? "text-gray-12" : "text-gray-11"
-                        }`}
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.sexo ? "text-gray-12" : "text-gray-11"
+                          }`}
                       >
                         {formData.sexo || "Selecione"}
                       </span>
@@ -667,9 +675,8 @@ export function RegisterModal() {
                 placeholder="Digite seu nome completo"
                 value={formData.nome}
                 onChange={(e) => handleInputChange("nome", e.target.value)}
-                className={`pl-10 h-12 ${
-                  errors.nome ? "border-red-9 focus-visible:border-red-9" : ""
-                }`}
+                className={`pl-10 h-12 ${errors.nome ? "border-red-9 focus-visible:border-red-9" : ""
+                  }`}
                 aria-invalid={!!errors.nome}
               />
             </div>
@@ -692,11 +699,10 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
-                          formData.nacionalidade
-                            ? "text-gray-12"
-                            : "text-gray-11"
-                        }`}
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.nacionalidade
+                          ? "text-gray-12"
+                          : "text-gray-11"
+                          }`}
                       >
                         {formData.nacionalidade || "Selecione"}
                       </span>
@@ -730,9 +736,8 @@ export function RegisterModal() {
                 value={formData.cpf}
                 onChange={(e) => handleCPFChange(e.target.value)}
                 maxLength={14}
-                className={`pl-10 h-12 ${
-                  errors.cpf ? "border-red-9 focus-visible:border-red-9" : ""
-                }`}
+                className={`pl-10 h-12 ${errors.cpf ? "border-red-9 focus-visible:border-red-9" : ""
+                  }`}
                 aria-invalid={!!errors.cpf}
               />
             </div>
@@ -785,11 +790,10 @@ export function RegisterModal() {
                 value={formData.telefone}
                 onChange={(e) => handlePhoneChange("telefone", e.target.value)}
                 maxLength={15}
-                className={`pl-10 h-12 ${
-                  errors.telefone
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
-                }`}
+                className={`pl-10 h-12 ${errors.telefone
+                  ? "border-red-9 focus-visible:border-red-9"
+                  : ""
+                  }`}
                 aria-invalid={!!errors.telefone}
               />
             </div>
@@ -814,9 +818,8 @@ export function RegisterModal() {
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
-                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
-                          formData.sexo ? "text-gray-12" : "text-gray-11"
-                        }`}
+                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.sexo ? "text-gray-12" : "text-gray-11"
+                          }`}
                       >
                         {formData.sexo || "Selecione"}
                       </span>
@@ -880,11 +883,9 @@ export function RegisterModal() {
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 disabled={isCompletingProfile}
-                className={`pl-10 h-12 ${
-                  errors.email ? "border-red-9 focus-visible:border-red-9" : ""
-                } ${
-                  isCompletingProfile ? "opacity-60 cursor-not-allowed" : ""
-                }`}
+                className={`pl-10 h-12 ${errors.email ? "border-red-9 focus-visible:border-red-9" : ""
+                  } ${isCompletingProfile ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
                 aria-invalid={!!errors.email}
               />
             </div>
@@ -905,9 +906,8 @@ export function RegisterModal() {
                 placeholder="Digite uma senha"
                 value={formData.senha}
                 onChange={(e) => handleInputChange("senha", e.target.value)}
-                className={`pl-10 h-12 ${
-                  errors.senha ? "border-red-9 focus-visible:border-red-9" : ""
-                }`}
+                className={`pl-10 h-12 ${errors.senha ? "border-red-9 focus-visible:border-red-9" : ""
+                  }`}
                 aria-invalid={!!errors.senha}
               />
             </div>
@@ -930,11 +930,10 @@ export function RegisterModal() {
                 onChange={(e) =>
                   handleInputChange("confirmarSenha", e.target.value)
                 }
-                className={`pl-10 h-12 ${
-                  errors.confirmarSenha
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
-                }`}
+                className={`pl-10 h-12 ${errors.confirmarSenha
+                  ? "border-red-9 focus-visible:border-red-9"
+                  : ""
+                  }`}
                 aria-invalid={!!errors.confirmarSenha}
               />
             </div>
@@ -958,8 +957,8 @@ export function RegisterModal() {
                 ? "Finalizando cadastro..."
                 : "Criando conta..."
               : isCompletingProfile
-              ? "Finalizar cadastro"
-              : "Criar conta"}
+                ? "Finalizar cadastro"
+                : "Criar conta"}
           </Button>
         </div>
       </div>
@@ -999,11 +998,9 @@ export function RegisterModal() {
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 disabled={isCompletingProfile}
-                className={`pl-10 h-12 ${
-                  errors.email ? "border-red-9 focus-visible:border-red-9" : ""
-                } ${
-                  isCompletingProfile ? "opacity-60 cursor-not-allowed" : ""
-                }`}
+                className={`pl-10 h-12 ${errors.email ? "border-red-9 focus-visible:border-red-9" : ""
+                  } ${isCompletingProfile ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
                 aria-invalid={!!errors.email}
               />
             </div>
@@ -1026,11 +1023,10 @@ export function RegisterModal() {
                     placeholder="Digite uma senha"
                     value={formData.senha}
                     onChange={(e) => handleInputChange("senha", e.target.value)}
-                    className={`pl-10 h-12 ${
-                      errors.senha
-                        ? "border-red-9 focus-visible:border-red-9"
-                        : ""
-                    }`}
+                    className={`pl-10 h-12 ${errors.senha
+                      ? "border-red-9 focus-visible:border-red-9"
+                      : ""
+                      }`}
                     aria-invalid={!!errors.senha}
                   />
                 </div>
@@ -1055,11 +1051,10 @@ export function RegisterModal() {
                     onChange={(e) =>
                       handleInputChange("confirmarSenha", e.target.value)
                     }
-                    className={`pl-10 h-12 ${
-                      errors.confirmarSenha
-                        ? "border-red-9 focus-visible:border-red-9"
-                        : ""
-                    }`}
+                    className={`pl-10 h-12 ${errors.confirmarSenha
+                      ? "border-red-9 focus-visible:border-red-9"
+                      : ""
+                      }`}
                     aria-invalid={!!errors.confirmarSenha}
                   />
                 </div>
@@ -1085,8 +1080,8 @@ export function RegisterModal() {
                 ? "Finalizando cadastro..."
                 : "Criando conta..."
               : isCompletingProfile
-              ? "Finalizar cadastro"
-              : "Criar conta"}
+                ? "Finalizar cadastro"
+                : "Criar conta"}
           </Button>
         </div>
       </div>
@@ -1096,25 +1091,10 @@ export function RegisterModal() {
   const renderStep3 = () => (
     <>
       {/* Success content */}
-      <div className="flex flex-col items-center justify-center relative shrink-0 w-full h-screen">
+      <div className="flex flex-col items-center justify-center relative shrink-0 w-full">
         <div className="flex flex-col gap-4 items-center justify-center pb-[52px] pt-6 px-6 relative shrink-0 w-full max-w-[460px] mx-auto">
-          {/* Success icon with glow effect */}
-          <div className="relative flex items-center justify-center p-5">
-            {/* Glow effects */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute bg-linear-to-t blur-sm from-gray-2 to-primary-5 h-[28px] w-[28px] top-[45.66%] left-1/2 -translate-x-1/2" />
-              <div className="absolute bg-linear-to-b blur-sm from-primary-5 to-gray-2 h-[28px] w-[28px] bottom-[45.66%] left-1/2 -translate-x-1/2" />
-              <div className="absolute bg-linear-to-l blur-sm from-primary-5 to-gray-2 h-[28px] w-[14px] left-[43.66%] top-1/2 -translate-y-1/2" />
-              <div className="absolute bg-linear-to-r blur-sm from-primary-5 to-gray-2 h-[28px] w-[14px] right-[43.66%] top-1/2 -translate-y-1/2" />
-              <div className="absolute bg-linear-to-br blur-sm from-primary-5 to-gray-2 h-[28px] w-[14px] top-[9.19%] left-[10.02%] rotate-45" />
-              <div className="absolute bg-linear-to-br blur-sm from-primary-5 to-gray-2 h-[28px] w-[14px] bottom-[9.19%] left-[10.02%] -rotate-45" />
-              <div className="absolute bg-linear-to-bl blur-sm from-primary-5 to-gray-2 h-[28px] w-[14px] top-[9.19%] right-[10.02%] -rotate-45" />
-              <div className="absolute bg-linear-to-bl blur-sm from-primary-5 to-gray-2 h-[28px] w-[14px] bottom-[9.19%] right-[10.02%] rotate-45" />
-            </div>
-            <SuccessIcon className="relative z-10 size-24" />
-          </div>
+          <Image src="/images/successIcon.png" alt="Success" width={100} height={100} />
 
-          {/* Success text */}
           <div className="flex flex-col gap-4 items-center justify-center relative shrink-0 w-full">
             <h2 className="font-extrabold text-xl leading-[1.1] text-gray-12 font-manrope text-center">
               Cadastro realizado!

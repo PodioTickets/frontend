@@ -46,7 +46,7 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
         distanceUnit: ticket.distanceUnit || "KM",
         price:
           ticket.batches && ticket.batches.length > 0
-            ? `R$ ${parseFloat(ticket.batches[0].price).toFixed(2).replace(".", ",")}`
+            ? `R$ ${(parseFloat(ticket.batches[0].price) / 100).toFixed(2).replace(".", ",")}`
             : "R$ 0,00",
         ageLimit: ticket.ageLimit,
         gender: ticket.gender,

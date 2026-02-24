@@ -70,14 +70,14 @@ export default function CreateOrganizerPage() {
         description: formData.description || undefined,
       });
 
-      toast.success("Perfil de organizador criado com sucesso!");
+      toast.success("Organização criada com sucesso!");
       router.push("/organizer");
     } catch (error: any) {
-      console.error("Error creating organizer:", error);
+      console.error("Error creating organization:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Erro ao criar perfil de organizador";
+        "Erro ao criar organização";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -110,10 +110,10 @@ export default function CreateOrganizerPage() {
 
         <div className="bg-gray-1 rounded-lg border border-gray-6 p-8">
           <h1 className="text-3xl font-bold text-gray-12 mb-2">
-            Criar Perfil de Organizador
+            Criar Organização
           </h1>
           <p className="text-gray-11 mb-8">
-            Preencha os dados abaixo para criar seu perfil de organizador e
+            Preencha os dados abaixo para criar sua organização e
             começar a criar eventos.
           </p>
 
@@ -121,7 +121,7 @@ export default function CreateOrganizerPage() {
             {/* Nome */}
             <div>
               <label className="block text-sm font-medium text-gray-12 mb-2">
-                Nome do Organizador *
+                Nome da Organização *
               </label>
               <div className="relative">
                 <FileText className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
@@ -151,7 +151,7 @@ export default function CreateOrganizerPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="contato@organizador.com"
+                  placeholder="contato@organizacao.com"
                   className={`pl-10 ${errors.email ? "border-red-10" : ""}`}
                 />
               </div>
@@ -190,7 +190,7 @@ export default function CreateOrganizerPage() {
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="Descreva seu organizador..."
+                placeholder="Descreva sua organização..."
                 rows={4}
                 className="w-full rounded-lg border border-gray-6 bg-transparent px-3 py-2 text-sm text-gray-12 placeholder:text-gray-11 focus:outline-none focus:ring-2 focus:ring-primary-11/50 focus:border-primary-11"
               />

@@ -1,282 +1,36 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { userService } from "@/services";
-import { TicketCard, Ticket } from "@/components/Ticket/Card";
-import { Search } from "lucide-react";
+import { useMyTickets } from "@/hooks/useMyTickets";
+import { TicketCard } from "@/components/Ticket/Card";
 import { Button } from "@/components/Button";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
-import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { modalitiesColumns, orderOptions } from "@/constants";
+import { orderOptions } from "@/constants";
 import Image from "next/image";
-
-// Mock tickets for testing
-const mockTickets: Ticket[] = [
-  {
-    id: "1",
-    event: {
-      id: "event-1",
-      name: "Maratona de Santhiago",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2026-04-26T12:03:00Z",
-      location: {
-        city: "Curitiba",
-        state: "Paraná",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "CONFIRMED",
-    distance: "0.3Km",
-  },
-  {
-    id: "2",
-    event: {
-      id: "event-2",
-      name: "Corrida de São Paulo",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2025-06-15T08:00:00Z",
-      location: {
-        city: "São Paulo",
-        state: "São Paulo",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "PENDING",
-    distance: "5Km",
-  },
-  {
-    id: "3",
-    event: {
-      id: "event-3",
-      name: "Maratona do Rio",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2024-12-10T07:30:00Z",
-      location: {
-        city: "Rio de Janeiro",
-        state: "Rio de Janeiro",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "COMPLETED",
-    distance: "42Km",
-  },
-  {
-    id: "4",
-    event: {
-      id: "event-4",
-      name: "Caminhada Ecológica",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2025-08-20T09:00:00Z",
-      location: {
-        city: "Belo Horizonte",
-        state: "Minas Gerais",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "CONFIRMED",
-    distance: "10Km",
-  },
-  {
-    id: "5",
-    event: {
-      id: "event-5",
-      name: "Triathlon de Florianópolis",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2025-09-05T06:00:00Z",
-      location: {
-        city: "Florianópolis",
-        state: "Santa Catarina",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "PENDING",
-    distance: "51.5Km",
-  },
-  {
-    id: "6",
-    event: {
-      id: "event-6",
-      name: "Corrida Noturna",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2024-11-15T19:00:00Z",
-      location: {
-        city: "Porto Alegre",
-        state: "Rio Grande do Sul",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "COMPLETED",
-    distance: "21Km",
-  },
-  {
-    id: "7",
-    event: {
-      id: "event-7",
-      name: "Ciclismo de Estrada",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2025-07-10T07:00:00Z",
-      location: {
-        city: "Brasília",
-        state: "Distrito Federal",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "CANCELLED",
-    distance: "100Km",
-  },
-  {
-    id: "8",
-    event: {
-      id: "event-8",
-      name: "Natação em Águas Abertas",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2025-10-12T08:30:00Z",
-      location: {
-        city: "Salvador",
-        state: "Bahia",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "CONFIRMED",
-    distance: "2.5Km",
-  },
-  {
-    id: "9",
-    event: {
-      id: "event-9",
-      name: "Corrida de Aventura",
-      imageUrl: "/banners/card_placeholder.png",
-      eventDate: "2024-10-05T06:00:00Z",
-      location: {
-        city: "Manaus",
-        state: "Amazonas",
-      },
-    },
-    modality: {
-      name: modalitiesColumns[0][0].label,
-    },
-    status: "COMPLETED",
-    distance: "15Km",
-  },
-];
 
 export default function UserTicketsPage() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [orderBy, setOrderBy] = useState<string>("date-asc");
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 1,
-  });
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/");
-      return;
-    }
-
-    loadTickets();
-  }, [isAuthenticated, statusFilter, pagination.page]);
+  const [page, setPage] = useState(1);
 
   // Reset page when filters change
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, page: 1 }));
+    setPage(1);
   }, [statusFilter]);
 
-  const loadTickets = async () => {
-    try {
-      setLoading(true);
-      const params: any = {
-        page: pagination.page,
-        limit: pagination.limit,
-      };
-      if (statusFilter) {
-        params.status = statusFilter;
-      }
-
-      const data = await userService.getMyTickets(params);
-
-      // Transform API response to Ticket format
-      const transformedTickets: Ticket[] = (data.registrations || []).map(
-        (reg: any) => ({
-          id: reg.id,
-          event: {
-            id: reg.event?.id || "",
-            name: reg.event?.name || "Evento sem nome",
-            imageUrl: reg.event?.imageUrl,
-            eventDate: reg.event?.eventDate || reg.purchaseDate,
-            location: {
-              city: reg.event?.location?.city || "Cidade não informada",
-              state: reg.event?.location?.state || "Estado não informado",
-            },
-          },
-          modality: {
-            icon:
-              reg.modalities?.[0]?.modality?.icon ||
-              "/icons-3d/Icon3D-corrida-de-rua.webp",
-            name:
-              reg.modalities?.[0]?.modality?.name ||
-              reg.modality?.name ||
-              "Modalidade não informada",
-          },
-          status: reg.status || "PENDING",
-          distance: reg.modalities?.[0]?.modality?.distance,
-        })
-      );
-
-      // Use mock tickets if API returns empty or fails
-      if (transformedTickets.length === 0) {
-        setTickets(mockTickets);
-        setPagination({
-          page: 1,
-          limit: 20,
-          total: mockTickets.length,
-          totalPages: 1,
-        });
-      } else {
-        setTickets(transformedTickets);
-        setPagination(data.pagination || pagination);
-      }
-    } catch (error: any) {
-      console.error("Error loading tickets:", error);
-      // Use mock tickets on error
-      setTickets(mockTickets);
-      setPagination({
-        page: 1,
-        limit: 20,
-        total: mockTickets.length,
-        totalPages: 1,
-      });
-      // Don't show error toast when using mock data
-      // toast.error("Erro ao carregar ingressos");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { tickets, pagination, loading } = useMyTickets(
+    {
+      page,
+      limit: 20,
+      status: statusFilter || undefined,
+    },
+    isAuthenticated
+  );
 
   const statusOptions = [
     { id: "CONFIRMED", label: "Inscrição confirmada" },
@@ -289,7 +43,7 @@ export default function UserTicketsPage() {
   const filteredTickets = useMemo(() => {
     let filtered = [...tickets];
 
-    // Filter by search term
+    // Filter by search term (status filter is already applied in the API)
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -299,11 +53,6 @@ export default function UserTicketsPage() {
           ticket.event.location.state.toLowerCase().includes(query) ||
           ticket.modality.name.toLowerCase().includes(query)
       );
-    }
-
-    // Filter by status
-    if (statusFilter) {
-      filtered = filtered.filter((ticket) => ticket.status === statusFilter);
     }
 
     // Sort tickets
@@ -468,28 +217,18 @@ export default function UserTicketsPage() {
           <div className="mt-8 flex items-center justify-center gap-2">
             <Button
               variant="outline"
-              onClick={() =>
-                setPagination((prev) => ({
-                  ...prev,
-                  page: Math.max(1, prev.page - 1),
-                }))
-              }
-              disabled={pagination.page === 1}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
             >
               Anterior
             </Button>
             <span className="text-sm text-gray-11">
-              Página {pagination.page} de {pagination.totalPages}
+              Página {page} de {pagination.totalPages}
             </span>
             <Button
               variant="outline"
-              onClick={() =>
-                setPagination((prev) => ({
-                  ...prev,
-                  page: Math.min(prev.totalPages, prev.page + 1),
-                }))
-              }
-              disabled={pagination.page === pagination.totalPages}
+              onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+              disabled={page === pagination.totalPages}
             >
               Próxima
             </Button>

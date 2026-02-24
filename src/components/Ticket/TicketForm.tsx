@@ -208,13 +208,12 @@ export function TicketForm({
 
       try {
         const ticket = await organizerService.getTicketById(ticketId);
-
-        console.log(ticket);
-
         if (ticket) {
           const ticketData = ticket as {
             name?: string;
             groupId?: string;
+            categoryId?: string;
+            category?: { id?: string; name?: string };
             modality?: string;
             distance?: number;
             distanceUnit?: string;
@@ -233,7 +232,9 @@ export function TicketForm({
           };
 
           setTicketName(ticketData.name || "");
-          setSelectedGroupId(ticketData.groupId || "");
+          // Prioriza categoryId, depois category.id, depois groupId (compatibilidade)
+          const categoryId = ticketData.categoryId || ticketData.category?.id || ticketData.groupId || "";
+          setSelectedGroupId(categoryId);
 
           if (ticketData.modality) {
             const template = modalityTemplates.find((t) => t.label === ticketData.modality);
