@@ -37,7 +37,7 @@ export function RegistrationQRCode({
   if (!qrCodeString) {
     return (
       <div 
-        className={`bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center ${className}`}
+        className={`bg-gray-2 border-2 border-gray-6 flex items-center justify-center ${className}`}
         style={{ width: size, height: size }}
       >
         <span className="text-xs text-gray-11 text-center px-2">
@@ -54,7 +54,7 @@ export function RegistrationQRCode({
         size={size}
         level="M"
         includeMargin={false}
-        className="rounded-lg"
+        className=""
       />
     </div>
   );

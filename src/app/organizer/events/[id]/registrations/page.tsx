@@ -41,6 +41,159 @@ import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 
+// Componente para linha de registro com gerenciamento de estado do avatar
+function RegistrationRow({
+  registration,
+  onViewRegistration,
+  onViewPaymentDetails,
+  getStatusBadge
+}: {
+  registration: any;
+  onViewRegistration: () => void;
+  onViewPaymentDetails: () => void;
+  getStatusBadge: (status: string) => { label: string; className: string; icon: any };
+}) {
+  const [imageError, setImageError] = useState(false);
+
+  // Verificar status do payment também para REFUNDED e CHARGEBACK
+  const paymentStatus = registration.order?.payment?.status;
+  const registrationStatus = registration.status;
+
+  // Determinar o status final: priorizar payment.status para REFUNDED e CHARGEBACK
+  const finalStatus = paymentStatus === "REFUNDED" || paymentStatus === "CHARGEBACK"
+    ? paymentStatus
+    : registrationStatus;
+
+  const statusBadge = getStatusBadge(finalStatus);
+  const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
+  const isCancelled = finalStatus === "CANCELLED";
+  const isRefunded = finalStatus === "REFUNDED" || paymentStatus === "REFUNDED";
+  const isChargeback = finalStatus === "CHARGEBACK" || paymentStatus === "CHARGEBACK";
+
+  // Avatar com fallback para primeira letra
+  const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
+  const firstLetter = fullName ? fullName.charAt(0).toUpperCase() : "U";
+  const hasAvatar = !!registration.user?.avatarUrl && !imageError;
+
+  return (
+    <div
+      className="bg-gray-1 border-b border-gray-6 flex h-[52px] items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors"
+    >
+      {/* ID do pedido */}
+      <div className="flex h-full items-center p-4 w-[136px]">
+        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+          #{registration.id?.slice(0, 6)}...{registration.id?.slice(-4)}
+        </p>
+      </div>
+
+      {/* Cliente */}
+      <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
+        <div className="relative shrink-0 size-8 rounded-full overflow-hidden">
+          {hasAvatar ? (
+            <Image
+              src={getAvatarUrl(registration.user?.avatarUrl!)}
+              alt={fullName || "User"}
+              width={32}
+              height={32}
+              className="rounded-full object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="size-8 rounded-full bg-primary-10/20 flex items-center justify-center">
+              <span className="text-primary-11 font-semibold text-sm">
+                {firstLetter}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col min-w-0">
+          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
+            {registration.user?.firstName}{" "}
+            {registration.user?.lastName && `${registration.user?.lastName} `}
+          </p>
+          <p className="font-family-dm-sans font-medium leading-[1.3] text-xs text-gray-11 truncate">
+            {registration.user?.email}
+          </p>
+        </div>
+      </div>
+
+      {/* Ticket */}
+      <div className="flex flex-1 h-full items-center w-[140px] p-4">
+        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+          <span className="text-gray-11 text-xs truncate max-w-[140px] block">
+            {registration.ticket.category.name}
+          </span>
+          <span className="text-gray-12">
+            {registration.ticket.name}
+          </span>
+        </p>
+      </div>
+
+      {/* Data compra */}
+      <div className="flex h-full items-center p-4 w-[140px]">
+        <p className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-12">
+          <span>{registration.createdAt
+            ? (() => {
+              const date = new Date(registration.createdAt);
+              const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+              return `${date.getDate().toString().padStart(2, "0")} ${months[date.getMonth()]}, ${date.getFullYear()}`;
+            })()
+            : "—"}</span>
+        </p>
+      </div>
+
+      {/* Valor */}
+      <div className="flex h-full items-center justify-center p-4 w-[120px]">
+        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
+          R$ {(registration.ticket.price ? (registration.ticket.price / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00")}
+        </p>
+      </div>
+
+      {/* Status */}
+      <div className="flex h-full items-center justify-center p-4 w-[120px]">
+        <span
+          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isPaid
+            ? "bg-primary-11 text-white"
+            : isCancelled
+              ? "bg-red-11 text-white"
+              : isChargeback
+                ? "bg-orange-11 text-white"
+                : isRefunded
+                  ? "bg-purple-11 text-white"
+                  : statusBadge?.className || "bg-gray-10/20 text-gray-11"
+            }`}
+        >
+          {isPaid
+            ? "Pago"
+            : isCancelled
+              ? "Cancelado"
+              : isChargeback
+                ? "Charge-back"
+                : isRefunded
+                  ? "Estornado"
+                  : statusBadge?.label || "Desconhecido"}
+        </span>
+      </div>
+
+      {/* Ações */}
+      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
+        <button
+          onClick={onViewPaymentDetails}
+          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+        >
+          <FileText className="size-4 text-gray-11" />
+        </button>
+        <button
+          onClick={onViewRegistration}
+          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+        >
+          <Eye className="size-4 text-gray-11" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function EventRegistrationsPage() {
   const router = useRouter();
   const params = useParams();
@@ -556,131 +709,23 @@ export default function EventRegistrationsPage() {
 
               {/* Rows */}
               <div className="flex flex-col items-start w-full">
-                {filteredRegistrations.map((registration) => {
-                  const statusBadge = getStatusBadge(registration.status);
-                  const isPaid = registration.status === "CONFIRMED" || registration.status === "COMPLETED";
-                  const isCancelled = registration.status === "CANCELLED";
-
-                  return (
-                    <div
-                      key={registration.id}
-                      className="bg-gray-1 border-b border-gray-6 flex h-[52px] items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors"
-                    >
-                      {/* ID do pedido */}
-                      <div className="flex h-full items-center p-4 w-[136px]">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          #{registration.id?.slice(0, 6)}...{registration.id?.slice(-4)}
-                        </p>
-                      </div>
-
-                      {/* Cliente */}
-                      <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
-                        <div className="relative shrink-0">
-                          <Image
-                            src={getAvatarUrl(registration.user?.avatarUrl)}
-                            alt={`${registration.user?.firstName} ${registration.user?.lastName}`}
-                            width={32}
-                            height={32}
-                            className="rounded-full object-cover"
-                          />
-
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
-                            {registration.user?.firstName}{" "}
-                            {registration.user?.lastName && `${registration.user?.lastName} `}
-                          </p>
-                          <p className="font-family-dm-sans font-medium leading-[1.3] text-xs text-gray-11 truncate">
-                            {registration.user?.email}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Ticket */}
-                      <div className="flex flex-1 h-full items-center w-[140px] p-4">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          <span className="text-gray-11 text-xs truncate max-w-[140px] block">
-                            {registration.ticket.category.name}
-                          </span>
-                          <span className="text-gray-12">
-                            {registration.ticket.name}
-                          </span>
-                        </p>
-                      </div>
-
-                      {/* Data compra */}
-                      <div className="flex h-full items-center p-4 w-[140px]">
-                        <p className="font-family-dm-sans font-medium leading-[1.3] text-sm text-gray-12">
-                          <span>{registration.createdAt
-                            ? (() => {
-                              const date = new Date(registration.createdAt);
-                              const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-                              return `${date.getDate().toString().padStart(2, "0")} ${months[date.getMonth()]}, ${date.getFullYear()}`;
-                            })()
-                            : "—"}</span>
-                        </p>
-                      </div>
-
-                      {/* Valor */}
-                      <div className="flex h-full items-center justify-center p-4 w-[120px]">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
-                          R$ {(registration.ticket.price ? (registration.ticket.price / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00")}
-                        </p>
-                      </div>
-
-                      {/* Status */}
-                      <div className="flex h-full items-center justify-center p-4 w-[120px]">
-                        <span
-                          className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isPaid
-                            ? "bg-primary-11 text-white"
-                            : isCancelled
-                              ? "bg-red-11 text-white"
-                              : registration.status === "CHARGEBACK"
-                                ? "bg-orange-11 text-white"
-                                : registration.status === "REFUNDED"
-                                  ? "bg-purple-11 text-white"
-                                  : statusBadge?.className || "bg-gray-10/20 text-gray-11"
-                            }`}
-                        >
-                          {isPaid
-                            ? "Pago"
-                            : isCancelled
-                              ? "Cancelado"
-                              : registration.status === "CHARGEBACK"
-                                ? "Charge-back"
-                                : registration.status === "REFUNDED"
-                                  ? "Estornado"
-                                  : statusBadge?.label || "Desconhecido"}
-                        </span>
-                      </div>
-
-                      {/* Ações */}
-                      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
-                        <button
-                          onClick={() => {
-                            openPaymentDetailsModal({
-                              registration,
-                            });
-                          }}
-                          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-                        >
-                          <FileText className="size-4 text-gray-11" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            openViewRegistrationModal({
-                              registration,
-                              registrations: filteredRegistrations,
-                            });
-                          }}
-                          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-                        >
-                          <Eye className="size-4 text-gray-11" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {filteredRegistrations.map((registration) => (
+                  <RegistrationRow
+                    key={registration.id}
+                    registration={registration}
+                    getStatusBadge={getStatusBadge}
+                    onViewRegistration={() => {
+                      openViewRegistrationModal({
+                        registrationId: registration.id,
+                      });
+                    }}
+                    onViewPaymentDetails={() => {
+                      openPaymentDetailsModal({
+                        registrationId: registration.id,
+                      });
+                    }}
+                  />
+                ))}
               </div>
 
               {/* Pagination */}
@@ -710,8 +755,8 @@ export default function EventRegistrationsPage() {
                             page: pageNum,
                           }))
                         }
-                        className={`size-8 flex items-center justify-center border rounded-lg ${isActive
-                          ? "bg-[#59E373] border-[#59E373] text-gray-12"
+                        className={`size-8 flex items-center justify-center border rounded-lg cursor-pointer ${isActive
+                          ? "bg-primary-11 border-primary-11 text-gray-1"
                           : "border-gray-6 hover:bg-gray-3"
                           }`}
                       >
@@ -743,7 +788,6 @@ export default function EventRegistrationsPage() {
                     registrations: filteredRegistrations,
                   });
                 }}
-                className="bg-[#59E373] text-[#141414] hover:bg-[#59E373]/90"
               >
                 Exportar CSV
               </Button>

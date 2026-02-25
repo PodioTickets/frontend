@@ -8,15 +8,16 @@ import {
   DrawerHeader,
 } from "@/components/ui/drawer";
 import { X, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
-import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
-import { CardIcon } from "@/components/Icons/CardIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
+import Image from "next/image";
+import { getAvatarUrl } from "@/utils/avatar";
+import { ChargeBackIcon } from "../Icons/ChargeBackIcon";
 
 interface ChargebackDrawerProps {
   isOpen: boolean;
@@ -32,17 +33,27 @@ interface ChargebackDrawerProps {
 interface ChargebackItem {
   id: string;
   orderId: string;
-  transactionId: string;
-  buyer: {
-    name: string;
-    email: string;
-    avatar: string | null;
-  };
-  chargebackDate: string;
-  paymentMethod: string;
+  registrationId: string;
+  paymentId?: string;
   amount: number;
-  cardBrand?: string;
-  cardLast4?: string;
+  chargebackDate: string;
+  purchaseDate: string;
+  paymentMethod: string;
+  buyer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl: string | null;
+  };
+  participant?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl: string | null;
+  };
+  reason?: string;
 }
 
 export function ChargebackDrawer({
@@ -81,7 +92,7 @@ export function ChargebackDrawer({
         page: currentPage,
         limit: itemsPerPage,
       });
-      setChargebackItems(data.items);
+      setChargebackItems(data.chargebacks);
       setPagination(data.pagination);
     } catch (error: any) {
       console.error("Error loading chargeback items:", error);
@@ -106,16 +117,22 @@ export function ChargebackDrawer({
       minute: "2-digit",
     });
 
+    // Usar paymentId para buscar detalhes (GET /api/v1/payments/payment/{paymentId}/details)
+    // Se não tiver paymentId, usar orderId como fallback
+    const paymentId = item.paymentId || item.orderId;
+
     return {
-      orderId: item.orderId,
-      transactionId: item.transactionId,
-      buyer: item.buyer,
+      orderId: paymentId || "", // Usar paymentId para buscar os detalhes via /api/v1/payments/payment/{paymentId}/details
+      transactionId: item.id, // ID do chargeback (apenas para exibição visual)
+      buyer: {
+        name: `${item.buyer.firstName} ${item.buyer.lastName}`,
+        email: item.buyer.email,
+        avatar: item.buyer.avatarUrl,
+      },
       date: formattedDate,
       time: formattedTime,
       paymentMethod: item.paymentMethod,
       value: item.amount / 100, // Converter de centavos
-      cardBrand: item.cardBrand,
-      cardLast4: item.cardLast4,
     };
   };
 
@@ -147,8 +164,8 @@ export function ChargebackDrawer({
 
                 {/* Title with Icon */}
                 <div className="flex items-center gap-2">
-                  <div className="w-[32px] h-[32px] p-1 rounded-lg bg-orange-3 flex items-center justify-center">
-                    <RotateCcw className="size-6 text-orange-11" />
+                  <div className="w-[32px] h-[32px] p-1 rounded-lg bg-red-4 flex items-center justify-center">
+                    <ChargeBackIcon className="size-6 text-red-12" />
                   </div>
                   <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
                     Chargebacks - Detalhes
@@ -167,14 +184,10 @@ export function ChargebackDrawer({
           <div className="flex-1 overflow-y-auto">
             <div className="p-5">
               {/* Info Header */}
-              <div className="mb-5 flex items-center gap-2 text-[12px] text-gray-11 font-family-dm-sans">
-                <span>
-                  Nome da categoria: <span className="text-gray-12">{categoryName}</span>
-                </span>
+              <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
+                <span>Nome da categoria: <span className="text-gray-12">{categoryName}</span></span>
                 <span className="w-1 h-1 rounded-full bg-gray-11" />
-                <span>
-                  Evento: <span className="text-gray-12">{eventName}</span>
-                </span>
+                <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 
               {/* Table */}
@@ -239,24 +252,40 @@ export function ChargebackDrawer({
                           {/* ID pedido */}
                           <div className="flex h-full items-center p-4 w-[120px]">
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {displayItem.orderId}
+                              {displayItem.orderId && displayItem.orderId.length > 10
+                                ? `#${displayItem.orderId.slice(0, 6)}...${displayItem.orderId.slice(-4)}`
+                                : displayItem.orderId || "—"}
                             </p>
                           </div>
 
                           {/* ID transação */}
                           <div className="flex h-full items-center p-4 w-[120px]">
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {displayItem.transactionId}
+                              {displayItem.transactionId && displayItem.transactionId.length > 8
+                                ? displayItem.transactionId.slice(0, 8)
+                                : displayItem.transactionId || "—"}
                             </p>
                           </div>
 
                           {/* Comprador */}
                           <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
-                            <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                              <span className="text-gray-12 font-semibold text-sm">
-                                {displayItem.buyer.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
+                            {displayItem.buyer.avatar ? (
+                              <div className="size-9 rounded-full overflow-hidden bg-gray-6 flex items-center justify-center shrink-0">
+                                <Image
+                                  src={getAvatarUrl(displayItem.buyer.avatar)}
+                                  alt={displayItem.buyer.name}
+                                  width={36}
+                                  height={36}
+                                  className="rounded-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
+                                <span className="text-gray-12 font-semibold text-sm">
+                                  {displayItem.buyer.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex flex-col gap-0 min-w-0">
                               <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
                                 {displayItem.buyer.name}
@@ -351,11 +380,10 @@ export function ChargebackDrawer({
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${
-                            isActive
+                          className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${isActive
                               ? "bg-[#59E373] border-[#59E373] text-gray-12"
                               : "border-gray-6 hover:bg-gray-3 text-gray-12"
-                          }`}
+                            }`}
                         >
                           {pageNum}
                         </button>

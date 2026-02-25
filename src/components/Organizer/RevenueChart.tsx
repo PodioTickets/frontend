@@ -35,6 +35,52 @@ interface RevenueChartProps {
   };
 }
 
+// Função para converter formato de data "3 de fev." para "03/02"
+const formatDateLabel = (label: string): string => {
+  if (!label) return label;
+  
+  // Mapeamento de meses abreviados
+  const monthMap: { [key: string]: string } = {
+    'jan': '01',
+    'fev': '02',
+    'mar': '03',
+    'abr': '04',
+    'mai': '05',
+    'jun': '06',
+    'jul': '07',
+    'ago': '08',
+    'set': '09',
+    'out': '10',
+    'nov': '11',
+    'dez': '12',
+  };
+
+  // Tentar parsear formato "3 de fev." ou "03 de fev."
+  const match = label.toLowerCase().match(/(\d+)\s+de\s+(\w+)/);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const monthAbbr = match[2].substring(0, 3);
+    const month = monthMap[monthAbbr] || '01';
+    return `${day}/${month}`;
+  }
+
+  // Tentar parsear formato "03/02" (já está no formato correto)
+  if (label.match(/^\d{2}\/\d{2}$/)) {
+    return label;
+  }
+
+  // Tentar parsear formato ISO ou outros formatos de data
+  const date = new Date(label);
+  if (!isNaN(date.getTime())) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
+  }
+
+  // Se não conseguir parsear, retornar o label original
+  return label;
+};
+
 export function RevenueChart({ data }: RevenueChartProps) {
   const [tooltipData, setTooltipData] = useState<{
     date: string;
@@ -51,30 +97,116 @@ export function RevenueChart({ data }: RevenueChartProps) {
     revenue: [4000, 12000, 8000, 6000],
   };
 
-  // Criar mais pontos para suavizar a linha
+  // Calcular valores dinâmicos para o eixo Y
+  const calculateYAxisScale = () => {
+    if (!chartData.revenue || chartData.revenue.length === 0) {
+      return {
+        max: 15000,
+        stepSize: 5000,
+        ticks: [15000, 10000, 5000, 0],
+      };
+    }
+
+    const maxValue = Math.max(...chartData.revenue);
+
+    // Se o valor máximo for 0, usar valores padrão
+    if (maxValue === 0) {
+      return {
+        max: 15000,
+        stepSize: 5000,
+        ticks: [15000, 10000, 5000, 0],
+      };
+    }
+
+    // Arredondar para cima para uma escala bonita
+    // Encontrar a ordem de grandeza
+    const magnitude = Math.pow(10, Math.floor(Math.log10(maxValue)));
+    const normalized = maxValue / magnitude;
+
+    // Arredondar para cima para múltiplos de 1, 2, 5, 10
+    let roundedMax: number;
+    if (normalized <= 1) {
+      roundedMax = magnitude;
+    } else if (normalized <= 2) {
+      roundedMax = 2 * magnitude;
+    } else if (normalized <= 5) {
+      roundedMax = 5 * magnitude;
+    } else {
+      roundedMax = 10 * magnitude;
+    }
+
+    // Adicionar 20% de margem no topo
+    roundedMax = Math.ceil(roundedMax * 1.2);
+
+    // Calcular stepSize (dividir em 3 ou 4 divisões)
+    const stepSize = roundedMax / 3;
+
+    // Arredondar stepSize para um valor "bonito"
+    const stepMagnitude = Math.pow(10, Math.floor(Math.log10(stepSize)));
+    const normalizedStep = stepSize / stepMagnitude;
+    let roundedStep: number;
+    if (normalizedStep <= 1) {
+      roundedStep = stepMagnitude;
+    } else if (normalizedStep <= 2) {
+      roundedStep = 2 * stepMagnitude;
+    } else if (normalizedStep <= 5) {
+      roundedStep = 5 * stepMagnitude;
+    } else {
+      roundedStep = 10 * stepMagnitude;
+    }
+
+    // Ajustar roundedMax para ser múltiplo de roundedStep
+    roundedMax = Math.ceil(roundedMax / roundedStep) * roundedStep;
+
+    // Gerar ticks (4 valores: max, 2/3, 1/3, 0) para melhor distribuição
+    const ticks = [
+      roundedMax,
+      Math.round((roundedMax * 2) / 3 / roundedStep) * roundedStep,
+      Math.round((roundedMax / 3) / roundedStep) * roundedStep,
+      0,
+    ];
+
+    return {
+      max: roundedMax,
+      stepSize: roundedStep,
+      ticks: ticks.sort((a, b) => b - a), // Ordenar do maior para o menor
+    };
+  };
+
+  const yAxisScale = calculateYAxisScale();
+
+  // Criar mais pontos para suavizar a linha (menos pontos para melhor performance)
   const generateSmoothData = useCallback(() => {
+    if (!chartData.revenue || chartData.revenue.length === 0) {
+      return { points: [], labels: [], originalIndices: [] };
+    }
+
     const points: number[] = [];
     const labels: string[] = [];
-    
+    const originalIndices: number[] = []; // Mapear pontos interpolados para índices originais
+
     chartData.revenue.forEach((value, index) => {
       if (index === 0) {
         points.push(value);
         labels.push("");
+        originalIndices.push(0);
       } else {
         const prevValue = chartData.revenue[index - 1];
-        const steps = 40;
+        const steps = 20; // Reduzido de 40 para 20 para melhor performance
         for (let i = 1; i <= steps; i++) {
           const interpolated = prevValue + (value - prevValue) * (i / steps);
           points.push(interpolated);
           labels.push("");
+          // Mapear para o índice original mais próximo
+          originalIndices.push(i === steps ? index : index - 1);
         }
       }
     });
-    
-    return { points, labels };
+
+    return { points, labels, originalIndices };
   }, [chartData]);
 
-  const { points, labels } = generateSmoothData();
+  const { points, labels, originalIndices } = generateSmoothData();
 
   // Dados para a linha principal (faturamento)
   const lineData = {
@@ -87,12 +219,13 @@ export function RevenueChart({ data }: RevenueChartProps) {
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(48, 135, 55, 0.3)");
-          gradient.addColorStop(1, "rgba(48, 135, 55, 0.05)");
+          gradient.addColorStop(0, "rgba(48, 135, 55, 0.25)");
+          gradient.addColorStop(0.5, "rgba(48, 135, 55, 0.1)");
+          gradient.addColorStop(1, "rgba(48, 135, 55, 0)");
           return gradient;
         },
         fill: true,
-        tension: 0.4,
+        tension: 0.5, // Aumentado para linha mais suave
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 6,
@@ -119,17 +252,17 @@ export function RevenueChart({ data }: RevenueChartProps) {
         external: (context: any) => {
           // Verificar se o tooltip está realmente ativo (hover)
           // O tooltip só deve aparecer quando há interação ativa
-          if (!context.tooltip || 
-              context.tooltip.opacity === 0 || 
-              !context.tooltip.dataPoints?.length ||
-              context.tooltip.dataPoints.length === 0) {
+          if (!context.tooltip ||
+            context.tooltip.opacity === 0 ||
+            !context.tooltip.dataPoints?.length ||
+            context.tooltip.dataPoints.length === 0) {
             setTooltipData(null);
             return;
           }
 
           const tooltip = context.tooltip;
           const dataPoint = tooltip.dataPoints[0];
-          
+
           // Verificar se o elemento realmente existe e está sendo hovered
           if (!dataPoint || !dataPoint.element) {
             setTooltipData(null);
@@ -148,12 +281,15 @@ export function RevenueChart({ data }: RevenueChartProps) {
 
           // Encontrar o mês correspondente baseado no índice
           const index = dataPoint.dataIndex;
-          const monthIndex = Math.floor(index / 41); // 40 steps + 1 ponto inicial
-          const monthLabel = chartData.labels[Math.min(monthIndex, chartData.labels.length - 1)] || chartData.labels[0];
+          const originalIndex = originalIndices[index] ?? Math.floor(index / 21); // 20 steps + 1 ponto inicial
+          const monthLabel = chartData.labels[Math.min(originalIndex, chartData.labels.length - 1)] || chartData.labels[0] || "";
           const revenue = dataPoint.parsed.y;
 
+          // Formatar data corretamente para DD/MM
+          const formattedDate = monthLabel ? formatDateLabel(monthLabel) : "Data";
+
           setTooltipData({
-            date: `24 de ${monthLabel.toLowerCase()}`,
+            date: formattedDate,
             revenue: revenue,
             tickets: Math.floor(revenue / 10), // Mock de ingressos
             x: x,
@@ -175,9 +311,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
           display: false,
         },
         min: 0,
-        max: 15000,
+        max: yAxisScale.max,
         ticks: {
-          stepSize: 5000,
+          stepSize: yAxisScale.stepSize,
         },
       },
     },
@@ -197,10 +333,23 @@ export function RevenueChart({ data }: RevenueChartProps) {
     <div className="relative h-[341px] w-full" onMouseLeave={handleMouseLeave}>
       {/* Y-axis labels */}
       <div className="absolute left-0 top-0 bottom-[32px] flex flex-col justify-between pr-3 pt-3 pb-6 z-10">
-        <span className="text-[14px] text-gray-11 font-family-dm-sans">R$15K</span>
-        <span className="text-[14px] text-gray-11 font-family-dm-sans">R$10K</span>
-        <span className="text-[14px] text-gray-11 font-family-dm-sans">R$5K</span>
-        <span className="text-[14px] text-gray-11 font-family-dm-sans">0</span>
+        {yAxisScale.ticks.map((tick, index) => {
+          // Formatar o valor
+          let formattedValue: string;
+          if (tick >= 1000000) {
+            formattedValue = `R$${(tick / 1000000).toFixed(1)}M`;
+          } else if (tick >= 1000) {
+            formattedValue = `R$${(tick / 1000).toFixed(0)}K`;
+          } else {
+            formattedValue = `R$${tick.toLocaleString("pt-BR")}`;
+          }
+
+          return (
+            <span key={index} className="text-[14px] text-gray-11 font-family-dm-sans">
+              {formattedValue}
+            </span>
+          );
+        })}
       </div>
 
       {/* Chart container */}
@@ -210,8 +359,20 @@ export function RevenueChart({ data }: RevenueChartProps) {
           <Line ref={chartRef} data={lineData} options={options} />
         </div>
 
-        {/* Grid line at middle */}
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-6 -translate-y-1/2 z-0" />
+        {/* Grid lines horizontais para melhor leitura */}
+        {yAxisScale.ticks.slice(0, -1).map((tick, index) => {
+          const percentage = (tick / yAxisScale.max) * 100;
+          return (
+            <div
+              key={`grid-${index}`}
+              className="absolute left-0 right-0 h-px bg-gray-6 z-0"
+              style={{
+                bottom: `${percentage}%`,
+                transform: 'translateY(50%)',
+              }}
+            />
+          );
+        })}
 
         {/* Vertical line indicator (when hovering) */}
         {tooltipData && (
@@ -232,13 +393,32 @@ export function RevenueChart({ data }: RevenueChartProps) {
           />
         )}
 
-        {/* X-axis labels */}
-        <div className="absolute -bottom-[22px] left-0 right-0 flex justify-between px-6">
-          {chartData.labels.map((label) => (
-            <span key={label} className="text-[14px] text-gray-11 font-family-dm-sans">
-              {label}
-            </span>
-          ))}
+        {/* X-axis labels - distribuídos uniformemente */}
+        <div className="absolute -bottom-[22px] left-0 right-0 flex justify-between px-0">
+          {chartData.labels.map((label, index) => {
+            // Distribuir uniformemente ao longo do eixo X
+            const totalLabels = chartData.labels.length;
+            const position = totalLabels > 1 
+              ? (index / (totalLabels - 1)) * 100 
+              : 50;
+            
+            // Formatar label para DD/MM
+            const formattedLabel = formatDateLabel(label);
+            
+            return (
+              <span 
+                key={`${label}-${index}`} 
+                className="text-[14px] text-gray-11 font-family-dm-sans"
+                style={{ 
+                  position: 'absolute',
+                  left: `${position}%`,
+                  transform: 'translateX(-50%)',
+                }}
+              >
+                {formattedLabel}
+              </span>
+            );
+          })}
         </div>
       </div>
 
@@ -247,7 +427,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
         <div
           className="absolute bg-gray-2 border border-gray-6 rounded p-[10px] shadow-lg w-[230px] z-30 pointer-events-none"
           style={{
-            left: typeof window !== "undefined" 
+            left: typeof window !== "undefined"
               ? `${Math.min(tooltipData.x + 20, window.innerWidth - 250)}px`
               : `${tooltipData.x + 20}px`,
             top: `${tooltipData.y - 100}px`,

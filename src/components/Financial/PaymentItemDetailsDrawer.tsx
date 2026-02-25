@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Drawer,
   DrawerClose,
   DrawerContent,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, ArrowLeft, Ticket, CreditCard, CheckCircle, Copy } from "lucide-react";
+import { X, ChevronRight, ArrowLeft, Ticket, CheckCircle, Copy } from "lucide-react";
 import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
+import { organizerService } from "@/services";
+import type { PaymentDetails } from "@/services/organizer/OrganizerService";
+import toast from "react-hot-toast";
+import { Loading } from "@/components/Loading";
+import Image from "next/image";
+import { getAvatarUrl } from "@/utils/avatar";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -36,42 +42,6 @@ interface PaymentItemDetailsDrawerProps {
   type?: "installment" | "awaiting";
 }
 
-// Mock data - substituir com dados reais da API
-const mockPaymentDetails = {
-  orderId: "#6b82...51d6",
-  transactionId: "1240-2414",
-  purchaseDate: "18/10/2024",
-  paymentDate: "18/10/2024",
-  status: "Pendente",
-  buyer: {
-    name: "Ahmad Ballard",
-    email: "NoahSilva@gmail.com",
-    avatar: null,
-    document: "118.423.912-42",
-    phone: "(11) 98765-4321",
-  },
-  payment: {
-    method: "Pix",
-    value: 150.0,
-    installment: "1/3",
-    totalValue: 450.0,
-    installments: "3x de R$ 142,00",
-    gateway: "Nome do Gateway",
-    authorizationCode: "AUTHO4215",
-    nsu: "033014525",
-    cardBrand: "Mastercard",
-    cardLast4: "5678",
-  },
-  event: {
-    name: "Nome do evento",
-    organizer: {
-      name: "Organizer Text",
-      email: "Organizer Text",
-      avatar: null,
-    },
-  },
-};
-
 export function PaymentItemDetailsDrawer({
   isOpen,
   onClose,
@@ -81,22 +51,79 @@ export function PaymentItemDetailsDrawer({
   type = "installment",
 }: PaymentItemDetailsDrawerProps) {
   const [copied, setCopied] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const getStatusBadge = (status: string) => {
-    if (status === "Pago" || status === "Concluído") {
-      return "bg-[#59E373] text-[#141414]";
+  useEffect(() => {
+    if (isOpen) {
+      loadPaymentDetails();
     }
-    return "bg-yellow-10/20 text-yellow-11";
+  }, [isOpen, paymentItem.transactionId, paymentItem.orderId]);
+
+  const loadPaymentDetails = async () => {
+    try {
+      setLoading(true);
+      let details: PaymentDetails;
+
+      const orderId = paymentItem.orderId
+        .replace(/^#/, "") // Remove # no início
+        .replace(/\.\.\..*$/, "") // Remove ... e tudo depois
+        .trim();
+
+      if (orderId && orderId.length > 10) {
+        try {
+          details = await organizerService.getPaymentDetailsByPayment(orderId);
+          setPaymentDetails(details);
+          return;
+        } catch (error) {
+          // Se falhar, tentar como orderId
+          try {
+            details = await organizerService.getPaymentDetailsByOrder(orderId);
+            setPaymentDetails(details);
+            return;
+          } catch (error) {
+            // Continuar para tentar outras opções
+          }
+        }
+      }
+
+      // Tentar buscar por transactionId (se não estiver formatado e parecer ser um UUID válido)
+      // Não usar transactionId se for um ID composto de parcela (geralmente não é um UUID)
+      const isLikelyUUID = paymentItem.transactionId &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentItem.transactionId);
+
+      if (paymentItem.transactionId && !paymentItem.transactionId.includes("...") && isLikelyUUID) {
+        try {
+          details = await organizerService.getPaymentDetailsByTransaction(paymentItem.transactionId);
+          setPaymentDetails(details);
+          return;
+        } catch (error) {
+          // Continuar para tentar como registrationId
+        }
+      }
+
+      // Se orderId parece ser um registrationId, tentar buscar por registrationId
+      if (orderId && orderId.length > 10) {
+        try {
+          details = await organizerService.getPaymentDetailsByRegistration(orderId);
+          setPaymentDetails(details);
+          return;
+        } catch (error) {
+          // Se falhar, mostrar erro
+        }
+      }
+
+      throw new Error("Não foi possível encontrar os detalhes do pagamento");
+    } catch (error: any) {
+      console.error("Error loading payment details:", error);
+      toast.error(error.message || "Erro ao carregar detalhes do pagamento");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "";
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "—";
     try {
       const date = new Date(dateString);
       const day = date.getDate().toString().padStart(2, "0");
@@ -109,6 +136,95 @@ export function PaymentItemDetailsDrawer({
       return dateString;
     }
   };
+
+  const formatDocument = (document?: string | null) => {
+    if (!document) return "—";
+    const cleaned = document.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      // CPF
+      return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    } else if (cleaned.length === 14) {
+      // CNPJ
+      return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    }
+    return document;
+  };
+
+  const formatPhone = (phone?: string | null) => {
+    if (!phone) return "—";
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    } else if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+    }
+    return phone;
+  };
+
+  const formatGender = (gender?: string | null) => {
+    if (!gender) return "—";
+    const genderMap: { [key: string]: string } = {
+      MALE: "Masculino",
+      FEMALE: "Feminino",
+      OTHER: "Outro",
+    };
+    return genderMap[gender] || gender;
+  };
+
+  const formatPaymentMethod = (method: string) => {
+    const methodMap: { [key: string]: string } = {
+      CREDIT_CARD: "Cartão de crédito",
+      DEBIT_CARD: "Cartão de débito",
+      PIX: "Pix",
+      BOLETO: "Boleto",
+    };
+    return methodMap[method] || method;
+  };
+
+  const formatInstallments = (installments: number | null, installmentValue: number | null) => {
+    if (!installments || !installmentValue) return null;
+    const totalValue = installments * installmentValue;
+    return `${installments}x de R$ ${(installmentValue / 100).toFixed(2).replace(".", ",")}`;
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      PAID: "Pago",
+      PENDING: "Pendente",
+      REFUNDED: "Estornado",
+      CANCELLED: "Cancelado",
+    };
+    return statusMap[status] || status;
+  };
+
+  const getStatusBadge = (status: string) => {
+    if (status === "PAID") {
+      return "bg-[#59E373] text-[#141414]";
+    }
+    return "bg-yellow-10/20 text-yellow-11";
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (loading) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose} direction="right">
+        <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
+          <div className="flex items-center justify-center h-full">
+            <Loading />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  if (!paymentDetails) {
+    return null;
+  }
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose} direction="right">
@@ -152,11 +268,11 @@ export function PaymentItemDetailsDrawer({
             {/* Order ID */}
             <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
               <span>ID do pedido:</span>
-              <span className="text-gray-12">{paymentItem.orderId}</span>
+              <span className="text-gray-12">{paymentDetails.orderId}</span>
             </div>
 
             {/* Buyer Section */}
-            <div className="">
+            <div className="mb-5">
               <p className="text-[18px] text-gray-12 font-family-dm-sans font-medium mb-3">Informações do comprador</p>
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2 py-2">
@@ -164,7 +280,7 @@ export function PaymentItemDetailsDrawer({
                     Nome
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {paymentItem.buyer.name}
+                    {paymentDetails.buyer.fullName}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 py-2">
@@ -172,7 +288,7 @@ export function PaymentItemDetailsDrawer({
                     Email
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {paymentItem.buyer.email}
+                    {paymentDetails.buyer.email}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 py-2">
@@ -180,7 +296,7 @@ export function PaymentItemDetailsDrawer({
                     CPF
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {mockPaymentDetails.buyer.document}
+                    {formatDocument(paymentDetails.buyer.documentNumber)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 py-2">
@@ -188,7 +304,7 @@ export function PaymentItemDetailsDrawer({
                     Data de nascimento
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    —
+                    {paymentDetails.buyer.dateOfBirth ? formatDate(paymentDetails.buyer.dateOfBirth).split(" - ")[0] : "—"}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 py-2">
@@ -196,7 +312,7 @@ export function PaymentItemDetailsDrawer({
                     Telefone
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {mockPaymentDetails.buyer.phone}
+                    {formatPhone(paymentDetails.buyer.phone)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 py-2">
@@ -204,7 +320,7 @@ export function PaymentItemDetailsDrawer({
                     Telefone de emergência
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    Opcional
+                    {formatPhone(paymentDetails.buyer.reservePhone) || "—"}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 py-2">
@@ -212,7 +328,7 @@ export function PaymentItemDetailsDrawer({
                     Sexo
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    —
+                    {formatGender(paymentDetails.buyer.gender)}
                   </p>
                 </div>
               </div>
@@ -228,29 +344,45 @@ export function PaymentItemDetailsDrawer({
                   </div>
                   <div className="flex flex-col gap-2">
                     <p className="font-family-dm-sans text-[16px] leading-[1.3] text-gray-12">
-                      {eventName}
+                      {paymentDetails.event.name}
                     </p>
                     <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                      {categoryName}
+                      {paymentDetails.event.category || categoryName}
                     </p>
                   </div>
                 </div>
-                <div className="h-full w-px bg-gray-6" />
-                <div className="flex items-center gap-2">
-                  <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                    <span className="text-gray-12 font-semibold text-sm">
-                      {mockPaymentDetails.event.organizer.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                      {mockPaymentDetails.event.organizer.name}
-                    </p>
-                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                      {mockPaymentDetails.event.organizer.email}
-                    </p>
-                  </div>
-                </div>
+                {paymentDetails.event.organizer && (
+                  <>
+                    <div className="h-full w-px bg-gray-6" />
+                    <div className="flex items-center gap-2">
+                      {paymentDetails.event.organizer.avatar ? (
+                        <div className="size-8 rounded-full overflow-hidden bg-gray-6 flex items-center justify-center shrink-0">
+                          <Image
+                            src={getAvatarUrl(paymentDetails.event.organizer.avatar)}
+                            alt={paymentDetails.event.organizer.name}
+                            width={32}
+                            height={32}
+                            className="rounded-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
+                          <span className="text-gray-12 font-semibold text-sm">
+                            {paymentDetails.event.organizer.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2">
+                        <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
+                          {paymentDetails.event.organizer.name}
+                        </p>
+                        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
+                          {paymentDetails.event.organizer.email}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -260,11 +392,11 @@ export function PaymentItemDetailsDrawer({
               <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between mb-4">
                 <div className="flex gap-4 items-center flex-1">
                   <div className="size-[36px] flex items-center justify-center shrink-0">
-                    {paymentItem.paymentMethod === "Pix" ? (
+                    {paymentDetails.payment.method === "PIX" ? (
                       <PixIcon className="size-9 text-gray-12" />
-                    ) : paymentItem.cardBrand ? (
+                    ) : paymentDetails.payment.cardBrand ? (
                       <PaymentIcon
-                        type={paymentItem.cardBrand as any}
+                        type={paymentDetails.payment.cardBrand as any}
                         className="size-9"
                       />
                     ) : (
@@ -273,21 +405,21 @@ export function PaymentItemDetailsDrawer({
                   </div>
                   <div className="flex flex-col gap-3">
                     <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                      {paymentItem.paymentMethod === "Pix"
-                        ? paymentItem.paymentMethod
-                        : paymentItem.cardBrand && paymentItem.cardLast4
-                          ? `${paymentItem.cardBrand} **** ${paymentItem.cardLast4}`
-                          : paymentItem.paymentMethod}
+                      {paymentDetails.payment.method === "PIX"
+                        ? "Pix"
+                        : paymentDetails.payment.cardBrand && paymentDetails.payment.last4Digits
+                          ? `${paymentDetails.payment.cardBrand} **** ${paymentDetails.payment.last4Digits}`
+                          : formatPaymentMethod(paymentDetails.payment.method)}
                     </p>
                     <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                      {paymentItem.paymentMethod === "Pix" ? "Pix" : "Cartão de crédito"}
+                      {formatPaymentMethod(paymentDetails.payment.method)}
                     </p>
                   </div>
                 </div>
-                <div className="bg-primary-11 flex gap-1 items-center justify-center px-4 py-2 rounded-lg">
-                  <CheckCircle className="size-6 text-primary-1" />
-                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-1">
-                    Pago
+                <div className={`flex gap-1 items-center justify-center px-4 py-2 rounded-lg ${getStatusBadge(paymentDetails.payment.status)}`}>
+                  <CheckCircle className="size-6" />
+                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3]">
+                    {getStatusLabel(paymentDetails.payment.status)}
                   </p>
                 </div>
               </div>
@@ -299,7 +431,7 @@ export function PaymentItemDetailsDrawer({
                     Valor total
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    R$ {paymentItem.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {(paymentDetails.payment.totalAmount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="flex flex-col gap-[15px] py-3">
@@ -307,7 +439,7 @@ export function PaymentItemDetailsDrawer({
                     Data da compra
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {formatDate(mockPaymentDetails.purchaseDate) || "—"}
+                    {formatDate(paymentDetails.payment.purchaseDate)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-[15px] py-3">
@@ -315,7 +447,7 @@ export function PaymentItemDetailsDrawer({
                     Código de autorização
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {mockPaymentDetails.payment.authorizationCode}
+                    {paymentDetails.payment.authorizationCode || "—"}
                   </p>
                 </div>
                 <div className="flex flex-col gap-[15px] py-3">
@@ -323,16 +455,16 @@ export function PaymentItemDetailsDrawer({
                     Gateway
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {mockPaymentDetails.payment.gateway}
+                    {paymentDetails.payment.gateway}
                   </p>
                 </div>
-                {paymentItem.installment && (
+                {paymentDetails.payment.installments && (
                   <div className="flex flex-col gap-[15px] py-3">
                     <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
                       Parcelamento
                     </p>
                     <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                      {mockPaymentDetails.payment.installments}
+                      {formatInstallments(paymentDetails.payment.installments, paymentDetails.payment.installmentValue) || "—"}
                     </p>
                   </div>
                 )}
@@ -342,10 +474,10 @@ export function PaymentItemDetailsDrawer({
                   </p>
                   <div className="flex gap-1 items-center">
                     <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                      {paymentItem.transactionId}
+                      {paymentDetails.transactionId}
                     </p>
                     <button
-                      onClick={() => handleCopy(paymentItem.transactionId)}
+                      onClick={() => handleCopy(paymentDetails.transactionId)}
                       className="size-5 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
                     >
                       {copied ? (
@@ -356,23 +488,25 @@ export function PaymentItemDetailsDrawer({
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-col gap-[15px] py-4">
-                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                    Cupom utilizado
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <Ticket className="size-6 text-yellow-12" />
-                    <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-yellow-12">
-                      PODIO10
+                {paymentDetails.coupon && (
+                  <div className="flex flex-col gap-[15px] py-4">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      Cupom utilizado
                     </p>
+                    <div className="flex items-center gap-1">
+                      <Ticket className="size-6 text-yellow-12" />
+                      <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-yellow-12">
+                        {paymentDetails.coupon.code}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex flex-col gap-[15px] py-4">
                   <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
                     NSU
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {mockPaymentDetails.payment.nsu}
+                    {paymentDetails.payment.nsu || "—"}
                   </p>
                 </div>
                 <div className="flex flex-col gap-[15px] py-4">
@@ -380,7 +514,7 @@ export function PaymentItemDetailsDrawer({
                     IP
                   </p>
                   <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                    {mockPaymentDetails.payment.nsu}
+                    {paymentDetails.payment.transactionIp || "—"}
                   </p>
                 </div>
               </div>

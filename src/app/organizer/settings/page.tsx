@@ -165,7 +165,6 @@ export default function OrganizerSettingsPage() {
 
   return (
     <div className="flex items-start relative size-full min-h-screen">
-      <OrganizerSidebar />
 
       <div className="flex flex-col items-start relative shrink-0 max-w-7xl mx-auto">
         <div className="fixed top-0 left-[218px] p-8 right-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center h-[84px] shrink-0 w-full">
@@ -179,7 +178,7 @@ export default function OrganizerSettingsPage() {
         </div>
 
         {/* Content */}
-        <div className="bg-gray-2 flex flex-col gap-[32px] items-start overflow-clip pb-6 pt-[64px] px-[32px] relative shrink-0 w-full">
+        <div className="bg-gray-2 flex flex-col gap-[32px] items-start overflow-clip pb-6 mt-20 pt-[64px] px-[32px] relative shrink-0 w-full">
           {/* Personal Info Section */}
           <div className="bg-gray-2 flex flex-col gap-[44px] items-start pb-[32px] pt-[24px] px-[16px] relative rounded-[12px] shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] shrink-0 w-full">
             {/* Profile Container */}

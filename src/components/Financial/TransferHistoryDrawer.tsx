@@ -1,6 +1,4 @@
 "use client";
-
-import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
 import { useState, useEffect } from "react";
 import {
   Drawer,
@@ -8,8 +6,7 @@ import {
   DrawerContent,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import { X, Eye, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
-import { Coins } from "lucide-react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { TransferDetailsDrawer } from "./TransferDetailsDrawer";
 import { RepasseIcon } from "../Icons/RepasseIcon";
@@ -46,7 +43,7 @@ export function TransferHistoryDrawer({
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(false);
   const itemsPerPage = 10;
-  
+
   useEffect(() => {
     if (isOpen && eventId) {
       loadTransfers();
@@ -85,16 +82,16 @@ export function TransferHistoryDrawer({
     const date = new Date(transfer.requestedAt);
     const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
     const formattedTime = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    
+
     return {
       id: transfer.id,
       pixKey: transfer.bankAccount?.account || "N/A",
       requestDate: formattedDate,
       requestTime: formattedTime,
       value: transfer.amount / 100, // Converter de centavos
-      status: transfer.status === "COMPLETED" ? "Concluído" : 
-              transfer.status === "PROCESSING" ? "Processando" :
-              transfer.status === "FAILED" ? "Falhou" : "Pendente",
+      status: transfer.status === "COMPLETED" ? "Concluído" :
+        transfer.status === "PROCESSING" ? "Processando" :
+          transfer.status === "FAILED" ? "Falhou" : "Pendente",
     };
   };
 
@@ -217,74 +214,74 @@ export function TransferHistoryDrawer({
                     paginatedTransfers.map((transfer) => {
                       const displayTransfer = formatTransferForDisplay(transfer);
                       return (
-                    <div
-                      key={transfer.id}
-                      className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[56px]"
-                    >
-                      {/* ID pedido */}
-                      <div className="flex h-full items-center p-4 w-[120px]">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {displayTransfer.id}
-                        </p>
-                      </div>
-
-                      {/* Chave pix */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center w-full">
-                          {displayTransfer.pixKey}
-                        </p>
-                      </div>
-
-                      {/* Data da solicitação */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <div className="flex flex-col items-center w-full">
-                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {displayTransfer.requestDate}
-                          </p>
-                          <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
-                            {displayTransfer.requestTime}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Valor */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <div className="flex items-center gap-1 justify-center w-full">
-                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            R$
-                          </span>
-                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {displayTransfer.value.toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Status */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <div className="flex justify-center w-full">
-                          <span
-                            className={`inline-flex items-center justify-center px-3 py-1 rounded text-[10px] font-medium ${getStatusBadge(
-                              displayTransfer.status
-                            )}`}
-                          >
-                            {displayTransfer.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Ações */}
-                      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[64px]">
-                        <button
-                          onClick={() => {
-                            setSelectedTransfer(transfer as Transfer);
-                            setIsDetailsOpen(true);
-                          }}
-                          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                        <div
+                          key={transfer.id}
+                          className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[56px]"
                         >
-                          <DetailsIcon className="size-5 text-gray-12" />
-                        </button>
-                      </div>
-                    </div>
+                          {/* ID pedido */}
+                          <div className="flex h-full items-center p-4 w-[120px]">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              {displayTransfer.id}
+                            </p>
+                          </div>
+
+                          {/* Chave pix */}
+                          <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center w-full">
+                              {displayTransfer.pixKey}
+                            </p>
+                          </div>
+
+                          {/* Data da solicitação */}
+                          <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                            <div className="flex flex-col items-center w-full">
+                              <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                {displayTransfer.requestDate}
+                              </p>
+                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
+                                {displayTransfer.requestTime}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Valor */}
+                          <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                            <div className="flex items-center gap-1 justify-center w-full">
+                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                R$
+                              </span>
+                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                {displayTransfer.value.toFixed(2).replace(".", ",")}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Status */}
+                          <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                            <div className="flex justify-center w-full">
+                              <span
+                                className={`inline-flex items-center justify-center px-3 py-1 rounded text-[10px] font-medium ${getStatusBadge(
+                                  displayTransfer.status
+                                )}`}
+                              >
+                                {displayTransfer.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Ações */}
+                          <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[64px]">
+                            <button
+                              onClick={() => {
+                                setSelectedTransfer(transfer as Transfer);
+                                setIsDetailsOpen(true);
+                              }}
+                              className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                            >
+                              <DetailsIcon className="size-5 text-gray-12" />
+                            </button>
+                          </div>
+                        </div>
                       );
                     })
                   )}
@@ -345,9 +342,9 @@ export function TransferHistoryDrawer({
             requestDate: new Date(selectedTransfer.requestedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }),
             requestTime: new Date(selectedTransfer.requestedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
             value: selectedTransfer.amount / 100,
-            status: selectedTransfer.status === "COMPLETED" ? "Concluído" : 
-                    selectedTransfer.status === "PROCESSING" ? "Processando" :
-                    selectedTransfer.status === "FAILED" ? "Falhou" : "Pendente",
+            status: selectedTransfer.status === "COMPLETED" ? "Concluído" :
+              selectedTransfer.status === "PROCESSING" ? "Processando" :
+                selectedTransfer.status === "FAILED" ? "Falhou" : "Pendente",
           }}
           eventName={eventName}
           categoryName={categoryName}

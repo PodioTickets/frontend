@@ -7,14 +7,6 @@ import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import {
   ArrowUp,
-  Wallet,
-  Coins,
-  LineChart,
-  Download,
-  Hourglass,
-  RotateCcw,
-  CreditCard,
-  ChevronDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
@@ -30,6 +22,11 @@ import { ChargebackDrawer } from "@/components/Financial/ChargebackDrawer";
 import { useRequestTransferModal } from "@/stores/modalStore";
 import { RepasseIcon } from "@/components/Icons/RepasseIcon";
 import { PaymentIcon } from "@/components/Icons/PaymentIcon";
+import type { FinancialTicket } from "@/services/organizer/OrganizerService";
+import { RemoveIcon } from "@/components/Icons/RemoveIcon";
+import { ChargeBackIcon } from "@/components/Icons/ChargeBackIcon";
+import { TimerIcon } from "@/components/Icons/Organizer/TimerIcon";
+import { FaturaIcon } from "@/components/Icons/FaturaIcon";
 
 export default function EventFinancialPage() {
   const router = useRouter();
@@ -83,59 +80,9 @@ export default function EventFinancialPage() {
     },
   });
 
-  // Mock data for tickets/lots
-  const [ticketsData, setTicketsData] = useState([
-    {
-      id: "1",
-      type: "category",
-      name: "Nome da categoria",
-      subtitle: "Kit inscrição 3K",
-      sold: "1240-2414",
-      revenue: 150.0,
-      createdAt: "10/10/2024",
-      expanded: true,
-    },
-    {
-      id: "2",
-      type: "lot",
-      name: "Lote 1",
-      subtitle: "Nome do evento",
-      sold: "20",
-      revenue: 100.0,
-      createdAt: "10/10/2024",
-      expanded: false,
-    },
-    {
-      id: "3",
-      type: "lot",
-      name: "Lote 1",
-      subtitle: "Nome do evento",
-      sold: "20",
-      revenue: 100.0,
-      createdAt: "10/10/2024",
-      expanded: false,
-    },
-    {
-      id: "4",
-      type: "lot",
-      name: "Lote 1",
-      subtitle: "Nome do evento",
-      sold: "20",
-      revenue: 100.0,
-      createdAt: "10/10/2024",
-      expanded: false,
-    },
-    {
-      id: "5",
-      type: "category",
-      name: "Nome da categoria",
-      subtitle: "Kit inscrição 3K",
-      sold: "1240-2414",
-      revenue: 150.0,
-      createdAt: "10/10/2024",
-      expanded: false,
-    },
-  ]);
+  // Data for tickets/lots
+  const [ticketsData, setTicketsData] = useState<FinancialTicket[]>([]);
+  const [financialBatchesMap, setFinancialBatchesMap] = useState<Map<string, { sold: string; revenue: number }>>(new Map());
 
   useEffect(() => {
     if (authLoading) return;
@@ -159,13 +106,15 @@ export default function EventFinancialPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [eventData, financialDataResponse] = await Promise.all([
+      const [eventData, financialDataResponse, ticketsResponse, categoriesResponse] = await Promise.all([
         organizerService.getEventById(eventId),
         organizerService.getEventFinancial(eventId, {
           period: periodFilter as "hoje" | "7d" | "15d" | "1m" | "2m",
           page: pagination.page,
           limit: pagination.limit,
         }),
+        organizerService.getTickets(eventId),
+        organizerService.getTicketCategories(eventId),
       ]);
       setEvent(eventData);
       setFinancialData({
@@ -179,23 +128,78 @@ export default function EventFinancialPage() {
         revenueChange: financialDataResponse.summary.revenueChange,
         revenueChart: financialDataResponse.revenueChart,
       });
-      setTicketsData(
-        financialDataResponse.tickets.items.map((item) => ({
-          id: item.id,
-          type: item.type,
-          name: item.name,
-          subtitle: item.subtitle || "",
-          sold: item.sold,
-          revenue: item.revenue,
-          createdAt: item.createdAt,
-          expanded: expandedRows.has(item.id),
-        }))
-      );
+
+      // Criar mapa de dados financeiros por ticket ID e batch ID
+      const financialTicketsMap = new Map<string, FinancialTicket>();
+      const financialBatchesMap = new Map<string, { sold: string; revenue: number }>();
+
+      if (financialDataResponse.tickets?.items) {
+        financialDataResponse.tickets.items.forEach((financialTicket: FinancialTicket) => {
+          financialTicketsMap.set(financialTicket.id, financialTicket);
+
+          // Mapear lotes financeiros se existirem
+          if (financialTicket.lots) {
+            financialTicket.lots.forEach((lot) => {
+              financialBatchesMap.set(lot.id, {
+                sold: lot.sold,
+                revenue: lot.revenue,
+              });
+            });
+          }
+        });
+      }
+
+      // Criar estrutura de dados para exibição - lista de tickets
+      const formattedTicketsData: FinancialTicket[] = [];
+
+      // Processar cada ticket
+      ticketsResponse.tickets.forEach((ticket: any) => {
+        // Usar o nome da categoria do objeto category que vem na resposta
+        const categoryName = ticket.category?.name || "Sem categoria";
+
+        // Verificar se o ticket tem batches
+        const hasBatches = ticket.batches && ticket.batches.length > 0;
+        const financialTicket = financialTicketsMap.get(ticket.id);
+
+        // Calcular totais do ticket (soma de todos os batches ou usar dados financeiros)
+        let totalSold = 0;
+        let totalRevenue = 0;
+
+        if (financialTicket) {
+          // Usar dados financeiros se disponíveis
+          totalSold = parseInt(financialTicket.sold) || 0;
+          totalRevenue = financialTicket.revenue || 0;
+        } else if (hasBatches) {
+          // Se não houver dados financeiros, somar dos batches
+          ticket.batches.forEach((batch: any) => {
+            const financialBatch = financialBatchesMap.get(batch.id);
+            if (financialBatch) {
+              totalSold += parseInt(financialBatch.sold) || 0;
+              totalRevenue += financialBatch.revenue || 0;
+            }
+          });
+        }
+
+        // Adicionar ticket
+        formattedTicketsData.push({
+          id: ticket.id,
+          type: "category", // Mantém "category" para compatibilidade com o código de renderização
+          name: ticket.name,
+          subtitle: categoryName, // Nome da categoria no subtitle
+          categoryId: ticket.categoryId,
+          sold: totalSold.toString(),
+          revenue: totalRevenue,
+          createdAt: ticket.createdAt,
+          lots: ticket.batches,
+        });
+      });
+
+      setTicketsData(formattedTicketsData);
+      setFinancialBatchesMap(financialBatchesMap);
       setPagination(financialDataResponse.tickets.pagination);
     } catch (error: any) {
       console.error("Error loading event:", error);
       toast.error("Erro ao carregar dados do evento");
-      // Manter dados mockados como fallback
     } finally {
       setLoading(false);
     }
@@ -279,8 +283,8 @@ export default function EventFinancialPage() {
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Parcelados a receber
                 </p>
-                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                  <CalendarIcon className="size-5 text-gray-12" />
+                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-4 flex items-center justify-center">
+                  <CalendarIcon className="size-5 text-blue-12" />
                 </div>
               </div>
               <div className="flex items-center justify-between">
@@ -289,7 +293,7 @@ export default function EventFinancialPage() {
                 </p>
                 <button
                   onClick={() => setIsInstallmentsOpen(true)}
-                  className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline"
+                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
                 >
                   Ver detalhes
                 </button>
@@ -302,8 +306,8 @@ export default function EventFinancialPage() {
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Aguardando liberação
                 </p>
-                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                  <Hourglass className="size-5 text-gray-12" />
+                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-yellow-4 flex items-center justify-center">
+                  <TimerIcon className="size-5 text-yellow-12" />
                 </div>
               </div>
               <div className="flex items-center justify-between">
@@ -312,7 +316,7 @@ export default function EventFinancialPage() {
                 </p>
                 <button
                   onClick={() => setIsAwaitingReleaseOpen(true)}
-                  className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline"
+                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
                 >
                   Ver detalhes
                 </button>
@@ -335,7 +339,7 @@ export default function EventFinancialPage() {
                 </p>
                 <button
                   onClick={() => setIsTransferHistoryOpen(true)}
-                  className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline"
+                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
                 >
                   Ver detalhes
                 </button>
@@ -349,7 +353,7 @@ export default function EventFinancialPage() {
                   Estornado
                 </p>
                 <div className="w-[28px] h-[28px] p-1 rounded-lg bg-red-3 flex items-center justify-center">
-                  <RotateCcw className="size-5 text-red-11" />
+                  <RemoveIcon className="size-3 text-red-12" />
                 </div>
               </div>
               <div className="flex items-center justify-between">
@@ -358,7 +362,7 @@ export default function EventFinancialPage() {
                 </p>
                 <button
                   onClick={() => setIsRefundedOpen(true)}
-                  className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline"
+                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
                 >
                   Ver detalhes
                 </button>
@@ -372,7 +376,7 @@ export default function EventFinancialPage() {
                   Chargebacks
                 </p>
                 <div className="w-[28px] h-[28px] p-1 rounded-lg bg-red-3 flex items-center justify-center">
-                  <CreditCard className="size-5 text-red-11" />
+                  <ChargeBackIcon className="size-5 text-red-12" />
                 </div>
               </div>
               <div className="flex items-center justify-between">
@@ -381,7 +385,7 @@ export default function EventFinancialPage() {
                 </p>
                 <button
                   onClick={() => setIsChargebackOpen(true)}
-                  className="text-[14px] text-primary-11 font-family-dm-sans font-medium hover:underline"
+                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
                 >
                   Ver detalhes
                 </button>
@@ -393,8 +397,8 @@ export default function EventFinancialPage() {
           <div className="w-full bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                  <LineChart className="size-5 text-gray-12" />
+                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-4 flex items-center justify-center">
+                  <FaturaIcon className="size-5 text-blue-12" />
                 </div>
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Faturamento
@@ -422,7 +426,7 @@ export default function EventFinancialPage() {
               <div className="flex items-center gap-2">
                 <ArrowUp className="size-6 text-primary-11" />
                 <span className="font-family-dm-sans font-normal text-[14px] text-gray-12">
-                  {financialData.revenueChange}% vs. semana passada
+                  {financialData.revenueChange.toFixed(2)}% vs. semana passada
                 </span>
               </div>
             </div>
@@ -470,90 +474,127 @@ export default function EventFinancialPage() {
               {ticketsData.map((item, index) => {
                 const isExpanded = expandedRows.has(item.id);
                 const isCategory = item.type === "category";
-                const isLot = item.type === "lot";
-
-                // Encontrar a categoria pai mais próxima antes deste lote
-                let parentCategoryId: string | null = null;
-                if (isLot) {
-                  for (let i = index - 1; i >= 0; i--) {
-                    if (ticketsData[i].type === "category") {
-                      parentCategoryId = ticketsData[i].id;
-                      break;
-                    }
-                  }
-                }
-
-                // Se é um lote e a categoria pai não está expandida, não mostrar
-                if (isLot && parentCategoryId && !expandedRows.has(parentCategoryId)) {
-                  return null;
-                }
+                const hasLots = item.lots && item.lots.length > 0;
 
                 return (
-                  <div
-                    key={item.id}
-                    className={`bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors ${isCategory ? "h-[56px]" : "h-[48px]"}`}
-                  >
-                    {/* Ingresso/Lotes */}
-                    <div className="flex h-full items-center p-4 w-[289.5px]">
-                      <div className="flex items-center gap-3">
-                        {isCategory && (
-                          <button
-                            onClick={() => toggleRow(item.id)}
-                            className="flex items-center justify-center"
-                          >
-                            <div className="relative size-6">
-                              <div className={`absolute inset-0 ${isExpanded ? "bg-blue-5" : "bg-gray-4"} rounded p-1`}>
-                                <div className="size-full rounded-lg flex items-center justify-center p-1">
-                                  <ArrowButton isOpen={isExpanded} />
+                  <div key={item.id} className="w-full">
+                    {/* Categoria/Ticket */}
+                    <div
+                      className={`border-b border-gray-6 flex items-center justify-between w-full hover:bg-gray-2 transition-colors ${isExpanded && hasLots ? "bg-blue-3" : "bg-gray-1"} ${isCategory ? "h-[56px]" : "h-[48px]"}`}
+                    >
+                      {/* Ingresso/Lotes */}
+                      <div className="flex h-full items-center px-4 py-3 w-[289.5px]">
+                        <div className="flex items-center gap-3">
+                          {hasLots && (
+                            <button
+                              onClick={() => toggleRow(item.id)}
+                              className="flex items-center justify-center cursor-pointer"
+                            >
+                              <div className="relative size-6">
+                                <div className={`absolute inset-0 ${isExpanded ? "bg-blue-5" : "bg-gray-4"} rounded p-1`}>
+                                  <div className="size-full rounded-lg flex items-center justify-center p-1">
+                                    <ArrowButton isOpen={isExpanded} />
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </button>
-                        )}
-                        <div className="flex flex-col gap-0">
-                          {isCategory ? (
-                            <>
-                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
-                                {item.subtitle || "Nome da categoria"}
-                              </p>
-                              <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                                {item.name}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {item.name} - {item.subtitle}
-                            </p>
+                            </button>
                           )}
+                          <div className="flex flex-col gap-0">
+                            {item.subtitle && (
+                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
+                                {item.subtitle}
+                              </p>
+                            )}
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              {item.name}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Vendidos */}
-                    <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                      <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                        {item.sold}
-                      </p>
-                    </div>
+                      {/* Vendidos */}
+                      <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
+                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                          {item.sold}
+                        </p>
+                      </div>
 
-                    {/* Receita bruta */}
-                    <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                      <div className="flex items-center gap-1">
-                        <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          R$
-                        </span>
-                        <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {(item.revenue / 100).toFixed(2).replace(".", ",")}
-                        </span>
+                      {/* Receita bruta */}
+                      <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                            R$
+                          </span>
+                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                            {(item.revenue / 100).toFixed(2).replace(".", ",")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Criado em */}
+                      <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
+                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                          {new Date(item.createdAt).toLocaleDateString("pt-BR")}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Criado em */}
-                    <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                      <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                        {item.createdAt}
-                      </p>
-                    </div>
+                    {/* Lotes (quando expandido) */}
+                    {isExpanded && hasLots && item.lots && item.lots.map((lot: any, lotIndex: number) => {
+                      // Buscar dados financeiros do lote
+                      const financialLot = financialBatchesMap.get(lot.id);
+                      const lotSold = financialLot?.sold || lot.sold?.toString() || "0";
+                      const lotRevenue = financialLot?.revenue || lot.revenue || 0;
+                      const lotCreatedAt = lot.createdAt || item.createdAt;
+                      
+                      // Formatar nome do lote: "Lote X - Nome do evento" 
+                      // Se o batch tiver um nome específico, usar ele, senão usar o nome do ticket
+                      const lotName = `Lote ${lotIndex + 1} - ${item.name}`;
+
+                      return (
+                        <div
+                          key={`${item.id}-lot-${lot.id}`}
+                          className="bg-blue-2 border-b border-blue-6 flex items-center justify-between w-full h-[48px] hover:bg-blue-3 transition-colors last:border-b-0"
+                        >
+                          {/* Ingresso/Lotes */}
+                          <div className="flex h-full items-center px-4 py-3 w-[289.5px]">
+                            <div className="flex items-center gap-3">
+                              <div className="flex flex-col gap-0">
+                                <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                  {lotName}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Vendidos */}
+                          <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              {lotSold}
+                            </p>
+                          </div>
+
+                          {/* Receita bruta */}
+                          <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                R$
+                              </span>
+                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                {(lotRevenue / 100).toFixed(2).replace(".", ",")}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Criado em */}
+                          <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              {new Date(lotCreatedAt).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}

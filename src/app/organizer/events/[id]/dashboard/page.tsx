@@ -5,26 +5,26 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import {
-  ArrowUp,
   ArrowDown,
   DollarSign,
   TrendingUp,
   Users,
   XCircle,
-  RotateCcw,
-  ChevronRight,
-  ChevronDown,
 } from "lucide-react";
-import Link from "next/link";
 import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { RevenueChart } from "@/components/Organizer/RevenueChart";
 import { SalesHeatmap } from "@/components/Organizer/SalesHeatmap";
-import type { SalesHeatmapData, TicketRanking, TopCity, LotNearDepletion, RegistrationsTrend } from "@/services/organizer/OrganizerService";
+import type { SalesHeatmapData } from "@/services/organizer/OrganizerService";
 import { ArrowButton } from "@/components/ArrowButton";
 import { SelectTicketsFilterModal } from "@/components/Registrations/SelectTicketsFilterModal";
 import { useTickets } from "@/hooks/useTickets";
+import { ArrowUpIcon } from "@/components/Icons/ArrowUpIcon";
+import { ShopIcon } from "@/components/Icons/ShopIcon";
+import { CartIcon } from "@/components/Icons/CartIcon";
+import { CheckIcon } from "@/components/Icons/Organizer/CheckIcon";
+import { DolarIcon } from "@/components/Icons/Organizer/DolarIcon";
 
 export default function EventDashboardPage() {
   const router = useRouter();
@@ -159,23 +159,35 @@ export default function EventDashboardPage() {
           refunded: dashboardDataResponse.registrationsTrend.refunded,
           chartData: dashboardDataResponse.registrationsTrend.chartData,
         },
-        ticketRanking: dashboardDataResponse.ticketRanking.map((t) => ({
-          name: t.name,
-          category: t.category,
-          quantity: t.quantity,
-          total: t.total,
-        })),
-        topCities: dashboardDataResponse.topCities.map((c) => ({
-          city: c.city,
-          buyers: c.buyers,
-        })),
-        lotsNearDepletion: dashboardDataResponse.lotsNearDepletion.map((l) => ({
-          name: l.name,
-          status: l.status,
-          sold: l.sold,
-          total: l.total,
-          remaining: l.remaining,
-        })),
+        ticketRanking: (() => {
+          const ranking = dashboardDataResponse.ticketRanking as any;
+          const data = Array.isArray(ranking) ? ranking : (ranking?.data || []);
+          return data.map((t: any) => ({
+            name: t.name,
+            category: t.category,
+            quantity: t.quantity,
+            total: t.total,
+          }));
+        })(),
+        topCities: (() => {
+          const cities = dashboardDataResponse.topCities as any;
+          const data = Array.isArray(cities) ? cities : (cities || []);
+          return data.map((c: any) => ({
+            city: c.city,
+            buyers: c.buyers,
+          }));
+        })(),
+        lotsNearDepletion: (() => {
+          const lots = dashboardDataResponse.lotsNearDepletion as any;
+          const data = Array.isArray(lots) ? lots : (lots || []);
+          return data.map((l: any) => ({
+            name: l.name,
+            status: l.status,
+            sold: l.sold,
+            total: l.total,
+            remaining: l.remaining,
+          }));
+        })(),
         salesHeatmap: dashboardDataResponse.salesHeatmap,
         dailyData: [],
       });
@@ -273,8 +285,8 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-lg h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Receita Líquida</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                <DollarSign className="size-5 text-gray-12" />
+              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-4 flex items-center justify-center">
+                <CartIcon className="size-5 text-blue-12" />
               </div>
             </div>
             <div className="px-4 h-[49px] flex items-center">
@@ -284,12 +296,12 @@ export default function EventDashboardPage() {
             </div>
             <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
               {dashboardData.netRevenueChange >= 0 ? (
-                <ArrowUp className="size-6 text-primary-11" />
+                <ArrowUpIcon className="size-3 text-primary-11" />
               ) : (
                 <ArrowDown className="size-6 text-red-11" />
               )}
               <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                {Math.abs(dashboardData.netRevenueChange)}% vs. semana passada
+                {Math.abs(dashboardData.netRevenueChange).toFixed(2)}% vs. semana passada
               </span>
             </div>
           </div>
@@ -299,7 +311,7 @@ export default function EventDashboardPage() {
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Ticket Médio</p>
               <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                <TrendingUp className="size-5 text-gray-12" />
+                <CheckIcon className="size-5 text-gray-12" />
               </div>
             </div>
             <div className="px-4 h-[49px] flex items-center">
@@ -309,12 +321,12 @@ export default function EventDashboardPage() {
             </div>
             <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
               {dashboardData.averageTicketChange >= 0 ? (
-                <ArrowUp className="size-6 text-primary-11" />
+                <ArrowUpIcon className="size-3 text-primary-11" />
               ) : (
                 <ArrowDown className="size-6 text-red-11" />
               )}
               <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                {Math.abs(dashboardData.averageTicketChange)}% vs. semana passada
+                {Math.abs(dashboardData.averageTicketChange).toFixed(2)}% vs. semana passada
               </span>
             </div>
           </div>
@@ -323,8 +335,8 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-lg h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Total de Inscrições</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                <Users className="size-5 text-gray-12" />
+              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
+                <DolarIcon className="size-5 text-[#202020]" />
               </div>
             </div>
             <div className="px-4 h-[49px] flex items-center">
@@ -333,9 +345,9 @@ export default function EventDashboardPage() {
               </p>
             </div>
             <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
-              <ArrowUp className="size-6 text-primary-11" />
+              <ArrowUpIcon className="size-3 text-primary-11" />
               <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                {dashboardData.totalRegistrationsChange}% vs. semana passada
+                {Math.abs(dashboardData.totalRegistrationsChange).toFixed(2)}% vs. semana passada
               </span>
             </div>
           </div>
@@ -344,8 +356,8 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-lg h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Cancelamentos / Estornos</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                <XCircle className="size-5 text-gray-12" />
+              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-red-4 flex items-center justify-center">
+                <XCircle className="size-5 text-red-12" />
               </div>
             </div>
             <div className="flex-1 flex">
@@ -389,9 +401,13 @@ export default function EventDashboardPage() {
                 R$ {(dashboardData.registrationsTrend.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <div className="flex items-center gap-1">
-                <ArrowUp className="size-6 text-primary-11" />
+                {dashboardData.registrationsTrend.change >= 0 ? (
+                  <ArrowUpIcon className="size-3 text-primary-11" />
+                ) : (
+                  <ArrowDown className="size-6 text-red-11" />
+                )}
                 <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                  {dashboardData.registrationsTrend.change}% vs. semana passada
+                  {dashboardData.registrationsTrend.change.toFixed(2)}% vs. semana passada
                 </span>
               </div>
             </div>
@@ -523,7 +539,7 @@ export default function EventDashboardPage() {
 
           {/* Heatmap de Dias e Horários */}
           <div className="bg-gray-1 border border-gray-6 rounded-lg">
-            <SalesHeatmap />
+            <SalesHeatmap data={dashboardData.salesHeatmap} />
           </div>
         </div>
       </div>

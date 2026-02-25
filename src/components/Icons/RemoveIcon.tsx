@@ -10,7 +10,7 @@ export function RemoveIcon({ className }: { className?: string }) {
     >
       <path
         d="M13.4779 0.750079L0.75 13.478M13.4779 13.4779L0.75 0.75"
-        stroke="#646464"
+        stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"

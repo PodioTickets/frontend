@@ -18,6 +18,10 @@ import { DetailsIcon } from "../Icons/DetailsIcon";
 import { organizerService } from "@/services";
 import type { Installment } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
+import { PaymentIcon } from "react-svg-credit-card-payment-icons";
+import { TimerIcon } from "../Icons/Organizer/TimerIcon";
+import Image from "next/image";
+import { getAvatarUrl } from "@/utils/avatar";
 
 interface InstallmentsDrawerProps {
   isOpen: boolean;
@@ -85,26 +89,30 @@ export function InstallmentsDrawer({
   const formatInstallmentForDisplay = (installment: Installment, registrationId?: string) => {
     const date = new Date(installment.dueDate);
     const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+    // Usar paymentId para buscar detalhes (GET /api/v1/payments/order/{paymentId}/details)
+    // O installment.id serve apenas para identificação visual na lista
+    const paymentId = installment.paymentId || installment.orderId;
     
     return {
-      orderId: registrationId ? `#${registrationId.slice(0, 6)}...${registrationId.slice(-4)}` : `#${installment.id.slice(0, 6)}...${installment.id.slice(-4)}`,
-      transactionId: installment.id.slice(0, 8),
+      orderId: paymentId || "", // Usar paymentId para buscar os detalhes via /api/v1/payments/order/{paymentId}/details
+      transactionId: installment.id, // ID da parcela (apenas para exibição visual)
       buyer: {
-        name: "Comprador", // TODO: Buscar dados do comprador se disponível
-        email: "email@example.com",
-        avatar: null,
+        name: `${installment.buyer.firstName} ${installment.buyer.lastName}`,
+        email: installment.buyer.email,
+        avatar: installment.buyer.avatarUrl,
       },
       releaseDate: formattedDate,
-      nextReleaseDate: formattedDate, // TODO: Calcular próxima data se disponível
-      paymentMethod: "Pix", // TODO: Buscar método de pagamento se disponível
+      nextReleaseDate: formattedDate,
+      paymentMethod: "Pix", // Será preenchido pela API
       value: installment.amount / 100, // Converter de centavos
-      installment: "1/1", // TODO: Calcular parcela se disponível
+      installment: "1/1", // Será preenchido pela API
     };
   };
 
   const displayInstallments = installments.map(i => formatInstallmentForDisplay(i));
   const totalPages = Math.ceil(displayInstallments.length / itemsPerPage);
-  
+
   const paginatedInstallments = displayInstallments.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -138,7 +146,7 @@ export function InstallmentsDrawer({
 
                 {/* Title with Icon */}
                 <div className="flex items-center gap-2">
-                  <div className="w-[32px] h-[32px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
+                  <div className="w-[32px] h-[32px] p-1 rounded-lg bg-[#CAF1F6] flex items-center justify-center">
                     <CalendarIcon className="size-6 text-gray-12" />
                   </div>
                   <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
@@ -158,10 +166,10 @@ export function InstallmentsDrawer({
           <div className="flex-1 overflow-y-auto">
             <div className="p-5">
               {/* Info Header */}
-              <div className="mb-5 flex items-center gap-2 text-[12px] text-gray-11 font-family-dm-sans">
-                <span>Nome da categoria: {categoryName}</span>
+              <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
+                <span>Nome da categoria: <span className="text-gray-12">{categoryName}</span></span>
                 <span className="w-1 h-1 rounded-full bg-gray-11" />
-                <span>Evento: {eventName}</span>
+                <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 
               {/* Cards Section */}
@@ -169,14 +177,14 @@ export function InstallmentsDrawer({
                 {/* Total pendente */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-gray-11">
                       Total pendente
                     </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#CAF1F6] flex items-center justify-center">
                       <CalendarIcon className="size-5 text-gray-12" />
                     </div>
                   </div>
-                  <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
+                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
                     R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -184,14 +192,14 @@ export function InstallmentsDrawer({
                 {/* Liberação hoje */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-gray-11">
                       Liberação hoje
                     </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                      <Hourglass className="size-5 text-gray-12" />
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-3 flex items-center justify-center">
+                      <TimerIcon className="size-5 text-primary-12" />
                     </div>
                   </div>
-                  <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
+                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
                     R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -199,14 +207,14 @@ export function InstallmentsDrawer({
                 {/* Transações */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-gray-11">
                       Transações
                     </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                      <FileText className="size-5 text-gray-12" />
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
+                      <FileText className="size-5 text-[#2F265F]" />
                     </div>
                   </div>
-                  <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
+                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
                     {actualData.totalTransactions}
                   </p>
                 </div>
@@ -236,12 +244,12 @@ export function InstallmentsDrawer({
                       Previsão liberação
                     </p>
                   </div>
-                  <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4 px-0">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
                       Pagamento
                     </p>
                   </div>
-                  <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
                       Valor pendente
                     </p>
@@ -265,97 +273,102 @@ export function InstallmentsDrawer({
                     </div>
                   ) : (
                     paginatedInstallments.map((installment: any, index: number) => (
-                    <div
-                      key={`${installment.orderId}-${index}`}
-                      className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[60px]"
-                    >
-                      {/* ID pedido */}
-                      <div className="flex h-full items-center p-4 w-[120px]">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {installment.orderId}
-                        </p>
-                      </div>
-
-                      {/* ID transação */}
-                      <div className="flex h-full items-center p-4 w-[120px]">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {installment.transactionId}
-                        </p>
-                      </div>
-
-                      {/* Comprador */}
-                      <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
-                        <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                          <span className="text-gray-12 font-semibold text-sm">
-                            {installment.buyer.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-0 min-w-0">
-                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
-                            {installment.buyer.name}
-                          </p>
-                          <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
-                            {installment.buyer.email}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Previsão liberação */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <div className="flex flex-col items-center w-full">
+                      <div
+                        key={`${installment.orderId}-${index}`}
+                        className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[60px]"
+                      >
+                        {/* ID pedido */}
+                        <div className="flex h-full items-center p-4 w-[120px]">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            Lib. {installment.releaseDate}
-                          </p>
-                          <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
-                            Próx. {installment.nextReleaseDate}
+                            #{installment.orderId.slice(0, 6)}...{installment.orderId.slice(-4)}
                           </p>
                         </div>
-                      </div>
 
-                      {/* Pagamento */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <div className="flex items-center gap-2 justify-center w-full">
-                          {installment.paymentMethod === "Pix" ? (
-                            <PixIcon className="size-5 text-gray-12" />
-                          ) : (
-                            <CardIcon className="size-5 text-gray-12" />
-                          )}
+                        {/* ID transação */}
+                        <div className="flex h-full items-center p-4 w-[120px]">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {installment.paymentMethod}
+                            {installment.transactionId.slice(0, 8)}
                           </p>
                         </div>
-                      </div>
 
-                      {/* Valor pendente */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <div className="flex flex-col items-center w-full">
-                          <div className="flex items-center gap-1">
-                            <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              R$
-                            </span>
-                            <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {installment.value.toFixed(2).replace(".", ",")}
-                            </span>
+                        {/* Comprador */}
+                        <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
+                          <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
+
+                            {installment.buyer.avatar ? (
+                              <Image src={getAvatarUrl(installment.buyer.avatar)} alt={installment.buyer.name} width={32} height={32} className="rounded-full object-cover" draggable={false} />
+                            ) : (
+                              <span className="text-gray-12 font-semibold text-sm">
+                                {installment.buyer.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
                           </div>
-                          <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
-                            Parcelado: {installment.installment}
-                          </p>
+                          <div className="flex flex-col gap-0 min-w-0">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
+                              {installment.buyer.name}
+                            </p>
+                            <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
+                              {installment.buyer.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Previsão liberação */}
+                        <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                          <div className="flex flex-col items-center w-full">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              Lib. {installment.releaseDate}
+                            </p>
+                            <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
+                              Próx. {installment.nextReleaseDate}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Pagamento */}
+                        <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4 px-0">
+                          <div className="flex items-center gap-2 justify-center w-full">
+                            {installment.paymentMethod === "Pix" ? (
+                              <PixIcon className="size-5 text-gray-12" />
+                            ) : (
+                              <PaymentIcon
+                                type={installment.paymentMethod as any}
+                                className="size-8 text-gray-12"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Valor pendente */}
+                        <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                          <div className="flex flex-col items-center w-full">
+                            <div className="flex items-center gap-1">
+                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                R$
+                              </span>
+                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                {installment.value.toFixed(2).replace(".", ",")}
+                              </span>
+                            </div>
+                            <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
+                              Parcelado: {installment.installment}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[64px]">
+                          <button
+                            onClick={() => {
+                              setSelectedPayment(installment);
+                              setIsDetailsOpen(true);
+                            }}
+                            className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                          >
+                            <DetailsIcon className="size-5 text-gray-12" />
+                          </button>
                         </div>
                       </div>
-
-                      {/* Ações */}
-                      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[64px]">
-                        <button
-                          onClick={() => {
-                            setSelectedPayment(installment);
-                            setIsDetailsOpen(true);
-                          }}
-                          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-                        >
-                          <DetailsIcon className="size-5 text-gray-12" />
-                        </button>
-                      </div>
-                    </div>
                     ))
                   )}
                 </div>

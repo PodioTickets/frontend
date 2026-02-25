@@ -19,6 +19,7 @@ import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { organizerService } from "@/services";
 import type { PendingRelease } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
+import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 
 interface AwaitingReleaseDrawerProps {
   isOpen: boolean;
@@ -86,23 +87,24 @@ export function AwaitingReleaseDrawer({
   const formatPendingForDisplay = (pending: PendingRelease) => {
     const releaseDate = new Date(pending.releaseDate);
     const formattedDate = releaseDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    
+    const paymentId = pending.paymentId || pending.orderId || pending.registrationId;
+
     return {
-      orderId: `#${pending.registrationId.slice(0, 6)}...${pending.registrationId.slice(-4)}`,
-      transactionId: pending.id.slice(0, 8),
+      orderId: paymentId || "",
+      transactionId: pending.id,
       buyer: {
-        name: "Comprador", // TODO: Buscar dados do comprador se disponível
+        name: "Comprador", // Será preenchido pela API
         email: "email@example.com",
         avatar: null,
       },
       releaseDate: formattedDate,
-      paymentMethod: "Pix", // TODO: Buscar método de pagamento se disponível
+      paymentMethod: "Pix", // Será preenchido pela API
       value: pending.amount / 100, // Converter de centavos
     };
   };
 
   const displayItems = pendingReleases.map(p => formatPendingForDisplay(p));
-  
+
   const totalPages = Math.ceil(displayItems.length / itemsPerPage);
   const paginatedItems = displayItems.slice(
     (currentPage - 1) * itemsPerPage,
@@ -137,8 +139,8 @@ export function AwaitingReleaseDrawer({
 
                 {/* Title with Icon */}
                 <div className="flex items-center gap-2">
-                  <div className="w-[32px] h-[32px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                    <Hourglass className="size-6 text-gray-12" />
+                  <div className="w-[32px] h-[32px] p-1 rounded-lg bg-yellow-3 flex items-center justify-center">
+                    <TimerIcon className="size-6 text-yellow-12" />
                   </div>
                   <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
                     Aguardando liberação - Detalhes
@@ -157,25 +159,24 @@ export function AwaitingReleaseDrawer({
           <div className="flex-1 overflow-y-auto">
             <div className="p-5">
               {/* Info Header */}
-              <div className="mb-5 flex items-center gap-2 text-[11px] text-gray-11 font-family-dm-sans">
-                <span>Nome da categoria: {categoryName}</span>
+              <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
+                <span>Nome da categoria: <span className="text-gray-12">{categoryName}</span></span>
                 <span className="w-1 h-1 rounded-full bg-gray-11" />
-                <span>Evento: {eventName}</span>
+                <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 
-              {/* Cards Section */}
               <div className="grid grid-cols-3 gap-4 mb-5">
                 {/* Total pendente */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-gray-11">
                       Total pendente
                     </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#CAF1F6] flex items-center justify-center">
                       <CalendarIcon className="size-5 text-gray-12" />
                     </div>
                   </div>
-                  <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
+                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
                     R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -183,14 +184,14 @@ export function AwaitingReleaseDrawer({
                 {/* Liberação hoje */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-gray-11">
                       Liberação hoje
                     </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                      <Hourglass className="size-5 text-gray-12" />
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-3 flex items-center justify-center">
+                      <TimerIcon className="size-5 text-primary-12" />
                     </div>
                   </div>
-                  <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
+                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
                     R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -198,14 +199,14 @@ export function AwaitingReleaseDrawer({
                 {/* Transações */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                    <p className="font-family-dm-sans font-normal text-gray-11">
                       Transações
                     </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                      <FileText className="size-5 text-gray-12" />
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
+                      <FileText className="size-5 text-[#2F265F]" />
                     </div>
                   </div>
-                  <p className="font-family-dm-sans font-extrabold text-[14px] text-gray-12">
+                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
                     {actualData.totalTransactions}
                   </p>
                 </div>
@@ -264,86 +265,86 @@ export function AwaitingReleaseDrawer({
                     </div>
                   ) : (
                     paginatedItems.map((item: any, index: number) => (
-                    <div
-                      key={`${item.orderId}-${index}`}
-                      className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[60px]"
-                    >
-                      {/* ID pedido */}
-                      <div className="flex h-full items-center p-4 w-[120px]">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {item.orderId}
-                        </p>
-                      </div>
-
-                      {/* ID transação */}
-                      <div className="flex h-full items-center p-4 w-[120px]">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {item.transactionId}
-                        </p>
-                      </div>
-
-                      {/* Comprador */}
-                      <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
-                        <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                          <span className="text-gray-12 font-semibold text-sm">
-                            {item.buyer.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-0 min-w-0">
-                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
-                            {item.buyer.name}
-                          </p>
-                          <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
-                            {item.buyer.email}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Previsão liberação */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                        <div className="flex items-center justify-center w-full">
+                      <div
+                        key={`${item.orderId}-${index}`}
+                        className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[60px]"
+                      >
+                        {/* ID pedido */}
+                        <div className="flex h-full items-center p-4 w-[120px]">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          Lib. {item.releaseDate}
+                            #{item.orderId.slice(0, 6)}...{item.orderId.slice(-4)}
                           </p>
                         </div>
-                      </div>
 
-                      {/* Pagamento */}
-                      <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
-                        <div className="flex items-center gap-2 justify-center w-full">
-                          {item.paymentMethod === "Pix" ? (
-                            <PixIcon className="size-5 text-gray-12" />
-                          ) : (
-                            <PaymentIcon type={item.paymentMethod as any} className="size-8 text-gray-12" />
-                          )}
+                        {/* ID transação */}
+                        <div className="flex h-full items-center p-4 w-[120px]">
+                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                            {item.transactionId.slice(0, 8)}
+                          </p>
+                        </div>
+
+                        {/* Comprador */}
+                        <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
+                          <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
+                            <span className="text-gray-12 font-semibold text-sm">
+                              {item.buyer.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-0 min-w-0">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
+                              {item.buyer.name}
+                            </p>
+                            <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
+                              {item.buyer.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Previsão liberação */}
+                        <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                          <div className="flex items-center justify-center w-full">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              Lib. {item.releaseDate}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Pagamento */}
+                        <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
+                          <div className="flex items-center gap-2 justify-center w-full">
+                            {item.paymentMethod === "Pix" ? (
+                              <PixIcon className="size-5 text-gray-12" />
+                            ) : (
+                              <PaymentIcon type={item.paymentMethod as any} className="size-8 text-gray-12" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Valor pendente */}
+                        <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
+                          <div className="flex items-center gap-1 justify-center w-full">
+                            <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              R$
+                            </span>
+                            <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              {item.value.toFixed(2).replace(".", ",")}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[64px]">
+                          <button
+                            onClick={() => {
+                              setSelectedPayment(item);
+                              setIsDetailsOpen(true);
+                            }}
+                            className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                          >
+                            <DetailsIcon className="size-5 text-gray-12" />
+                          </button>
                         </div>
                       </div>
-
-                      {/* Valor pendente */}
-                      <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
-                        <div className="flex items-center gap-1 justify-center w-full">
-                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            R$
-                          </span>
-                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {item.value.toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Ações */}
-                      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[64px]">
-                        <button
-                          onClick={() => {
-                            setSelectedPayment(item);
-                            setIsDetailsOpen(true);
-                          }}
-                          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-                        >
-                          <DetailsIcon className="size-5 text-gray-12" />
-                        </button>
-                      </div>
-                    </div>
                     ))
                   )}
                 </div>

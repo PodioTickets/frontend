@@ -4,144 +4,53 @@ import { useViewRegistrationModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
-import { useState, useMemo } from "react";
-import { mockRegistrations } from "@/constants";
-import { LocationIcon } from "../Icons/LocationIcon";
-
-// Mock data para o modal
-const mockParticipantData = {
-  name: "Calebe Cunha",
-  email: "calebecunha@email.com",
-  cpf: "456.789.123-00",
-  birthDate: "15/08/1992",
-  phone: "(11) 9 8765-4321",
-  gender: "Masculino",
-  emergencyPhone: "(11) 9 1234-5678",
-};
-
-const mockQuestions = [
-  { id: "1", question: "Pergunta 1", answer: "Resposta" },
-  { id: "2", question: "Pergunta 2", answer: "Resposta" },
-  { id: "3", question: "Pergunta 3", answer: "Resposta" },
-  { id: "4", question: "Pergunta 4", answer: "Resposta" },
-  { id: "5", question: "Pergunta 5", answer: "Resposta" },
-  { id: "6", question: "Pergunta 6", answer: "Resposta" },
-  { id: "7", question: "Pergunta 7", answer: "Resposta" },
-  { id: "8", question: "Pergunta 8", answer: "Resposta" },
-  { id: "9", question: "Pergunta 9", answer: "Resposta" },
-  { id: "10", question: "Pergunta 10", answer: "Resposta" },
-  { id: "11", question: "Pergunta 11", answer: "Resposta" },
-  { id: "12", question: "Pergunta 12", answer: "Resposta" },
-  { id: "13", question: "Pergunta 13", answer: "Resposta" },
-];
-
-const mockProducts = [
-  {
-    id: "1",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-  {
-    id: "2",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-  {
-    id: "3",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-  {
-    id: "4",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-  {
-    id: "5",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-  {
-    id: "6",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-  {
-    id: "7",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-  {
-    id: "8",
-    name: "ITEM EXTRA - Camiseta Regata - Compra Opcional",
-    price: "R$ 29,90",
-    size: "Tamanho: XL",
-    image: "/banners/card_placeholder.png",
-  },
-];
+import { useState, useMemo, useEffect } from "react";
+import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
+import { getAvatarUrl } from "@/utils/avatar";
+import { organizerService } from "@/services";
+import { Loading } from "../Loading";
+import { DistanceIcon } from "../Icons/DistanceIcon";
 
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isQuestionsModalOpen, setIsQuestionsModalOpen] = useState(false);
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
   const [productsPage, setProductsPage] = useState(1);
+  const [loadingRegistration, setLoadingRegistration] = useState(false);
+  const [registrationData, setRegistrationData] = useState<any>(null);
 
-  // Usar dados mock ou dados passados
-  const registration = useMemo(() => {
-    if (data?.registration) {
-      return data.registration;
-    }
-    // Se não houver dados, usar o primeiro mock
-    return mockRegistrations[0];
+  const registrationId = useMemo(() => {
+    return data?.registrationId || data?.registration?.id || null;
   }, [data]);
 
-  const allRegistrations = useMemo(() => {
-    // Se houver uma lista de registrations, usar ela, senão usar mocks
-    if (data?.registrations && Array.isArray(data.registrations)) {
-      return data.registrations;
+  useEffect(() => {
+    if (!isOpen || !registrationId) {
+      setRegistrationData(null);
+      return;
     }
-    return mockRegistrations;
-  }, [data]);
 
-  const currentRegistration = allRegistrations[currentIndex] || registration;
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+    // Evitar buscar novamente se já temos os dados para este ID
+    if (registrationData?.id === registrationId && !loadingRegistration) {
+      return;
     }
-  };
 
-  const handleNext = () => {
-    if (currentIndex < allRegistrations.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
+    const fetchRegistration = async () => {
+      try {
+        setLoadingRegistration(true);
+        const fullData = await organizerService.getRegistrationById(registrationId);
+        setRegistrationData(fullData);
+      } catch (error) {
+        console.error("Erro ao buscar detalhes da registration:", error);
+        setRegistrationData(null);
+      } finally {
+        setLoadingRegistration(false);
+      }
+    };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "";
-    try {
-      const date = new Date(dateString);
-      const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-      return `${date.getDate().toString().padStart(2, "0")} ${months[date.getMonth()]}, ${date.getFullYear()}`;
-    } catch {
-      return "";
-    }
-  };
+    fetchRegistration();
+  }, [isOpen, registrationId]);
+
+  const currentRegistration = registrationData;
 
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
@@ -149,103 +58,252 @@ export function ViewRegistrationModal() {
       male: "Masculino",
       female: "Feminino",
       other: "Outro",
+      MALE: "Masculino",
+      FEMALE: "Feminino",
+      OTHER: "Outro",
     };
-    return labels[gender.toLowerCase()] || gender;
+    return labels[gender] || labels[gender.toLowerCase()] || gender;
   };
 
-  const ticketName = currentRegistration?.modalities?.[0]?.modality?.name || "Kit inscrição - 3K Caminhada";
-  const categoryName = "Nome da categoria";
-  const participantName = currentRegistration?.user
-    ? `${currentRegistration.user.firstName} ${currentRegistration.user.lastName}`
-    : mockParticipantData.name;
-  const participantEmail = currentRegistration?.user?.email || mockParticipantData.email;
-  const participantCPF = currentRegistration?.user?.documentNumber || mockParticipantData.cpf;
-  const participantBirthDate = mockParticipantData.birthDate;
-  const participantGender = getGenderLabel(mockParticipantData.gender);
-  const participantPhone = mockParticipantData.phone;
-  const emergencyPhone = mockParticipantData.emergencyPhone;
+  const formatCPF = (cpf?: string | null) => {
+    if (!cpf) return "";
+    const numbers = cpf.replace(/\D/g, "");
+    if (numbers.length !== 11) return cpf;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
+  };
 
-  return (
-    <>
+  // Se não houver registration, não renderizar nada
+  if (!currentRegistration && !loadingRegistration) {
+    return null;
+  }
+
+  // Mostrar loading enquanto busca os dados
+  if (loadingRegistration && !currentRegistration) {
+    return (
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            key="view-registration-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-99999 flex items-center justify-center bg-black/50"
-            onClick={closeViewRegistrationModal}
-          >
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              onClick={closeViewRegistrationModal}
+            />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden"
+              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
             >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-6">
-              <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
-                Informações do participante
-              </h2>
-              <button
-                onClick={closeViewRegistrationModal}
-                className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
-              >
-                <X className="size-5 text-gray-11" />
-              </button>
-            </div>
+              <div className="bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto p-20">
+                <div className="flex items-center justify-center">
+                  <Loading />
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
 
-            {/* Content */}
-            <div className="p-5 max-h-[582px] overflow-y-auto">
-              <div className="flex gap-5">
-                {/* Left Section */}
-                <div className="flex-1 flex flex-col gap-5">
-                  {/* Participant Info Card */}
-                  <div className="flex flex-col gap-5">
-                    <div className="flex gap-5">
-                      <div className="flex-1 flex flex-col gap-5">
-                        <div>
-                          <div className="mb-2">
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11 mb-1">
+  // Se não tiver dados ainda, não renderizar
+  if (!currentRegistration) {
+    return null;
+  }
+
+  const ticketName = currentRegistration?.ticket?.name || currentRegistration?.modalities?.[0]?.modality?.name || "—";
+  const categoryName = currentRegistration?.ticket?.category?.name || currentRegistration?.modalities?.[0]?.modality?.category?.name || "—";
+  const user = currentRegistration?.user || currentRegistration?.buyer;
+  const participantName = user
+    ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.fullName || "—"
+    : "—";
+  const participantEmail = user?.email || "—";
+  const participantCPFRaw = user?.documentNumber || null;
+
+  // Mascarar CPF: mostrar apenas primeiros 3 e últimos 2 dígitos
+  const maskCPF = (cpf?: string | null) => {
+    if (!cpf) return "—";
+    const numbers = cpf.replace(/\D/g, "");
+    if (numbers.length !== 11) return cpf;
+    return `${numbers.slice(0, 3)}.***.***-${numbers.slice(-2)}`;
+  };
+  const participantCPF = maskCPF(participantCPFRaw);
+
+  const participantBirthDate = user?.dateOfBirth
+    ? (() => {
+      try {
+        const date = new Date(user.dateOfBirth);
+        const day = date.getDate().toString().padStart(2, "0");
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch {
+        return "—";
+      }
+    })()
+    : "—";
+  const participantGender = getGenderLabel(user?.gender);
+  const participantPhone = user?.phone || null;
+  const emergencyPhone = user?.reservePhone || user?.reserve_phone || null;
+
+  // Obter distância do ticket
+  const ticketDistance = currentRegistration?.ticket?.distance
+    ? (() => {
+        // Se distance for uma string como "5 KM", extrair o número
+        const distanceStr = String(currentRegistration.ticket.distance);
+        const distanceMatch = distanceStr.match(/(\d+(?:\.\d+)?)/);
+        if (distanceMatch) {
+          return `${distanceMatch[1]} Km`;
+        }
+        // Se for número em metros, converter para km
+        const distanceNum = parseFloat(distanceStr);
+        if (!isNaN(distanceNum)) {
+          return distanceNum >= 1000 ? `${(distanceNum / 1000).toFixed(1)} Km` : `${distanceNum} m`;
+        }
+        return distanceStr;
+      })()
+    : currentRegistration?.modalities?.[0]?.modality?.distance
+      ? `${(parseFloat(String(currentRegistration.modalities[0].modality.distance)) / 1000).toFixed(1)} Km`
+      : "—";
+
+  // Obter perguntas e produtos reais
+  const questions = currentRegistration?.questionAnswers || [];
+  const products = currentRegistration?.kitItems || [];
+
+  // Formatar telefone
+  const formatPhone = (phone?: string | null) => {
+    if (!phone) return "—";
+    const numbers = phone.replace(/\D/g, "");
+    if (numbers.length === 11) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3, 7)}-${numbers.slice(7)}`;
+    }
+    if (numbers.length === 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    }
+    return phone;
+  };
+
+  return (
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              onClick={closeViewRegistrationModal}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            >
+              <div className="bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6">
+                  <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
+                    Informações do participante
+                  </h2>
+                  <button
+                    onClick={closeViewRegistrationModal}
+                    className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
+                  >
+                    <X className="size-5 text-gray-11" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex h-[642px]">
+                  {/* Left Section */}
+                  <div className="flex-1 flex flex-col min-w-[400px] p-5">
+                    {/* Participant Header */}
+                    <div className="flex flex-col pr-5 border-b border-gray-6">
+                      <div className="flex items-center justify-between pb-6">
+                        <div className="flex flex-col gap-5">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Participante
+                          </p>
+                          <div className="flex flex-col">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
                               {categoryName}
                             </p>
-                            <p className="font-manrope font-bold text-[20px] leading-[1.3] text-gray-12">
+                            <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12">
                               {ticketName}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <LocationIcon className="size-5" />
-                            <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11">
-                              0.3 Km
+                            <DistanceIcon className="size-6" />
+                            <p className="font-family-dm-sans font-medium text-[18px] leading-[1.3] text-gray-12">
+                              {ticketDistance}
                             </p>
                           </div>
                         </div>
-                        {/* Profile Card */}
-                        <div className="border border-gray-6 rounded-xl p-3">
+                        {/* QR Code */}
+                        <div className="flex items-center">
+                          <div className="aspect-square w-[116px] h-[116px] relative">
+                            {currentRegistration?.qrCode ? (
+                              <RegistrationQRCode
+                                qrCodeData={currentRegistration.qrCode}
+                                size={116}
+                                className="w-full h-full"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-2 border border-gray-6 flex items-center justify-center">
+                                <span className="text-xs text-gray-11 text-center">
+                                  QR Code
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Profile Card */}
+                      <div className="flex items-center pb-5">
+                        <div className="border border-gray-6 rounded-xl p-3 w-full">
                           <div className="flex gap-2 items-center">
-                            <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
-                              <span className="text-sm font-bold text-gray-12">
-                                {participantName.charAt(0).toUpperCase()}
-                              </span>
+                            <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
+                              {user?.avatarUrl ? (
+                                <Image
+                                  src={getAvatarUrl(user.avatarUrl)}
+                                  alt={participantName}
+                                  width={40}
+                                  height={40}
+                                  className="rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center">
+                                  <span className="text-primary-11 font-semibold text-sm">
+                                    {participantName.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             <div className="flex flex-col gap-3">
                               <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
-                                {participantName}
+                                {participantName.split(" ")[0]}
                               </p>
                               <div className="flex gap-2 items-center">
-                                <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11">
+                                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
                                   {participantBirthDate}
                                 </p>
                                 <div className="size-1 bg-gray-11 rounded-full" />
-                                <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11">
+                                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
                                   {participantGender}
                                 </p>
                                 <div className="size-1 bg-gray-11 rounded-full" />
-                                <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11">
+                                <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
                                   {participantCPF}
                                 </p>
                               </div>
@@ -253,101 +311,194 @@ export function ViewRegistrationModal() {
                           </div>
                         </div>
                       </div>
-                      {/* QR Code */}
-                      <div className="size-[116px] rounded-lg bg-gray-3 flex items-center justify-center shrink-0">
-                        <div className="text-xs text-gray-11 text-center">
-                          QR Code
+                    </div>
+
+                    {/* Participant Information */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-2 pt-5 pr-5">
+                      <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12 w-full mb-0">
+                        Informações do participante
+                      </p>
+                      <div className="grid grid-cols-2 w-full">
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Nome
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {participantName}
+                          </p>
+                        </div>
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Email
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {participantEmail}
+                          </p>
+                        </div>
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            CPF
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {formatCPF(participantCPFRaw) || "—"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Data de nascimento:
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {participantBirthDate}
+                          </p>
+                        </div>
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Telefone:
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {formatPhone(participantPhone) || "—"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Sexo
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {participantGender || "—"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Telefone de emergência
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {formatPhone(emergencyPhone) || "Opcional"}
+                          </p>
                         </div>
                       </div>
                     </div>
-
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px bg-gray-6" />
-
-                {/* Right Section */}
-                <div className="flex-1 flex flex-col gap-5">
-                  {/* Organizer Questions */}
-                  <div className="flex flex-col gap-5">
-                    <div className="flex items-center justify-between">
-                      <p className="font-family-dm-sans font-bold text-[20px] leading-[1.3] text-gray-12">
-                        Perguntas do Organizador
-                      </p>
-                      <button
-                        onClick={() => setIsQuestionsModalOpen(true)}
-                        className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
-                      >
-                        Ver mais
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-5">
-                      {mockQuestions.slice(0, 6).map((q) => (
-                        <div key={q.id} className="flex flex-col gap-2">
-                          <label className="font-family-dm-sans font-normal leading-[1.3] text-gray-12">
-                            {q.question}
-                          </label>
-                          <label className="font-family-dm-sans font-medium leading-[1.3] text-gray-12">
-                            {q.answer}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
                   </div>
 
-                  {/* Products */}
-                  <div className="flex flex-col gap-5 border-t border-gray-6 pt-3">
-                    <div className="flex items-center justify-between">
-                      <p className="font-family-dm-sans font-bold text-[20px] leading-[1.3] text-gray-12">
-                        Produtos
-                      </p>
-                      <button
-                        onClick={() => setIsProductsModalOpen(true)}
-                        className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
-                      >
-                        Ver mais
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                      {mockProducts.slice(0, 2).map((product) => (
-                        <div
-                          key={product.id}
-                          className="border border-gray-6 rounded-xl p-4"
-                        >
-                          <div className="flex gap-4">
-                            <div className="size-[100px] rounded-lg bg-gray-3 flex items-center justify-center shrink-0 overflow-hidden">
-                              <Image
-                                src={product.image}
-                                alt={product.name}
-                                width={100}
-                                height={100}
-                                className="object-cover"
-                              />
-                            </div>
-                            <div className="flex-1 flex flex-col justify-between">
-                              <p className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12 line-clamp-2">
-                                {product.name}
+                  {/* Divider */}
+                  <div className="w-px bg-gray-6" />
+
+                  {/* Right Section */}
+                  <div className="flex-1 flex flex-col w-[537px] pr-4">
+                    {/* Organizer Questions */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-2 py-5 pl-5 border-b border-gray-6">
+                      <div className="flex items-center justify-between w-full">
+                        <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12">
+                          Perguntas do Organizador
+                        </p>
+                        {questions.length > 4 && (
+                          <button
+                            onClick={() => setIsQuestionsModalOpen(true)}
+                            className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+                          >
+                            Ver mais
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-4 w-full">
+                        {questions.length > 0 ? (
+                          questions.slice(0, 4).map((q: any, index: number) => (
+                            <div key={q.id || index} className="flex flex-col gap-[15px] py-4">
+                              <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                                {q.question?.question || q.question || `Pergunta ${index + 1}`}
                               </p>
-                              <div className="flex items-center justify-between mt-auto">
-                                <p className="font-family-dm-sans font-semibold text-xs leading-[1.3] text-gray-12">
-                                  {product.price}
-                                </p>
-                                <p className="font-family-dm-sans font-semibold text-xs leading-[1.3] text-gray-12">
-                                  {product.size}
-                                </p>
-                              </div>
+                              <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                                {q.answer || "—"}
+                              </p>
                             </div>
+                          ))
+                        ) : (
+                          <div className="col-span-2 py-4">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
+                              Nenhuma pergunta respondida
+                            </p>
                           </div>
-                        </div>
-                      ))}
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Products */}
+                    <div className="flex flex-col gap-5 pt-5 pl-5 flex-1 overflow-y-auto">
+                      <div className="flex items-center justify-between w-full">
+                        <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12">
+                          Produtos
+                        </p>
+                        {products.length > 2 && (
+                          <button
+                            onClick={() => setIsProductsModalOpen(true)}
+                            className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+                          >
+                            Ver mais
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-4">
+                        {products.length > 0 ? (
+                          products.slice(0, 2).map((product: any, index: number) => {
+                            const productName = product.kitItem?.name || product.name || "Produto";
+                            const productPrice = product.kitItem?.price || product.price || 0;
+                            const productSize = product.selectedSize || product.size || "";
+                            const productImage = product.kitItem?.image || product.image || "/banners/card_placeholder.png";
+
+                            return (
+                              <div
+                                key={product.id || index}
+                                className="border border-gray-6 rounded-xl overflow-hidden"
+                              >
+                                <div className="p-4">
+                                  <div className="flex gap-3">
+                                    <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
+                                      <Image
+                                        src={productImage}
+                                        alt={productName}
+                                        width={100}
+                                        height={100}
+                                        className="object-cover w-full h-full"
+                                      />
+                                    </div>
+                                    <div className="flex-1 flex flex-col justify-between py-2">
+                                      <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
+                                        {productName}
+                                      </p>
+                                      <div className="flex items-center justify-between">
+                                        <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                                          R$ {typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}
+                                        </p>
+                                        {productSize && (
+                                          <div className="flex gap-1 items-center">
+                                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                                              Tamanho:
+                                            </p>
+                                            <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                                              {productSize}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="py-4">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
+                              Nenhum produto adicionado
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -360,7 +511,7 @@ export function ViewRegistrationModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
             onClick={() => setIsQuestionsModalOpen(false)}
           >
             <motion.div
@@ -386,18 +537,26 @@ export function ViewRegistrationModal() {
 
               {/* Content */}
               <div className="p-5 max-h-[515px] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-5">
-                  {mockQuestions.map((q) => (
-                    <div key={q.id} className="flex flex-col gap-2">
-                      <label className="font-family-dm-sans font-normal leading-[1.3] text-gray-12">
-                        {q.question}
-                      </label>
-                      <p className="font-family-dm-sans font-medium leading-[1.3] text-gray-12">
-                        {q.answer}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {questions.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-5">
+                    {questions.map((q: any, index: number) => (
+                      <div key={q.id || index} className="flex flex-col gap-2">
+                        <label className="font-family-dm-sans font-normal leading-[1.3] text-gray-12">
+                          {q.question?.question || q.question || `Pergunta ${index + 1}`}
+                        </label>
+                        <p className="font-family-dm-sans font-medium leading-[1.3] text-gray-12">
+                          {q.answer || "—"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-4">
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
+                      Nenhuma pergunta respondida
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -413,7 +572,7 @@ export function ViewRegistrationModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
             onClick={() => setIsProductsModalOpen(false)}
           >
             <motion.div
@@ -439,72 +598,96 @@ export function ViewRegistrationModal() {
 
               {/* Content */}
               <div className="p-5 max-h-[540px] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
-                  {mockProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="border border-gray-6 rounded-xl overflow-hidden"
-                    >
-                      <div className="p-4">
-                        <div className="flex gap-4">
-                          <div className="size-[100px] rounded-lg bg-gray-3 flex items-center justify-center shrink-0 overflow-hidden">
-                            <Image
-                              src={product.image}
-                              alt={product.name}
-                              width={100}
-                              height={100}
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="flex-1 flex flex-col justify-between min-w-0">
-                            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 line-clamp-2 mb-2">
-                              {product.name}
-                            </p>
-                            <div className="flex items-center justify-between">
-                              <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-12">
-                                {product.price}
-                              </p>
-                              <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-12">
-                                {product.size}
-                              </p>
+                {products.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {products.map((product: any, index: number) => {
+                      const productName = product.kitItem?.name || product.name || "Produto";
+                      const productPrice = product.kitItem?.price || product.price || 0;
+                      const productSize = product.selectedSize || product.size || "";
+                      const productImage = product.kitItem?.image || product.image || "/banners/card_placeholder.png";
+
+                      return (
+                        <div
+                          key={product.id || index}
+                          className="border border-gray-6 rounded-xl overflow-hidden"
+                        >
+                          <div className="p-4">
+                            <div className="flex gap-3">
+                              <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
+                                <Image
+                                  src={productImage}
+                                  alt={productName}
+                                  width={100}
+                                  height={100}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                              <div className="flex-1 flex flex-col justify-between py-2 min-w-0">
+                                <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
+                                  {productName}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                                    R$ {typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}
+                                  </p>
+                                  {productSize && (
+                                    <div className="flex gap-1 items-center">
+                                      <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                                        Tamanho:
+                                      </p>
+                                      <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                                        {productSize}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-4">
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
+                      Nenhum produto adicionado
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-6">
-                <button
-                  onClick={() => setProductsPage((prev) => Math.max(1, prev - 1))}
-                  disabled={productsPage === 1}
-                  className="size-8 flex items-center justify-center bg-transparent rounded-lg hover:bg-gray-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <ChevronLeft className="size-4 text-gray-11" />
-                </button>
-                {Array.from({ length: 8 }, (_, i) => i + 1).map((page) => (
+              {products.length > 0 && (
+                <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-6">
                   <button
-                    key={page}
-                    onClick={() => setProductsPage(page)}
-                    className={`size-8 flex items-center justify-center border rounded-lg transition-colors ${productsPage === page
-                      ? "bg-primary-11 border-primary-11 text-[#FBFEFB]"
-                      : "bg-gray-4 border-transparent hover:bg-gray-3 text-gray-12"
-                      }`}
+                    onClick={() => setProductsPage((prev) => Math.max(1, prev - 1))}
+                    disabled={productsPage === 1}
+                    className="size-8 flex items-center justify-center bg-transparent rounded-lg hover:bg-gray-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {page}
+                    <ChevronLeft className="size-4 text-gray-11" />
                   </button>
-                ))}
-                <button
-                  onClick={() => setProductsPage((prev) => Math.min(8, prev + 1))}
-                  disabled={productsPage === 8}
-                  className="size-8 flex items-center justify-center bg-transparent rounded-lg hover:bg-gray-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <ChevronRight className="size-4 text-gray-11" />
-                </button>
-              </div>
+                  {Array.from({ length: Math.ceil(products.length / 10) || 1 }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setProductsPage(page)}
+                      className={`size-8 flex items-center justify-center border rounded-lg transition-colors ${productsPage === page
+                        ? "bg-primary-11 border-primary-11 text-[#FBFEFB]"
+                        : "bg-gray-4 border-transparent hover:bg-gray-3 text-gray-12"
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setProductsPage((prev) => Math.min(Math.ceil(products.length / 10) || 1, prev + 1))}
+                    disabled={productsPage >= (Math.ceil(products.length / 10) || 1)}
+                    className="size-8 flex items-center justify-center bg-transparent rounded-lg hover:bg-gray-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <ChevronRight className="size-4 text-gray-11" />
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

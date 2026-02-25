@@ -63,6 +63,7 @@ export interface OrganizationMember {
     email: string;
     phone?: string;
     mfaEnabled?: boolean;
+    documentNumber?: string;
   };
   organization?: Organization;
 }
@@ -460,20 +461,93 @@ export interface Transfer {
 }
 
 export interface Installment {
-  id: string;
+  id: string; // ID composto da parcela (não é UUID válido)
+  paymentId?: string; // ID do pagamento (UUID)
+  orderId?: string; // ID do pedido (UUID)
+  registrationId?: string; // ID da inscrição (UUID)
   amount: number;
   dueDate: string;
   status: "PENDING" | "RECEIVED";
+  buyer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl: string | null;
+  };
   releaseToday?: number;
 }
 
 export interface PendingRelease {
   id: string;
   registrationId: string;
+  paymentId?: string; // ID do pagamento (UUID)
+  orderId?: string; // ID do pedido (UUID)
   amount: number;
   purchaseDate: string;
   releaseDate: string;
   daysUntilRelease: number;
+}
+
+export interface PaymentDetails {
+  buyer: {
+    id: string;
+    fullName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    documentNumber?: string | null;
+    phone?: string | null;
+    dateOfBirth?: string | null;
+    reservePhone?: string | null;
+    gender?: string | null;
+  };
+  payment: {
+    id: string;
+    method: string;
+    status: string;
+    totalAmount: number;
+    purchaseDate: string;
+    paymentDate?: string | null;
+    gateway: string;
+    authorizationCode?: string | null;
+    nsu?: string | null;
+    transactionIp?: string | null;
+    installments?: number | null;
+    installmentValue?: number | null;
+    cardBrand?: string | null;
+    last4Digits?: string | null;
+    pix: {
+      qrCode: string | null;
+      pixCode: string | null;
+      expiresAt: string | null;
+    } | null;
+    boleto: {
+      barcode: string | null;
+      digitableLine: string | null;
+      expiresAt: string | null;
+      url: string | null;
+    } | null;
+  };
+  event: {
+    id: string;
+    name: string;
+    category: string | null;
+    organizer: {
+      id: string;
+      name: string;
+      email: string;
+      avatar: string | null;
+    } | null;
+  };
+  coupon: {
+    id: string;
+    code: string;
+    type: string;
+    discountValue: number | null;
+    discountPercentage: number | null;
+  } | null;
+  transactionId: string;
+  orderId: string;
 }
 
 // Registration interfaces (extended)
@@ -574,6 +648,53 @@ export class OrganizerService {
       data
     );
     return response.data.organization;
+  }
+
+  async updateOrganizationLogo(logoUrl: string): Promise<Organization> {
+    const { data: response } = await this.apiClient.patch<{ data: { organization: Organization } }>(
+      "/api/v1/organizations/me/logo",
+      { logoUrl }
+    );
+    return response.data.organization;
+  }
+
+  async uploadImage(file: File): Promise<string> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const token = this.apiClient.getAccessToken();
+
+      const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Erro ao fazer upload da imagem");
+      }
+
+      const result = await response.json();
+      const imageUrl = result.url || result.imageUrl || result.data?.url || result.data?.imageUrl;
+
+      if (!imageUrl) {
+        throw new Error("URL da imagem não retornada pelo servidor");
+      }
+
+      // Se a URL não começar com http, adicionar o domínio base
+      if (!imageUrl.startsWith("http")) {
+        return `${apiUrl}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
+      }
+
+      return imageUrl;
+    } catch (error: any) {
+      throw error;
+    }
   }
 
   // Verificar acesso do organizador
@@ -1335,20 +1456,30 @@ export class OrganizerService {
       limit?: number;
     }
   ): Promise<{
-    items: Array<{
+    refunded: Array<{
       id: string;
       orderId: string;
-      transactionId: string;
-      buyer: {
-        name: string;
-        email: string;
-        avatar: string | null;
-      };
-      refundDate: string;
-      paymentMethod: string;
+      registrationId: string;
+      paymentId?: string;
       amount: number;
-      cardBrand?: string;
-      cardLast4?: string;
+      refundDate: string;
+      purchaseDate: string;
+      paymentMethod: string;
+      buyer: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        avatarUrl: string | null;
+      };
+      participant?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        avatarUrl: string | null;
+      };
+      reason?: string;
     }>;
     pagination: {
       page: number;
@@ -1356,23 +1487,34 @@ export class OrganizerService {
       total: number;
       totalPages: number;
     };
+    totalAmount: number;
   }> {
     const { data: response } = await this.apiClient.get<{
+      message: string;
       data: {
-        items: Array<{
+        refunded: Array<{
           id: string;
           orderId: string;
-          transactionId: string;
-          buyer: {
-            name: string;
-            email: string;
-            avatar: string | null;
-          };
-          refundDate: string;
-          paymentMethod: string;
+          registrationId: string;
           amount: number;
-          cardBrand?: string;
-          cardLast4?: string;
+          refundDate: string;
+          purchaseDate: string;
+          paymentMethod: string;
+          buyer: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            avatarUrl: string | null;
+          };
+          participant?: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            avatarUrl: string | null;
+          };
+          reason?: string;
         }>;
         pagination: {
           page: number;
@@ -1380,6 +1522,7 @@ export class OrganizerService {
           total: number;
           totalPages: number;
         };
+        totalAmount: number;
       };
     }>(`/api/v1/events/${eventId}/financial/refunded`, { params });
     return response.data;
@@ -1392,20 +1535,30 @@ export class OrganizerService {
       limit?: number;
     }
   ): Promise<{
-    items: Array<{
+    chargebacks: Array<{
       id: string;
       orderId: string;
-      transactionId: string;
-      buyer: {
-        name: string;
-        email: string;
-        avatar: string | null;
-      };
-      chargebackDate: string;
-      paymentMethod: string;
+      registrationId: string;
+      paymentId?: string;
       amount: number;
-      cardBrand?: string;
-      cardLast4?: string;
+      chargebackDate: string;
+      purchaseDate: string;
+      paymentMethod: string;
+      buyer: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        avatarUrl: string | null;
+      };
+      participant?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        avatarUrl: string | null;
+      };
+      reason?: string;
     }>;
     pagination: {
       page: number;
@@ -1413,23 +1566,34 @@ export class OrganizerService {
       total: number;
       totalPages: number;
     };
+    totalAmount: number;
   }> {
     const { data: response } = await this.apiClient.get<{
+      message: string;
       data: {
-        items: Array<{
+        chargebacks: Array<{
           id: string;
           orderId: string;
-          transactionId: string;
-          buyer: {
-            name: string;
-            email: string;
-            avatar: string | null;
-          };
-          chargebackDate: string;
-          paymentMethod: string;
+          registrationId: string;
           amount: number;
-          cardBrand?: string;
-          cardLast4?: string;
+          chargebackDate: string;
+          purchaseDate: string;
+          paymentMethod: string;
+          buyer: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            avatarUrl: string | null;
+          };
+          participant?: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            avatarUrl: string | null;
+          };
+          reason?: string;
         }>;
         pagination: {
           page: number;
@@ -1437,6 +1601,7 @@ export class OrganizerService {
           total: number;
           totalPages: number;
         };
+        totalAmount: number;
       };
     }>(`/api/v1/events/${eventId}/financial/chargebacks`, { params });
     return response.data;
@@ -1498,5 +1663,47 @@ export class OrganizerService {
       data: RegistrationStats;
     }>(`/api/v1/events/${eventId}/registrations/stats`);
     return response.data;
+  }
+
+  // Payment Details methods
+  async getPaymentDetailsByPayment(paymentId: string): Promise<PaymentDetails> {
+    const { data: response } = await this.apiClient.get<{
+      message: string;
+      data: PaymentDetails;
+    }>(`/api/v1/payments/payment/${paymentId}/details`);
+    return response.data;
+  }
+
+  async getPaymentDetailsByTransaction(transactionId: string): Promise<PaymentDetails> {
+    const { data: response } = await this.apiClient.get<{
+      message: string;
+      data: PaymentDetails;
+    }>(`/api/v1/payments/transaction/${transactionId}/details`);
+    return response.data;
+  }
+
+  async getPaymentDetailsByOrder(orderId: string): Promise<PaymentDetails> {
+    const { data: response } = await this.apiClient.get<{
+      message: string;
+      data: PaymentDetails;
+    }>(`/api/v1/payments/order/${orderId}/details`);
+    return response.data;
+  }
+
+  async getPaymentDetailsByRegistration(registrationId: string): Promise<PaymentDetails> {
+    const { data: response } = await this.apiClient.get<{
+      message: string;
+      data: PaymentDetails;
+    }>(`/api/v1/registrations/${registrationId}/payment-details`);
+    return response.data;
+  }
+
+  async getRegistrationById(registrationId: string): Promise<Registration> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        registration: Registration;
+      };
+    }>(`/api/v1/registrations/${registrationId}`);
+    return response.data.registration;
   }
 }

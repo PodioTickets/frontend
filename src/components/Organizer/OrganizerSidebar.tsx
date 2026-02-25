@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { Home, TrendingUp, Ticket, Settings, FileText, LogOut, ChevronDown, Medal, Sun, HelpCircle } from "lucide-react";
+import { Home, TrendingUp, Ticket, Settings, FileText, LogOut, ChevronDown, Medal, Sun, HelpCircle, Building2 } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TicketIcon } from "../Icons/TicketIcon";
@@ -50,6 +50,11 @@ export function OrganizerSidebar() {
       label: "Eventos",
       href: "/organizer/events",
       icon: TicketIcon,
+    },
+    {
+      label: "Organização",
+      href: "/organizer/organization/settings",
+      icon: Building2,
     },
   ];
 

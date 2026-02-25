@@ -1,0 +1,849 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { organizerService } from "@/services";
+import { Button } from "@/components/Button";
+import { Input } from "@/components/Input";
+import { Dropdown, DropdownOption } from "@/components/Dropdown";
+import Image from "next/image";
+import toast from "react-hot-toast";
+import { getAvatarUrl } from "@/utils/avatar";
+import { Plus, MessageSquare } from "lucide-react";
+import type { Organization } from "@/services/organizer/OrganizerService";
+import { ChatIcon } from "@/components/Icons/ChatIcon";
+import { ArrowButton } from "@/components/ArrowButton";
+
+const BRAZIL_STATES = [
+  { id: "AC", label: "Acre" },
+  { id: "AL", label: "Alagoas" },
+  { id: "AP", label: "Amapá" },
+  { id: "AM", label: "Amazonas" },
+  { id: "BA", label: "Bahia" },
+  { id: "CE", label: "Ceará" },
+  { id: "DF", label: "Distrito Federal" },
+  { id: "ES", label: "Espírito Santo" },
+  { id: "GO", label: "Goiás" },
+  { id: "MA", label: "Maranhão" },
+  { id: "MT", label: "Mato Grosso" },
+  { id: "MS", label: "Mato Grosso do Sul" },
+  { id: "MG", label: "Minas Gerais" },
+  { id: "PA", label: "Pará" },
+  { id: "PB", label: "Paraíba" },
+  { id: "PR", label: "Paraná" },
+  { id: "PE", label: "Pernambuco" },
+  { id: "PI", label: "Piauí" },
+  { id: "RJ", label: "Rio de Janeiro" },
+  { id: "RN", label: "Rio Grande do Norte" },
+  { id: "RS", label: "Rio Grande do Sul" },
+  { id: "RO", label: "Rondônia" },
+  { id: "RR", label: "Roraima" },
+  { id: "SC", label: "Santa Catarina" },
+  { id: "SP", label: "São Paulo" },
+  { id: "SE", label: "Sergipe" },
+  { id: "TO", label: "Tocantins" },
+];
+
+const PIX_KEY_TYPES = [
+  { id: "CPF", label: "CPF" },
+  { id: "CNPJ", label: "CNPJ" },
+  { id: "EMAIL", label: "E-mail" },
+  { id: "TELEFONE", label: "Telefone" },
+  { id: "ALEATORIA", label: "Chave Aleatória" },
+];
+
+export default function OrganizationSettingsPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [organizer, setOrganizer] = useState<Organization | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [formData, setFormData] = useState({
+    // Detalhes da organização
+    document: "",
+    tradeName: "",
+    ownerName: "",
+    ownerDocument: "",
+    // Endereço
+    zipCode: "",
+    street: "",
+    number: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    // Contatos
+    email: "",
+    whatsapp: "",
+    phone: "",
+    siteUrl: "",
+    instagram: "",
+    // Chave PIX
+    pix: "",
+    pixKeyType: "",
+    accountHolderName: "",
+    accountHolderDocument: "",
+    bankName: "",
+    bankCode: "",
+    agency: "",
+    account: "",
+    accountType: "" as "CORRENTE" | "POUPANCA" | "",
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    loadOrganization();
+  }, []);
+
+  const loadOrganization = async () => {
+    try {
+      setLoading(true);
+      const org = await organizerService.getOrganization();
+
+      // Log para debug - verificar o que está sendo retornado
+      console.log("Organization data received:", org);
+
+      setOrganizer(org);
+      setFormData({
+        document: org.document || "",
+        tradeName: org.tradeName || "",
+        ownerName: org.ownerName || "",
+        ownerDocument: org.accountHolderDocument || "", // Usar accountHolderDocument como fallback
+        zipCode: org.zipCode || "",
+        street: org.street || "",
+        number: org.number || "",
+        neighborhood: org.neighborhood || "",
+        city: org.city || "",
+        state: org.state || "",
+        email: org.email || "",
+        whatsapp: org.whatsapp || "",
+        phone: org.phone || "",
+        siteUrl: org.siteUrl || "",
+        instagram: org.instagram || "",
+        pix: org.pix || "",
+        pixKeyType: "", // Precisa inferir do tipo de chave PIX
+        accountHolderName: org.accountHolderName || "",
+        accountHolderDocument: org.accountHolderDocument || "",
+        bankName: org.bankName || "",
+        bankCode: org.bankCode || "",
+        agency: org.agency || "",
+        account: org.account || "",
+        accountType: (org.accountType as "CORRENTE" | "POUPANCA") || "",
+      });
+    } catch (error: any) {
+      console.error("Error loading organization:", error);
+      console.error("Error response:", error.response?.data);
+      if (error.response?.status === 404) {
+        router.push("/organizer/create");
+        return;
+      }
+      toast.error("Erro ao carregar dados da organização");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato inválido. Use JPG ou PNG.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo de 2MB.");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Passo 1: Fazer upload da imagem
+      const imageUrl = await organizerService.uploadImage(file);
+
+      // Passo 2: Atualizar o logo da organização
+      await organizerService.updateOrganizationLogo(imageUrl);
+
+      toast.success("Imagem atualizada com sucesso!");
+      loadOrganization();
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      const errorMessage =
+        error.message || error.response?.data?.message || "Erro ao fazer upload da imagem";
+      toast.error(errorMessage);
+    } finally {
+      setUploadingImage(false);
+      // Limpar o input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    try {
+      // Remover logo definindo como string vazia ou null
+      await organizerService.updateOrganizationLogo("");
+      toast.success("Imagem removida com sucesso!");
+      loadOrganization();
+    } catch (error: any) {
+      console.error("Error removing image:", error);
+      const errorMessage =
+        error.message || error.response?.data?.message || "Erro ao remover imagem";
+      toast.error(errorMessage);
+    }
+  };
+
+  // Máscaras progressivas (aplicam durante a digitação)
+  const maskCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6)
+      return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9)
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const maskCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 5)
+      return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
+    if (numbers.length <= 8)
+      return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`;
+    if (numbers.length <= 12)
+      return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`;
+    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`;
+  };
+
+  const maskCPForCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    // Se tiver 11 ou menos dígitos, formata como CPF
+    if (numbers.length <= 11) {
+      return maskCPF(value);
+    }
+    // Se tiver mais de 11 dígitos, formata como CNPJ
+    return maskCNPJ(value);
+  };
+
+  const maskCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
+  const maskPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7)
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    // Se tiver 10 dígitos, é telefone fixo: (00) 0000-0000
+    if (numbers.length <= 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6, 10)}`;
+    }
+    // Se tiver 11 dígitos, é celular: (00) 00000-0000
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  const maskWhatsApp = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7)
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    // WhatsApp sempre é celular: (00) 00000-0000
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setSaving(true);
+    try {
+      // Preparar dados removendo formatação de documentos e telefones
+      const updateData: any = {
+        name: organizer?.name || "", // Manter o nome original se não foi alterado
+        tradeName: formData.tradeName || undefined,
+        document: formData.document.replace(/\D/g, "") || undefined,
+        email: formData.email || undefined,
+        phone: formData.phone.replace(/\D/g, "") || undefined,
+        whatsapp: formData.whatsapp.replace(/\D/g, "") || undefined,
+        siteUrl: formData.siteUrl || undefined,
+        instagram: formData.instagram || undefined,
+        zipCode: formData.zipCode.replace(/\D/g, "") || undefined,
+        street: formData.street || undefined,
+        number: formData.number || undefined,
+        neighborhood: formData.neighborhood || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        ownerName: formData.ownerName || undefined,
+        pix: formData.pix || undefined,
+        accountHolderName: formData.accountHolderName || undefined,
+        accountHolderDocument: formData.accountHolderDocument.replace(/\D/g, "") || undefined,
+        bankName: formData.bankName || undefined,
+        bankCode: formData.bankCode || undefined,
+        agency: formData.agency || undefined,
+        account: formData.account || undefined,
+        accountType: formData.accountType || undefined,
+      };
+
+      // Remover campos undefined para não enviar
+      Object.keys(updateData).forEach((key) => {
+        if (updateData[key] === undefined || updateData[key] === "") {
+          delete updateData[key];
+        }
+      });
+
+      await organizerService.updateOrganization(updateData);
+
+      toast.success("Configurações atualizadas com sucesso!");
+      loadOrganization();
+    } catch (error: any) {
+      console.error("Error updating organization:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao atualizar configurações";
+      toast.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRequestChange = () => {
+    toast("Funcionalidade em desenvolvimento", { icon: "ℹ️" });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
+        <div className="text-gray-11">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!organizer) {
+    return null;
+  }
+
+  const stateOptions: DropdownOption[] = BRAZIL_STATES.map((state) => ({
+    id: state.id,
+    label: state.label,
+  }));
+
+  const pixKeyTypeOptions: DropdownOption[] = PIX_KEY_TYPES.map((type) => ({
+    id: type.id,
+    label: type.label,
+  }));
+
+  const selectedState = BRAZIL_STATES.find((s) => s.id === formData.state);
+  const selectedPixKeyType = PIX_KEY_TYPES.find(
+    (t) => t.id === formData.pixKeyType
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-2">
+      {/* Header */}
+      <div className="fixed top-0 left-[218px] p-8 right-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center h-[73px] shrink-0">
+        <div className="flex items-center relative shrink-0">
+          <div className="flex flex-col items-start relative shrink-0">
+            <p className="font-inter font-extrabold leading-[1.1] relative shrink-0 text-base text-gray-12 text-[24px]">
+              Configurações da organização
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="pt-[73px] pb-8 px-8">
+        <div className="max-w-[1158px] mx-auto flex flex-col gap-8 mt-8">
+          {/* Personal Info Section */}
+          <div className="bg-gray-2 flex flex-col gap-4 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+            {/* Profile Container */}
+            <div className="flex flex-col gap-4 items-start justify-end relative shrink-0 w-full">
+              {/* First Row: Logo, Organization Info, Owner Info */}
+              <div className="flex items-center justify-between relative shrink-0 w-full">
+                {/* Left: Logo and Organization Info */}
+                <div className="flex gap-4 items-center relative shrink-0">
+                  {/* Logo */}
+                  <div className="relative shrink-0 size-24 rounded-full overflow-hidden bg-gray-6">
+                    {organizer.logoUrl ? (
+                      <Image
+                        src={getAvatarUrl(organizer.logoUrl)}
+                        alt="Organization Logo"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-6">
+                        <span className="text-gray-11 text-2xl font-medium">
+                          {organizer.name?.[0]?.toUpperCase() || "O"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Organization Details */}
+                  <div className="flex flex-col gap-2 items-start justify-center relative shrink-0">
+                    <p className="font-manrope font-bold leading-[1.1] relative shrink-0 text-2xl text-gray-12">
+                      {organizer.name || "Nome da organização"}
+                    </p>
+                    <p className="font-family-dm-sans leading-[1.3] relative shrink-0 text-xl text-gray-11">
+                      CNPJ: {organizer.document ? maskCNPJ(organizer.document.replace(/\D/g, "")) : "00.000.000/0000-00"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: Owner Info */}
+                <div className="flex flex-col gap-3 items-start relative shrink-0">
+                  <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-base text-gray-11">
+                    Dono da organização
+                  </p>
+                  <div className="flex gap-2 items-center relative shrink-0">
+                    <div className="relative shrink-0 size-10 rounded-full overflow-hidden bg-gray-6">
+                      {user?.avatarUrl ? (
+                        <Image
+                          src={getAvatarUrl(user.avatarUrl)}
+                          alt="Owner"
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-6">
+                          <span className="text-gray-11 text-sm font-medium">
+                            {user?.firstName?.[0]?.toUpperCase() || "O"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-start justify-center relative shrink-0">
+                      <p className="font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-lg text-gray-12">
+                        {user?.firstName && user?.lastName
+                          ? `${user.firstName} ${user.lastName}`
+                          : user?.email || "Nome do dono"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Second Row: Buttons and Support Text */}
+              <div className="flex flex-col gap-4 h-24 items-start justify-center relative shrink-0 w-full">
+                <div className="flex gap-3 items-center relative shrink-0">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploadingImage}
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    size="default"
+                    className="px-8 py-5"
+                  >
+                    <Plus className="size-6" />
+                    {uploadingImage ? "Enviando..." : "Alterar imagem"}
+                  </Button>
+                  <Button
+                    onClick={handleRemoveImage}
+                    disabled={uploadingImage || !organizer.logoUrl}
+                    variant="outline"
+                    className="px-8 py-5 border-gray-6 text-gray-12"
+                  >
+                    Remover imagem
+                  </Button>
+                </div>
+                <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-sm text-gray-11">
+                  Suportamos imagens em PNGs, JPEGs até 10MB
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Detalhes da organização */}
+          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
+              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+                Detalhes da organização
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 w-full">
+              {/* CNPJ */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  CNPJ
+                </label>
+                <Input
+                  type="text"
+                  name="document"
+                  value={maskCNPJ(formData.document)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setFormData((prev) => ({ ...prev, document: value }));
+                  }}
+                  placeholder="00.000.000/0000-00"
+                  maxLength={18}
+                />
+              </div>
+
+              {/* Nome fantasia (Razão social) */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Nome fantasia (Razão social)
+                </label>
+                <Input
+                  type="text"
+                  name="tradeName"
+                  value={formData.tradeName}
+                  onChange={handleInputChange}
+                  placeholder="Digite o nome fantasia"
+
+                />
+              </div>
+
+              {/* Nome do responsável */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Nome do responsável
+                </label>
+                <span
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                >
+                  {organizer.members?.find((member) => member.role === "OWNER")?.user?.firstName || ""} {organizer.members?.find((member) => member.role === "OWNER")?.user?.lastName || ""}
+                </span>
+              </div>
+
+              {/* CPF do responsável */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  CPF do responsável
+                </label>
+                <span
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                >
+                  {maskCPF((organizer.members?.find((member) => member.role === "OWNER")?.user?.documentNumber || "").replace(/\D/g, ""))}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Endereço */}
+          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
+              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+                Endereço
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 w-full">
+              {/* CEP */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  CEP
+                </label>
+                <Input
+                  type="text"
+                  name="zipCode"
+                  value={maskCEP(formData.zipCode)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setFormData((prev) => ({ ...prev, zipCode: value }));
+                  }}
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+              </div>
+
+              {/* Rua */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Rua
+                </label>
+                <Input
+                  type="text"
+                  name="street"
+                  value={formData.street}
+                  onChange={handleInputChange}
+                  placeholder="Digite o nome da sua rua"
+
+                />
+              </div>
+
+              {/* Número */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Número
+                </label>
+                <Input
+                  type="text"
+                  name="number"
+                  value={formData.number}
+                  onChange={handleInputChange}
+                  placeholder="Ex: 123"
+
+                />
+              </div>
+
+              {/* Bairro */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Bairro
+                </label>
+                <Input
+                  type="text"
+                  name="neighborhood"
+                  value={formData.neighborhood}
+                  onChange={handleInputChange}
+                  placeholder="Digite o nome do seu bairro"
+
+                />
+              </div>
+
+              {/* Cidade */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Cidade
+                </label>
+                <Input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  placeholder="Nome da cidade"
+
+                />
+              </div>
+
+              {/* Estado */}
+              <div className="flex flex-col gap-2 items-start w-full">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Estado
+                </label>
+                <div className="w-full">
+                  <Dropdown
+                    options={stateOptions}
+                    width="w-full"
+                    trigger={(isOpen) => (
+                      <button className="border border-gray-6 rounded-lg h-[42px] flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
+                        <span
+                          className={`text-base flex-1 text-left font-family-dm-sans ${formData.state ? "text-gray-12" : "text-gray-11"
+                            }`}
+                        >
+                          {selectedState?.label || "Selecione o estado"}
+                        </span>
+                        <ArrowButton isOpen={isOpen} />
+                      </button>
+                    )}
+                    onSelect={(option) =>
+                      setFormData((prev) => ({ ...prev, state: option.id || "" }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contatos da organização */}
+          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
+              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+                Contatos da organização
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 w-full">
+              {/* E-mail para Atendimento */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  E-mail para Atendimento
+                </label>
+                <Input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="contato@meuevento.com.br"
+
+                />
+              </div>
+
+              {/* WhatsApp */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  WhatsApp
+                </label>
+                <Input
+                  type="text"
+                  name="whatsapp"
+                  value={maskWhatsApp(formData.whatsapp)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setFormData((prev) => ({ ...prev, whatsapp: value }));
+                  }}
+                  placeholder="(00) 00000-0000"
+                  maxLength={15}
+                />
+              </div>
+
+              {/* Telefone */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Telefone
+                </label>
+                <Input
+                  type="text"
+                  name="phone"
+                  value={maskPhone(formData.phone)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setFormData((prev) => ({ ...prev, phone: value }));
+                  }}
+                  placeholder="(00) 0000-0000"
+                  maxLength={14}
+                />
+              </div>
+
+              {/* Site Oficial */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Site Oficial
+                </label>
+                <Input
+                  type="url"
+                  name="siteUrl"
+                  value={formData.siteUrl}
+                  onChange={handleInputChange}
+                  placeholder="https://www.meuevento.com.br"
+
+                />
+              </div>
+
+              {/* Instagram Oficial */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Instagram Oficial
+                </label>
+                <Input
+                  type="text"
+                  name="instagram"
+                  value={formData.instagram}
+                  onChange={handleInputChange}
+                  placeholder="@meuevento"
+
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Chave PIX */}
+          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
+              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+                Chave PIX
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 w-full">
+              {/* Tipo de Chave */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Tipo de Chave
+                </label>
+
+                <span
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                >
+                  {formData.pixKeyType}
+                </span>
+              </div>
+
+              {/* Chave cadastrada */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Chave cadastrada
+                </label>
+                <span
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                >
+                  {formData.pix}
+                </span>
+              </div>
+
+              {/* CPF/CNPJ do titular */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  CPF/CNPJ do titular
+                </label>
+
+                <span
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                >
+                  {maskCPForCNPJ(formData.accountHolderDocument)}
+                </span>
+              </div>
+
+              {/* Nome do titular */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Nome do titular
+                </label>
+
+                <span
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                >
+                  {formData.accountHolderName}
+                </span>
+              </div>
+
+              {/* Banco */}
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  Banco
+                </label>
+                <span
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                >
+                  {formData.bankName}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-end w-full mt-4">
+              <Button
+                onClick={handleRequestChange}
+                variant="outline"
+                className="flex items-center gap-2 border-gray-6 text-gray-12"
+              >
+                <ChatIcon className="size-5" />
+                Solicitar alteração
+              </Button></div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4">
+            <Button onClick={handleSubmit} disabled={saving} size="lg">
+              {saving ? "Salvando..." : "Salvar alteração"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
