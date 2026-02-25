@@ -236,20 +236,19 @@ export function RegisterModal() {
         if (formData.sexo) {
           const genderLower = formData.sexo.toLowerCase().trim();
           if (genderLower === "masculino") {
-            updateData.gender = "masculino";
+            updateData.gender = "MALE";
           } else if (genderLower === "feminino") {
-            updateData.gender = "feminino";
+            updateData.gender = "FEMALE";
           } else if (genderLower === "outro") {
-            updateData.gender = "outro";
+            updateData.gender = "OTHER";
           } else if (
             genderLower === "prefiro não informar" ||
             genderLower === "prefiro não dizer" ||
             genderLower === "prefiro-nao-dizer" ||
             genderLower === "prefiro-nao-informar"
           ) {
-            updateData.gender = "prefiro-nao-dizer";
+            updateData.gender = "PREFER_NOT_TO_SAY";
           } else {
-            // Se não for um dos valores esperados, usar o valor em minúsculas
             updateData.gender = genderLower || formData.sexo;
           }
         }
