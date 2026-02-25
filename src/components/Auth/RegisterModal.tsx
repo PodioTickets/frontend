@@ -365,8 +365,27 @@ export function RegisterModal() {
   };
 
   const handleFinish = () => {
+    // Resetar formulário e step antes de fechar
+    setFormData({
+      nome: "",
+      nacionalidade: "",
+      cpf: "",
+      dataNascimento: null,
+      telefone: "",
+      telefoneEmergencia: "",
+      sexo: "",
+      email: "",
+      senha: "",
+      confirmarSenha: "",
+    });
+    setErrors({});
+    setCurrentStep(1);
+    // Fechar modal primeiro
     closeRegisterModal();
-    router.push("/");
+    // Redirecionar após um pequeno delay para garantir que o modal feche
+    setTimeout(() => {
+      router.push("/");
+    }, 100);
   };
 
   // Mask functions
