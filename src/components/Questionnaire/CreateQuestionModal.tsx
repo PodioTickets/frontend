@@ -80,7 +80,7 @@ export function CreateQuestionModal() {
       return;
     }
 
-    if (question.length > 25) {
+    if (question.length > 200) {
       toast.error("A pergunta deve ter no máximo 25 caracteres");
       return;
     }
