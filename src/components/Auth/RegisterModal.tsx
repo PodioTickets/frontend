@@ -309,7 +309,7 @@ export function RegisterModal() {
 
         // Campos opcionais conforme o DTO
         if (formData.sexo) {
-          registerData.sex = formData.sexo;
+          registerData.gender = formData.sexo;
         }
         if (formData.telefone) {
           registerData.phone = formData.telefone.replace(/\D/g, ""); // Remove formatação
