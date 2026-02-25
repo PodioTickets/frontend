@@ -10,6 +10,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import type { Event } from "@/interfaces/event";
+import { ImageCarouselModal } from "./ImageCarouselModal";
 
 interface TicketCategoryCardProps {
   categoryName: string;
@@ -79,6 +80,9 @@ const TicketItemMobile = memo(({
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
 }) => {
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
@@ -90,14 +94,39 @@ const TicketItemMobile = memo(({
       .filter((image): image is string => !!image);
   }, [ticket.products, productsMap]);
 
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsImageModalOpen(true);
+  };
+
+  const handlePreviousImage = () => {
+    setCurrentMainImageIndex((prev) =>
+      prev === 0 ? productImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentMainImageIndex((prev) =>
+      prev === productImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handleThumbnailClick = (index: number) => {
+    setCurrentMainImageIndex(index);
+    handleImageClick(index);
+  };
+
   return (
     <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
       {/* Image Gallery */}
       {productImages.length > 0 && (
         <div className={`flex gap-3 items-center w-full ${productImages.length === 1 ? 'justify-center' : 'justify-start'}`}>
-          <div className={`${productImages.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden`}>
+          <button
+            onClick={() => handleImageClick(currentMainImageIndex)}
+            className={`${productImages.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
+          >
             <Image
-              src={productImages[0]}
+              src={productImages[currentMainImageIndex]}
               alt={ticket.name}
               fill
               className="object-cover"
@@ -105,40 +134,58 @@ const TicketItemMobile = memo(({
               decoding="async"
               sizes="(max-width: 768px) 50vw, 136px"
             />
-          </div>
+          </button>
           {productImages.length > 1 && (
             <div className="flex flex-col items-center gap-1 h-[136px] justify-center">
               {/* Seta para cima */}
-              <div className="w-[18px] h-8 flex items-center justify-center shrink-0">
+              <button
+                onClick={handlePreviousImage}
+                className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                aria-label="Imagem anterior"
+              >
                 <div className="-rotate-90">
                   <ArrowButton isOpen={true} />
                 </div>
-              </div>
+              </button>
               {/* Thumbnails */}
               <div className="flex flex-col gap-1">
-                {productImages.slice(1, 4).map((image, idx) => (
-                  <div
-                    key={idx}
-                    className="w-9 h-9 relative rounded border border-gray-6 overflow-hidden shrink-0"
-                  >
-                    <Image
-                      src={image}
-                      alt={`${ticket.name} ${idx + 2}`}
-                      fill
-                      className="object-cover"
-                      loading="lazy"
-                      decoding="async"
-                      sizes="36px"
-                    />
-                  </div>
-                ))}
+                {productImages
+                  .filter((_, idx) => idx !== currentMainImageIndex)
+                  .slice(0, 3)
+                  .map((image, idx) => {
+                    const originalIndex = productImages.findIndex((img) => img === image);
+                    return (
+                      <button
+                        key={originalIndex}
+                        onClick={() => handleThumbnailClick(originalIndex)}
+                        className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
+                            ? 'border-primary-11'
+                            : 'border-gray-6'
+                          }`}
+                      >
+                        <Image
+                          src={image}
+                          alt={`${ticket.name} ${originalIndex + 1}`}
+                          fill
+                          className="object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          sizes="36px"
+                        />
+                      </button>
+                    );
+                  })}
               </div>
               {/* Seta para baixo */}
-              <div className="w-[18px] h-8 flex items-center justify-center shrink-0">
+              <button
+                onClick={handleNextImage}
+                className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                aria-label="Próxima imagem"
+              >
                 <div className="rotate-90">
                   <ArrowButton isOpen={true} />
                 </div>
-              </div>
+              </button>
             </div>
           )}
         </div>
@@ -208,6 +255,17 @@ const TicketItemMobile = memo(({
           </button>
         </div>
       </div>
+
+      {/* Image Carousel Modal */}
+      {productImages.length > 0 && (
+        <ImageCarouselModal
+          images={productImages}
+          initialIndex={selectedImageIndex}
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          ticketName={ticket.name}
+        />
+      )}
     </div>
   );
 });
@@ -229,6 +287,9 @@ const TicketItemDesktop = memo(({
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
 }) => {
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
@@ -240,15 +301,40 @@ const TicketItemDesktop = memo(({
       .filter((image): image is string => !!image);
   }, [ticket.products, productsMap]);
 
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsImageModalOpen(true);
+  };
+
+  const handlePreviousImage = () => {
+    setCurrentMainImageIndex((prev) =>
+      prev === 0 ? productImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentMainImageIndex((prev) =>
+      prev === productImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handleThumbnailClick = (index: number) => {
+    setCurrentMainImageIndex(index);
+    handleImageClick(index);
+  };
+
   return (
-    <div className="flex gap-4 w-full">
+    <div className="flex w-full">
       {productImages.length > 0 && (
-        <div className={`${productImages.length === 1 ? 'flex justify-center' : 'shrink-0'}`}>
+        <div className={`flex justify-start w-1/3`}>
           <div className={`flex items-center gap-2 ${productImages.length === 1 ? 'justify-center' : ''}`}>
-            {productImages[0] && (
-              <div className="w-[136px] h-[136px] relative rounded-lg border border-gray-6 overflow-hidden shrink-0">
+            {productImages[currentMainImageIndex] && (
+              <button
+                onClick={() => handleImageClick(currentMainImageIndex)}
+                className="w-[136px] h-[136px] relative rounded-lg border border-gray-6 overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+              >
                 <Image
-                  src={productImages[0]}
+                  src={productImages[currentMainImageIndex]}
                   alt={ticket.name}
                   fill
                   className="object-cover"
@@ -256,41 +342,57 @@ const TicketItemDesktop = memo(({
                   decoding="async"
                   sizes="136px"
                 />
-              </div>
+              </button>
             )}
             {productImages.length > 1 && (
               <div className="flex flex-col items-center gap-1">
                 {/* Seta para cima */}
-                <div className="w-[18px] h-8 flex items-center justify-center shrink-0">
+                <button
+                  onClick={handlePreviousImage}
+                  className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                  aria-label="Imagem anterior"
+                >
                   <div className="-rotate-90">
-                    <ArrowButton isOpen={true} />
+                    <ArrowButton isOpen={false} />
                   </div>
-                </div>
+                </button>
                 {/* Thumbnails */}
                 <div className="flex flex-col gap-1">
-                  {productImages.slice(1, 4).map((image, idx) => (
-                    <div
-                      key={idx}
-                      className="w-9 h-9 relative rounded border border-gray-6 overflow-hidden shrink-0"
-                    >
-                      <Image
-                        src={image}
-                        alt={`${ticket.name} ${idx + 2}`}
-                        fill
-                        className="object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        sizes="36px"
-                      />
-                    </div>
-                  ))}
+                  {productImages
+                    .filter((_, idx) => idx !== currentMainImageIndex)
+                    .slice(0, 3)
+                    .map((image, idx) => {
+                      const originalIndex = productImages.findIndex((img) => img === image);
+                      return (
+                        <button
+                          key={originalIndex}
+                          onClick={() => handleThumbnailClick(originalIndex)}
+                          className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
+                              ? 'border-primary-11'
+                              : 'border-gray-6'
+                            }`}
+                        >
+                          <Image
+                            src={image}
+                            alt={`${ticket.name} ${originalIndex + 1}`}
+                            fill
+                            className="object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            sizes="36px"
+                          />
+                        </button>
+                      );
+                    })}
                 </div>
                 {/* Seta para baixo */}
-                <div className="w-[18px] h-8 flex items-center justify-center shrink-0">
-                  <div className="rotate-90">
-                    <ArrowButton isOpen={true} />
-                  </div>
-                </div>
+                <button
+                  onClick={handleNextImage}
+                  className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+                  aria-label="Próxima imagem"
+                >
+                  <ArrowButton isOpen={true} />
+                </button>
               </div>
             )}
           </div>
@@ -360,6 +462,17 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       </div>
+
+      {/* Image Carousel Modal */}
+      {productImages.length > 0 && (
+        <ImageCarouselModal
+          images={productImages}
+          initialIndex={selectedImageIndex}
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          ticketName={ticket.name}
+        />
+      )}
     </div>
   );
 });

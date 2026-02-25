@@ -241,8 +241,6 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                   productsMap={productsMap}
                 />
               ))}
-              {/* Tickets avulsos */}
-
             </>
           ) : (
             <div className="w-full rounded-lg border border-gray-5 px-4 py-8 text-center ">
@@ -338,8 +336,8 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
             )}
           </div>
           <div className="w-[400px] shrink-0">
-            <EventInfo 
-              event={event} 
+            <EventInfo
+              event={event}
               onNext={onNext}
               tickets={tickets}
               categorizedTickets={categorizedTickets}

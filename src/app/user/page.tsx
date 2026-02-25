@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/CheckBox";
 import { FlagIcon } from "@/components/Icons/FlagIcon";
 import { HeartIcon } from "@/components/Icons/HeartIcon";
 import { ArrowButton } from "@/components/ArrowButton";
-import { useChangeEmailModal } from "@/stores/modalStore";
+import { useChangeEmailModal, useChangePasswordModal } from "@/stores/modalStore";
 import { CPFIcon } from "@/components/Icons/CPFIcon";
 import { getAvatarUrl } from "@/utils/avatar";
 import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
@@ -31,7 +31,7 @@ const formatGenderFromBackend = (
   backendGender: string | null | undefined
 ): string => {
   console.log("🔍 formatGenderFromBackend chamado com:", backendGender);
-  
+
   if (!backendGender || backendGender.trim() === "") {
     console.log("❌ Valor vazio, retornando string vazia");
     return "";
@@ -114,6 +114,7 @@ const formatGenderToBackend = (
 export default function UserProfilePage() {
   const { user, refetchUser } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
+  const { openChangePasswordModal } = useChangePasswordModal();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
@@ -177,20 +178,20 @@ export default function UserProfilePage() {
     const userGender = (user as any)?.gender;
     const userSex = (user as any)?.sex;
     const formDataGender = formData.gender;
-    
+
     console.log("🔍 displayGender useMemo:", {
       userGender,
       userSex,
       formDataGender,
       user: user ? "existe" : "não existe",
     });
-    
+
     const genderValue = userGender || userSex || formDataGender;
     console.log("🔍 genderValue escolhido:", genderValue);
-    
+
     const formatted = formatGenderFromBackend(genderValue);
     console.log("🔍 formatted result:", formatted);
-    
+
     return formatted;
   }, [formData.gender, user]);
 
@@ -222,14 +223,14 @@ export default function UserProfilePage() {
           const userGender = (user as any)?.gender;
           const userSex = (user as any)?.sex;
           const genderValue = userGender || userSex;
-          
+
           console.log("🔍 useEffect atualizando gender:", {
             userGender,
             userSex,
             genderValue,
             prevGender: prev.gender,
           });
-          
+
           if (genderValue) {
             const formatted = formatGenderFromBackend(genderValue);
             console.log("🔍 gender formatado no useEffect:", formatted);
@@ -382,9 +383,8 @@ export default function UserProfilePage() {
       const updateData: any = {};
 
       // Parse nome completo em firstName e lastName
-      const fullName = `${formData.firstName || ""} ${
-        formData.lastName || ""
-      }`.trim();
+      const fullName = `${formData.firstName || ""} ${formData.lastName || ""
+        }`.trim();
       if (fullName) {
         const nameParts = fullName.split(" ");
         if (nameParts.length > 0) {
@@ -432,8 +432,7 @@ export default function UserProfilePage() {
   };
 
   const handleChangePassword = () => {
-    // TODO: Implement password change logic
-    console.log("Changing password");
+    openChangePasswordModal();
   };
 
   const handleChangeEmail = () => {
@@ -514,7 +513,7 @@ export default function UserProfilePage() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-10 text-gray-11 gap-2 px-5"
+                    className="h-10 text-gray-12 gap-2 px-5 border-gray-6"
                     onClick={handleRemoveAvatar}
                     disabled={isUploadingAvatar || !user?.avatarUrl}
                   >
@@ -554,9 +553,8 @@ export default function UserProfilePage() {
                     type="text"
                     name="firstName"
                     value={
-                      `${formData.firstName || ""} ${
-                        formData.lastName || ""
-                      }`.trim() || ""
+                      `${formData.firstName || ""} ${formData.lastName || ""
+                        }`.trim() || ""
                     }
                     onChange={(e) => {
                       const fullName = e.target.value;
@@ -575,9 +573,8 @@ export default function UserProfilePage() {
                     type="text"
                     name="firstName"
                     value={
-                      `${formData.firstName || ""} ${
-                        formData.lastName || ""
-                      }`.trim() || ""
+                      `${formData.firstName || ""} ${formData.lastName || ""
+                        }`.trim() || ""
                     }
                     onChange={(e) => {
                       const fullName = e.target.value;
@@ -607,10 +604,10 @@ export default function UserProfilePage() {
                       // Convert Date to YYYY-MM-DD string format
                       const dateString = value
                         ? `${value.getFullYear()}-${String(
-                            value.getMonth() + 1
-                          ).padStart(2, "0")}-${String(
-                            value.getDate()
-                          ).padStart(2, "0")}`
+                          value.getMonth() + 1
+                        ).padStart(2, "0")}-${String(
+                          value.getDate()
+                        ).padStart(2, "0")}`
                         : "";
                       setFormData((prev) => ({
                         ...prev,
@@ -626,10 +623,10 @@ export default function UserProfilePage() {
                     onChange={(value) => {
                       const dateString = value
                         ? `${value.getFullYear()}-${String(
-                            value.getMonth() + 1
-                          ).padStart(2, "0")}-${String(
-                            value.getDate()
-                          ).padStart(2, "0")}`
+                          value.getMonth() + 1
+                        ).padStart(2, "0")}-${String(
+                          value.getDate()
+                        ).padStart(2, "0")}`
                         : "";
                       setFormData((prev) => ({
                         ...prev,
@@ -855,87 +852,6 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          {/* Change Password Section - Desktop Only */}
-          <div className="hidden md:flex flex-col gap-8 border-b border-gray-6 px-4 py-8">
-            <h2 className="text-xl font-bold leading-[1.1] text-gray-12">
-              Alterar senha
-            </h2>
-
-            <div className="grid grid-cols-2 gap-3">
-              {/* Current Password */}
-              <div className="flex min-w-[269px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">Senha atual</label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
-                  <Lock className="size-5 shrink-0 text-gray-11" />
-                  <Input
-                    type="password"
-                    name="currentPassword"
-                    value={formData.currentPassword}
-                    onChange={handleInputChange}
-                    placeholder="Digite sua senha atual"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                  />
-                </div>
-              </div>
-
-              {/* New Password */}
-              <div className="flex min-w-[269px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">
-                  Criar uma senha
-                </label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
-                  <Lock className="size-5 shrink-0 text-gray-11" />
-                  <Input
-                    type="password"
-                    name="newPassword"
-                    value={formData.newPassword}
-                    onChange={handleInputChange}
-                    placeholder="Digite uma senha"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                  />
-                </div>
-              </div>
-
-              <div className="flex min-w-[269px] flex-1 flex-col gap-2">
-                <label className="text-base text-gray-12">
-                  Criar uma senha
-                </label>
-                <div className="flex h-12 items-center gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3">
-                  <Lock className="size-5 shrink-0 text-gray-11" />
-                  <Input
-                    type="password"
-                    name="newPassword"
-                    value={formData.newPassword}
-                    onChange={handleInputChange}
-                    placeholder="Digite uma senha"
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                className="text-left text-base text-gray-11 hover:text-gray-12"
-                onClick={() => {
-                  // TODO: Implement forgot password
-                  console.log("Forgot password");
-                }}
-              >
-                Esqueci minha senha
-              </button>
-              <div />
-              <Button
-                variant="default"
-                className="h-12 gap-2 px-5"
-                onClick={handleChangePassword}
-              >
-                Confirmar
-              </Button>
-            </div>
-          </div>
-
           {/* Account and Security Section */}
           <div className="flex flex-col gap-8 border-b border-gray-6 px-4 py-8 md:gap-8">
             {/* Mobile: Left aligned */}
@@ -954,7 +870,7 @@ export default function UserProfilePage() {
               <button
                 type="button"
                 onClick={handleChangeEmail}
-                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.5px] border-gray-6 bg-transparent px-3"
+                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.5px] border-gray-6 bg-transparent px-3 cursor-pointer"
               >
                 <div className="flex items-center gap-1">
                   <Mail className="size-6 shrink-0 text-gray-12" />
@@ -968,7 +884,7 @@ export default function UserProfilePage() {
               <button
                 type="button"
                 onClick={handleChangePassword}
-                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.25px] border-gray-6 bg-transparent px-3"
+                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.25px] border-gray-6 bg-transparent px-3 cursor-pointer"
               >
                 <div className="flex items-center gap-1">
                   <Lock className="size-6 shrink-0 text-gray-12" />
@@ -980,20 +896,35 @@ export default function UserProfilePage() {
               </button>
             </div>
 
-            {/* Desktop: Single button */}
-            <button
-              type="button"
-              onClick={handleChangeEmail}
-              className="hidden md:flex h-12 w-full max-w-[400px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3"
-            >
-              <div className="flex items-center gap-2.5">
-                <Mail className="size-6 shrink-0 text-gray-12" />
-                <span className="text-base text-gray-12">
-                  Deseja alterar seu email?
-                </span>
-              </div>
-              <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
-            </button>
+            {/* Desktop: Two buttons side by side */}
+            <div className="hidden md:flex flex-row gap-6 items-center w-full">
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                className="flex h-[52px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3 w-full cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Mail className="size-6 shrink-0 text-gray-12" />
+                  <span className="text-base text-gray-12 font-family-dm-sans">
+                    Deseja alterar seu email?
+                  </span>
+                </div>
+                <ChevronDown className="size-5 shrink-0 -rotate-90 text-gray-12" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleChangePassword}
+                className="flex h-[52px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3 w-full cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Lock className="size-6 shrink-0 text-gray-12" />
+                  <span className="text-base text-gray-12 font-family-dm-sans">
+                    Deseja alterar sua senha?
+                  </span>
+                </div>
+              </button>
+            </div>
           </div>
 
           {/* Security Section */}
@@ -1016,7 +947,7 @@ export default function UserProfilePage() {
                 </div>
                 <div
                   className={cn(
-                    "relative h-5 w-[37px] rounded-full transition-colors shrink-0",
+                    "relative h-5 w-[37px] rounded-full transition-colors shrink-0 cursor-pointer",
                     twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
                   )}
                 >
@@ -1038,7 +969,6 @@ export default function UserProfilePage() {
               </p>
               <button
                 type="button"
-                onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
                 className="hidden md:flex h-12 w-full max-w-[400px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3"
               >
                 <div className="flex items-center gap-2.5">
@@ -1048,8 +978,9 @@ export default function UserProfilePage() {
                   </span>
                 </div>
                 <div
+                  onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
                   className={cn(
-                    "relative h-5 w-[37px] rounded-full transition-colors",
+                    "relative h-5 w-[37px] rounded-full transition-colors cursor-pointer",
                     twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
                   )}
                 >

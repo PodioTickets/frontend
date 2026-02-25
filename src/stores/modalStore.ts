@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | "viewRegistration" | "exportData" | "paymentDetails" | "requestTransfer" | "accessAllOrganizations" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "changePassword" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | "viewRegistration" | "exportData" | "paymentDetails" | "requestTransfer" | "accessAllOrganizations" | null;
 
 interface ModalData {
   amount?: number;
@@ -128,6 +128,17 @@ export const useChangeEmailModal = () => {
     data: data as ModalData | null,
     openChangeEmailModal: (data?: ModalData) => openModal("changeEmail", data),
     closeChangeEmailModal: closeModal,
+  };
+};
+
+export const useChangePasswordModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
+
+  return {
+    isOpen: isOpen && type === "changePassword",
+    data: data as ModalData | null,
+    openChangePasswordModal: (data?: ModalData) => openModal("changePassword", data),
+    closeChangePasswordModal: closeModal,
   };
 };
 

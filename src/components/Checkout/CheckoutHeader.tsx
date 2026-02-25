@@ -65,12 +65,11 @@ export default function CheckoutHeader({
             <button
               key={option.id}
               className={cn(
-                "flex items-center gap-2 rounded-4xl px-4 py-2 transition-all duration-200 ease-in-out cursor-pointer",
+                "flex items-center gap-2 rounded-4xl px-4 py-2 transition-all duration-200 ease-in-out",
                 activeStep >= option.id
                   ? "text-primary-2 bg-primary-11"
                   : "text-gray-11 bg-gray-5"
               )}
-              onClick={() => handleStepClick(option.id)}
             >
               <span>{option.label}</span>
             </button>

@@ -72,21 +72,21 @@ export function PaymentSuccessStep({
 }: PaymentSuccessStepProps) {
   const router = useRouter();
   const { participants: contextParticipants } = useCheckout();
-  
+
   // Usar participantsInfo se fornecido, senão usar do contexto
-  const participants = participantsInfo.length > 0 
+  const participants = participantsInfo.length > 0
     ? participantsInfo.map(p => ({
-        name: p.name,
-        cpf: p.cpf,
-        email: p.email,
-        birthDate: p.birthDate,
-        phone: p.phone,
-        gender: p.gender || '',
-        emergencyPhone: '',
-        emergencyContactName: '',
-      }))
+      name: p.name,
+      cpf: p.cpf,
+      email: p.email,
+      birthDate: p.birthDate,
+      phone: p.phone,
+      gender: p.gender || '',
+      emergencyPhone: '',
+      emergencyContactName: '',
+    }))
     : contextParticipants;
-    
+
   const [activeTab, setActiveTab] = useState<"info" | "products">("info");
   const [expandedParticipants, setExpandedParticipants] = useState<
     Record<number, boolean>
@@ -162,23 +162,23 @@ export function PaymentSuccessStep({
     participantsData.length > 0
       ? participantsData
       : [
-          {
-            participantIndex: 0,
-            ticketName: "Kit inscrição - 3K Caminhada",
-            ticketPrice: 438.34,
-            qrCode: "/images/qr-code-placeholder.png",
-            additionalProducts: [
-              { name: "Camiseta Regata", price: 29.9, quantity: 1 },
-              { name: "Viseira", price: 29.9, quantity: 1 },
-            ],
-          },
-          {
-            participantIndex: 1,
-            ticketName: "Kit inscrição - 3K Caminhada",
-            ticketPrice: 438.34,
-            qrCode: "/images/qr-code-placeholder.png",
-          },
-        ];
+        {
+          participantIndex: 0,
+          ticketName: "Kit inscrição - 3K Caminhada",
+          ticketPrice: 438.34,
+          qrCode: "/images/qr-code-placeholder.png",
+          additionalProducts: [
+            { name: "Camiseta Regata", price: 29.9, quantity: 1 },
+            { name: "Viseira", price: 29.9, quantity: 1 },
+          ],
+        },
+        {
+          participantIndex: 1,
+          ticketName: "Kit inscrição - 3K Caminhada",
+          ticketPrice: 438.34,
+          qrCode: "/images/qr-code-placeholder.png",
+        },
+      ];
 
   return (
     <>
@@ -317,7 +317,7 @@ export function PaymentSuccessStep({
                         </p>
                       </div>
                     )}
-                    
+
                     {/* Voucher Discount */}
                     {voucherDiscount > 0 && (
                       <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
@@ -337,7 +337,7 @@ export function PaymentSuccessStep({
                       Total pago:
                     </p>
                     <p className="font-bold text-2xl leading-[1.1] text-gray-12 font-manrope">
-                      {formatCurrency(totalPaid)}
+                      {formatCurrency(totalPaid / 100)}
                     </p>
                   </div>
                 </div>
@@ -503,11 +503,10 @@ export function PaymentSuccessStep({
                                 e.stopPropagation();
                                 setActiveTab("info");
                               }}
-                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${
-                                activeTab === "info"
+                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${activeTab === "info"
                                   ? "bg-primary-11 text-primary-2"
                                   : "bg-gray-5 text-gray-11"
-                              }`}
+                                }`}
                             >
                               Informações
                             </button>
@@ -516,11 +515,10 @@ export function PaymentSuccessStep({
                                 e.stopPropagation();
                                 setActiveTab("products");
                               }}
-                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${
-                                activeTab === "products"
+                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${activeTab === "products"
                                   ? "bg-primary-11 text-primary-2"
                                   : "bg-gray-5 text-gray-11"
-                              }`}
+                                }`}
                             >
                               Produtos
                             </button>
@@ -631,7 +629,7 @@ export function PaymentSuccessStep({
                               )}
                               {/* Produtos adicionais */}
                               {participantData.additionalProducts &&
-                              participantData.additionalProducts.length > 0 ? (
+                                participantData.additionalProducts.length > 0 ? (
                                 <div className="flex flex-col gap-4 items-start w-full">
                                   {participantData.includedProducts && participantData.includedProducts.length > 0 && (
                                     <p className="font-semibold text-base text-gray-11 mb-2 mt-4">Produtos adicionais:</p>
@@ -830,7 +828,7 @@ export function PaymentSuccessStep({
                         </p>
                       </div>
                     )}
-                    
+
                     {/* Voucher Discount */}
                     {voucherDiscount > 0 && (
                       <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
@@ -850,7 +848,7 @@ export function PaymentSuccessStep({
                       Total pago:
                     </p>
                     <p className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
-                      {formatCurrency(totalPaid)}
+                      {formatCurrency(totalPaid / 100)}
                     </p>
                   </div>
                 </div>
@@ -1006,9 +1004,8 @@ export function PaymentSuccessStep({
                           </div>
                           <div className="flex items-center justify-center size-8">
                             <ChevronDown
-                              className={`size-8 text-gray-12 transition-transform ${
-                                isExpanded ? "rotate-180" : ""
-                              }`}
+                              className={`size-8 text-gray-12 transition-transform ${isExpanded ? "rotate-180" : ""
+                                }`}
                             />
                           </div>
                         </div>
@@ -1024,11 +1021,10 @@ export function PaymentSuccessStep({
                                 e.stopPropagation();
                                 setActiveTab("info");
                               }}
-                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${
-                                activeTab === "info"
+                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${activeTab === "info"
                                   ? "bg-primary-11 text-primary-2"
                                   : "bg-gray-5 text-gray-11"
-                              }`}
+                                }`}
                             >
                               Informações
                             </button>
@@ -1037,11 +1033,10 @@ export function PaymentSuccessStep({
                                 e.stopPropagation();
                                 setActiveTab("products");
                               }}
-                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${
-                                activeTab === "products"
+                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${activeTab === "products"
                                   ? "bg-primary-11 text-primary-2"
                                   : "bg-gray-5 text-gray-11"
-                              }`}
+                                }`}
                             >
                               Produtos
                             </button>
@@ -1152,7 +1147,7 @@ export function PaymentSuccessStep({
                               )}
                               {/* Produtos adicionais */}
                               {participantData.additionalProducts &&
-                              participantData.additionalProducts.length > 0 ? (
+                                participantData.additionalProducts.length > 0 ? (
                                 <div className="flex flex-col gap-4 items-start w-full">
                                   {participantData.includedProducts && participantData.includedProducts.length > 0 && (
                                     <p className="font-semibold text-base text-gray-11 mb-2 mt-4">Produtos adicionais:</p>
