@@ -242,10 +242,7 @@ export function RegisterModal() {
           } else if (genderLower === "outro") {
             updateData.gender = "OTHER";
           } else if (
-            genderLower === "prefiro não informar" ||
-            genderLower === "prefiro não dizer" ||
-            genderLower === "prefiro-nao-dizer" ||
-            genderLower === "prefiro-nao-informar"
+            genderLower === "prefiro-nao-dizer"
           ) {
             updateData.gender = "PREFER_NOT_TO_SAY";
           } else {
