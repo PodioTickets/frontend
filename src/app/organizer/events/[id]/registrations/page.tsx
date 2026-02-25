@@ -41,6 +41,23 @@ import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 
+// Função auxiliar para calcular o status final de um registro
+function getFinalStatus(registration: any): string {
+  const paymentStatus = registration.order?.payment?.status;
+  const registrationStatus = registration.status;
+  const paymentMetadata = registration.order?.payment?.metadata;
+  const refundType = registration.order?.payment?.refundType;
+
+  // Determinar o status final: 
+  // Se houver metadata, usar refundType (mapear REFUND -> REFUNDED)
+  // Caso contrário, priorizar payment.status para REFUNDED e CHARGEBACK
+  return paymentMetadata && refundType
+    ? refundType === "REFUND" ? "REFUNDED" : refundType === "CHARGEBACK" ? "CHARGEBACK" : refundType
+    : paymentStatus === "REFUNDED" || paymentStatus === "CHARGEBACK"
+      ? paymentStatus
+      : registrationStatus;
+}
+
 // Componente para linha de registro com gerenciamento de estado do avatar
 function RegistrationRow({
   registration,
@@ -55,20 +72,17 @@ function RegistrationRow({
 }) {
   const [imageError, setImageError] = useState(false);
 
-  // Verificar status do payment também para REFUNDED e CHARGEBACK
+  // Calcular o status final usando a função auxiliar
+  const finalStatus = getFinalStatus(registration);
   const paymentStatus = registration.order?.payment?.status;
-  const registrationStatus = registration.status;
-
-  // Determinar o status final: priorizar payment.status para REFUNDED e CHARGEBACK
-  const finalStatus = paymentStatus === "REFUNDED" || paymentStatus === "CHARGEBACK"
-    ? paymentStatus
-    : registrationStatus;
+  const paymentMetadata = registration.order?.payment?.metadata;
+  const refundType = registration.order?.payment?.refundType;
 
   const statusBadge = getStatusBadge(finalStatus);
   const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
   const isCancelled = finalStatus === "CANCELLED";
-  const isRefunded = finalStatus === "REFUNDED" || paymentStatus === "REFUNDED";
-  const isChargeback = finalStatus === "CHARGEBACK" || paymentStatus === "CHARGEBACK";
+  const isRefunded = finalStatus === "REFUNDED" || paymentStatus === "REFUNDED" || (paymentMetadata && refundType === "REFUND");
+  const isChargeback = finalStatus === "CHARGEBACK" || paymentStatus === "CHARGEBACK" || (paymentMetadata && refundType === "CHARGEBACK");
 
   // Avatar com fallback para primeira letra
   const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
@@ -150,16 +164,16 @@ function RegistrationRow({
       </div>
 
       {/* Status */}
-      <div className="flex h-full items-center justify-center p-4 w-[120px]">
+      <div className="flex h-full items-center justify-center text-center p-4 w-[120px]">
         <span
           className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded text-xs font-medium ${isPaid
             ? "bg-primary-11 text-white"
             : isCancelled
               ? "bg-red-11 text-white"
               : isChargeback
-                ? "bg-orange-11 text-white"
+                ? "bg-red-11 text-white"
                 : isRefunded
-                  ? "bg-purple-11 text-white"
+                  ? "bg-red-11 text-white"
                   : statusBadge?.className || "bg-gray-10/20 text-gray-11"
             }`}
         >
@@ -168,7 +182,7 @@ function RegistrationRow({
             : isCancelled
               ? "Cancelado"
               : isChargeback
-                ? "Charge-back"
+                ? "ChargeBack"
                 : isRefunded
                   ? "Estornado"
                   : statusBadge?.label || "Desconhecido"}
@@ -348,13 +362,13 @@ export default function EventRegistrationsPage() {
         icon: CheckCircle,
       },
       CHARGEBACK: {
-        label: "Charge-back",
-        className: "bg-orange-10/20 text-orange-11",
+        label: "ChargeBack",
+        className: "bg-red-10 text-red-11",
         icon: XCircle,
       },
       REFUNDED: {
         label: "Estornado",
-        className: "bg-purple-10/20 text-purple-11",
+        className: "bg-red-10 text-red-11",
         icon: XCircle,
       },
       PENDING: {
@@ -402,7 +416,9 @@ export default function EventRegistrationsPage() {
       orderId.includes(searchLower) ||
       ticketNames.includes(searchLower);
 
-    const matchesStatus = statusFilter === "all" || reg.status === statusFilter;
+    // Calcular o status final usando a mesma lógica do componente
+    const finalStatus = getFinalStatus(reg);
+    const matchesStatus = statusFilter === "all" || finalStatus === statusFilter;
 
     // Date range filter - only filter when both dates are selected and different
     const matchesDateRange = !dateRange?.from || !dateRange?.to || dateRange.from.getTime() === dateRange.to.getTime()
@@ -564,7 +580,7 @@ export default function EventRegistrationsPage() {
               { id: "COMPLETED", label: "Concluída", icon: CheckCircle },
               { id: "CANCELLED", label: "Cancelado", icon: XCircle },
 
-              { id: "CHARGEBACK", label: "Charge-back", icon: XCircle },
+              { id: "CHARGEBACK", label: "ChargeBack", icon: XCircle },
               { id: "REFUNDED", label: "Estornado", icon: XCircle },
             ]}
             selectedIds={statusFilter !== "all" ? [statusFilter] : []}
@@ -580,7 +596,7 @@ export default function EventRegistrationsPage() {
                   CONFIRMED: "Status: Pago",
                   CANCELLED: "Status: Cancelado",
                   COMPLETED: "Status: Concluída",
-                  CHARGEBACK: "Status: Charge-back",
+                  CHARGEBACK: "Status: ChargeBack",
                   REFUNDED: "Status: Estornado",
                 };
                 return statusMap[statusFilter] || "Status: Todos";
