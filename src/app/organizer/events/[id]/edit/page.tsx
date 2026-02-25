@@ -272,6 +272,14 @@ export default function EditInformationPage() {
         eventData.state = formData.state;
       }
 
+      if (formData.cep) {
+        eventData.zipCode = formData.cep;
+      }
+
+      if (formData.neighborhood) {
+        eventData.neighborhood = formData.neighborhood;
+      }
+
       if (formData.googleMapsLink) {
         eventData.googleMapsLink = formData.googleMapsLink;
       }

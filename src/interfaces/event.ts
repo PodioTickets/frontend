@@ -22,6 +22,8 @@ export interface Event {
   status: string;
   createdAt: string;
   updatedAt: string;
+  zipCode: string;
+  neighborhood: string;
   organization: Organization; // Mudado de organizer para organization
   organizer?: Organizer; // Mantido para compatibilidade retroativa
   topics: Topic[];

@@ -89,6 +89,14 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
       const eventData = await organizerService.getEventById(eventId);
       setEvent(eventData);
 
+      // Formatar CEP se existir
+      const formatCEP = (cep: string | null | undefined) => {
+        if (!cep) return "";
+        const numbers = cep.replace(/\D/g, "");
+        if (numbers.length <= 5) return numbers;
+        return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+      };
+
       setFormData({
         eventId,
         name: eventData.name || "",
@@ -97,9 +105,9 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
         registrationStartTime: formatTimeForInput(eventData.registrationStartDate),
         registrationEndDate: formatDateForInput(eventData.registrationEndDate),
         registrationEndTime: formatTimeForInput(eventData.registrationEndDate),
-        cep: "",
+        cep: formatCEP(eventData.zipCode || (eventData as any).cep),
         street: eventData.location || "",
-        neighborhood: "",
+        neighborhood: eventData.neighborhood || "",
         city: eventData.city || "",
         state: eventData.state || "",
         googleMapsLink: eventData.googleMapsLink || "",
