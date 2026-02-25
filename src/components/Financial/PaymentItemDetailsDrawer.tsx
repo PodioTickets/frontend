@@ -464,7 +464,7 @@ export function PaymentItemDetailsDrawer({
                       Parcelamento
                     </p>
                     <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                      {formatInstallments(paymentDetails.payment.installments, paymentDetails.payment.installmentValue) || "—"}
+                      {formatInstallments(paymentDetails.payment.installments, paymentDetails.payment.installmentValue || null) || "—"}
                     </p>
                   </div>
                 )}
