@@ -304,8 +304,21 @@ export function RegisterModal() {
         };
 
         // Campos opcionais conforme o DTO
+        // Normalizar gênero para o formato esperado pela API
         if (formData.sexo) {
-          registerData.gender = formData.sexo;
+          const genderLower = formData.sexo.toLowerCase().trim();
+          if (genderLower === "masculino") {
+            registerData.gender = "MALE";
+          } else if (genderLower === "feminino") {
+            registerData.gender = "FEMALE";
+          } else if (genderLower === "outro") {
+            registerData.gender = "OTHER";
+          } else if (genderLower === "prefiro-nao-dizer") {
+            registerData.gender = "PREFER_NOT_TO_SAY";
+          } else {
+            // Se já estiver no formato correto, usa diretamente
+            registerData.gender = formData.sexo;
+          }
         }
         if (formData.telefone) {
           registerData.phone = formData.telefone.replace(/\D/g, ""); // Remove formatação
