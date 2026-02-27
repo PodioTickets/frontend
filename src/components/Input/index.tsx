@@ -2,20 +2,62 @@ import * as React from "react";
 
 import { cn } from "@/utils/cn";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
-  return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "file:text-gray-12 placeholder:text-gray-11 dark:bg-input border-gray-6 flex h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-5",
-        "focus-visible:border-gray-4 focus-visible:ring-gray-4/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        className
-      )}
-      {...props}
-    />
-  );
+interface InputProps extends React.ComponentProps<"input"> {
+  showCharCount?: boolean;
 }
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, maxLength, value, showCharCount, ...props }, ref) => {
+    const hasCharCount = (maxLength !== undefined && maxLength > 0) || showCharCount;
+    const currentLength = typeof value === "string" ? value.length : (value as any)?.toString().length || 0;
+    const maxLengthValue = maxLength || 0;
+
+    if (hasCharCount) {
+      return (
+        <div className="relative w-full">
+          <input
+            ref={ref}
+            type={type}
+            data-slot="input"
+            maxLength={maxLength}
+            value={value}
+            className={cn(
+              "file:text-gray-12 placeholder:text-gray-11 dark:bg-input border-gray-6 flex h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-5",
+              "focus-visible:border-gray-4 focus-visible:ring-gray-4/50 focus-visible:ring-[3px]",
+              "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+              "pr-16",
+              className
+            )}
+            {...props}
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <span className="text-gray-11 text-base font-family-dm-sans font-normal leading-[1.3]">
+              {currentLength}/{maxLengthValue}
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <input
+        ref={ref}
+        type={type}
+        data-slot="input"
+        maxLength={maxLength}
+        value={value}
+        className={cn(
+          "file:text-gray-12 placeholder:text-gray-11 dark:bg-input border-gray-6 flex h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-5",
+          "focus-visible:border-gray-4 focus-visible:ring-gray-4/50 focus-visible:ring-[3px]",
+          "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+
+Input.displayName = "Input";
 
 export { Input };

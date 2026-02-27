@@ -99,12 +99,6 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   const params = useParams();
   const eventId = params.id as string;
 
-  const tabs = [
-    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-    { label: "Editar", href: `/organizer/events/${eventId}/edit`, active: true },
-  ];
 
   if (loading) {
     return (
@@ -116,7 +110,7 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader eventName={event?.name} tabs={tabs} />
+      <EventPageHeader eventName={event?.name} />
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
         <EditProgressBar />
         {children}

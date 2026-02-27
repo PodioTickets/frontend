@@ -345,7 +345,7 @@ export default function EditInformationPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-11">
           {/* Nome do Evento e Data */}
-          <div className="flex gap-6 w-full items-start">
+          <div className="flex gap-3 w-full items-start">
             <div className="flex flex-col gap-3 flex-1">
               <div className="flex flex-col gap-2">
                 <label className="text-gray-12 text-base font-family-dm-sans">Nome do evento</label>
@@ -356,16 +356,12 @@ export default function EditInformationPage() {
                   onChange={handleInputChange}
                   placeholder="Ex: Corrida Pena Nubas 2025"
                   className={`h-12 ${errors.name ? "border-red-10" : ""}`}
-                  maxLength={25}
+                  maxLength={200}
                 />
-              </div>
-              <div className="flex items-center gap-1">
-                <InfoIcon className="size-5 text-gray-11" />
-                <p className="text-gray-11 text-base font-family-dm-sans">Limite de 25 Caracteres</p>
               </div>
               {errors.name && <p className="text-red-10 text-sm">{errors.name}</p>}
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 w-1/2">
               <div className="flex flex-col gap-2">
                 <label className="text-gray-12 text-base font-family-dm-sans">Data do evento</label>
                 <DatePicker
@@ -376,7 +372,7 @@ export default function EditInformationPage() {
                   hideIcon={false}
                 />
               </div>
-              <div className="flex items-center gap-1 max-w-[350px]">
+              <div className="flex items-center gap-1">
                 <InfoIcon className="size-5 text-gray-11 shrink-0" />
                 <p className="text-gray-11 text-base font-family-dm-sans flex-1">
                   Use a data e o horário oficiais de início do evento. As largadas por modalidade

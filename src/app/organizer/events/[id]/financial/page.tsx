@@ -228,15 +228,7 @@ export default function EventFinancialPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader
-        eventName={event?.name}
-        tabs={[
-          { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-          { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-          { label: "Financeiro", href: `/organizer/events/${eventId}/financial`, active: true },
-          { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-        ]}
-      />
+      <EventPageHeader eventName={event?.name} />
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
 
 

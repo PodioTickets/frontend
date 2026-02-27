@@ -34,6 +34,7 @@ export interface Batch {
 
 export interface TicketFormData {
   ticketName: string;
+  ticketDescription?: string;
   selectedModality: string;
   distance: string;
   distanceUnit: string;
@@ -103,6 +104,7 @@ export function TicketForm({
 
   // Form state
   const [ticketName, setTicketName] = useState(initialData?.ticketName || "");
+  const [ticketDescription, setTicketDescription] = useState(initialData?.ticketDescription || "");
   const [selectedModality, setSelectedModality] = useState(initialData?.selectedModality || "");
   const [distance, setDistance] = useState(initialData?.distance || "");
   const [distanceUnit, setDistanceUnit] = useState(initialData?.distanceUnit || "KM");
@@ -118,6 +120,10 @@ export function TicketForm({
   // Data from API
   const [modalityTemplates, setModalityTemplates] = useState<ModalityTemplate[]>([]);
   const [ticketCategories, setTicketCategories] = useState<ModalityGroup[]>([]);
+
+  // Description editing state (for category)
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editingDescription, setEditingDescription] = useState("");
 
   // Refs for product management
   const productsRef = useRef(products);
@@ -136,6 +142,7 @@ export function TicketForm({
       try {
         const parsed = JSON.parse(saved);
         if (parsed.ticketName) setTicketName(parsed.ticketName);
+        if (parsed.ticketDescription !== undefined) setTicketDescription(parsed.ticketDescription || "");
         if (parsed.selectedModality) setSelectedModality(parsed.selectedModality);
         if (parsed.distance) setDistance(parsed.distance);
         if (parsed.distanceUnit) setDistanceUnit(parsed.distanceUnit);
@@ -159,6 +166,7 @@ export function TicketForm({
 
     const formDataToSave = {
       ticketName,
+      ticketDescription,
       selectedModality,
       distance,
       distanceUnit,
@@ -176,7 +184,7 @@ export function TicketForm({
       prevFormDataRef.current = formDataString;
       localStorage.setItem(localStorageKey, formDataString);
     }
-  }, [mode, localStorageKey, ticketName, selectedModality, distance, distanceUnit, gender, hasAgeRestriction, minAge, maxAge, hasKit, batches, selectedGroupId]);
+  }, [mode, localStorageKey, ticketName, ticketDescription, selectedModality, distance, distanceUnit, gender, hasAgeRestriction, minAge, maxAge, hasKit, batches, selectedGroupId]);
 
   // Load API data (modality templates and categories)
   useEffect(() => {
@@ -200,6 +208,14 @@ export function TicketForm({
 
     loadData();
   }, [eventId]);
+
+  // Update editingDescription when selectedGroupId changes
+  useEffect(() => {
+    if (!isEditingDescription && selectedGroupId) {
+      const category = ticketCategories.find((cat) => cat.id === selectedGroupId);
+      setEditingDescription(category?.description || "");
+    }
+  }, [selectedGroupId, ticketCategories, isEditingDescription]);
 
   // Load existing ticket data (only for edit mode)
   useEffect(() => {
@@ -232,6 +248,7 @@ export function TicketForm({
           };
 
           setTicketName(ticketData.name || "");
+          setTicketDescription((ticketData as any).description || "");
           // Prioriza categoryId, depois category.id, depois groupId (compatibilidade)
           const categoryId = ticketData.categoryId || ticketData.category?.id || ticketData.groupId || "";
           setSelectedGroupId(categoryId);
@@ -452,15 +469,45 @@ export function TicketForm({
     setBatches(batches.map((b) => (b.id === batchId ? { ...b, [field]: value } : b)));
   };
 
+  const handleSaveDescription = async () => {
+    if (!selectedGroupId) {
+      toast.error("Selecione uma categoria primeiro");
+      setIsEditingDescription(false);
+      return;
+    }
+
+    try {
+      await organizerService.updateTicketCategory(eventId, selectedGroupId, {
+        description: editingDescription.trim(),
+      });
+
+      // Atualizar a categoria localmente
+      setTicketCategories((prev) =>
+        prev.map((cat) =>
+          cat.id === selectedGroupId
+            ? { ...cat, description: editingDescription.trim() }
+            : cat
+        )
+      );
+
+      setIsEditingDescription(false);
+      toast.success("Observação atualizada com sucesso!");
+    } catch (error: any) {
+      console.error("Error updating category description:", error);
+      toast.error(error.response?.data?.message || "Erro ao atualizar observação");
+    }
+  };
+
+  const handleCancelDescription = () => {
+    const category = ticketCategories.find((cat) => cat.id === selectedGroupId);
+    setEditingDescription(category?.description || "");
+    setIsEditingDescription(false);
+  };
+
   const handleSubmit = async () => {
     // Validation
     if (!ticketName.trim()) {
       toast.error("Nome do ingresso é obrigatório");
-      return;
-    }
-
-    if (ticketName.length > 25) {
-      toast.error("Nome do ingresso deve ter no máximo 25 caracteres");
       return;
     }
 
@@ -485,6 +532,7 @@ export function TicketForm({
         modalityTemplates.find((t) => t.id === selectedModality)?.label || selectedModality;
       const ticketData = {
         name: ticketName.trim(),
+        description: ticketDescription.trim() || undefined,
         categoryId: selectedGroupId || initialGroupId || undefined,
         modality: modalityLabel,
         distance: distance || undefined,
@@ -505,7 +553,7 @@ export function TicketForm({
           const priceInReais = parseFloat(priceString) || 0;
           // Convert to cents (multiply by 100) to ensure 2 decimal places are preserved
           const priceInCents = Math.round(priceInReais * 100);
-          
+
           return {
             quantity: parseInt(b.quantity) || 0,
             price: priceInCents,
@@ -612,20 +660,71 @@ export function TicketForm({
         <div className="flex flex-col gap-9">
           {/* Nome do ingresso */}
           <div className="flex flex-col gap-2">
-            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-              Nome do ingresso
-            </label>
-            <Input
-              value={ticketName}
-              onChange={(e) => setTicketName(e.target.value)}
-              placeholder="Ex: 5K"
-              maxLength={25}
-              className="h-12"
-            />
-            <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-              Limite de 25 Caracteres
-            </p>
+            <div className="flex flex-col gap-2">
+              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                Nome do ingresso
+              </label>
+              <Input
+                value={ticketName}
+                onChange={(e) => setTicketName(e.target.value)}
+                placeholder="Ex: 5K"
+                maxLength={200}
+                className="h-12"
+              />
+            </div>
+
+            <div className="w-full">
+              {(() => {
+                const category = ticketCategories.find((cat) => cat.id === selectedGroupId);
+                const categoryDescription = category?.description || "";
+
+                return isEditingDescription ? (
+                  <input
+                    type="text"
+                    value={editingDescription}
+                    onChange={(e) => setEditingDescription(e.target.value)}
+                    onBlur={handleSaveDescription}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveDescription();
+                      } else if (e.key === "Escape") {
+                        handleCancelDescription();
+                      }
+                    }}
+                    placeholder="Adicione uma observação para o cliente..."
+                    className="text-gray-11 font-normal font-manrope leading-[1.4] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 w-full"
+                    autoFocus
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {categoryDescription ? (
+                      <p
+                        onClick={() => {
+                          setIsEditingDescription(true);
+                          setEditingDescription(categoryDescription);
+                        }}
+                        className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-12 transition-colors"
+                      >
+                        {categoryDescription}
+                      </p>
+                    ) : (
+                      <p
+                        onClick={() => {
+                          setIsEditingDescription(true);
+                          setEditingDescription("");
+                        }}
+                        className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-11 transition-colors"
+                      >
+                        Adicione uma observação para o cliente...
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
+
+
 
           {/* Categoria */}
           {Array.isArray(ticketCategories) && ticketCategories.length > 0 && (

@@ -15,6 +15,7 @@ interface TicketCategoryCardProps {
   currentPage: number;
   totalPages: number;
   onEdit: (categoryId: string, name: string) => void;
+  onEditDescription?: (categoryId: string, description: string) => void;
   onDelete: (categoryId: string) => void;
   onEditTicket: (ticketId: string) => void;
   onDeleteTicket: (ticketId: string) => void;
@@ -30,6 +31,7 @@ export function TicketCategoryCard({
   currentPage,
   totalPages,
   onEdit,
+  onEditDescription,
   onDelete,
   onEditTicket,
   onDeleteTicket,
@@ -40,6 +42,8 @@ export function TicketCategoryCard({
 }: TicketCategoryCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingName, setEditingName] = useState(category.name);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(category.description || "");
 
   const { setNodeRef, isOver } = useDroppable({
     id: `category-${category.id}`,
@@ -61,6 +65,18 @@ export function TicketCategoryCard({
     setIsEditing(false);
   };
 
+  const handleSaveDescription = () => {
+    if (onEditDescription) {
+      onEditDescription(category.id, editingDescription.trim());
+    }
+    setIsEditingDescription(false);
+  };
+
+  const handleCancelDescription = () => {
+    setEditingDescription(category.description || "");
+    setIsEditingDescription(false);
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -69,50 +85,106 @@ export function TicketCategoryCard({
         }`}
     >
       {/* Category Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 w-full">
-        <div className="flex gap-[10px] items-center">
-          {isEditing ? (
-            <input
-              type="text"
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              onBlur={handleSave}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSave();
-                } else if (e.key === "Escape") {
-                  handleCancel();
+      <div className="flex flex-col gap-3 w-full">
+        <div className="flex items-center justify-between flex-wrap gap-4 w-full">
+          <div className="flex gap-[10px] items-center">
+            {isEditing ? (
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSave();
+                  } else if (e.key === "Escape") {
+                    handleCancel();
+                  }
+                }}
+                className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8"
+                autoFocus
+              />
+            ) : (
+              <h3 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
+                {category.name}
+              </h3>
+            )}
+            <button
+              onClick={() => {
+                setIsEditing(true);
+                setEditingName(category.name);
+              }}
+              className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
+            >
+              <PencilIcon className="size-5 text-gray-11" />
+            </button>
+          </div>
+          <div className="flex items-center">
+            <button
+              onClick={() => {
+                if (confirm("Tem certeza que deseja excluir esta categoria?")) {
+                  onDelete(category.id);
                 }
               }}
-              className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8"
+              className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
+            >
+              <TrashIcon className="size-5 text-red-12" />
+            </button>
+          </div>
+        </div>
+        {/* Observation Field */}
+        <div className="w-full">
+          {isEditingDescription ? (
+            <input
+              type="text"
+              value={editingDescription}
+              onChange={(e) => setEditingDescription(e.target.value)}
+              onBlur={handleSaveDescription}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSaveDescription();
+                } else if (e.key === "Escape") {
+                  handleCancelDescription();
+                }
+              }}
+              placeholder="Adicione uma observação para o cliente..."
+              className="text-gray-11 font-normal font-manrope leading-[1.4] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 w-full"
               autoFocus
             />
           ) : (
-            <h3 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-              {category.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              {category.description ? (
+                <p
+                  onClick={() => {
+                    setIsEditingDescription(true);
+                    setEditingDescription(category.description || "");
+                  }}
+                  className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-12 transition-colors"
+                >
+                  {category.description}
+                </p>
+              ) : (
+                <p
+                  onClick={() => {
+                    setIsEditingDescription(true);
+                    setEditingDescription("");
+                  }}
+                  className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-11 transition-colors"
+                >
+                  Adicione uma observação para o cliente...
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  setIsEditingDescription(true);
+                  setEditingDescription(category.description || "");
+                }}
+                className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-7 flex items-center justify-center cursor-pointer shrink-0"
+              >
+                <PencilIcon className="size-4 text-gray-11" />
+              </button>
+            </div>
           )}
-          <button
-            onClick={() => {
-              setIsEditing(true);
-              setEditingName(category.name);
-            }}
-            className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-          >
-            <PencilIcon className="size-5 text-gray-11" />
-          </button>
-        </div>
-        <div className="flex items-center">
-          <button
-            onClick={() => {
-              if (confirm("Tem certeza que deseja excluir esta categoria?")) {
-                onDelete(category.id);
-              }
-            }}
-            className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-          >
-            <TrashIcon className="size-5 text-red-12" />
-          </button>
         </div>
       </div>
 

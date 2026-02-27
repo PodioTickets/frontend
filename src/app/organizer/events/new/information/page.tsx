@@ -208,7 +208,7 @@ export default function InformacoesPage() {
 
       // Log response for debugging
       console.log("PDF upload response status:", response.status, response.statusText);
-      
+
       let result;
       try {
         const text = await response.text();
@@ -230,7 +230,7 @@ export default function InformacoesPage() {
           result,
           fileType: pdfFile.type,
         });
-        
+
         // Check if error is about image files (backend validation issue)
         const errorMessage = result.message || result.error?.message || "Erro ao fazer upload";
         if (errorMessage.includes("image") || errorMessage.includes("Only image")) {
@@ -240,19 +240,11 @@ export default function InformacoesPage() {
         }
         throw new Error(errorMessage);
       }
-
-      // Handle PDF upload response - try multiple possible formats
-      // Backend might return:
-      // - { url: "..." }
-      // - { fileUrl: "..." }
-      // - { data: { url: "..." } }
-      // - { success: true, url: "..." }
-      // - { success: true, fileUrl: "..." }
       const fileUrl = result.url || result.fileUrl || result.data?.url || result.data?.fileUrl;
-      
+
       if (fileUrl) {
-        const fullUrl = fileUrl.startsWith('http') 
-          ? fileUrl 
+        const fullUrl = fileUrl.startsWith('http')
+          ? fileUrl
           : `${apiUrl}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
         setPdfUrl(fullUrl);
         toast.success("PDF enviado com sucesso!");
@@ -261,24 +253,24 @@ export default function InformacoesPage() {
         // If upload was successful (status 200/201) but no URL in response, 
         // check if file was actually uploaded by checking response structure
         console.warn("PDF upload response missing URL, but status was OK:", result);
-        
+
         // If response indicates success but no URL, maybe the backend returns differently
         if (response.status === 200 || response.status === 201) {
           // Try to extract URL from any field
-          const possibleUrl = Object.values(result).find((v: any) => 
+          const possibleUrl = Object.values(result).find((v: any) =>
             typeof v === 'string' && (v.startsWith('http') || v.startsWith('/'))
           ) as string | undefined;
-          
+
           if (possibleUrl) {
-            const fullUrl = possibleUrl.startsWith('http') 
-              ? possibleUrl 
+            const fullUrl = possibleUrl.startsWith('http')
+              ? possibleUrl
               : `${apiUrl}${possibleUrl.startsWith('/') ? '' : '/'}${possibleUrl}`;
             setPdfUrl(fullUrl);
             toast.success("PDF enviado com sucesso!");
             return fullUrl;
           }
         }
-        
+
         console.error("PDF upload response missing URL:", result);
         throw new Error(result.message || "Resposta do servidor inválida - URL não encontrada");
       }
@@ -456,14 +448,8 @@ export default function InformacoesPage() {
                   onChange={handleInputChange}
                   placeholder="Ex: Corrida Pena Nubas 2025"
                   className={`h-12 ${errors.name ? "border-red-10" : ""}`}
-                  maxLength={25}
+                  maxLength={200}
                 />
-              </div>
-              <div className="flex items-center gap-1">
-                <InfoIcon className="size-5 text-gray-11" />
-                <p className="text-gray-11 text-base font-family-dm-sans">
-                  Limite de 25 Caracteres
-                </p>
               </div>
               {errors.name && (
                 <p className="text-red-10 text-sm">{errors.name}</p>

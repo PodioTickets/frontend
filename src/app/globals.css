@@ -224,3 +224,51 @@ input[type="number"] {
 .loading-dot:nth-child(3) {
   animation-delay: 0.94s;
 }
+
+/* Quill alignment classes for rendered content */
+.ql-align-left {
+  text-align: left;
+}
+
+.ql-align-center {
+  text-align: center;
+}
+
+.ql-align-right {
+  text-align: right;
+}
+
+.ql-align-justify {
+  text-align: justify;
+}
+
+/* Ensure images in aligned paragraphs respect alignment */
+.ql-align-center img,
+.ql-align-left img,
+.ql-align-right img,
+.ql-align-justify img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.ql-align-center img {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ql-align-right img {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.ql-align-left img {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.ql-align-justify img {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}

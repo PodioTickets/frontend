@@ -48,7 +48,7 @@ export function useTicketCategories(eventId: string | null, enabled: boolean = t
       data,
     }: {
       categoryId: string;
-      data: { name?: string; order?: number };
+      data: { name?: string; order?: number; description?: string };
     }) => {
       if (!eventId) throw new Error("Event ID is required");
       return organizerService.updateTicketCategory(eventId, categoryId, data);
@@ -85,7 +85,7 @@ export function useTicketCategories(eventId: string | null, enabled: boolean = t
     error,
     createCategory: (name: string, order?: number) =>
       createMutation.mutateAsync({ name, order }),
-    updateCategory: (categoryId: string, data: { name?: string; order?: number }) =>
+    updateCategory: (categoryId: string, data: { name?: string; order?: number; description?: string }) =>
       updateMutation.mutateAsync({ categoryId, data }),
     deleteCategory: (categoryId: string) => deleteMutation.mutateAsync(categoryId),
   };

@@ -1150,7 +1150,7 @@ export class OrganizerService {
   async updateTicketCategory(
     eventId: string,
     categoryId: string,
-    data: Partial<{ name: string; order: number }>
+    data: Partial<{ name: string; order: number; description?: string }>
   ): Promise<any> {
     const { data: response } = await this.apiClient.patch<{ data: any }>(
       `/api/v1/tickets/events/${eventId}/categories/${categoryId}`,

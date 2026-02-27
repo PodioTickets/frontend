@@ -58,26 +58,70 @@ export function TopicModal() {
           theme: 'snow',
           placeholder: 'Descreva sobre o tópico...',
           modules: {
-            toolbar: [
-              [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-              ['bold', 'italic', 'underline', 'strike'],
-              [{ 'color': [] }, { 'background': [] }],
-              [{ 'script': 'sub' }, { 'script': 'super' }],
-              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-              [{ 'indent': '-1' }, { 'indent': '+1' }],
-              [{ 'align': [] }],
-              ['blockquote', 'code-block'],
-              ['link', 'image', 'video'],
-              [{ 'table': true }],
-              ['clean']
-            ]
+            toolbar: {
+              container: [
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'script': 'sub' }, { 'script': 'super' }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'align': [] }],
+                ['blockquote', 'code-block'],
+                ['link', 'image', 'video'],
+                [{ 'table': true }],
+                ['clean']
+              ],
+              handlers: {
+                image: function() {
+                  const input = document.createElement('input');
+                  input.setAttribute('type', 'file');
+                  input.setAttribute('accept', 'image/*');
+                  input.click();
+
+                  input.onchange = () => {
+                    const file = input.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (e) => {
+                        const url = e.target?.result as string;
+                        const range = quill.getSelection(true);
+                        if (range) {
+                          // Insert image
+                          quill.insertEmbed(range.index, 'image', url, 'user');
+                          
+                          // After insertion, apply center alignment using Quill's API
+                          setTimeout(() => {
+                            // Get the line containing the image
+                            const [line, offset] = quill.getLine(range.index);
+                            if (line) {
+                              // Apply center alignment to the line
+                              quill.formatLine(range.index, 1, 'align', 'center');
+                              
+                              // Select the line so user can change alignment
+                              quill.setSelection(line.offset(), 0);
+                              
+                              // Style the image to respect alignment
+                              setTimeout(() => {
+                                updateImageAlignment();
+                              }, 150);
+                            }
+                          }, 100);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  };
+                }
+              }
+            }
           },
           formats: [
             'header', 'font', 'size',
             'bold', 'italic', 'underline', 'strike',
             'color', 'background',
             'script',
-            'list', 'bullet', 'indent',
+            'list', 'indent',
             'align',
             'blockquote', 'code-block',
             'link', 'image', 'video',
@@ -85,11 +129,136 @@ export function TopicModal() {
           ]
         });
 
+        // Function to update image alignment based on parent paragraph
+        const updateImageAlignment = () => {
+          const editor = quillRef.current?.querySelector('.ql-editor') as HTMLElement;
+          if (!editor) return;
+
+          const allImages = editor.querySelectorAll('img');
+          allImages.forEach((imgElement) => {
+            const img = imgElement as HTMLImageElement;
+            const parent = img.parentElement;
+            
+            if (parent && parent.tagName === 'P') {
+              // Reset margins
+              img.style.marginLeft = '';
+              img.style.marginRight = '';
+              img.style.width = '';
+              
+              // Apply alignment based on parent class
+              if (parent.classList.contains('ql-align-center')) {
+                img.style.marginLeft = 'auto';
+                img.style.marginRight = 'auto';
+              } else if (parent.classList.contains('ql-align-right')) {
+                img.style.marginLeft = 'auto';
+                img.style.marginRight = '0';
+              } else if (parent.classList.contains('ql-align-left')) {
+                img.style.marginLeft = '0';
+                img.style.marginRight = 'auto';
+              } else if (parent.classList.contains('ql-align-justify')) {
+                img.style.width = '100%';
+                img.style.marginLeft = '0';
+                img.style.marginRight = '0';
+              } else {
+                // Default to left if no alignment class
+                img.style.marginLeft = '0';
+                img.style.marginRight = 'auto';
+              }
+            }
+          });
+        };
+
+        // Style images to work with Quill's align format
+        const styleImages = () => {
+          const editor = quillRef.current?.querySelector('.ql-editor') as HTMLElement;
+          const quill = quillInstanceRef.current;
+          if (!editor || !quill) return;
+
+          const allImages = editor.querySelectorAll('img');
+          allImages.forEach((imgElement) => {
+            const img = imgElement as HTMLImageElement;
+            
+            // Skip if image doesn't have a valid src
+            if (!img.src || img.src === '' || img.src === window.location.href) return;
+            
+            // Style image to be block-level
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            
+            // Find the line containing this image and ensure it has alignment
+            try {
+              // Find image position in editor
+              const editorElement = quillRef.current?.querySelector('.ql-editor');
+              if (editorElement) {
+                const range = document.createRange();
+                range.selectNodeContents(editorElement);
+                range.setStartBefore(img);
+                const preCaretRange = range.cloneRange();
+                preCaretRange.setStart(editorElement, 0);
+                const textLength = preCaretRange.toString().length;
+                
+                // Get the line containing the image
+                const [line, offset] = quill.getLine(textLength);
+                if (line) {
+                  // Check if line already has alignment
+                  const formats = quill.getFormat(line.offset());
+                  if (!formats.align) {
+                    // Apply center alignment by default
+                    quill.formatLine(line.offset(), 1, 'align', 'center');
+                  }
+                }
+              }
+            } catch (e) {
+              // If API fails, fallback to DOM manipulation
+              const parent = img.parentElement;
+              if (parent && parent.tagName === 'P') {
+                if (!parent.classList.contains('ql-align-left') && 
+                    !parent.classList.contains('ql-align-center') && 
+                    !parent.classList.contains('ql-align-right') &&
+                    !parent.classList.contains('ql-align-justify')) {
+                  parent.classList.add('ql-align-center');
+                }
+              }
+            }
+          });
+          
+          // Update alignment after styling
+          updateImageAlignment();
+        };
+
+
         // Listen for content changes
         quill.on('text-change', () => {
           const html = quill.root.innerHTML;
           setContent(html);
+          // Update image alignment after content changes
+          setTimeout(() => {
+            styleImages();
+          }, 100);
         });
+
+        // Update image alignment on selection change (when user changes alignment)
+        quill.on('selection-change', () => {
+          setTimeout(() => {
+            updateImageAlignment();
+          }, 50);
+        });
+
+        // Also listen for format changes (when alignment is applied)
+        quill.on('editor-change', (eventName: string) => {
+          if (eventName === 'format-change' || eventName === 'text-change') {
+            setTimeout(() => {
+              updateImageAlignment();
+            }, 50);
+          }
+        });
+
+        // Initial styling of images
+        setTimeout(() => {
+          styleImages();
+          updateImageAlignment();
+        }, 200);
 
         // Apply custom styles to match Figma design
         setTimeout(() => {
@@ -202,6 +371,11 @@ export function TopicModal() {
           if (initialContent) {
             quill.root.innerHTML = initialContent;
             setContent(initialContent);
+            // Style images for initial content
+            setTimeout(() => {
+              styleImages();
+              updateImageAlignment();
+            }, 300);
           } else {
             setContent("");
           }
@@ -230,6 +404,50 @@ export function TopicModal() {
         if (currentContent !== initialContent) {
           quillInstanceRef.current.root.innerHTML = initialContent || "";
           setContent(initialContent || "");
+          
+          // Apply image alignment after loading saved content
+          setTimeout(() => {
+            const editor = quillRef.current?.querySelector('.ql-editor') as HTMLElement;
+            if (editor) {
+              const allImages = editor.querySelectorAll('img');
+              allImages.forEach((imgElement) => {
+                const img = imgElement as HTMLImageElement;
+                const parent = img.parentElement;
+                
+                if (parent && parent.tagName === 'P') {
+                  // Style image
+                  img.style.maxWidth = '100%';
+                  img.style.height = 'auto';
+                  img.style.display = 'block';
+                  
+                  // Reset margins
+                  img.style.marginLeft = '';
+                  img.style.marginRight = '';
+                  img.style.width = '';
+                  
+                  // Apply alignment based on saved parent class
+                  if (parent.classList.contains('ql-align-center')) {
+                    img.style.marginLeft = 'auto';
+                    img.style.marginRight = 'auto';
+                  } else if (parent.classList.contains('ql-align-right')) {
+                    img.style.marginLeft = 'auto';
+                    img.style.marginRight = '0';
+                  } else if (parent.classList.contains('ql-align-left')) {
+                    img.style.marginLeft = '0';
+                    img.style.marginRight = 'auto';
+                  } else if (parent.classList.contains('ql-align-justify')) {
+                    img.style.width = '100%';
+                    img.style.marginLeft = '0';
+                    img.style.marginRight = '0';
+                  } else {
+                    // Default to left if no alignment class
+                    img.style.marginLeft = '0';
+                    img.style.marginRight = 'auto';
+                  }
+                }
+              });
+            }
+          }, 200);
         }
       }
     } else {
@@ -251,7 +469,56 @@ export function TopicModal() {
   const handleSave = async () => {
     if (onModalSave) {
       try {
-        await onModalSave({ title, content });
+        // Get the current HTML from Quill
+        let htmlToSave = content;
+        
+        if (quillInstanceRef.current) {
+          htmlToSave = quillInstanceRef.current.root.innerHTML;
+          
+          // Process HTML to ensure images have inline styles for alignment
+          // This ensures images render correctly even outside Quill editor
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = htmlToSave;
+          
+          const allImages = tempDiv.querySelectorAll('img');
+          allImages.forEach((imgElement) => {
+            const img = imgElement as HTMLImageElement;
+            const parent = img.parentElement;
+            
+            if (parent && parent.tagName === 'P') {
+              // Ensure image has basic styles
+              img.style.maxWidth = '100%';
+              img.style.height = 'auto';
+              img.style.display = 'block';
+              
+              // Apply alignment styles based on parent class
+              // These inline styles will be preserved in the saved HTML
+              if (parent.classList.contains('ql-align-center')) {
+                img.style.marginLeft = 'auto';
+                img.style.marginRight = 'auto';
+              } else if (parent.classList.contains('ql-align-right')) {
+                img.style.marginLeft = 'auto';
+                img.style.marginRight = '0';
+              } else if (parent.classList.contains('ql-align-left')) {
+                img.style.marginLeft = '0';
+                img.style.marginRight = 'auto';
+              } else if (parent.classList.contains('ql-align-justify')) {
+                img.style.width = '100%';
+                img.style.marginLeft = '0';
+                img.style.marginRight = '0';
+              } else {
+                // Default to left if no alignment class
+                img.style.marginLeft = '0';
+                img.style.marginRight = 'auto';
+              }
+            }
+          });
+          
+          // Get the processed HTML with inline styles
+          htmlToSave = tempDiv.innerHTML;
+        }
+        
+        await onModalSave({ title, content: htmlToSave });
         closeTopicModal();
       } catch (error) {
         // Error is already handled in the callback

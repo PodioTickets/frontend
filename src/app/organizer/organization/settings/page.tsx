@@ -500,7 +500,8 @@ export default function OrganizationSettingsPage() {
                     setFormData((prev) => ({ ...prev, document: value }));
                   }}
                   placeholder="00.000.000/0000-00"
-                  maxLength={18}
+                  disabled
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
                 />
               </div>
 
@@ -515,7 +516,8 @@ export default function OrganizationSettingsPage() {
                   value={formData.tradeName}
                   onChange={handleInputChange}
                   placeholder="Digite o nome fantasia"
-
+                  disabled
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
                 />
               </div>
 
@@ -524,11 +526,15 @@ export default function OrganizationSettingsPage() {
                 <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
                   Nome do responsável
                 </label>
-                <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
-                >
-                  {organizer.members?.find((member) => member.role === "OWNER")?.user?.firstName || ""} {organizer.members?.find((member) => member.role === "OWNER")?.user?.lastName || ""}
-                </span>
+                <Input
+                  type="text"
+                  name="ownerName"
+                  value={organizer.members?.find((member) => member.role === "OWNER")?.user?.firstName || ""}
+                  onChange={handleInputChange}
+                  placeholder="Nome do responsável"
+                  disabled
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
+                />
               </div>
 
               {/* CPF do responsável */}
@@ -536,11 +542,15 @@ export default function OrganizationSettingsPage() {
                 <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
                   CPF do responsável
                 </label>
-                <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
-                >
-                  {maskCPF((organizer.members?.find((member) => member.role === "OWNER")?.user?.documentNumber || "").replace(/\D/g, ""))}
-                </span>
+                <Input
+                  type="text"
+                  name="ownerName"
+                  value={maskCPF((organizer.members?.find((member) => member.role === "OWNER")?.user?.documentNumber || "").replace(/\D/g, ""))}
+                  onChange={handleInputChange}
+                  placeholder="CPF do responsável"
+                  disabled
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
+                />
               </div>
             </div>
           </div>
@@ -769,9 +779,9 @@ export default function OrganizationSettingsPage() {
                 </label>
 
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
                 >
-                  {formData.pixKeyType}
+                  {formData.pixKeyType || "Tipo de chave"}
                 </span>
               </div>
 
@@ -781,9 +791,9 @@ export default function OrganizationSettingsPage() {
                   Chave cadastrada
                 </label>
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
                 >
-                  {formData.pix}
+                  {formData.pix || "Chave cadastrada"}
                 </span>
               </div>
 
@@ -794,9 +804,9 @@ export default function OrganizationSettingsPage() {
                 </label>
 
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
                 >
-                  {maskCPForCNPJ(formData.accountHolderDocument)}
+                  {formData.accountHolderDocument ? maskCPForCNPJ(formData.accountHolderDocument) : "CPF/CNPJ do titular"}
                 </span>
               </div>
 
@@ -807,9 +817,9 @@ export default function OrganizationSettingsPage() {
                 </label>
 
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
                 >
-                  {formData.accountHolderName}
+                  {formData.accountHolderName || "Nome do titular"}
                 </span>
               </div>
 
@@ -819,9 +829,9 @@ export default function OrganizationSettingsPage() {
                   Banco
                 </label>
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
                 >
-                  {formData.bankName}
+                  {formData.bankName || "Banco"}
                 </span>
               </div>
             </div>

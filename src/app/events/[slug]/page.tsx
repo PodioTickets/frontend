@@ -282,11 +282,12 @@ export default function EventPage() {
         <div className="px-4 space-y-4">
           {event.topics?.map((topic, index) => {
             const isExpanded = expandedSections[topic.id] || false;
-            const shouldTruncate = topic.content.length > 150;
-            const displayContent =
-              isExpanded || !shouldTruncate
-                ? topic.content
-                : topic.content.substring(0, 150) + "...";
+            // Check if content has more than just text (has HTML tags)
+            const hasHTML = topic.content.includes('<');
+            const textLength = hasHTML 
+              ? topic.content.replace(/<[^>]*>/g, '').length 
+              : topic.content.length;
+            const shouldTruncate = textLength > 150;
 
             return (
               <Fragment key={topic.id}>
@@ -297,15 +298,10 @@ export default function EventPage() {
                   <h2 className="text-lg font-bold text-gray-12 mb-3">
                     {topic.title}
                   </h2>
-                  <div className="text-sm text-gray-11 mb-3">
-                    <p
-                      className={
-                        !isExpanded && shouldTruncate ? "line-clamp-3" : ""
-                      }
-                    >
-                      {displayContent}
-                    </p>
-                  </div>
+                  <div 
+                    className={`text-sm text-gray-11 mb-3 prose prose-sm max-w-none ${!isExpanded && shouldTruncate ? "line-clamp-3" : ""}`}
+                    dangerouslySetInnerHTML={{ __html: topic.content }}
+                  />
                   {shouldTruncate && (
                     <Button
                       variant="ghost"
@@ -595,7 +591,10 @@ export default function EventPage() {
                     <h1 className="text-2xl font-bold text-gray-12">
                       {topic.title}
                     </h1>
-                    <p className="text-gray-11 text-sm">{topic.content}</p>
+                    <div 
+                      className="text-gray-11 text-sm prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: topic.content }}
+                    />
                   </div>
                   <div className="w-full h-px bg-gray-6" />
                 </Fragment>

@@ -247,12 +247,6 @@ export default function EventDashboardPage() {
     );
   }
 
-  const tabs = [
-    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard`, active: true },
-    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-  ];
 
   const periodOptions = [
     { value: "geral", label: "Geral" },
@@ -276,7 +270,7 @@ export default function EventDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader eventName={event?.name} tabs={tabs} />
+      <EventPageHeader eventName={event?.name} />
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
         {/* Title and Description */}
         <div className="mb-6 flex items-center justify-between w-full">

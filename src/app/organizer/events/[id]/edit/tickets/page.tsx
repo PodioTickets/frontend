@@ -174,6 +174,17 @@ export default function EditTicketsPage() {
     [updateCategory]
   );
 
+  const handleUpdateGroupDescription = useCallback(
+    async (groupId: string, description: string) => {
+      try {
+        await updateCategory(groupId, { description });
+      } catch (error) {
+        // Error já foi tratado no hook
+      }
+    },
+    [updateCategory]
+  );
+
   const handleDeleteGroup = useCallback(
     async (groupId: string) => {
       try {
@@ -743,6 +754,7 @@ export default function EditTicketsPage() {
                     currentPage={page}
                     totalPages={totalPages}
                     onEdit={handleUpdateGroupName}
+                    onEditDescription={handleUpdateGroupDescription}
                     onDelete={handleDeleteGroup}
                     onEditTicket={handleEditTicket}
                     onDeleteTicket={handleDeleteTicket}
