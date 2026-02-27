@@ -145,7 +145,7 @@ export default function AdsPage() {
                 </label>
                 <Input
                   type="text"
-                  placeholder="Ex: de cada um"
+                  placeholder="Ex: 123456789012345"
                   value={formData.metaPixelId}
                   onChange={(e) => handleInputChange("metaPixelId", e.target.value)}
                   className="h-12"
@@ -170,7 +170,7 @@ export default function AdsPage() {
                 </label>
                 <Input
                   type="text"
-                  placeholder="Ex: de cada um"
+                  placeholder="Ex: 123456789012345"
                   value={formData.googleAnalyticsId}
                   onChange={(e) => handleInputChange("googleAnalyticsId", e.target.value)}
                   className="h-12"
@@ -195,7 +195,7 @@ export default function AdsPage() {
                 </label>
                 <Input
                   type="text"
-                  placeholder="Ex: de cada um"
+                  placeholder="Ex: 123456789012345"
                   value={formData.googleAdsId}
                   onChange={(e) => handleInputChange("googleAdsId", e.target.value)}
                   className="h-12"

@@ -501,7 +501,7 @@ export default function OrganizationSettingsPage() {
                   }}
                   placeholder="00.000.000/0000-00"
                   disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
                 />
               </div>
 
@@ -517,7 +517,7 @@ export default function OrganizationSettingsPage() {
                   onChange={handleInputChange}
                   placeholder="Digite o nome fantasia"
                   disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
                 />
               </div>
 
@@ -533,7 +533,7 @@ export default function OrganizationSettingsPage() {
                   onChange={handleInputChange}
                   placeholder="Nome do responsável"
                   disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
                 />
               </div>
 
@@ -549,7 +549,7 @@ export default function OrganizationSettingsPage() {
                   onChange={handleInputChange}
                   placeholder="CPF do responsável"
                   disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-9"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
                 />
               </div>
             </div>
@@ -779,7 +779,7 @@ export default function OrganizationSettingsPage() {
                 </label>
 
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
                 >
                   {formData.pixKeyType || "Tipo de chave"}
                 </span>
@@ -791,7 +791,7 @@ export default function OrganizationSettingsPage() {
                   Chave cadastrada
                 </label>
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
                 >
                   {formData.pix || "Chave cadastrada"}
                 </span>
@@ -804,7 +804,7 @@ export default function OrganizationSettingsPage() {
                 </label>
 
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
                 >
                   {formData.accountHolderDocument ? maskCPForCNPJ(formData.accountHolderDocument) : "CPF/CNPJ do titular"}
                 </span>
@@ -817,7 +817,7 @@ export default function OrganizationSettingsPage() {
                 </label>
 
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
                 >
                   {formData.accountHolderName || "Nome do titular"}
                 </span>
@@ -829,7 +829,7 @@ export default function OrganizationSettingsPage() {
                   Banco
                 </label>
                 <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-gray-9"
+                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
                 >
                   {formData.bankName || "Banco"}
                 </span>

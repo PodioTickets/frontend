@@ -14,7 +14,7 @@ import {
   TooltipItem,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 
 ChartJS.register(
   CategoryScale,
@@ -99,6 +99,8 @@ export function RevenueChart({ data }: RevenueChartProps) {
     y: number;
   } | null>(null);
   const chartRef = useRef<ChartJS<"line">>(null);
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTooltipDataRef = useRef<string | null>(null);
 
   // Mock data - substituir com dados reais
   // Usar useMemo para evitar recriação a cada render
@@ -251,6 +253,99 @@ export function RevenueChart({ data }: RevenueChartProps) {
     ],
   };
 
+  // Handler do tooltip usando useCallback para evitar recriação
+  const handleTooltip = useCallback((context: any) => {
+    // Limpar timeout anterior se existir
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+
+    // Verificar se o tooltip está realmente ativo (hover)
+    // O tooltip só deve aparecer quando há interação ativa
+    if (!context.tooltip ||
+      context.tooltip.opacity === 0 ||
+      !context.tooltip.dataPoints?.length ||
+      context.tooltip.dataPoints.length === 0) {
+      setTooltipData((prev) => {
+        if (prev !== null) {
+          lastTooltipDataRef.current = null;
+          return null;
+        }
+        return prev;
+      });
+      return;
+    }
+
+    const tooltip = context.tooltip;
+    const dataPoint = tooltip.dataPoints[0];
+
+    // Verificar se o elemento realmente existe e está sendo hovered
+    if (!dataPoint || !dataPoint.element) {
+      setTooltipData((prev) => {
+        if (prev !== null) {
+          lastTooltipDataRef.current = null;
+          return null;
+        }
+        return prev;
+      });
+      return;
+    }
+
+    const chart = chartRef.current;
+    if (!chart) {
+      setTooltipData((prev) => {
+        if (prev !== null) {
+          lastTooltipDataRef.current = null;
+          return null;
+        }
+        return prev;
+      });
+      return;
+    }
+
+    const x = dataPoint.element.x;
+    const y = dataPoint.element.y;
+
+    // Encontrar o mês correspondente baseado no índice
+    const index = dataPoint.dataIndex;
+    const originalIndex = originalIndices[index] ?? Math.floor(index / 21); // 20 steps + 1 ponto inicial
+    const monthLabel = chartData.labels[Math.min(originalIndex, chartData.labels.length - 1)] || chartData.labels[0] || "";
+    const revenue = dataPoint.parsed.y;
+
+    // Formatar data corretamente para DD/MM
+    const formattedDate = monthLabel ? formatDateLabel(monthLabel) : "Data";
+
+    // Criar uma chave única para este tooltip para evitar atualizações desnecessárias
+    const tooltipKey = `${index}-${Math.round(x)}-${Math.round(y)}-${Math.round(revenue)}`;
+    
+    // Só atualizar se os dados realmente mudaram
+    if (lastTooltipDataRef.current === tooltipKey) {
+      return;
+    }
+
+    // Usar timeout para debounce e evitar atualizações muito frequentes
+    tooltipTimeoutRef.current = setTimeout(() => {
+      setTooltipData({
+        date: formattedDate,
+        revenue: revenue,
+        tickets: Math.floor(revenue / 10), // Mock de ingressos
+        x: x,
+        y: y,
+      });
+      lastTooltipDataRef.current = tooltipKey;
+    }, 0);
+  }, [chartData, originalIndices]);
+
+  // Limpar timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Usar useMemo para options para evitar recriação a cada render
   const options = useMemo(() => ({
     responsive: true,
@@ -265,53 +360,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       },
       tooltip: {
         enabled: false,
-        external: (context: any) => {
-          // Verificar se o tooltip está realmente ativo (hover)
-          // O tooltip só deve aparecer quando há interação ativa
-          if (!context.tooltip ||
-            context.tooltip.opacity === 0 ||
-            !context.tooltip.dataPoints?.length ||
-            context.tooltip.dataPoints.length === 0) {
-            setTooltipData(null);
-            return;
-          }
-
-          const tooltip = context.tooltip;
-          const dataPoint = tooltip.dataPoints[0];
-
-          // Verificar se o elemento realmente existe e está sendo hovered
-          if (!dataPoint || !dataPoint.element) {
-            setTooltipData(null);
-            return;
-          }
-
-          const chart = chartRef.current;
-          if (!chart) {
-            setTooltipData(null);
-            return;
-          }
-
-          const canvas = chart.canvas;
-          const x = dataPoint.element.x;
-          const y = dataPoint.element.y;
-
-          // Encontrar o mês correspondente baseado no índice
-          const index = dataPoint.dataIndex;
-          const originalIndex = originalIndices[index] ?? Math.floor(index / 21); // 20 steps + 1 ponto inicial
-          const monthLabel = chartData.labels[Math.min(originalIndex, chartData.labels.length - 1)] || chartData.labels[0] || "";
-          const revenue = dataPoint.parsed.y;
-
-          // Formatar data corretamente para DD/MM
-          const formattedDate = monthLabel ? formatDateLabel(monthLabel) : "Data";
-
-          setTooltipData({
-            date: formattedDate,
-            revenue: revenue,
-            tickets: Math.floor(revenue / 10), // Mock de ingressos
-            x: x,
-            y: y,
-          });
-        },
+        external: handleTooltip,
       },
     },
     scales: {
@@ -339,7 +388,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       }
     },
     events: ['mousemove', 'mouseout'] as ('mousemove' | 'mouseout')[],
-  }), [yAxisScale, chartData, originalIndices]);
+  }), [yAxisScale, handleTooltip]);
 
   const handleMouseLeave = () => {
     setTooltipData(null);
