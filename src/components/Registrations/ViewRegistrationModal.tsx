@@ -173,7 +173,37 @@ export function ViewRegistrationModal() {
 
   // Obter perguntas e produtos reais
   const questions = currentRegistration?.questionAnswers || [];
-  const products = currentRegistration?.kitItems || [];
+  
+  // Produtos podem vir de kitItems (produtos adicionais) ou includedProducts (produtos incluídos no ticket)
+  const kitItems = currentRegistration?.kitItems || [];
+  const includedProducts = currentRegistration?.ticket?.includedProducts || [];
+  
+  // Mapear includedProducts para o formato esperado
+  const mappedIncludedProducts = includedProducts.map((product: any) => {
+    // Encontrar a variação selecionada se houver
+    const selectedVariation = product.selectedVariation 
+      ? product.variations?.find((v: any) => v.id === product.selectedVariation)
+      : product.variations && product.variations.length > 0 
+        ? product.variations[0] 
+        : null;
+    
+    return {
+      id: product.id,
+      kitItem: {
+        id: product.id,
+        name: product.name,
+        price: selectedVariation?.price || product.basePrice || 0,
+        image: product.image || "/banners/card_placeholder.png"
+      },
+      selectedSize: selectedVariation?.name || null,
+      isIncluded: true // Marcar como produto incluído
+    };
+  });
+  
+  // Combinar produtos: primeiro kitItems (produtos adicionais), depois includedProducts
+  const products = kitItems.length > 0 
+    ? kitItems 
+    : mappedIncludedProducts;
 
   // Formatar telefone
   const formatPhone = (phone?: string | null) => {
@@ -443,6 +473,7 @@ export function ViewRegistrationModal() {
                             const productPrice = product.kitItem?.price || product.price || 0;
                             const productSize = product.selectedSize || product.size || "";
                             const productImage = product.kitItem?.image || product.image || "/banners/card_placeholder.png";
+                            const isIncluded = product.isIncluded || false;
 
                             return (
                               <div
@@ -466,7 +497,7 @@ export function ViewRegistrationModal() {
                                       </p>
                                       <div className="flex items-center justify-between">
                                         <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                          R$ {typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}
+                                          {isIncluded ? "Incluído" : `R$ ${typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}`}
                                         </p>
                                         {productSize && (
                                           <div className="flex gap-1 items-center">
@@ -605,6 +636,7 @@ export function ViewRegistrationModal() {
                       const productPrice = product.kitItem?.price || product.price || 0;
                       const productSize = product.selectedSize || product.size || "";
                       const productImage = product.kitItem?.image || product.image || "/banners/card_placeholder.png";
+                      const isIncluded = product.isIncluded || false;
 
                       return (
                         <div
@@ -628,7 +660,7 @@ export function ViewRegistrationModal() {
                                 </p>
                                 <div className="flex items-center justify-between">
                                   <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                    R$ {typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}
+                                    {isIncluded ? "Incluído" : `R$ ${typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}`}
                                   </p>
                                   {productSize && (
                                     <div className="flex gap-1 items-center">

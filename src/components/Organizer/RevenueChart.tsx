@@ -14,7 +14,7 @@ import {
   TooltipItem,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 
 ChartJS.register(
   CategoryScale,
@@ -35,9 +35,17 @@ interface RevenueChartProps {
   };
 }
 
-// Função para converter formato de data "3 de fev." para "03/02"
+// Função para converter formato de data "3 de fev." para "03/02" ou manter formato mensal
 const formatDateLabel = (label: string): string => {
   if (!label) return label;
+  
+  // Se o label já está no formato mensal (ex: "jan de 2024", "set de 2025"), retornar como está
+  // Padrão: 3-4 letras (mês) + " de " + 4 dígitos (ano)
+  // Regex mais flexível para capturar meses com ou sem acentos
+  const monthlyPattern = /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i;
+  if (monthlyPattern.test(label.trim())) {
+    return label;
+  }
   
   // Mapeamento de meses abreviados
   const monthMap: { [key: string]: string } = {
@@ -55,16 +63,17 @@ const formatDateLabel = (label: string): string => {
     'dez': '12',
   };
 
-  // Tentar parsear formato "3 de fev." ou "03 de fev."
+  // Tentar parsear formato "3 de fev." ou "03 de fev." (formato diário)
+  // Mas só se não for formato mensal (que tem ano de 4 dígitos)
   const match = label.toLowerCase().match(/(\d+)\s+de\s+(\w+)/);
-  if (match) {
+  if (match && !label.match(/\d{4}/)) {
     const day = match[1].padStart(2, '0');
     const monthAbbr = match[2].substring(0, 3);
     const month = monthMap[monthAbbr] || '01';
     return `${day}/${month}`;
   }
 
-  // Tentar parsear formato "03/02" (já está no formato correto)
+  // Tentar parsear formato "03/02" ou "09/25" (DD/MM ou MM/AA - já está no formato correto)
   if (label.match(/^\d{2}\/\d{2}$/)) {
     return label;
   }
@@ -92,13 +101,18 @@ export function RevenueChart({ data }: RevenueChartProps) {
   const chartRef = useRef<ChartJS<"line">>(null);
 
   // Mock data - substituir com dados reais
-  const chartData = data || {
-    labels: ["Jan", "Fev", "Mar", "Abr"],
-    revenue: [4000, 12000, 8000, 6000],
-  };
+  // Usar useMemo para evitar recriação a cada render
+  const chartData = useMemo(() => {
+    return data || {
+      labels: ["Jan", "Fev", "Mar", "Abr"],
+      revenue: [4000, 12000, 8000, 6000],
+    };
+  }, [data]);
 
   // Calcular valores dinâmicos para o eixo Y
-  const calculateYAxisScale = () => {
+  // Usar useMemo para evitar recálculo desnecessário
+  const yAxisScale = useMemo(() => {
+    const calculateYAxisScale = () => {
     if (!chartData.revenue || chartData.revenue.length === 0) {
       return {
         max: 15000,
@@ -166,14 +180,14 @@ export function RevenueChart({ data }: RevenueChartProps) {
       0,
     ];
 
-    return {
-      max: roundedMax,
-      stepSize: roundedStep,
-      ticks: ticks.sort((a, b) => b - a), // Ordenar do maior para o menor
+      return {
+        max: roundedMax,
+        stepSize: roundedStep,
+        ticks: ticks.sort((a, b) => b - a), // Ordenar do maior para o menor
+      };
     };
-  };
-
-  const yAxisScale = calculateYAxisScale();
+    return calculateYAxisScale();
+  }, [chartData]);
 
   // Criar mais pontos para suavizar a linha (menos pontos para melhor performance)
   const generateSmoothData = useCallback(() => {
@@ -206,7 +220,8 @@ export function RevenueChart({ data }: RevenueChartProps) {
     return { points, labels, originalIndices };
   }, [chartData]);
 
-  const { points, labels, originalIndices } = generateSmoothData();
+  // Usar useMemo para evitar recálculo desnecessário
+  const { points, labels, originalIndices } = useMemo(() => generateSmoothData(), [generateSmoothData]);
 
   // Dados para a linha principal (faturamento)
   const lineData = {
@@ -236,7 +251,8 @@ export function RevenueChart({ data }: RevenueChartProps) {
     ],
   };
 
-  const options = {
+  // Usar useMemo para options para evitar recriação a cada render
+  const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
@@ -323,7 +339,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       }
     },
     events: ['mousemove', 'mouseout'] as ('mousemove' | 'mouseout')[],
-  };
+  }), [yAxisScale, chartData, originalIndices]);
 
   const handleMouseLeave = () => {
     setTooltipData(null);
@@ -402,8 +418,11 @@ export function RevenueChart({ data }: RevenueChartProps) {
               ? (index / (totalLabels - 1)) * 100 
               : 50;
             
-            // Formatar label para DD/MM
-            const formattedLabel = formatDateLabel(label);
+            // Verificar se é label mensal (formato "set de 2025" ou "09/25") antes de formatar
+            // Regex para capturar meses com acentos e variações OU formato MM/AA
+            const isMonthlyLabel = /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) || /^\d{2}\/\d{2}$/.test(label.trim());
+            // Se for label mensal, usar diretamente sem formatar
+            const formattedLabel = isMonthlyLabel ? label : formatDateLabel(label);
             
             return (
               <span 

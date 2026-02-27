@@ -157,7 +157,46 @@ export default function EventDashboardPage() {
           confirmed: dashboardDataResponse.registrationsTrend.confirmed,
           canceled: dashboardDataResponse.registrationsTrend.canceled,
           refunded: dashboardDataResponse.registrationsTrend.refunded,
-          chartData: dashboardDataResponse.registrationsTrend.chartData,
+          chartData: (() => {
+            // Se o filtro for "geral", os dados já vêm agrupados por mês do backend
+            // Apenas formatar os labels se necessário
+            if (periodFilter === "geral" && dashboardDataResponse.registrationsTrend.chartData) {
+              const originalData = dashboardDataResponse.registrationsTrend.chartData;
+              
+              // Se já tiver labels e revenue (dados mensais), usar diretamente
+              if (originalData.labels && originalData.revenue) {
+                // Converter labels do formato "Set/25" para "09/25" (MM/AA)
+                const formattedLabels = originalData.labels.map((label: string) => {
+                  // Formato "Set/25" ou "Jan/26"
+                  const match = label.match(/^(\w+)\/(\d{2})$/);
+                  if (match) {
+                    const monthAbbr = match[1].toLowerCase();
+                    const yearShort = match[2];
+                    
+                    // Mapear abreviações de meses para números
+                    const monthMap: { [key: string]: string } = {
+                      'jan': '01', 'fev': '02', 'mar': '03', 'abr': '04',
+                      'mai': '05', 'jun': '06', 'jul': '07', 'ago': '08',
+                      'set': '09', 'out': '10', 'nov': '11', 'dez': '12'
+                    };
+                    
+                    const monthNumber = monthMap[monthAbbr] || '01';
+                    return `${monthNumber}/${yearShort}`;
+                  }
+                  return label;
+                });
+                
+                return {
+                  labels: formattedLabels,
+                  revenue: originalData.revenue,
+                  dailyData: originalData.dailyData
+                };
+              }
+            }
+            
+            // Para outros filtros, retornar dados originais
+            return dashboardDataResponse.registrationsTrend.chartData;
+          })(),
         },
         ticketRanking: (() => {
           const ranking = dashboardDataResponse.ticketRanking as any;
@@ -209,10 +248,10 @@ export default function EventDashboardPage() {
   }
 
   const tabs = [
-    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-    { label: "Pedidos", href: `/organizer/events/${eventId}/registrations` },
     { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard`, active: true },
+    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
     { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
   ];
 
   const periodOptions = [

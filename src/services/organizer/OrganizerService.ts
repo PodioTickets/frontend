@@ -548,6 +548,19 @@ export interface PaymentDetails {
   } | null;
   transactionId: string;
   orderId: string;
+  registrations?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    ticket?: {
+      id: string;
+      name: string;
+    } | null;
+    ticketCategory?: {
+      id: string;
+      name: string;
+    } | null;
+  }> | null;
 }
 
 // Registration interfaces (extended)

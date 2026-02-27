@@ -337,7 +337,7 @@ export function PaymentSuccessStep({
                       Total pago:
                     </p>
                     <p className="font-bold text-2xl leading-[1.1] text-gray-12 font-manrope">
-                      {formatCurrency(totalPaid / 100)}
+                      {formatCurrency(totalPaid)}
                     </p>
                   </div>
                 </div>
@@ -504,8 +504,8 @@ export function PaymentSuccessStep({
                                 setActiveTab("info");
                               }}
                               className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${activeTab === "info"
-                                  ? "bg-primary-11 text-primary-2"
-                                  : "bg-gray-5 text-gray-11"
+                                ? "bg-primary-11 text-primary-2"
+                                : "bg-gray-5 text-gray-11"
                                 }`}
                             >
                               Informações
@@ -516,8 +516,8 @@ export function PaymentSuccessStep({
                                 setActiveTab("products");
                               }}
                               className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${activeTab === "products"
-                                  ? "bg-primary-11 text-primary-2"
-                                  : "bg-gray-5 text-gray-11"
+                                ? "bg-primary-11 text-primary-2"
+                                : "bg-gray-5 text-gray-11"
                                 }`}
                             >
                               Produtos
@@ -848,7 +848,7 @@ export function PaymentSuccessStep({
                       Total pago:
                     </p>
                     <p className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
-                      {formatCurrency(totalPaid / 100)}
+                      {formatCurrency(totalPaid)}
                     </p>
                   </div>
                 </div>
@@ -1022,8 +1022,8 @@ export function PaymentSuccessStep({
                                 setActiveTab("info");
                               }}
                               className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${activeTab === "info"
-                                  ? "bg-primary-11 text-primary-2"
-                                  : "bg-gray-5 text-gray-11"
+                                ? "bg-primary-11 text-primary-2"
+                                : "bg-gray-5 text-gray-11"
                                 }`}
                             >
                               Informações
@@ -1034,8 +1034,8 @@ export function PaymentSuccessStep({
                                 setActiveTab("products");
                               }}
                               className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${activeTab === "products"
-                                  ? "bg-primary-11 text-primary-2"
-                                  : "bg-gray-5 text-gray-11"
+                                ? "bg-primary-11 text-primary-2"
+                                : "bg-gray-5 text-gray-11"
                                 }`}
                             >
                               Produtos

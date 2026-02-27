@@ -171,26 +171,36 @@ export function PaymentDetailsModal() {
     reservePhone: buyer?.reservePhone || registrationUser?.reservePhone,
   };
 
-  // Criar participantes baseado no ticket da registration
-  const participants = registration?.ticket ? [{
-    id: registration.id,
-    registrationId: registration.id?.slice(0, 8) || "—",
-    name: buyerData?.firstName && buyerData?.lastName
-      ? `${buyerData.firstName} ${buyerData.lastName}`
-      : buyerData?.fullName || "Participante",
-    email: buyerData?.email || "",
-    ticket: registration.ticket?.name || "Ticket",
-    category: registration.ticket?.category?.name || "Nome da categoria",
-  }] : registration?.modalities?.map((mod: any, index: number) => ({
-    id: `${registration.id}-${index}`,
-    registrationId: registration.id?.slice(0, 8) || "—",
-    name: buyerData?.firstName && buyerData?.lastName
-      ? `${buyerData.firstName} ${buyerData.lastName}`
-      : buyerData?.fullName || "Participante",
-    email: buyerData?.email || "",
-    ticket: mod.modality?.name || registration?.ticket?.name || "Ticket",
-    category: registration?.ticket?.category?.name || "Nome da categoria",
-  })) || [];
+  const paymentDetailsWithRegistrations = paymentDetails as PaymentDetails & { registrations?: Array<{ id: string; name: string; email: string; ticket?: { id: string; name: string } | null; ticketCategory?: { id: string; name: string } | null }> };
+  
+  const participants = paymentDetailsWithRegistrations?.registrations && Array.isArray(paymentDetailsWithRegistrations.registrations) && paymentDetailsWithRegistrations.registrations.length > 0
+    ? paymentDetailsWithRegistrations.registrations.map((reg: any) => ({
+      id: reg.id,
+      registrationId: reg.id?.slice(0, 8) || "—",
+      name: reg.name || "Participante",
+      email: reg.email || "",
+      ticket: reg.ticket?.name || "Ticket",
+      category: reg.ticketCategory?.name || "Nome da categoria",
+    }))
+    : registration?.ticket ? [{
+      id: registration.id,
+      registrationId: registration.id?.slice(0, 8) || "—",
+      name: buyerData?.firstName && buyerData?.lastName
+        ? `${buyerData.firstName} ${buyerData.lastName}`
+        : buyerData?.fullName || "Participante",
+      email: buyerData?.email || "",
+      ticket: registration.ticket?.name || "Ticket",
+      category: registration.ticket?.category?.name || "Nome da categoria",
+    }] : registration?.modalities?.map((mod: any, index: number) => ({
+      id: `${registration.id}-${index}`,
+      registrationId: registration.id?.slice(0, 8) || "—",
+      name: buyerData?.firstName && buyerData?.lastName
+        ? `${buyerData.firstName} ${buyerData.lastName}`
+        : buyerData?.fullName || "Participante",
+      email: buyerData?.email || "",
+      ticket: mod.modality?.name || registration?.ticket?.name || "Ticket",
+      category: registration?.ticket?.category?.name || "Nome da categoria",
+    })) || [];
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
@@ -591,7 +601,7 @@ export function PaymentDetailsModal() {
                           {paginatedParticipants.map((participant: any) => (
                             <div
                               key={participant.id}
-                              className="flex items-center h-[60px]"
+                              className="flex items-center h-[60px] border-b border-gray-6"
                             >
                               <div className="w-[120px] px-4">
                                 <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 truncate">

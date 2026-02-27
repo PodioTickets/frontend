@@ -231,10 +231,10 @@ export default function EventFinancialPage() {
       <EventPageHeader
         eventName={event?.name}
         tabs={[
-          { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-          { label: "Pedidos", href: `/organizer/events/${eventId}/registrations` },
           { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+          { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
           { label: "Financeiro", href: `/organizer/events/${eventId}/financial`, active: true },
+          { label: "Editar", href: `/organizer/events/${eventId}/edit` },
         ]}
       />
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
@@ -543,12 +543,13 @@ export default function EventFinancialPage() {
                     {isExpanded && hasLots && item.lots && item.lots.map((lot: any, lotIndex: number) => {
                       // Buscar dados financeiros do lote
                       const financialLot = financialBatchesMap.get(lot.id);
-                      const lotSold = financialLot?.sold || lot.sold?.toString() || "0";
+                      // Extrair apenas o valor vendido (antes do hífen, se houver)
+                      const lotSoldRaw = financialLot?.sold || "0";
+                      const lotSold = typeof lotSoldRaw === "string" && lotSoldRaw.includes("-")
+                        ? lotSoldRaw.split("-")[0].trim()
+                        : lotSoldRaw;
                       const lotRevenue = financialLot?.revenue || lot.revenue || 0;
                       const lotCreatedAt = lot.createdAt || item.createdAt;
-                      
-                      // Formatar nome do lote: "Lote X - Nome do evento" 
-                      // Se o batch tiver um nome específico, usar ele, senão usar o nome do ticket
                       const lotName = `Lote ${lotIndex + 1} - ${item.name}`;
 
                       return (

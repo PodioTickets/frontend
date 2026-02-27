@@ -46,28 +46,6 @@ function EditProgressBar() {
     return "default";
   };
 
-  const getCurrentStepIndex = (): number => {
-    const isInformationStep =
-      pathname.endsWith("/edit") ||
-      pathname.includes("/edit/information") ||
-      pathname.includes("/edit/banner");
-
-    const isTicketsStep = pathname.includes("/edit/tickets");
-    const isTopicsStep = pathname.includes("/edit/topics");
-    const isQuestionnaireStep = pathname.includes("/edit/questionnaire");
-
-    if (isInformationStep) return 0;
-    if (isTicketsStep) return 1;
-    if (isTopicsStep) return 2;
-    if (isQuestionnaireStep) return 3;
-
-    return 0;
-  };
-
-  const getProgressWidth = (): string => {
-    return "100%";
-  };
-
   const steps = [
     { step: 1, label: "Informações", icon: OrganizerInfoIcon, href: `/organizer/events/${eventId}/edit` },
     { step: 2, label: "Ingressos", icon: OrganizerTicketIcon, href: `/organizer/events/${eventId}/edit/tickets` },
@@ -78,16 +56,11 @@ function EditProgressBar() {
   return (
     <div className="max-w-[487px] mx-auto py-7">
       <div className="relative flex items-center justify-between">
-        <div className="absolute h-px top-[24px] left-0 w-full px-8">
-          <div className="h-px bg-gray-6 w-full relative">
-            <div
-              style={{ width: getProgressWidth() }}
-              className="absolute h-px top-0 left-0 bg-primary-8 transition-all duration-300"
-            />
-          </div>
-        </div>
-
         {steps.map(({ step, label, icon: Icon, href }) => {
+          const status = getStepStatus(step);
+          const isActive = status === "active";
+          const isCompleted = status === "completed";
+
           return (
             <Link
               key={step}
@@ -96,17 +69,20 @@ function EditProgressBar() {
             >
               <div className="flex flex-col gap-[12px] items-center relative z-10">
                 <div
-                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative border border-[#3e7949]`}
+                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative border ${isActive ? "border-[#3e7949]" : "border-transparent"
+                    }`}
                 >
                   <div
-                    className={`rounded-[32px] size-full p-2 flex items-center justify-center bg-[#3e7949]`}
+                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${isActive ? "bg-[#3e7949]" : isCompleted ? "bg-gray-6" : "bg-gray-6"
+                      }`}
                   >
                     <Icon
-                      className="size-5 text-white"
+                      className={`size-5 ${isActive ? "text-white" : isCompleted ? "text-gray-12" : "text-gray-12"
+                        }`}
                     />
                   </div>
                 </div>
-                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
+                <p className={`text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap text-gray-12`}>
                   {label}
                 </p>
               </div>
@@ -124,10 +100,10 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   const eventId = params.id as string;
 
   const tabs = [
-    { label: "Editar", href: `/organizer/events/${eventId}/edit`, active: true },
-    { label: "Pedidos", href: `/organizer/events/${eventId}/registrations` },
     { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
     { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+    { label: "Editar", href: `/organizer/events/${eventId}/edit`, active: true },
   ];
 
   if (loading) {
