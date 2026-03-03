@@ -154,39 +154,39 @@ export function ViewRegistrationModal() {
   // Obter distância do ticket
   const ticketDistance = currentRegistration?.ticket?.distance
     ? (() => {
-        // Se distance for uma string como "5 KM", extrair o número
-        const distanceStr = String(currentRegistration.ticket.distance);
-        const distanceMatch = distanceStr.match(/(\d+(?:\.\d+)?)/);
-        if (distanceMatch) {
-          return `${distanceMatch[1]} Km`;
-        }
-        // Se for número em metros, converter para km
-        const distanceNum = parseFloat(distanceStr);
-        if (!isNaN(distanceNum)) {
-          return distanceNum >= 1000 ? `${(distanceNum / 1000).toFixed(1)} Km` : `${distanceNum} m`;
-        }
-        return distanceStr;
-      })()
+      // Se distance for uma string como "5 KM", extrair o número
+      const distanceStr = String(currentRegistration.ticket.distance);
+      const distanceMatch = distanceStr.match(/(\d+(?:\.\d+)?)/);
+      if (distanceMatch) {
+        return `${distanceMatch[1]} Km`;
+      }
+      // Se for número em metros, converter para km
+      const distanceNum = parseFloat(distanceStr);
+      if (!isNaN(distanceNum)) {
+        return distanceNum >= 1000 ? `${(distanceNum / 1000).toFixed(1)} Km` : `${distanceNum} m`;
+      }
+      return distanceStr;
+    })()
     : currentRegistration?.modalities?.[0]?.modality?.distance
       ? `${(parseFloat(String(currentRegistration.modalities[0].modality.distance)) / 1000).toFixed(1)} Km`
       : "—";
 
   // Obter perguntas e produtos reais
   const questions = currentRegistration?.questionAnswers || [];
-  
+
   // Produtos podem vir de kitItems (produtos adicionais) ou includedProducts (produtos incluídos no ticket)
   const kitItems = currentRegistration?.kitItems || [];
   const includedProducts = currentRegistration?.ticket?.includedProducts || [];
-  
+
   // Mapear includedProducts para o formato esperado
   const mappedIncludedProducts = includedProducts.map((product: any) => {
     // Encontrar a variação selecionada se houver
-    const selectedVariation = product.selectedVariation 
+    const selectedVariation = product.selectedVariation
       ? product.variations?.find((v: any) => v.id === product.selectedVariation)
-      : product.variations && product.variations.length > 0 
-        ? product.variations[0] 
+      : product.variations && product.variations.length > 0
+        ? product.variations[0]
         : null;
-    
+
     return {
       id: product.id,
       kitItem: {
@@ -199,10 +199,10 @@ export function ViewRegistrationModal() {
       isIncluded: true // Marcar como produto incluído
     };
   });
-  
+
   // Combinar produtos: primeiro kitItems (produtos adicionais), depois includedProducts
-  const products = kitItems.length > 0 
-    ? kitItems 
+  const products = kitItems.length > 0
+    ? kitItems
     : mappedIncludedProducts;
 
   // Formatar telefone
@@ -432,12 +432,12 @@ export function ViewRegistrationModal() {
                       <div className="grid grid-cols-2 gap-x-2 gap-y-4 w-full">
                         {questions.length > 0 ? (
                           questions.slice(0, 4).map((q: any, index: number) => (
-                            <div key={q.id || index} className="flex flex-col gap-[15px] py-4">
-                              <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                                {q.question?.question || q.question || `Pergunta ${index + 1}`}
-                              </p>
+                            <div key={q.id || index} className="flex flex-col gap-2 py-4">
                               <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                                {q.answer || "—"}
+                                Pergunta: {q.question?.question || q.question || `Pergunta ${index + 1}`}
+                              </p>
+                              <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                                R: {q.answer || "—"}
                               </p>
                             </div>
                           ))
@@ -573,7 +573,7 @@ export function ViewRegistrationModal() {
                     {questions.map((q: any, index: number) => (
                       <div key={q.id || index} className="flex flex-col gap-2">
                         <label className="font-family-dm-sans font-normal leading-[1.3] text-gray-12">
-                          {q.question?.question || q.question || `Pergunta ${index + 1}`}
+                          Pergunta: {q.question?.question || q.question || `Pergunta ${index + 1}`}
                         </label>
                         <p className="font-family-dm-sans font-medium leading-[1.3] text-gray-12">
                           {q.answer || "—"}
