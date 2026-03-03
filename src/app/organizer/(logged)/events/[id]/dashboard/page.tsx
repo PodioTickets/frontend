@@ -164,26 +164,94 @@ export default function EventDashboardPage() {
               const originalData = dashboardDataResponse.registrationsTrend.chartData;
               
               // Se já tiver labels e revenue (dados mensais), usar diretamente
-              if (originalData.labels && originalData.revenue) {
-                // Converter labels do formato "Set/25" para "09/25" (MM/AA)
-                const formattedLabels = originalData.labels.map((label: string) => {
-                  // Formato "Set/25" ou "Jan/26"
-                  const match = label.match(/^(\w+)\/(\d{2})$/);
+              if (originalData.labels && Array.isArray(originalData.labels) && originalData.revenue) {
+                // Converter labels para formato "Fev/2026" (mês completo/ano completo)
+                const formattedLabels = originalData.labels.map((label: any) => {
+                  // Garantir que label é uma string
+                  const labelStr = String(label || '').trim();
+                  
+                  if (!labelStr) return label;
+                  
+                  // Formato pode ser "Set/25", "Jan/26", "02/25", "09/25", etc.
+                  // Tentar primeiro formato com mês abreviado e ano de 2 dígitos
+                  let match = labelStr.match(/^(\w+)\/(\d{2})$/);
+                  
                   if (match) {
                     const monthAbbr = match[1].toLowerCase();
                     const yearShort = match[2];
                     
-                    // Mapear abreviações de meses para números
+                    // Mapear abreviações de meses para nomes completos
                     const monthMap: { [key: string]: string } = {
-                      'jan': '01', 'fev': '02', 'mar': '03', 'abr': '04',
-                      'mai': '05', 'jun': '06', 'jul': '07', 'ago': '08',
-                      'set': '09', 'out': '10', 'nov': '11', 'dez': '12'
+                      'jan': 'Jan', 'fev': 'Fev', 'mar': 'Mar', 'abr': 'Abr',
+                      'mai': 'Mai', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Ago',
+                      'set': 'Set', 'out': 'Out', 'nov': 'Nov', 'dez': 'Dez'
                     };
                     
-                    const monthNumber = monthMap[monthAbbr] || '01';
-                    return `${monthNumber}/${yearShort}`;
+                    const monthName = monthMap[monthAbbr] || monthAbbr.charAt(0).toUpperCase() + monthAbbr.slice(1);
+                    
+                    // Converter ano de 2 dígitos para 4 dígitos
+                    const currentYear = new Date().getFullYear();
+                    const currentCentury = Math.floor(currentYear / 100) * 100;
+                    const yearNumber = parseInt(yearShort, 10);
+                    
+                    // Se o ano for maior que o ano atual, assumir século anterior
+                    let fullYear = currentCentury + yearNumber;
+                    if (fullYear > currentYear + 10) {
+                      fullYear = (currentCentury - 100) + yearNumber;
+                    }
+                    
+                    return `${monthName}/${fullYear}`;
                   }
-                  return label;
+                  
+                  // Tentar formato "MM/AA" (02/25, 09/25, etc.)
+                  match = labelStr.match(/^(\d{1,2})\/(\d{2})$/);
+                  if (match) {
+                    const monthNumber = parseInt(match[1], 10);
+                    const yearShort = match[2];
+                    
+                    // Validar número do mês
+                    if (monthNumber < 1 || monthNumber > 12) {
+                      return labelStr; // Retornar original se inválido
+                    }
+                    
+                    // Mapear número do mês para nome abreviado
+                    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                    const monthName = monthNames[monthNumber - 1] || `Mês ${monthNumber}`;
+                    
+                    // Converter ano de 2 dígitos para 4 dígitos
+                    const currentYear = new Date().getFullYear();
+                    const currentCentury = Math.floor(currentYear / 100) * 100;
+                    const yearNumber = parseInt(yearShort, 10);
+                    
+                    // Se o ano for maior que o ano atual, assumir século anterior
+                    let fullYear = currentCentury + yearNumber;
+                    if (fullYear > currentYear + 10) {
+                      fullYear = (currentCentury - 100) + yearNumber;
+                    }
+                    
+                    return `${monthName}/${fullYear}`;
+                  }
+                  
+                  // Se já estiver no formato "Mês/Ano" completo, verificar se precisa ajustar
+                  match = labelStr.match(/^(\w+)\/(\d{4})$/);
+                  if (match) {
+                    // Já está no formato correto, apenas capitalizar o mês se necessário
+                    const monthAbbr = match[1].toLowerCase();
+                    const fullYear = match[2];
+                    
+                    const monthMap: { [key: string]: string } = {
+                      'jan': 'Jan', 'fev': 'Fev', 'mar': 'Mar', 'abr': 'Abr',
+                      'mai': 'Mai', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Ago',
+                      'set': 'Set', 'out': 'Out', 'nov': 'Nov', 'dez': 'Dez'
+                    };
+                    
+                    const monthName = monthMap[monthAbbr] || match[1];
+                    return `${monthName}/${fullYear}`;
+                  }
+                  
+                  // Se não conseguir parsear, retornar como está
+                  return labelStr;
                 });
                 
                 return {

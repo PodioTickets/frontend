@@ -4,6 +4,7 @@ import Image from "next/image";
 import { MapPin, Calendar, Clock, Navigation } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
+import { useRouter } from "next/navigation";
 
 export interface Ticket {
   id: string;
@@ -67,7 +68,12 @@ const statusConfig = {
 };
 
 export function TicketCard({ ticket, className }: TicketCardProps) {
+  const router = useRouter();
   const status = statusConfig[ticket.status] || statusConfig.PENDING;
+
+  const handleClick = () => {
+    router.push(`/user/tickets/${ticket.id}`);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -95,6 +101,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
 
   return (
     <div
+      onClick={handleClick}
       className={cn(
         "bg-gray-2 flex flex-col items-start overflow-hidden rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full max-w-[308px] cursor-pointer border border-transparent hover:border-gray-6 hover:translate-y-[-5px] transition-all duration-300",
         className

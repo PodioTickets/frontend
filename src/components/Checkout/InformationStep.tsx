@@ -91,20 +91,20 @@ export function InformationStep({
   // Sincronizar questionAnswers quando participants mudarem (ex: carregamento do storage)
   // Usar ref para evitar loops infinitos
   const isUpdatingFromContextRef = useRef(false);
-  
+
   useEffect(() => {
     if (isUpdatingFromContextRef.current) {
       isUpdatingFromContextRef.current = false;
       return;
     }
-    
+
     const updated: Record<number, Record<string, string | string[]>> = {};
     participants.forEach((participant, index) => {
       if (participant.questionAnswers) {
         updated[index] = participant.questionAnswers;
       }
     });
-    
+
     // Só atualizar se houver diferenças
     setQuestionAnswers((prev) => {
       const hasChanges = Object.keys(updated).some(
@@ -125,6 +125,11 @@ export function InformationStep({
 
   // Estado para rastrear quais participantes já foram salvos
   const [savedParticipantIds, setSavedParticipantIds] = useState<
+    Record<number, boolean>
+  >({});
+
+  // Estado para rastrear quais participantes foram salvos clicando em "Salvar e próximo"
+  const [savedParticipants, setSavedParticipants] = useState<
     Record<number, boolean>
   >({});
 
@@ -251,6 +256,24 @@ export function InformationStep({
     }
   }, [participantsWithRaces.length, participants.length, updateParticipant]);
 
+  // Limpar estado de salvos quando a quantidade de participantes mudar
+  useEffect(() => {
+    // Remover participantes salvos que não existem mais
+    setSavedParticipants((prev) => {
+      const validIndices = new Set(
+        participantsWithRaces.map(({ participantIndex }) => participantIndex)
+      );
+      const updated: Record<number, boolean> = {};
+      Object.keys(prev).forEach((key) => {
+        const index = Number(key);
+        if (validIndices.has(index)) {
+          updated[index] = prev[index];
+        }
+      });
+      return updated;
+    });
+  }, [participantsWithRaces]);
+
   // Calculate totals same way as ModalitiesStep
   const { totalParticipants, totalPrice } = useMemo(() => {
     let participants = 0;
@@ -367,6 +390,15 @@ export function InformationStep({
 
     // Verificar se está tentando fechar (participante já está expandido)
     const isCurrentlyExpanded = expandedParticipants[index];
+
+    // Se está abrindo o participante para edição, remover do estado de salvos
+    if (!isCurrentlyExpanded) {
+      setSavedParticipants((prev) => {
+        const updated = { ...prev };
+        delete updated[index];
+        return updated;
+      });
+    }
 
     // Se está tentando fechar E o participante está completo, tentar salvar
     if (isCurrentlyExpanded && isParticipantComplete(index)) {
@@ -577,6 +609,13 @@ export function InformationStep({
         // Remover o participante
         removeParticipant(participantIndex);
 
+        // Remover do estado de salvos
+        setSavedParticipants((prev) => {
+          const updated = { ...prev };
+          delete updated[participantIndex];
+          return updated;
+        });
+
         // Atualizar a quantidade do ticket correspondente
         const currentQuantity = raceQuantities[ticketId] || 0;
         if (currentQuantity > 0) {
@@ -683,12 +722,12 @@ export function InformationStep({
           [questionId]: answer,
         },
       };
-      
+
       // Salvar no contexto
       updateParticipant(participantIndex, {
         questionAnswers: updated[participantIndex],
       });
-      
+
       return updated;
     });
   };
@@ -1449,9 +1488,18 @@ export function InformationStep({
                             {formatPrice(getTicketPrice(ticket))}
                           </h1>
                           <Button
-                            onClick={() => toggleParticipant(participantIndex)}
+                            onClick={() => {
+                              // Marcar participante como salvo
+                              setSavedParticipants((prev) => ({
+                                ...prev,
+                                [participantIndex]: true,
+                              }));
+                              // Fechar o participante
+                              toggleParticipant(participantIndex);
+                            }}
                             variant="default"
                             className="font-bold"
+                            disabled={!isParticipantComplete(participantIndex)}
                           >
                             Salvar e próximo
                           </Button>
@@ -1471,7 +1519,7 @@ export function InformationStep({
               disabled={
                 participantsWithRaces.length === 0 ||
                 !participantsWithRaces.every(({ participantIndex }) =>
-                  isParticipantComplete(participantIndex)
+                  isParticipantComplete(participantIndex) && savedParticipants[participantIndex]
                 )
               }
               variant="default"
@@ -1518,7 +1566,7 @@ export function InformationStep({
             disabled={
               participantsWithRaces.length === 0 ||
               !participantsWithRaces.every(({ participantIndex }) =>
-                isParticipantComplete(participantIndex)
+                isParticipantComplete(participantIndex) && savedParticipants[participantIndex]
               )
             }
           >

@@ -1069,6 +1069,28 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
+  // Validar se o formulário do cartão de crédito está completo e válido
+  const isCreditCardFormValid = useMemo(() => {
+    if (!cardName?.trim() || !cardNumber || !cardExpiry || !cardCVV) {
+      return false;
+    }
+
+    // Validar formato dos campos
+    if (!validateCardNumber(cardNumber)) {
+      return false;
+    }
+
+    if (!validateExpiry(cardExpiry)) {
+      return false;
+    }
+
+    if (!validateCVV(cardCVV)) {
+      return false;
+    }
+
+    return true;
+  }, [cardName, cardNumber, cardExpiry, cardCVV]);
+
   // Processar checkout Cartão de Crédito
   const handleProcessCreditCardCheckout = async () => {
     // Validar dados do cartão
@@ -1263,8 +1285,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 />
                 <Button
                   onClick={handleProcessCreditCardCheckout}
-                  disabled={checkoutLoading}
-                  className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope"
+                  disabled={checkoutLoading || !isCreditCardFormValid}
+                  className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
                 </Button>
@@ -1448,8 +1470,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   handleProcessPixCheckout();
                 }
               }}
-              disabled={totalParticipants === 0 || checkoutLoading}
-              className="font-bold font-manrope"
+              disabled={
+                totalParticipants === 0 || 
+                checkoutLoading || 
+                (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
+              }
+              className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
             </Button>
@@ -1524,8 +1550,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           />
                           <Button
                             onClick={handleProcessCreditCardCheckout}
-                            disabled={checkoutLoading}
-                            className="w-full mt-4 font-bold font-manrope"
+                            disabled={checkoutLoading || !isCreditCardFormValid}
+                            className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
                           </Button>
@@ -1893,26 +1919,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     onClick={() => {
                       closeModal();
                       if (selectedPaymentMethod === "credit") {
-                        if (
-                          !cardName ||
-                          !cardNumber ||
-                          !cardExpiry ||
-                          !cardCVV
-                        ) {
-                          alert(
-                            "Por favor, preencha todos os campos do cartão"
-                          );
-                          return;
-                        }
-                      }
-                      if (selectedPaymentMethod === "credit") {
                         handleProcessCreditCardCheckout();
                       } else if (selectedPaymentMethod === "pix") {
                         handleProcessPixCheckout();
                       }
                     }}
-                    disabled={totalParticipants === 0 || checkoutLoading}
-                    className="bg-primary-11 text-primary-2 font-bold font-manrope"
+                    disabled={
+                      totalParticipants === 0 || 
+                      checkoutLoading || 
+                      (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
+                    }
+                    className="bg-primary-11 text-primary-2 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
                   </Button>

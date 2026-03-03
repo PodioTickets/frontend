@@ -86,9 +86,12 @@ export function ImageCarouselModal({
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={(e) => e.stopPropagation()}
+            onClick={onClose}
           >
-            <div className="relative w-full max-w-6xl max-h-[60vh] flex flex-col">
+            <div 
+              className="relative w-full max-w-6xl max-h-[60vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Close Button */}
               <button
                 onClick={onClose}

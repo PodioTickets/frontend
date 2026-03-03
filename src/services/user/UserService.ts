@@ -456,6 +456,15 @@ export class UserService {
     }
   }
 
+  async getMyRegistrationById(registrationId: string): Promise<any> {
+    try {
+      const response = await this.apiClient.get(`/api/v1/registrations/me/${registrationId}`);
+      return response.data.data?.registration || response.data.registration || response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   async getLinkedUsers(): Promise<{
     users: Array<{
       id: string;

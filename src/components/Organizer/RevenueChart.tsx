@@ -39,12 +39,19 @@ interface RevenueChartProps {
 const formatDateLabel = (label: string): string => {
   if (!label) return label;
   
-  // Se o label já está no formato mensal (ex: "jan de 2024", "set de 2025"), retornar como está
-  // Padrão: 3-4 letras (mês) + " de " + 4 dígitos (ano)
-  // Regex mais flexível para capturar meses com ou sem acentos
-  const monthlyPattern = /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i;
-  if (monthlyPattern.test(label.trim())) {
-    return label;
+  const labelTrimmed = label.trim();
+  
+  // Se o label já está no formato mensal com ano completo (ex: "Fev/2026", "Set/2025", "jan de 2024", "set de 2025"), retornar como está
+  // Padrão 1: 3-4 letras (mês) + "/" + 4 dígitos (ano) - ex: "Fev/2026"
+  const monthlyPattern1 = /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i;
+  if (monthlyPattern1.test(labelTrimmed)) {
+    return labelTrimmed;
+  }
+  
+  // Padrão 2: 3-4 letras (mês) + " de " + 4 dígitos (ano) - ex: "jan de 2024"
+  const monthlyPattern2 = /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i;
+  if (monthlyPattern2.test(labelTrimmed)) {
+    return labelTrimmed;
   }
   
   // Mapeamento de meses abreviados
@@ -313,7 +320,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
     const monthLabel = chartData.labels[Math.min(originalIndex, chartData.labels.length - 1)] || chartData.labels[0] || "";
     const revenue = dataPoint.parsed.y;
 
-    // Formatar data corretamente para DD/MM
+    // Formatar data corretamente - manter formato mensal se já estiver no formato "Fev/2026"
     const formattedDate = monthLabel ? formatDateLabel(monthLabel) : "Data";
 
     // Criar uma chave única para este tooltip para evitar atualizações desnecessárias
@@ -467,11 +474,14 @@ export function RevenueChart({ data }: RevenueChartProps) {
               ? (index / (totalLabels - 1)) * 100 
               : 50;
             
-            // Verificar se é label mensal (formato "set de 2025" ou "09/25") antes de formatar
+            // Verificar se é label mensal (formato "Fev/2026", "Set/2025", "set de 2025" ou "09/25") antes de formatar
             // Regex para capturar meses com acentos e variações OU formato MM/AA
-            const isMonthlyLabel = /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) || /^\d{2}\/\d{2}$/.test(label.trim());
+            const isMonthlyLabel = 
+              /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i.test(label.trim()) || // Formato "Fev/2026"
+              /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) || // Formato "set de 2025"
+              /^\d{2}\/\d{2}$/.test(label.trim()); // Formato "09/25"
             // Se for label mensal, usar diretamente sem formatar
-            const formattedLabel = isMonthlyLabel ? label : formatDateLabel(label);
+            const formattedLabel = isMonthlyLabel ? label.trim() : formatDateLabel(label);
             
             return (
               <span 

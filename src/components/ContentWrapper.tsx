@@ -5,6 +5,11 @@ import { usePathname } from "next/navigation";
 export function ContentWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isOrganizer = pathname.startsWith("/organizer");
+  const isAuthOrganizer = pathname.startsWith("/organizer/login");
+
+  if (isAuthOrganizer) {
+    return <div>{children}</div>;
+  }
 
   if (isOrganizer) {
     return <div className="mb-12">{children}</div>;

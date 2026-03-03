@@ -21,7 +21,7 @@ export default function UserTicketsPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [statusFilter]);
+  }, [statusFilter, orderBy]);
 
   const { tickets, pagination, loading } = useMyTickets(
     {
@@ -43,7 +43,7 @@ export default function UserTicketsPage() {
   const filteredTickets = useMemo(() => {
     let filtered = [...tickets];
 
-    // Filter by search term (status filter is already applied in the API)
+    // Filter by search term (status filter is already applied in the API via useMyTickets)
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -59,32 +59,42 @@ export default function UserTicketsPage() {
     const sortedTickets = [...filtered].sort((a, b) => {
       switch (orderBy) {
         case "date-asc":
-          if (!a.event.eventDate || !b.event.eventDate) return 0;
-          return (
-            new Date(a.event.eventDate).getTime() -
-            new Date(b.event.eventDate).getTime()
-          );
+          // Ordenar por data do evento (mais antiga primeiro)
+          const dateA = a.event.eventDate ? new Date(a.event.eventDate).getTime() : 0;
+          const dateB = b.event.eventDate ? new Date(b.event.eventDate).getTime() : 0;
+          if (dateA === 0 && dateB === 0) return 0;
+          if (dateA === 0) return 1; // Sem data vai para o final
+          if (dateB === 0) return -1;
+          return dateA - dateB;
         case "date-desc":
-          if (!a.event.eventDate || !b.event.eventDate) return 0;
-          return (
-            new Date(b.event.eventDate).getTime() -
-            new Date(a.event.eventDate).getTime()
-          );
+          // Ordenar por data do evento (mais recente primeiro)
+          const dateADesc = a.event.eventDate ? new Date(a.event.eventDate).getTime() : 0;
+          const dateBDesc = b.event.eventDate ? new Date(b.event.eventDate).getTime() : 0;
+          if (dateADesc === 0 && dateBDesc === 0) return 0;
+          if (dateADesc === 0) return 1; // Sem data vai para o final
+          if (dateBDesc === 0) return -1;
+          return dateBDesc - dateADesc;
         case "name-asc":
-          return a.event.name.localeCompare(b.event.name, "pt-BR");
+          return a.event.name.localeCompare(b.event.name, "pt-BR", {
+            sensitivity: "base",
+          });
         case "name-desc":
-          return b.event.name.localeCompare(a.event.name, "pt-BR");
+          return b.event.name.localeCompare(a.event.name, "pt-BR", {
+            sensitivity: "base",
+          });
         default:
-          if (!a.event.eventDate || !b.event.eventDate) return 0;
-          return (
-            new Date(a.event.eventDate).getTime() -
-            new Date(b.event.eventDate).getTime()
-          );
+          // Default: ordenar por data (mais antiga primeiro)
+          const defaultDateA = a.event.eventDate ? new Date(a.event.eventDate).getTime() : 0;
+          const defaultDateB = b.event.eventDate ? new Date(b.event.eventDate).getTime() : 0;
+          if (defaultDateA === 0 && defaultDateB === 0) return 0;
+          if (defaultDateA === 0) return 1;
+          if (defaultDateB === 0) return -1;
+          return defaultDateA - defaultDateB;
       }
     });
 
     return sortedTickets;
-  }, [tickets, searchTerm, statusFilter, orderBy]);
+  }, [tickets, searchTerm, orderBy]);
 
   const hasFilters = useMemo(() => {
     return !!(searchTerm || statusFilter || orderBy !== "date-asc");
@@ -115,6 +125,11 @@ export default function UserTicketsPage() {
   const getStatusLabel = () => {
     const option = statusOptions.find((opt) => opt.id === statusFilter);
     return option?.label || "Status";
+  };
+
+  const getOrderLabel = () => {
+    const option = orderOptions.find((opt) => opt.id === orderBy);
+    return option?.label || "Ordenar por";
   };
 
   return (
@@ -166,7 +181,7 @@ export default function UserTicketsPage() {
               trigger={() => (
                 <div className="flex items-center gap-2 px-4 py-2 bg-gray-2 border border-gray-6 rounded-lg cursor-pointer hover:bg-gray-4 transition-colors">
                   <span className="text-sm text-gray-12 font-medium">
-                    Ordenar por
+                    {getOrderLabel()}
                   </span>
                 </div>
               )}
