@@ -11,6 +11,7 @@ import type { PaymentDetails } from "@/services/organizer/OrganizerService";
 import { Loading } from "../Loading";
 import toast from "react-hot-toast";
 import { CheckIcon } from '../Icons/Organizer/CheckIcon';
+import { PixIcon } from '../Icons/PixIcon';
 
 export function PaymentDetailsModal() {
   const { isOpen, closePaymentDetailsModal, data } = usePaymentDetailsModal();
@@ -418,10 +419,8 @@ export function PaymentDetailsModal() {
                                 <PaymentIcon type={paymentInfo.cardBrand as any} className="size-9" />
                               </div>
                             ) : (
-                              <div className="size-[36px] relative shrink-0 flex items-center justify-center">
-                                <div className="size-9 bg-gray-6 rounded flex items-center justify-center">
-                                  <span className="text-gray-11 text-xs font-semibold">C</span>
-                                </div>
+                              <div className="size-[36px] relative shrink-0 flex items-center justify-center border border-gray-6 rounded">
+                                <PixIcon className="size-6" />
                               </div>
                             )}
                             <div className="flex flex-col">
@@ -435,7 +434,7 @@ export function PaymentDetailsModal() {
                                 </p>
                               )}
                               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                                {paymentInfo.paymentMethod}
+                                {paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}
                               </p>
                             </div>
                           </div>

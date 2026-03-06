@@ -478,14 +478,26 @@ export interface Installment {
 }
 
 export interface PendingRelease {
-  id: string;
-  registrationId: string;
-  paymentId?: string; // ID do pagamento (UUID)
-  orderId?: string; // ID do pedido (UUID)
+  orderId: string;
+  paymentId: string;
+  transactionId: string;
   amount: number;
+  paymentMethod: "CREDIT_CARD" | "PIX";
   purchaseDate: string;
+  paymentDate: string;
   releaseDate: string;
   daysUntilRelease: number;
+  buyer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    documentNumber: string;
+    avatarUrl: string | null;
+  };
+  registrationsCount: number;
 }
 
 export interface PaymentDetails {
@@ -1445,20 +1457,40 @@ export class OrganizerService {
     return response.data;
   }
 
-  async getEventPendingReleases(eventId: string): Promise<{
+  async getEventPendingReleases(
+    eventId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
     pending: PendingRelease[];
     totalPending: number;
     releaseToday: number;
-    totalTransactions: number;
+    pagination: {
+      page: number;
+      limit: number;
+      totalOrders: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
   }> {
     const { data: response } = await this.apiClient.get<{
       data: {
         pending: PendingRelease[];
         totalPending: number;
         releaseToday: number;
-        totalTransactions: number;
+        pagination: {
+          page: number;
+          limit: number;
+          totalOrders: number;
+          totalPages: number;
+          hasNextPage: boolean;
+          hasPreviousPage: boolean;
+        };
       };
-    }>(`/api/v1/events/${eventId}/financial/pending`);
+    }>(`/api/v1/events/${eventId}/financial/pending`, {
+      params: { page, limit }
+    });
     return response.data;
   }
 

@@ -7,19 +7,18 @@ import {
   DrawerContent,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import { X, Eye, ChevronLeft, ChevronRight, FileText, ChevronUp } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { Hourglass } from "lucide-react";
 import { PixIcon } from "@/components/Icons/PixIcon";
-import { CardIcon } from "@/components/Icons/CardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { organizerService } from "@/services";
 import type { PendingRelease } from "@/services/organizer/OrganizerService";
-import toast from "react-hot-toast";
 import { TimerIcon } from "../Icons/Organizer/TimerIcon";
+import { getAvatarUrl } from "@/utils/avatar";
+import Image from "next/image";
 
 interface AwaitingReleaseDrawerProps {
   isOpen: boolean;
@@ -48,68 +47,78 @@ export function AwaitingReleaseDrawer({
 }: AwaitingReleaseDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PendingRelease | null>(null);
   const [pendingReleases, setPendingReleases] = useState<PendingRelease[]>([]);
   const [loading, setLoading] = useState(false);
   const [actualData, setActualData] = useState<{
     totalPending: number;
     releaseToday: number;
-    totalTransactions: number;
-  }>({ totalPending, releaseToday, totalTransactions });
-  const itemsPerPage = 10;
+  }>({ totalPending, releaseToday });
+  const [pagination, setPagination] = useState<{
+    page: number;
+    limit: number;
+    totalOrders: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  }>({
+    page: 1,
+    limit: 20,
+    totalOrders: totalTransactions,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
+  const itemsPerPage = 20;
 
   useEffect(() => {
     if (isOpen && eventId) {
-      loadPendingReleases();
+      loadPendingReleases(1);
     }
   }, [isOpen, eventId]);
 
-  const loadPendingReleases = async () => {
+  useEffect(() => {
+    if (isOpen && eventId && currentPage > 0) {
+      loadPendingReleases(currentPage);
+    }
+  }, [currentPage]);
+
+  const loadPendingReleases = async (page: number) => {
     try {
       setLoading(true);
-      const data = await organizerService.getEventPendingReleases(eventId);
-      setPendingReleases(data.pending);
+      const data = await organizerService.getEventPendingReleases(eventId, page, itemsPerPage);
+      setPendingReleases(data.pending || []);
       setActualData({
-        totalPending: data.totalPending,
-        releaseToday: data.releaseToday,
-        totalTransactions: data.totalTransactions,
+        totalPending: data.totalPending || 0,
+        releaseToday: data.releaseToday || 0,
       });
+      if (data.pagination) {
+        setPagination({
+          page: data.pagination.page || page,
+          limit: data.pagination.limit || itemsPerPage,
+          totalOrders: data.pagination.totalOrders || 0,
+          totalPages: data.pagination.totalPages || 1,
+          hasNextPage: data.pagination.hasNextPage || false,
+          hasPreviousPage: data.pagination.hasPreviousPage || false,
+        });
+      }
     } catch (error: any) {
       console.error("Error loading pending releases:", error);
-      // Usar dados mockados como fallback
       setPendingReleases([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Converter PendingRelease para formato de exibição
-  const formatPendingForDisplay = (pending: PendingRelease) => {
-    const releaseDate = new Date(pending.releaseDate);
-    const formattedDate = releaseDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const paymentId = pending.paymentId || pending.orderId || pending.registrationId;
-
-    return {
-      orderId: paymentId || "",
-      transactionId: pending.id,
-      buyer: {
-        name: "Comprador", // Será preenchido pela API
-        email: "email@example.com",
-        avatar: null,
-      },
-      releaseDate: formattedDate,
-      paymentMethod: "Pix", // Será preenchido pela API
-      value: pending.amount / 100, // Converter de centavos
-    };
+  // Formatar data para exibição
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
 
-  const displayItems = pendingReleases.map(p => formatPendingForDisplay(p));
-
-  const totalPages = Math.ceil(displayItems.length / itemsPerPage);
-  const paginatedItems = displayItems.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Usar paginação do servidor
+  const totalPages = pagination.totalPages;
+  const paginatedItems = pendingReleases; // Já vem paginado do servidor
 
   return (
     <>
@@ -196,18 +205,18 @@ export function AwaitingReleaseDrawer({
                   </p>
                 </div>
 
-                {/* Transações */}
+                {/* Pedidos */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
                     <p className="font-family-dm-sans font-normal text-gray-11">
-                      Transações
+                      Pedidos
                     </p>
                     <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
                       <FileText className="size-5 text-[#2F265F]" />
                     </div>
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
-                    {actualData.totalTransactions}
+                    {pagination.totalOrders}
                   </p>
                 </div>
               </div>
@@ -264,7 +273,7 @@ export function AwaitingReleaseDrawer({
                       Nenhum item aguardando liberação
                     </div>
                   ) : (
-                    paginatedItems.map((item: any, index: number) => (
+                    paginatedItems.map((item, index) => (
                       <div
                         key={`${item.orderId}-${index}`}
                         className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0 hover:bg-gray-2 transition-colors h-[60px]"
@@ -279,20 +288,30 @@ export function AwaitingReleaseDrawer({
                         {/* ID transação */}
                         <div className="flex h-full items-center p-4 w-[120px]">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {item.transactionId.slice(0, 8)}
+                            {item.transactionId.length > 8 ? item.transactionId.slice(0, 8) : item.transactionId}
                           </p>
                         </div>
 
                         {/* Comprador */}
                         <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
-                          <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                            <span className="text-gray-12 font-semibold text-sm">
-                              {item.buyer.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          {item.buyer.avatarUrl ? (
+                            <Image
+                              src={getAvatarUrl(item.buyer.avatarUrl)}
+                              alt={item.buyer.fullName}
+                              width={36}
+                              height={36}
+                              className="size-9 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
+                              <span className="text-gray-12 font-semibold text-sm">
+                                {item.buyer.firstName?.charAt(0).toUpperCase() || "?"}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex flex-col gap-0 min-w-0">
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
-                              {item.buyer.name}
+                              {item.buyer.fullName || `${item.buyer.firstName} ${item.buyer.lastName}`}
                             </p>
                             <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
                               {item.buyer.email}
@@ -304,7 +323,7 @@ export function AwaitingReleaseDrawer({
                         <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                           <div className="flex items-center justify-center w-full">
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              Lib. {item.releaseDate}
+                              Lib. {formatDate(item.releaseDate)}
                             </p>
                           </div>
                         </div>
@@ -312,10 +331,10 @@ export function AwaitingReleaseDrawer({
                         {/* Pagamento */}
                         <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                           <div className="flex items-center gap-2 justify-center w-full">
-                            {item.paymentMethod === "Pix" ? (
+                            {item.paymentMethod === "PIX" ? (
                               <PixIcon className="size-5 text-gray-12" />
                             ) : (
-                              <PaymentIcon type={item.paymentMethod as any} className="size-8 text-gray-12" />
+                              <PaymentIcon type="Generic" className="size-8 text-gray-12" />
                             )}
                           </div>
                         </div>
@@ -327,7 +346,7 @@ export function AwaitingReleaseDrawer({
                               R$
                             </span>
                             <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {item.value.toFixed(2).replace(".", ",")}
+                              {(item.amount / 100).toFixed(2).replace(".", ",")}
                             </span>
                           </div>
                         </div>
@@ -354,30 +373,43 @@ export function AwaitingReleaseDrawer({
                   <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
                     <button
                       onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
+                      disabled={!pagination.hasPreviousPage || loading}
                       className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronLeft className="size-4" />
                     </button>
-                    {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                      const pageNum = i + 1;
-                      const isActive = pageNum === currentPage;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${isActive
-                            ? "bg-[#59E373] border-[#59E373] text-gray-12"
-                            : "border-gray-6 hover:bg-gray-3 text-gray-12"
-                            }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                    {(() => {
+                      // Calcular quais páginas mostrar
+                      const maxVisible = 8;
+                      let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                      
+                      // Ajustar se estiver perto do final
+                      if (endPage - startPage + 1 < maxVisible) {
+                        startPage = Math.max(1, endPage - maxVisible + 1);
+                      }
+                      
+                      return Array.from({ length: endPage - startPage + 1 }, (_, i) => {
+                        const pageNum = startPage + i;
+                        const isActive = pageNum === currentPage;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            disabled={loading}
+                            className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${isActive
+                              ? "bg-[#59E373] border-[#59E373] text-gray-12"
+                              : "border-gray-6 hover:bg-gray-3 text-gray-12"
+                              } disabled:opacity-50`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      });
+                    })()}
                     <button
                       onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage >= totalPages}
+                      disabled={!pagination.hasNextPage || loading}
                       className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronRight className="size-4" />
@@ -398,7 +430,18 @@ export function AwaitingReleaseDrawer({
             setIsDetailsOpen(false);
             setSelectedPayment(null);
           }}
-          paymentItem={selectedPayment}
+          paymentItem={{
+            orderId: selectedPayment.orderId,
+            transactionId: selectedPayment.transactionId,
+            buyer: {
+              name: selectedPayment.buyer.fullName || `${selectedPayment.buyer.firstName} ${selectedPayment.buyer.lastName}`,
+              email: selectedPayment.buyer.email,
+              avatar: selectedPayment.buyer.avatarUrl,
+            },
+            releaseDate: formatDate(selectedPayment.releaseDate),
+            paymentMethod: selectedPayment.paymentMethod === "PIX" ? "Pix" : "Cartão de Crédito",
+            value: selectedPayment.amount / 100,
+          }}
           eventName={eventName}
           categoryName={categoryName}
           type="awaiting"

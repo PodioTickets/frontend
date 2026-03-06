@@ -174,9 +174,27 @@ export function ViewRegistrationModal() {
   // Obter perguntas e produtos reais
   const questions = currentRegistration?.questionAnswers || [];
 
-  // Produtos podem vir de kitItems (produtos adicionais) ou includedProducts (produtos incluídos no ticket)
+  // Produtos podem vir de:
+  // 1. registration.products (nova estrutura com product e variation)
+  // 2. kitItems (produtos adicionais - estrutura antiga)
+  // 3. includedProducts (produtos incluídos no ticket)
+  const registrationProducts = currentRegistration?.products || [];
   const kitItems = currentRegistration?.kitItems || [];
   const includedProducts = currentRegistration?.ticket?.includedProducts || [];
+
+  // Mapear registration.products para o formato esperado
+  const mappedRegistrationProducts = registrationProducts.map((item: any) => {
+    return {
+      id: item.id,
+      productName: item.product?.name || "Produto",
+      productImage: item.product?.image || "/banners/card_placeholder.png",
+      variationType: item.product?.variationType || null,
+      variationName: item.variation?.name || item.variationName || null,
+      price: item.unitPrice || item.totalPrice || 0,
+      quantity: item.quantity || 1,
+      isIncluded: item.unitPrice === 0 && item.totalPrice === 0
+    };
+  });
 
   // Mapear includedProducts para o formato esperado
   const mappedIncludedProducts = includedProducts.map((product: any) => {
@@ -189,21 +207,34 @@ export function ViewRegistrationModal() {
 
     return {
       id: product.id,
-      kitItem: {
-        id: product.id,
-        name: product.name,
-        price: selectedVariation?.price || product.basePrice || 0,
-        image: product.image || "/banners/card_placeholder.png"
-      },
-      selectedSize: selectedVariation?.name || null,
-      isIncluded: true // Marcar como produto incluído
+      productName: product.name,
+      productImage: product.image || "/banners/card_placeholder.png",
+      variationType: product.variationType || null,
+      variationName: selectedVariation?.name || null,
+      price: selectedVariation?.price || product.basePrice || 0,
+      isIncluded: true
     };
   });
 
-  // Combinar produtos: primeiro kitItems (produtos adicionais), depois includedProducts
-  const products = kitItems.length > 0
-    ? kitItems
-    : mappedIncludedProducts;
+  // Mapear kitItems para o formato esperado
+  const mappedKitItems = kitItems.map((item: any) => {
+    return {
+      id: item.id,
+      productName: item.kitItem?.name || item.name || "Produto",
+      productImage: item.kitItem?.image || item.image || "/banners/card_placeholder.png",
+      variationType: item.kitItem?.variationType || null,
+      variationName: item.selectedSize || item.size || null,
+      price: item.kitItem?.price || item.price || 0,
+      isIncluded: false
+    };
+  });
+
+  // Priorizar: registration.products > kitItems > includedProducts
+  const products = mappedRegistrationProducts.length > 0
+    ? mappedRegistrationProducts
+    : kitItems.length > 0
+      ? mappedKitItems
+      : mappedIncludedProducts;
 
   // Formatar telefone
   const formatPhone = (phone?: string | null) => {
@@ -469,12 +500,6 @@ export function ViewRegistrationModal() {
                       <div className="flex flex-col gap-4">
                         {products.length > 0 ? (
                           products.slice(0, 2).map((product: any, index: number) => {
-                            const productName = product.kitItem?.name || product.name || "Produto";
-                            const productPrice = product.kitItem?.price || product.price || 0;
-                            const productSize = product.selectedSize || product.size || "";
-                            const productImage = product.kitItem?.image || product.image || "/banners/card_placeholder.png";
-                            const isIncluded = product.isIncluded || false;
-
                             return (
                               <div
                                 key={product.id || index}
@@ -484,8 +509,8 @@ export function ViewRegistrationModal() {
                                   <div className="flex gap-3">
                                     <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
                                       <Image
-                                        src={productImage}
-                                        alt={productName}
+                                        src={product.productImage}
+                                        alt={product.productName}
                                         width={100}
                                         height={100}
                                         className="object-cover w-full h-full"
@@ -493,19 +518,19 @@ export function ViewRegistrationModal() {
                                     </div>
                                     <div className="flex-1 flex flex-col justify-between py-2">
                                       <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
-                                        {productName}
+                                        {product.productName}
                                       </p>
                                       <div className="flex items-center justify-between">
                                         <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                          {isIncluded ? "Incluído" : `R$ ${typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}`}
+                                          {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
                                         </p>
-                                        {productSize && (
+                                        {product.variationName && (
                                           <div className="flex gap-1 items-center">
                                             <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                                              Tamanho:
+                                              {product.variationType || "Variação"}:
                                             </p>
                                             <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                              {productSize}
+                                              {product.variationName}
                                             </p>
                                           </div>
                                         )}
@@ -632,12 +657,6 @@ export function ViewRegistrationModal() {
                 {products.length > 0 ? (
                   <div className="flex flex-col gap-4">
                     {products.map((product: any, index: number) => {
-                      const productName = product.kitItem?.name || product.name || "Produto";
-                      const productPrice = product.kitItem?.price || product.price || 0;
-                      const productSize = product.selectedSize || product.size || "";
-                      const productImage = product.kitItem?.image || product.image || "/banners/card_placeholder.png";
-                      const isIncluded = product.isIncluded || false;
-
                       return (
                         <div
                           key={product.id || index}
@@ -647,8 +666,8 @@ export function ViewRegistrationModal() {
                             <div className="flex gap-3">
                               <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
                                 <Image
-                                  src={productImage}
-                                  alt={productName}
+                                  src={product.productImage}
+                                  alt={product.productName}
                                   width={100}
                                   height={100}
                                   className="object-cover w-full h-full"
@@ -656,19 +675,19 @@ export function ViewRegistrationModal() {
                               </div>
                               <div className="flex-1 flex flex-col justify-between py-2 min-w-0">
                                 <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
-                                  {productName}
+                                  {product.productName}
                                 </p>
                                 <div className="flex items-center justify-between">
                                   <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                    {isIncluded ? "Incluído" : `R$ ${typeof productPrice === "number" ? (productPrice / 100).toFixed(2).replace(".", ",") : productPrice}`}
+                                    {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
                                   </p>
-                                  {productSize && (
+                                  {product.variationName && (
                                     <div className="flex gap-1 items-center">
                                       <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                                        Tamanho:
+                                        {product.variationType || "Variação"}:
                                       </p>
                                       <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                        {productSize}
+                                        {product.variationName}
                                       </p>
                                     </div>
                                   )}
