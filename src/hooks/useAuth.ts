@@ -33,7 +33,7 @@ interface AuthContextType {
   refetchUser: () => Promise<User | null>;
   isLoading: boolean;
   error: any;
-  login: (data: { emailOrCpf: string; password: string }) => Promise<void>;
+  login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -202,7 +202,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const login = async (data: { emailOrCpf: string; password: string }) => {
+  const login = async (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }) => {
     setIsLoading(true);
     setError(null);
     try {

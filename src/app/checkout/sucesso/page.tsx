@@ -8,6 +8,9 @@ import { Suspense, useEffect, useState, useMemo } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import type { CheckoutResponse } from "@/interfaces/checkout";
+import { useQuery } from "@tanstack/react-query";
+import { organizerService } from "@/services";
+import { queryKeys } from "@/services/cache/QueryClient";
 
 function CheckoutSucessoContent() {
   const searchParams = useSearchParams();
@@ -15,6 +18,17 @@ function CheckoutSucessoContent() {
   const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { resetCheckout } = useCheckout();
   const [checkoutResponse, setCheckoutResponse] = useState<CheckoutResponse | null>(null);
+
+  // Buscar produtos do evento para obter imagens
+  const { data: productsData } = useQuery({
+    queryKey: queryKeys.events.products(eventId || ""),
+    queryFn: async () => {
+      if (!eventId) return { products: [] };
+      return organizerService.getProducts(eventId);
+    },
+    enabled: !!eventId,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Buscar dados do checkout do localStorage
   useEffect(() => {
@@ -69,18 +83,30 @@ function CheckoutSucessoContent() {
       }
 
       // Produtos adicionais do participante (não incluídos no ticket)
+      // IMPORTANTE: Usar apenas os produtos deste participante específico (participant.products)
       const participantProducts = participant.products || [];
       const additionalProducts = participantProducts.length > 0
         ? participantProducts.map(p => {
-          // Encontrar o produto completo na lista de produtos
-          const productItem = checkoutResponse.products.items.find(item =>
-            item.id === p.productId || item.variationId === p.variationId
-          );
+          // Buscar o produto na lista geral apenas para obter detalhes (nome, variação, imagem)
+          // A busca deve corresponder exatamente ao productId e variationId deste participante
+          const productItem = checkoutResponse.products.items.find(item => {
+            // Verificar correspondência exata: productId deve ser igual
+            // E se houver variationId, ele também deve corresponder
+            const productIdMatch = item.id === p.productId;
+            const variationIdMatch = p.variationId 
+              ? (item.variationId === p.variationId)
+              : (!item.variationId); // Se não tem variationId no participante, o item também não deve ter
+            
+            return productIdMatch && variationIdMatch;
+          });
+          
+          // Retornar apenas os produtos deste participante específico
           return {
             name: productItem?.name || 'Produto',
-            price: (productItem?.unitPrice || 0) / 100, // Converter de centavos
+            price: productItem ? (productItem.unitPrice || 0) / 100 : 0, // Converter de centavos
             quantity: p.quantity,
             variationName: productItem?.variationName || null,
+            image: (productItem as any)?.image || null,
           };
         })
         : undefined;
@@ -88,19 +114,43 @@ function CheckoutSucessoContent() {
       // Produtos incluídos no ticket (para exibição)
       const includedProducts = participant.includedProducts || registration?.participant?.includedProducts || [];
 
+      // Mapear produtos incluídos com informações completas (imagem, variação, preço)
+      const mappedIncludedProducts = includedProducts.map(ip => {
+        // Buscar o produto na lista geral para obter variação e preço
+        const productItem = checkoutResponse.products.items.find(item => 
+          item.id === ip.productId
+        );
+
+        // Buscar o produto completo do evento para obter a imagem
+        const eventProduct = productsData?.products?.find((p: any) => p.id === ip.productId);
+        
+        // Se o produto tem variação, buscar o nome da variação
+        let variationName = productItem?.variationName || null;
+        if (!variationName && eventProduct && productItem?.variationId) {
+          const variation = eventProduct.variations?.find((v: any) => 
+            (v.id || `${eventProduct.id}-${eventProduct.variations?.indexOf(v)}`) === productItem.variationId
+          );
+          variationName = variation?.name || null;
+        }
+
+        return {
+          name: ip.productName,
+          price: productItem ? (productItem.unitPrice || 0) / 100 : (ip.basePrice || 0) / 100, // Converter de centavos
+          quantity: 1,
+          variationName: variationName,
+          variationType: eventProduct?.variationType || null,
+          image: eventProduct?.image || null,
+          isIncluded: true,
+        };
+      });
+
       return {
         participantIndex: index,
         ticketName: ticket?.name || 'Ingresso',
         ticketPrice: (ticket?.price || 0) / 100, // Converter de centavos para reais
         qrCode: qrCodeData, // QR Code como objeto ou string
         additionalProducts: additionalProducts,
-        includedProducts: includedProducts.map(ip => ({
-          name: ip.productName,
-          price: ip.basePrice / 100, // Converter de centavos
-          quantity: 1,
-          variationName: null,
-          isIncluded: true,
-        })),
+        includedProducts: mappedIncludedProducts,
       };
     });
 
@@ -117,7 +167,7 @@ function CheckoutSucessoContent() {
       voucherDiscount: (checkoutResponse.pricing.voucherDiscount || 0) / 100, // Converter de centavos
       date: checkoutResponse.date,
     };
-  }, [checkoutResponse]);
+  }, [checkoutResponse, productsData]);
 
   if (!eventId) {
     return (

@@ -1229,14 +1229,22 @@ export function InformationStep({
                                 if (normalizedGender) {
                                   // Verificar se é um dos valores esperados
                                   const genderLower = normalizedGender.toLowerCase();
-                                  if (genderLower === "masculino") {
+                                  
+                                  // Converter valores em inglês para português
+                                  if (genderLower === "male" || genderLower === "masculino") {
                                     normalizedGender = "Masculino";
-                                  } else if (genderLower === "feminino") {
+                                  } else if (genderLower === "female" || genderLower === "feminino") {
                                     normalizedGender = "Feminino";
-                                  } else if (genderLower === "outro") {
+                                  } else if (genderLower === "other" || genderLower === "outro") {
                                     normalizedGender = "Outro";
-                                  } else if (genderLower === "prefiro-nao-dizer" || genderLower === "prefiro-nao-informar") {
+                                  } else if (genderLower === "prefiro-nao-dizer" || genderLower === "prefiro-nao-informar" || genderLower === "prefer not to say") {
                                     normalizedGender = "Prefiro não dizer";
+                                  } else {
+                                    // Se não for reconhecido, tentar mapear para o label correspondente
+                                    const genderOption = sexoOptions.find(
+                                      (opt) => opt.id.toLowerCase() === genderLower || opt.label.toLowerCase() === genderLower
+                                    );
+                                    normalizedGender = genderOption ? genderOption.label : normalizedGender;
                                   }
                                 }
 

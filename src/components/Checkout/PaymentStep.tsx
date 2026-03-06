@@ -928,6 +928,35 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           }));
         }
 
+        // Adicionar produtos selecionados se existirem
+        if (participant.productVariations && productsData?.products) {
+          const selectedProducts: Array<{
+            productId: string;
+            variationId?: string;
+            quantity: number;
+          }> = [];
+
+          // Iterar sobre as variações selecionadas do participante
+          Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
+            // Verificar se o produto existe na lista de produtos do evento
+            const product = productsData.products.find((p: any) => p.id === productId);
+            
+            // Se o produto existe e tem uma variação selecionada (não null, undefined ou string vazia)
+            if (product && variationId !== null && variationId !== undefined && variationId !== '') {
+              selectedProducts.push({
+                productId: productId,
+                variationId: variationId,
+                quantity: 1, // Por enquanto sempre 1, pode ser ajustado se houver quantidade no futuro
+              });
+            }
+          });
+
+          // Adicionar produtos apenas se houver algum selecionado
+          if (selectedProducts.length > 0) {
+            participantData.products = selectedProducts;
+          }
+        }
+
         return participantData;
       }
     );
@@ -946,6 +975,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       return null;
     }
 
+    // Converter serviceFee para centavos (se estiver em reais)
+    const serviceFeeInCents = Math.round(serviceFee * 100);
+
     return {
       eventId,
       paymentMethod: selectedPaymentMethod === 'credit' ? 'CREDIT_CARD' : 'PIX',
@@ -953,9 +985,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         selectedPaymentMethod === 'credit'
           ? {
               card: {
-                name: cardName.toUpperCase(),
+                name: cardName.toUpperCase().trim(),
                 number: cardNumber.replace(/\D/g, ''),
-                expiry: cardExpiry,
+                expiry: cardExpiry.replace(/\s/g, ''), // Remove espaços se houver
                 cvv: cardCVV,
                 installments: parseInt(selectedInstallments) || 1,
               },
@@ -964,6 +996,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       tickets: checkoutTickets,
       participants: checkoutParticipants,
       couponCode: isCouponApplied && couponCode ? couponCode : undefined,
+      voucherCode: undefined, // TODO: Implementar quando estiver disponível
+      serviceFee: serviceFeeInCents,
     };
   };
 

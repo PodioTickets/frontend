@@ -53,6 +53,7 @@ export interface CheckoutRequest {
   participants: CheckoutParticipant[];
   couponCode?: string;
   voucherCode?: string;
+  serviceFee?: number; // Em centavos
 }
 
 // Response Types

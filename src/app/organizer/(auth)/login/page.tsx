@@ -41,17 +41,14 @@ export default function OrganizerLoginPage() {
 
     try {
       const validatedData: LoginFormData = loginSchema.parse(formData);
-
-      // Chama a função de login do contexto
       await login({
         emailOrCpf: validatedData.email,
         password: validatedData.password,
+        accountType: "ORGANIZER",
       });
 
       toast.success("Login realizado com sucesso!");
-      // Redirecionar para dashboard do organizador
-      router.push("/organizer");
-      // Limpa o formulário
+      router.push("/organizer/events");
       setFormData({ email: "", password: "" });
       setErrors({});
     } catch (error) {
@@ -178,7 +175,7 @@ export default function OrganizerLoginPage() {
             <div className="flex justify-end w-full">
               <Link
                 href="/organizer/forgot-password"
-                className="text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors"
+                className="text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors underline"
               >
                 Esqueci minha senha
               </Link>
@@ -188,7 +185,6 @@ export default function OrganizerLoginPage() {
             <Button
               type="submit"
               disabled={isSubmitting || authLoading}
-              className="h-[52px] w-full text-lg font-bold font-manrope bg-primary-11 text-primary-2 hover:bg-primary-12"
             >
               {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
             </Button>

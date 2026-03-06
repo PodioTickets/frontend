@@ -111,7 +111,7 @@ export interface UserItem {
 export class UserService {
   constructor(private apiClient: ApiClient) {}
 
-  async login(data: { emailOrCpf: string; password: string }): Promise<{
+  async login(data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }): Promise<{
     success: boolean;
     data?: {
       access_token: string;
@@ -128,9 +128,18 @@ export class UserService {
     error?: string;
   }> {
     try {
+      const endpoint = data.accountType === "ORGANIZER" 
+        ? "/api/v1/auth/login/organizer"
+        : "/api/v1/auth/login";
+      
+      // Remover accountType do payload se usar endpoint específico
+      const payload = data.accountType === "ORGANIZER"
+        ? { emailOrCpf: data.emailOrCpf, password: data.password }
+        : data;
+      
       const response = await this.apiClient.post<LoginResponse>(
-        "/api/v1/auth/login",
-        data
+        endpoint,
+        payload
       );
       const responseBody = response.data as LoginResponse;
       let loginData: {
@@ -372,11 +381,48 @@ export class UserService {
     }
   }
 
-  async forgotPassword(data: { email: string }): Promise<{ message: string }> {
+  async forgotPassword(data: { email: string; accountType?: "USER" | "ORGANIZER" }): Promise<{ message: string }> {
     try {
+      const payload = {
+        email: data.email,
+        ...(data.accountType && { accountType: data.accountType }),
+      };
       const response = await this.apiClient.post(
         "/api/v1/auth/forgot-password",
-        data
+        payload
+      );
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async verifyResetCode(data: { email: string; code: string; accountType?: "USER" | "ORGANIZER" }): Promise<{ token: string }> {
+    try {
+      const payload = {
+        email: data.email,
+        code: data.code,
+        ...(data.accountType && { accountType: data.accountType }),
+      };
+      const response = await this.apiClient.post(
+        "/api/v1/auth/verify-reset-code",
+        payload
+      );
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async resendResetCode(data: { email: string; accountType?: "USER" | "ORGANIZER" }): Promise<{ message: string }> {
+    try {
+      const payload = {
+        email: data.email,
+        ...(data.accountType && { accountType: data.accountType }),
+      };
+      const response = await this.apiClient.post(
+        "/api/v1/auth/resend-reset-code",
+        payload
       );
       return response.data;
     } catch (error: any) {

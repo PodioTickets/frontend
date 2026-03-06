@@ -47,6 +47,7 @@ export function CreateProductModal() {
         setIsIncludedInTicket(p.isIncludedInTicket ?? true);
         setBasePrice(p.basePrice || "");
         setIsRequired(p.isRequired ?? true);
+        setVariationTypeName(p.variationType || "");
         setVariations(p.variations || []);
       } else {
         // Create mode - reset form
@@ -185,6 +186,7 @@ export function CreateProductModal() {
         isIncludedInTicket,
         basePrice: basePrice ? parseFloat(basePrice.replace(",", ".")) : 0,
         isRequired,
+        variationType: variationTypeName.trim() || undefined,
         variations: variations.map(v => ({
           name: v.name,
           price: parseFloat(v.price.replace(",", ".")),

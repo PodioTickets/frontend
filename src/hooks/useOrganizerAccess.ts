@@ -31,17 +31,15 @@ export function useOrganizerAccess() {
       setAccess(result);
 
       if (!result.isMember) {
-        // Redirecionar para página de acesso negado ou criar organização
-        router.push("/organizer/create");
+        router.push("/organizer/login");
         return;
       }
     } catch (error: any) {
       console.error("Error checking organizer access:", error);
       setError(error.response?.data?.message || "Erro ao verificar acesso");
 
-      // Se for 404, significa que não tem organização
-      if (error.response?.status === 404) {
-        router.push("/organizer/create");
+      if (error.response?.status === 404 || error.response?.status === 401) {
+        router.push("/organizer/login");
       }
     } finally {
       setLoading(false);

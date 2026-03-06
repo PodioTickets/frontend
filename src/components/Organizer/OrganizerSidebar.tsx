@@ -29,7 +29,7 @@ export function OrganizerSidebar() {
 
   const handleLogout = async () => {
     await logout();
-    router.push("/");
+    router.push("/organizer/login");
   };
 
   useEffect(() => {
@@ -424,7 +424,7 @@ export function OrganizerSidebar() {
                   )}
 
                   {/* Bottom Options */}
-                  <button 
+                  <button
                     onClick={() => {
                       setIsProfileOpen(false);
                       openAccessAllOrganizationsModal();
