@@ -112,10 +112,10 @@ export function DatePickerWithConfirm({
 
   // Convert value to Date - parse it directly
   // Use stable key for comparison but parse the actual value
-  const valueStableKey = value instanceof Date 
-    ? value.getTime() 
-    : typeof value === "string" 
-      ? value 
+  const valueStableKey = value instanceof Date
+    ? value.getTime()
+    : typeof value === "string"
+      ? value
       : null;
 
   const validDate = useMemo(() => {
@@ -169,16 +169,14 @@ export function DatePickerWithConfirm({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer ${
-            error ? "border-red-9" : "border-gray-7"
-          }`}
+          className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer ${error ? "border-red-9" : "border-gray-7"
+            }`}
         >
-          <div className="flex gap-1 items-center flex-1 min-w-0">
+          <div className="flex gap-2 items-center flex-1 min-w-0">
             <CalendarIcon className="w-5 h-5 text-gray-11 shrink-0" />
             <span
-              className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${
-                validDate ? "text-gray-12" : "text-gray-11"
-              }`}
+              className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${validDate ? "text-gray-12" : "text-gray-11"
+                }`}
             >
               {formatDate(validDate)}
             </span>

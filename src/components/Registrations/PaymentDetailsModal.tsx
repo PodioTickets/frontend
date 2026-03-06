@@ -172,7 +172,7 @@ export function PaymentDetailsModal() {
   };
 
   const paymentDetailsWithRegistrations = paymentDetails as PaymentDetails & { registrations?: Array<{ id: string; name: string; email: string; ticket?: { id: string; name: string } | null; ticketCategory?: { id: string; name: string } | null }> };
-  
+
   const participants = paymentDetailsWithRegistrations?.registrations && Array.isArray(paymentDetailsWithRegistrations.registrations) && paymentDetailsWithRegistrations.registrations.length > 0
     ? paymentDetailsWithRegistrations.registrations.map((reg: any) => ({
       id: reg.id,
@@ -273,7 +273,7 @@ export function PaymentDetailsModal() {
     if (!status || status === "PAID") return "bg-primary-11 text-primary-1";
     if (status === "PENDING") return "bg-yellow-11 text-white";
     if (status === "REFUNDED") return "bg-red-11 text-gray-1";
-    if (status === "CANCELLED") return "bg-red-11 text-gray-1";
+    if (status === "CANCELLED" || status === "FAILED") return "bg-red-11 text-gray-1";
     if (status === "CHARGEBACK") return "bg-orange-11 text-white";
     return "bg-primary-11 text-primary-1";
   };

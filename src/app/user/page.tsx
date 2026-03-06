@@ -249,6 +249,16 @@ export default function UserProfilePage() {
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
+  const handleToggle2FA = () => {
+    const newValue = !twoFactorEnabled;
+    setTwoFactorEnabled(newValue);
+    if (newValue) {
+      toast.success("2FA ativado com sucesso!");
+    } else {
+      toast.success("2FA desativado com sucesso!");
+    }
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -601,7 +611,6 @@ export default function UserProfilePage() {
                   <DatePickerWithConfirm
                     value={formData.dateOfBirth}
                     onChange={(value) => {
-                      // Convert Date to YYYY-MM-DD string format
                       const dateString = value
                         ? `${value.getFullYear()}-${String(
                           value.getMonth() + 1
@@ -936,7 +945,7 @@ export default function UserProfilePage() {
 
               <button
                 type="button"
-                onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+                onClick={handleToggle2FA}
                 className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.5px] border-gray-6 bg-transparent px-3 md:hidden"
               >
                 <div className="flex items-center gap-1 flex-1">
@@ -978,7 +987,7 @@ export default function UserProfilePage() {
                   </span>
                 </div>
                 <div
-                  onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+                  onClick={handleToggle2FA}
                   className={cn(
                     "relative h-5 w-[37px] rounded-full transition-colors cursor-pointer",
                     twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
@@ -988,7 +997,7 @@ export default function UserProfilePage() {
                     className={cn(
                       "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
                       twoFactorEnabled
-                        ? "translate-x-[17px]"
+                        ? "translate-x-[19px]"
                         : "translate-x-0.5"
                     )}
                   />

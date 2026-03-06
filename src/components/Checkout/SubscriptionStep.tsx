@@ -137,35 +137,92 @@ export function SubscriptionStep({
     }
   };
 
-  // Separar produtos obrigatórios e opcionais
-  const { requiredProducts, additionalProducts } = useMemo(() => {
+  // Converter produtos da API para o formato interno
+  const allProducts = useMemo(() => {
     if (!productsData?.products) {
-      return { requiredProducts: [], additionalProducts: [] };
+      return [];
     }
 
+    return productsData.products.map((product: any): Product => ({
+      id: product.id,
+      name: product.name,
+      image: product.image || null,
+      basePrice: product.basePrice || 0,
+      isRequired: product.isRequired || false,
+      isIncludedInTicket: product.isIncludedInTicket || false,
+      variations: product.variations || [],
+    }));
+  }, [productsData]);
+
+  // Criar mapa de ticketId -> lista de productIds vinculados
+  const ticketProductsMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    
+    // Mapear tickets de categorizedTickets
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        // ticket.products é um array de IDs de produtos (strings)
+        map[ticket.id] = ticket.products || [];
+      });
+    });
+    
+    // Mapear tickets sem categoria
+    uncategorizedTickets.forEach((ticket) => {
+      map[ticket.id] = ticket.products || [];
+    });
+    
+    return map;
+  }, [categorizedTickets, uncategorizedTickets]);
+
+  // Filtrar produtos por ticket ID
+  const getProductsForTicket = (ticketId: string) => {
+    const ticketProductIds = ticketProductsMap[ticketId] || [];
+    
+    // Se o ticket não tem produtos vinculados, não mostrar nenhum produto
+    if (ticketProductIds.length === 0) {
+      return [];
+    }
+    
+    // Filtrar apenas os produtos que estão vinculados a este ticket
+    return allProducts.filter((product) => ticketProductIds.includes(product.id));
+  };
+
+  // Separar produtos obrigatórios e opcionais (global - usado para cálculos gerais)
+  const { requiredProducts, additionalProducts } = useMemo(() => {
     const required: Product[] = [];
     const additional: Product[] = [];
 
-    productsData.products.forEach((product: any) => {
-      const productData: Product = {
-        id: product.id,
-        name: product.name,
-        image: product.image || null,
-        basePrice: product.basePrice || 0,
-        isRequired: product.isRequired || false,
-        isIncludedInTicket: product.isIncludedInTicket || false,
-        variations: product.variations || [],
-      };
-
-      if (productData.isRequired) {
-        required.push(productData);
+    allProducts.forEach((product) => {
+      if (product.isRequired) {
+        required.push(product);
       } else {
-        additional.push(productData);
+        additional.push(product);
       }
     });
 
     return { requiredProducts: required, additionalProducts: additional };
-  }, [productsData]);
+  }, [allProducts]);
+
+  // Obter produtos filtrados por ticket para um participante específico
+  const getRequiredProductsForParticipant = (participantIndex: number): Product[] => {
+    const participantTicket = participantsWithTickets.find(
+      (p) => p.participantIndex === participantIndex
+    );
+    if (!participantTicket) return [];
+    
+    const ticketProducts = getProductsForTicket(participantTicket.ticketId);
+    return ticketProducts.filter((p) => p.isRequired);
+  };
+
+  const getAdditionalProductsForParticipant = (participantIndex: number): Product[] => {
+    const participantTicket = participantsWithTickets.find(
+      (p) => p.participantIndex === participantIndex
+    );
+    if (!participantTicket) return [];
+    
+    const ticketProducts = getProductsForTicket(participantTicket.ticketId);
+    return ticketProducts.filter((p) => !p.isRequired);
+  };
 
   // Função para obter a chave única da variação selecionada (participante + produto)
   // Usar um separador único que não aparece em UUIDs para evitar problemas com split
@@ -445,7 +502,9 @@ export function SubscriptionStep({
 
   // Verificar se todos os produtos obrigatórios têm variação selecionada
   const hasAllRequiredVariations = (participantIndex: number): boolean => {
-    return requiredProducts.every((product) => {
+    // Usar apenas os produtos obrigatórios do ticket deste participante
+    const participantRequiredProducts = getRequiredProductsForParticipant(participantIndex);
+    return participantRequiredProducts.every((product) => {
       const variationKey = getVariationKey(participantIndex, product.id);
       return selectedVariations[variationKey] && selectedVariations[variationKey] !== null;
     });
@@ -536,7 +595,9 @@ export function SubscriptionStep({
 
   // Calcular total de produtos adicionais selecionados por participante
   const getAdditionalProductsTotal = (participantIndex: number): number => {
-    return additionalProducts.reduce((total, product) => {
+    // Usar apenas os produtos adicionais do ticket deste participante
+    const participantAdditionalProducts = getAdditionalProductsForParticipant(participantIndex);
+    return participantAdditionalProducts.reduce((total, product) => {
       const variationKey = getVariationKey(participantIndex, product.id);
       const selectedId = selectedVariations[variationKey];
       if (selectedId) {
@@ -552,9 +613,40 @@ export function SubscriptionStep({
     }, 0);
   };
 
+  // Calcular total de produtos obrigatórios selecionados por participante
+  const getRequiredProductsTotal = (participantIndex: number): number => {
+    // Usar apenas os produtos obrigatórios do ticket deste participante
+    const participantRequiredProducts = getRequiredProductsForParticipant(participantIndex);
+    return participantRequiredProducts.reduce((total, product) => {
+      // Se o produto está incluído no ingresso, não cobrar
+      if (product.isIncludedInTicket) {
+        return total;
+      }
+      const selectedVariation = getSelectedVariation(participantIndex, product);
+      if (selectedVariation) {
+        return total + selectedVariation.price;
+      }
+      return total + product.basePrice;
+    }, 0);
+  };
+
+  // Calcular total de todos os produtos (obrigatórios + adicionais) por participante
+  const getAllProductsTotal = (participantIndex: number): number => {
+    return getRequiredProductsTotal(participantIndex) + getAdditionalProductsTotal(participantIndex);
+  };
+
+  // Calcular total geral de produtos de todos os participantes
+  const totalProductsPrice = useMemo(() => {
+    return participantsWithTickets.reduce((total, { participantIndex }) => {
+      return total + getAllProductsTotal(participantIndex);
+    }, 0);
+  }, [participantsWithTickets, selectedVariations, allProducts]);
+
   // Contar quantidade de produtos adicionais selecionados
   const getAdditionalProductsCount = (participantIndex: number): number => {
-    return additionalProducts.filter((product) => {
+    // Usar apenas os produtos adicionais do ticket deste participante
+    const participantAdditionalProducts = getAdditionalProductsForParticipant(participantIndex);
+    return participantAdditionalProducts.filter((product) => {
       const variationKey = getVariationKey(participantIndex, product.id);
       return selectedVariations[variationKey] !== null && selectedVariations[variationKey] !== undefined;
     }).length;
@@ -769,7 +861,7 @@ export function SubscriptionStep({
                         Produtos do kit (obrigatório)
                       </h3>
                       <div className="flex flex-col gap-3">
-                        {requiredProducts.map((product) => (
+                        {getRequiredProductsForParticipant(participantIndex).map((product) => (
                           <div
                             key={product.id}
                             className="bg-gray-2 border border-gray-6 rounded-xl"
@@ -848,13 +940,13 @@ export function SubscriptionStep({
                     </div>
 
                     {/* Optional Products */}
-                    {additionalProducts.length > 0 && (
+                    {getAdditionalProductsForParticipant(participantIndex).length > 0 && (
                       <div className="py-4">
                         <h3 className="text-base font-bold text-gray-12 mb-4">
                           Produtos adicionais (opcional)
                         </h3>
                         <div className="flex flex-col gap-3">
-                          {additionalProducts.map((product) => (
+                          {getAdditionalProductsForParticipant(participantIndex).map((product) => (
                           <div
                             key={product.id}
                             className="bg-gray-2 border border-gray-6 rounded-xl"
@@ -971,7 +1063,7 @@ export function SubscriptionStep({
             <p className="text-base">
               Valor total:{" "}
               <span className="font-bold">
-                {formatPrice(totalPrice + (event.serviceFee || 0))}
+                {formatPrice(totalPrice + totalProductsPrice + (event.serviceFee || 0))}
               </span>
             </p>
           </div>
@@ -1060,7 +1152,7 @@ export function SubscriptionStep({
                 Produtos do kit (obrigatório)
               </h1>
               <div className="grid grid-cols-2 gap-4">
-                {requiredProducts.map((product) => (
+                {getRequiredProductsForParticipant(selectedParticipant).map((product) => (
                   <div
                     key={product.id}
                     className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4"
@@ -1134,13 +1226,13 @@ export function SubscriptionStep({
             </div>
 
             {/* Produtos adicionais (opcional) */}
-            {additionalProducts.length > 0 && (
+            {getAdditionalProductsForParticipant(selectedParticipant).length > 0 && (
               <div>
                 <h1 className="text-lg font-bold mb-4">
                   Produtos adicionais (opcional)
                 </h1>
                 <div className="grid grid-cols-2 gap-4">
-                  {additionalProducts.map((product) => (
+                  {getAdditionalProductsForParticipant(selectedParticipant).map((product) => (
                   <div
                     key={product.id}
                     className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4"
@@ -1342,10 +1434,8 @@ export function SubscriptionStep({
                 <p>
                   {formatPrice(
                     (event.serviceFee || 0) +
-                    participantsWithTickets.reduce(
-                      (sum, { ticket }) => sum + getTicketPrice(ticket),
-                      0
-                    )
+                    totalPrice +
+                    totalProductsPrice
                   )}
                 </p>
               </div>

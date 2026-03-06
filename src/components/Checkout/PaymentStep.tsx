@@ -26,7 +26,7 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import { Loading } from "../Loading";
 import { useCheckout as useCheckoutPayment } from "@/hooks/useCheckoutPayment";
 import { usePaymentStatusPolling } from "@/hooks/usePaymentStatus";
-import { validateCardNumber, validateExpiry, validateCVV } from "@/utils/cardValidation";
+import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import type { CheckoutRequest, PixPayment } from "@/interfaces/checkout";
 import toast from "react-hot-toast";
 import { apiClient } from "@/services";
@@ -109,8 +109,12 @@ function CreditCardForm({
     if (setCardExpiry) setCardExpiry(formatted);
   };
 
+  // Detectar se é Amex para permitir 4 dígitos no CVV
+  const isAmex = cardNumber ? getCardBrand(cardNumber) === 'AMEX' : false;
+  const cvvMaxLength = isAmex ? 4 : 3;
+
   const handleCVVChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "").substring(0, 3);
+    const value = e.target.value.replace(/\D/g, "").substring(0, cvvMaxLength);
     if (setCardCVV) setCardCVV(value);
   };
 
@@ -148,9 +152,8 @@ function CreditCardForm({
       </div>
 
       <div
-        className={`flex ${
-          isMobile ? "flex-col gap-4" : "justify-between gap-4"
-        } w-full`}
+        className={`flex ${isMobile ? "flex-col gap-4" : "justify-between gap-4"
+          } w-full`}
       >
         <div
           className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}
@@ -191,9 +194,9 @@ function CreditCardForm({
               type="text"
               value={cardCVV || ""}
               onChange={handleCVVChange}
-              maxLength={3}
+              maxLength={cvvMaxLength}
               className="bg-gray-2"
-              placeholder="3 dígitos"
+              placeholder={isAmex ? "4 dígitos" : "3 dígitos"}
             />
           </div>
         </div>
@@ -259,7 +262,7 @@ function PixModal({
       const now = new Date();
       const diff = Math.max(0, Math.floor((expirationDate.getTime() - now.getTime()) / 1000));
       setTimeLeft(diff);
-      
+
       if (diff <= 0) {
         onClose();
       }
@@ -342,7 +345,7 @@ function PixModal({
 
           {/* Botões */}
           <div className="space-y-3 w-1/2 mx-auto mb-8">
-            <Button 
+            <Button
               className="w-full py-4 text-lg font-bold"
               onClick={copyPixCode}
             >
@@ -397,9 +400,9 @@ function PixForm({
       </p>
       {!isMobile && (
         <Button
-          className="w-full py-4 text-lg font-bold"
           onClick={onProcessCheckout}
           disabled={loading}
+          className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Processando...' : 'Finalizar compra'}
         </Button>
@@ -420,19 +423,17 @@ function PaymentMethodOption({
   return (
     <div
       onClick={onSelect}
-      className={`flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer ${
-        isSelected
-          ? "border border-blue-8 bg-blue-3"
-          : "border border-gray-5 hover:bg-gray-2"
-      }`}
+      className={`flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer ${isSelected
+        ? "border border-blue-8 bg-blue-3"
+        : "border border-gray-5 hover:bg-gray-2"
+        }`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`rounded-full size-4 border-[1.5px] ${
-            isSelected
-              ? "bg-primary-10 border-primary-10"
-              : "bg-transparent border-gray-6"
-          }`}
+          className={`rounded-full size-4 border-[1.5px] ${isSelected
+            ? "bg-primary-10 border-primary-10"
+            : "bg-transparent border-gray-6"
+            }`}
         />
         <span className="text-sm font-semibold font-family-manrope text-gray-12">
           {option.name}{" "}
@@ -445,11 +446,10 @@ function PaymentMethodOption({
       </div>
       <div className="flex items-center gap-2">
         <span
-          className={`text-xs ${
-            option.badge?.includes("OFF")
-              ? "text-primary-10 font-semibold hidden"
-              : "text-gray-11"
-          }`}
+          className={`text-xs ${option.badge?.includes("OFF")
+            ? "text-primary-10 font-semibold hidden"
+            : "text-gray-11"
+            }`}
         >
           {option.description}
         </span>
@@ -655,6 +655,55 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return result;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
+  // Helper para obter produtos de um participante
+  const getParticipantProducts = (participantIndex: number): Array<{
+    name: string;
+    price: number;
+    quantity: number;
+    size?: string;
+  }> => {
+    if (!productsData?.products) return [];
+
+    const participant = participants[participantIndex];
+    if (!participant?.productVariations) return [];
+
+    const items: Array<{
+      name: string;
+      price: number;
+      quantity: number;
+      size?: string;
+    }> = [];
+
+    Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
+      if (!variationId) return;
+
+      const product = productsData.products.find((p: any) =>
+        p.id === productId || p.id.startsWith(productId) || productId.startsWith(p.id)
+      );
+      if (!product) return;
+
+      // Se o produto está incluído no ingresso, não mostrar como adicional
+      if (product.isIncludedInTicket) return;
+
+      const variation = product.variations?.find((v: any, i: number) =>
+        (v.id || `${product.id}-${i}`) === variationId
+      );
+
+      const price = variation?.price ?? product.basePrice ?? 0;
+
+      if (price > 0) {
+        items.push({
+          name: product.name,
+          price,
+          quantity: 1,
+          size: variation?.name,
+        });
+      }
+    });
+
+    return items;
+  };
+
   // Generate participants data for the list
   const participantsData = useMemo(() => {
     const data: Array<{
@@ -665,6 +714,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         name: string;
         price: number;
         quantity: number;
+        size?: string;
       }>;
       participant?: {
         name: string;
@@ -683,6 +733,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     participantsWithTickets.forEach(({ ticket, participantIndex }) => {
       const participant = participants[participantIndex];
       if (participant && (participant.name || participant.cpf)) {
+        const products = getParticipantProducts(participantIndex);
         data.push({
           participantIndex,
           ticketName: ticket.name,
@@ -695,8 +746,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             phone: participant.phone || "",
             gender: participant.gender,
           },
-          // TODO: Adicionar produtos opcionais quando estiverem no contexto
-          additionalProducts: undefined,
+          additionalProducts: products.length > 0 ? products : undefined,
           // TODO: Adicionar cupom e voucher quando estiverem no contexto
           couponCode: undefined,
           couponDiscount: undefined,
@@ -707,19 +757,70 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     });
 
     return data;
-  }, [participantsWithTickets, participants]);
+  }, [participantsWithTickets, participants, productsData]);
 
-  // Calcular produtos opcionais selecionados (por enquanto vazio, pois não estão no contexto)
-  // TODO: Adicionar produtos selecionados ao contexto quando necessário
+  // Calcular produtos selecionados a partir do contexto (productVariations de cada participante)
   const orderItems = useMemo((): Array<{
     name: string;
     price: number;
     image?: string;
     size?: string;
+    participantIndex: number;
+    productId: string;
   }> => {
-    // Por enquanto retorna array vazio, produtos opcionais serão adicionados quando estiverem no contexto
-    return [];
-  }, []);
+    if (!productsData?.products) return [];
+
+    const items: Array<{
+      name: string;
+      price: number;
+      image?: string;
+      size?: string;
+      participantIndex: number;
+      productId: string;
+    }> = [];
+
+    // Para cada participante, verificar os produtos selecionados
+    participantsWithTickets.forEach(({ participantIndex }) => {
+      const participant = participants[participantIndex];
+      if (!participant?.productVariations) return;
+
+      // Para cada produto selecionado pelo participante
+      Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
+        if (!variationId) return;
+
+        // Encontrar o produto
+        const product = productsData.products.find((p: any) =>
+          p.id === productId || p.id.startsWith(productId) || productId.startsWith(p.id)
+        );
+        if (!product) return;
+
+        // Se o produto está incluído no ingresso, não cobrar
+        if (product.isIncludedInTicket) return;
+
+        // Encontrar a variação selecionada
+        const variation = product.variations?.find((v: any, i: number) =>
+          (v.id || `${product.id}-${i}`) === variationId
+        );
+
+        // Calcular preço (variação ou preço base)
+        const price = variation?.price ?? product.basePrice ?? 0;
+
+        // Só adicionar se tiver preço > 0
+        if (price > 0) {
+          items.push({
+            name: product.name,
+            price,
+            image: product.image || undefined,
+            size: variation?.name || undefined,
+            participantIndex,
+            productId: product.id,
+          });
+        }
+      });
+    });
+
+    return items;
+  }, [productsData, participantsWithTickets, participants]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -848,9 +949,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   // Mapear gender do formulário para o formato da API
   const mapGenderToAPI = (gender: string): 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | undefined => {
     if (!gender) return undefined;
-    
+
     const genderLower = gender.toLowerCase().trim();
-    
+
     if (genderLower === 'masculino' || genderLower === 'male' || genderLower === 'm') {
       return 'MALE';
     }
@@ -863,7 +964,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     if (genderLower === 'prefiro não dizer' || genderLower === 'prefer_not_to_say' || genderLower === 'prefiro-nao-dizer') {
       return 'PREFER_NOT_TO_SAY';
     }
-    
+
     // Se não corresponder a nenhum, retorna undefined
     return undefined;
   };
@@ -937,14 +1038,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           }> = [];
 
           // Iterar sobre as variações selecionadas do participante
-          Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
+          Object.entries(participant.productVariations).forEach(([savedProductId, variationId]) => {
             // Verificar se o produto existe na lista de produtos do evento
-            const product = productsData.products.find((p: any) => p.id === productId);
-            
+            // Suporta tanto ID completo quanto ID parcial (para compatibilidade com dados antigos)
+            const product = productsData.products.find((p: any) =>
+              p.id === savedProductId ||
+              p.id.startsWith(savedProductId) ||
+              savedProductId.startsWith(p.id)
+            );
+
             // Se o produto existe e tem uma variação selecionada (não null, undefined ou string vazia)
             if (product && variationId !== null && variationId !== undefined && variationId !== '') {
               selectedProducts.push({
-                productId: productId,
+                productId: product.id, // Usar o ID completo do produto
                 variationId: variationId,
                 quantity: 1, // Por enquanto sempre 1, pode ser ajustado se houver quantidade no futuro
               });
@@ -984,14 +1090,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       payment:
         selectedPaymentMethod === 'credit'
           ? {
-              card: {
-                name: cardName.toUpperCase().trim(),
-                number: cardNumber.replace(/\D/g, ''),
-                expiry: cardExpiry.replace(/\s/g, ''), // Remove espaços se houver
-                cvv: cardCVV,
-                installments: parseInt(selectedInstallments) || 1,
-              },
-            }
+            card: {
+              name: cardName.toUpperCase().trim(),
+              number: cardNumber.replace(/\D/g, ''),
+              expiry: cardExpiry.replace(/\s/g, ''), // Remove espaços se houver
+              cvv: cardCVV,
+              installments: parseInt(selectedInstallments) || 1,
+            },
+          }
           : {},
       tickets: checkoutTickets,
       participants: checkoutParticipants,
@@ -1004,12 +1110,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   // Salvar dados do checkout para a página de sucesso
   const saveCheckoutDataForSuccess = (result: any) => {
     if (typeof window === 'undefined' || !eventId) return;
-    
+
     const successData = {
       checkoutResponse: result,
       timestamp: Date.now(),
     };
-    
+
     localStorage.setItem(`checkout_success_${eventId}`, JSON.stringify(successData));
   };
 
@@ -1017,7 +1123,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const fetchPixDataFromAPI = async (registrationId: string): Promise<PixPayment | null> => {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
     const token = apiClient.getAccessToken();
-    
+
     if (!token) {
       throw new Error('Você precisa estar autenticado');
     }
@@ -1036,11 +1142,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
         if (response.ok) {
           const data = await response.json();
-          
+
           // Verificar se há dados do PIX no metadata
           if (data.payment?.metadata?.pix) {
             const pixMetadata = data.payment.metadata.pix;
-            
+
             if (pixMetadata.qrCode && pixMetadata.qrCodeBase64) {
               return {
                 qrCode: pixMetadata.qrCode,
@@ -1074,7 +1180,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
       // Salvar dados para a página de sucesso
       saveCheckoutDataForSuccess(result);
-      
+
       const registrationId = result.registrations[0]?.id || null;
       setRegistrationId(registrationId);
 
@@ -1084,9 +1190,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       // Se não vieram, tentar buscar do endpoint de summary
       if (!pixData && registrationId) {
         const loadingToast = toast.loading('Gerando QR Code PIX...', { id: 'pix-loading' });
-        
+
         pixData = await fetchPixDataFromAPI(registrationId);
-        
+
         toast.dismiss('pix-loading');
       }
 
@@ -1157,7 +1263,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       if (result.payment.status === 'approved') {
         // Salvar dados para a página de sucesso
         saveCheckoutDataForSuccess(result);
-        
+
         toast.success('Pagamento aprovado!');
         if (onSuccess) {
           onSuccess();
@@ -1212,18 +1318,23 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     participantsWithTickets.forEach(({ ticket, participantIndex }) => {
       const participant = participants[participantIndex];
       if (participant) {
+        // Obter produtos do participante
+        const products = getParticipantProducts(participantIndex);
+
         result.push({
           participantIndex,
           participant,
           ticket,
-          // TODO: Adicionar produtos opcionais quando estiverem no contexto
-          additionalProducts: undefined,
+          additionalProducts: products.length > 0 ? products.map(p => ({
+            ...p,
+            image: undefined, // Pode ser adicionado se necessário
+          })) : undefined,
         });
       }
     });
 
     return result;
-  }, [participantsWithTickets, participants]);
+  }, [participantsWithTickets, participants, productsData]);
 
   const formatDateShort = (date: string) => {
     if (!date) return "";
@@ -1259,21 +1370,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         <div className="pb-6 flex flex-col gap-3">
           {/* Credit Card Option */}
           <div
-            className={`border rounded-lg p-4 transition-colors ${
-              selectedPaymentMethod === "credit"
-                ? "border-blue-8 bg-blue-3"
-                : "border-gray-7 bg-gray-3"
-            }`}
+            className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "credit"
+              ? "border-blue-8 bg-blue-3"
+              : "border-gray-7 bg-gray-3"
+              }`}
             onClick={() => setSelectedPaymentMethod("credit")}
           >
             <div className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-3">
                 <div
-                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${
-                    selectedPaymentMethod === "credit"
-                      ? "bg-primary-11 border-primary-11"
-                      : "bg-transparent border-gray-6"
-                  }`}
+                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "credit"
+                    ? "bg-primary-11 border-primary-11"
+                    : "bg-transparent border-gray-6"
+                    }`}
                 ></div>
                 <span className="text-base font-semibold text-primary-12 font-manrope">
                   Cartão de crédito
@@ -1330,21 +1439,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
           {/* PIX Option */}
           <div
-            className={`border rounded-lg p-4 transition-colors ${
-              selectedPaymentMethod === "pix"
-                ? "border-blue-8 bg-blue-3"
-                : "border-gray-7 bg-gray-3"
-            }`}
+            className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "pix"
+              ? "border-blue-8 bg-blue-3"
+              : "border-gray-7 bg-gray-3"
+              }`}
             onClick={() => setSelectedPaymentMethod("pix")}
           >
             <div className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-3">
                 <div
-                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${
-                    selectedPaymentMethod === "pix"
-                      ? "bg-primary-11 border-primary-11"
-                      : "bg-transparent border-gray-6"
-                  }`}
+                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "pix"
+                    ? "bg-primary-11 border-primary-11"
+                    : "bg-transparent border-gray-6"
+                    }`}
                 ></div>
                 <span className="text-base font-semibold text-gray-12 font-manrope">
                   PIX
@@ -1400,8 +1507,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 couponError
                   ? "border-red-6"
                   : isCouponApplied
-                  ? "border-primary-8 bg-primary-3"
-                  : ""
+                    ? "border-primary-8 bg-primary-3"
+                    : ""
               }
             />
             {couponError && (
@@ -1505,8 +1612,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 }
               }}
               disabled={
-                totalParticipants === 0 || 
-                checkoutLoading || 
+                totalParticipants === 0 ||
+                checkoutLoading ||
                 (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
               }
               className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1638,17 +1745,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         <>
           {/* Backdrop */}
           <div
-            className={`fixed inset-0 z-50 bg-black/90 md:hidden transition-opacity duration-300 ease-out ${
-              isModalAnimating ? "opacity-100" : "opacity-0"
-            }`}
+            className={`fixed inset-0 z-50 bg-black/90 md:hidden transition-opacity duration-300 ease-out ${isModalAnimating ? "opacity-100" : "opacity-0"
+              }`}
             onClick={closeModal}
           />
 
           {/* Modal Content */}
           <div
-            className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-xl max-h-[90vh] flex flex-col md:hidden transition-transform duration-300 ease-out ${
-              isModalAnimating ? "translate-y-0" : "translate-y-full"
-            }`}
+            className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-xl max-h-[90vh] flex flex-col md:hidden transition-transform duration-300 ease-out ${isModalAnimating ? "translate-y-0" : "translate-y-full"
+              }`}
           >
             {/* Close Button */}
             <div className="bg-gray-2 w-1/3 place-self-end border-t border-l border-r border-gray-6 rounded-tl-xl px-4 py-2 flex items-center justify-center shrink-0">
@@ -1662,9 +1767,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
             {/* Scrollable Content */}
             <div
-              className={`flex-1 overflow-y-auto transition-opacity duration-300 ${
-                isModalAnimating ? "opacity-100" : "opacity-0"
-              }`}
+              className={`flex-1 overflow-y-auto transition-opacity duration-300 ${isModalAnimating ? "opacity-100" : "opacity-0"
+                }`}
             >
               <div className="bg-gray-1">
                 {/* Participants List */}
@@ -1681,13 +1785,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     ) => (
                       <div
                         key={participantIndex}
-                        className={`py-5 transition-all duration-300 ease-out ${
-                          index > 0 ? "border-t border-gray-6" : ""
-                        } ${
-                          isModalAnimating
+                        className={`py-5 transition-all duration-300 ease-out ${index > 0 ? "border-t border-gray-6" : ""
+                          } ${isModalAnimating
                             ? "opacity-100 translate-y-0"
                             : "opacity-0 translate-y-4"
-                        }`}
+                          }`}
                         style={{
                           transitionDelay: `${index * 50}ms`,
                         }}
@@ -1869,11 +1971,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           <p className="text-base font-bold text-gray-12 font-manrope">
                             {formatPrice(
                               getTicketPrice(ticket) +
-                                (additionalProducts?.reduce(
-                                  (sum, item) =>
-                                    sum + item.price * item.quantity,
-                                  0
-                                ) || 0)
+                              (additionalProducts?.reduce(
+                                (sum, item) =>
+                                  sum + item.price * item.quantity,
+                                0
+                              ) || 0)
                             )}
                           </p>
                         </div>
@@ -1885,9 +1987,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
               {/* Summary Footer - Fixed */}
               <div
-                className={`bg-gray-1 border-t border-gray-6 px-4 py-5 shrink-0 transition-opacity duration-300 delay-200 ${
-                  isModalAnimating ? "opacity-100" : "opacity-0"
-                }`}
+                className={`bg-gray-1 border-t border-gray-6 px-4 py-5 shrink-0 transition-opacity duration-300 delay-200 ${isModalAnimating ? "opacity-100" : "opacity-0"
+                  }`}
               >
                 <div className="flex flex-col gap-2 items-start justify-between mb-4">
                   <h1 className="text-base font-bold">{event.name}</h1>
@@ -1959,8 +2060,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       }
                     }}
                     disabled={
-                      totalParticipants === 0 || 
-                      checkoutLoading || 
+                      totalParticipants === 0 ||
+                      checkoutLoading ||
                       (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
                     }
                     className="bg-primary-11 text-primary-2 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"

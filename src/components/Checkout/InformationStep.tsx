@@ -588,7 +588,7 @@ export function InformationStep({
     const phone = participant.phone?.trim();
     const gender = participant.gender?.trim();
 
-    return !!(
+    const basicFieldsComplete = !!(
       name &&
       cpf &&
       email &&
@@ -596,6 +596,20 @@ export function InformationStep({
       phone &&
       gender
     );
+
+    if (!basicFieldsComplete) return false;
+
+    // Verificar se todas as perguntas obrigatórias foram respondidas
+    const requiredQuestions = sortedQuestions.filter((q) => q.isRequired);
+    const allRequiredQuestionsAnswered = requiredQuestions.every((question) => {
+      const answer = getQuestionAnswer(index, question.id);
+      if (Array.isArray(answer)) {
+        return answer.length > 0;
+      }
+      return typeof answer === "string" && answer.trim() !== "";
+    });
+
+    return allRequiredQuestionsAnswered;
   };
 
   const handleDeleteParticipant = (
@@ -714,21 +728,22 @@ export function InformationStep({
     answer: string | string[]
   ) => {
     isUpdatingFromContextRef.current = true;
-    setQuestionAnswers((prev) => {
-      const updated = {
-        ...prev,
-        [participantIndex]: {
-          ...prev[participantIndex],
-          [questionId]: answer,
-        },
-      };
-
-      // Salvar no contexto
-      updateParticipant(participantIndex, {
-        questionAnswers: updated[participantIndex],
-      });
-
-      return updated;
+    
+    // Calcular novo estado fora do updater
+    const newAnswers = {
+      ...questionAnswers[participantIndex],
+      [questionId]: answer,
+    };
+    
+    // Atualizar estado local
+    setQuestionAnswers((prev) => ({
+      ...prev,
+      [participantIndex]: newAnswers,
+    }));
+    
+    // Salvar no contexto (fora do updater para evitar erro de setState durante render)
+    updateParticipant(participantIndex, {
+      questionAnswers: newAnswers,
     });
   };
 

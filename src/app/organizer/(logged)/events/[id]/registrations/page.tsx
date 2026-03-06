@@ -14,15 +14,10 @@ import {
   CheckCircle,
   XCircle,
   FileText,
-  ShoppingCart,
   TrendingUp,
-  DollarSign,
-  AlertCircle,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import Link from "next/link";
-import toast from "react-hot-toast";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { Dropdown } from "@/components/Dropdown";
 import type { DateRange } from "react-day-picker";
@@ -48,9 +43,6 @@ function getFinalStatus(registration: any): string {
   const paymentMetadata = registration.order?.payment?.metadata;
   const refundType = registration.order?.payment?.refundType;
 
-  // Determinar o status final: 
-  // Se houver metadata, usar refundType (mapear REFUND -> REFUNDED)
-  // Caso contrário, priorizar payment.status para REFUNDED e CHARGEBACK
   return paymentMetadata && refundType
     ? refundType === "REFUND" ? "REFUNDED" : refundType === "CHARGEBACK" ? "CHARGEBACK" : refundType
     : paymentStatus === "REFUNDED" || paymentStatus === "CHARGEBACK"
@@ -80,7 +72,7 @@ function RegistrationRow({
 
   const statusBadge = getStatusBadge(finalStatus);
   const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
-  const isCancelled = finalStatus === "CANCELLED";
+  const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
   const isRefunded = finalStatus === "REFUNDED" || paymentStatus === "REFUNDED" || (paymentMetadata && refundType === "REFUND");
   const isChargeback = finalStatus === "CHARGEBACK" || paymentStatus === "CHARGEBACK" || (paymentMetadata && refundType === "CHARGEBACK");
 

@@ -18,8 +18,6 @@ import { InfoIcon } from "../Icons/InfoIcon";
 import { TwitterIcon } from "../Icons/TwitterIcon";
 import { InstagramIcon } from "../Icons/InstagramIcon";
 import { FacebookIcon } from "../Icons/FacebookIcon";
-import { MedalIcon } from "../Icons/MedalIcon";
-import { SneakersIcon } from "../Icons/SneakersIcon";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { UserIcon } from "../Icons/UserIcon";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -236,6 +234,7 @@ export function Header() {
                     icon: LogOut,
                     onClick: () => {
                       logout();
+                      push("/");
                     },
                   },
                 ]}
@@ -383,6 +382,7 @@ export function Header() {
                         onClick={() => {
                           logout();
                           setMobileMenuOpen(false);
+                          push("/");
                         }}
                         className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors"
                       >

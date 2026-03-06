@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Mail, Lock, Building2 } from "lucide-react";
+import { Mail, Lock, Building2, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
@@ -22,6 +22,7 @@ export default function OrganizerLoginPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -156,13 +157,25 @@ export default function OrganizerLoginPage() {
                   <Lock className="size-5 text-gray-11" />
                 </div>
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Digite sua senha"
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
-                  className={`pl-10 h-12 ${errors.password ? "border-red-11" : ""}`}
+                  className={`pl-10 pr-10 h-12 ${errors.password ? "border-red-11" : ""}`}
                   disabled={isSubmitting || authLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-5" />
+                  ) : (
+                    <Eye className="size-5" />
+                  )}
+                </button>
               </div>
               {errors.password && (
                 <p className="text-sm text-red-11 font-family-dm-sans">
