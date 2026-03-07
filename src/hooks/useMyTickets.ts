@@ -90,6 +90,8 @@ export function useMyTickets(
       };
     },
     enabled,
+    refetchOnMount: 'always', // Sempre buscar dados atualizados quando a página for montada
+    staleTime: 0, // Considerar dados como obsoletos imediatamente
   });
 
   return {

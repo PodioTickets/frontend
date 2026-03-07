@@ -23,7 +23,7 @@ export default function UserTicketsPage() {
     setPage(1);
   }, [statusFilter, orderBy]);
 
-  const { tickets, pagination, loading } = useMyTickets(
+  const { tickets, pagination, loading, refetch } = useMyTickets(
     {
       page,
       limit: 20,
@@ -31,6 +31,13 @@ export default function UserTicketsPage() {
     },
     isAuthenticated
   );
+
+  // Sempre buscar dados atualizados quando a página for montada
+  useEffect(() => {
+    if (isAuthenticated) {
+      refetch();
+    }
+  }, [isAuthenticated, refetch]);
 
   const statusOptions = [
     { id: "CONFIRMED", label: "Inscrição confirmada" },

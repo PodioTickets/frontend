@@ -129,6 +129,8 @@ export default function TicketDetailsPage() {
 
     const tickets = registration.tickets || [];
     const user = registration.user || {};
+    // Produtos vêm do registration.products com estrutura { product, variation, quantity, totalPrice, unitPrice }
+    const registrationProducts = registration.products || [];
 
     return tickets.map((ticketItem: any, index: number) => {
       const ticket = ticketItem.ticket || {};
@@ -153,7 +155,8 @@ export default function TicketDetailsPage() {
           }
           return acc;
         }, {}),
-        products: ticket.products || [],
+        // Usar produtos do registration com a estrutura correta
+        products: registrationProducts,
       };
     });
   }, [registration]);
@@ -240,7 +243,6 @@ export default function TicketDetailsPage() {
               const isExpanded = expandedParticipants[index] || false;
               const tab = activeTab[index] || "info";
               const ticket = participant.ticket || {};
-              console.log(participant)
 
               // Calcular distância do ticket
               const distance = ticket.distance
@@ -351,16 +353,12 @@ export default function TicketDetailsPage() {
                       onClick={() => toggleParticipant(index)}
                       className="size-8 flex items-center justify-center"
                     >
-                      {isExpanded ? (
-                        <ChevronDown className="size-5 text-gray-12" />
-                      ) : (
-                        <ChevronRight className="size-5 text-gray-12" />
-                      )}
+                      <ArrowButton isOpen={isExpanded} />
                     </button>
                   </div>
 
                   {/* Tabs */}
-                  <div className="flex gap-3 items-start px-4 pt-5 pb-2">
+                  <div className={`flex gap-3 items-start px-4 pt-5 ${isExpanded ? "pb-0" : "pb-5"}`}>
                     <button
                       onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "info" }))}
                       className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "info"
@@ -483,20 +481,23 @@ export default function TicketDetailsPage() {
                         <div>
                           {participant.products && participant.products.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {participant.products.map((product: any, productIndex: number) => {
-                                // Os produtos podem ter variações
-                                const variations = product.variations || [];
+                              {participant.products.map((item: any, productIndex: number) => {
+                                const productData = item.product || {};
+                                const variationData = item.variation || {};
+                                const price = item.totalPrice ?? item.unitPrice ?? 0;
+                                const isIncluded = price === 0;
+
                                 return (
                                   <div
-                                    key={product.id || productIndex}
-                                    className="bg-gray-2 border border-gray-6 rounded-xl p-4"
+                                    key={item.id || productIndex}
+                                    className="bg-gray-2 border border-gray-6 rounded-xl"
                                   >
-                                    <div className="flex gap-3">
-                                      {product.image && (
+                                    <div className="flex gap-3 p-4">
+                                      {productData.image && (
                                         <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
                                           <Image
-                                            src={product.image}
-                                            alt={product.name || "Produto"}
+                                            src={productData.image}
+                                            alt={productData.name || "Produto"}
                                             width={100}
                                             height={100}
                                             className="w-full h-full object-cover"
@@ -505,12 +506,18 @@ export default function TicketDetailsPage() {
                                       )}
                                       <div className="flex flex-col justify-between flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
-                                          {product.name || "Produto"}
+                                          {productData.name || "Produto"}
                                         </p>
                                         <p className="text-base font-semibold text-gray-12 font-manrope">
-                                          {Number(product.basePrice) === 0 ? "Incluso no ingresso" : formatPrice(product.basePrice)}
+                                          {isIncluded ? "Incluso no ingresso" : formatPrice(price)}
                                         </p>
                                       </div>
+                                    </div>
+
+                                    <div className="border-t border-gray-6 p-4">
+                                      <p className="text-base font-semibold text-gray-12 font-manrope">
+                                        <span className="font-normal"> {productData.variationType || "Tamanho"}:</span> {variationData.name || "N/A"}
+                                      </p>
                                     </div>
                                   </div>
                                 );
@@ -642,7 +649,7 @@ export default function TicketDetailsPage() {
               </div>
 
               {/* Total pago (fora do card, abaixo) */}
-              <div className="px-4 py-4 flex items-center justify-center gap-1">
+              <div className="px-4 py-4 pb-8 flex items-center justify-center gap-1">
                 <p className="text-xl font-medium text-gray-12 font-manrope leading-[1.1]">
                   Total pago:
                 </p>
