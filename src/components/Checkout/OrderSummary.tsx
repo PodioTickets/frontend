@@ -59,6 +59,7 @@ interface OrderSummaryProps {
   onApplyCoupon: () => void;
   onCouponChange?: (coupon: string) => void;
   participantsData?: ParticipantData[];
+  onParticipantClick?: (participantIndex: number) => void;
 }
 
 export function OrderSummary({
@@ -77,6 +78,7 @@ export function OrderSummary({
   onApplyCoupon,
   onCouponChange,
   participantsData = [],
+  onParticipantClick,
 }: OrderSummaryProps) {
   const [couponCode, setCouponCode] = useState(externalCouponCode);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
@@ -143,7 +145,7 @@ export function OrderSummary({
     <div className="flex flex-col gap-6 w-full">
       {/* Seção de Valores */}
       <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] p-6">
-        <div className="flex flex-col gap-5 pb-6">
+        <div className="flex flex-col gap-3 pb-6">
           {/* Itens adicionais */}
           {items.length > 0 && (
             <div className="flex gap-8 items-center">
@@ -254,7 +256,8 @@ export function OrderSummary({
               return (
                 <div
                   key={index}
-                  className="border border-gray-6 flex flex-col items-start min-w-[400px] overflow-hidden rounded-xl w-full"
+                  className={`border border-gray-6 flex flex-col items-start overflow-hidden rounded-xl w-full ${onParticipantClick ? "cursor-pointer hover:bg-gray-3 transition-colors" : ""}`}
+                  onClick={() => onParticipantClick?.(participantData.participantIndex)}
                 >
                   {/* Conteúdo do Card */}
                   <div className="flex items-center px-4 py-6 w-full">
@@ -292,7 +295,7 @@ export function OrderSummary({
                   {participantData.participant && (
                     <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
                       <div className="flex items-center justify-between w-full">
-                        <div className="border border-gray-6 flex items-center p-3 rounded-xl">
+                        <div className="border border-gray-6 flex items-center p-3 rounded-xl w-full">
                           <div className="flex gap-2 items-center">
                             <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
                               {participantData.participant.name ? (
@@ -303,7 +306,7 @@ export function OrderSummary({
                                 <div className="size-10 rounded-full bg-gray-5" />
                               )}
                             </div>
-                            <div className="flex flex-col gap-3 items-start justify-center">
+                            <div className="flex flex-col gap-1 items-start justify-center">
                               <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
                                 {participantData.participant.name || `Participante ${participantData.participantIndex + 1}`}
                               </p>
@@ -340,9 +343,7 @@ export function OrderSummary({
                             onClick={() => toggleParticipant(index)}
                             className="flex items-center justify-center size-6"
                           >
-                            <div className={`transform transition-transform -scale-y-100 ${isExpanded ? "rotate-180" : ""}`}>
-                              <ArrowButton isOpen={false} />
-                            </div>
+                            <ArrowButton isOpen={false} />
                           </button>
                         </div>
                       </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { OrderSummary } from "./OrderSummary";
+import { ParticipantSummaryModal } from "./ParticipantSummaryModal";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { VisaIcon } from "../Icons/VisaIcon";
@@ -500,6 +501,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     enabled: !!eventId,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Create productsMap for product images in ParticipantSummaryModal
+  const productsMap = useMemo(() => {
+    if (!productsData?.products) return {};
+    const map: Record<string, { id: string; name: string; image: string | null }> = {};
+    productsData.products.forEach((product: any) => {
+      map[product.id] = {
+        id: product.id,
+        name: product.name,
+        image: product.image || null,
+      };
+    });
+    return map;
+  }, [productsData]);
 
   const loading = ticketsLoading || categoriesLoading || productsLoading;
 
@@ -1285,6 +1300,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     Record<number, boolean>
   >({});
 
+  // Participant Summary Modal state
+  const [isParticipantSummaryModalOpen, setIsParticipantSummaryModalOpen] = useState(false);
+  const [selectedParticipantIndex, setSelectedParticipantIndex] = useState(0);
+
+  // Handler for opening participant summary modal
+  const handleParticipantClick = (participantIndex: number) => {
+    setSelectedParticipantIndex(participantIndex);
+    setIsParticipantSummaryModalOpen(true);
+  };
+
   const openModal = () => {
     setIsParticipantsModalOpen(true);
     // Trigger animation after modal is mounted
@@ -1335,6 +1360,30 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
     return result;
   }, [participantsWithTickets, participants, productsData]);
+
+  // Generate participant data for the modal
+  const participantModalData = useMemo(() => {
+    return participantsWithTicketsForDisplay.map(({ participantIndex, participant, ticket }) => ({
+      participantIndex,
+      participant: {
+        name: participant.name || "",
+        cpf: participant.cpf || "",
+        email: participant.email || "",
+        birthDate: participant.birthDate || "",
+        phone: participant.phone || "",
+        gender: participant.gender,
+        emergencyPhone: participant.emergencyPhone,
+        emergencyContactName: participant.emergencyContactName,
+        productVariations: participant.productVariations,
+      },
+      ticket,
+      event: {
+        bannerUrl: event.bannerUrl,
+        eventDate: event.eventDate,
+        eventTime: undefined, // Can be added if available in event data
+      },
+    }));
+  }, [participantsWithTicketsForDisplay, event]);
 
   const formatDateShort = (date: string) => {
     if (!date) return "";
@@ -1736,6 +1785,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               }
             }}
             participantsData={participantsData}
+            onParticipantClick={handleParticipantClick}
           />
         </div>
       </div>
@@ -2087,6 +2137,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             onSuccess();
           }
         }}
+      />
+
+      {/* Participant Summary Modal */}
+      <ParticipantSummaryModal
+        isOpen={isParticipantSummaryModalOpen}
+        onClose={() => setIsParticipantSummaryModalOpen(false)}
+        participants={participantModalData}
+        initialParticipantIndex={selectedParticipantIndex}
+        products={productsData?.products || []}
+        productsMap={productsMap}
       />
     </>
   );

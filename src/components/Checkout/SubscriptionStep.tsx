@@ -46,8 +46,11 @@ const formatPrice = (price: number) => {
   }).format(price);
 };
 
-// Função para formatar o label da variação com preço
+// Função para formatar o label da variação com preço (só mostra preço se > 0)
 const formatVariationLabel = (variation: { name: string; price: number }): string => {
+  if (variation.price === 0) {
+    return variation.name;
+  }
   return `${variation.name} - ${formatPrice(variation.price)}`;
 };
 
