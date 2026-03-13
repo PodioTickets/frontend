@@ -93,13 +93,13 @@ function CheckoutSucessoContent() {
             // Verificar correspondência exata: productId deve ser igual
             // E se houver variationId, ele também deve corresponder
             const productIdMatch = item.id === p.productId;
-            const variationIdMatch = p.variationId 
+            const variationIdMatch = p.variationId
               ? (item.variationId === p.variationId)
               : (!item.variationId); // Se não tem variationId no participante, o item também não deve ter
-            
+
             return productIdMatch && variationIdMatch;
           });
-          
+
           // Retornar apenas os produtos deste participante específico
           return {
             name: productItem?.name || 'Produto',
@@ -117,17 +117,17 @@ function CheckoutSucessoContent() {
       // Mapear produtos incluídos com informações completas (imagem, variação, preço)
       const mappedIncludedProducts = includedProducts.map(ip => {
         // Buscar o produto na lista geral para obter variação e preço
-        const productItem = checkoutResponse.products.items.find(item => 
+        const productItem = checkoutResponse.products.items.find(item =>
           item.id === ip.productId
         );
 
         // Buscar o produto completo do evento para obter a imagem
         const eventProduct = productsData?.products?.find((p: any) => p.id === ip.productId);
-        
+
         // Se o produto tem variação, buscar o nome da variação
         let variationName = productItem?.variationName || null;
         if (!variationName && eventProduct && productItem?.variationId) {
-          const variation = eventProduct.variations?.find((v: any) => 
+          const variation = eventProduct.variations?.find((v: any) =>
             (v.id || `${eventProduct.id}-${eventProduct.variations?.indexOf(v)}`) === productItem.variationId
           );
           variationName = variation?.name || null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
@@ -25,6 +25,12 @@ import { ShopIcon } from "@/components/Icons/ShopIcon";
 import { CartIcon } from "@/components/Icons/CartIcon";
 import { CheckIcon } from "@/components/Icons/Organizer/CheckIcon";
 import { DolarIcon } from "@/components/Icons/Organizer/DolarIcon";
+import { BestSellingVariations } from "@/components/Organizer/BestSellingVariations";
+import { QuestionsListing } from "@/components/Organizer/QuestionsListing";
+import { QuestionDetailsDrawer } from "@/components/Organizer/QuestionDetailsDrawer";
+import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawer";
+import type { Question } from "@/interfaces/event";
+import type { BestSellingVariationItem } from "@/components/Organizer/BestSellingVariations";
 
 export default function EventDashboardPage() {
   const router = useRouter();
@@ -37,6 +43,8 @@ export default function EventDashboardPage() {
   const [periodFilter, setPeriodFilter] = useState("geral");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
   const { tickets } = useTickets(eventId, true);
 
   // Mock data - substituir com dados reais da API
@@ -162,98 +170,98 @@ export default function EventDashboardPage() {
             // Apenas formatar os labels se necessário
             if (periodFilter === "geral" && dashboardDataResponse.registrationsTrend.chartData) {
               const originalData = dashboardDataResponse.registrationsTrend.chartData;
-              
+
               // Se já tiver labels e revenue (dados mensais), usar diretamente
               if (originalData.labels && Array.isArray(originalData.labels) && originalData.revenue) {
                 // Converter labels para formato "Fev/2026" (mês completo/ano completo)
                 const formattedLabels = originalData.labels.map((label: any) => {
                   // Garantir que label é uma string
                   const labelStr = String(label || '').trim();
-                  
+
                   if (!labelStr) return label;
-                  
+
                   // Formato pode ser "Set/25", "Jan/26", "02/25", "09/25", etc.
                   // Tentar primeiro formato com mês abreviado e ano de 2 dígitos
                   let match = labelStr.match(/^(\w+)\/(\d{2})$/);
-                  
+
                   if (match) {
                     const monthAbbr = match[1].toLowerCase();
                     const yearShort = match[2];
-                    
+
                     // Mapear abreviações de meses para nomes completos
                     const monthMap: { [key: string]: string } = {
                       'jan': 'Jan', 'fev': 'Fev', 'mar': 'Mar', 'abr': 'Abr',
                       'mai': 'Mai', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Ago',
                       'set': 'Set', 'out': 'Out', 'nov': 'Nov', 'dez': 'Dez'
                     };
-                    
+
                     const monthName = monthMap[monthAbbr] || monthAbbr.charAt(0).toUpperCase() + monthAbbr.slice(1);
-                    
+
                     // Converter ano de 2 dígitos para 4 dígitos
                     const currentYear = new Date().getFullYear();
                     const currentCentury = Math.floor(currentYear / 100) * 100;
                     const yearNumber = parseInt(yearShort, 10);
-                    
+
                     // Se o ano for maior que o ano atual, assumir século anterior
                     let fullYear = currentCentury + yearNumber;
                     if (fullYear > currentYear + 10) {
                       fullYear = (currentCentury - 100) + yearNumber;
                     }
-                    
+
                     return `${monthName}/${fullYear}`;
                   }
-                  
+
                   // Tentar formato "MM/AA" (02/25, 09/25, etc.)
                   match = labelStr.match(/^(\d{1,2})\/(\d{2})$/);
                   if (match) {
                     const monthNumber = parseInt(match[1], 10);
                     const yearShort = match[2];
-                    
+
                     // Validar número do mês
                     if (monthNumber < 1 || monthNumber > 12) {
                       return labelStr; // Retornar original se inválido
                     }
-                    
+
                     // Mapear número do mês para nome abreviado
-                    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
-                                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
                     const monthName = monthNames[monthNumber - 1] || `Mês ${monthNumber}`;
-                    
+
                     // Converter ano de 2 dígitos para 4 dígitos
                     const currentYear = new Date().getFullYear();
                     const currentCentury = Math.floor(currentYear / 100) * 100;
                     const yearNumber = parseInt(yearShort, 10);
-                    
+
                     // Se o ano for maior que o ano atual, assumir século anterior
                     let fullYear = currentCentury + yearNumber;
                     if (fullYear > currentYear + 10) {
                       fullYear = (currentCentury - 100) + yearNumber;
                     }
-                    
+
                     return `${monthName}/${fullYear}`;
                   }
-                  
+
                   // Se já estiver no formato "Mês/Ano" completo, verificar se precisa ajustar
                   match = labelStr.match(/^(\w+)\/(\d{4})$/);
                   if (match) {
                     // Já está no formato correto, apenas capitalizar o mês se necessário
                     const monthAbbr = match[1].toLowerCase();
                     const fullYear = match[2];
-                    
+
                     const monthMap: { [key: string]: string } = {
                       'jan': 'Jan', 'fev': 'Fev', 'mar': 'Mar', 'abr': 'Abr',
                       'mai': 'Mai', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Ago',
                       'set': 'Set', 'out': 'Out', 'nov': 'Nov', 'dez': 'Dez'
                     };
-                    
+
                     const monthName = monthMap[monthAbbr] || match[1];
                     return `${monthName}/${fullYear}`;
                   }
-                  
+
                   // Se não conseguir parsear, retornar como está
                   return labelStr;
                 });
-                
+
                 return {
                   labels: formattedLabels,
                   revenue: originalData.revenue,
@@ -261,7 +269,7 @@ export default function EventDashboardPage() {
                 };
               }
             }
-            
+
             // Para outros filtros, retornar dados originais
             return dashboardDataResponse.registrationsTrend.chartData;
           })(),
@@ -307,6 +315,82 @@ export default function EventDashboardPage() {
     }
   };
 
+  // Variações mais vendidas: derivado do ranking de ingressos (nome do ingresso + categoria como variação)
+  const bestSellingVariations = useMemo(
+    (): BestSellingVariationItem[] =>
+      dashboardData.ticketRanking.map((t, i) => ({
+        id: `ticket-${i}`,
+        productName: t.name,
+        variationName: t.category || "Ingresso",
+        quantity: t.quantity,
+        totalCents: t.total,
+      })),
+    [dashboardData.ticketRanking]
+  );
+
+  const uniqueProductNames = useMemo(
+    () => [...new Set(bestSellingVariations.map((i) => i.productName))],
+    [bestSellingVariations]
+  );
+  const selectedProductIndex = selectedProductName
+    ? uniqueProductNames.indexOf(selectedProductName) + 1
+    : 0;
+  const totalProducts = uniqueProductNames.length;
+  const selectedProductVariations = useMemo(() => {
+    if (!selectedProductName) return [];
+    const items = bestSellingVariations.filter((i) => i.productName === selectedProductName);
+    const totalQty = items.reduce((s, i) => s + (i.quantity ?? 0), 0);
+    const totalRev = items.reduce((s, i) => s + (i.totalCents ?? 0), 0);
+    return items.map((item) => {
+      const qty = item.quantity ?? 0;
+      const pct = totalQty > 0 ? Math.round((qty / totalQty) * 100) : 0;
+      return {
+        variationName: item.variationName,
+        quantitySold: (item.totalCents ?? 0) > 0
+          ? `R$ ${((item.totalCents ?? 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : String(qty),
+        percentage: pct,
+        stock: "—",
+        stockStatus: undefined as "Esgotado" | "Normal" | undefined,
+      };
+    });
+  }, [selectedProductName, bestSellingVariations]);
+  const selectedProductTotalRevenue: number = useMemo(() => {
+    if (!selectedProductName) return 0;
+    return bestSellingVariations
+      .filter((i) => i.productName === selectedProductName)
+      .reduce((s, i) => s + (i.totalCents ?? 0), 0);
+  }, [selectedProductName, bestSellingVariations]);
+  const selectedProductQuantitySold: number = useMemo(() => {
+    if (!selectedProductName) return 0;
+    return bestSellingVariations
+      .filter((i) => i.productName === selectedProductName)
+      .reduce((s, i) => s + (i.quantity ?? 0), 0);
+  }, [selectedProductName, bestSellingVariations]);
+
+  const sortedQuestions = useMemo(() => {
+    const questions = (event?.questions ?? []) as Question[];
+    return [...questions].sort((a, b) => a.order - b.order);
+  }, [event?.questions]);
+
+  const questionsListing = useMemo(
+    () =>
+      sortedQuestions.map((q) => ({
+        id: q.id,
+        question: q.question,
+        answerSummary: q.type === "text" ? "Texto livre" : "Maioria: —",
+      })),
+    [sortedQuestions]
+  );
+
+  const selectedQuestion = selectedQuestionId
+    ? sortedQuestions.find((q) => q.id === selectedQuestionId) ?? null
+    : null;
+  const selectedQuestionIndex = selectedQuestionId
+    ? sortedQuestions.findIndex((q) => q.id === selectedQuestionId) + 1
+    : 0;
+  const totalQuestions = sortedQuestions.length;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
@@ -314,7 +398,6 @@ export default function EventDashboardPage() {
       </div>
     );
   }
-
 
   const periodOptions = [
     { value: "geral", label: "Geral" },
@@ -339,28 +422,26 @@ export default function EventDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-2">
       <EventPageHeader eventName={event?.name} />
-      <div className="max-w-7xl mx-auto px-4 lg:px-0">
-        {/* Title and Description */}
-        <div className="mb-6 flex items-center justify-between w-full">
-          <div>
-            <h1 className="font-manrope font-bold text-[20px] leading-[1.3] text-gray-12 mb-2">
-              Dashboard
-            </h1>
-            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-              Acompanhe o desempenho do seu evento em tempo real
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto py-8">
+        {/* Title and Description - conforme Figma */}
+        <div className="mb-8 flex flex-col gap-1">
+          <h1 className="font-manrope font-bold text-[20px] leading-[1.3] text-gray-12">
+            Dashboard
+          </h1>
+          <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
+            Acompanhe o desempenho do seu evento em tempo real
+          </p>
         </div>
 
-        {/* Filters */}
-        <div className="mb-8 flex items-center gap-3">
+        {/* Filters - segment + dropdown */}
+        <div className="mb-6 flex items-center gap-3 flex-wrap">
           {/* Period Filter - Segment Buttons */}
-          <div className="bg-gray-3 flex items-center p-1 rounded-lg h-[48px]">
+          <div className="bg-gray-3 flex items-center p-1 rounded-xl h-[48px]">
             {periodOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setPeriodFilter(option.value)}
-                className={`px-4 py-2 rounded-lg text-[14px] font-family-dm-sans border transition-all ease-in-out cursor-pointer duration-200 font-medium h-[40px] flex items-center ${periodFilter === option.value
+                className={`px-4 py-2 rounded-xl text-[14px] font-family-dm-sans border transition-all ease-in-out cursor-pointer duration-200 font-medium h-[40px] flex items-center ${periodFilter === option.value
                   ? "bg-gray-1 border-gray-6 text-gray-12"
                   : "text-gray-11 hover:text-gray-12 border-transparent"
                   }`}
@@ -373,7 +454,7 @@ export default function EventDashboardPage() {
           {/* Ticket Filter Button */}
           <button
             onClick={() => setIsTicketModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-3 rounded-lg border border-gray-6 bg-gray-1 text-gray-12 hover:bg-gray-3 transition-colors cursor-pointer min-w-[187px] h-[48px]"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-6 bg-gray-1 text-gray-12 hover:bg-gray-3 transition-colors cursor-pointer min-w-[187px] h-[48px]"
           >
             <span className="text-[14px] font-family-dm-sans font-normal flex-1 text-left">{getTicketButtonLabel()}</span>
             <ArrowButton />
@@ -383,10 +464,10 @@ export default function EventDashboardPage() {
         {/* Metrics Cards */}
         <div className="grid grid-cols-4 gap-3 mb-8 w-full">
           {/* Receita Líquida */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg h-[133px] flex flex-col">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Receita Líquida</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-4 flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-blue-4 flex items-center justify-center">
                 <CartIcon className="size-5 text-blue-12" />
               </div>
             </div>
@@ -408,10 +489,10 @@ export default function EventDashboardPage() {
           </div>
 
           {/* Ticket Médio */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg h-[133px] flex flex-col">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Ticket Médio</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-primary-4 flex items-center justify-center">
                 <CheckIcon className="size-5 text-gray-12" />
               </div>
             </div>
@@ -433,10 +514,10 @@ export default function EventDashboardPage() {
           </div>
 
           {/* Total de Inscrições */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg h-[133px] flex flex-col">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Total de Inscrições</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center">
                 <DolarIcon className="size-5 text-[#202020]" />
               </div>
             </div>
@@ -454,10 +535,10 @@ export default function EventDashboardPage() {
           </div>
 
           {/* Cancelamentos / Estornos */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg h-[133px] flex flex-col">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Cancelamentos / Estornos</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-red-4 flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-red-4 flex items-center justify-center">
                 <XCircle className="size-5 text-red-12" />
               </div>
             </div>
@@ -493,7 +574,7 @@ export default function EventDashboardPage() {
         {/* Charts Section */}
         <div className="flex gap-3 mb-8 w-full">
           {/* Tendência de Inscrições */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 w-3/4">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 w-3/4">
             <div className="mb-4">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Tendência de inscrições</p>
             </div>
@@ -523,7 +604,7 @@ export default function EventDashboardPage() {
           </div>
 
           {/* Ranking de Ingressos */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl">
             <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ranking de ingressos</p>
               <button className="text-[14px] font-family-dm-sans font-semibold text-gray-11 hover:text-gray-12 underline">
@@ -567,31 +648,74 @@ export default function EventDashboardPage() {
           </div>
         </div>
 
-        {/* Cities Section */}
-        <div className="grid grid-cols-2 gap-3 mb-8 w-full">
-          {dashboardData.topCities.map((city, index) => {
-            const isFirst = index === 0;
-            return (
-              <div
-                key={index}
-                className={`${isFirst ? "bg-primary-2 border-primary-6" : "bg-blue-2 border-blue-6"} border rounded-lg p-3`}
-              >
-                <div className={`inline-block px-2 py-1 rounded text-[14px] font-family-dm-sans font-medium mb-2 ${isFirst ? "bg-primary-5 text-primary-12" : "bg-blue-5 text-blue-12"}`}>
-                  {isFirst ? "1º Cidade com mais vendas" : "2º Cidade com mais vendas"}
-                </div>
-                <p className="font-family-dm-sans font-semibold text-[16px] text-gray-12 mb-2">{city.city}</p>
-                <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                  QT de compradores: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.buyers}</span>
-                </p>
-              </div>
-            )
-          })}
+        {/* Variações mais vendidas | Listagem de perguntas - conforme Figma */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full">
+          <div className="min-h-[311px]">
+            <BestSellingVariations
+              items={bestSellingVariations}
+              onItemClick={(item) => setSelectedProductName(item.productName)}
+            />
+          </div>
+          <div className="min-h-[311px]">
+            <QuestionsListing
+              items={questionsListing}
+              onItemClick={(item) => {
+                setSelectedQuestionId(item.id);
+              }}
+            />
+          </div>
         </div>
+
+        <QuestionDetailsDrawer
+          isOpen={!!selectedQuestionId}
+          onClose={() => setSelectedQuestionId(null)}
+          question={selectedQuestion}
+          questionIndex={selectedQuestionIndex}
+          totalQuestions={totalQuestions}
+          onPrevious={
+            selectedQuestionIndex > 1
+              ? () => {
+                const prev = sortedQuestions[selectedQuestionIndex - 2];
+                if (prev) setSelectedQuestionId(prev.id);
+              }
+              : undefined
+          }
+          onNext={
+            selectedQuestionIndex < totalQuestions && totalQuestions > 0
+              ? () => {
+                const next = sortedQuestions[selectedQuestionIndex];
+                if (next) setSelectedQuestionId(next.id);
+              }
+              : undefined
+          }
+        />
+
+        <ProductDetailsDrawer
+          isOpen={!!selectedProductName}
+          onClose={() => setSelectedProductName(null)}
+          productName={selectedProductName ?? ""}
+          productIndex={selectedProductIndex}
+          totalProducts={totalProducts}
+          quantitySold={String(selectedProductQuantitySold)}
+          totalRevenue={`R$ ${(selectedProductTotalRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          variationRows={selectedProductVariations}
+          onPrevious={
+            selectedProductIndex > 1
+              ? () => setSelectedProductName(uniqueProductNames[selectedProductIndex - 2] ?? null)
+              : undefined
+          }
+          onNext={
+            selectedProductIndex < totalProducts && totalProducts > 0
+              ? () => setSelectedProductName(uniqueProductNames[selectedProductIndex] ?? null)
+              : undefined
+          }
+        />
+
 
         {/* Bottom Section */}
         <div className="grid grid-cols-[392px_1fr] gap-3 w-full">
           {/* Lotes Próximos de Esgotamento */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl">
             <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Lotes próximos de esgotamento</p>
               <button className="text-[14px] font-family-dm-sans font-semibold text-gray-11 hover:text-gray-12 underline">
@@ -639,9 +763,30 @@ export default function EventDashboardPage() {
           </div>
 
           {/* Heatmap de Dias e Horários */}
-          <div className="bg-gray-1 border border-gray-6 rounded-lg">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl">
             <SalesHeatmap data={dashboardData.salesHeatmap} />
           </div>
+        </div>
+
+        {/* Cities Section */}
+        <div className="grid grid-cols-2 gap-3 mt-8 w-full">
+          {dashboardData.topCities.map((city, index) => {
+            const isFirst = index === 0;
+            return (
+              <div
+                key={index}
+                className={`${isFirst ? "bg-primary-2 border-primary-6" : "bg-blue-2 border-blue-6"} border rounded-lg p-3`}
+              >
+                <div className={`inline-block px-2 py-1 rounded text-[14px] font-family-dm-sans font-medium mb-2 ${isFirst ? "bg-primary-5 text-primary-12" : "bg-blue-5 text-blue-12"}`}>
+                  {isFirst ? "1º Cidade com mais vendas" : "2º Cidade com mais vendas"}
+                </div>
+                <p className="font-family-dm-sans font-semibold text-[16px] text-gray-12 mb-2">{city.city}</p>
+                <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                  QT de compradores: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.buyers}</span>
+                </p>
+              </div>
+            )
+          })}
         </div>
       </div>
 

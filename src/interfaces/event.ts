@@ -16,6 +16,8 @@ export interface Event {
   serviceFee: number;
   googleMapsLink: string;
   stravaRouteId?: string;
+  /** URL do regulamento do evento (ex.: PDF) */
+  regulationUrl?: string;
   eventDate: string;
   registrationStartDate: string;
   registrationEndDate: string;

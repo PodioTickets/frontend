@@ -17,8 +17,15 @@ interface Product {
   image: string | null;
   isRequired: boolean;
   isIncludedInTicket: boolean;
-  basePrice: string;
+  /** API retorna em centavos (number); exibição em reais */
+  basePrice?: number | string;
   linkedTickets?: string[];
+}
+
+function formatProductPrice(value: number | string | undefined): string {
+  if (value == null || value === "") return "0,00";
+  if (typeof value === "number") return (value / 100).toFixed(2).replace(".", ",");
+  return String(value);
 }
 
 interface Ticket {
@@ -254,7 +261,7 @@ export function AddExistingProductsModal() {
                                   <span className="text-gray-11 text-sm font-semibold font-family-dm-sans">
                                     {product.isIncludedInTicket
                                       ? "Valor incluso no ingresso"
-                                      : `R$ ${product.basePrice || "0,00"}`}
+                                      : `R$ ${formatProductPrice(product.basePrice)}`}
                                   </span>
                                 </div>
                               </div>

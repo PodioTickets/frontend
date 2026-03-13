@@ -220,7 +220,7 @@ export default function EventPage() {
               {(() => {
                 const organizer = getEventOrganizer(event);
                 if (!organizer) return null;
-                
+
                 return (
                   <>
                     <div className="flex items-center gap-3 mb-3">
@@ -284,8 +284,8 @@ export default function EventPage() {
             const isExpanded = expandedSections[topic.id] || false;
             // Check if content has more than just text (has HTML tags)
             const hasHTML = topic.content.includes('<');
-            const textLength = hasHTML 
-              ? topic.content.replace(/<[^>]*>/g, '').length 
+            const textLength = hasHTML
+              ? topic.content.replace(/<[^>]*>/g, '').length
               : topic.content.length;
             const shouldTruncate = textLength > 150;
 
@@ -298,7 +298,7 @@ export default function EventPage() {
                   <h2 className="text-lg font-bold text-gray-12 mb-3">
                     {topic.title}
                   </h2>
-                  <div 
+                  <div
                     className={`text-sm text-gray-11 mb-3 prose prose-sm max-w-none ${!isExpanded && shouldTruncate ? "line-clamp-3" : ""}`}
                     dangerouslySetInnerHTML={{ __html: topic.content }}
                   />
@@ -316,6 +316,26 @@ export default function EventPage() {
               </Fragment>
             );
           })}
+
+          {/* Regulamento - exibido como tópico quando houver regulationUrl */}
+          {event.regulationUrl && (
+            <>
+              <div className="my-4">
+                <h2 className="text-lg font-bold text-gray-12 mb-3">
+                  Regulamento
+                </h2>
+                <a
+                  href={event.regulationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
+                >
+                  Acessar regulamento
+                </a>
+              </div>
+              <div className="w-full h-px bg-gray-6" />
+            </>
+          )}
 
           {/* Onde acontecerá o evento */}
           <div className="my-4">
@@ -487,7 +507,7 @@ export default function EventPage() {
                         {(() => {
                           const organizer = getEventOrganizer(event);
                           if (!organizer) return null;
-                          
+
                           return (
                             <div className="space-y-3">
                               <div className="flex items-start gap-3">
@@ -585,13 +605,13 @@ export default function EventPage() {
               {event.topics?.map((topic, index) => (
                 <Fragment key={topic.id}>
                   <div
-                    className={`flex flex-col gap-2 ${index === 0 ? "mb-10" : "my-10"
+                    className={`flex flex-col gap-2 ${index === 0 ? "my-10" : "my-10"
                       }`}
                   >
                     <h1 className="text-2xl font-bold text-gray-12">
                       {topic.title}
                     </h1>
-                    <div 
+                    <div
                       className="text-gray-11 text-sm prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: topic.content }}
                     />
@@ -599,6 +619,28 @@ export default function EventPage() {
                   <div className="w-full h-px bg-gray-6" />
                 </Fragment>
               ))}
+
+              {/* Regulamento - exibido como tópico quando houver regulationUrl */}
+              {event.regulationUrl && (
+                <>
+                  <div className="flex flex-col gap-6 my-10">
+                    <h1 className="text-2xl font-bold text-gray-12">
+                      Regulamento
+                    </h1>
+                    <a
+                      href={event.regulationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
+                    >
+                      <Button variant="outline" className="text-gray-12 border-gray-6">
+                        Ler regulamento
+                      </Button>
+                    </a>
+                  </div>
+                  <div className="w-full h-px bg-gray-6" />
+                </>
+              )}
 
               <div className="flex flex-col gap-4 my-10">
                 <div className="flex flex-col gap-2">
@@ -687,7 +729,7 @@ export default function EventPage() {
                     {(() => {
                       const organizer = getEventOrganizer(event);
                       if (!organizer) return null;
-                      
+
                       return (
                         <div className="space-y-3">
                           <div className="flex items-start gap-3">

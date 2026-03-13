@@ -49,6 +49,7 @@ export default function OrganizerLoginPage() {
       });
 
       toast.success("Login realizado com sucesso!");
+      router.refresh();
       router.push("/organizer/events");
       setFormData({ email: "", password: "" });
       setErrors({});

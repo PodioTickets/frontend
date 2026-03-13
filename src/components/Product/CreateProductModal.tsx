@@ -36,19 +36,36 @@ export function CreateProductModal() {
   const isEditing = data?.productId !== undefined;
   const eventId = data?.eventId;
 
+  // Helper: API retorna preços em centavos; exibir em reais (formato "10,50")
+  const formatPriceFromApi = (value: number | string | undefined): string => {
+    if (value == null || value === "") return "";
+    if (typeof value === "number") return (value / 100).toFixed(2).replace(".", ",");
+    const s = String(value).trim().replace(".", ",");
+    return s;
+  };
+
   // Initialize form when modal opens
   useEffect(() => {
     if (isOpen) {
       if (isEditing && data?.product) {
-        // Editing mode - load product data
+        // Editing mode - load product data (API envia preços em centavos)
         const p = data.product;
         setProductName(p.name || "");
         setProductImage(p.image || null);
         setIsIncludedInTicket(p.isIncludedInTicket ?? true);
-        setBasePrice(p.basePrice || "");
+        setBasePrice(formatPriceFromApi(p.basePrice));
         setIsRequired(p.isRequired ?? true);
         setVariationTypeName(p.variationType || "");
-        setVariations(p.variations || []);
+        setVariations(
+          Array.isArray(p.variations)
+            ? p.variations.map((v: any) => ({
+                id: v.id || String(Date.now() + Math.random()),
+                name: v.name ?? "",
+                price: formatPriceFromApi(v.price),
+                stock: v.stock != null ? String(v.stock) : "",
+              }))
+            : []
+        );
       } else {
         // Create mode - reset form
         setProductName("");
@@ -180,18 +197,23 @@ export function CreateProductModal() {
     setIsSubmitting(true);
 
     try {
+      // Enviar preços em centavos para a API
+      const basePriceReais = basePrice ? parseFloat(basePrice.replace(",", ".")) : 0;
       const productData = {
         name: productName.trim(),
         image: productImage,
         isIncludedInTicket,
-        basePrice: basePrice ? parseFloat(basePrice.replace(",", ".")) : 0,
+        basePrice: Math.round(basePriceReais * 100),
         isRequired,
         variationType: variationTypeName.trim() || undefined,
-        variations: variations.map(v => ({
-          name: v.name,
-          price: parseFloat(v.price.replace(",", ".")),
-          stock: parseInt(v.stock) || 0,
-        })),
+        variations: variations.map(v => {
+          const priceReais = parseFloat(String(v.price || "0").replace(",", ".")) || 0;
+          return {
+            name: v.name,
+            price: Math.round(priceReais * 100),
+            stock: parseInt(v.stock) || 0,
+          };
+        }),
       };
 
       let savedProduct;

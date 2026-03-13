@@ -9,9 +9,11 @@ interface DateRangePickerProps {
   onSelect?: (range: DateRange | undefined) => void;
   className?: string;
   value?: DateRange | undefined;
+  /** Se true, permite selecionar datas passadas. Útil para filtros (ex.: inscrições por período). */
+  allowPastDates?: boolean;
 }
 
-export function DateRangePicker({ onSelect, className, value }: DateRangePickerProps) {
+export function DateRangePicker({ onSelect, className, value, allowPastDates }: DateRangePickerProps) {
   const [date, setDate] = React.useState<DateRange | undefined>(value);
   const [isMobile, setIsMobile] = React.useState(false);
   
@@ -44,6 +46,7 @@ export function DateRangePicker({ onSelect, className, value }: DateRangePickerP
         onSelect={handleSelect}
         numberOfMonths={isMobile ? 1 : 2}
         className="rounded-md border-0 bg-transparent"
+        disablePastDates={!allowPastDates}
       />
     </div>
   );

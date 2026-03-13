@@ -160,7 +160,7 @@ export function SubscriptionStep({
   // Criar mapa de ticketId -> lista de productIds vinculados
   const ticketProductsMap = useMemo(() => {
     const map: Record<string, string[]> = {};
-    
+
     // Mapear tickets de categorizedTickets
     categorizedTickets.forEach((category) => {
       category.tickets.forEach((ticket) => {
@@ -168,24 +168,24 @@ export function SubscriptionStep({
         map[ticket.id] = ticket.products || [];
       });
     });
-    
+
     // Mapear tickets sem categoria
     uncategorizedTickets.forEach((ticket) => {
       map[ticket.id] = ticket.products || [];
     });
-    
+
     return map;
   }, [categorizedTickets, uncategorizedTickets]);
 
   // Filtrar produtos por ticket ID
   const getProductsForTicket = (ticketId: string) => {
     const ticketProductIds = ticketProductsMap[ticketId] || [];
-    
+
     // Se o ticket não tem produtos vinculados, não mostrar nenhum produto
     if (ticketProductIds.length === 0) {
       return [];
     }
-    
+
     // Filtrar apenas os produtos que estão vinculados a este ticket
     return allProducts.filter((product) => ticketProductIds.includes(product.id));
   };
@@ -212,7 +212,7 @@ export function SubscriptionStep({
       (p) => p.participantIndex === participantIndex
     );
     if (!participantTicket) return [];
-    
+
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
     return ticketProducts.filter((p) => p.isRequired);
   };
@@ -222,7 +222,7 @@ export function SubscriptionStep({
       (p) => p.participantIndex === participantIndex
     );
     if (!participantTicket) return [];
-    
+
     const ticketProducts = getProductsForTicket(participantTicket.ticketId);
     return ticketProducts.filter((p) => !p.isRequired);
   };
@@ -233,7 +233,7 @@ export function SubscriptionStep({
   const getVariationKey = (participantIndex: number, productId: string) => {
     return `${participantIndex}${VARIATION_KEY_SEPARATOR}${productId}`;
   };
-  
+
   // Função para extrair participantIndex e productId de uma chave
   // Suporta tanto o formato novo (com ::) quanto o antigo (com -)
   const parseVariationKey = (key: string): { participantIndex: number; productId: string } => {
@@ -245,7 +245,7 @@ export function SubscriptionStep({
         productId: key.substring(separatorIndex + VARIATION_KEY_SEPARATOR.length),
       };
     }
-    
+
     // Fallback para formato antigo (com -) - pegar apenas o primeiro número
     // Formato antigo: "0-9f24fcc6-421b-..." -> ["0", "9f24fcc6", "421b", ...]
     const parts = key.split("-");
@@ -255,7 +255,7 @@ export function SubscriptionStep({
       const productId = parts.slice(1).join("-");
       return { participantIndex, productId };
     }
-    
+
     throw new Error(`Invalid variation key format: ${key}`);
   };
 
@@ -287,15 +287,15 @@ export function SubscriptionStep({
 
     // Agrupar variações por participante
     const variationsByParticipant: Record<number, Record<string, string | null>> = {};
-    
+
     Object.keys(selectedVariations).forEach((key) => {
       try {
         const { participantIndex, productId } = parseVariationKey(key);
-        
+
         if (!variationsByParticipant[participantIndex]) {
           variationsByParticipant[participantIndex] = {};
         }
-        
+
         variationsByParticipant[participantIndex][productId] = selectedVariations[key];
       } catch (error) {
         // Ignorar chaves inválidas (pode ser formato antigo)
@@ -307,11 +307,11 @@ export function SubscriptionStep({
     Object.keys(variationsByParticipant).forEach((participantIndexStr) => {
       const participantIndex = Number(participantIndexStr);
       const participantVariations = variationsByParticipant[participantIndex];
-      
+
       // Só atualizar se houver diferenças
       const currentVariations = participants[participantIndex]?.productVariations || {};
       const hasChanges = JSON.stringify(currentVariations) !== JSON.stringify(participantVariations);
-      
+
       if (hasChanges) {
         isUpdatingFromContextRef.current = true;
         updateParticipant(participantIndex, {
@@ -366,10 +366,10 @@ export function SubscriptionStep({
       isUpdatingFromContextRef.current = false;
       return;
     }
-    
+
     // Carregar variações do contexto usando os participantIndex corretos de participantsWithTickets
     const updated: Record<string, string | null> = {};
-    
+
     // Criar um mapa de IDs de produtos para facilitar a correspondência
     // Isso ajuda a lidar com IDs truncados salvos no localStorage
     const allProducts = [...requiredProducts, ...additionalProducts];
@@ -381,17 +381,17 @@ export function SubscriptionStep({
         productIdMap.set(product.id.substring(0, 8), product.id);
       }
     });
-    
+
     participantsWithTickets.forEach(({ participantIndex }) => {
       const participant = participants[participantIndex];
       if (participant?.productVariations) {
         Object.keys(participant.productVariations).forEach((savedProductId) => {
           // Tentar encontrar o ID completo do produto
           // Pode ser que o ID salvo esteja truncado (formato antigo)
-          const fullProductId = productIdMap.get(savedProductId) || 
-                               allProducts.find(p => p.id.startsWith(savedProductId))?.id ||
-                               savedProductId;
-          
+          const fullProductId = productIdMap.get(savedProductId) ||
+            allProducts.find(p => p.id.startsWith(savedProductId))?.id ||
+            savedProductId;
+
           if (fullProductId) {
             const variationKey = getVariationKey(participantIndex, fullProductId);
             updated[variationKey] = participant.productVariations![savedProductId];
@@ -399,21 +399,21 @@ export function SubscriptionStep({
         });
       }
     });
-    
+
     // Só atualizar se houver diferenças significativas
     setSelectedVariations((prev) => {
       const prevKeys = Object.keys(prev).sort();
       const updatedKeys = Object.keys(updated).sort();
-      const keysMatch = prevKeys.length === updatedKeys.length && 
+      const keysMatch = prevKeys.length === updatedKeys.length &&
         prevKeys.every((key, i) => key === updatedKeys[i]);
-      
+
       if (keysMatch) {
         const valuesMatch = prevKeys.every((key) => prev[key] === updated[key]);
         if (valuesMatch) {
           return prev;
         }
       }
-      
+
       // Mesclar mantendo valores existentes que não estão no contexto
       return { ...prev, ...updated };
     });
@@ -471,7 +471,7 @@ export function SubscriptionStep({
       (option: DropdownOption) => {
         const variationKey = getVariationKey(participantIndex, productId);
         const newVariationId = option.id || null;
-        
+
         // Atualizar apenas o estado local - o useEffect vai sincronizar com o contexto
         setSelectedVariations((prev) => ({
           ...prev,
@@ -700,8 +700,8 @@ export function SubscriptionStep({
                 {/* Header - Always Visible */}
                 <div
                   className={`p-2 border-b border-gray-6 ${!isExpanded
-                      ? "hover:bg-gray-2 transition-colors cursor-pointer"
-                      : ""
+                    ? "hover:bg-gray-2 transition-colors cursor-pointer"
+                    : ""
                     }`}
                   onClick={
                     !isExpanded
@@ -753,8 +753,8 @@ export function SubscriptionStep({
                 {/* Collapsed View - Summary */}
                 <div
                   className={`transition-all duration-300 ease-in-out ${!isExpanded
-                      ? "max-h-[200px] opacity-100"
-                      : "max-h-0 opacity-0 overflow-hidden"
+                    ? "max-h-[200px] opacity-100"
+                    : "max-h-0 opacity-0 overflow-hidden"
                     }`}
                 >
                   <div className="px-3 py-5 border-b border-gray-6">
@@ -781,8 +781,8 @@ export function SubscriptionStep({
                   <div className="px-3 py-4 flex items-center justify-between">
                     <div
                       className={`px-3 py-1 rounded-full text-sm font-medium ${isCompleted
-                          ? "bg-primary-3 text-primary-12"
-                          : "bg-yellow-3 text-yellow-12"
+                        ? "bg-primary-3 text-primary-12"
+                        : "bg-yellow-3 text-yellow-12"
                         }`}
                     >
                       {isCompleted ? "Concluído" : "Pendente"}
@@ -804,8 +804,8 @@ export function SubscriptionStep({
                 {/* Expanded View - Full Details */}
                 <div
                   className={`transition-all duration-300 ease-in-out ${isExpanded
-                      ? "max-h-[5000px] opacity-100"
-                      : "max-h-0 opacity-0 overflow-hidden pointer-events-none"
+                    ? "max-h-[5000px] opacity-100"
+                    : "max-h-0 opacity-0 overflow-hidden pointer-events-none"
                     }`}
                 >
                   <div className="p-4 border-b border-gray-6">
@@ -816,8 +816,8 @@ export function SubscriptionStep({
                         </h2>
                         <div
                           className={`px-3 py-1 rounded-full text-sm font-medium ${isCompleted
-                              ? "bg-primary-3 text-primary-12"
-                              : "bg-yellow-3 text-yellow-12"
+                            ? "bg-primary-3 text-primary-12"
+                            : "bg-yellow-3 text-yellow-12"
                             }`}
                         >
                           {isCompleted ? "Concluído" : "Pendente"}
@@ -950,78 +950,78 @@ export function SubscriptionStep({
                         </h3>
                         <div className="flex flex-col gap-3">
                           {getAdditionalProductsForParticipant(participantIndex).map((product) => (
-                          <div
-                            key={product.id}
-                            className="bg-gray-2 border border-gray-6 rounded-xl"
-                          >
-                            <div className="flex gap-3 p-4 border-b border-gray-6">
-                              {product.image ? (
-                                <Image
-                                  src={product.image}
-                                  alt={product.name}
-                                  width={100}
-                                  height={100}
-                                  className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
-                                  draggable={false}
-                                />
-                              ) : (
-                                <div className="w-[100px] h-[100px] rounded border border-gray-6 shrink-0 bg-gray-3 flex items-center justify-center">
-                                  <span className="text-gray-11 text-xs">Sem imagem</span>
+                            <div
+                              key={product.id}
+                              className="bg-gray-2 border border-gray-6 rounded-xl"
+                            >
+                              <div className="flex gap-3 p-4 border-b border-gray-6">
+                                {product.image ? (
+                                  <Image
+                                    src={product.image}
+                                    alt={product.name}
+                                    width={100}
+                                    height={100}
+                                    className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
+                                    draggable={false}
+                                  />
+                                ) : (
+                                  <div className="w-[100px] h-[100px] rounded border border-gray-6 shrink-0 bg-gray-3 flex items-center justify-center">
+                                    <span className="text-gray-11 text-xs">Sem imagem</span>
+                                  </div>
+                                )}
+                                <div className="flex flex-col justify-between flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-12 line-clamp-2">
+                                    {product.name}
+                                  </p>
+                                  <p className="text-base font-semibold text-gray-12">
+                                    {formatPrice(getProductPrice(participantIndex, product))}
+                                  </p>
                                 </div>
-                              )}
-                              <div className="flex flex-col justify-between flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-gray-12 line-clamp-2">
-                                  {product.name}
+                              </div>
+                              <div className="p-4">
+                                <p className="text-base text-gray-12 mb-2">
+                                  Escolha a variação
                                 </p>
-                                <p className="text-base font-semibold text-gray-12">
-                                  {formatPrice(getProductPrice(participantIndex, product))}
-                                </p>
+                                <Dropdown
+                                  options={getVariationOptions(product)}
+                                  dataAttribute={`variation-${product.id}`}
+                                  width="w-full"
+                                  maxHeight="max-h-[200px]"
+                                  selectedIds={
+                                    selectedVariations[
+                                      getVariationKey(participantIndex, product.id)
+                                    ]
+                                      ? [
+                                        selectedVariations[
+                                        getVariationKey(
+                                          participantIndex,
+                                          product.id
+                                        )
+                                        ]!,
+                                      ]
+                                      : []
+                                  }
+                                  onSelect={handleVariationSelect(
+                                    participantIndex,
+                                    product.id
+                                  )}
+                                  trigger={() => {
+                                    const selected = getSelectedVariation(participantIndex, product);
+                                    return (
+                                      <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
+                                        <p className="text-base text-gray-11">
+                                          {selected
+                                            ? formatVariationLabel(selected)
+                                            : "Selecione a opção"}
+                                        </p>
+                                        <span className="text-gray-12">›</span>
+                                      </div>
+                                    );
+                                  }}
+                                />
                               </div>
                             </div>
-                            <div className="p-4">
-                              <p className="text-base text-gray-12 mb-2">
-                                Escolha a variação
-                              </p>
-                              <Dropdown
-                                options={getVariationOptions(product)}
-                                dataAttribute={`variation-${product.id}`}
-                                width="w-full"
-                                maxHeight="max-h-[200px]"
-                                selectedIds={
-                                  selectedVariations[
-                                    getVariationKey(participantIndex, product.id)
-                                  ]
-                                    ? [
-                                      selectedVariations[
-                                      getVariationKey(
-                                        participantIndex,
-                                        product.id
-                                      )
-                                      ]!,
-                                    ]
-                                    : []
-                                }
-                                onSelect={handleVariationSelect(
-                                  participantIndex,
-                                  product.id
-                                )}
-                                trigger={() => {
-                                  const selected = getSelectedVariation(participantIndex, product);
-                                  return (
-                                    <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                                      <p className="text-base text-gray-11">
-                                        {selected
-                                          ? formatVariationLabel(selected)
-                                          : "Selecione a opção"}
-                                      </p>
-                                      <span className="text-gray-12">›</span>
-                                    </div>
-                                  );
-                                }}
-                              />
-                            </div>
-                          </div>
-                        ))}
+                          ))}
                         </div>
                       </div>
                     )}
@@ -1161,7 +1161,7 @@ export function SubscriptionStep({
                     className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4"
                   >
                     <div className="flex items-start gap-3">
-                      {product.image ? (
+                      {product.image && (
                         <Image
                           src={product.image}
                           alt={product.name}
@@ -1170,10 +1170,6 @@ export function SubscriptionStep({
                           className="w-[100px] h-[100px] object-cover rounded-lg shrink-0"
                           draggable={false}
                         />
-                      ) : (
-                        <div className="w-[100px] h-[100px] rounded-lg shrink-0 bg-gray-3 flex items-center justify-center border border-gray-6">
-                          <span className="text-gray-11 text-xs">Sem imagem</span>
-                        </div>
                       )}
                       <div className="flex flex-col gap-2 flex-1 min-w-0">
                         <p className="text-sm text-gray-12 font-semibold truncate">
@@ -1236,72 +1232,72 @@ export function SubscriptionStep({
                 </h1>
                 <div className="grid grid-cols-2 gap-4">
                   {getAdditionalProductsForParticipant(selectedParticipant).map((product) => (
-                  <div
-                    key={product.id}
-                    className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      {product.image ? (
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          width={100}
-                          height={100}
-                          className="w-[100px] h-[100px] object-cover rounded-lg shrink-0"
-                          draggable={false}
-                        />
-                      ) : (
-                        <div className="w-[100px] h-[100px] rounded-lg shrink-0 bg-gray-3 flex items-center justify-center border border-gray-6">
-                          <span className="text-gray-11 text-xs">Sem imagem</span>
+                    <div
+                      key={product.id}
+                      className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        {product.image ? (
+                          <Image
+                            src={product.image}
+                            alt={product.name}
+                            width={100}
+                            height={100}
+                            className="w-[100px] h-[100px] object-cover rounded-lg shrink-0"
+                            draggable={false}
+                          />
+                        ) : (
+                          <div className="w-[100px] h-[100px] rounded-lg shrink-0 bg-gray-3 flex items-center justify-center border border-gray-6">
+                            <span className="text-gray-11 text-xs">Sem imagem</span>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-2 flex-1 min-w-0">
+                          <p className="text-sm text-gray-12 font-semibold line-clamp-2">
+                            {product.name}
+                          </p>
+                          <p className="text-sm text-gray-12 font-semibold">
+                            {formatPrice(getProductPrice(selectedParticipant, product))}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex flex-col gap-2 flex-1 min-w-0">
-                        <p className="text-sm text-gray-12 font-semibold line-clamp-2">
-                          {product.name}
-                        </p>
-                        <p className="text-sm text-gray-12 font-semibold">
-                          {formatPrice(getProductPrice(selectedParticipant, product))}
-                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
+                        <p className="text-sm text-gray-12">Escolha a variação</p>
+                        <Dropdown
+                          options={getVariationOptions(product)}
+                          dataAttribute={`variation-${product.id}`}
+                          width="w-full"
+                          maxHeight="max-h-[200px]"
+                          selectedIds={
+                            selectedVariations[
+                              getVariationKey(selectedParticipant, product.id)
+                            ]
+                              ? [
+                                selectedVariations[
+                                getVariationKey(selectedParticipant, product.id)
+                                ]!,
+                              ]
+                              : []
+                          }
+                          onSelect={handleVariationSelect(
+                            selectedParticipant,
+                            product.id
+                          )}
+                          trigger={() => {
+                            const selected = getSelectedVariation(selectedParticipant, product);
+                            return (
+                              <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
+                                <p className="text-sm text-gray-12">
+                                  {selected
+                                    ? formatVariationLabel(selected)
+                                    : "Selecione a opção"}
+                                </p>
+                                <span className="text-gray-12">›</span>
+                              </div>
+                            );
+                          }}
+                        />
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
-                      <p className="text-sm text-gray-12">Escolha a variação</p>
-                      <Dropdown
-                        options={getVariationOptions(product)}
-                        dataAttribute={`variation-${product.id}`}
-                        width="w-full"
-                        maxHeight="max-h-[200px]"
-                        selectedIds={
-                          selectedVariations[
-                            getVariationKey(selectedParticipant, product.id)
-                          ]
-                            ? [
-                              selectedVariations[
-                              getVariationKey(selectedParticipant, product.id)
-                              ]!,
-                            ]
-                            : []
-                        }
-                        onSelect={handleVariationSelect(
-                          selectedParticipant,
-                          product.id
-                        )}
-                        trigger={() => {
-                          const selected = getSelectedVariation(selectedParticipant, product);
-                          return (
-                            <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                              <p className="text-sm text-gray-12">
-                                {selected
-                                  ? formatVariationLabel(selected)
-                                  : "Selecione a opção"}
-                              </p>
-                              <span className="text-gray-12">›</span>
-                            </div>
-                          );
-                        }}
-                      />
-                    </div>
-                  </div>
                   ))}
                 </div>
               </div>
@@ -1394,8 +1390,8 @@ export function SubscriptionStep({
                         <div className="flex items-center justify-between">
                           <p
                             className={`text-sm font-medium rounded-full px-3 py-1 ${isParticipantComplete(participantIndex)
-                                ? "bg-primary-3 text-primary-12"
-                                : "bg-yellow-3 text-yellow-12"
+                              ? "bg-primary-3 text-primary-12"
+                              : "bg-yellow-3 text-yellow-12"
                               }`}
                           >
                             {isParticipantComplete(participantIndex)

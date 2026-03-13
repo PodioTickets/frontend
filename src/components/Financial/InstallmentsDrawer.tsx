@@ -7,9 +7,8 @@ import {
   DrawerContent,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import { X, Eye, ChevronLeft, ChevronRight, FileText, ChevronUp } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { Hourglass } from "lucide-react";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
@@ -53,6 +52,7 @@ export function InstallmentsDrawer({
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [actualData, setActualData] = useState<{
     totalPending: number;
     releaseToday: number;
@@ -110,23 +110,71 @@ export function InstallmentsDrawer({
     };
   };
 
-  const displayInstallments = installments.map(i => formatInstallmentForDisplay(i));
-  const totalPages = Math.ceil(displayInstallments.length / itemsPerPage);
+  const displayInstallments = installments.map((i) => formatInstallmentForDisplay(i));
 
-  const paginatedInstallments = displayInstallments.slice(
+  const filteredInstallments = searchQuery.trim()
+    ? displayInstallments.filter((d) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (d.orderId || "").toLowerCase().includes(q) ||
+          (d.buyer?.name || "").toLowerCase().includes(q) ||
+          (d.buyer?.email || "").toLowerCase().includes(q)
+        );
+      })
+    : displayInstallments;
+
+  const totalPages = Math.ceil(filteredInstallments.length / itemsPerPage);
+  const paginatedInstallments = filteredInstallments.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   return (
     <>
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
-        <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
-          {/* Header */}
-          <DrawerHeader className="border-b border-gray-6 px-5 py-3">
+        <DrawerContent className="bg-gray-2 md:bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
+          {/* ========== MOBILE Header (Figma) ========== */}
+          <DrawerHeader className="md:hidden border-b border-gray-6 p-0">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1 h-[52px] px-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+                  aria-label="Voltar"
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+                <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+                  {eventName}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 px-4 py-2 flex-wrap text-gray-11">
+                <span className="font-family-dm-sans font-normal text-sm text-gray-11">Eventos</span>
+                <ArrowButton isOpen={false} />
+                <span className="font-family-dm-sans font-normal text-sm text-gray-11">Financeiro</span>
+                <ArrowButton isOpen={false} />
+                <span className="font-family-dm-sans font-normal text-sm text-gray-12">Parcelados a receber</span>
+              </div>
+              <div className="flex gap-2 items-center justify-center px-4 pb-3">
+                <div className="size-7 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
+                  <CalendarIcon className="size-5 text-gray-12" />
+                </div>
+                <h2 className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12">
+                  Parcelados a receber - Detalhes
+                </h2>
+              </div>
+            </div>
+          </DrawerHeader>
+
+          {/* ========== DESKTOP Header ========== */}
+          <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-5">
-                {/* Navigation Buttons */}
                 <div className="flex items-center gap-1">
                   <button
                     onClick={onNavigatePrev}
@@ -143,8 +191,6 @@ export function InstallmentsDrawer({
                     <ArrowButton isOpen={false} />
                   </button>
                 </div>
-
-                {/* Title with Icon */}
                 <div className="flex items-center gap-2">
                   <div className="w-[32px] h-[32px] p-1 rounded-lg bg-[#CAF1F6] flex items-center justify-center">
                     <CalendarIcon className="size-6 text-gray-12" />
@@ -162,10 +208,161 @@ export function InstallmentsDrawer({
             </div>
           </DrawerHeader>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* ========== MOBILE Content (Figma) ========== */}
+          <div className="md:hidden flex-1 overflow-y-auto flex flex-col">
+            <div className="p-4 flex flex-col gap-4">
+              {/* Summary cards: Total a receber, Receber hoje, Transações parcelas a receber */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex flex-col gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
+                      <CalendarIcon className="size-5 text-blue-12" />
+                    </div>
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Total a receber</p>
+                  </div>
+                  <p className="font-manrope font-extrabold text-lg text-gray-12">
+                    R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex flex-col gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary-4 flex items-center justify-center shrink-0">
+                      <TimerIcon className="size-5 text-primary-12" />
+                    </div>
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Receber hoje</p>
+                  </div>
+                  <p className="font-manrope font-extrabold text-lg text-gray-12">
+                    R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3 col-span-2">
+                  <div className="flex gap-3 items-center">
+                    <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
+                      <FileText className="size-5 text-[#2F265F]" />
+                    </div>
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Transações parcelas a receber</p>
+                  </div>
+                  <p className="font-manrope font-extrabold text-lg text-gray-12">
+                    {actualData.totalTransactions}
+                  </p>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
+                <Search className="size-5 text-gray-11 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Nome, CPF, IDs.."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
+                />
+              </div>
+
+              {/* Installment cards list */}
+              <div className="flex flex-col gap-3">
+                {loading ? (
+                  <div className="py-8 text-center text-gray-11 font-family-dm-sans text-sm">Carregando...</div>
+                ) : paginatedInstallments.length === 0 ? (
+                  <div className="py-8 text-center text-gray-11 font-family-dm-sans text-sm">Nenhuma parcela encontrada</div>
+                ) : (
+                  paginatedInstallments.map((installment: any, index: number) => (
+                    <div
+                      key={`${installment.orderId}-${index}`}
+                      className="bg-gray-1 border border-gray-6 rounded-lg overflow-hidden"
+                    >
+                      <div className="flex flex-col gap-5 px-3 py-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex gap-2 items-center min-w-0 flex-1">
+                            <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                              {installment.buyer?.avatar ? (
+                                <Image src={getAvatarUrl(installment.buyer.avatar)} alt={installment.buyer.name} width={36} height={36} className="rounded-full object-cover" draggable={false} />
+                              ) : (
+                                <span className="text-gray-12 font-semibold text-sm">
+                                  {installment.buyer?.name?.charAt(0)?.toUpperCase() || "?"}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">{installment.buyer?.name}</p>
+                              <p className="font-family-dm-sans font-normal text-sm text-gray-11 truncate">{installment.buyer?.email}</p>
+                            </div>
+                          </div>
+                          <div className="shrink-0">
+                            {installment.paymentMethod === "Pix" ? (
+                              <PixIcon className="size-5 text-gray-12" />
+                            ) : (
+                              <CardIcon className="size-5 text-gray-12" />
+                            )}
+                          </div>
+                        </div>
+                        <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {installment.orderId}</p>
+                        <div className="bg-gray-2 border border-gray-6 rounded-lg h-[34px] flex items-center px-3">
+                          <p className="font-family-dm-sans font-medium text-sm text-gray-12">Próxima liberação: {installment.releaseDate}</p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className="font-manrope font-extrabold text-xl text-gray-12">
+                            R$ {installment.value.toFixed(2).replace(".", ",")}
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-sm text-gray-12">Parcelado: {installment.installment}</p>
+                        </div>
+                      </div>
+                      <div className="h-px bg-gray-6" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPayment(installment);
+                          setIsDetailsOpen(true);
+                        }}
+                        className="flex gap-2 items-center justify-center w-full h-11 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                      >
+                        <FileText className="size-5" />
+                        Ver detalhes
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Mobile pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
+                    const pageNum = i + 1;
+                    const isActive = pageNum === currentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ========== DESKTOP Content ========== */}
+          <div className="hidden md:block flex-1 overflow-y-auto">
             <div className="p-5">
-              {/* Info Header */}
               <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
                 <span>Nome da categoria: <span className="text-gray-12">{categoryName}</span></span>
                 <span className="w-1 h-1 rounded-full bg-gray-11" />

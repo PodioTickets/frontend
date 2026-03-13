@@ -6,12 +6,13 @@ import {
   DrawerContent,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, CheckCircle, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { TransferDetailsDrawer } from "./TransferDetailsDrawer";
 import { RepasseIcon } from "../Icons/RepasseIcon";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
+import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 import { organizerService } from "@/services";
 import type { Transfer } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
@@ -42,13 +43,20 @@ export function TransferHistoryDrawer({
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const itemsPerPage = 10;
+
+  const totalTransferredReais = totalTransferred / 100;
 
   useEffect(() => {
     if (isOpen && eventId) {
       loadTransfers();
     }
   }, [isOpen, eventId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const loadTransfers = async () => {
     try {
@@ -64,23 +72,9 @@ export function TransferHistoryDrawer({
     }
   };
 
-  const totalPages = Math.ceil(transfers.length / itemsPerPage);
-
-  const getStatusBadge = (status: string) => {
-    if (status === "Concluído") {
-      return "bg-primary-11 text-primary-1";
-    }
-    return "bg-yellow-11 text-yellow-1";
-  };
-
-  const paginatedTransfers = transfers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   const formatTransferForDisplay = (transfer: Transfer) => {
     const date = new Date(transfer.requestedAt);
-    const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     const formattedTime = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
     return {
@@ -95,15 +89,70 @@ export function TransferHistoryDrawer({
     };
   };
 
+  const filteredTransfers = searchQuery.trim()
+    ? transfers.filter((t) => {
+      const q = searchQuery.toLowerCase();
+      const pix = (t.bankAccount?.account || "").toLowerCase();
+      const id = (t.id || "").toLowerCase();
+      return id.includes(q) || pix.includes(q);
+    })
+    : transfers;
+
+  const totalPages = Math.ceil(filteredTransfers.length / itemsPerPage);
+  const paginatedTransfers = filteredTransfers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const getStatusBadge = (status: string) => {
+    if (status === "Concluído") {
+      return "bg-primary-11 text-primary-1";
+    }
+    return "bg-yellow-11 text-yellow-1";
+  };
+
   return (
     <>
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
-        <DrawerContent className="bg-gray-1 h-full border-l border-gray-6">
-          {/* Header */}
-          <DrawerHeader className="border-b border-gray-6 px-5 py-3">
+        <DrawerContent className="bg-gray-2 md:bg-gray-1 h-full border-l border-gray-6">
+          {/* ========== MOBILE Header ========== */}
+          <DrawerHeader className="md:hidden border-b border-gray-6 p-0">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1 h-[52px] px-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+                  aria-label="Voltar"
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+                <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+                  {eventName}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 px-4 py-2 flex-wrap text-gray-11">
+                <span className="font-family-dm-sans font-normal text-sm text-gray-11">Eventos</span>
+                <ArrowButton isOpen={false} />
+                <span className="font-family-dm-sans font-normal text-sm text-gray-11">Financeiro</span>
+                <ArrowButton isOpen={false} />
+                <span className="font-family-dm-sans font-normal text-sm text-gray-12">Histórico de repasses</span>
+              </div>
+              <div className="flex gap-2 items-center justify-center px-4 pb-3">
+                <div className="size-7 rounded bg-[#EBE4FF] flex items-center justify-center shrink-0">
+                  <RepasseIcon className="size-5 text-gray-12" />
+                </div>
+                <h2 className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12">
+                  Histórico de repasses - Detalhes
+                </h2>
+              </div>
+            </div>
+          </DrawerHeader>
+
+          {/* ========== DESKTOP Header ========== */}
+          <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-5">
-                {/* Navigation Buttons */}
                 <div className="flex items-center gap-1">
                   <button
                     onClick={onNavigatePrev}
@@ -120,8 +169,6 @@ export function TransferHistoryDrawer({
                     <ArrowButton isOpen={false} />
                   </button>
                 </div>
-
-                {/* Title with Icon */}
                 <div className="flex items-center gap-2">
                   <div className="w-[32px] h-[32px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
                     <RepasseIcon className="size-6 text-gray-12" />
@@ -139,17 +186,157 @@ export function TransferHistoryDrawer({
             </div>
           </DrawerHeader>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* ========== MOBILE Content (Figma) ========== */}
+          <div className="md:hidden flex-1 overflow-y-auto flex flex-col">
+            <div className="p-4 flex flex-col gap-4">
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex flex-col gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
+                      <CalendarIcon className="size-5 text-blue-12" />
+                    </div>
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Total repassado</p>
+                  </div>
+                  <p className="font-manrope font-extrabold text-lg text-gray-12">
+                    R$ {totalTransferredReais.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex flex-col gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
+                      <FileText className="size-5 text-gray-12" />
+                    </div>
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Transações de repasse</p>
+                  </div>
+                  <p className="font-manrope font-extrabold text-lg text-gray-12">
+                    {transfers.length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
+                <Search className="size-5 text-gray-11 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Nome, CPF, IDs.."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
+                />
+              </div>
+
+              {/* Transfer cards list */}
+              <div className="flex flex-col gap-3">
+                {loading ? (
+                  <div className="py-8 text-center text-gray-11 font-family-dm-sans text-sm">Carregando...</div>
+                ) : paginatedTransfers.length === 0 ? (
+                  <div className="py-8 text-center text-gray-11 font-family-dm-sans text-sm">Nenhum repasse encontrado</div>
+                ) : (
+                  paginatedTransfers.map((transfer) => {
+                    const d = formatTransferForDisplay(transfer);
+                    const isConcluido = d.status === "Concluído";
+                    return (
+                      <div
+                        key={transfer.id}
+                        className="bg-gray-1 border border-gray-6 rounded-lg overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-5 px-3 py-4">
+                          <div className="flex gap-2 items-center">
+                            <div className={`shrink-0 size-9 rounded-lg flex items-center justify-center ${isConcluido ? "bg-primary-4" : "bg-yellow-4"}`}>
+                              {isConcluido ? (
+                                <CheckCircle className="size-5 text-primary-11" />
+                              ) : (
+                                <TimerIcon className="size-5 text-yellow-12" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0 flex flex-col gap-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex flex-col min-w-0">
+                                  <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">ID Pedido: {d.id}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-family-dm-sans font-normal text-sm text-gray-11">{d.requestDate}</p>
+                                  </div>
+                                </div>
+                                <span className={`shrink-0 px-3 py-2 rounded text-sm font-family-dm-sans font-normal ${isConcluido ? "bg-[#21835d] text-primary-1" : "bg-yellow-11 text-yellow-1"}`}>
+                                  {d.status}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-3 border-b border-gray-6 pb-3">
+                            <p className="font-manrope font-extrabold text-xl text-gray-12">
+                              R$ {d.value.toFixed(2).replace(".", ",")}
+                            </p>
+                            <p className="font-family-dm-sans font-normal text-sm text-gray-11">
+                              Chave pix: <span className="font-family-dm-sans font-semibold text-gray-12">{d.pixKey}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center p-3 pt-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTransfer(transfer);
+                              setIsDetailsOpen(true);
+                            }}
+                            className="flex gap-2 items-center justify-center w-full h-11 border border-gray-6 rounded-lg mx-0 mb-0 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                          >
+                            <FileText className="size-5" />
+                            Ver detalhes
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Mobile pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
+                    const pageNum = i + 1;
+                    const isActive = pageNum === currentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ========== DESKTOP Content ========== */}
+          <div className="hidden md:block flex-1 overflow-y-auto">
             <div className="p-5">
-              {/* Info Header */}
               <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
                 <span>Nome da categoria: <span className="text-gray-12">{categoryName}</span></span>
                 <span className="w-1 h-1 rounded-full bg-gray-11" />
                 <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 
-              {/* Total Card */}
               <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3 mb-5 w-1/3">
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
@@ -160,7 +347,7 @@ export function TransferHistoryDrawer({
                   </div>
                 </div>
                 <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
-                  R$ {totalTransferred.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  R$ {totalTransferredReais.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
 

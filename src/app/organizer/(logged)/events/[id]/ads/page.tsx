@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
 import { Input } from "@/components/Input";
@@ -10,8 +11,8 @@ import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { Loading } from "@/components/Loading";
 import toast from "react-hot-toast";
 import { GoogleIcon } from "@/components/Icons/GoogleIcon";
-import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { MetaIcon } from "@/components/Icons/Organizer/MetaIcon";
+import { ArrowButton } from "@/components/ArrowButton";
 
 interface AdsTrackingData {
   metaPixelId?: string;
@@ -100,10 +101,21 @@ export default function AdsPage() {
     }
   };
 
+  const eventTabs = [
+    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
+    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
+    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+    { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
+    { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+  ];
+
   if (!authChecked || loading) {
     return (
       <div className="min-h-screen bg-gray-2">
-        <EventPageHeader eventName={event?.name} />
+        <div className="hidden md:block">
+          <EventPageHeader eventName={event?.name} />
+        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loading />
         </div>
@@ -113,32 +125,70 @@ export default function AdsPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader eventName={event?.name} />
-      <div className="max-w-7xl mx-auto px-4 lg:px-0 py-6">
-        <div className="flex flex-col gap-10">
-          {/* Title Section */}
-          <div className="flex flex-col gap-4">
-            <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+      {/* Desktop header */}
+      <div className="hidden md:block">
+        <EventPageHeader eventName={event?.name} />
+      </div>
+
+      {/* Mobile header: back + event name + horizontal tabs (Figma) */}
+      <div className="md:hidden bg-gray-1 border-b border-gray-6">
+        <div className="flex items-center gap-1 h-[52px] px-4">
+          <Link
+            href={`/organizer/events/${eventId}/dashboard`}
+            className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={false} />
+          </Link>
+          <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+            {event?.name || "Evento"}
+          </p>
+        </div>
+        <div className="border-b border-gray-6 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center min-w-max">
+            {eventTabs.map((tab) => {
+              const isAds = tab.href.includes("/ads");
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isAds
+                      ? "border-primary-11 text-primary-11 font-manrope font-bold"
+                      : "border-transparent text-gray-11 font-family-dm-sans font-normal"
+                    }`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 md:px-4 lg:px-0 py-6 md:py-6">
+        <div className="flex flex-col gap-6 md:gap-10">
+          {/* Title Section - mobile: 18px title, 14px description; desktop: 28px, 16px */}
+          <div className="flex flex-col gap-3 md:gap-4">
+            <h1 className="text-gray-12 font-bold font-manrope leading-[1.1] text-[18px] md:text-[28px]">
               Rastreamento e Conversões
             </h1>
-            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+            <p className="text-gray-11 font-family-dm-sans leading-[1.3] text-sm md:text-base">
               Configure os IDs de rastreamento para medir o tráfego e as vendas do seu evento
             </p>
           </div>
 
-          {/* Tracking Cards */}
+          {/* Tracking Cards - mobile: stacked, gap-4; desktop: row */}
           <div className="flex flex-col md:flex-row gap-4 w-full">
             {/* Meta - Facebook/Instagram */}
-            <div className="flex-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-8">
-              <div className="flex gap-3 items-center">
-                <div className="size-8 flex items-center justify-center shrink-0">
+            <div className="flex-1 border border-gray-6 rounded-lg p-3 md:p-4 flex flex-col gap-7 md:gap-8">
+              <div className="flex gap-2 md:gap-3 items-center">
+                <div className="size-7 md:size-8 flex items-center justify-center shrink-0">
                   <MetaIcon />
                 </div>
-                <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3]">
+                <p className="text-gray-12 font-semibold font-family-dm-sans leading-[1.3] text-lg">
                   Meta - Facebook/Instagram
                 </p>
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                   ID do Pixel
@@ -154,16 +204,15 @@ export default function AdsPage() {
             </div>
 
             {/* Google Analytics 4 */}
-            <div className="flex-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-8">
-              <div className="flex gap-3 items-center">
-                <div className="size-8 flex items-center justify-center shrink-0">
+            <div className="flex-1 border border-gray-6 rounded-lg p-3 md:p-4 flex flex-col gap-7 md:gap-8">
+              <div className="flex gap-2 md:gap-3 items-center">
+                <div className="size-7 md:size-8 flex items-center justify-center shrink-0">
                   <GoogleIcon />
                 </div>
-                <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3]">
+                <p className="text-gray-12 font-semibold font-family-dm-sans leading-[1.3] text-lg">
                   Google Analytics 4 (GA4)
                 </p>
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                   ID da Métrica (Measurement ID)
@@ -179,16 +228,15 @@ export default function AdsPage() {
             </div>
 
             {/* Google Ads */}
-            <div className="flex-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-8">
-              <div className="flex gap-3 items-center">
-                <div className="size-8 flex items-center justify-center shrink-0">
+            <div className="flex-1 border border-gray-6 rounded-lg p-3 md:p-4 flex flex-col gap-7 md:gap-8">
+              <div className="flex gap-2 md:gap-3 items-center">
+                <div className="size-7 md:size-8 flex items-center justify-center shrink-0">
                   <GoogleIcon />
                 </div>
-                <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3]">
+                <p className="text-gray-12 font-semibold font-family-dm-sans leading-[1.3] text-lg">
                   Google Ads
                 </p>
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                   ID de Conversão (Tag)
@@ -204,13 +252,13 @@ export default function AdsPage() {
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end">
+          {/* Save Button - mobile: full width 44px; desktop: right-aligned */}
+          <div className="w-full flex justify-end md:justify-end">
             <Button
               onClick={handleSave}
               variant="default"
               disabled={saving}
-              className="text-base font-bold font-manrope leading-[1.1] px-8 py-5"
+              className="w-full md:w-auto h-11 md:h-auto text-base font-bold font-manrope leading-[1.1] px-6 py-5 md:px-8"
             >
               {saving ? "Salvando..." : "Salvar"}
             </Button>

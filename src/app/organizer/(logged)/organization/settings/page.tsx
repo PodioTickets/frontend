@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService } from "@/services";
@@ -10,7 +11,7 @@ import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
-import { Plus, MessageSquare } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 import type { Organization } from "@/services/organizer/OrganizerService";
 import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -357,30 +358,34 @@ export default function OrganizationSettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      {/* Header */}
-      <div className="fixed top-0 left-[218px] p-8 right-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center h-[73px] shrink-0">
-        <div className="flex items-center relative shrink-0">
-          <div className="flex flex-col items-start relative shrink-0">
-            <p className="font-inter font-extrabold leading-[1.1] relative shrink-0 text-base text-gray-12 text-[24px]">
-              Configurações da organização
-            </p>
-          </div>
+      {/* Desktop: fixed header com offset da sidebar. Mobile: barra com voltar + título (Figma) */}
+      <div className="md:fixed top-0 left-0 md:left-[218px] right-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center h-[73px] md:h-[73px] shrink-0 px-4 md:px-8">
+        <div className="flex items-center gap-2 min-w-0 w-full md:w-auto">
+          <Link
+            href="/organizer/events"
+            className="md:hidden size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={false} />
+          </Link>
+          <p className="font-manrope font-extrabold leading-[1.1] text-gray-12 text-base md:text-2xl truncate">
+            Configurações da organização
+          </p>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="pt-[73px] pb-8 px-8">
-        <div className="max-w-[1158px] mx-auto flex flex-col gap-8 mt-8">
-          {/* Personal Info Section */}
-          <div className="bg-gray-2 flex flex-col gap-4 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
-            {/* Profile Container */}
+      {/* Content: padding mobile 16px, desktop 32px */}
+      <div className="md:pt-[73px] pb-8 px-4 md:px-8">
+        <div className="max-w-[1158px] mx-auto flex flex-col gap-6 md:gap-8 mt-6 md:mt-8">
+          {/* Personal Info Section - Organização (Figma: card com logo, nome, CNPJ, botões) */}
+          <div className="bg-gray-1 flex flex-col gap-4 md:gap-4 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-4 items-start justify-end relative shrink-0 w-full">
-              {/* First Row: Logo, Organization Info, Owner Info */}
-              <div className="flex items-center justify-between relative shrink-0 w-full">
-                {/* Left: Logo and Organization Info */}
-                <div className="flex gap-4 items-center relative shrink-0">
-                  {/* Logo */}
-                  <div className="relative shrink-0 size-24 rounded-full overflow-hidden bg-gray-6">
+              {/* First Row: Logo + Organization Info; Owner Info só no desktop */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0 relative shrink-0 w-full">
+                {/* Logo and Organization Info */}
+                <div className="flex gap-3 md:gap-4 items-center relative shrink-0 w-full md:w-auto">
+                  {/* Logo - menor no mobile (Figma ~40px) */}
+                  <div className="relative shrink-0 size-10 md:size-24 rounded-full overflow-hidden bg-gray-6">
                     {organizer.logoUrl ? (
                       <Image
                         src={getAvatarUrl(organizer.logoUrl)}
@@ -397,19 +402,19 @@ export default function OrganizationSettingsPage() {
                     )}
                   </div>
 
-                  {/* Organization Details */}
-                  <div className="flex flex-col gap-2 items-start justify-center relative shrink-0">
-                    <p className="font-manrope font-bold leading-[1.1] relative shrink-0 text-2xl text-gray-12">
+                  {/* Organization Details - texto menor no mobile (Figma) */}
+                  <div className="flex flex-col gap-1 md:gap-2 items-start justify-center relative shrink-0 min-w-0">
+                    <p className="font-family-dm-sans font-semibold leading-[1.3] md:font-manrope md:font-bold md:leading-[1.1] text-base md:text-2xl text-gray-12 truncate w-full">
                       {organizer.name || "Nome da organização"}
                     </p>
-                    <p className="font-family-dm-sans leading-[1.3] relative shrink-0 text-xl text-gray-11">
+                    <p className="font-family-dm-sans leading-[1.3] text-sm md:text-xl text-gray-11">
                       CNPJ: {organizer.document ? maskCNPJ(organizer.document.replace(/\D/g, "")) : "00.000.000/0000-00"}
                     </p>
                   </div>
                 </div>
 
-                {/* Right: Owner Info */}
-                <div className="flex flex-col gap-3 items-start relative shrink-0">
+                {/* Owner Info - só no desktop */}
+                <div className="hidden md:flex flex-col gap-3 items-start relative shrink-0">
                   <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-base text-gray-11">
                     Dono da organização
                   </p>
@@ -441,9 +446,12 @@ export default function OrganizationSettingsPage() {
                 </div>
               </div>
 
-              {/* Second Row: Buttons and Support Text */}
-              <div className="flex flex-col gap-4 h-24 items-start justify-center relative shrink-0 w-full">
-                <div className="flex gap-3 items-center relative shrink-0">
+              {/* Second Row: Support text + Buttons (mobile: full width, Figma) */}
+              <div className="flex flex-col gap-3 md:gap-4 w-full">
+                <p className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-11">
+                  Suportamos imagens em PNGs, JPEGs até 2MB
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -456,36 +464,33 @@ export default function OrganizationSettingsPage() {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingImage}
                     size="default"
-                    className="px-8 py-5"
+                    className="w-full sm:w-auto px-6 py-3 h-11 font-manrope font-bold text-base"
                   >
-                    <Plus className="size-6" />
+                    <Plus className="size-5" />
                     {uploadingImage ? "Enviando..." : "Alterar imagem"}
                   </Button>
                   <Button
                     onClick={handleRemoveImage}
                     disabled={uploadingImage || !organizer.logoUrl}
                     variant="outline"
-                    className="px-8 py-5 border-gray-6 text-gray-12"
+                    className="w-full sm:w-auto px-6 py-3 h-11 border-gray-6 text-gray-12 font-manrope font-bold text-base"
                   >
                     Remover imagem
                   </Button>
                 </div>
-                <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-sm text-gray-11">
-                  Suportamos imagens em PNGs, JPEGs até 10MB
-                </p>
               </div>
             </div>
           </div>
 
           {/* Detalhes da organização */}
-          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
                 Detalhes da organização
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
               {/* CNPJ */}
               <div className="flex flex-col gap-2 items-start">
                 <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
@@ -556,14 +561,14 @@ export default function OrganizationSettingsPage() {
           </div>
 
           {/* Endereço */}
-          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
                 Endereço
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
               {/* CEP */}
               <div className="flex flex-col gap-2 items-start">
                 <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
@@ -672,14 +677,14 @@ export default function OrganizationSettingsPage() {
           </div>
 
           {/* Contatos da organização */}
-          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
                 Contatos da organização
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
               {/* E-mail para Atendimento */}
               <div className="flex flex-col gap-2 items-start">
                 <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
@@ -764,14 +769,14 @@ export default function OrganizationSettingsPage() {
           </div>
 
           {/* Chave PIX */}
-          <div className="bg-gray-2 flex flex-col gap-6 items-start pb-8 pt-6 px-4 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-inter font-semibold leading-[1.1] text-sm text-gray-12">
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
                 Chave PIX
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
               {/* Tipo de Chave */}
               <div className="flex flex-col gap-2 items-start">
                 <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
@@ -835,20 +840,34 @@ export default function OrganizationSettingsPage() {
                 </span>
               </div>
             </div>
-            <div className="flex justify-end w-full mt-4">
+            <div className="hidden md:flex justify-end w-full mt-4">
               <Button
                 onClick={handleRequestChange}
                 variant="outline"
-                className="flex items-center gap-2 border-gray-6 text-gray-12"
+                className="flex items-center gap-2 border-gray-6 text-gray-12 font-manrope font-bold"
               >
                 <ChatIcon className="size-5" />
                 Solicitar alteração
-              </Button></div>
+              </Button>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
-            <Button onClick={handleSubmit} disabled={saving} size="lg">
+          {/* Action Buttons - mobile: full width stacked (Figma); desktop: à direita */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 w-full pb-8 md:pb-0">
+            <Button
+              onClick={handleRequestChange}
+              variant="outline"
+              className="md:hidden w-full h-11 flex items-center justify-center gap-2 border-gray-6 text-gray-12 font-manrope font-bold"
+            >
+              <ChatIcon className="size-5" />
+              Solicitar alteração
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={saving}
+              size="lg"
+              className="w-full sm:w-auto h-11 font-manrope font-bold text-base"
+            >
               {saving ? "Salvando..." : "Salvar alteração"}
             </Button>
           </div>

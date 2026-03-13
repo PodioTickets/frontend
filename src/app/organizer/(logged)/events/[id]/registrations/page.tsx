@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import Link from "next/link";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { Dropdown } from "@/components/Dropdown";
 import type { DateRange } from "react-day-picker";
@@ -214,6 +215,8 @@ export default function EventRegistrationsPage() {
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange | undefined>(undefined);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const { tickets } = useTickets(eventId, true);
   const { openViewRegistrationModal } = useViewRegistrationModal();
   const { openExportDataModal } = useExportDataModal();
@@ -254,7 +257,7 @@ export default function EventRegistrationsPage() {
     }, searchTerm ? 500 : 0);
 
     return () => clearTimeout(timeoutId);
-  }, [authChecked, eventId, statusFilter, pagination.page, dateRange, selectedTicketIds, searchTerm]);
+  }, [authChecked, eventId, statusFilter, pagination.page, appliedDateRange, selectedTicketIds, searchTerm]);
 
   const loadData = async () => {
     try {
@@ -274,8 +277,8 @@ export default function EventRegistrationsPage() {
             status: statusFilter !== "all" ? statusFilter as any : undefined,
             search: searchTerm || undefined,
             ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
-            startDate: dateRange?.from?.toISOString(),
-            endDate: dateRange?.to?.toISOString(),
+            startDate: appliedDateRange?.from?.toISOString(),
+            endDate: appliedDateRange?.to?.toISOString(),
           }),
         ]);
 
@@ -412,15 +415,15 @@ export default function EventRegistrationsPage() {
     const finalStatus = getFinalStatus(reg);
     const matchesStatus = statusFilter === "all" || finalStatus === statusFilter;
 
-    // Date range filter - only filter when both dates are selected and different
-    const matchesDateRange = !dateRange?.from || !dateRange?.to || dateRange.from.getTime() === dateRange.to.getTime()
+    // Date range filter - only filter when both dates are selected and different (usa o range aplicado)
+    const matchesDateRange = !appliedDateRange?.from || !appliedDateRange?.to || appliedDateRange.from.getTime() === appliedDateRange.to.getTime()
       ? true
       : (() => {
         if (!reg.purchaseDate) return false;
         const purchaseDate = new Date(reg.purchaseDate);
-        const fromDate = new Date(dateRange.from!);
+        const fromDate = new Date(appliedDateRange.from!);
         fromDate.setHours(0, 0, 0, 0);
-        const toDate = new Date(dateRange.to!);
+        const toDate = new Date(appliedDateRange.to!);
         toDate.setHours(23, 59, 59, 999);
         purchaseDate.setHours(0, 0, 0, 0);
         return purchaseDate >= fromDate && purchaseDate <= toDate;
@@ -445,7 +448,8 @@ export default function EventRegistrationsPage() {
     return matchesSearch && matchesStatus && matchesDateRange && matchesTickets;
   });
 
-  if (loading) {
+  // Full-page loading só na carga inicial (ainda sem dados). Refetch (filtros, data etc.) mostra loading só na lista.
+  if (loading && registrations.length === 0) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
         <Loading />
@@ -453,20 +457,114 @@ export default function EventRegistrationsPage() {
     );
   }
 
+  const eventTabs = [
+      { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+      { label: "Editar", href: `/organizer/events/${eventId}/edit` },
+      { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
+      { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+      { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
+      { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+    ];
+
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader eventName={event?.name} />
+      <div className="hidden md:block">
+        <EventPageHeader eventName={event?.name} />
+      </div>
+
+      {/* Mobile header: back + event name + horizontal tabs (Figma) */}
+      <div className="md:hidden bg-gray-1 border-b border-gray-6">
+        <div className="flex items-center gap-1 h-[52px] px-4">
+          <Link
+            href={`/organizer/events/${eventId}/dashboard`}
+            className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={false} />
+          </Link>
+          <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+            {event?.name || "Evento"}
+          </p>
+        </div>
+        <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="flex items-center min-w-max">
+            {eventTabs.map((tab) => {
+              const isRegistrations = tab.href.includes("/registrations");
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isRegistrations
+                    ? "border-primary-11 text-primary-11 font-manrope font-bold"
+                    : "border-transparent text-gray-11 font-family-dm-sans font-normal"
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
-        {/* Page Title */}
-        <div className="mb-6">
+        {/* Page Title - Desktop only */}
+        <div className="mb-6 hidden md:block">
           <h1 className="text-3xl font-bold text-gray-12 mb-2">Inscrições</h1>
           <p className="text-gray-11">
             Gerencie todos os projetos e pagamentos deste evento
           </p>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Mobile: 3 summary cards */}
+        <div className="md:hidden flex flex-col gap-5 mb-5 mt-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
+                  <CartIcon className="size-5 text-blue-12" />
+                </div>
+                <p className="font-family-dm-sans font-normal text-base text-gray-11">Total de inscrições</p>
+              </div>
+              <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.total.toLocaleString()}</p>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="size-3 text-primary-11" />
+                <span className="font-family-dm-sans font-normal text-xs text-primary-11">12% vs. sem. passada</span>
+              </div>
+            </div>
+            <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary-4 flex items-center justify-center shrink-0">
+                  <CheckIcon className="size-5 text-gray-12" />
+                </div>
+                <p className="font-family-dm-sans font-normal text-base text-gray-11">Inscrições confirmadas</p>
+              </div>
+              <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.paid.toLocaleString()}</p>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="size-3 text-primary-11" />
+                <span className="font-family-dm-sans font-normal text-xs text-primary-11">12% vs. sem. passada</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
+                <DolarIcon className="size-5 text-gray-12" />
+              </div>
+              <p className="font-family-dm-sans font-normal text-sm text-gray-11">Total arrecadado</p>
+            </div>
+            <p className="font-manrope font-extrabold text-lg text-gray-12">
+              R$ {(stats.totalCollected / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="size-3 text-primary-11" />
+              <span className="font-family-dm-sans font-normal text-xs text-primary-11">12% vs. sem. passada</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Cards - Desktop */}
+        <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Total de inscrições */}
           <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
             <div className="mb-2">
@@ -539,8 +637,106 @@ export default function EventRegistrationsPage() {
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center p-4 bg-gray-1 rounded-lg border border-gray-6">
+        {/* Mobile: Search + Filtros row */}
+        <div className="md:hidden flex gap-3 items-center mb-4">
+          <div className="flex-1 min-w-0 border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
+            <Search className="size-5 text-gray-11 shrink-0" />
+            <input
+              type="text"
+              placeholder="Nome, CPF, IDs.."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen((v) => !v)}
+            className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 font-family-dm-sans font-normal text-sm"
+          >
+            Filtros
+            <ArrowButton isOpen={mobileFiltersOpen} />
+          </button>
+        </div>
+
+        {/* Mobile: Filters panel (when open) */}
+        {mobileFiltersOpen && (
+          <div className="md:hidden flex flex-col gap-2 mb-4 p-3 bg-gray-1 rounded-lg border border-gray-6">
+            <Dropdown
+              dataAttribute="status-filter-mobile"
+              width="w-full"
+              maxHeight="max-h-[300px]"
+              align="start"
+              options={[
+                { id: "all", label: "Todos" },
+                { id: "COMPLETED", label: "Concluída", icon: CheckCircle },
+                { id: "CANCELLED", label: "Cancelado", icon: XCircle },
+                { id: "CHARGEBACK", label: "ChargeBack", icon: XCircle },
+                { id: "REFUNDED", label: "Estornado", icon: XCircle },
+              ]}
+              selectedIds={statusFilter !== "all" ? [statusFilter] : []}
+              onSelect={(option) => {
+                setStatusFilter(option.id || "all");
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+              trigger={() => {
+                const statusLabels: Record<string, string> = {
+                  all: "Todos",
+                  COMPLETED: "Concluída",
+                  CANCELLED: "Cancelado",
+                  CHARGEBACK: "ChargeBack",
+                  REFUNDED: "Estornado",
+                };
+                return (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 text-sm w-full">
+                    <span>Status: {statusLabels[statusFilter] ?? "Todos"}</span>
+                    <ArrowButton isOpen={false} />
+                  </div>
+                );
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setIsTicketModalOpen(true)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 text-sm"
+            >
+              <span>{selectedTicketIds.length === 0 ? "Ingressos: Todos" : `${selectedTicketIds.length} selecionado(s)`}</span>
+              <ArrowButton isOpen={false} />
+            </button>
+            <Dropdown
+              width="w-max"
+              align="start"
+              trigger={() => {
+                const fmt = !dateRange?.from ? "Data: Recentes" : dateRange.from && dateRange.to && dateRange.from.getTime() !== dateRange.to.getTime()
+                  ? `Data: ${dateRange.from.getDate()}/${dateRange.from.getMonth() + 1} - ${dateRange.to.getDate()}/${dateRange.to.getMonth() + 1}`
+                  : `Data: ${dateRange.from.getDate()}/${dateRange.from.getMonth() + 1}`;
+                return (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 text-sm">
+                    <span>{fmt}</span>
+                    <ArrowButton isOpen={false} />
+                  </div>
+                );
+              }}
+            >
+              <DateRangePicker
+                allowPastDates
+                onSelect={(range) => {
+                  setDateRange(range);
+                  const hasTwo = range?.from && range?.to && range.from.getTime() !== range.to.getTime();
+                  const isCleared = !range || (!range.from && !range.to);
+                  if (hasTwo || isCleared) {
+                    setAppliedDateRange(isCleared ? undefined : range ?? undefined);
+                    setPagination((prev) => ({ ...prev, page: 1 }));
+                  }
+                }}
+                value={dateRange}
+              />
+            </Dropdown>
+          </div>
+        )}
+
+        {/* Search and Filters - Desktop */}
+        <div className="hidden md:flex mb-6 flex-col sm:flex-row gap-4 items-center p-4 bg-gray-1 rounded-lg border border-gray-6">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
             <Input
@@ -629,7 +825,8 @@ export default function EventRegistrationsPage() {
                   }).format(date);
                 };
 
-                if (dateRange.from && dateRange.to) {
+                // Só mostra intervalo quando são duas datas diferentes (range completo)
+                if (dateRange.from && dateRange.to && dateRange.from.getTime() !== dateRange.to.getTime()) {
                   return `Data: ${formatDate(dateRange.from)} - ${formatDate(dateRange.to)}`;
                 }
 
@@ -646,9 +843,19 @@ export default function EventRegistrationsPage() {
             }}
           >
             <DateRangePicker
+              allowPastDates
               onSelect={(range) => {
                 setDateRange(range);
-                setPagination((prev) => ({ ...prev, page: 1 }));
+                // Só aplica o filtro e busca quando há duas datas diferentes no range (segunda data selecionada) ou foi limpo
+                const hasTwoDifferentDates =
+                  range?.from != null &&
+                  range?.to != null &&
+                  range.from.getTime() !== range.to.getTime();
+                const isCleared = range == null || (range.from == null && range.to == null);
+                if (hasTwoDifferentDates || isCleared) {
+                  setAppliedDateRange(isCleared ? undefined : range ?? undefined);
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }
               }}
               value={dateRange}
             />
@@ -656,157 +863,286 @@ export default function EventRegistrationsPage() {
         </div>
 
         {/* Registrations List */}
-        {filteredRegistrations.length === 0 ? (
-          <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center">
-            <Users className="size-12 text-gray-11 mx-auto mb-4" />
-            <p className="text-gray-11 mb-4">
-              {searchTerm || statusFilter !== "all"
-                ? "Nenhuma inscrição encontrada"
-                : "Nenhuma inscrição ainda"}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="bg-gray-2 border border-gray-6 rounded-lg overflow-hidden w-full">
-              {/* Header */}
-              <div className="bg-gray-4 border-b border-gray-6 flex h-[44px] items-center">
-                <div className="flex h-full items-center p-4 w-[136px]">
-                  <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                    ID do pedido
-                  </p>
-                </div>
-                <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                  <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                    Cliente
-                  </p>
-                </div>
-                <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                  <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                    Ingresso
-                  </p>
-                </div>
-                <div className="flex h-full items-center p-4 w-[140px]">
-                  <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                    Data compra
-                  </p>
-                </div>
-                <div className="flex h-full items-center justify-center p-4 w-[120px]">
-                  <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                    Valor
-                  </p>
-                </div>
-                <div className="flex h-full items-center justify-center p-4 w-[120px]">
-                  <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                    Status
-                  </p>
-                </div>
-                <div className="flex h-full items-center justify-center p-4 w-[112px]">
-                  <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                    Ações
-                  </p>
-                </div>
-              </div>
-
-              {/* Rows */}
-              <div className="flex flex-col items-start w-full">
-                {filteredRegistrations.map((registration) => (
-                  <RegistrationRow
-                    key={registration.id}
-                    registration={registration}
-                    getStatusBadge={getStatusBadge}
-                    onViewRegistration={() => {
-                      openViewRegistrationModal({
-                        registrationId: registration.id,
-                      });
-                    }}
-                    onViewPaymentDetails={() => {
-                      openPaymentDetailsModal({
-                        registrationId: registration.id,
-                      });
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
-                  <button
-                    onClick={() =>
-                      setPagination((prev) => ({
-                        ...prev,
-                        page: prev.page - 1,
-                      }))
-                    }
-                    disabled={pagination.page === 1}
-                    className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => {
-                    const pageNum = i + 1;
-                    const isActive = pageNum === pagination.page;
+        <div className="relative">
+          {loading && registrations.length > 0 && (
+            <div className="absolute inset-0 bg-gray-2/80 z-10 flex items-center justify-center rounded-lg min-h-[200px]">
+              <Loading />
+            </div>
+          )}
+          {filteredRegistrations.length === 0 && !loading ? (
+            <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center">
+              <Users className="size-12 text-gray-11 mx-auto mb-4" />
+              <p className="text-gray-11 mb-4">
+                {searchTerm || statusFilter !== "all"
+                  ? "Nenhuma inscrição encontrada"
+                  : "Nenhuma inscrição ainda"}
+              </p>
+            </div>
+          ) : filteredRegistrations.length === 0 && loading ? (
+            <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center min-h-[200px] flex items-center justify-center">
+              <Loading />
+            </div>
+          ) : (
+            <>
+              {/* Mobile: Lista de inscrições + cards */}
+              <div className="md:hidden flex flex-col gap-4 pb-6">
+                <h2 className="font-manrope font-bold text-xl text-gray-12">Lista de inscrições</h2>
+                <div className="flex flex-col gap-3">
+                  {filteredRegistrations.map((registration) => {
+                    const finalStatus = getFinalStatus(registration);
+                    const paymentStatus = registration.order?.payment?.status;
+                    const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
+                    const isCancelled = finalStatus === "CANCELLED" || paymentStatus === "FAILED";
+                    const isRefunded = finalStatus === "REFUNDED";
+                    const isChargeback = finalStatus === "CHARGEBACK";
+                    const statusLabel = isPaid ? "Pago" : isCancelled ? "Cancelado" : isRefunded ? "Estornado" : isChargeback ? "ChargeBack" : "Pendente";
+                    const statusClass = isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
+                    const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
+                    const createdDate = registration.createdAt ? new Date(registration.createdAt) : null;
+                    const timeStr = createdDate ? createdDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + "H" : "—";
+                    const dateStr = createdDate ? createdDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+                    const price = registration.ticket?.price != null ? (registration.ticket.price / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
                     return (
-                      <button
-                        key={pageNum}
-                        onClick={() =>
-                          setPagination((prev) => ({
-                            ...prev,
-                            page: pageNum,
-                          }))
-                        }
-                        className={`size-8 flex items-center justify-center border rounded-lg cursor-pointer ${isActive
-                          ? "bg-primary-11 border-primary-11 text-gray-1"
-                          : "border-gray-6 hover:bg-gray-3"
-                          }`}
-                      >
-                        {pageNum}
-                      </button>
+                      <div key={registration.id} className="bg-gray-1 border border-gray-6 rounded-lg overflow-hidden">
+                        <div className="flex flex-col gap-5 px-3 py-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-2 items-center min-w-0 flex-1">
+                              {registration.user?.avatarUrl ? (
+                                <Image src={getAvatarUrl(registration.user.avatarUrl)} alt={fullName} width={36} height={36} className="size-9 rounded-full object-cover shrink-0" />
+                              ) : (
+                                <div className="size-9 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
+                                  <span className="text-primary-11 font-semibold text-sm">{(fullName || "U").charAt(0).toUpperCase()}</span>
+                                </div>
+                              )}
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">{fullName || "—"}</p>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-family-dm-sans font-normal text-sm text-gray-11">{timeStr}</span>
+                                  <span className="size-1 rounded-full bg-gray-11 shrink-0" />
+                                  <span className="font-family-dm-sans font-normal text-sm text-gray-11">{dateStr}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <span className={`shrink-0 px-3 py-2 rounded text-xs font-family-dm-sans font-normal ${statusClass}`}>{statusLabel}</span>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <p className="font-family-dm-sans font-normal text-xs text-gray-11">Nome da categoria</p>
+                            <p className="font-manrope font-semibold text-base text-gray-12">{registration.ticket?.name || "—"}</p>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="font-manrope font-extrabold text-xl text-gray-12">R$ {price}</p>
+                            <p className="font-family-dm-sans font-medium text-sm text-gray-12">
+                              ID inscrição: {registration.id?.length > 10 ? `${registration.id.slice(0, 4)}-${registration.id.slice(-4)}` : registration.id}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="h-px bg-gray-6" />
+                        <div className="flex gap-2 p-3">
+                          <button
+                            type="button"
+                            onClick={() => openViewRegistrationModal({ registrationId: registration.id })}
+                            className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                          >
+                            Ver ingresso
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openPaymentDetailsModal({ registrationId: registration.id, eventId, eventName: event?.name })}
+                            className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                          >
+                            Ver pedido
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
-                  <button
-                    onClick={() =>
-                      setPagination((prev) => ({
-                        ...prev,
-                        page: prev.page + 1,
-                      }))
-                    }
-                    disabled={pagination.page >= pagination.totalPages}
-                    className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
                 </div>
-              )}
-            </div>
+                {pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
+                      disabled={pagination.page === 1}
+                      className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+                    {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => {
+                      const pageNum = i + 1;
+                      const isActive = pageNum === pagination.page;
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setPagination((p) => ({ ...p, page: pageNum }))}
+                          className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive ? "bg-primary-11 border-primary-11 text-primary-2" : "border border-gray-6 bg-gray-4 text-gray-12"}`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setPagination((p) => ({ ...p, page: Math.min(pagination.totalPages, p.page + 1) }))}
+                      disabled={pagination.page >= pagination.totalPages}
+                      className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50"
+                    >
+                      <ChevronRight className="size-4" />
+                    </button>
+                  </div>
+                )}
+                <Button
+                  className="w-full h-12 rounded-lg font-manrope font-bold text-lg bg-primary-11 text-primary-2"
+                  onClick={() => openExportDataModal({ registrations: filteredRegistrations })}
+                >
+                  Exportar CSV
+                </Button>
+              </div>
 
-            {/* Export Button */}
-            <div className="mt-6 flex justify-end">
-              <Button
-                onClick={() => {
-                  openExportDataModal({
-                    registrations: filteredRegistrations,
-                  });
-                }}
-              >
-                Exportar CSV
-              </Button>
-            </div>
-          </>
-        )}
+              {/* Desktop: Table */}
+              <div className="hidden md:block bg-gray-2 border border-gray-6 rounded-lg overflow-hidden w-full">
+                {/* Header */}
+                <div className="bg-gray-4 border-b border-gray-6 flex h-[44px] items-center">
+                  <div className="flex h-full items-center p-4 w-[136px]">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                      ID do pedido
+                    </p>
+                  </div>
+                  <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                      Cliente
+                    </p>
+                  </div>
+                  <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                      Ingresso
+                    </p>
+                  </div>
+                  <div className="flex h-full items-center p-4 w-[140px]">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                      Data compra
+                    </p>
+                  </div>
+                  <div className="flex h-full items-center justify-center p-4 w-[120px]">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                      Valor
+                    </p>
+                  </div>
+                  <div className="flex h-full items-center justify-center p-4 w-[120px]">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                      Status
+                    </p>
+                  </div>
+                  <div className="flex h-full items-center justify-center p-4 w-[112px]">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
+                      Ações
+                    </p>
+                  </div>
+                </div>
+
+                {/* Rows */}
+                <div className="flex flex-col items-start w-full">
+                  {filteredRegistrations.map((registration) => (
+                    <RegistrationRow
+                      key={registration.id}
+                      registration={registration}
+                      getStatusBadge={getStatusBadge}
+                      onViewRegistration={() => {
+                        openViewRegistrationModal({
+                          registrationId: registration.id,
+                        });
+                      }}
+                      onViewPaymentDetails={() => {
+                        openPaymentDetailsModal({
+                          registrationId: registration.id,
+                          eventId,
+                          eventName: event?.name,
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
+                    <button
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page - 1,
+                        }))
+                      }
+                      disabled={pagination.page === 1}
+                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+                    {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => {
+                      const pageNum = i + 1;
+                      const isActive = pageNum === pagination.page;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() =>
+                            setPagination((prev) => ({
+                              ...prev,
+                              page: pageNum,
+                            }))
+                          }
+                          className={`size-8 flex items-center justify-center border rounded-lg cursor-pointer ${isActive
+                            ? "bg-primary-11 border-primary-11 text-gray-1"
+                            : "border-gray-6 hover:bg-gray-3"
+                            }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page + 1,
+                        }))
+                      }
+                      disabled={pagination.page >= pagination.totalPages}
+                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="size-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Export Button - Desktop only (mobile has full-width button above) */}
+              <div className="mt-6 justify-end hidden md:flex">
+                <Button
+                  onClick={() => {
+                    openExportDataModal({
+                      registrations: filteredRegistrations,
+                    });
+                  }}
+                >
+                  Exportar CSV
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Ticket Selection Modal */}
+        <SelectTicketsFilterModal
+          isOpen={isTicketModalOpen}
+          onClose={() => setIsTicketModalOpen(false)}
+          onConfirm={(ticketIds) => {
+            setSelectedTicketIds(ticketIds);
+            setPagination((prev) => ({ ...prev, page: 1 }));
+          }}
+          eventId={eventId}
+          selectedTicketIds={selectedTicketIds}
+        />
       </div>
-
-      {/* Ticket Selection Modal */}
-      <SelectTicketsFilterModal
-        isOpen={isTicketModalOpen}
-        onClose={() => setIsTicketModalOpen(false)}
-        onConfirm={(ticketIds) => {
-          setSelectedTicketIds(ticketIds);
-          setPagination((prev) => ({ ...prev, page: 1 }));
-        }}
-        eventId={eventId}
-        selectedTicketIds={selectedTicketIds}
-      />
     </div>
   );
 }

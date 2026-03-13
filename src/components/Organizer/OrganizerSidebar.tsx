@@ -66,7 +66,7 @@ export function OrganizerSidebar() {
   };
 
   return (
-    <aside className="bg-linear-to-b from-[#191919] to-[#222222] w-[218px] h-screen flex flex-col items-start justify-between px-4 py-8 shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)] fixed left-0 top-0 z-50">
+    <aside className="hidden md:flex bg-linear-to-b from-[#191919] to-[#222222] w-[218px] h-screen flex-col items-start justify-between px-4 py-8 shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)] fixed left-0 top-0 z-40">
       {/* Top Section */}
       <div className="flex flex-col gap-10 items-start w-full">
         {/* Logo */}

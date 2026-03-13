@@ -133,6 +133,11 @@ export function InformationStep({
     Record<number, boolean>
   >({});
 
+  // Erros de validação por participante e campo (ex: { 0: { name: "Informe nome e sobrenome", email: "Campo obrigatório" } })
+  const [fieldErrors, setFieldErrors] = useState<
+    Record<number, Record<string, string>>
+  >({});
+
   // Separar tickets com categoria dos avulsos
   const { categorizedTickets, uncategorizedTickets } = useMemo(() => {
     const categorized: Array<{ id: string; name: string; tickets: Ticket[] }> = [];
@@ -523,15 +528,27 @@ export function InformationStep({
     }));
   };
 
+  const clearParticipantFieldError = (participantIndex: number, field: string) => {
+    setFieldErrors((prev) => {
+      const participantErrors = prev[participantIndex];
+      if (!participantErrors || !participantErrors[field]) return prev;
+      const next = { ...participantErrors };
+      delete next[field];
+      return { ...prev, [participantIndex]: Object.keys(next).length ? next : {} };
+    });
+  };
+
   const handleInputChange = (
     index: number,
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    clearParticipantFieldError(index, name);
     updateParticipant(index, { [name]: value });
   };
 
   const handleCPFChange = (index: number, value: string) => {
+    clearParticipantFieldError(index, "cpf");
     const masked = maskCPF(value);
     updateParticipant(index, { cpf: masked });
   };
@@ -541,6 +558,7 @@ export function InformationStep({
     field: "phone" | "emergencyPhone",
     value: string
   ) => {
+    if (field === "phone") clearParticipantFieldError(index, "phone");
     const masked = maskPhone(value);
     updateParticipant(index, { [field]: masked });
   };
@@ -588,8 +606,13 @@ export function InformationStep({
     const phone = participant.phone?.trim();
     const gender = participant.gender?.trim();
 
+    // Nome deve ter pelo menos 2 palavras (nome e sobrenome)
+    const nameParts = name ? name.split(/\s+/).filter(Boolean) : [];
+    const hasFullName = nameParts.length >= 2;
+
     const basicFieldsComplete = !!(
       name &&
+      hasFullName &&
       cpf &&
       email &&
       birthDate &&
@@ -612,6 +635,70 @@ export function InformationStep({
     return allRequiredQuestionsAnswered;
   };
 
+  // Retorna erros de validação por campo para um participante (para exibir no formulário)
+  const getParticipantValidationErrors = (index: number): Record<string, string> => {
+    const participant = participants[index];
+    const errors: Record<string, string> = {};
+    if (!participant) return errors;
+
+    const name = participant.name?.trim();
+    const cpf = participant.cpf?.trim();
+    const email = participant.email?.trim();
+    const birthDate = participant.birthDate?.trim();
+    const phone = participant.phone?.trim();
+    const gender = participant.gender?.trim();
+
+    if (!name) {
+      errors.name = "Nome completo é obrigatório";
+    } else {
+      const nameParts = name.split(/\s+/).filter(Boolean);
+      if (nameParts.length < 2) {
+        errors.name = "Informe nome e sobrenome";
+      }
+    }
+
+    if (!email) {
+      errors.email = "Email é obrigatório";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Informe um email válido";
+    }
+
+    const cpfNumbers = (cpf || "").replace(/\D/g, "");
+    if (!cpf) {
+      errors.cpf = "CPF é obrigatório";
+    } else if (cpfNumbers.length !== 11) {
+      errors.cpf = "CPF deve ter 11 dígitos";
+    }
+
+    if (!birthDate) {
+      errors.birthDate = "Data de nascimento é obrigatória";
+    }
+
+    if (!phone) {
+      errors.phone = "Telefone é obrigatório";
+    } else if ((phone || "").replace(/\D/g, "").length < 10) {
+      errors.phone = "Informe um telefone válido";
+    }
+
+    if (!gender) {
+      errors.gender = "Selecione o sexo";
+    }
+
+    // Perguntas obrigatórias
+    const requiredQuestions = sortedQuestions.filter((q) => q.isRequired);
+    requiredQuestions.forEach((question) => {
+      const answer = getQuestionAnswer(index, question.id);
+      const isEmpty = Array.isArray(answer)
+        ? answer.length === 0
+        : typeof answer !== "string" || answer.trim() === "";
+      if (isEmpty) {
+        errors[`question_${question.id}`] = "Campo obrigatório";
+      }
+    });
+
+    return errors;
+  };
+
   const handleDeleteParticipant = (
     participantIndex: number,
     ticketId: string
@@ -623,8 +710,13 @@ export function InformationStep({
         // Remover o participante
         removeParticipant(participantIndex);
 
-        // Remover do estado de salvos
+        // Remover do estado de salvos e erros
         setSavedParticipants((prev) => {
+          const updated = { ...prev };
+          delete updated[participantIndex];
+          return updated;
+        });
+        setFieldErrors((prev) => {
           const updated = { ...prev };
           delete updated[participantIndex];
           return updated;
@@ -764,7 +856,8 @@ export function InformationStep({
     const isRequired = question.isRequired;
 
     switch (question.type) {
-      case "text":
+      case "text": {
+        const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
           <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
@@ -774,20 +867,20 @@ export function InformationStep({
             <input
               type="text"
               value={typeof answer === "string" ? answer : ""}
-              onChange={(e) =>
-                updateQuestionAnswer(
-                  participantIndex,
-                  question.id,
-                  e.target.value
-                )
-              }
-              className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
+              onChange={(e) => {
+                clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                updateQuestionAnswer(participantIndex, question.id, e.target.value);
+              }}
+              className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
               placeholder="Digite sua resposta"
             />
+            {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
         );
+      }
 
-      case "select":
+      case "select": {
+        const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
           <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
@@ -799,7 +892,7 @@ export function InformationStep({
                 width="w-full"
                 className="z-60"
                 trigger={(open: boolean) => (
-                  <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
+                  <div className={`rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer border ${questionError ? "border-red-6" : "border-gray-7"}`}>
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <span className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans truncate">
                         {typeof answer === "string" && answer
@@ -816,19 +909,19 @@ export function InformationStep({
                     label: opt,
                   })) || []
                 }
-                onSelect={(option) =>
-                  updateQuestionAnswer(
-                    participantIndex,
-                    question.id,
-                    option.label
-                  )
-                }
+                onSelect={(option) => {
+                  clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                  updateQuestionAnswer(participantIndex, question.id, option.label);
+                }}
               />
             </div>
+            {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
         );
+      }
 
-      case "multiple_choice":
+      case "multiple_choice": {
+        const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
           <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
@@ -859,13 +952,10 @@ export function InformationStep({
                       name={`question-${question.id}-${participantIndex}`}
                       value={option}
                       checked={isSelected}
-                      onChange={() =>
-                        updateQuestionAnswer(
-                          participantIndex,
-                          question.id,
-                          option
-                        )
-                      }
+                      onChange={() => {
+                        clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                        updateQuestionAnswer(participantIndex, question.id, option);
+                      }}
                       className="sr-only"
                     />
                     <span className="text-sm text-gray-12 font-family-dm-sans">
@@ -875,10 +965,13 @@ export function InformationStep({
                 );
               })}
             </div>
+            {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
         );
+      }
 
-      case "true_false":
+      case "true_false": {
+        const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         const trueFalseOptions = ["Verdadeiro", "Falso"];
         return (
           <div className="flex flex-col gap-2">
@@ -896,9 +989,10 @@ export function InformationStep({
                   >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={(checked) =>
-                        updateQuestionAnswer(participantIndex, question.id, checked ? option : "")
-                      }
+                      onCheckedChange={(checked) => {
+                        clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                        updateQuestionAnswer(participantIndex, question.id, checked ? option : "");
+                      }}
                     />
                     <span className="text-sm text-gray-12 font-family-dm-sans">
                       {option}
@@ -907,10 +1001,13 @@ export function InformationStep({
                 );
               })}
             </div>
+            {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
         );
+      }
 
-      case "number":
+      case "number": {
+        const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
         return (
           <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
@@ -920,18 +1017,17 @@ export function InformationStep({
             <input
               type="number"
               value={typeof answer === "string" ? answer : ""}
-              onChange={(e) =>
-                updateQuestionAnswer(
-                  participantIndex,
-                  question.id,
-                  e.target.value
-                )
-              }
-              className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
+              onChange={(e) => {
+                clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                updateQuestionAnswer(participantIndex, question.id, e.target.value);
+              }}
+              className={`w-full h-12 px-3 rounded-lg border bg-transparent text-gray-12 focus:outline-none focus:bg-gray-3 transition-colors font-family-dm-sans text-base placeholder:text-gray-11 ${questionError ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
               placeholder="Digite um número"
             />
+            {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>
         );
+      }
 
       default:
         return null;
@@ -1220,13 +1316,14 @@ export function InformationStep({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mg:gap-4 mt-4">
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              Nome
+                              Nome completo
                             </label>
                             <UserAutocomplete
                               value={participant.name}
-                              onChange={(value) =>
-                                updateParticipant(participantIndex, { name: value })
-                              }
+                              onChange={(value) => {
+                                clearParticipantFieldError(participantIndex, "name");
+                                updateParticipant(participantIndex, { name: value });
+                              }}
                               onSelectUser={(user: LinkedUser) => {
                                 // Preencher automaticamente os campos quando um usuário é selecionado
                                 // Formatar CPF se necessário
@@ -1278,9 +1375,12 @@ export function InformationStep({
                                   [participantIndex]: user.id,
                                 }));
                               }}
-                              placeholder="Digite o nome ou selecione um usuário"
-                              className="w-full"
+                              placeholder="Digite nome e sobrenome ou selecione um usuário"
+                              className={`w-full ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
                             />
+                            {fieldErrors[participantIndex]?.name && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].name}</p>
+                            )}
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
@@ -1293,9 +1393,12 @@ export function InformationStep({
                               onChange={(e) =>
                                 handleInputChange(participantIndex, e)
                               }
-                              className="w-full px-4 py-3 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                               placeholder="Digite seu email"
                             />
+                            {fieldErrors[participantIndex]?.email && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].email}</p>
+                            )}
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
@@ -1312,9 +1415,12 @@ export function InformationStep({
                                 )
                               }
                               maxLength={14}
-                              className="w-full px-4 py-3 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors ${fieldErrors[participantIndex]?.cpf ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                               placeholder="000.000.000-00"
                             />
+                            {fieldErrors[participantIndex]?.cpf && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].cpf}</p>
+                            )}
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
@@ -1323,13 +1429,15 @@ export function InformationStep({
                             <DateOfBirthPicker
                               value={participant.birthDate || undefined}
                               icon={false}
-                              onChange={(value) =>
-                                updateParticipant(participantIndex, {
-                                  birthDate: value,
-                                })
-                              }
+                              onChange={(value) => {
+                                clearParticipantFieldError(participantIndex, "birthDate");
+                                updateParticipant(participantIndex, { birthDate: value });
+                              }}
                               placeholder="00/00/0000"
                             />
+                            {fieldErrors[participantIndex]?.birthDate && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].birthDate}</p>
+                            )}
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
@@ -1347,9 +1455,12 @@ export function InformationStep({
                                 )
                               }
                               maxLength={15}
-                              className="w-full px-4 py-3 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors"
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                               placeholder="(00) 99999-9999"
                             />
+                            {fieldErrors[participantIndex]?.phone && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].phone}</p>
+                            )}
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
@@ -1360,7 +1471,7 @@ export function InformationStep({
                                 width="w-full"
                                 className="z-60"
                                 trigger={(open: boolean) => (
-                                  <div className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
+                                  <div className={`rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer border ${fieldErrors[participantIndex]?.gender ? "border-red-6" : "border-gray-6"}`}>
                                     <div className="flex gap-1 items-center flex-1 min-w-0">
                                       <span className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans truncate">
                                         {getGenderDisplayValue(
@@ -1372,13 +1483,17 @@ export function InformationStep({
                                   </div>
                                 )}
                                 options={sexoOptions}
-                                onSelect={(option) =>
+                                onSelect={(option) => {
+                                  clearParticipantFieldError(participantIndex, "gender");
                                   updateParticipant(participantIndex, {
                                     gender: option.label,
-                                  })
-                                }
+                                  });
+                                }}
                               />
                             </div>
+                            {fieldErrors[participantIndex]?.gender && (
+                              <p className="text-sm text-red-11">{fieldErrors[participantIndex].gender}</p>
+                            )}
                           </div>
                         </div>
 
@@ -1512,17 +1627,23 @@ export function InformationStep({
                           </h1>
                           <Button
                             onClick={() => {
-                              // Marcar participante como salvo
-                              setSavedParticipants((prev) => ({
-                                ...prev,
-                                [participantIndex]: true,
-                              }));
-                              // Fechar o participante
+                              const errors = getParticipantValidationErrors(participantIndex);
+                              if (Object.keys(errors).length > 0) {
+                                setFieldErrors((prev) => ({ ...prev, [participantIndex]: errors }));
+                                setExpandedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
+                                toast.error("Preencha todos os campos obrigatórios corretamente.");
+                                return;
+                              }
+                              setFieldErrors((prev) => {
+                                const next = { ...prev };
+                                delete next[participantIndex];
+                                return next;
+                              });
+                              setSavedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
                               toggleParticipant(participantIndex);
                             }}
                             variant="default"
                             className="font-bold"
-                            disabled={!isParticipantComplete(participantIndex)}
                           >
                             Salvar e próximo
                           </Button>
@@ -1538,13 +1659,31 @@ export function InformationStep({
           {/* Botão Confirmar dados */}
           <div className="hidden md:flex items-center justify-center w-full mt-6">
             <Button
-              onClick={onNext}
-              disabled={
-                participantsWithRaces.length === 0 ||
-                !participantsWithRaces.every(({ participantIndex }) =>
-                  isParticipantComplete(participantIndex) && savedParticipants[participantIndex]
-                )
-              }
+              onClick={() => {
+                if (participantsWithRaces.length === 0) return;
+                const allErrors: Record<number, Record<string, string>> = {};
+                let firstInvalidIndex: number | null = null;
+                participantsWithRaces.forEach(({ participantIndex }) => {
+                  const errors = getParticipantValidationErrors(participantIndex);
+                  if (Object.keys(errors).length > 0) {
+                    allErrors[participantIndex] = errors;
+                    if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
+                  }
+                });
+                if (Object.keys(allErrors).length > 0) {
+                  setFieldErrors(allErrors);
+                  if (firstInvalidIndex !== null) {
+                    setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                  }
+                  toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
+                  return;
+                }
+                if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
+                  toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
+                  return;
+                }
+                onNext();
+              }}
               variant="default"
               className="w-1/4 font-bold"
             >
@@ -1585,13 +1724,31 @@ export function InformationStep({
             </p>
           </div>
           <Button
-            onClick={onNext}
-            disabled={
-              participantsWithRaces.length === 0 ||
-              !participantsWithRaces.every(({ participantIndex }) =>
-                isParticipantComplete(participantIndex) && savedParticipants[participantIndex]
-              )
-            }
+            onClick={() => {
+              if (participantsWithRaces.length === 0) return;
+              const allErrors: Record<number, Record<string, string>> = {};
+              let firstInvalidIndex: number | null = null;
+              participantsWithRaces.forEach(({ participantIndex }) => {
+                const errors = getParticipantValidationErrors(participantIndex);
+                if (Object.keys(errors).length > 0) {
+                  allErrors[participantIndex] = errors;
+                  if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
+                }
+              });
+              if (Object.keys(allErrors).length > 0) {
+                setFieldErrors(allErrors);
+                if (firstInvalidIndex !== null) {
+                  setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                }
+                toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
+                return;
+              }
+              if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
+                toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
+                return;
+              }
+              onNext();
+            }}
           >
             Confirmar dados
           </Button>

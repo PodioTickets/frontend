@@ -59,8 +59,15 @@ export interface Product {
   id: string;
   name: string;
   image?: string;
-  basePrice?: string;
+  /** API retorna em centavos (number); exibição em reais */
+  basePrice?: number | string;
   isIncludedInTicket?: boolean;
+}
+
+function formatProductPrice(value: number | string | undefined): string {
+  if (value == null || value === "") return "0,00";
+  if (typeof value === "number") return (value / 100).toFixed(2).replace(".", ",");
+  return String(value);
 }
 
 export interface TicketFormProps {
@@ -1118,18 +1125,16 @@ export function TicketForm({
                         className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px]"
                       >
                         <div className="border-b border-gray-6 flex gap-3 items-center p-4">
-                          <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
-                            {product.product.image ? (
+                          {product.product.image && (
+                            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
                               <Image
                                 src={product.product.image}
                                 alt={product.product.name}
                                 fill
                                 className="object-cover rounded"
                               />
-                            ) : (
-                              <div className="w-full h-full bg-gray-4" />
-                            )}
-                          </div>
+                            </div>
+                          )}
                           <div className="flex flex-col justify-between h-full py-2 gap-2 flex-1 min-w-0">
                             <h3 className="text-gray-12 text-base font-semibold font-family-dm-sans leading-[1.1]">
                               {product.product.name}
@@ -1137,7 +1142,7 @@ export function TicketForm({
                             <p className="text-gray-11 text-sm font-semibold font-family-dm-sans leading-[1.3]">
                               {product.product.isIncludedInTicket
                                 ? "Valor incluso no ingresso"
-                                : `R$ ${product.product.basePrice || "0,00"}`}
+                                : `R$ ${formatProductPrice(product.product.basePrice)}`}
                             </p>
                           </div>
                         </div>

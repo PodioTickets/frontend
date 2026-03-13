@@ -220,7 +220,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         const userWithCache = { ...user, _cachedAt: Date.now() };
         localStorage.setItem("user", JSON.stringify(userWithCache));
-        refetchUser();
+        await refetchUser();
       } else {
         const errorMessage =
           response.error || "Erro ao fazer login. Tente novamente.";

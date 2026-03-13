@@ -4,18 +4,18 @@ import * as React from "react";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import {
   DayPicker,
-  getDefaultClassNames,
   type MonthCaptionProps,
   type DayButtonProps,
   useDayPicker,
-  type DropdownProps,
 } from "react-day-picker";
 
 import { cn } from "@/utils/cn";
 import { buttonVariants } from "@/components/Button";
 import { Button } from "@/components/Button";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  disablePastDates?: boolean;
+};
 
 function CalendarDayButton({ day, modifiers, ...props }: DayButtonProps) {
   const isSelected = modifiers.selected || modifiers.range_start || modifiers.range_end;
@@ -119,6 +119,7 @@ function Calendar({
   showOutsideDays = true,
   captionLayout,
   disabled: customDisabled,
+  disablePastDates = true,
   ...props
 }: CalendarProps) {
   const today = new Date();
@@ -130,7 +131,10 @@ function Calendar({
     return dateToCheck < today;
   };
 
-  const isDateDisabled = customDisabled || defaultIsDateDisabled;
+  const isDateDisabled =
+    disablePastDates === false
+      ? customDisabled
+      : customDisabled || defaultIsDateDisabled;
 
   // Components configuration
   const components = {
@@ -156,10 +160,10 @@ function Calendar({
       formatters={
         captionLayout === "dropdown"
           ? {
-              formatMonthDropdown: (date: Date) =>
-                date.toLocaleDateString("pt-BR", { month: "long" }),
-              formatYearDropdown: (date: Date) => date.getFullYear().toString(),
-            }
+            formatMonthDropdown: (date: Date) =>
+              date.toLocaleDateString("pt-BR", { month: "long" }),
+            formatYearDropdown: (date: Date) => date.getFullYear().toString(),
+          }
           : undefined
       }
       classNames={{

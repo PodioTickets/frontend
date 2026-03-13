@@ -1,10 +1,11 @@
 "use client";
 import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
-import { usePaymentDetailsModal } from "@/stores/modalStore";
+import { usePaymentDetailsModal, useViewRegistrationModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, CheckCircle, Eye, ChevronLeft, ChevronRight, XIcon, XCircleIcon } from "lucide-react";
+import { X, Copy, CheckCircle, Eye, FileText, ChevronLeft, ChevronRight, ChevronDown, XCircleIcon } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "../Button";
 import { organizerService } from "@/services";
 import type { PaymentDetails } from "@/services/organizer/OrganizerService";
@@ -12,13 +13,19 @@ import { Loading } from "../Loading";
 import toast from "react-hot-toast";
 import { CheckIcon } from '../Icons/Organizer/CheckIcon';
 import { PixIcon } from '../Icons/PixIcon';
+import { CardIcon } from '../Icons/CardIcon';
+import { ArrowButton } from '../ArrowButton';
 
 export function PaymentDetailsModal() {
   const { isOpen, closePaymentDetailsModal, data } = usePaymentDetailsModal();
+  const { openViewRegistrationModal } = useViewRegistrationModal();
   const [copied, setCopied] = useState(false);
   const [ticketsPage, setTicketsPage] = useState(1);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const eventId = data?.eventId as string | undefined;
+  const eventName = (data?.eventName as string) || "Evento";
 
   // Obter o ID da registration passada
   const registrationId = useMemo(() => {
@@ -279,6 +286,17 @@ export function PaymentDetailsModal() {
     return "bg-primary-11 text-primary-1";
   };
 
+  const eventTabs = eventId
+    ? [
+        { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+        { label: "Editar", href: `/organizer/events/${eventId}/edit` },
+        { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
+        { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+        { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
+        { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+      ]
+    : [];
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -299,10 +317,197 @@ export function PaymentDetailsModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 z-50 flex flex-col md:flex md:items-center md:justify-center p-0 md:p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-gray-1 rounded-[12px] w-full max-w-[1095px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Mobile: full-screen layout */}
+            <div className="md:hidden flex-1 flex flex-col bg-gray-2 overflow-hidden min-h-0 mt-16 w-full">
+              <div className="bg-gray-1 border-b border-gray-6 shrink-0">
+                <div className="flex items-center gap-1 h-[52px] px-4">
+                  <button
+                    type="button"
+                    onClick={closePaymentDetailsModal}
+                    className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
+                    aria-label="Voltar"
+                  >
+                    <ArrowButton isOpen={false} />
+                  </button>
+                  <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+                    {eventName}
+                  </p>
+                </div>
+                {eventId && (
+                  <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                    <div className="flex items-center min-w-max">
+                      {eventTabs.map((tab) => {
+                        const isRegistrations = tab.href.includes("/registrations");
+                        return (
+                          <Link
+                            key={tab.href}
+                            href={tab.href}
+                            onClick={closePaymentDetailsModal}
+                            className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isRegistrations ? "border-primary-11 text-primary-11 font-manrope font-bold" : "border-transparent text-gray-11 font-family-dm-sans font-normal"}`}
+                          >
+                            {tab.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <div className="px-4 py-4 flex flex-col gap-5">
+                  {/* Breadcrumbs */}
+                  <div className="flex items-center gap-1 flex-wrap text-sm text-gray-11 font-family-dm-sans">
+                    <span>Eventos</span>
+                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
+                    <span>Inscrições</span>
+                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
+                    <span className="text-gray-12">Detalhes do pedido</span>
+                  </div>
+                  <div className="flex flex-col gap-5">
+                    <h2 className="font-manrope font-bold text-xl text-gray-12">Detalhes do pedido</h2>
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                      ID do pedido: <span className="text-gray-12">#{paymentDetails?.orderId ? paymentDetails.orderId.slice(0, 6) : registration.id?.slice(0, 6)}...{paymentDetails?.orderId ? paymentDetails.orderId.slice(-4) : registration.id?.slice(-4)}</span>
+                    </p>
+                  </div>
+                  {/* Buyer info list */}
+                  <div className="flex flex-col gap-0">
+                    {[
+                      { label: "Nome", value: buyerData?.firstName && buyerData?.lastName ? `${buyerData.firstName} ${buyerData.lastName}` : buyerData?.fullName || "—" },
+                      { label: "Email", value: buyerData?.email || "—" },
+                      { label: "CPF", value: formatCPF(buyerData?.documentNumber || null) || "—" },
+                      { label: "Data de nascimento:", value: formatBirthDate(buyerData?.dateOfBirth || null) || "—" },
+                      { label: "Telefone:", value: formatPhone(buyerData?.phone || null) || "—" },
+                      { label: "Sexo", value: buyerData?.gender === "MALE" || buyerData?.gender === "male" ? "Masculino" : buyerData?.gender === "FEMALE" || buyerData?.gender === "female" ? "Feminino" : buyerData?.gender === "OTHER" || buyerData?.gender === "other" ? "Outro" : buyerData?.gender || "—" },
+                      { label: "Telefone de emergência", value: formatPhone(buyerData?.reservePhone || null) || "Opcional" },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex flex-col gap-1 py-4 border-b border-gray-6 last:border-b-0">
+                        <p className="font-family-dm-sans font-normal text-base text-gray-12">{label}</p>
+                        <p className="font-family-dm-sans font-medium text-base text-gray-12">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Payment method card */}
+                  <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
+                    <div className="flex gap-3 items-center justify-between">
+                      <div className="flex gap-3 items-center">
+                        {paymentInfo.cardBrand ? (
+                          <div className="size-10 shrink-0 flex items-center justify-center">
+                            <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
+                          </div>
+                        ) : (
+                          <div className="size-10 shrink-0 flex items-center justify-center">
+                            <PixIcon className="size-6 text-gray-12" />
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-0">
+                          <p className="font-family-dm-sans font-semibold text-lg text-gray-12">{paymentInfo.cardBrand && paymentInfo.cardLast4 ? `${paymentInfo.cardBrand} **** ${paymentInfo.cardLast4}` : paymentInfo.paymentMethod}</p>
+                          <p className="font-family-dm-sans font-normal text-base text-gray-11">{paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}</p>
+                        </div>
+                      </div>
+                      <span className={`flex gap-1 items-center justify-center px-4 py-2 rounded ${getPaymentStatusColor(paymentDetails?.payment?.status)}`}>
+                        <CheckIcon className="size-5" />
+                        <span className="font-family-dm-sans font-normal text-base">{getPaymentStatusLabel(paymentDetails?.payment?.status)}</span>
+                      </span>
+                    </div>
+                  </div>
+                  {/* Transaction details card */}
+                  <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
+                    {[
+                      { label: "Valor total", value: formatPrice(paymentInfo.totalAmount / 100) },
+                      { label: "Data da compra", value: formatDate(paymentInfo.purchaseDate) || "—" },
+                      { label: "Gateway", value: paymentInfo.gateway },
+                      { label: "ID da transação", value: paymentInfo.transactionId, copy: true },
+                      { label: "Voucher utilizado", value: paymentInfo.coupon, coupon: true },
+                      { label: "TxID", value: paymentInfo.nsu },
+                      { label: "E2E ID (Pix)", value: paymentInfo.transactionId },
+                      { label: "IP", value: paymentInfo.ip },
+                    ].map(({ label, value, copy, coupon }) => (
+                      <div key={label} className="flex flex-col gap-1 py-2">
+                        <p className="font-family-dm-sans font-normal text-base text-gray-12">{label}</p>
+                        <div className="flex items-center gap-2">
+                          {coupon && (
+                            <svg className="size-4 text-yellow-12 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                            </svg>
+                          )}
+                          <p className={`font-family-dm-sans font-medium text-base text-gray-12 ${coupon ? "text-yellow-12" : ""}`}>{value || "—"}</p>
+                          {copy && (
+                            <button type="button" onClick={() => handleCopy(value)} className="size-5 flex items-center justify-center shrink-0 rounded hover:bg-gray-3">
+                              {copied ? <CheckCircle className="size-4 text-primary-11" /> : <Copy className="size-4 text-gray-11" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Ingressos vinculados */}
+                  <div className="flex flex-col gap-4">
+                    <h3 className="font-manrope font-bold text-lg text-gray-12">Ingressos vinculados a este pedido</h3>
+                    <div className="flex flex-col gap-0 border border-gray-6 rounded-lg overflow-hidden bg-gray-1">
+                      {paginatedParticipants.map((participant: any) => (
+                        <div key={participant.id} className="flex flex-col border-b border-gray-6 last:border-b-0">
+                          <div className="flex flex-col gap-5 px-3 py-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex gap-2 items-center min-w-0 flex-1">
+                                <div className="size-9 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
+                                  <span className="text-primary-11 font-semibold text-sm">{(participant.name || "P").charAt(0).toUpperCase()}</span>
+                                </div>
+                                <div className="flex flex-col gap-1 min-w-0">
+                                  <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">{participant.name}</p>
+                                  <p className="font-family-dm-sans font-normal text-sm text-gray-11 truncate">{participant.email}</p>
+                                </div>
+                              </div>
+                              <div className="shrink-0">
+                                {paymentInfo.cardBrand ? <CardIcon className="size-6 text-gray-11" /> : <PixIcon className="size-5 text-gray-11" />}
+                              </div>
+                            </div>
+                            <p className="font-manrope font-extrabold text-xl text-gray-12">
+                              {formatPrice((registration?.finalAmount ?? paymentInfo.totalAmount) / (participants.length || 1) / 100)}
+                            </p>
+                          </div>
+                          <div className="h-px bg-gray-6" />
+                          <div className="p-3">
+                            <button
+                              type="button"
+                              onClick={() => { openViewRegistrationModal({ registrationId: participant.id }); closePaymentDetailsModal(); }}
+                              className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                            >
+                              <FileText className="size-5" />
+                              Ver detalhes
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2">
+                        <button type="button" onClick={() => setTicketsPage((p) => Math.max(1, p - 1))} disabled={ticketsPage === 1} className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50">
+                          <ChevronLeft className="size-4" />
+                        </button>
+                        {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
+                          const pageNum = i + 1;
+                          const isActive = pageNum === ticketsPage;
+                          return (
+                            <button key={pageNum} type="button" onClick={() => setTicketsPage(pageNum)} className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium ${isActive ? "bg-primary-11 text-primary-2" : "bg-gray-4 border border-gray-6 text-gray-12"}`}>
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                        <button type="button" onClick={() => setTicketsPage((p) => Math.min(totalPages, p + 1))} disabled={ticketsPage >= totalPages} className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50">
+                          <ChevronRight className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop: modal box */}
+            <div className="hidden md:flex flex-col bg-gray-1 rounded-[12px] w-full max-w-[1095px] max-h-[90vh] shadow-2xl overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6 shrink-0">
                 <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
