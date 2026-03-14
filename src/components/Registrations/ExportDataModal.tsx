@@ -10,6 +10,7 @@ import { ExcelIcon } from "../Icons/ExcelIcon";
 import { TxtIcon } from "../Icons/TxtIcon";
 import { PDFIcon } from "../Icons/PDFIcon";
 import { ArrowButton } from "../ArrowButton";
+import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
 
 type ExportFormat = "txt" | "excel" | "pdf";
 
@@ -40,17 +41,7 @@ export function ExportDataModal() {
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
-
-  const eventTabs = eventId
-    ? [
-        { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-        { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-        { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-        { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-        { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-        { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-      ]
-    : [];
+  const eventTabs = eventId ? getEventTabs(eventId) : [];
 
   const handleExport = () => {
     console.log("Exportando como:", selectedFormat);
@@ -92,23 +83,12 @@ export function ExportDataModal() {
                 </p>
               </div>
               {eventId && (
-                <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                  <div className="flex items-center min-w-max">
-                    {eventTabs.map((tab) => {
-                      const isRegistrations = tab.href.includes("/registrations");
-                      return (
-                        <Link
-                          key={tab.href}
-                          href={tab.href}
-                          onClick={closeExportDataModal}
-                          className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isRegistrations ? "border-primary-11 text-primary-11 font-manrope font-bold" : "border-transparent text-gray-11 font-family-dm-sans font-normal"}`}
-                        >
-                          {tab.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
+                <EventMobileTabs
+                  tabs={eventTabs}
+                  activeHref={`/organizer/events/${eventId}/registrations`}
+                  onLinkClick={closeExportDataModal}
+                  eventId={eventId}
+                />
               )}
             </div>
 

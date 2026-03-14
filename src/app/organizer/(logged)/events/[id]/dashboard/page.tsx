@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import {
@@ -15,6 +14,7 @@ import {
 import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
+import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 import { RevenueChart } from "@/components/Organizer/RevenueChart";
 import { SalesHeatmap } from "@/components/Organizer/SalesHeatmap";
 import type { SalesHeatmapData } from "@/services/organizer/OrganizerService";
@@ -94,6 +94,8 @@ export default function EventDashboardPage() {
       productId: string;
       productName: string;
       productImage?: string | null;
+      /** Valor total vendido do produto em centavos (API: totalSoldAmount) */
+      totalSoldAmount?: number;
       variations: Array<{
         variationId: string | null;
         variationName: string;
@@ -328,6 +330,12 @@ export default function EventDashboardPage() {
             productId: p.productId ?? p.product_id ?? "",
             productName: p.productName ?? p.product_name ?? "",
             productImage: p.productImage ?? p.product_image ?? null,
+            totalSoldAmount:
+              typeof p.totalSoldAmount === "number"
+                ? p.totalSoldAmount
+                : typeof p.total_sold_amount === "number"
+                  ? p.total_sold_amount
+                  : undefined,
             variations: Array.isArray(p.variations)
               ? p.variations.map((v: any) => ({
                 variationId: v.variationId ?? v.variation_id ?? null,
@@ -420,7 +428,7 @@ export default function EventDashboardPage() {
       return selectedProductFromApi.variations.map((v) => {
         const stockStr =
           v.remainingStock != null && v.totalStock != null
-            ? `${v.remainingStock.toLocaleString("pt-BR")} / ${v.totalStock.toLocaleString("pt-BR")}`
+            ? v.totalStock.toLocaleString("pt-BR")
             : "—";
         const stockStatus: "Esgotado" | "Normal" | undefined =
           v.remainingStock != null ? (v.remainingStock === 0 ? "Esgotado" : "Normal") : undefined;
@@ -468,9 +476,22 @@ export default function EventDashboardPage() {
       .filter((i) => i.productName === selectedProductName)
       .reduce((s, i) => s + (i.quantity ?? 0), 0);
   }, [selectedProductName, bestSellingVariations]);
-  const selectedProductTotalRevenueLabel = selectedProductTotalRevenue > 0
-    ? `R$ ${(selectedProductTotalRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : "—";
+
+  const selectedProductTotalStock: number | undefined = useMemo(() => {
+    if (!selectedProductFromApi?.variations?.length) return undefined;
+    const sum = selectedProductFromApi.variations.reduce((s, v) => s + (v.totalStock ?? 0), 0);
+    return sum > 0 ? sum : undefined;
+  }, [selectedProductFromApi]);
+
+  const selectedProductTotalRevenueLabel = useMemo(() => {
+    const cents =
+      selectedProductFromApi?.totalSoldAmount != null
+        ? selectedProductFromApi.totalSoldAmount
+        : selectedProductTotalRevenue;
+    return cents > 0
+      ? `R$ ${(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : "—";
+  }, [selectedProductFromApi?.totalSoldAmount, selectedProductTotalRevenue]);
 
   const sortedQuestions = useMemo(() => {
     const questions = (event?.questions ?? []) as Question[];
@@ -562,52 +583,18 @@ export default function EventDashboardPage() {
     return `${selectedTicketIds.length} ingressos selecionados`;
   };
 
-  const eventTabs = [
-    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-    { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-    { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-2">
       <div className="hidden md:block">
         <EventPageHeader eventName={event?.name} />
       </div>
 
-      {/* Mobile header: back + event name + horizontal tabs (Figma) */}
-      <div className="md:hidden bg-gray-1 border-b border-gray-6">
-        <div className="flex items-center gap-1 h-[52px] px-4">
-          <Link
-            href="/organizer/events"
-            className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
-            aria-label="Voltar"
-          >
-            <ArrowButton isOpen={false} />
-          </Link>
-          <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
-            {event?.name || "Evento"}
-          </p>
-        </div>
-        <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          <div className="flex items-center min-w-max">
-            {eventTabs.map((tab) => {
-              const isDashboard = tab.href.includes("/dashboard");
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isDashboard ? "border-primary-11 text-primary-11 font-manrope font-bold" : "border-transparent text-gray-11 font-family-dm-sans font-normal"}`}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <EventMobileHeader
+        eventId={eventId}
+        eventName={event?.name}
+        activeHref={`/organizer/events/${eventId}/dashboard`}
+        backHref="/organizer/events"
+      />
 
       {/* Desktop content */}
       <div className="hidden md:block max-w-7xl mx-auto py-8">
@@ -901,7 +888,8 @@ export default function EventDashboardPage() {
           productImageUrl={selectedProductFromApi?.productImage ?? undefined}
           productIndex={selectedProductIndex}
           totalProducts={totalProducts}
-          quantitySold={String(selectedProductQuantitySold)}
+          quantitySold={selectedProductQuantitySold}
+          totalStock={selectedProductTotalStock}
           totalRevenue={selectedProductTotalRevenueLabel}
           variationRows={selectedProductVariations}
           onPrevious={

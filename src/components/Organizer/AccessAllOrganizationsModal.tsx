@@ -11,7 +11,7 @@ import { RemoveIcon } from "../Icons/RemoveIcon";
 import { ArrowButton } from "../ArrowButton";
 import { Building2, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { Organization, OrganizationMember } from "@/services/organizer/OrganizerService";
+import type { OrganizationMember } from "@/services/organizer/OrganizerService";
 
 interface OrganizationAccount {
   id: string;

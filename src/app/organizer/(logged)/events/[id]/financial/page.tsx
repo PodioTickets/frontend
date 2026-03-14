@@ -31,6 +31,7 @@ import { ChargeBackIcon } from "@/components/Icons/ChargeBackIcon";
 import { TimerIcon } from "@/components/Icons/Organizer/TimerIcon";
 import { FaturaIcon } from "@/components/Icons/FaturaIcon";
 import Link from "next/link";
+import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 
 export default function EventFinancialPage() {
   const router = useRouter();
@@ -256,42 +257,13 @@ export default function EventFinancialPage() {
         <EventPageHeader eventName={event?.name} />
       </div>
 
-      {/* Mobile header: back + event name + horizontal tabs (igual à tela de Ads) */}
-      <div className="md:hidden bg-gray-1 border-b border-gray-6">
-        <div className="flex items-center gap-1 h-[52px] px-4">
-          <Link
-            href={`/organizer/events/${eventId}/dashboard`}
-            className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
-            aria-label="Voltar"
-          >
-            <ArrowButton isOpen={false} />
-          </Link>
-          <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
-            {event?.name || "Evento"}
-          </p>
-        </div>
-        <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          <div className="flex items-center min-w-max">
-            {eventTabs.map((tab) => {
-              const isFinancial = tab.href.includes("/financial");
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isFinancial
-                    ? "border-primary-11 text-primary-11 font-manrope font-bold"
-                    : "border-transparent text-gray-11 font-family-dm-sans font-normal"
-                    }`}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <EventMobileHeader
+        eventId={eventId}
+        eventName={event?.name}
+        activeHref={`/organizer/events/${eventId}/financial`}
+        backHref={`/organizer/events/${eventId}/registrations`}
+        backLinkClassName="rotate-180"
+      />
 
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
 

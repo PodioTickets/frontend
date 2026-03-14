@@ -15,6 +15,7 @@ import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useCreateCouponModal, useDeleteCouponModal } from "@/stores/modalStore";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
+import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 import { Loading } from "@/components/Loading";
 
 interface Coupon {
@@ -195,10 +196,27 @@ export default function CouponsPage() {
       : formatCurrency(coupon.value);
   };
 
+  const getValueDisplayMobile = (coupon: Coupon) => {
+    return coupon.type === "PERCENTAGE"
+      ? `${coupon.value}% (Percentual)`
+      : `${formatCurrency(coupon.value)} (Valor fixo)`;
+  };
+
   if (!authChecked || loading) {
     return (
       <div className="min-h-screen bg-gray-2">
-        <EventPageHeader eventName={event?.name} />
+        <div className="hidden md:block">
+          <EventPageHeader eventName={event?.name} />
+        </div>
+        <div className="md:hidden">
+          <EventMobileHeader
+            eventId={eventId}
+            eventName={event?.name}
+            activeHref={`/organizer/events/${eventId}/discount/cupom`}
+            backHref={`/organizer/events/${eventId}/dashboard`}
+            backLinkClassName="rotate-180"
+          />
+        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loading />
         </div>
@@ -208,11 +226,20 @@ export default function CouponsPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader eventName={event?.name} />
-      <div className="max-w-7xl mx-auto px-4 lg:px-0 py-6">
+      <div className="hidden md:block">
+        <EventPageHeader eventName={event?.name} />
+      </div>
+      <EventMobileHeader
+        eventId={eventId}
+        eventName={event?.name}
+        activeHref={`/organizer/events/${eventId}/discount/cupom`}
+        backHref={`/organizer/events/${eventId}/dashboard`}
+        backLinkClassName="rotate-180"
+      />
+      <div className="max-w-7xl mx-auto px-4 lg:px-0 py-6 pb-20 md:pb-6">
         <div className="flex flex-col gap-9">
-          {/* Title Section */}
-          <div className="flex flex-col gap-4">
+          {/* Desktop: Title Section */}
+          <div className="hidden md:flex flex-col gap-4">
             <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
               Cupons de desconto
             </h1>
@@ -221,9 +248,26 @@ export default function CouponsPage() {
             </p>
           </div>
 
+          {/* Mobile: Title + Criar cupom (Figma) */}
+          <div className="md:hidden flex flex-col gap-3 px-0">
+            <h1 className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
+              Cupons
+            </h1>
+            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
+              Crie e gerencie cupons para aplicar desconto nas inscrições
+            </p>
+            <Button
+              onClick={handleCreateCoupon}
+              className="w-full h-11 rounded-lg font-manrope font-bold text-base flex items-center justify-center gap-1"
+            >
+              <Plus className="size-5" />
+              Criar cupom
+            </Button>
+          </div>
+
           {/* Coupons List Section */}
           <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="hidden md:flex items-center justify-between flex-wrap gap-4">
               <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                 Lista de cupons
               </h2>
@@ -236,8 +280,11 @@ export default function CouponsPage() {
                 Criar cupom
               </Button>
             </div>
+            <h2 className="md:hidden font-manrope font-bold text-lg leading-[1.1] text-gray-12">
+              Lista de cupons
+            </h2>
 
-            {/* Coupons Table */}
+            {/* Desktop: Coupons Table */}
             {coupons.length === 0 ? (
               <div className="border border-gray-6 rounded-xl p-12 flex flex-col items-center justify-center gap-4">
                 <CouponIcon className="size-12 text-gray-11" />
@@ -246,100 +293,156 @@ export default function CouponsPage() {
                 </p>
               </div>
             ) : (
-              <div className="bg-gray-1 rounded-lg border border-gray-6 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-3 border-b border-gray-6">
-                      <tr>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Código
-                        </th>
-                        <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Tipo
-                        </th>
-                        <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Valor
-                        </th>
-                        <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Validade
-                        </th>
-                        <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Status
-                        </th>
-                        <th className="text-end py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-6">
-                      {coupons.map((coupon) => {
-                        const statusBadge = getStatusBadge(coupon.status);
-                        return (
-                          <tr
-                            key={coupon.id}
-                            className="hover:bg-gray-2 transition-colors"
-                          >
-                            <td className="py-4 px-5">
-                              <div className="flex items-center gap-2">
+              <>
+                <div className="hidden md:block bg-gray-1 rounded-lg border border-gray-6 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-3 border-b border-gray-6">
+                        <tr>
+                          <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Código
+                          </th>
+                          <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Tipo
+                          </th>
+                          <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Valor
+                          </th>
+                          <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Validade
+                          </th>
+                          <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Status
+                          </th>
+                          <th className="text-end py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Ações
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-6">
+                        {coupons.map((coupon) => {
+                          const statusBadge = getStatusBadge(coupon.status);
+                          return (
+                            <tr
+                              key={coupon.id}
+                              className="hover:bg-gray-2 transition-colors"
+                            >
+                              <td className="py-4 px-5">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
+                                    {coupon.code}
+                                  </span>
+                                  <button
+                                    onClick={() => handleCopyCode(coupon.code)}
+                                    className="size-5 flex items-center justify-center hover:bg-gray-3 rounded-lg transition-colors cursor-pointer"
+                                    title="Copiar código"
+                                  >
+                                    <CopyIcon className="size-4 text-gray-11" />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5 text-center">
                                 <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
+                                  {getTypeLabel(coupon.type)}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5 text-center">
+                                <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
+                                  {getValueDisplay(coupon)}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5 text-center">
+                                <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
+                                  {formatDate(coupon.expiryDate)}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5 text-center">
+                                <span
+                                  className={`px-3 py-1 rounded text-xs font-medium ${statusBadge.className}`}
+                                >
+                                  {statusBadge.label}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5">
+                                <div className="flex items-center gap-2 justify-end">
+                                  <button
+                                    onClick={() => handleEditCoupon(coupon)}
+                                    className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                    title="Editar"
+                                  >
+                                    <PencilIcon className="size-4 text-gray-11" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
+                                    className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
+                                    title="Excluir"
+                                  >
+                                    <TrashIcon className="size-4 text-red-12" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Mobile: Coupon cards (Figma) */}
+                <div className="md:hidden flex flex-col gap-3">
+                  {coupons.map((coupon) => {
+                    const statusBadge = getStatusBadge(coupon.status);
+                    return (
+                      <div
+                        key={coupon.id}
+                        className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-5"
+                      >
+                        <div className="flex flex-col gap-5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-col gap-3 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-manrope font-semibold text-base leading-[1.1] text-gray-12 truncate">
                                   {coupon.code}
                                 </span>
                                 <button
+                                  type="button"
                                   onClick={() => handleCopyCode(coupon.code)}
-                                  className="size-5 flex items-center justify-center hover:bg-gray-3 rounded-lg transition-colors cursor-pointer"
-                                  title="Copiar código"
+                                  className="size-6 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+                                  aria-label="Copiar código"
                                 >
                                   <CopyIcon className="size-4 text-gray-11" />
                                 </button>
                               </div>
-                            </td>
-                            <td className="py-4 px-5 text-center">
-                              <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
-                                {getTypeLabel(coupon.type)}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5 text-center">
-                              <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
-                                {getValueDisplay(coupon)}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5 text-center">
-                              <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
-                                {formatDate(coupon.expiryDate)}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5 text-center">
-                              <span
-                                className={`px-3 py-1 rounded text-xs font-medium ${statusBadge.className}`}
-                              >
-                                {statusBadge.label}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5">
-                              <div className="flex items-center gap-2 justify-end">
-                                <button
-                                  onClick={() => handleEditCoupon(coupon)}
-                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                  title="Editar"
-                                >
-                                  <PencilIcon className="size-4 text-gray-11" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
-                                  className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
-                                  title="Excluir"
-                                >
-                                  <TrashIcon className="size-4 text-red-12" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                Validade: {formatDate(coupon.expiryDate)}
+                              </p>
+                            </div>
+                            <span
+                              className={`shrink-0 px-3 py-2 rounded text-xs font-family-dm-sans font-normal leading-[1.3] ${statusBadge.className}`}
+                            >
+                              {statusBadge.label}
+                            </span>
+                          </div>
+                          <div className="bg-gray-2 border border-gray-6 rounded-lg h-[34px] flex items-center justify-center px-3">
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
+                              {getValueDisplayMobile(coupon)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="h-px bg-gray-6 w-full" />
+                        <Button
+                          variant="outline"
+                          onClick={() => handleEditCoupon(coupon)}
+                          className="w-full h-11 rounded-lg border-gray-6 text-gray-12 font-manrope font-bold text-base hover:bg-gray-3"
+                        >
+                          Editar
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -351,20 +454,20 @@ export default function CouponsPage() {
                   setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
                 }
                 disabled={pagination.page === 1}
-                className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                className="size-8 rounded-lg border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
               >
                 <ChevronLeft className="size-4 text-gray-11" />
               </button>
-              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
+              {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => i + 1).map(
                 (page) => (
                   <button
                     key={page}
                     onClick={() =>
                       setPagination((prev) => ({ ...prev, page }))
                     }
-                    className={`size-8 rounded-full border transition-colors font-family-dm-sans text-sm ${pagination.page === page
-                      ? "bg-primary-11 text-white border-primary-11"
-                      : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
+                    className={`size-8 rounded-lg border transition-colors font-family-dm-sans text-sm flex items-center justify-center ${pagination.page === page
+                      ? "bg-primary-11 text-primary-2 border-primary-11"
+                      : "bg-gray-4 border-gray-6 text-gray-12 hover:bg-gray-3"
                       }`}
                   >
                     {page}
@@ -376,7 +479,7 @@ export default function CouponsPage() {
                   setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
                 }
                 disabled={pagination.page === pagination.totalPages}
-                className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                className="size-8 rounded-lg border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
               >
                 <ChevronRight className="size-4 text-gray-11" />
               </button>

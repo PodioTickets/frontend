@@ -663,7 +663,7 @@ export function RegisterModal() {
         <div className="flex flex-col items-start relative shrink-0 w-full">
           <Button
             onClick={handleNext}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg font-manrope"
+            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
           >
             Próximo
           </Button>
@@ -869,7 +869,7 @@ export function RegisterModal() {
 
         {/* Desktop Next button */}
         <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full">
-          <Button onClick={handleNext} className="px-8 font-bold text-xl">
+          <Button onClick={handleNext} className="px-8 font-bold text-base">
             Próximo
           </Button>
         </div>

@@ -23,7 +23,7 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
-  
+
   const currentQuantity = raceQuantities[ticket.id] || 0;
 
   const formatDate = (date: Date) => {
@@ -91,13 +91,13 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
   };
 
   const handlePreviousImage = () => {
-    setCurrentMainImageIndex((prev) => 
+    setCurrentMainImageIndex((prev) =>
       prev === 0 ? productImages.length - 1 : prev - 1
     );
   };
 
   const handleNextImage = () => {
-    setCurrentMainImageIndex((prev) => 
+    setCurrentMainImageIndex((prev) =>
       prev === productImages.length - 1 ? 0 : prev + 1
     );
   };
@@ -119,21 +119,21 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
       {/* Mobile Layout */}
       <div className="w-full md:hidden">
         <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col justify-center gap-6">
-           {/* Image Gallery */}
-           {productImages.length > 0 && (
-             <div className={`flex gap-3 items-center w-full ${productImages.length === 1 ? 'justify-center' : 'justify-start'}`}>
-               {/* Main Image */}
-               <button
-                 onClick={() => handleImageClick(currentMainImageIndex)}
-                 className={`${productImages.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
-               >
-                 <Image
-                   src={productImages[currentMainImageIndex]}
-                   alt={ticket.name}
-                   fill
-                   className="object-cover"
-                 />
-               </button>
+          {/* Image Gallery */}
+          {productImages.length > 0 && (
+            <div className={`flex gap-3 items-center w-full ${productImages.length === 1 ? 'justify-center' : 'justify-start'}`}>
+              {/* Main Image */}
+              <button
+                onClick={() => handleImageClick(currentMainImageIndex)}
+                className={`${productImages.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
+              >
+                <Image
+                  src={productImages[currentMainImageIndex]}
+                  alt={ticket.name}
+                  fill
+                  className="object-cover"
+                />
+              </button>
 
               {/* Thumbnail Grid */}
               {productImages.length > 1 && (
@@ -159,11 +159,10 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                           <button
                             key={originalIndex}
                             onClick={() => handleThumbnailClick(originalIndex)}
-                            className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${
-                              originalIndex === currentMainImageIndex
+                            className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
                                 ? 'border-primary-11'
                                 : 'border-gray-6'
-                            }`}
+                              }`}
                           >
                             <Image
                               src={image}
@@ -207,20 +206,7 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                   </p>
                 </div>
               )}
-              {event?.eventDate && (
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="size-6 shrink-0" />
-                  <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                    {formatDate(new Date(event.eventDate))}
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <ClockIcon className="size-6 shrink-0" />
-                <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                  10:00h
-                </p>
-              </div>
+
             </div>
 
             {/* Age Limit Tag */}
@@ -264,13 +250,13 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
         </div>
       </div>
 
-       {/* Desktop Layout */}
-       <div className="hidden md:block w-full">
-         <div className="flex gap-4 w-full">
-           {/* Galeria de imagens dos produtos à esquerda */}
-           {productImages.length > 0 && (
-             <div className={`${productImages.length === 1 ? 'flex justify-center w-full' : 'shrink-0'}`}>
-               <div className={`flex items-center gap-2 ${productImages.length === 1 ? 'justify-center w-full' : ''}`}>
+      {/* Desktop Layout */}
+      <div className="hidden md:block w-full">
+        <div className="flex gap-4 w-full">
+          {/* Galeria de imagens dos produtos à esquerda */}
+          {productImages.length > 0 && (
+            <div className={`${productImages.length === 1 ? 'flex justify-center w-full' : 'shrink-0'}`}>
+              <div className={`flex items-center gap-2 ${productImages.length === 1 ? 'justify-center w-full' : ''}`}>
                 {productImages[currentMainImageIndex] && (
                   <button
                     onClick={() => handleImageClick(currentMainImageIndex)}
@@ -307,11 +293,10 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                             <button
                               key={originalIndex}
                               onClick={() => handleThumbnailClick(originalIndex)}
-                              className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${
-                                originalIndex === currentMainImageIndex
+                              className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
                                   ? 'border-primary-11'
                                   : 'border-gray-6'
-                              }`}
+                                }`}
                             >
                               <Image
                                 src={image}

@@ -135,15 +135,7 @@ export function QuestionDetailsDrawer({
                       P: {question.question}
                     </p>
                     <div className="flex gap-11 flex-wrap">
-                      <div className="flex flex-col gap-3">
-                        <p className="font-family-dm-sans font-medium text-base text-gray-11">
-                          Taxa de resposta
-                        </p>
-                        <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                          {responseRate != null ? `${responseRate}%` : "—"}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1">
                         <p className="font-family-dm-sans font-medium text-base text-gray-11">
                           Tipo de pergunta
                         </p>
@@ -151,7 +143,7 @@ export function QuestionDetailsDrawer({
                           {typeLabel}
                         </p>
                       </div>
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1">
                         <p className="font-family-dm-sans font-medium text-base text-gray-11">
                           Qt de participantes
                         </p>
@@ -165,7 +157,7 @@ export function QuestionDetailsDrawer({
 
                 {/* Table: Respostas | % das Escolhas | QT participante */}
                 <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-[44px_1fr_209px_137px] border-t border-b border-gray-6 bg-gray-3 h-11 items-center">
+                  <div className="grid grid-cols-[44px_1fr_209px_137px] border-b border-gray-6 bg-gray-3 h-11 items-center">
                     <div className="border-r border-gray-6" />
                     <div className="px-4 py-3">
                       <p className="font-medium text-sm leading-[1.3] text-gray-12">

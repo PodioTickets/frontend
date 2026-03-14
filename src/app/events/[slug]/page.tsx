@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { ArrowLeft, Phone } from "lucide-react";
+import { ArrowLeft, Phone, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
 import { getEventOrganizer } from "@/utils/organization";
+import { cn } from "@/utils/cn";
 
 export default function EventPage() {
   const params = useParams();
@@ -253,12 +254,18 @@ export default function EventPage() {
             </div>
 
             {/* Action Buttons */}
-            <Button
-              onClick={handleCheckoutClick}
-              className="w-full bg-[#5CC870] hover:bg-[#4db860] mb-3"
-            >
-              Inscreva-se
-            </Button>
+            {event.status === "COMPLETED" ? (
+              <Button className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                Inscrições encerradas!
+              </Button>
+            ) : (
+              <Button onClick={handleCheckoutClick} className="w-full mb-3">
+                Inscreva-se
+              </Button>
+            )}
+            {event.status === "COMPLETED" && (
+              <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
+            )}
           </div>
         </div>
 
@@ -403,12 +410,19 @@ export default function EventPage() {
               </div>
             </div>
 
-            <Button
-              onClick={handleCheckoutClick}
-              className="w-full bg-[#5CC870] hover:bg-[#4db860]"
-            >
-              Inscreva-se
-            </Button>
+            {event.status === "COMPLETED" ? (
+              <Button className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                Inscrições encerradas!
+              </Button>
+            ) : (
+              <Button onClick={handleCheckoutClick} className="w-full">
+                Inscreva-se
+              </Button>
+            )}
+
+            {event.status === "COMPLETED" && (
+              <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
+            )}
           </div>
         </div>
       </div>
@@ -556,12 +570,18 @@ export default function EventPage() {
                         )}
                       </div>
 
-                      <Button
-                        onClick={handleCheckoutClick}
-                        className="w-full mt-8"
-                      >
-                        Inscrever-se
-                      </Button>
+                      {event.status === "COMPLETED" ? (
+                        <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                          Inscrições encerradas!
+                        </Button>
+                      ) : (
+                        <Button onClick={handleCheckoutClick} className="w-full mt-8">
+                          Inscreva-se
+                        </Button>
+                      )}
+                      {event.status === "COMPLETED" && (
+                        <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
+                      )}
                     </div>
                     <div className="flex flex-col items-center justify-center gap-4">
                       <Button
@@ -773,9 +793,18 @@ export default function EventPage() {
                     })()}
                   </div>
 
-                  <Button onClick={handleCheckoutClick} className="w-full mt-8">
-                    Inscrever-se
-                  </Button>
+                  {event.status === "COMPLETED" ? (
+                    <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                      Inscrições encerradas!
+                    </Button>
+                  ) : (
+                    <Button onClick={handleCheckoutClick} className="w-full mt-8">
+                      Inscreva-se
+                    </Button>
+                  )}
+                  {event.status === "COMPLETED" && (
+                    <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
+                  )}
                 </div>
                 <div className="flex flex-col items-center justify-center gap-4">
                   <Button

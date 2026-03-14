@@ -45,7 +45,7 @@ export function EventCard({ event }: EventCardProps) {
       case "PUBLISHED":
         return "bg-primary-5 border-primary-7";
       case "COMPLETED":
-        return "bg-blue-3 border-blue-6";
+        return "bg-[#F4F0FE] border-[#D4CAFE]";
       case "CANCELLED":
         return "bg-red-3 border-red-6";
       default:

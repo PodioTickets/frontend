@@ -7,6 +7,7 @@ import {
   DrawerHeader,
 } from "@/components/ui/drawer";
 import { X, ChevronLeft } from "lucide-react";
+import { ArrowButton } from "../ArrowButton";
 
 export interface ProductVariationRow {
   variationName: string;
@@ -21,12 +22,14 @@ interface ProductDetailsDrawerProps {
   onClose: () => void;
   productName: string;
   productImageUrl?: string | null;
-  /** "Produto X de Y" */
   productIndex?: number;
   totalProducts?: number;
-  /** Ex.: "QT vendida" / "Total" - valor em texto (R$ 2.000,00) */
+  /** Total vendido (para "Vendas totais": exibir como vendido / estoque) */
+  quantitySold?: number | string;
+  /** Total do estoque (opcional; quando informado, Vendas totais = quantitySold / totalStock) */
+  totalStock?: number;
+  /** Receita total em valor (ex.: "R$ 1.500,00") */
   totalRevenue?: string;
-  quantitySold?: string;
   variationRows: ProductVariationRow[];
   onPrevious?: () => void;
   onNext?: () => void;
@@ -41,9 +44,8 @@ function PercentageBar({ percentage }: { percentage: number }) {
       {Array.from({ length: BAR_SEGMENTS }).map((_, i) => (
         <div
           key={i}
-          className={`h-full w-3 rounded shrink-0 ${
-            i < filled ? "bg-primary-11" : "bg-gray-6"
-          }`}
+          className={`h-full w-3 rounded shrink-0 ${i < filled ? "bg-primary-11" : "bg-gray-6"
+            }`}
         />
       ))}
     </div>
@@ -57,12 +59,18 @@ export function ProductDetailsDrawer({
   productImageUrl,
   productIndex = 1,
   totalProducts = 1,
-  totalRevenue = "R$ 0,00",
-  quantitySold = "0",
+  totalRevenue = "—",
+  quantitySold = 0,
+  totalStock,
   variationRows,
   onPrevious,
   onNext,
 }: ProductDetailsDrawerProps) {
+  const vendasTotaisLabel =
+    totalStock != null && totalStock > 0
+      ? `${Number(quantitySold).toLocaleString("pt-BR")} / ${totalStock.toLocaleString("pt-BR")}`
+      : `${Number(quantitySold).toLocaleString("pt-BR")}`;
+
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} direction="right">
       <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[883px] border-l border-gray-6 rounded-l-xl">
@@ -94,25 +102,25 @@ export function ProductDetailsDrawer({
                     type="button"
                     onClick={onPrevious}
                     disabled={!onPrevious || productIndex <= 1}
-                    className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                    className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer rotate-180"
                     aria-label="Produto anterior"
                   >
-                    <ChevronLeft className="size-5 text-gray-12" />
+                    <ArrowButton isOpen={false} />
                   </button>
                   <button
                     type="button"
                     onClick={onNext}
                     disabled={!onNext || productIndex >= totalProducts}
-                    className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer rotate-180"
+                    className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
                     aria-label="Próximo produto"
                   >
-                    <ChevronLeft className="size-5 text-gray-12" />
+                    <ArrowButton isOpen={false} />
                   </button>
                 </div>
               </div>
 
               {/* Product card: image + name + stats */}
-              <div className="flex gap-5 items-start">
+              <div className="flex gap-5 items-center">
                 <div className="size-[124px] rounded-lg bg-gray-3 border border-gray-6 shrink-0 overflow-hidden">
                   {productImageUrl ? (
                     <img
@@ -126,22 +134,22 @@ export function ProductDetailsDrawer({
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col gap-4 min-w-0 flex-1">
+                <div className="flex flex-col gap-2 min-w-0 flex-1">
                   <p className="font-manrope font-extrabold text-[20px] leading-[1.1] text-gray-12">
                     {productName}
                   </p>
                   <div className="flex gap-10 flex-wrap">
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
                       <p className="font-family-dm-sans font-medium text-base text-gray-11">
-                        QT vendida
+                        Vendas totais
                       </p>
                       <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                        {quantitySold}
+                        {vendasTotaisLabel} un
                       </p>
                     </div>
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
                       <p className="font-family-dm-sans font-medium text-base text-gray-11">
-                        Total
+                        Receita total
                       </p>
                       <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
                         {totalRevenue}
@@ -154,8 +162,8 @@ export function ProductDetailsDrawer({
 
             {/* Table: Desempenho por variações */}
             <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-6">
-                <p className="font-manrope font-semibold text-base leading-[1.2] text-gray-12">
+              <div className="px-4 py-3 border-b border-gray-6 bg-gray-3">
+                <p className="font-manrope font-extrabold text-base leading-[1.2] text-gray-12">
                   Desempenho por variações
                 </p>
               </div>
@@ -176,7 +184,7 @@ export function ProductDetailsDrawer({
                     % das Escolhas
                   </p>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-center border-l border-gray-6">
+                <div className="px-4 py-3 flex items-center justify-center">
                   <p className="font-medium text-sm leading-[1.3] text-gray-12">
                     Estoque
                   </p>
@@ -202,13 +210,13 @@ export function ProductDetailsDrawer({
                       {row.quantitySold}
                     </p>
                   </div>
-                  <div className="flex gap-2 items-center justify-center px-4 py-2">
+                  <div className="flex gap-2 items-center justify-end px-4 py-2">
                     <p className="font-semibold text-sm leading-[1.3] text-gray-12 shrink-0">
                       {row.percentage}%
                     </p>
                     <PercentageBar percentage={row.percentage} />
                   </div>
-                  <div className="flex flex-col items-center justify-center px-4 py-2 border-l border-gray-6 gap-0.5">
+                  <div className="flex flex-col items-center justify-center px-4 py-2 gap-0.5">
                     <p className="font-semibold text-sm leading-[1.3] text-gray-12">
                       {row.stock}
                     </p>

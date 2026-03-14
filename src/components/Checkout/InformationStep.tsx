@@ -653,7 +653,7 @@ export function InformationStep({
     } else {
       const nameParts = name.split(/\s+/).filter(Boolean);
       if (nameParts.length < 2) {
-        errors.name = "Informe nome e sobrenome";
+        errors.name = "Informe nome completo";
       }
     }
 
@@ -1375,7 +1375,7 @@ export function InformationStep({
                                   [participantIndex]: user.id,
                                 }));
                               }}
-                              placeholder="Digite nome e sobrenome ou selecione um usuário"
+                              placeholder="Digite nome completo ou selecione um usuário"
                               className={`w-full ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
                             />
                             {fieldErrors[participantIndex]?.name && (

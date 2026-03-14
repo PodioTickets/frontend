@@ -15,6 +15,7 @@ import { CheckIcon } from '../Icons/Organizer/CheckIcon';
 import { PixIcon } from '../Icons/PixIcon';
 import { CardIcon } from '../Icons/CardIcon';
 import { ArrowButton } from '../ArrowButton';
+import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
 
 export function PaymentDetailsModal() {
   const { isOpen, closePaymentDetailsModal, data } = usePaymentDetailsModal();
@@ -286,16 +287,7 @@ export function PaymentDetailsModal() {
     return "bg-primary-11 text-primary-1";
   };
 
-  const eventTabs = eventId
-    ? [
-      { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-      { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-      { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-      { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-      { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-      { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-    ]
-    : [];
+  const eventTabs = eventId ? getEventTabs(eventId) : [];
 
   return (
     <AnimatePresence>
@@ -337,36 +329,25 @@ export function PaymentDetailsModal() {
                   </p>
                 </div>
                 {eventId && (
-                  <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                    <div className="flex items-center min-w-max">
-                      {eventTabs.map((tab) => {
-                        const isRegistrations = tab.href.includes("/registrations");
-                        return (
-                          <Link
-                            key={tab.href}
-                            href={tab.href}
-                            onClick={closePaymentDetailsModal}
-                            className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isRegistrations ? "border-primary-11 text-primary-11 font-manrope font-bold" : "border-transparent text-gray-11 font-family-dm-sans font-normal"}`}
-                          >
-                            {tab.label}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <EventMobileTabs
+                    tabs={eventTabs}
+                    activeHref={`/organizer/events/${eventId}/registrations`}
+                    onLinkClick={closePaymentDetailsModal}
+                    eventId={eventId}
+                  />
                 )}
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
                 <div className="px-4 py-4 flex flex-col gap-5">
                   {/* Breadcrumbs */}
-                  <div className="flex items-center gap-1 flex-wrap text-sm text-gray-11 font-family-dm-sans">
+                  <div className="flex items-center justify-center gap-1 flex-wrap text-sm text-gray-11 font-family-dm-sans">
                     <span>Eventos</span>
                     <ChevronDown className="size-4 -rotate-90 shrink-0" />
                     <span>Inscrições</span>
                     <ChevronDown className="size-4 -rotate-90 shrink-0" />
                     <span className="text-gray-12">Detalhes do pedido</span>
                   </div>
-                  <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-3">
                     <h2 className="font-manrope font-bold text-xl text-gray-12">Detalhes do pedido</h2>
                     <p className="font-family-dm-sans font-normal text-base text-gray-11">
                       ID do pedido: <span className="text-gray-12">#{paymentDetails?.orderId ? paymentDetails.orderId.slice(0, 6) : registration.id?.slice(0, 6)}...{paymentDetails?.orderId ? paymentDetails.orderId.slice(-4) : registration.id?.slice(-4)}</span>

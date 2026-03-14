@@ -91,7 +91,7 @@ export function BestSellingVariations({ items, onItemClick }: BestSellingVariati
               </div>
             ))}
             {showPagination && totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 py-3 px-4 border-t border-gray-6 shrink-0">
+              <div className="flex items-center justify-center gap-2 py-3 px-4 shrink-0">
                 <button
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
