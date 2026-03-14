@@ -33,8 +33,8 @@ interface QuestionDetailsDrawerProps {
   totalQuestions?: number;
   /** Respostas: opção + % + quantidade. Se não informado, usa options da pergunta com dados placeholder. */
   answerRows?: QuestionAnswerRow[];
-  /** Taxa de resposta (0-100). Placeholder se não informado. */
-  responseRate?: number;
+  /** Taxa de resposta (0-100). Exibe "—" se não informado. */
+  responseRate?: number | null;
   /** Total de participantes que responderam. Placeholder se não informado. */
   totalParticipants?: number;
   onPrevious?: () => void;
@@ -65,7 +65,7 @@ export function QuestionDetailsDrawer({
   questionIndex = 1,
   totalQuestions = 1,
   answerRows,
-  responseRate = 0,
+  responseRate,
   totalParticipants = 0,
   onPrevious,
   onNext,
@@ -114,7 +114,7 @@ export function QuestionDetailsDrawer({
                         type="button"
                         onClick={onPrevious}
                         disabled={!onPrevious || questionIndex <= 1}
-                        className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                        className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer rotate-180"
                         aria-label="Pergunta anterior"
                       >
                         <ArrowButton isOpen={false} />
@@ -123,7 +123,7 @@ export function QuestionDetailsDrawer({
                         type="button"
                         onClick={onNext}
                         disabled={!onNext || questionIndex >= totalQuestions}
-                        className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer rotate-180"
+                        className="size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 disabled:opacity-50 disabled:pointer-events-none cursor-pointer "
                         aria-label="Próxima pergunta"
                       ><ArrowButton isOpen={false} />
                       </button>
@@ -140,7 +140,7 @@ export function QuestionDetailsDrawer({
                           Taxa de resposta
                         </p>
                         <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                          {responseRate}%
+                          {responseRate != null ? `${responseRate}%` : "—"}
                         </p>
                       </div>
                       <div className="flex flex-col gap-3">

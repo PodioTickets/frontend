@@ -3,23 +3,30 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
-import { Input } from "@/components/Input";
-import { X, Lock, Building2 } from "lucide-react";
+import { X, Building2, Ticket } from "lucide-react";
 import { useRequestTransferModal } from "@/stores/modalStore";
 import Image from "next/image";
+import { ArrowButton } from "@/components/ArrowButton";
 
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
   const [amount, setAmount] = useState("");
+  const [amountFocused, setAmountFocused] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
 
-  const availableBalance = data?.availableBalance || 1250;
+  // API pode enviar em centavos; normalizar para exibição em reais
+  const rawBalance = data?.availableBalance ?? 125000;
+  const availableBalance = rawBalance > 10000 && Number.isInteger(rawBalance) ? rawBalance / 100 : rawBalance;
   const minAmount = 50;
-  const maskedPixKey = data?.pixKey || "34.***.***.0001.**";
+  const processingAmount = data?.processingAmount != null
+    ? (data.processingAmount > 10000 && Number.isInteger(data.processingAmount) ? data.processingAmount / 100 : data.processingAmount)
+    : null;
+  const maskedPixKey = data?.pixKey || "119.241.929-21";
   const organizationName = data?.organizationName || "Grupo Max atacadista";
   const organizationCnpj = data?.organizationCnpj || "27.912.458/0001-73";
   const organizationAvatar = data?.organizationAvatar || null;
+  const eventName = (data?.eventName as string) || organizationName;
 
   const handleUseAll = () => {
     setAmount(availableBalance.toFixed(2).replace(".", ","));
@@ -27,29 +34,28 @@ export function RequestTransferModal() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
-    // Remove "R$" e espaços, mantém apenas números e vírgula
-    value = value.replace(/R\$\s*/g, "").replace(/[^\d,]/g, "");
+    value = value.replace(/R\$\s*/g, "").replace(/\s/g, "").replace(/[^\d,]/g, "");
 
-    // Se o valor estiver vazio ou for apenas "0", permite edição
-    if (value === "" || value === "0") {
-      setAmount(value);
+    if (value === "" || value === ",") {
+      setAmount(value === "," ? "0," : "");
       return;
     }
 
-    // Limita a duas casas decimais
     const parts = value.split(",");
     if (parts.length > 2) {
-      // Se houver mais de uma vírgula, mantém apenas a primeira
       value = parts[0] + "," + parts.slice(1).join("");
     }
     if (parts.length === 2 && parts[1].length > 2) {
-      // Limita a 2 casas decimais
-      value = parts[0] + "," + parts[1].substring(0, 2);
+      const dec = parts[1];
+      // "1,000" (usuário digitou 0 no inteiro) -> "10,00"
+      if (dec.length === 3 && dec.endsWith("00") && dec[0] !== "0") {
+        value = parts[0] + dec[0] + ",00";
+      } else {
+        value = parts[0] + "," + dec.slice(-2);
+      }
     }
 
-    // Substitui vírgula por ponto para processamento
     const numericValue = value.replace(",", ".");
-    // Valida se é um número válido
     if (numericValue === "" || (!isNaN(parseFloat(numericValue)) && parseFloat(numericValue) >= 0)) {
       setAmount(value);
     }
@@ -60,6 +66,22 @@ export function RequestTransferModal() {
     const numericValue = value.replace(",", ".");
     const num = parseFloat(numericValue) || 0;
     return `R$ ${num.toFixed(2).replace(".", ",")}`;
+  };
+
+  const displayValue = amountFocused
+    ? "R$ " + (amount || "")
+    : formatAmount(amount);
+
+  const handleAmountBlur = () => {
+    setAmountFocused(false);
+    if (!amount) return;
+    const normalized = amount.replace(",", ".");
+    const num = parseFloat(normalized);
+    if (isNaN(num) || num <= 0) {
+      setAmount("");
+      return;
+    }
+    setAmount(num.toFixed(2).replace(".", ","));
   };
 
   const handleConfirm = () => {
@@ -77,6 +99,7 @@ export function RequestTransferModal() {
   const handleClose = () => {
     setShowSuccess(false);
     setAmount("");
+    setAmountFocused(false);
     setTransferAmount("");
     closeRequestTransferModal();
   };
@@ -94,39 +117,193 @@ export function RequestTransferModal() {
 
   if (!isOpen) return null;
 
+  const formatBalance = (val: number) => val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(".", ",");
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/90 z-50"
+            className="fixed inset-0 bg-black/50 md:bg-black/90 z-50"
             onClick={handleClose}
           />
-
-          {/* Modal */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex flex-col md:flex md:items-center md:justify-center md:p-4"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Mobile: full-screen layout (Figma) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="md:hidden flex flex-col flex-1 min-h-0 w-full bg-gray-2 overflow-hidden pt-16"
+            >
+              {!showSuccess ? (
+                <>
+                  <div className="bg-gray-1 border-b border-gray-6 shrink-0">
+                    <div className="flex items-center gap-1 h-[52px] px-4">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
+                        aria-label="Voltar"
+                      >
+                        <ArrowButton isOpen={false} />
+                      </button>
+                      <h2 className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 flex-1 text-center pr-8">
+                        Solicitar repasse
+                      </h2>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4">
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11 mb-6">
+                      O valor será enviado para a conta cadastrada.
+                    </p>
+                    <div className="flex flex-col gap-5 mb-8">
+                      <div className="flex flex-col gap-3">
+                        <label className="font-family-dm-sans font-medium text-base text-gray-12">
+                          Valor do Saque
+                        </label>
+                        <div className="flex items-center justify-between gap-2 border border-gray-6 rounded-lg px-3 py-4 md:py-6 bg-gray-1">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={displayValue}
+                            onChange={handleAmountChange}
+                            onFocus={() => setAmountFocused(true)}
+                            onBlur={handleAmountBlur}
+                            placeholder="R$ 0,00"
+                            className="flex-1 min-w-0 text-xl md:text-2xl font-manrope font-extrabold tracking-[1px] text-gray-12 bg-transparent border-none outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleUseAll}
+                            className="text-sm font-family-dm-sans font-semibold text-blue-10 hover:text-blue-11 shrink-0"
+                          >
+                            Sacar tudo
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-4">
+                        <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                          Mínimo: <span className="font-semibold text-gray-11">R$ {formatBalance(minAmount)}</span>
+                        </p>
+                        <div className="w-full h-px bg-gray-6" />
+                        <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                          Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
+                        </p>
+                        {processingAmount != null && (
+                          <>
+                            <div className="w-full h-px bg-gray-6" />
+                            <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                              Repasse processando: <span className="font-semibold text-gray-12">R$ {formatBalance(processingAmount)}</span>
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex flex-col gap-5">
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="size-9 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
+                            <Building2 className="size-6 text-gray-12" />
+                          </div>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <p className="font-family-dm-sans font-semibold text-base text-gray-12">
+                              Banco Nubank
+                            </p>
+                            <p className="font-family-dm-sans font-normal text-sm text-gray-11">
+                              Chave: {maskedPixKey}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-sm font-family-dm-sans font-semibold text-blue-10 hover:text-blue-11 text-left"
+                        >
+                          Precisa alterar conta?
+                        </button>
+                      </div>
+                      <div className="w-full h-px bg-gray-6" />
+                      <div className="flex flex-col gap-3">
+                        <p className="font-family-dm-sans font-normal text-sm text-gray-11">
+                          Nome do evento
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div className="size-9 rounded-lg bg-[#caf1f6] flex items-center justify-center shrink-0">
+                            <Ticket className="size-5 text-gray-12" />
+                          </div>
+                          <p className="font-family-dm-sans font-semibold text-base text-gray-12">
+                            {eventName}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex gap-2 px-4 py-4 border-t border-gray-6 bg-gray-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleClose}
+                      className="flex-1 h-11 border-gray-6 text-gray-12 font-manrope font-bold text-base"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleConfirm}
+                      disabled={!isValidAmount}
+                      className="flex-1 h-11 bg-primary-11 text-primary-2 font-manrope font-bold text-base hover:bg-primary-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Confirmar
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-gray-1 border-b border-gray-6 shrink-0">
+                    <div className="flex items-center gap-1 h-[52px] px-4">
+                      <button type="button" onClick={handleClose} className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 -rotate-180" aria-label="Voltar">
+                        <ArrowButton isOpen={false} />
+                      </button>
+                      <h2 className="font-family-dm-sans font-semibold text-base text-gray-12 flex-1 text-center pr-8">Saque solicitado</h2>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col items-center justify-center gap-6">
+                    <Image src="/images/money_icon.png" alt="" width={116} height={88} className="w-[116px] h-[88px] object-contain" draggable={false} />
+                    <div className="text-center">
+                      <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                        Seu saque de <span className="font-bold text-gray-12">{transferAmount}</span> foi solicitado e será enviado para a conta cadastrada
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex gap-2 px-4 py-4 border-t border-gray-6 bg-gray-1">
+                    <Button variant="outline" onClick={handleClose} className="flex-1 h-11 border-gray-6 text-gray-12 font-manrope font-bold text-base">Fechar</Button>
+                    <Button onClick={handleViewHistory} className="flex-1 h-11 bg-primary-11 text-primary-2 font-manrope font-bold text-base">Ver detalhes</Button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+
+            {/* Desktop: centered modal */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[745px] flex flex-col shadow-2xl"
+              className="hidden md:flex flex-col bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[745px] shadow-2xl"
             >
               {!showSuccess ? (
                 <>
-                  {/* Header */}
                   <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6">
                     <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
                       Solicitar Saque
@@ -138,15 +315,10 @@ export function RequestTransferModal() {
                       <X className="size-6 text-gray-11" />
                     </button>
                   </div>
-
-                  {/* Content */}
                   <div className="px-5 py-5 flex flex-col gap-6">
-                    {/* Info Text */}
                     <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
                       O valor será enviado para a conta cadastrada. Para alterar a conta, fale com o suporte
                     </p>
-
-                    {/* Amount Input */}
                     <div className="flex flex-col gap-2">
                       <label className="font-family-dm-sans font-medium text-[18px] leading-[1.3] text-gray-12">
                         Valor do Saque
@@ -154,8 +326,11 @@ export function RequestTransferModal() {
                       <div className="relative">
                         <input
                           type="text"
-                          value={formatAmount(amount)}
+                          inputMode="decimal"
+                          value={displayValue}
                           onChange={handleAmountChange}
+                          onFocus={() => setAmountFocused(true)}
+                          onBlur={handleAmountBlur}
                           placeholder="R$ 0,00"
                           className="h-[71px] text-[24px] font-manrope font-extrabold tracking-[1px] border border-gray-6 rounded-lg px-3 py-6 w-full"
                         />
@@ -163,14 +338,15 @@ export function RequestTransferModal() {
                       <div className="flex items-center justify-between h-5 font-family-dm-sans">
                         <div className="flex items-center gap-2">
                           <span className="text-[16px] leading-[1.3] text-gray-11">
-                            Mínimo: <span className="font-semibold text-gray-12">R${minAmount.toFixed(2).replace(".", ",")}</span>
+                            Mínimo: <span className="font-semibold text-gray-12">R$ {formatBalance(minAmount)}</span>
                           </span>
                           <span className="w-px h-5 bg-gray-6" />
                           <span className="text-[16px] leading-[1.3] text-gray-11">
-                            Disponível: <span className="font-semibold text-gray-12">R${availableBalance.toFixed(2).replace(".", ",")}</span>
+                            Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
                           </span>
                         </div>
                         <button
+                          type="button"
                           onClick={handleUseAll}
                           className="text-[16px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3]"
                         >
@@ -178,8 +354,6 @@ export function RequestTransferModal() {
                         </button>
                       </div>
                     </div>
-
-                    {/* Account Info Card */}
                     <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex flex-col gap-5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -187,104 +361,59 @@ export function RequestTransferModal() {
                             <Building2 className="size-6 text-gray-12" />
                           </div>
                           <div className="flex flex-col gap-2">
-                            <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                              Banco Nubank
-                            </p>
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                              Chave: {maskedPixKey}
-                            </p>
+                            <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">Banco Nubank</p>
+                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Chave: {maskedPixKey}</p>
                           </div>
                         </div>
-                        <button className="text-[16px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3]">
+                        <button type="button" className="text-[16px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3]">
                           Precisa alterar a conta?
                         </button>
                       </div>
                       <div className="h-px bg-gray-6" />
                       <div className="flex flex-col gap-3">
-                        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                          Organização
-                        </p>
+                        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Organização</p>
                         <div className="flex items-center gap-2">
                           {organizationAvatar ? (
-                            <img
-                              src={organizationAvatar}
-                              alt={organizationName}
-                              className="size-8 rounded-full shrink-0 object-cover"
-                            />
+                            <img src={organizationAvatar} alt={organizationName} className="size-8 rounded-full shrink-0 object-cover" />
                           ) : (
                             <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                              <span className="text-gray-12 font-semibold text-sm">
-                                {organizationName.charAt(0).toUpperCase()}
-                              </span>
+                              <span className="text-gray-12 font-semibold text-sm">{organizationName.charAt(0).toUpperCase()}</span>
                             </div>
                           )}
                           <div className="flex flex-col gap-3">
-                            <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                              {organizationName}
-                            </p>
-                            <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">
-                              CNPJ: {organizationCnpj}
-                            </p>
+                            <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">{organizationName}</p>
+                            <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">CNPJ: {organizationCnpj}</p>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Footer */}
                   <div className="px-4 py-3 border-t border-gray-6 flex gap-2.5 justify-end">
-                    <Button
-                      variant="outline"
-                      onClick={handleClose}
-                      className="h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2"
-                    >
+                    <Button variant="outline" onClick={handleClose} className="h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2">
                       Cancelar
                     </Button>
-                    <Button
-                      variant="default"
-                      onClick={handleConfirm}
-                      disabled={!isValidAmount}
-                      className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <Button variant="default" onClick={handleConfirm} disabled={!isValidAmount} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
                       Confirmar
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Success View */}
                   <div className="flex flex-col items-center justify-center px-5 py-5 gap-11">
                     <div className="flex flex-col gap-6 items-center w-full">
-                      {/* Lock Icon */}
-                      <Image src="/images/money_icon.png" alt="Success Lock" width={116} height={88} draggable={false} className="w-[116px] h-[88px] object-contain" />
-
-                      {/* Success Message */}
+                      <Image src="/images/money_icon.png" alt="" width={116} height={88} draggable={false} className="w-[116px] h-[88px] object-contain" />
                       <div className="flex flex-col gap-4 items-center text-center w-full">
-                        <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
-                          Saque solicitado
-                        </h2>
+                        <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">Saque solicitado</h2>
                         <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                          Seu saque de{" "}
-                          <span className="font-bold text-gray-12">{transferAmount}</span>{" "}
-                          foi solicitado e será enviado para a conta cadastrada
+                          Seu saque de <span className="font-bold text-gray-12">{transferAmount}</span> foi solicitado e será enviado para a conta cadastrada
                         </p>
                       </div>
                     </div>
-
-                    {/* Buttons */}
                     <div className="flex gap-2 w-full">
-                      <Button
-                        variant="outline"
-                        onClick={handleClose}
-                        className="flex-1 h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2"
-                      >
+                      <Button variant="outline" onClick={handleClose} className="flex-1 h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2">
                         Fechar
                       </Button>
-                      <Button
-                        variant="default"
-                        onClick={handleViewHistory}
-                        className="flex-1 h-[44px] px-8 text-[16px] font-bold font-manrope"
-                      >
+                      <Button variant="default" onClick={handleViewHistory} className="flex-1 h-[44px] px-8 text-[16px] font-bold font-manrope">
                         Ver detalhes
                       </Button>
                     </div>

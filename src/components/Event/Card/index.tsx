@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import type { Event } from "@/interfaces/event";
 import { getAvatarUrl } from "@/utils/avatar";
 import { getEventOrganizer } from "@/utils/organization";
+import { cn } from "@/utils/cn";
 
 interface EventCardProps {
   event: Event;
@@ -34,6 +35,21 @@ export function EventCard({ event }: EventCardProps) {
         return "Cancelado";
       default:
         return "Inscrições abertas";
+      case "COMPLETED":
+        return "Evento realizado";
+    }
+  };
+
+  const getStatusColor = (status: Event["status"]) => {
+    switch (status) {
+      case "PUBLISHED":
+        return "bg-primary-5 border-primary-7";
+      case "COMPLETED":
+        return "bg-blue-3 border-blue-6";
+      case "CANCELLED":
+        return "bg-red-3 border-red-6";
+      default:
+        return "bg-primary-5";
     }
   };
 
@@ -64,7 +80,7 @@ export function EventCard({ event }: EventCardProps) {
           {(() => {
             const organizer = getEventOrganizer(event);
             if (!organizer) return <FlagIcon className="size-5" />;
-            
+
             // Se tiver logoUrl (organization), usa ela, senão usa avatar do user (organizer antigo)
             if (organizer.logoUrl) {
               return (
@@ -76,7 +92,7 @@ export function EventCard({ event }: EventCardProps) {
                 />
               );
             }
-            
+
             // Fallback para formato antigo
             if (event.organizer?.user?.avatarUrl) {
               return (
@@ -88,7 +104,7 @@ export function EventCard({ event }: EventCardProps) {
                 />
               );
             }
-            
+
             return <FlagIcon className="size-5" />;
           })()}
           <span>{getEventOrganizer(event)?.name || "Organizador"}</span>
@@ -99,10 +115,12 @@ export function EventCard({ event }: EventCardProps) {
       </div>
 
       <div className="flex items-center justify-between mt-3">
-        <div className="w-auto flex items-center justify-center gap-2 bg-primary-5 border border-primary-7 rounded-tr-xl rounded-bl-xl p-2">
-          <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
-            <div className="bg-primary-12 rounded-full size-1" />
-          </div>
+        <div className={cn("w-auto flex items-center justify-center gap-2 border border-primary-7 rounded-tr-xl rounded-bl-xl p-2", getStatusColor(event.status))}>
+          {event.status === "PUBLISHED" && (
+            <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
+              <div className="bg-primary-12 rounded-full size-1" />
+            </div>
+          )}
           <h1 className="text-sm font-semibold font-family-dm-sans text-gray-12">
             {getStatusText(event.status)}
           </h1>

@@ -2,14 +2,16 @@
 
 import { useViewRegistrationModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { organizerService } from "@/services";
 import { Loading } from "../Loading";
 import { DistanceIcon } from "../Icons/DistanceIcon";
+import { ArrowButton } from "../ArrowButton";
 
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();
@@ -22,6 +24,19 @@ export function ViewRegistrationModal() {
   const registrationId = useMemo(() => {
     return data?.registrationId || data?.registration?.id || null;
   }, [data]);
+
+  const eventId = data?.eventId as string | undefined;
+  const eventName = (data?.eventName as string) || "Evento";
+  const eventTabs = eventId
+    ? [
+      { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+      { label: "Editar", href: `/organizer/events/${eventId}/edit` },
+      { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
+      { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+      { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
+      { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+    ]
+    : [];
 
   useEffect(() => {
     if (!isOpen || !registrationId) {
@@ -259,7 +274,7 @@ export function ViewRegistrationModal() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              className="fixed inset-0 z-50 flex flex-col md:flex md:items-center md:justify-center bg-black/50"
               onClick={closeViewRegistrationModal}
             />
             <motion.div
@@ -268,9 +283,228 @@ export function ViewRegistrationModal() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+              className="fixed inset-0 z-50 flex flex-col md:flex md:items-center md:justify-center pointer-events-none p-0 md:pointer-events-auto"
             >
-              <div className="bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto">
+              {/* Mobile: full-screen layout (Figma) */}
+              <div className="md:hidden flex flex-col flex-1 min-h-0 w-full bg-gray-2 overflow-hidden pt-16 pointer-events-auto">
+                <div className="bg-gray-1 border-b border-gray-6 shrink-0">
+                  <div className="flex items-center gap-1 h-[52px] px-4">
+                    <button
+                      type="button"
+                      onClick={closeViewRegistrationModal}
+                      className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
+                      aria-label="Voltar"
+                    >
+                      <ArrowButton isOpen={false} />
+                    </button>
+                    <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+                      {eventName}
+                    </p>
+                  </div>
+                  {eventId && (
+                    <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+                      <div className="flex items-center min-w-max">
+                        {eventTabs.map((tab) => {
+                          const isRegistrations = tab.href.includes("/registrations");
+                          return (
+                            <Link
+                              key={tab.href}
+                              href={tab.href}
+                              onClick={closeViewRegistrationModal}
+                              className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isRegistrations ? "border-primary-11 text-primary-11 font-manrope font-bold" : "border-transparent text-gray-11 font-family-dm-sans font-normal"}`}
+                            >
+                              {tab.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4">
+                  <div className="flex items-center justify-center gap-2 flex-wrap text-sm text-gray-11 font-family-dm-sans mb-4">
+                    <span>Eventos</span>
+                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
+                    <span>Inscrições</span>
+                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
+                    <span>Detalhes do pedido</span>
+                    <ChevronDown className="size-4 -rotate-90 shrink-0" />
+                    <span className="text-gray-12">Informações do participante</span>
+                  </div>
+
+                  <h1 className="font-manrope font-bold text-xl text-gray-12 mb-5">
+                    Informações do participante
+                  </h1>
+
+                  {/* Participant ticket block */}
+                  <div className="flex flex-col gap-5 pb-6 border-b border-gray-6">
+                    <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                      Participante 1
+                    </p>
+                    <div className="flex flex-col gap-4">
+                      <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                        {categoryName}
+                      </p>
+                      <p className="font-manrope font-bold text-lg text-gray-12">
+                        {ticketName}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DistanceIcon className="size-6 shrink-0 text-gray-12" />
+                      <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                        {ticketDistance}
+                      </p>
+                    </div>
+                    <div className="relative shrink-0 size-[130px]">
+                      {currentRegistration?.qrCode ? (
+                        <RegistrationQRCode
+                          qrCodeData={currentRegistration.qrCode}
+                          size={130}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-2 border border-gray-6 rounded-lg flex items-center justify-center">
+                          <span className="text-xs text-gray-11">QR Code</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="border border-gray-6 rounded-xl p-3">
+                      <div className="flex gap-2 items-center">
+                        <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
+                          {user?.avatarUrl ? (
+                            <Image
+                              src={getAvatarUrl(user.avatarUrl)}
+                              alt={participantName}
+                              width={40}
+                              height={40}
+                              className="rounded-full object-cover w-full h-full"
+                            />
+                          ) : (
+                            <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center">
+                              <span className="text-primary-11 font-semibold text-sm">
+                                {participantName.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-3 min-w-0 flex-1">
+                          <p className="font-family-dm-sans font-semibold text-sm text-gray-12 truncate">
+                            {participantName}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-11 font-family-dm-sans">
+                            <span>{participantBirthDate}</span>
+                            <span className="size-1 bg-gray-11 rounded-full shrink-0" />
+                            <span>{participantGender}</span>
+                            <span className="size-1 bg-gray-11 rounded-full shrink-0" />
+                            <span>{participantCPF}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Personal info fields */}
+                  <div className="flex flex-col gap-0 pt-8 pb-6">
+                    {[
+                      { label: "Nome", value: participantName },
+                      { label: "Email", value: participantEmail },
+                      { label: "CPF", value: formatCPF(participantCPFRaw) || "—" },
+                      { label: "Data de nascimento", value: participantBirthDate },
+                      { label: "Telefone", value: formatPhone(participantPhone) || "—" },
+                      { label: "Telefone de emergência", value: formatPhone(emergencyPhone) || "Opcional" },
+                      { label: "Sexo", value: participantGender || "—" },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex flex-col gap-1 py-4 first:pt-0">
+                        <p className="font-family-dm-sans font-normal text-base text-gray-12">
+                          {label}
+                        </p>
+                        <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                          {value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="w-full h-px bg-gray-6" />
+
+                  {/* Perguntas do Organizador */}
+                  <div className="py-8">
+                    <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
+                      Perguntas do Organizador
+                    </h2>
+                    {questions.length > 0 ? (
+                      <div className="flex flex-col gap-4">
+                        {questions.map((q: any, index: number) => (
+                          <div key={q.id || index} className="flex flex-col gap-1 py-4">
+                            <p className="font-family-dm-sans font-normal text-base text-gray-12">
+                              {q.question?.question || q.question || `Pergunta ${index + 1}`}
+                            </p>
+                            <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                              {q.answer || "—"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                        Nenhuma pergunta respondida
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="w-full h-px bg-gray-6" />
+
+                  {/* Produtos */}
+                  <div className="py-8">
+                    <h2 className="font-manrope font-bold text-lg text-gray-12 mb-4">
+                      Produtos
+                    </h2>
+                    {products.length > 0 ? (
+                      <div className="flex flex-col gap-4">
+                        {products.map((product: any, index: number) => (
+                          <div
+                            key={product.id || index}
+                            className="bg-gray-1 border border-gray-6 rounded-xl p-4"
+                          >
+                            <div className="flex gap-3">
+                              <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
+                                <Image
+                                  src={product.productImage}
+                                  alt={product.productName}
+                                  width={100}
+                                  height={100}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                              <div className="flex-1 flex flex-col justify-between min-w-0">
+                                <p className="font-family-dm-sans font-semibold text-base text-gray-12 line-clamp-2">
+                                  {product.productName}
+                                </p>
+                                {product.variationName && (
+                                  <p className="font-family-dm-sans font-normal text-sm text-gray-11">
+                                    {product.variationType || "Variação"}: {product.variationName}
+                                  </p>
+                                )}
+                                <p className="font-manrope font-semibold text-base text-gray-12 mt-1">
+                                  {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="font-family-dm-sans font-normal text-base text-gray-11">
+                        Nenhum produto adicionado
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop: centered modal */}
+              <div className="hidden md:flex flex-col bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6">
                   <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">

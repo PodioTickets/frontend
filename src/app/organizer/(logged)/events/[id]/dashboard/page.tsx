@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import {
@@ -89,6 +90,29 @@ export default function EventDashboardPage() {
     }>;
     salesHeatmap: SalesHeatmapData[];
     dailyData: any[];
+    topProductVariations: Array<{
+      productId: string;
+      productName: string;
+      productImage?: string | null;
+      variations: Array<{
+        variationId: string | null;
+        variationName: string;
+        quantitySold: number;
+        percentage?: number;
+        remainingStock?: number;
+        totalStock?: number;
+      }>;
+    }>;
+    mostAnsweredQuestions: Array<{
+      questionId: string;
+      question: string;
+      order: number;
+      participantCount: number;
+      type: string;
+      options?: string[];
+      isRequired?: boolean;
+      answersRanking: Array<{ answer: string; count: number; percentage: number }>;
+    }>;
   }>({
     netRevenue: 0,
     netRevenueChange: 0,
@@ -116,6 +140,8 @@ export default function EventDashboardPage() {
     lotsNearDepletion: [],
     salesHeatmap: [],
     dailyData: [],
+    topProductVariations: [],
+    mostAnsweredQuestions: [],
   });
 
   useEffect(() => {
@@ -166,22 +192,12 @@ export default function EventDashboardPage() {
           canceled: dashboardDataResponse.registrationsTrend.canceled,
           refunded: dashboardDataResponse.registrationsTrend.refunded,
           chartData: (() => {
-            // Se o filtro for "geral", os dados já vêm agrupados por mês do backend
-            // Apenas formatar os labels se necessário
             if (periodFilter === "geral" && dashboardDataResponse.registrationsTrend.chartData) {
               const originalData = dashboardDataResponse.registrationsTrend.chartData;
-
-              // Se já tiver labels e revenue (dados mensais), usar diretamente
               if (originalData.labels && Array.isArray(originalData.labels) && originalData.revenue) {
-                // Converter labels para formato "Fev/2026" (mês completo/ano completo)
                 const formattedLabels = originalData.labels.map((label: any) => {
-                  // Garantir que label é uma string
                   const labelStr = String(label || '').trim();
-
                   if (!labelStr) return label;
-
-                  // Formato pode ser "Set/25", "Jan/26", "02/25", "09/25", etc.
-                  // Tentar primeiro formato com mês abreviado e ano de 2 dígitos
                   let match = labelStr.match(/^(\w+)\/(\d{2})$/);
 
                   if (match) {
@@ -305,6 +321,51 @@ export default function EventDashboardPage() {
         })(),
         salesHeatmap: dashboardDataResponse.salesHeatmap,
         dailyData: [],
+        topProductVariations: (() => {
+          const raw = (dashboardDataResponse as any).topProductVariations;
+          const arr = Array.isArray(raw) ? raw : [];
+          return arr.map((p: any) => ({
+            productId: p.productId ?? p.product_id ?? "",
+            productName: p.productName ?? p.product_name ?? "",
+            productImage: p.productImage ?? p.product_image ?? null,
+            variations: Array.isArray(p.variations)
+              ? p.variations.map((v: any) => ({
+                variationId: v.variationId ?? v.variation_id ?? null,
+                variationName: v.variationName ?? v.variation_name ?? "—",
+                quantitySold: typeof v.quantitySold === "number" ? v.quantitySold : Number(v.quantity_sold ?? 0) || 0,
+                percentage: typeof v.percentage === "number" ? v.percentage : undefined,
+                remainingStock: typeof v.remainingStock === "number" ? v.remainingStock : (typeof v.remaining_stock === "number" ? v.remaining_stock : undefined),
+                totalStock: typeof v.totalStock === "number" ? v.totalStock : (typeof v.total_stock === "number" ? v.total_stock : undefined),
+              }))
+              : [],
+          }));
+        })(),
+        mostAnsweredQuestions: (() => {
+          const raw = (dashboardDataResponse as any).mostAnsweredQuestions;
+          const arr = Array.isArray(raw) ? raw : [];
+          return arr.map((q: any) => ({
+            questionId: q.questionId ?? q.question_id ?? "",
+            question: q.question ?? "",
+            order: typeof q.order === "number" ? q.order : Number(q.order ?? 0) || 0,
+            participantCount: typeof q.participantCount === "number" ? q.participantCount : Number(q.participant_count ?? 0) || 0,
+            type: typeof q.type === "string" ? q.type : "text",
+            options: Array.isArray(q.options) ? q.options : [],
+            isRequired: Boolean(q.isRequired ?? q.is_required ?? false),
+            answersRanking: Array.isArray(q.answersRanking)
+              ? (q.answersRanking as any[]).map((a: any) => ({
+                answer: a.answer ?? a.label ?? "",
+                count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
+                percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
+              }))
+              : Array.isArray(q.answers_ranking)
+                ? (q.answers_ranking as any[]).map((a: any) => ({
+                  answer: a.answer ?? a.label ?? "",
+                  count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
+                  percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
+                }))
+                : [],
+          }));
+        })(),
       });
     } catch (error: any) {
       console.error("Error loading data:", error);
@@ -315,18 +376,29 @@ export default function EventDashboardPage() {
     }
   };
 
-  // Variações mais vendidas: derivado do ranking de ingressos (nome do ingresso + categoria como variação)
-  const bestSellingVariations = useMemo(
-    (): BestSellingVariationItem[] =>
-      dashboardData.ticketRanking.map((t, i) => ({
-        id: `ticket-${i}`,
-        productName: t.name,
-        variationName: t.category || "Ingresso",
-        quantity: t.quantity,
-        totalCents: t.total,
-      })),
-    [dashboardData.ticketRanking]
-  );
+  // Variações mais vendidas: da API topProductVariations (flatten: um item por variação)
+  const bestSellingVariations = useMemo((): BestSellingVariationItem[] => {
+    const top = dashboardData.topProductVariations ?? [];
+    const list: BestSellingVariationItem[] = [];
+    top.forEach((product) => {
+      (product.variations ?? []).forEach((v, vIdx) => {
+        const item: BestSellingVariationItem = {
+          id: v.variationId ?? `${product.productId}-${vIdx}`,
+          productId: product.productId,
+          productName: product.productName,
+          variationId: v.variationId ?? undefined,
+          variationName: v.variationName,
+          quantity: v.quantitySold,
+          totalCents: undefined,
+          percentage: v.percentage,
+          remainingStock: v.remainingStock,
+          totalStock: v.totalStock,
+        };
+        list.push(item);
+      });
+    });
+    return list;
+  }, [dashboardData.topProductVariations]);
 
   const uniqueProductNames = useMemo(
     () => [...new Set(bestSellingVariations.map((i) => i.productName))],
@@ -336,25 +408,54 @@ export default function EventDashboardPage() {
     ? uniqueProductNames.indexOf(selectedProductName) + 1
     : 0;
   const totalProducts = uniqueProductNames.length;
+
+  const selectedProductFromApi = useMemo(
+    () => (dashboardData.topProductVariations ?? []).find((p) => p.productName === selectedProductName) ?? null,
+    [dashboardData.topProductVariations, selectedProductName]
+  );
+
   const selectedProductVariations = useMemo(() => {
     if (!selectedProductName) return [];
+    if (selectedProductFromApi?.variations?.length) {
+      return selectedProductFromApi.variations.map((v) => {
+        const stockStr =
+          v.remainingStock != null && v.totalStock != null
+            ? `${v.remainingStock.toLocaleString("pt-BR")} / ${v.totalStock.toLocaleString("pt-BR")}`
+            : "—";
+        const stockStatus: "Esgotado" | "Normal" | undefined =
+          v.remainingStock != null ? (v.remainingStock === 0 ? "Esgotado" : "Normal") : undefined;
+        return {
+          variationName: v.variationName,
+          quantitySold: String(v.quantitySold),
+          percentage: v.percentage ?? 0,
+          stock: stockStr,
+          stockStatus,
+        };
+      });
+    }
     const items = bestSellingVariations.filter((i) => i.productName === selectedProductName);
     const totalQty = items.reduce((s, i) => s + (i.quantity ?? 0), 0);
-    const totalRev = items.reduce((s, i) => s + (i.totalCents ?? 0), 0);
     return items.map((item) => {
       const qty = item.quantity ?? 0;
-      const pct = totalQty > 0 ? Math.round((qty / totalQty) * 100) : 0;
+      const pct = item.percentage ?? (totalQty > 0 ? Math.round((qty / totalQty) * 100) : 0);
+      const hasRevenue = (item.totalCents ?? 0) > 0;
+      const stockStr =
+        item.remainingStock != null && item.totalStock != null
+          ? `${item.remainingStock.toLocaleString("pt-BR")} / ${item.totalStock.toLocaleString("pt-BR")}`
+          : "—";
+      const stockStatus: "Esgotado" | "Normal" | undefined =
+        item.remainingStock != null ? (item.remainingStock === 0 ? "Esgotado" : "Normal") : undefined;
       return {
         variationName: item.variationName,
-        quantitySold: (item.totalCents ?? 0) > 0
+        quantitySold: hasRevenue
           ? `R$ ${((item.totalCents ?? 0) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : String(qty),
         percentage: pct,
-        stock: "—",
-        stockStatus: undefined as "Esgotado" | "Normal" | undefined,
+        stock: stockStr,
+        stockStatus,
       };
     });
-  }, [selectedProductName, bestSellingVariations]);
+  }, [selectedProductName, selectedProductFromApi, bestSellingVariations]);
   const selectedProductTotalRevenue: number = useMemo(() => {
     if (!selectedProductName) return 0;
     return bestSellingVariations
@@ -367,29 +468,71 @@ export default function EventDashboardPage() {
       .filter((i) => i.productName === selectedProductName)
       .reduce((s, i) => s + (i.quantity ?? 0), 0);
   }, [selectedProductName, bestSellingVariations]);
+  const selectedProductTotalRevenueLabel = selectedProductTotalRevenue > 0
+    ? `R$ ${(selectedProductTotalRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : "—";
 
   const sortedQuestions = useMemo(() => {
     const questions = (event?.questions ?? []) as Question[];
     return [...questions].sort((a, b) => a.order - b.order);
   }, [event?.questions]);
 
-  const questionsListing = useMemo(
-    () =>
-      sortedQuestions.map((q) => ({
-        id: q.id,
+  // Listagem de perguntas: da API mostAnsweredQuestions (participantCount, answersRanking, type, etc.)
+  const questionsListing = useMemo(() => {
+    const fromApi = dashboardData.mostAnsweredQuestions ?? [];
+    if (fromApi.length > 0) {
+      return fromApi.map((q) => ({
+        id: q.questionId,
         question: q.question,
-        answerSummary: q.type === "text" ? "Texto livre" : "Maioria: —",
-      })),
-    [sortedQuestions]
-  );
+        answerSummary: `${q.participantCount} resposta${q.participantCount !== 1 ? "s" : ""}`,
+      }));
+    }
+    return sortedQuestions.map((q) => ({
+      id: q.id,
+      question: q.question,
+      answerSummary: q.type === "text" ? "Texto livre" : "Maioria: —",
+    }));
+  }, [dashboardData.mostAnsweredQuestions, sortedQuestions]);
 
-  const selectedQuestion = selectedQuestionId
-    ? sortedQuestions.find((q) => q.id === selectedQuestionId) ?? null
+  const apiQuestions = dashboardData.mostAnsweredQuestions ?? [];
+
+  const selectedQuestionFromApi = selectedQuestionId && apiQuestions.length > 0
+    ? apiQuestions.find((q) => q.questionId === selectedQuestionId) ?? null
     : null;
+
+  const selectedQuestion: Question | null = useMemo(() => {
+    if (!selectedQuestionId) return null;
+    if (selectedQuestionFromApi) {
+      return {
+        id: selectedQuestionFromApi.questionId,
+        eventId: "",
+        question: selectedQuestionFromApi.question,
+        type: (selectedQuestionFromApi.type || "text") as Question["type"],
+        options: selectedQuestionFromApi.options,
+        isRequired: selectedQuestionFromApi.isRequired ?? false,
+        order: selectedQuestionFromApi.order,
+        createdAt: "",
+        updatedAt: "",
+      };
+    }
+    return sortedQuestions.find((q) => q.id === selectedQuestionId) ?? null;
+  }, [selectedQuestionId, selectedQuestionFromApi, sortedQuestions]);
+
+  const selectedQuestionAnswerRows = useMemo((): { label: string; percentage: number; count: number }[] | undefined => {
+    if (!selectedQuestionFromApi?.answersRanking?.length) return undefined;
+    return selectedQuestionFromApi.answersRanking.map((a) => ({
+      label: a.answer,
+      percentage: a.percentage,
+      count: a.count,
+    }));
+  }, [selectedQuestionFromApi]);
+
   const selectedQuestionIndex = selectedQuestionId
-    ? sortedQuestions.findIndex((q) => q.id === selectedQuestionId) + 1
+    ? (apiQuestions.length > 0
+      ? apiQuestions.findIndex((q) => q.questionId === selectedQuestionId) + 1
+      : sortedQuestions.findIndex((q) => q.id === selectedQuestionId) + 1)
     : 0;
-  const totalQuestions = sortedQuestions.length;
+  const totalQuestions = apiQuestions.length > 0 ? apiQuestions.length : sortedQuestions.length;
 
   if (loading) {
     return (
@@ -419,10 +562,55 @@ export default function EventDashboardPage() {
     return `${selectedTicketIds.length} ingressos selecionados`;
   };
 
+  const eventTabs = [
+    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
+    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
+    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+    { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
+    { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader eventName={event?.name} />
-      <div className="max-w-7xl mx-auto py-8">
+      <div className="hidden md:block">
+        <EventPageHeader eventName={event?.name} />
+      </div>
+
+      {/* Mobile header: back + event name + horizontal tabs (Figma) */}
+      <div className="md:hidden bg-gray-1 border-b border-gray-6">
+        <div className="flex items-center gap-1 h-[52px] px-4">
+          <Link
+            href="/organizer/events"
+            className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={false} />
+          </Link>
+          <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+            {event?.name || "Evento"}
+          </p>
+        </div>
+        <div className="border-b border-gray-6 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="flex items-center min-w-max">
+            {eventTabs.map((tab) => {
+              const isDashboard = tab.href.includes("/dashboard");
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isDashboard ? "border-primary-11 text-primary-11 font-manrope font-bold" : "border-transparent text-gray-11 font-family-dm-sans font-normal"}`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop content */}
+      <div className="hidden md:block max-w-7xl mx-auto py-8">
         {/* Title and Description - conforme Figma */}
         <div className="mb-8 flex flex-col gap-1">
           <h1 className="font-manrope font-bold text-[20px] leading-[1.3] text-gray-12">
@@ -648,8 +836,7 @@ export default function EventDashboardPage() {
           </div>
         </div>
 
-        {/* Variações mais vendidas | Listagem de perguntas - conforme Figma */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8 w-full">
           <div className="min-h-[311px]">
             <BestSellingVariations
               items={bestSellingVariations}
@@ -672,19 +859,36 @@ export default function EventDashboardPage() {
           question={selectedQuestion}
           questionIndex={selectedQuestionIndex}
           totalQuestions={totalQuestions}
+          answerRows={selectedQuestionAnswerRows}
+          totalParticipants={selectedQuestionFromApi?.participantCount ?? 0}
+          responseRate={
+            dashboardData.totalRegistrations > 0 && selectedQuestionFromApi
+              ? Math.round((selectedQuestionFromApi.participantCount / dashboardData.totalRegistrations) * 100)
+              : undefined
+          }
           onPrevious={
             selectedQuestionIndex > 1
               ? () => {
-                const prev = sortedQuestions[selectedQuestionIndex - 2];
-                if (prev) setSelectedQuestionId(prev.id);
+                if (apiQuestions.length > 0) {
+                  const prev = apiQuestions[selectedQuestionIndex - 2];
+                  if (prev) setSelectedQuestionId(prev.questionId);
+                } else {
+                  const prev = sortedQuestions[selectedQuestionIndex - 2];
+                  if (prev) setSelectedQuestionId(prev.id);
+                }
               }
               : undefined
           }
           onNext={
             selectedQuestionIndex < totalQuestions && totalQuestions > 0
               ? () => {
-                const next = sortedQuestions[selectedQuestionIndex];
-                if (next) setSelectedQuestionId(next.id);
+                if (apiQuestions.length > 0) {
+                  const next = apiQuestions[selectedQuestionIndex];
+                  if (next) setSelectedQuestionId(next.questionId);
+                } else {
+                  const next = sortedQuestions[selectedQuestionIndex];
+                  if (next) setSelectedQuestionId(next.id);
+                }
               }
               : undefined
           }
@@ -694,10 +898,11 @@ export default function EventDashboardPage() {
           isOpen={!!selectedProductName}
           onClose={() => setSelectedProductName(null)}
           productName={selectedProductName ?? ""}
+          productImageUrl={selectedProductFromApi?.productImage ?? undefined}
           productIndex={selectedProductIndex}
           totalProducts={totalProducts}
           quantitySold={String(selectedProductQuantitySold)}
-          totalRevenue={`R$ ${(selectedProductTotalRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          totalRevenue={selectedProductTotalRevenueLabel}
           variationRows={selectedProductVariations}
           onPrevious={
             selectedProductIndex > 1
@@ -786,6 +991,240 @@ export default function EventDashboardPage() {
                 </p>
               </div>
             )
+          })}
+        </div>
+      </div>
+
+      {/* Mobile content (Figma) */}
+      <div className="md:hidden max-w-7xl mx-auto px-4 pb-8">
+        <div className="mb-5 mt-4">
+          <h1 className="font-manrope font-bold text-xl leading-[1.1] text-gray-12 mb-1">
+            Dashboard
+          </h1>
+          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
+            Acompanhe o desempenho do seu evento em tempo real
+          </p>
+        </div>
+
+        {/* Period + ticket filter */}
+        <div className="flex flex-col gap-3 mb-5">
+          <div className="bg-gray-3 flex items-center p-1 rounded-xl h-12 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+            {periodOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setPeriodFilter(option.value)}
+                className={`shrink-0 px-4 py-2 rounded-xl text-sm font-family-dm-sans font-medium border transition-all cursor-pointer h-10 flex items-center ${periodFilter === option.value ? "bg-gray-1 border-gray-6 text-gray-12" : "text-gray-11 hover:text-gray-12 border-transparent"}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setIsTicketModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-6 bg-gray-1 text-gray-12 hover:bg-gray-3 transition-colors cursor-pointer w-full h-12"
+          >
+            <span className="text-sm font-family-dm-sans font-normal flex-1 text-left truncate">{getTicketButtonLabel()}</span>
+            <ArrowButton />
+          </button>
+        </div>
+
+        {/* 2x2 metric cards */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
+            <div className="flex items-center justify-between px-3 pt-3 pb-2">
+              <p className="font-family-dm-sans font-normal text-base text-gray-11">Receita Líquida</p>
+              <div className="w-7 h-7 p-1 rounded-xl bg-blue-4 flex items-center justify-center shrink-0">
+                <CartIcon className="size-5 text-blue-12" />
+              </div>
+            </div>
+            <div className="px-3 flex-1 flex items-center">
+              <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
+                R$ {(dashboardData.netRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="px-3 pb-3 pt-1 flex items-center gap-2">
+              {dashboardData.netRevenueChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
+              <span className="font-family-dm-sans font-normal text-sm text-primary-11">
+                {Math.abs(dashboardData.netRevenueChange).toFixed(2)}% vs. semana passada
+              </span>
+            </div>
+          </div>
+          <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
+            <div className="flex items-center justify-between px-3 pt-3 pb-2">
+              <p className="font-family-dm-sans font-normal text-base text-gray-11">Ticket Médio</p>
+              <div className="w-7 h-7 p-1 rounded-xl bg-primary-4 flex items-center justify-center shrink-0">
+                <CheckIcon className="size-5 text-gray-12" />
+              </div>
+            </div>
+            <div className="px-3 flex-1 flex items-center">
+              <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
+                R$ {(dashboardData.averageTicket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="px-3 pb-3 pt-1 flex items-center gap-2">
+              {dashboardData.averageTicketChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
+              <span className="font-family-dm-sans font-normal text-sm text-primary-11">
+                {Math.abs(dashboardData.averageTicketChange).toFixed(2)}% vs. semana passada
+              </span>
+            </div>
+          </div>
+          <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
+            <div className="flex items-center justify-between px-3 pt-3 pb-2">
+              <p className="font-family-dm-sans font-normal text-base text-gray-11">Total de Inscrições</p>
+              <div className="w-7 h-7 p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center shrink-0">
+                <DolarIcon className="size-5 text-gray-12" />
+              </div>
+            </div>
+            <div className="px-3 flex-1 flex items-center">
+              <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
+                {dashboardData.totalRegistrations.toLocaleString("pt-BR")}
+              </p>
+            </div>
+            <div className="px-3 pb-3 pt-1 flex items-center gap-2">
+              <ArrowUpIcon className="size-3 text-primary-11" />
+              <span className="font-family-dm-sans font-normal text-sm text-primary-11">
+                {Math.abs(dashboardData.totalRegistrationsChange).toFixed(2)}% vs. semana passada
+              </span>
+            </div>
+          </div>
+          <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[171px]">
+            <div className="flex items-center justify-between px-3 pt-3 pb-2">
+              <p className="font-family-dm-sans font-normal text-base text-gray-11 leading-tight">Cancelamentos / Estornos</p>
+              <div className="w-7 h-7 p-1 rounded-xl bg-red-4 flex items-center justify-center shrink-0">
+                <XCircle className="size-5 text-red-12" />
+              </div>
+            </div>
+            <div className="flex-1 flex border-t border-gray-6">
+              <div className="flex-1 flex flex-col justify-center py-3 px-3 border-r border-gray-6">
+                <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">{dashboardData.cancellations}</p>
+                <p className="font-family-dm-sans font-normal text-sm text-gray-11 mt-1">Cancelados</p>
+              </div>
+              <div className="flex-1 flex flex-col justify-center py-3 px-3">
+                <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">{dashboardData.refunds}</p>
+                <p className="font-family-dm-sans font-normal text-sm text-gray-11 mt-1">Estornos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tendência de inscrições - chart */}
+        <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 mb-6">
+          <p className="font-family-dm-sans font-normal text-base text-gray-11 mb-2">Tendência de inscrições</p>
+          <div className="flex items-center gap-2 mb-4">
+            <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
+              R$ {(dashboardData.registrationsTrend.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <div className="flex items-center gap-1">
+              {dashboardData.registrationsTrend.change >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
+              <span className="font-family-dm-sans font-normal text-sm text-primary-11">
+                {dashboardData.registrationsTrend.change.toFixed(2)}% vs. semana passada
+              </span>
+            </div>
+          </div>
+          <div className="min-h-0 w-full">
+            <RevenueChart
+              data={{
+                labels: dashboardData.registrationsTrend.chartData?.labels || ["Jan", "Fev", "Mar", "Abr"],
+                revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) || [4000, 12000, 8000, 10000],
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Ranking de ingressos - mobile list */}
+        <div className="bg-gray-1 border border-gray-6 rounded-xl mb-6">
+          <div className="px-4 py-3 border-b border-gray-6 flex items-center justify-between">
+            <p className="font-family-dm-sans font-normal text-base text-gray-11">Ranking de ingressos</p>
+          </div>
+          <div className="divide-y divide-gray-6">
+            {dashboardData.ticketRanking.map((ticket, index) => (
+              <div key={index} className="px-4 py-3 flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="font-family-dm-sans font-normal text-sm text-gray-11">{ticket.category}</p>
+                  <p className="font-family-dm-sans font-semibold text-sm text-gray-12 truncate">{ticket.name}</p>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <p className="font-inter font-semibold text-sm text-gray-12">{ticket.quantity.toLocaleString("pt-BR")}</p>
+                  <p className="font-inter font-semibold text-sm text-gray-12">
+                    R$ {(ticket.total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Variações mais vendidas - mobile */}
+        <div className="mb-6">
+          <BestSellingVariations
+            items={bestSellingVariations}
+            onItemClick={(item) => setSelectedProductName(item.productName)}
+          />
+        </div>
+
+        {/* Perguntas - mobile */}
+        <div className="mb-6">
+          <QuestionsListing
+            items={questionsListing}
+            onItemClick={(item) => setSelectedQuestionId(item.id)}
+          />
+        </div>
+
+        {/* Lotes próximos de esgotamento - mobile */}
+        <div className="bg-gray-1 border border-gray-6 rounded-xl mb-6">
+          <div className="px-4 py-3 border-b border-gray-6">
+            <p className="font-family-dm-sans font-normal text-base text-gray-11">Lotes próximos de esgotamento</p>
+          </div>
+          <div className="divide-y divide-gray-6">
+            {dashboardData.lotsNearDepletion.map((lot, index) => {
+              const percentage = (lot.sold / lot.total) * 100;
+              const getStatusColor = (status: string) => {
+                if (status === "Crítico") return "bg-red-11";
+                if (status === "Atenção") return "bg-yellow-11";
+                return "bg-gray-11";
+              };
+              return (
+                <div key={index} className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-family-dm-sans font-semibold text-sm text-gray-12">{lot.name}</p>
+                    <span className={`px-2 py-0.5 rounded text-xs font-family-dm-sans text-gray-1 ${getStatusColor(lot.status)}`}>{lot.status}</span>
+                  </div>
+                  <div className="h-2 bg-gray-6 rounded-full overflow-hidden mb-2">
+                    <div className={`h-full rounded-full ${getStatusColor(lot.status)}`} style={{ width: `${percentage}%` }} />
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-11">
+                    <span>Restantes: <span className="font-semibold text-gray-12">{lot.remaining}</span></span>
+                    <span>Total: <span className="font-semibold text-gray-12">{lot.total}</span></span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Heatmap - mobile */}
+        <div className="bg-gray-1 border border-gray-6 rounded-xl mb-6 overflow-hidden">
+          <SalesHeatmap data={dashboardData.salesHeatmap} />
+        </div>
+
+        {/* Cidades - mobile */}
+        <div className="grid grid-cols-1 gap-3">
+          {dashboardData.topCities.map((city, index) => {
+            const isFirst = index === 0;
+            return (
+              <div
+                key={index}
+                className={`${isFirst ? "bg-primary-2 border-primary-6" : "bg-blue-2 border-blue-6"} border rounded-xl p-3`}
+              >
+                <div className={`inline-block px-2 py-1 rounded text-sm font-family-dm-sans font-medium mb-2 ${isFirst ? "bg-primary-5 text-primary-12" : "bg-blue-5 text-blue-12"}`}>
+                  {isFirst ? "1º Cidade com mais vendas" : "2º Cidade com mais vendas"}
+                </div>
+                <p className="font-family-dm-sans font-semibold text-base text-gray-12 mb-1">{city.city}</p>
+                <p className="font-family-dm-sans font-normal text-sm text-gray-11">
+                  QT de compradores: <span className="font-semibold text-gray-12">{city.buyers}</span>
+                </p>
+              </div>
+            );
           })}
         </div>
       </div>

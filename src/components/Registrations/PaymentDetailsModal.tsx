@@ -288,13 +288,13 @@ export function PaymentDetailsModal() {
 
   const eventTabs = eventId
     ? [
-        { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-        { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-        { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-        { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-        { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-        { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-      ]
+      { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+      { label: "Editar", href: `/organizer/events/${eventId}/edit` },
+      { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
+      { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+      { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
+      { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+    ]
     : [];
 
   return (
@@ -472,7 +472,7 @@ export function PaymentDetailsModal() {
                           <div className="p-3">
                             <button
                               type="button"
-                              onClick={() => { openViewRegistrationModal({ registrationId: participant.id }); closePaymentDetailsModal(); }}
+                              onClick={() => { openViewRegistrationModal({ registrationId: participant.id, eventId, eventName }); closePaymentDetailsModal(); }}
                               className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
                             >
                               <FileText className="size-5" />

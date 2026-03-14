@@ -885,7 +885,7 @@ export default function EventRegistrationsPage() {
           ) : (
             <>
               {/* Mobile: Lista de inscrições + cards */}
-              <div className="md:hidden flex flex-col gap-4 pb-6">
+              <div className="md:hidden flex flex-col gap-4">
                 <h2 className="font-manrope font-bold text-xl text-gray-12">Lista de inscrições</h2>
                 <div className="flex flex-col gap-3">
                   {filteredRegistrations.map((registration) => {
@@ -940,7 +940,7 @@ export default function EventRegistrationsPage() {
                         <div className="flex gap-2 p-3">
                           <button
                             type="button"
-                            onClick={() => openViewRegistrationModal({ registrationId: registration.id })}
+                            onClick={() => openViewRegistrationModal({ registrationId: registration.id, eventId, eventName: event?.name })}
                             className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
                           >
                             Ver ingresso
@@ -992,8 +992,8 @@ export default function EventRegistrationsPage() {
                   </div>
                 )}
                 <Button
-                  className="w-full h-12 rounded-lg font-manrope font-bold text-lg bg-primary-11 text-primary-2"
-                  onClick={() => openExportDataModal({ registrations: filteredRegistrations })}
+                  className="w-full h-12 rounded-lg font-manrope font-bold"
+                  onClick={() => openExportDataModal({ registrations: filteredRegistrations, eventId, eventName: event?.name })}
                 >
                   Exportar CSV
                 </Button>
@@ -1050,6 +1050,8 @@ export default function EventRegistrationsPage() {
                       onViewRegistration={() => {
                         openViewRegistrationModal({
                           registrationId: registration.id,
+                          eventId,
+                          eventName: event?.name,
                         });
                       }}
                       onViewPaymentDetails={() => {
@@ -1121,6 +1123,8 @@ export default function EventRegistrationsPage() {
                   onClick={() => {
                     openExportDataModal({
                       registrations: filteredRegistrations,
+                      eventId,
+                      eventName: event?.name,
                     });
                   }}
                 >

@@ -28,11 +28,23 @@ ChartJS.register(
   Filler
 );
 
+const MAX_LABELS_MOBILE = 6;
+
 interface RevenueChartProps {
   data?: {
     labels: string[];
     revenue: number[];
   };
+}
+
+/** No mobile, reduz a quantidade de pontos para no máximo MAX_LABELS_MOBILE (evita gráfico achatado). */
+function sampleForMobile<T>(arr: T[], isMobile: boolean, maxLabels: number): T[] {
+  if (!isMobile || !arr?.length || arr.length <= maxLabels) return arr;
+  const n = arr.length;
+  const indices = Array.from({ length: maxLabels }, (_, i) =>
+    i === maxLabels - 1 ? n - 1 : Math.round((i * (n - 1)) / (maxLabels - 1))
+  );
+  return indices.map((i) => arr[i]);
 }
 
 // Função para converter formato de data "3 de fev." para "03/02" ou manter formato mensal
@@ -105,12 +117,19 @@ export function RevenueChart({ data }: RevenueChartProps) {
     x: number;
     y: number;
   } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const chartRef = useRef<ChartJS<"line">>(null);
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTooltipDataRef = useRef<string | null>(null);
 
-  // Mock data - substituir com dados reais
-  // Usar useMemo para evitar recriação a cada render
+  useEffect(() => {
+    const check = () => setIsMobile(typeof window !== "undefined" && window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Dados brutos
   const chartData = useMemo(() => {
     return data || {
       labels: ["Jan", "Fev", "Mar", "Abr"],
@@ -118,11 +137,20 @@ export function RevenueChart({ data }: RevenueChartProps) {
     };
   }, [data]);
 
-  // Calcular valores dinâmicos para o eixo Y
-  // Usar useMemo para evitar recálculo desnecessário
+  // No mobile com muitos pontos, amostrar para no máximo MAX_LABELS_MOBILE (gráfico legível)
+  const displayData = useMemo(() => {
+    if (!isMobile || !chartData.labels?.length || chartData.labels.length <= MAX_LABELS_MOBILE) {
+      return chartData;
+    }
+    const labels = sampleForMobile(chartData.labels, true, MAX_LABELS_MOBILE);
+    const revenue = sampleForMobile(chartData.revenue || [], true, MAX_LABELS_MOBILE);
+    return { labels, revenue };
+  }, [chartData, isMobile]);
+
+  // Calcular valores dinâmicos para o eixo Y (usa displayData para mobile com poucos pontos)
   const yAxisScale = useMemo(() => {
     const calculateYAxisScale = () => {
-    if (!chartData.revenue || chartData.revenue.length === 0) {
+    if (!displayData.revenue || displayData.revenue.length === 0) {
       return {
         max: 15000,
         stepSize: 5000,
@@ -130,7 +158,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       };
     }
 
-    const maxValue = Math.max(...chartData.revenue);
+    const maxValue = Math.max(...displayData.revenue);
 
     // Se o valor máximo for 0, usar valores padrão
     if (maxValue === 0) {
@@ -196,25 +224,25 @@ export function RevenueChart({ data }: RevenueChartProps) {
       };
     };
     return calculateYAxisScale();
-  }, [chartData]);
+  }, [displayData]);
 
-  // Criar mais pontos para suavizar a linha (menos pontos para melhor performance)
+  // Criar mais pontos para suavizar a linha (usa displayData)
   const generateSmoothData = useCallback(() => {
-    if (!chartData.revenue || chartData.revenue.length === 0) {
+    if (!displayData.revenue || displayData.revenue.length === 0) {
       return { points: [], labels: [], originalIndices: [] };
     }
 
     const points: number[] = [];
     const labels: string[] = [];
-    const originalIndices: number[] = []; // Mapear pontos interpolados para índices originais
+    const originalIndices: number[] = [];
 
-    chartData.revenue.forEach((value, index) => {
+    displayData.revenue.forEach((value, index) => {
       if (index === 0) {
         points.push(value);
         labels.push("");
         originalIndices.push(0);
       } else {
-        const prevValue = chartData.revenue[index - 1];
+        const prevValue = displayData.revenue[index - 1];
         const steps = 20; // Reduzido de 40 para 20 para melhor performance
         for (let i = 1; i <= steps; i++) {
           const interpolated = prevValue + (value - prevValue) * (i / steps);
@@ -227,7 +255,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
     });
 
     return { points, labels, originalIndices };
-  }, [chartData]);
+  }, [displayData]);
 
   // Usar useMemo para evitar recálculo desnecessário
   const { points, labels, originalIndices } = useMemo(() => generateSmoothData(), [generateSmoothData]);
@@ -242,7 +270,8 @@ export function RevenueChart({ data }: RevenueChartProps) {
         borderColor: "#308737", // primary-11
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+          const h = context.chart?.height ?? 300;
+          const gradient = ctx.createLinearGradient(0, 0, 0, h);
           gradient.addColorStop(0, "rgba(48, 135, 55, 0.25)");
           gradient.addColorStop(0.5, "rgba(48, 135, 55, 0.1)");
           gradient.addColorStop(1, "rgba(48, 135, 55, 0)");
@@ -316,8 +345,8 @@ export function RevenueChart({ data }: RevenueChartProps) {
 
     // Encontrar o mês correspondente baseado no índice
     const index = dataPoint.dataIndex;
-    const originalIndex = originalIndices[index] ?? Math.floor(index / 21); // 20 steps + 1 ponto inicial
-    const monthLabel = chartData.labels[Math.min(originalIndex, chartData.labels.length - 1)] || chartData.labels[0] || "";
+    const originalIndex = originalIndices[index] ?? Math.floor(index / 21);
+    const monthLabel = displayData.labels[Math.min(originalIndex, displayData.labels.length - 1)] || displayData.labels[0] || "";
     const revenue = dataPoint.parsed.y;
 
     // Formatar data corretamente - manter formato mensal se já estiver no formato "Fev/2026"
@@ -342,7 +371,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       });
       lastTooltipDataRef.current = tooltipKey;
     }, 0);
-  }, [chartData, originalIndices]);
+  }, [displayData, originalIndices]);
 
   // Limpar timeout ao desmontar
   useEffect(() => {
@@ -402,9 +431,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
   };
 
   return (
-    <div className="relative h-[341px] w-full" onMouseLeave={handleMouseLeave}>
+    <div className="relative h-[260px] md:h-[341px] w-full min-w-0" onMouseLeave={handleMouseLeave}>
       {/* Y-axis labels */}
-      <div className="absolute left-0 top-0 bottom-[32px] flex flex-col justify-between pr-3 pt-3 pb-6 z-10">
+      <div className="absolute left-0 top-0 bottom-6 md:bottom-8 flex flex-col justify-between pr-2 md:pr-3 pt-2 md:pt-3 pb-4 md:pb-6 z-10">
         {yAxisScale.ticks.map((tick, index) => {
           // Formatar o valor
           let formattedValue: string;
@@ -417,7 +446,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
           }
 
           return (
-            <span key={index} className="text-[14px] text-gray-11 font-family-dm-sans">
+            <span key={index} className="text-xs md:text-sm text-gray-11 font-family-dm-sans">
               {formattedValue}
             </span>
           );
@@ -425,7 +454,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       </div>
 
       {/* Chart container */}
-      <div className="ml-[59px] mr-0 h-[285px] relative">
+      <div className="ml-9 md:ml-[59px] mr-0 h-[200px] md:h-[285px] relative min-w-0">
         {/* Main line chart */}
         <div className="absolute inset-0">
           <Line ref={chartRef} data={lineData} options={options} />
@@ -449,7 +478,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
         {/* Vertical line indicator (when hovering) */}
         {tooltipData && (
           <div
-            className="absolute top-0 bottom-[16px] w-px bg-gray-6 z-10"
+            className="absolute top-0 bottom-4 md:bottom-4 w-px bg-gray-6 z-10"
             style={{ left: `${tooltipData.x}px` }}
           />
         )}
@@ -457,36 +486,33 @@ export function RevenueChart({ data }: RevenueChartProps) {
         {/* Hover point indicator */}
         {tooltipData && (
           <div
-            className="absolute w-3 h-3 bg-primary-11 rounded-full border-2 border-white z-20"
+            className="absolute w-2.5 h-2.5 md:w-3 md:h-3 bg-primary-11 rounded-full border-2 border-white z-20"
             style={{
-              left: `${tooltipData.x - 6}px`,
-              top: `${tooltipData.y - 6}px`,
+              left: `${tooltipData.x - 5}px`,
+              top: `${tooltipData.y - 5}px`,
             }}
           />
         )}
 
         {/* X-axis labels - distribuídos uniformemente */}
-        <div className="absolute -bottom-[22px] left-0 right-0 flex justify-between px-0">
-          {chartData.labels.map((label, index) => {
-            // Distribuir uniformemente ao longo do eixo X
-            const totalLabels = chartData.labels.length;
+        <div className="absolute -bottom-5 md:-bottom-[22px] left-0 right-0 flex justify-between px-0">
+          {displayData.labels.map((label, index) => {
+            const totalLabels = displayData.labels.length;
             const position = totalLabels > 1 
               ? (index / (totalLabels - 1)) * 100 
               : 50;
             
             // Verificar se é label mensal (formato "Fev/2026", "Set/2025", "set de 2025" ou "09/25") antes de formatar
-            // Regex para capturar meses com acentos e variações OU formato MM/AA
             const isMonthlyLabel = 
-              /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i.test(label.trim()) || // Formato "Fev/2026"
-              /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) || // Formato "set de 2025"
-              /^\d{2}\/\d{2}$/.test(label.trim()); // Formato "09/25"
-            // Se for label mensal, usar diretamente sem formatar
+              /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i.test(label.trim()) ||
+              /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) ||
+              /^\d{2}\/\d{2}$/.test(label.trim());
             const formattedLabel = isMonthlyLabel ? label.trim() : formatDateLabel(label);
             
             return (
               <span 
                 key={`${label}-${index}`} 
-                className="text-[14px] text-gray-11 font-family-dm-sans"
+                className="text-xs md:text-sm text-gray-11 font-family-dm-sans"
                 style={{ 
                   position: 'absolute',
                   left: `${position}%`,
@@ -500,43 +526,31 @@ export function RevenueChart({ data }: RevenueChartProps) {
         </div>
       </div>
 
-      {/* Tooltip */}
+      {/* Tooltip - compacto no mobile */}
       {tooltipData && (
         <div
-          className="absolute bg-gray-2 border border-gray-6 rounded p-[10px] shadow-lg w-[230px] z-30 pointer-events-none"
+          className="absolute bg-gray-2 border border-gray-6 rounded p-2 md:p-[10px] shadow-lg max-w-[180px] md:max-w-none md:w-[230px] z-30 pointer-events-none"
           style={{
-            left: typeof window !== "undefined"
-              ? `${Math.min(tooltipData.x + 20, window.innerWidth - 250)}px`
-              : `${tooltipData.x + 20}px`,
-            top: `${tooltipData.y - 100}px`,
+            left: `min(${tooltipData.x + 12}px, calc(100% - 12rem))`,
+            top: `${Math.max(8, tooltipData.y - 72)}px`,
           }}
         >
-          <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 mb-3">
+          <p className="font-family-dm-sans font-normal text-xs md:text-sm leading-[1.3] text-gray-11 mb-2 md:mb-3 truncate">
             {tooltipData.date}
           </p>
-          <div className="flex justify-between items-center mb-3">
-            <span className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-12">
-              Confirmadas:
-            </span>
-            <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">
+          <div className="flex justify-between items-center gap-2 mb-1.5 md:mb-3 text-xs md:text-sm">
+            <span className="font-family-dm-sans font-normal leading-[1.3] text-gray-12 shrink-0">Confirmadas:</span>
+            <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12 truncate">
               R$ {tooltipData.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="flex justify-between items-center mb-3">
-            <span className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-12">
-              Cancelados:
-            </span>
-            <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">
-              {Math.floor(tooltipData.tickets * 0.1)}
-            </span>
+          <div className="flex justify-between items-center gap-2 mb-1.5 md:mb-3 text-xs md:text-sm">
+            <span className="font-family-dm-sans font-normal leading-[1.3] text-gray-12 shrink-0">Cancelados:</span>
+            <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12">{Math.floor(tooltipData.tickets * 0.1)}</span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-12">
-              Estornados:
-            </span>
-            <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">
-              {Math.floor(tooltipData.tickets * 0.05)}
-            </span>
+          <div className="flex justify-between items-center gap-2 text-xs md:text-sm">
+            <span className="font-family-dm-sans font-normal leading-[1.3] text-gray-12 shrink-0">Estornados:</span>
+            <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12">{Math.floor(tooltipData.tickets * 0.05)}</span>
           </div>
         </div>
       )}

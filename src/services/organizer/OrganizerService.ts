@@ -384,6 +384,28 @@ export interface SalesHeatmapData {
   sales: number;
 }
 
+/** Variação dentro de topProductVariations (variations mais vendidas por produto) */
+export interface TopProductVariationItem {
+  variationId: string | null;
+  variationName: string;
+  quantitySold: number;
+}
+
+/** Produto com variações ordenadas por quantidade vendida (API dashboard) */
+export interface TopProductVariation {
+  productId: string;
+  productName: string;
+  variations: TopProductVariationItem[];
+}
+
+/** Pergunta com contagem de respostas (API dashboard) */
+export interface MostAnsweredQuestion {
+  questionId: string;
+  question: string;
+  order: number;
+  answerCount: number;
+}
+
 export interface DashboardData {
   metrics: DashboardMetrics;
   registrationsTrend: RegistrationsTrend;
@@ -391,6 +413,8 @@ export interface DashboardData {
   topCities: TopCity[];
   lotsNearDepletion: LotNearDepletion[];
   salesHeatmap: SalesHeatmapData[];
+  topProductVariations?: TopProductVariation[];
+  mostAnsweredQuestions?: MostAnsweredQuestion[];
 }
 
 // Financial interfaces
