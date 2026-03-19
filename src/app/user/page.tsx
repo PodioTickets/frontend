@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { useAuth } from "@/hooks/useAuth";
@@ -112,11 +113,24 @@ const formatGenderToBackend = (
 };
 
 export default function UserProfilePage() {
+  const router = useRouter();
   const { user, refetchUser } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
   const { openChangePasswordModal } = useChangePasswordModal();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Redirecionar para home se não estiver logado
+  useEffect(() => {
+    const hasToken = userService.isAuthenticated();
+    if (!hasToken) {
+      router.replace("/");
+      return;
+    }
+    const timer = setTimeout(() => setAuthChecked(true), 300);
+    return () => clearTimeout(timer);
+  }, [router]);
 
   // Mask functions (declared before useMemo to use in it)
   const maskCPFForInit = (value: string) => {
@@ -448,6 +462,10 @@ export default function UserProfilePage() {
   const handleChangeEmail = () => {
     openChangeEmailModal();
   };
+
+  if (!authChecked) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-2 md:pb-32">

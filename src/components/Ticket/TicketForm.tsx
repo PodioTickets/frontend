@@ -25,6 +25,8 @@ export interface Batch {
   id: string;
   quantity: string;
   price: string;
+  /** Quando > 0, o preço não pode mais ser editado (lote já teve vendas). */
+  quantitySold?: number;
   startType: "date" | "previous";
   startDate?: string;
   startTime?: string;
@@ -247,6 +249,7 @@ export function TicketForm({
               id?: string;
               quantity?: number;
               price?: number;
+              quantitySold?: number;
               startDate?: string;
               endDate?: string;
             }>;
@@ -283,22 +286,26 @@ export function TicketForm({
 
           // Load batches
           if (ticketData.batches && Array.isArray(ticketData.batches) && ticketData.batches.length > 0) {
-            const loadedBatches: Batch[] = ticketData.batches.map((b, index) => ({
-              id: b.id || `batch-${index}`,
-              quantity: b.quantity?.toString() || "",
-              price: b.price
-                ? `R$${(b.price / 100).toFixed(2).replace(".", ",")}`
-                : "",
-              startType: b.startDate ? "date" : "previous",
-              startDate: b.startDate ? b.startDate.split("T")[0] : undefined,
-              startTime: b.startDate
-                ? new Date(b.startDate).toTimeString().slice(0, 5)
-                : undefined,
-              endDate: b.endDate ? b.endDate.split("T")[0] : undefined,
-              endTime: b.endDate
-                ? new Date(b.endDate).toTimeString().slice(0, 5)
-                : undefined,
-            }));
+            const loadedBatches: Batch[] = ticketData.batches.map((b, index) => {
+              const quantitySold = b.quantitySold ?? 0;
+              return {
+                id: b.id || `batch-${index}`,
+                quantity: b.quantity?.toString() || "",
+                price: b.price
+                  ? `R$${(b.price / 100).toFixed(2).replace(".", ",")}`
+                  : "",
+                quantitySold,
+                startType: b.startDate ? "date" : "previous",
+                startDate: b.startDate ? b.startDate.split("T")[0] : undefined,
+                startTime: b.startDate
+                  ? new Date(b.startDate).toTimeString().slice(0, 5)
+                  : undefined,
+                endDate: b.endDate ? b.endDate.split("T")[0] : undefined,
+                endTime: b.endDate
+                  ? new Date(b.endDate).toTimeString().slice(0, 5)
+                  : undefined,
+              };
+            });
             setBatches(loadedBatches.length > 0 ? loadedBatches : [defaultBatch]);
           }
 
@@ -473,6 +480,28 @@ export function TicketForm({
   };
 
   const handleBatchChange = (batchId: string, field: keyof Batch, value: string) => {
+    const batch = batches.find((b) => b.id === batchId);
+    if (!batch) return;
+
+    if (field === "price") {
+      if ((batch.quantitySold ?? 0) > 0) return;
+    }
+
+    if (field === "quantity") {
+      const sold = batch.quantitySold ?? 0;
+      const currentQty = parseInt(batch.quantity, 10) || 0;
+      if (sold > 0 && currentQty > 0 && sold >= currentQty) return; // lote esgotado: não editar
+      if (sold > 0) {
+        const num = parseInt(value, 10);
+        if (value !== "" && !Number.isNaN(num) && num < sold) {
+          toast.error(
+            `A quantidade de vagas não pode ser menor que o número já vendido (${sold}).`
+          );
+          return;
+        }
+      }
+    }
+
     setBatches(batches.map((b) => (b.id === batchId ? { ...b, [field]: value } : b)));
   };
 
@@ -525,6 +554,16 @@ export function TicketForm({
 
     if (!batches[0]?.quantity || !batches[0]?.price) {
       toast.error("Lote 1 deve ter quantidade e preço preenchidos");
+      return;
+    }
+
+    const invalidBatch = batches.find(
+      (b) => (b.quantitySold ?? 0) > 0 && (parseInt(b.quantity, 10) || 0) < (b.quantitySold ?? 0)
+    );
+    if (invalidBatch) {
+      toast.error(
+        `A quantidade de vagas não pode ser menor que o número já vendido (${invalidBatch.quantitySold}) em algum lote.`
+      );
       return;
     }
 
@@ -918,128 +957,153 @@ export function TicketForm({
               </p>
             </div>
 
-            {batches.map((batch, index) => (
-              <div
-                key={batch.id}
-                className="flex flex-col gap-4 p-5 bg-gray-2 border border-gray-6 rounded-xl"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-gray-12 text-lg font-bold font-family-dm-sans leading-[1.1]">
-                    Lote {index + 1} {index === 0 && "(Obrigatório)"}
-                  </h3>
+            {batches.map((batch, index) => {
+              const sold = batch.quantitySold ?? 0;
+              const qtyNum = parseInt(batch.quantity, 10) || 0;
+              const soldOut = sold > 0 && qtyNum > 0 && sold >= qtyNum;
+              const priceLocked = sold > 0;
+
+              return (
+                <div
+                  key={batch.id}
+                  className="flex flex-col gap-4 p-5 bg-gray-2 border border-gray-6 rounded-xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-gray-12 text-lg font-bold font-family-dm-sans leading-[1.1]">
+                      Lote {index + 1} {index === 0 && "(Obrigatório)"}
+                    </h3>
+                    {index > 0 && (
+                      <button
+                        onClick={() => handleRemoveBatch(batch.id)}
+                        className="text-red-11 hover:text-red-12 transition-colors"
+                      >
+                        <Trash2 className="size-5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-gray-12 text-sm font-family-dm-sans">
+                        Quantidade de vagas
+                        {sold > 0 && !soldOut && (
+                          <span className="ml-1.5 text-gray-11 font-normal text-xs">
+                            ({sold} já vendidos)
+                          </span>
+                        )}
+                        {soldOut && (
+                          <span className="ml-1.5 text-gray-11 font-normal text-xs">
+                            (esgotado – não editável)
+                          </span>
+                        )}
+                      </label>
+                      <Input
+                        type="number"
+                        value={batch.quantity}
+                        onChange={(e) => handleBatchChange(batch.id, "quantity", e.target.value)}
+                        placeholder="Ex: 500"
+                        readOnly={soldOut}
+                        className={`h-12 ${soldOut ? "bg-gray-4 text-gray-11 cursor-not-allowed" : ""}`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-gray-12 text-sm font-family-dm-sans">
+                        Preço do ingresso
+                        {priceLocked && (
+                          <span className="ml-1.5 text-gray-11 font-normal text-xs">
+                            (ja vendido)
+                          </span>
+                        )}
+                      </label>
+                      <Input
+                        type="text"
+                        value={batch.price}
+                        onChange={(e) => {
+                          if (priceLocked) return;
+                          const value = e.target.value.replace(/\D/g, "");
+                          const formatted = value
+                            ? `R$${(parseInt(value) / 100).toFixed(2).replace(".", ",")}`
+                            : "";
+                          handleBatchChange(batch.id, "price", formatted);
+                        }}
+                        placeholder="R$00,00"
+                        readOnly={priceLocked}
+                        className={`h-12 ${priceLocked ? "bg-gray-4 text-gray-11 cursor-not-allowed" : ""}`}
+                      />
+                    </div>
+                  </div>
+
                   {index > 0 && (
-                    <button
-                      onClick={() => handleRemoveBatch(batch.id)}
-                      className="text-red-11 hover:text-red-12 transition-colors"
-                    >
-                      <Trash2 className="size-5" />
-                    </button>
+                    <>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-gray-12 text-sm font-family-dm-sans">
+                          Como este lote começa a ser vendido?
+                        </p>
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <Radio
+                              name={`startType-${batch.id}`}
+                              checked={batch.startType === "date"}
+                              onChange={() => handleBatchChange(batch.id, "startType", "date")}
+                            />
+                            <span className="text-gray-12 text-sm font-family-dm-sans">Por data</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Radio
+                              name={`startType-${batch.id}`}
+                              checked={batch.startType === "previous"}
+                              onChange={() => handleBatchChange(batch.id, "startType", "previous")}
+                            />
+                            <span className="text-gray-12 text-sm font-family-dm-sans">
+                              Quando esgotar o lote anterior
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {batch.startType === "date" && (
+                        <div className="flex gap-10">
+                          <div className="flex flex-col gap-2 w-max">
+                            <label className="text-gray-12 text-sm font-family-dm-sans">
+                              Data de início
+                            </label>
+                            <div className="flex gap-2">
+                              <DatePicker
+                                value={batch.startDate}
+                                onChange={(value) => handleBatchChange(batch.id, "startDate", value)}
+                                className="w-max"
+                              />
+                              <TimePicker
+                                value={batch.startTime}
+                                onChange={(value) => handleBatchChange(batch.id, "startTime", value)}
+                                className="w-max"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-gray-12 text-sm font-family-dm-sans">
+                              Data de Término
+                            </label>
+                            <div className="flex gap-2">
+                              <DatePicker
+                                value={batch.endDate}
+                                onChange={(value) => handleBatchChange(batch.id, "endDate", value)}
+                                className="w-max"
+                              />
+                              <TimePicker
+                                value={batch.endTime}
+                                onChange={(value) => handleBatchChange(batch.id, "endTime", value)}
+                                className="w-max"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-gray-12 text-sm font-family-dm-sans">
-                      Quantidade de vagas
-                    </label>
-                    <Input
-                      type="number"
-                      value={batch.quantity}
-                      onChange={(e) => handleBatchChange(batch.id, "quantity", e.target.value)}
-                      placeholder="Ex: 500"
-                      className="h-12"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-gray-12 text-sm font-family-dm-sans">
-                      Preço do ingresso
-                    </label>
-                    <Input
-                      type="text"
-                      value={batch.price}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "");
-                        const formatted = value
-                          ? `R$${(parseInt(value) / 100).toFixed(2).replace(".", ",")}`
-                          : "";
-                        handleBatchChange(batch.id, "price", formatted);
-                      }}
-                      placeholder="R$00,00"
-                      className="h-12"
-                    />
-                  </div>
-                </div>
-
-                {index > 0 && (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <p className="text-gray-12 text-sm font-family-dm-sans">
-                        Como este lote começa a ser vendido?
-                      </p>
-                      <div className="flex gap-4">
-                        <div className="flex items-center gap-2">
-                          <Radio
-                            name={`startType-${batch.id}`}
-                            checked={batch.startType === "date"}
-                            onChange={() => handleBatchChange(batch.id, "startType", "date")}
-                          />
-                          <span className="text-gray-12 text-sm font-family-dm-sans">Por data</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Radio
-                            name={`startType-${batch.id}`}
-                            checked={batch.startType === "previous"}
-                            onChange={() => handleBatchChange(batch.id, "startType", "previous")}
-                          />
-                          <span className="text-gray-12 text-sm font-family-dm-sans">
-                            Quando esgotar o lote anterior
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {batch.startType === "date" && (
-                      <div className="flex gap-10">
-                        <div className="flex flex-col gap-2 w-max">
-                          <label className="text-gray-12 text-sm font-family-dm-sans">
-                            Data de início
-                          </label>
-                          <div className="flex gap-2">
-                            <DatePicker
-                              value={batch.startDate}
-                              onChange={(value) => handleBatchChange(batch.id, "startDate", value)}
-                              className="w-max"
-                            />
-                            <TimePicker
-                              value={batch.startTime}
-                              onChange={(value) => handleBatchChange(batch.id, "startTime", value)}
-                              className="w-max"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-gray-12 text-sm font-family-dm-sans">
-                            Data de Término
-                          </label>
-                          <div className="flex gap-2">
-                            <DatePicker
-                              value={batch.endDate}
-                              onChange={(value) => handleBatchChange(batch.id, "endDate", value)}
-                              className="w-max"
-                            />
-                            <TimePicker
-                              value={batch.endTime}
-                              onChange={(value) => handleBatchChange(batch.id, "endTime", value)}
-                              className="w-max"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             <div className="flex justify-center w-full">
               <Button

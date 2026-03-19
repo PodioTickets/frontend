@@ -5,28 +5,35 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
-import { Input } from "@/components/Input";
 import { FlagIcon } from "@/components/Icons/FlagIcon";
-import { SneakersIcon } from "@/components/Icons/SneakersIcon";
 import {
   Plus,
-  Search,
   Calendar,
-  BarChart3,
-  Pencil,
-  DollarSign,
-  Eye,
   ChevronLeft,
   ChevronRight,
-  DollarSignIcon,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import Image from "next/image";
-import { Loading, LoadingAnimation } from "@/components/Loading";
+import { LoadingAnimation } from "@/components/Loading";
 import { MoneyIcon } from "@/components/Icons/MoneyIcon";
 import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
+import { UsersIcon } from "@/components/Icons/Organizer/UsersIcon";
+import { ThreePointsIcon } from "@/components/Icons/Organizer/ThreePointsIcon";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
+import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
+import { cn } from "@/utils/cn";
+
+/** Alinhado à API: status SUSPENDED (POST …/suspend e …/resume). */
+function isEventSuspended(event: { status?: string }) {
+  return event.status === "SUSPENDED";
+}
 
 export default function OrganizerEventsPage() {
   const router = useRouter();
@@ -42,6 +49,10 @@ export default function OrganizerEventsPage() {
     total: 0,
     totalPages: 1,
   });
+  const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
+  const [suspendingId, setSuspendingId] = useState<string | null>(null);
+  const [suspendModalEvent, setSuspendModalEvent] = useState<any>(null);
+  const [resumeModalEvent, setResumeModalEvent] = useState<any>(null);
 
   useEffect(() => {
     // Aguarda a verificação de autenticação terminar
@@ -104,7 +115,13 @@ export default function OrganizerEventsPage() {
     event.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (event: { status: string }) => {
+    if (isEventSuspended(event)) {
+      return {
+        label: "Suspenso",
+        className: "bg-red-11 text-red-1",
+      };
+    }
     const statusMap: Record<string, { label: string; className: string }> = {
       DRAFT: { label: "Rascunhos", className: "bg-gray-5 text-gray-12" },
       PUBLISHED: {
@@ -116,8 +133,72 @@ export default function OrganizerEventsPage() {
         label: "Concluído",
         className: "bg-gray-10/20 text-gray-11",
       },
+      SUSPENDED: {
+        label: "Suspenso",
+        className: "bg-red-11 text-red-1",
+      },
     };
-    return statusMap[status] || statusMap.DRAFT;
+    return statusMap[event.status] || statusMap.DRAFT;
+  };
+
+  const openSuspendModal = (event: any) => {
+    if (event.status !== "PUBLISHED") {
+      toast.error("Somente eventos publicados podem ser suspensos.");
+      setMenuOpenForId(null);
+      return;
+    }
+    setMenuOpenForId(null);
+    setSuspendModalEvent(event);
+  };
+
+  const openResumeModal = (event: any) => {
+    if (event.status !== "SUSPENDED") {
+      toast.error("Somente eventos suspensos podem ser reativados desta forma.");
+      setMenuOpenForId(null);
+      return;
+    }
+    setMenuOpenForId(null);
+    setResumeModalEvent(event);
+  };
+
+  const handleSuspendConfirm = async () => {
+    if (!suspendModalEvent) return;
+    setSuspendingId(suspendModalEvent.id);
+    try {
+      const { message } = await organizerService.suspendEvent(
+        suspendModalEvent.id
+      );
+      toast.success(message || "Evento suspenso com sucesso.");
+      loadEvents();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(
+        e?.response?.data?.message ||
+        "Não foi possível suspender o evento."
+      );
+    } finally {
+      setSuspendingId(null);
+    }
+  };
+
+  const handleResumeConfirm = async () => {
+    if (!resumeModalEvent) return;
+    setSuspendingId(resumeModalEvent.id);
+    try {
+      const { message } = await organizerService.resumeEvent(
+        resumeModalEvent.id
+      );
+      toast.success(message || "Evento reativado com sucesso.");
+      loadEvents();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(
+        e?.response?.data?.message ||
+        "Não foi possível reativar o evento."
+      );
+    } finally {
+      setSuspendingId(null);
+    }
   };
 
   const getEventRegistrations = (event: any) => {
@@ -205,7 +286,7 @@ export default function OrganizerEventsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-6">
                     {filteredEvents.map((event) => {
-                      const statusBadge = getStatusBadge(event.status);
+                      const statusBadge = getStatusBadge(event);
                       const registrations = getEventRegistrations(event);
 
                       return (
@@ -215,11 +296,7 @@ export default function OrganizerEventsPage() {
                         >
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-3">
-                              {event.bannerUrl ? (
-                                <Image src={event.bannerUrl} alt={event.name} width={36} height={36} className="rounded-lg" />
-                              ) : (
-                                <FlagIcon className="size-5 text-gray-12" />
-                              )}
+                              {event.bannerUrl && <Image src={event.bannerUrl} alt={event.name} width={36} height={36} className="rounded-lg max-w-[36px] max-h-[36px] object-cover h-[36px] w-[36px]" />}
                               <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                                 {event.name}
                               </span>
@@ -247,7 +324,7 @@ export default function OrganizerEventsPage() {
                               <Link
                                 href={`/organizer/events/${event.id}/dashboard`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Financeiro"
+                                title="Dashboard"
                               >
                                 <DashboardIcon className="size-4 text-gray-11" />
                               </Link>
@@ -261,10 +338,88 @@ export default function OrganizerEventsPage() {
                               <Link
                                 href={`/organizer/events/${event.id}/financial`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Ver inscrições"
+                                title="Ver financeiro"
                               >
                                 <MoneyIcon className="size-5 text-gray-11" />
                               </Link>
+
+                              <Link
+                                href={`/organizer/events/${event.id}/registrations`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title="Ver inscritos"
+                              >
+                                <UsersIcon className="size-5 text-gray-11" />
+                              </Link>
+
+                              <Popover
+                                open={menuOpenForId === event.id}
+                                onOpenChange={(open) =>
+                                  setMenuOpenForId(open ? event.id : null)
+                                }
+                              >
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                    title="Mais opções"
+                                    aria-label="Mais opções"
+                                  >
+                                    <ThreePointsIcon className="size-5 text-gray-11" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  align="end"
+                                  sideOffset={6}
+                                  className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg"
+                                >
+                                  <div className="flex flex-col gap-0.5">
+                                    <Link
+                                      href={`/organizer/events/${event.id}/discount/cupom`}
+                                      onClick={() => setMenuOpenForId(null)}
+                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    >
+                                      Cupom
+                                    </Link>
+                                    <Link
+                                      href={`/organizer/events/${event.id}/discount/voucher`}
+                                      onClick={() => setMenuOpenForId(null)}
+                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    >
+                                      Voucher
+                                    </Link>
+                                    <Link
+                                      href={`/organizer/events/${event.id}/ads`}
+                                      onClick={() => setMenuOpenForId(null)}
+                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    >
+                                      ADS
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        suspendingId === event.id ||
+                                        (isEventSuspended(event)
+                                          ? event.status !== "SUSPENDED"
+                                          : event.status !== "PUBLISHED")
+                                      }
+                                      onClick={() =>
+                                        isEventSuspended(event)
+                                          ? openResumeModal(event)
+                                          : openSuspendModal(event)
+                                      }
+                                      className={cn(
+                                        "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
+                                        "hover:bg-gray-3 text-gray-12",
+                                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                      )}
+                                    >
+                                      {isEventSuspended(event)
+                                        ? "Reativar evento"
+                                        : "Suspender evento"}
+                                    </button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </td>
                         </tr>
@@ -316,6 +471,21 @@ export default function OrganizerEventsPage() {
             </button>
           </div>
         )}
+
+        <SuspendEventModal
+          open={!!suspendModalEvent}
+          onClose={() => setSuspendModalEvent(null)}
+          event={suspendModalEvent}
+          onConfirm={handleSuspendConfirm}
+          loading={suspendingId === suspendModalEvent?.id}
+        />
+        <ResumeEventModal
+          open={!!resumeModalEvent}
+          onClose={() => setResumeModalEvent(null)}
+          event={resumeModalEvent}
+          onConfirm={handleResumeConfirm}
+          loading={suspendingId === resumeModalEvent?.id}
+        />
       </div>
     </div>
   );

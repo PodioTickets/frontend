@@ -6,29 +6,28 @@ import { useMyTickets } from "@/hooks/useMyTickets";
 import { TicketCard } from "@/components/Ticket/Card";
 import { Button } from "@/components/Button";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
-import { useRouter } from "next/navigation";
-import { orderOptions } from "@/constants";
 import Image from "next/image";
+
+const orderOptions = [
+  { id: "date-asc", label: "Data: mais próximo" },
+  { id: "date-desc", label: "Data: mais distante" },
+  { id: "name-asc", label: "Nome: A-Z" },
+  { id: "name-desc", label: "Nome: Z-A" },
+];
 
 export default function UserTicketsPage() {
   const { isAuthenticated } = useAuth();
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [orderBy, setOrderBy] = useState<string>("date-asc");
   const [page, setPage] = useState(1);
 
-  // Reset page when filters change
+  // Reset page when order changes
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, orderBy]);
+  }, [orderBy]);
 
   const { tickets, pagination, loading, refetch } = useMyTickets(
-    {
-      page,
-      limit: 20,
-      status: statusFilter || undefined,
-    },
+    { page, limit: 20, status: "CONFIRMED" },
     isAuthenticated
   );
 
@@ -38,13 +37,6 @@ export default function UserTicketsPage() {
       refetch();
     }
   }, [isAuthenticated, refetch]);
-
-  const statusOptions = [
-    { id: "CONFIRMED", label: "Inscrição confirmada" },
-    { id: "PENDING", label: "Pagamento pendente" },
-    { id: "COMPLETED", label: "Evento realizado" },
-    { id: "CANCELLED", label: "Cancelado" },
-  ];
 
   // Filter and sort tickets
   const filteredTickets = useMemo(() => {
@@ -104,16 +96,8 @@ export default function UserTicketsPage() {
   }, [tickets, searchTerm, orderBy]);
 
   const hasFilters = useMemo(() => {
-    return !!(searchTerm || statusFilter || orderBy !== "date-asc");
-  }, [searchTerm, statusFilter, orderBy]);
-
-  const handleStatusChange = (option: DropdownOption) => {
-    if (option.id) {
-      setStatusFilter(option.id);
-    } else {
-      setStatusFilter(null);
-    }
-  };
+    return !!(searchTerm || orderBy !== "date-asc");
+  }, [searchTerm, orderBy]);
 
   const handleOrderChange = (option: DropdownOption) => {
     if (option.id) {
@@ -125,13 +109,7 @@ export default function UserTicketsPage() {
 
   const handleClearFilters = () => {
     setSearchTerm("");
-    setStatusFilter(null);
     setOrderBy("date-asc");
-  };
-
-  const getStatusLabel = () => {
-    const option = statusOptions.find((opt) => opt.id === statusFilter);
-    return option?.label || "Status";
   };
 
   const getOrderLabel = () => {
@@ -161,22 +139,6 @@ export default function UserTicketsPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Dropdown
-              options={statusOptions}
-              dataAttribute="status-filter"
-              width="w-[200px]"
-              maxHeight="max-h-[200px]"
-              className="top-12"
-              selectedIds={statusFilter ? [statusFilter] : []}
-              onSelect={handleStatusChange}
-              trigger={() => (
-                <div className="flex items-center gap-2 px-4 py-2 bg-gray-2 border border-gray-6 rounded-lg cursor-pointer hover:bg-gray-4 transition-colors">
-                  <span className="text-sm text-gray-12 font-medium">
-                    {getStatusLabel()}
-                  </span>
-                </div>
-              )}
-            />
             <Dropdown
               options={orderOptions}
               dataAttribute="order-filter"

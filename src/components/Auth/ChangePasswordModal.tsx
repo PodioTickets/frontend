@@ -12,7 +12,9 @@ import { useAuth } from "@/hooks/useAuth";
 
 export function ChangePasswordModal() {
   const { isOpen, closeChangePasswordModal } = useChangePasswordModal();
-  const { refetchUser } = useAuth();
+  const { refetchUser, user } = useAuth();
+
+  const hasPassword = user?.hasPassword !== false;
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -27,7 +29,7 @@ export function ChangePasswordModal() {
   const validateForm = () => {
     const newErrors: typeof errors = {};
 
-    if (!currentPassword) {
+    if (hasPassword && !currentPassword) {
       newErrors.currentPassword = "Senha atual é obrigatória";
     }
 
@@ -138,32 +140,34 @@ export function ChangePasswordModal() {
               <div className="flex flex-col items-start w-full">
                 {/* Inputs Section */}
                 <div className="flex flex-col gap-6 items-start p-6 w-full">
-                  {/* Current Password */}
-                  <div className="flex flex-col gap-2 items-start w-full">
-                    <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                      Senha atual
-                    </label>
-                    <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
-                      <Lock className="w-6 h-6 text-gray-11 shrink-0" />
-                      <Input
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => {
-                          setCurrentPassword(e.target.value);
-                          if (errors.currentPassword) {
-                            setErrors((prev) => ({ ...prev, currentPassword: undefined }));
-                          }
-                        }}
-                        placeholder="Digite sua senha atual"
-                        className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
-                      />
+                  {/* Current Password (só exige se o usuário já tiver senha) */}
+                  {hasPassword && (
+                    <div className="flex flex-col gap-2 items-start w-full">
+                      <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                        Senha atual
+                      </label>
+                      <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
+                        <Lock className="w-6 h-6 text-gray-11 shrink-0" />
+                        <Input
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => {
+                            setCurrentPassword(e.target.value);
+                            if (errors.currentPassword) {
+                              setErrors((prev) => ({ ...prev, currentPassword: undefined }));
+                            }
+                          }}
+                          placeholder="Digite sua senha atual"
+                          className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
+                        />
+                      </div>
+                      {errors.currentPassword && (
+                        <p className="text-sm text-red-9 font-family-dm-sans">
+                          {errors.currentPassword}
+                        </p>
+                      )}
                     </div>
-                    {errors.currentPassword && (
-                      <p className="text-sm text-red-9 font-family-dm-sans">
-                        {errors.currentPassword}
-                      </p>
-                    )}
-                  </div>
+                  )}
 
                   {/* New Password */}
                   <div className="flex flex-col gap-2 items-start w-full">

@@ -25,6 +25,33 @@ export function EventCard({ event }: EventCardProps) {
     return dateFormatter?.format?.(new Date(event?.eventDate));
   }, [event?.eventDate]);
 
+  const eventRealizationPassed = useMemo(() => {
+    if (!event?.eventDate) return false;
+    const at = new Date(event.eventDate);
+    return !Number.isNaN(at.getTime()) && Date.now() >= at.getTime();
+  }, [event?.eventDate]);
+
+  const registrationPeriodEnded = useMemo(() => {
+    if (!event?.registrationEndDate) return false;
+    const at = new Date(event.registrationEndDate);
+    return !Number.isNaN(at.getTime()) && Date.now() >= at.getTime();
+  }, [event?.registrationEndDate]);
+
+  const inscricoesEncerradas = eventRealizationPassed || registrationPeriodEnded;
+
+  const inscricoesEmBreve = useMemo(() => {
+    if (event.status !== "PUBLISHED" || !event.registrationStartDate) return false;
+    const opens = new Date(event.registrationStartDate);
+    if (Number.isNaN(opens.getTime())) return false;
+    return Date.now() < opens.getTime();
+  }, [event.status, event.registrationStartDate]);
+
+  const vagasEsgotadas =
+    event.hasRegistrationSlotsAvailable === false &&
+    event.status === "PUBLISHED" &&
+    !inscricoesEmBreve &&
+    !inscricoesEncerradas;
+
   const getStatusText = (status: Event["status"]) => {
     switch (status) {
       case "PUBLISHED":
@@ -48,6 +75,8 @@ export function EventCard({ event }: EventCardProps) {
         return "bg-[#F4F0FE] border-[#D4CAFE]";
       case "CANCELLED":
         return "bg-red-3 border-red-6";
+      case "SUSPENDED":
+        return "bg-primary-5 border-primary-7";
       default:
         return "bg-primary-5";
     }
@@ -115,14 +144,41 @@ export function EventCard({ event }: EventCardProps) {
       </div>
 
       <div className="flex items-center justify-between mt-3">
-        <div className={cn("w-auto flex items-center justify-center gap-2 border border-primary-7 rounded-tr-xl rounded-bl-xl p-2", getStatusColor(event.status))}>
-          {event.status === "PUBLISHED" && (
+        <div
+          className={cn(
+            "w-auto flex items-center justify-center gap-2 border rounded-tr-xl rounded-bl-xl p-2",
+            inscricoesEncerradas
+              ? "bg-red-50 border-red-200"
+              : inscricoesEmBreve
+                ? "bg-amber-50 border-amber-300"
+                : vagasEsgotadas
+                  ? "bg-violet-50 border-violet-200"
+                  : getStatusColor(event.status)
+          )}
+        >
+          {(event.status === "PUBLISHED" || event.status === "SUSPENDED") && !inscricoesEncerradas && !inscricoesEmBreve && !vagasEsgotadas && (
             <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
               <div className="bg-primary-12 rounded-full size-1" />
-            </div>
-          )}
-          <h1 className="text-sm font-semibold font-family-dm-sans text-gray-12">
-            {getStatusText(event.status)}
+            </div>)}
+          <h1
+            className={cn(
+              "text-sm font-semibold font-family-dm-sans",
+              inscricoesEncerradas
+                ? "text-red-900"
+                : inscricoesEmBreve
+                  ? "text-amber-950"
+                  : vagasEsgotadas
+                    ? "text-violet-900"
+                    : "text-gray-12"
+            )}
+          >
+            {inscricoesEncerradas
+              ? "Inscrições encerradas"
+              : inscricoesEmBreve
+                ? "Inscrições em breve"
+                : vagasEsgotadas
+                  ? "Vagas esgotadas"
+                  : getStatusText(event.status)}
           </h1>
         </div>
       </div>

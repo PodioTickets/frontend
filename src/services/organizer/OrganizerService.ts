@@ -129,7 +129,9 @@ export interface CreateEventRequest {
   registrationEndDate?: string;
   googleMapsLink?: string;
   bannerUrl?: string;
-  status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED";
+  status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" | "SUSPENDED";
+  /** Quando true, inscrições/vendas do evento ficam pausadas (reativar com false). */
+  isSuspended?: boolean;
 }
 
 export interface EventTopic {
@@ -862,6 +864,24 @@ export class OrganizerService {
 
   async publishEvent(id: string): Promise<Event> {
     return this.updateEvent(id, { status: "PUBLISHED" });
+  }
+
+  /** PUBLISHED → SUSPENDED. Ver EVENT_SUSPEND_ORGANIZER_API.md */
+  async suspendEvent(id: string): Promise<{ event: Event; message?: string }> {
+    const { data: body } = await this.apiClient.post<{
+      message?: string;
+      data: { event: Event };
+    }>(`/api/v1/events/${id}/suspend`);
+    return { event: body.data.event, message: body.message };
+  }
+
+  /** SUSPENDED → PUBLISHED. Ver EVENT_SUSPEND_ORGANIZER_API.md */
+  async resumeEvent(id: string): Promise<{ event: Event; message?: string }> {
+    const { data: body } = await this.apiClient.post<{
+      message?: string;
+      data: { event: Event };
+    }>(`/api/v1/events/${id}/resume`);
+    return { event: body.data.event, message: body.message };
   }
 
   async createModalityGroup(

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRegisterModal, useLoginModal } from "@/stores/modalStore";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Dropdown } from "@/components/Dropdown";
-import { Mail, Lock, User, Phone } from "lucide-react";
+import { Mail, Lock, User, Phone, Search } from "lucide-react";
 import { ArrowButton } from "../ArrowButton";
 import { FlagIcon } from "../Icons/FlagIcon";
 import { SuccessIcon } from "../Icons/SuccessIcon";
@@ -25,6 +25,7 @@ import { CPFIcon } from "../Icons/CPFIcon";
 import { HeartIcon } from "../Icons/HeartIcon";
 import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
 import Image from "next/image";
+import { COUNTRIES_PT_BR } from "@/data/countries";
 
 type RegisterStep = 1 | 2 | 3;
 
@@ -43,7 +44,7 @@ export function RegisterModal() {
   const [formData, setFormData] = useState({
     // Step 1: Personal Information
     nome: "",
-    nacionalidade: "",
+    nacionalidade: "Brasil",
     cpf: "",
     dataNascimento: null as Date | null,
     telefone: "",
@@ -56,6 +57,9 @@ export function RegisterModal() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
+  const [nationalitySearch, setNationalitySearch] = useState("");
+  const nationalityDropdownRef = useRef<HTMLDivElement>(null);
 
   // Reset step quando modal fecha
   useEffect(() => {
@@ -88,7 +92,7 @@ export function RegisterModal() {
       setFormData({
         nome: fullName,
         nacionalidade:
-          (user as any)?.nationality || (user as any)?.country || "Brasileira",
+          (user as any)?.nationality || (user as any)?.country || "Brasil",
         cpf: (user as any)?.documentNumber || "",
         dataNascimento: birthDate,
         telefone: (user as any)?.phone || "",
@@ -98,13 +102,13 @@ export function RegisterModal() {
         senha: "",
         confirmarSenha: "",
       });
-      // Começar no step 1 quando for completar cadastro
-      setCurrentStep(1);
+      // Completar cadastro: começar no step 2 (só informações pessoais)
+      setCurrentStep(2);
     } else if (!isCompletingProfile && isOpen) {
-      // Reset form quando abrir para novo cadastro
+      // Novo cadastro: começar no step 1 (dados de acesso)
       setFormData({
         nome: "",
-        nacionalidade: "",
+        nacionalidade: "Brasil",
         cpf: "",
         dataNascimento: null,
         telefone: "",
@@ -202,17 +206,13 @@ export function RegisterModal() {
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      if (validateStep1()) {
-        // Se for completar cadastro, salva direto (pula step 2 de dados de acesso)
-        if (isCompletingProfile) {
-          await handleRegister();
-        } else {
-          setCurrentStep(2);
-        }
+      // Step 1 = dados de acesso (email/senha)
+      if (validateStep2()) {
+        setCurrentStep(2);
       }
     } else if (currentStep === 2) {
-      if (validateStep2()) {
-        // Quando valida o passo 2, faz o registro
+      // Step 2 = informações pessoais
+      if (validateStep1()) {
         await handleRegister();
       }
     }
@@ -365,10 +365,17 @@ export function RegisterModal() {
   };
 
   const handleFinish = () => {
+    // Marcar que o usuário dispensou (para não reabrir o modal ao navegar)
+    if (typeof window !== "undefined" && user?.id) {
+      sessionStorage.setItem(
+        "completeProfileModalDismissed",
+        `${user.id}:${Date.now()}`
+      );
+    }
     // Resetar formulário e step antes de fechar
     setFormData({
       nome: "",
-      nacionalidade: "",
+      nacionalidade: "Brasil",
       cpf: "",
       dataNascimento: null,
       telefone: "",
@@ -444,13 +451,37 @@ export function RegisterModal() {
     handleInputChange(field, masked);
   };
 
-  // Nacionalidade options
-  const nacionalidadeOptions = [
-    { id: "brasil", label: "Brasil" },
-    { id: "argentina", label: "Argentina" },
-    { id: "chile", label: "Chile" },
-    { id: "outro", label: "Outro" },
-  ];
+  // Nacionalidade options (todos os países; Brasil já é o padrão)
+  const nacionalidadeOptions = useMemo(
+    () =>
+      COUNTRIES_PT_BR.map((name) => ({
+        id: name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\s+/g, "-"),
+        label: name,
+      })),
+    []
+  );
+
+  const normalizeForSearch = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "");
+
+  const filteredNacionalidadeOptions = useMemo(() => {
+    if (!nationalitySearch.trim()) return nacionalidadeOptions;
+    const q = normalizeForSearch(nationalitySearch);
+    return nacionalidadeOptions.filter((opt) => normalizeForSearch(opt.label).includes(q));
+  }, [nacionalidadeOptions, nationalitySearch]);
+
+  useEffect(() => {
+    if (!showNationalityDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const el = nationalityDropdownRef.current;
+      if (el && !el.contains(e.target as Node)) setShowNationalityDropdown(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNationalityDropdown]);
 
   // Sexo options (igual à tela do usuário)
   const sexoOptions = [
@@ -508,33 +539,68 @@ export function RegisterModal() {
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Nacionalidade
             </label>
-            <div className="w-full">
-              <Dropdown
-                width="w-full"
-                className="z-60"
-                trigger={(open: boolean) => (
-                  <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
-                    <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span
-                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.nacionalidade
-                          ? "text-gray-12"
-                          : "text-gray-11"
-                          }`}
-                      >
-                        {formData.nacionalidade || "Selecione"}
-                      </span>
-                    </div>
-                    <div className="flex-none -scale-y-100 shrink-0">
-                      <ArrowButton isOpen={open} />
+            <div className="w-full relative" ref={nationalityDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNationalityDropdown((v) => !v);
+                  if (!showNationalityDropdown) setNationalitySearch("");
+                }}
+                className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer text-left"
+              >
+                <div className="flex gap-1 items-center flex-1 min-w-0">
+                  <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
+                  <span
+                    className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.nacionalidade
+                      ? "text-gray-12"
+                      : "text-gray-11"
+                      }`}
+                  >
+                    {formData.nacionalidade || "Selecione"}
+                  </span>
+                </div>
+                <div className="flex-none -scale-y-100 shrink-0">
+                  <ArrowButton isOpen={showNationalityDropdown} />
+                </div>
+              </button>
+              {showNationalityDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-60 bg-gray-1 border border-gray-6 rounded-lg shadow-lg overflow-hidden">
+                  <div className="p-2 border-b border-gray-6">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-11" />
+                      <input
+                        type="text"
+                        placeholder="Pesquisar país"
+                        value={nationalitySearch}
+                        onChange={(e) => setNationalitySearch(e.target.value)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="w-full h-9 pl-8 pr-3 rounded-md border border-gray-6 bg-gray-2 text-sm font-family-dm-sans text-gray-12 placeholder:text-gray-10 focus:outline-none focus:ring-2 focus:ring-primary-8 focus:border-transparent"
+                      />
                     </div>
                   </div>
-                )}
-                options={nacionalidadeOptions}
-                onSelect={(option) => {
-                  handleInputChange("nacionalidade", option.label);
-                }}
-              />
+                  <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
+                    {filteredNacionalidadeOptions.length === 0 ? (
+                      <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
+                        Nenhum país encontrado
+                      </div>
+                    ) : (
+                      filteredNacionalidadeOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            handleInputChange("nacionalidade", option.label);
+                            setShowNationalityDropdown(false);
+                          }}
+                          className="w-full px-3 py-2.5 text-left text-sm font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
+                        >
+                          {option.label}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             {errors.nacionalidade && (
               <p className="text-sm text-red-9 font-family-dm-sans">
@@ -659,13 +725,20 @@ export function RegisterModal() {
           </div>
         </div>
 
-        {/* Mobile Next button */}
+        {/* Mobile: step 2 = último passo, botão Criar conta / Finalizar cadastro */}
         <div className="flex flex-col items-start relative shrink-0 w-full">
           <Button
             onClick={handleNext}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
+            disabled={isSubmitting || authLoading}
+            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Próximo
+            {isSubmitting || authLoading
+              ? isCompletingProfile
+                ? "Finalizando cadastro..."
+                : "Criando conta..."
+              : isCompletingProfile
+                ? "Finalizar cadastro"
+                : "Criar conta"}
           </Button>
         </div>
       </div>
@@ -718,31 +791,66 @@ export function RegisterModal() {
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
               Nacionalidade
             </label>
-            <div className="w-full">
-              <Dropdown
-                width="w-full"
-                className="z-60"
-                trigger={(open: boolean) => (
-                  <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
-                    <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
-                      <span
-                        className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.nacionalidade
-                          ? "text-gray-12"
-                          : "text-gray-11"
-                          }`}
-                      >
-                        {formData.nacionalidade || "Selecione"}
-                      </span>
-                    </div>
-                    <ArrowButton isOpen={open} />
-                  </div>
-                )}
-                options={nacionalidadeOptions}
-                onSelect={(option) => {
-                  handleInputChange("nacionalidade", option.label);
+            <div className="w-full relative" ref={nationalityDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNationalityDropdown((v) => !v);
+                  if (!showNationalityDropdown) setNationalitySearch("");
                 }}
-              />
+                className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer text-left"
+              >
+                <div className="flex gap-1 items-center flex-1 min-w-0">
+                  <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
+                  <span
+                    className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${formData.nacionalidade
+                      ? "text-gray-12"
+                      : "text-gray-11"
+                      }`}
+                  >
+                    {formData.nacionalidade || "Selecione"}
+                  </span>
+                </div>
+                <ArrowButton isOpen={showNationalityDropdown} />
+              </button>
+              {showNationalityDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-60 bg-gray-1 border border-gray-6 rounded-lg shadow-lg overflow-hidden">
+                  <div className="p-2 border-b border-gray-6">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-11" />
+                      <input
+                        type="text"
+                        placeholder="Pesquisar país"
+                        value={nationalitySearch}
+                        onChange={(e) => setNationalitySearch(e.target.value)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="w-full h-9 pl-8 pr-3 rounded-md border border-gray-6 bg-gray-2 text-sm font-family-dm-sans text-gray-12 placeholder:text-gray-10 focus:outline-none focus:ring-2 focus:ring-primary-8 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
+                    {filteredNacionalidadeOptions.length === 0 ? (
+                      <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
+                        Nenhum país encontrado
+                      </div>
+                    ) : (
+                      filteredNacionalidadeOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            handleInputChange("nacionalidade", option.label);
+                            setShowNationalityDropdown(false);
+                          }}
+                          className="w-full px-3 py-2.5 text-left text-sm font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
+                        >
+                          {option.label}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             {errors.nacionalidade && (
               <p className="text-sm text-red-9 font-family-dm-sans">
@@ -867,10 +975,20 @@ export function RegisterModal() {
           </div>
         </div>
 
-        {/* Desktop Next button */}
+        {/* Desktop: step 2 = último passo, botão Criar conta / Finalizar cadastro */}
         <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full">
-          <Button onClick={handleNext} className="px-8 font-bold text-base">
-            Próximo
+          <Button
+            onClick={handleNext}
+            disabled={isSubmitting || authLoading}
+            className="px-8 font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting || authLoading
+              ? isCompletingProfile
+                ? "Finalizando cadastro..."
+                : "Criando conta..."
+              : isCompletingProfile
+                ? "Finalizar cadastro"
+                : "Criar conta"}
           </Button>
         </div>
       </div>
@@ -973,20 +1091,13 @@ export function RegisterModal() {
           </div>
         </div>
 
-        {/* Mobile Next button */}
+        {/* Mobile: step 1 = dados de acesso, botão Próximo */}
         <div className="flex flex-col items-start relative shrink-0 w-full">
           <Button
             onClick={handleNext}
-            disabled={isSubmitting || authLoading}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg font-manrope"
           >
-            {isSubmitting || authLoading
-              ? isCompletingProfile
-                ? "Finalizando cadastro..."
-                : "Criando conta..."
-              : isCompletingProfile
-                ? "Finalizar cadastro"
-                : "Criar conta"}
+            Próximo
           </Button>
         </div>
       </div>
@@ -1096,20 +1207,10 @@ export function RegisterModal() {
           )}
         </div>
 
-        {/* Desktop Next button */}
+        {/* Desktop: step 1 = dados de acesso, botão Próximo */}
         <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full">
-          <Button
-            onClick={handleNext}
-            disabled={isSubmitting || authLoading}
-            className="px-8 font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting || authLoading
-              ? isCompletingProfile
-                ? "Finalizando cadastro..."
-                : "Criando conta..."
-              : isCompletingProfile
-                ? "Finalizar cadastro"
-                : "Criar conta"}
+          <Button onClick={handleNext} className="px-8 font-bold text-xl">
+            Próximo
           </Button>
         </div>
       </div>
@@ -1171,7 +1272,7 @@ export function RegisterModal() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {renderStep1Mobile()}
+                    {renderStep2Mobile()}
                   </motion.div>
                 )}
                 {currentStep === 2 && (
@@ -1182,7 +1283,7 @@ export function RegisterModal() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {renderStep2Mobile()}
+                    {renderStep1Mobile()}
                   </motion.div>
                 )}
                 {currentStep === 3 && (
@@ -1224,7 +1325,7 @@ export function RegisterModal() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {renderStep1()}
+                    {renderStep2()}
                   </motion.div>
                 )}
                 {currentStep === 2 && (
@@ -1235,7 +1336,7 @@ export function RegisterModal() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {renderStep2()}
+                    {renderStep1()}
                   </motion.div>
                 )}
                 {currentStep === 3 && (

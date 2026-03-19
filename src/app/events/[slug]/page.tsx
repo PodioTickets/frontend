@@ -16,8 +16,45 @@ import { Fragment, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
-import { getEventOrganizer } from "@/utils/organization";
+import {
+  formatBrazilianPhone,
+  getEventOrganizer,
+  phoneDigitsForTel,
+} from "@/utils/organization";
 import { cn } from "@/utils/cn";
+
+function OrganizerAvatar({
+  logoUrl,
+  name,
+  className,
+}: {
+  logoUrl?: string;
+  name: string;
+  className?: string;
+}) {
+  const initial = name?.charAt(0).toUpperCase() || "O";
+  return (
+    <div
+      className={cn(
+        "relative shrink-0 size-10 rounded-full overflow-hidden bg-primary-10/20 flex items-center justify-center",
+        className
+      )}
+    >
+      {logoUrl?.trim() ? (
+        <Image
+          src={logoUrl.trim()}
+          alt=""
+          width={40}
+          height={40}
+          className="size-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <span className="text-primary-11 font-semibold text-sm">{initial}</span>
+      )}
+    </div>
+  );
+}
 
 export default function EventPage() {
   const params = useParams();
@@ -117,6 +154,47 @@ export default function EventPage() {
   if (!event) {
     return null;
   }
+
+  const registrationOpensAt = event.registrationStartDate
+    ? new Date(event.registrationStartDate)
+    : null;
+  const registrationsNotOpenYet =
+    !!registrationOpensAt &&
+    !Number.isNaN(registrationOpensAt.getTime()) &&
+    Date.now() < registrationOpensAt.getTime();
+
+  const registrationOpensDateText =
+    registrationsNotOpenYet && registrationOpensAt
+      ? new Intl.DateTimeFormat("pt-BR", {
+          day: "numeric",
+          month: "long",
+          ...(registrationOpensAt.getFullYear() !== new Date().getFullYear()
+            ? { year: "numeric" }
+            : {}),
+        }).format(registrationOpensAt)
+      : "";
+
+  const registrationSlotsSoldOut =
+    event.hasRegistrationSlotsAvailable === false;
+
+  const eventRealizationAt = event.eventDate
+    ? new Date(event.eventDate)
+    : null;
+  const eventRealizationPassed =
+    !!eventRealizationAt &&
+    !Number.isNaN(eventRealizationAt.getTime()) &&
+    Date.now() >= eventRealizationAt.getTime();
+
+  const registrationEndsAt = event.registrationEndDate
+    ? new Date(event.registrationEndDate)
+    : null;
+  const registrationPeriodEnded =
+    !!registrationEndsAt &&
+    !Number.isNaN(registrationEndsAt.getTime()) &&
+    Date.now() >= registrationEndsAt.getTime();
+
+  const eventSuspendedByOrganizer =
+    event.status === "SUSPENDED" || event.isSuspended === true;
 
   return (
     <>
@@ -224,16 +302,23 @@ export default function EventPage() {
 
                 return (
                   <>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
-                        <span className="text-primary-11 font-semibold text-sm">
-                          {organizer.name?.charAt(0).toUpperCase() || "O"}
-                        </span>
-                      </div>
+                    <div className="flex items-start gap-3 mb-3">
+                      <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-12">
                           {organizer.name}
                         </p>
+                        {organizer.phone && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <Phone className="size-3.5 text-gray-11 shrink-0" />
+                            <a
+                              href={`tel:${phoneDigitsForTel(organizer.phone) || organizer.phone.replace(/\D/g, "")}`}
+                              className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
+                            >
+                              {formatBrazilianPhone(organizer.phone)}
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <Button
@@ -254,17 +339,71 @@ export default function EventPage() {
             </div>
 
             {/* Action Buttons */}
-            {event.status === "COMPLETED" ? (
-              <Button className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
-                Inscrições encerradas!
-              </Button>
+            {eventRealizationPassed ? (
+              <>
+                <Button
+                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Evento realizado
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  Este evento já foi realizado.
+                </p>
+              </>
+            ) : registrationPeriodEnded ? (
+              <>
+                <Button className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                  Inscrições encerradas!
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  O prazo de inscrições para este evento foi encerrado.
+                </p>
+              </>
+            ) : eventSuspendedByOrganizer ? (
+              <>
+                <Button
+                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Inscreva-se
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  As inscrições para este evento não estão disponíveis no momento.
+                </p>
+              </>
+            ) : registrationSlotsSoldOut ? (
+              <>
+                <Button
+                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Esgotado
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  Este evento não possui mais vagas disponíveis.
+                </p>
+              </>
+            ) : registrationsNotOpenYet ? (
+              <>
+                <Button
+                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Em breve!
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  Inscrições abrem em {registrationOpensDateText}
+                </p>
+              </>
             ) : (
               <Button onClick={handleCheckoutClick} className="w-full mb-3">
                 Inscreva-se
               </Button>
-            )}
-            {event.status === "COMPLETED" && (
-              <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
             )}
           </div>
         </div>
@@ -410,18 +549,71 @@ export default function EventPage() {
               </div>
             </div>
 
-            {event.status === "COMPLETED" ? (
-              <Button className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
-                Inscrições encerradas!
-              </Button>
+            {eventRealizationPassed ? (
+              <>
+                <Button
+                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Evento realizado
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  Este evento já foi realizado.
+                </p>
+              </>
+            ) : registrationPeriodEnded ? (
+              <>
+                <Button className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                  Inscrições encerradas!
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  O prazo de inscrições para este evento foi encerrado.
+                </p>
+              </>
+            ) : eventSuspendedByOrganizer ? (
+              <>
+                <Button
+                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Inscreva-se
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  As inscrições para este evento não estão disponíveis no momento.
+                </p>
+              </>
+            ) : registrationSlotsSoldOut ? (
+              <>
+                <Button
+                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Esgotado
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  Este evento não possui mais vagas disponíveis.
+                </p>
+              </>
+            ) : registrationsNotOpenYet ? (
+              <>
+                <Button
+                  className="w-full bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                  disabled
+                  variant="outline"
+                >
+                  Em breve!
+                </Button>
+                <p className="text-sm text-gray-11 text-center mt-2">
+                  Inscrições abrem em {registrationOpensDateText}
+                </p>
+              </>
             ) : (
               <Button onClick={handleCheckoutClick} className="w-full">
                 Inscreva-se
               </Button>
-            )}
-
-            {event.status === "COMPLETED" && (
-              <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
             )}
           </div>
         </div>
@@ -525,11 +717,7 @@ export default function EventPage() {
                           return (
                             <div className="space-y-3">
                               <div className="flex items-start gap-3">
-                                <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                                  <span className="text-primary-11 font-semibold text-sm">
-                                    {organizer.name?.charAt(0).toUpperCase() || "O"}
-                                  </span>
-                                </div>
+                                <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-semibold text-gray-12 truncate">
                                     {organizer.name}
@@ -538,10 +726,10 @@ export default function EventPage() {
                                     <div className="flex items-center gap-1.5 mt-1">
                                       <Phone className="size-3.5 text-gray-11 shrink-0" />
                                       <a
-                                        href={`tel:${organizer.phone}`}
+                                        href={`tel:${phoneDigitsForTel(organizer.phone) || organizer.phone.replace(/\D/g, "")}`}
                                         className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
                                       >
-                                        {organizer.phone}
+                                        {formatBrazilianPhone(organizer.phone)}
                                       </a>
                                     </div>
                                   )}
@@ -570,17 +758,71 @@ export default function EventPage() {
                         )}
                       </div>
 
-                      {event.status === "COMPLETED" ? (
-                        <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
-                          Inscrições encerradas!
-                        </Button>
+                      {eventRealizationPassed ? (
+                        <>
+                          <Button
+                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                            disabled
+                            variant="outline"
+                          >
+                            Evento realizado
+                          </Button>
+                          <p className="text-sm text-gray-11 text-center mt-2">
+                            Este evento já foi realizado.
+                          </p>
+                        </>
+                      ) : registrationPeriodEnded ? (
+                        <>
+                          <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                            Inscrições encerradas!
+                          </Button>
+                          <p className="text-sm text-gray-11 text-center mt-2">
+                            O prazo de inscrições para este evento foi encerrado.
+                          </p>
+                        </>
+                      ) : eventSuspendedByOrganizer ? (
+                        <>
+                          <Button
+                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                            disabled
+                            variant="outline"
+                          >
+                            Inscreva-se
+                          </Button>
+                          <p className="text-sm text-gray-11 text-center mt-2">
+                            As inscrições para este evento não estão disponíveis no momento.
+                          </p>
+                        </>
+                      ) : registrationSlotsSoldOut ? (
+                        <>
+                          <Button
+                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                            disabled
+                            variant="outline"
+                          >
+                            Esgotado
+                          </Button>
+                          <p className="text-sm text-gray-11 text-center mt-2">
+                            Este evento não possui mais vagas disponíveis.
+                          </p>
+                        </>
+                      ) : registrationsNotOpenYet ? (
+                        <>
+                          <Button
+                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                            disabled
+                            variant="outline"
+                          >
+                            Em breve!
+                          </Button>
+                          <p className="text-sm text-gray-11 text-center mt-2">
+                            Inscrições abrem em {registrationOpensDateText}
+                          </p>
+                        </>
                       ) : (
                         <Button onClick={handleCheckoutClick} className="w-full mt-8">
                           Inscreva-se
                         </Button>
-                      )}
-                      {event.status === "COMPLETED" && (
-                        <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
                       )}
                     </div>
                     <div className="flex flex-col items-center justify-center gap-4">
@@ -753,11 +995,7 @@ export default function EventPage() {
                       return (
                         <div className="space-y-3">
                           <div className="flex items-start gap-3">
-                            <div className="shrink-0 w-10 h-10 rounded-full bg-primary-10/20 flex items-center justify-center">
-                              <span className="text-primary-11 font-semibold text-sm">
-                                {organizer.name?.charAt(0).toUpperCase() || "O"}
-                              </span>
-                            </div>
+                            <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-12 truncate">
                                 {organizer.name}
@@ -766,10 +1004,10 @@ export default function EventPage() {
                                 <div className="flex items-center gap-1.5 mt-1">
                                   <Phone className="size-3.5 text-gray-11 shrink-0" />
                                   <a
-                                    href={`tel:${organizer.phone}`}
+                                    href={`tel:${phoneDigitsForTel(organizer.phone) || organizer.phone.replace(/\D/g, "")}`}
                                     className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
                                   >
-                                    {organizer.phone}
+                                    {formatBrazilianPhone(organizer.phone)}
                                   </a>
                                 </div>
                               )}
@@ -793,17 +1031,71 @@ export default function EventPage() {
                     })()}
                   </div>
 
-                  {event.status === "COMPLETED" ? (
-                    <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
-                      Inscrições encerradas!
-                    </Button>
+                  {eventRealizationPassed ? (
+                    <>
+                      <Button
+                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                        disabled
+                        variant="outline"
+                      >
+                        Evento realizado
+                      </Button>
+                      <p className="text-sm text-gray-11 text-center mt-2">
+                        Este evento já foi realizado.
+                      </p>
+                    </>
+                  ) : registrationPeriodEnded ? (
+                    <>
+                      <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                        Inscrições encerradas!
+                      </Button>
+                      <p className="text-sm text-gray-11 text-center mt-2">
+                        O prazo de inscrições para este evento foi encerrado.
+                      </p>
+                    </>
+                  ) : eventSuspendedByOrganizer ? (
+                    <>
+                      <Button
+                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                        disabled
+                        variant="outline"
+                      >
+                        Inscreva-se
+                      </Button>
+                      <p className="text-sm text-gray-11 text-center mt-2">
+                        As inscrições para este evento não estão disponíveis no momento.
+                      </p>
+                    </>
+                  ) : registrationSlotsSoldOut ? (
+                    <>
+                      <Button
+                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                        disabled
+                        variant="outline"
+                      >
+                        Esgotado
+                      </Button>
+                      <p className="text-sm text-gray-11 text-center mt-2">
+                        Este evento não possui mais vagas disponíveis.
+                      </p>
+                    </>
+                  ) : registrationsNotOpenYet ? (
+                    <>
+                      <Button
+                        className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                        disabled
+                        variant="outline"
+                      >
+                        Em breve!
+                      </Button>
+                      <p className="text-sm text-gray-11 text-center mt-2">
+                        Inscrições abrem em {registrationOpensDateText}
+                      </p>
+                    </>
                   ) : (
                     <Button onClick={handleCheckoutClick} className="w-full mt-8">
                       Inscreva-se
                     </Button>
-                  )}
-                  {event.status === "COMPLETED" && (
-                    <p className="text-sm text-gray-11 text-center mt-2">O prazo de inscrições para este evento foi encerrado.</p>
                   )}
                 </div>
                 <div className="flex flex-col items-center justify-center gap-4">

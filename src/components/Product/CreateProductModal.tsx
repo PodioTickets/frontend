@@ -549,16 +549,22 @@ export function CreateProductModal() {
                               />
                             </div>
                             <div className="w-[188px] px-4 flex items-center justify-center">
-                              <div className="flex gap-0.5 items-center text-sm font-semibold font-inter text-gray-12">
-                                <span>R$</span>
-                                <input
-                                  type="text"
-                                  value={variation.price}
-                                  onChange={(e) => handlePriceChange(variation.id, e.target.value)}
-                                  className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:border-0"
-                                  placeholder="0,00"
-                                />
-                              </div>
+                              {isIncludedInTicket ? (
+                                <span className="text-sm font-medium font-inter text-gray-11">
+                                  Incluso
+                                </span>
+                              ) : (
+                                <div className="flex gap-0.5 items-center text-sm font-semibold font-inter text-gray-12">
+                                  <span>R$</span>
+                                  <input
+                                    type="text"
+                                    value={variation.price}
+                                    onChange={(e) => handlePriceChange(variation.id, e.target.value)}
+                                    className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:border-0"
+                                    placeholder="0,00"
+                                  />
+                                </div>
+                              )}
                             </div>
                             <div className="w-[132px] px-4 flex items-center justify-center">
                               <input

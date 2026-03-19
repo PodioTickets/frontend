@@ -28,6 +28,20 @@ export function ProfileCompleteChecker() {
       return;
     }
 
+    // Se o usuário clicou em "Continuar navegando", não reabrir por um tempo (ex.: 24h)
+    if (typeof window !== "undefined") {
+      const raw = sessionStorage.getItem("completeProfileModalDismissed");
+      if (raw) {
+        const [dismissedUserId, dismissedAt] = raw.split(":");
+        const ts = dismissedAt ? parseInt(dismissedAt, 10) : 0;
+        const ageMs = Date.now() - ts;
+        if (dismissedUserId === user.id && ageMs < 24 * 60 * 60 * 1000) {
+          lastCheckedUserIdRef.current = user.id;
+          return;
+        }
+      }
+    }
+
     // Verifica se o perfil está completo
     if (!isProfileComplete(user)) {
       lastCheckedUserIdRef.current = user.id;

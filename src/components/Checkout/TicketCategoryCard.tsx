@@ -11,6 +11,7 @@ import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import type { Event } from "@/interfaces/event";
 import { ImageCarouselModal } from "./ImageCarouselModal";
+import { modalitiesColumns } from "@/constants";
 
 interface TicketCategoryCardProps {
   categoryName: string;
@@ -64,6 +65,34 @@ const getDistanceKm = (ticket: Ticket): number => {
   return parseFloat(ticket.distance) || 0;
 };
 
+function getModalityInfo(ticket: Ticket, event: Event): { name: string; icon?: string } | null {
+  const modalityValue = ticket.modality?.trim();
+  if (!modalityValue) return null;
+
+  const fromEvent = event.modalities?.find(
+    (m) =>
+      m.name === modalityValue ||
+      m.template?.label === modalityValue ||
+      m.template?.code === modalityValue
+  );
+  if (fromEvent) {
+    return {
+      name: fromEvent.template?.label || fromEvent.name,
+      icon: fromEvent.template?.icon,
+    };
+  }
+
+  const allModalities = modalitiesColumns.flat();
+  const byIdOrLabel = allModalities.find(
+    (m) => m.id === modalityValue || m.label === modalityValue
+  );
+  if (byIdOrLabel) {
+    return { name: byIdOrLabel.label, icon: byIdOrLabel.icon };
+  }
+
+  return { name: modalityValue, icon: undefined };
+}
+
 // Componente de ticket memoizado para evitar re-renders desnecessários
 const TicketItemMobile = memo(({
   ticket,
@@ -87,6 +116,7 @@ const TicketItemMobile = memo(({
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  const modalityInfo = useMemo(() => getModalityInfo(ticket, event), [ticket, event]);
   const productImages = useMemo(() => {
     if (!ticket.products || ticket.products.length === 0) return [];
     return ticket.products
@@ -159,8 +189,8 @@ const TicketItemMobile = memo(({
                         key={originalIndex}
                         onClick={() => handleThumbnailClick(originalIndex)}
                         className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                            ? 'border-primary-11'
-                            : 'border-gray-6'
+                          ? 'border-primary-11'
+                          : 'border-gray-6'
                           }`}
                       >
                         <Image
@@ -204,20 +234,26 @@ const TicketItemMobile = memo(({
               </p>
             </div>
           )}
-          {event?.eventDate && (
+          {modalityInfo && (
             <div className="flex items-center gap-2">
-              <CalendarIcon className="size-6 shrink-0" />
+              {modalityInfo.icon ? (
+                <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
+                  <Image
+                    src={modalityInfo.icon}
+                    alt={modalityInfo.name}
+                    width={24}
+                    height={24}
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+              )}
               <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                {formatDate(new Date(event.eventDate))}
+                {modalityInfo.name}
               </p>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <ClockIcon className="size-6 shrink-0" />
-            <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-              10:00h
-            </p>
-          </div>
         </div>
         {ageLimitText && (
           <div className="bg-yellow-3 rounded-full px-4 py-3 w-fit">
@@ -294,6 +330,7 @@ const TicketItemDesktop = memo(({
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  const modalityInfo = useMemo(() => getModalityInfo(ticket, event), [ticket, event]);
   const productImages = useMemo(() => {
     if (!ticket.products || ticket.products.length === 0) return [];
     return ticket.products
@@ -368,8 +405,8 @@ const TicketItemDesktop = memo(({
                           key={originalIndex}
                           onClick={() => handleThumbnailClick(originalIndex)}
                           className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                              ? 'border-primary-11'
-                              : 'border-gray-6'
+                            ? 'border-primary-11'
+                            : 'border-gray-6'
                             }`}
                         >
                           <Image
@@ -411,20 +448,26 @@ const TicketItemDesktop = memo(({
                 </p>
               </div>
             )}
-            {event?.eventDate && (
+            {modalityInfo && (
               <div className="flex items-center gap-2">
-                <CalendarIcon className="size-6" />
+                {modalityInfo.icon ? (
+                  <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
+                    <Image
+                      src={modalityInfo.icon}
+                      alt={modalityInfo.name}
+                      width={24}
+                      height={24}
+                      className="object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                )}
                 <p className="text-lg font-medium text-gray-12">
-                  {formatDate(new Date(event.eventDate))}
+                  {modalityInfo.name}
                 </p>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <ClockIcon className="size-6" />
-              <p className="text-lg font-medium text-gray-12">
-                10:00h
-              </p>
-            </div>
           </div>
           {ageLimitText && (
             <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 w-fit">

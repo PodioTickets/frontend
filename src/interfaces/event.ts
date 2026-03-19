@@ -21,6 +21,9 @@ export interface Event {
   eventDate: string;
   registrationStartDate: string;
   registrationEndDate: string;
+  hasRegistrationSlotsAvailable?: boolean;
+  /** Inscrições suspensas (alternativa ou complemento a status SUSPENDED). */
+  isSuspended?: boolean;
   status: string;
   createdAt: string;
   updatedAt: string;

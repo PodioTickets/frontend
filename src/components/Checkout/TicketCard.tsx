@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { ArrowButton } from "../ArrowButton";
 import { DistanceIcon } from "../Icons/DistanceIcon";
@@ -11,6 +11,7 @@ import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import type { Event } from "@/interfaces/event";
 import { ImageCarouselModal } from "./ImageCarouselModal";
+import { modalitiesColumns } from "@/constants";
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -69,6 +70,35 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
     return parseFloat(ticket.distance) || 0;
   };
 
+  // Resolver ícone e nome da modalidade: primeiro do evento, depois das modalidades padrão
+  const modalityInfo = useMemo(() => {
+    const modalityValue = ticket.modality?.trim();
+    if (!modalityValue) return null;
+
+    const fromEvent = event.modalities?.find(
+      (m) =>
+        m.name === modalityValue ||
+        m.template?.label === modalityValue ||
+        m.template?.code === modalityValue
+    );
+    if (fromEvent) {
+      return {
+        name: fromEvent.template?.label || fromEvent.name,
+        icon: fromEvent.template?.icon,
+      };
+    }
+
+    const allModalities = modalitiesColumns.flat();
+    const byIdOrLabel = allModalities.find(
+      (m) => m.id === modalityValue || m.label === modalityValue
+    );
+    if (byIdOrLabel) {
+      return { name: byIdOrLabel.label, icon: byIdOrLabel.icon };
+    }
+
+    return { name: modalityValue, icon: undefined };
+  }, [ticket.modality, event.modalities]);
+
   // Obter imagens dos produtos vinculados ao ticket
   const getTicketProductImages = (): string[] => {
     if (!ticket.products || ticket.products.length === 0) return [];
@@ -109,9 +139,7 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
 
   const price = getTicketPrice();
   const distanceKm = getDistanceKm();
-  const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
   const productImages = getTicketProductImages();
-  const remainingImages = Math.max(0, productImages.length - 5);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
 
   return (
@@ -160,8 +188,8 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                             key={originalIndex}
                             onClick={() => handleThumbnailClick(originalIndex)}
                             className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                                ? 'border-primary-11'
-                                : 'border-gray-6'
+                              ? 'border-primary-11'
+                              : 'border-gray-6'
                               }`}
                           >
                             <Image
@@ -203,6 +231,26 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                   <DistanceIcon className="size-6 shrink-0" />
                   <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
                     {distanceKm} Km
+                  </p>
+                </div>
+              )}
+              {modalityInfo && (
+                <div className="flex items-center gap-2">
+                  {modalityInfo.icon ? (
+                    <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
+                      <Image
+                        src={modalityInfo.icon}
+                        alt={modalityInfo.name}
+                        width={24}
+                        height={24}
+                        className="object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                  )}
+                  <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {modalityInfo.name}
                   </p>
                 </div>
               )}
@@ -294,8 +342,8 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                               key={originalIndex}
                               onClick={() => handleThumbnailClick(originalIndex)}
                               className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                                  ? 'border-primary-11'
-                                  : 'border-gray-6'
+                                ? 'border-primary-11'
+                                : 'border-gray-6'
                                 }`}
                             >
                               <Image
@@ -337,20 +385,6 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                     </p>
                   </div>
                 )}
-                {event?.eventDate && (
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="size-6" />
-                    <p className="text-lg font-medium text-gray-12">
-                      {formatDate(new Date(event.eventDate))}
-                    </p>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <ClockIcon className="size-6" />
-                  <p className="text-lg font-medium text-gray-12">
-                    10:00h
-                  </p>
-                </div>
               </div>
               {ageLimitText && (
                 <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 w-fit">

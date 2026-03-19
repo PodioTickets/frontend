@@ -158,10 +158,27 @@ export function DatePickerWithConfirm({
   }, [validDate, isOpen]);
 
   const handleConfirm = () => {
-    if (tempDate) {
-      onChange(tempDate);
-    }
     setIsOpen(false);
+  };
+
+  const getDaysInMonth = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+  const displayMonth = useMemo(() => {
+    const d = tempDate ?? validDate ?? undefined;
+    if (d) return new Date(d.getFullYear(), d.getMonth(), 1);
+    return new Date();
+  }, [tempDate, validDate]);
+
+  const handleMonthChange = (newMonth: Date) => {
+    const year = newMonth.getFullYear();
+    const month = newMonth.getMonth();
+    const day = tempDate
+      ? Math.min(tempDate.getDate(), getDaysInMonth(newMonth))
+      : 1;
+    const newDate = new Date(year, month, day);
+    setTempDate(newDate);
+    onChange(newDate);
   };
 
   return (
@@ -191,11 +208,16 @@ export function DatePickerWithConfirm({
           <Calendar
             mode="single"
             captionLayout="dropdown"
+            month={displayMonth}
+            onMonthChange={handleMonthChange}
             fromYear={1900}
             toYear={new Date().getFullYear()}
             selected={tempDate}
             onSelect={(date: Date | undefined) => {
               setTempDate(date);
+              if (date) {
+                onChange(date);
+              }
             }}
             disabled={(date: Date) => {
               const today = new Date();

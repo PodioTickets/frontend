@@ -12,7 +12,7 @@ import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { PencilIcon } from "../Icons/PencilIcon";
 import { Dropdown } from "../Dropdown";
-import { DateOfBirthPicker } from "../DateOfBirthPicker";
+import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
 import { Checkbox } from "../CheckBox";
 import type { Question } from "@/interfaces/event";
 import { eventService } from "@/services";
@@ -820,19 +820,19 @@ export function InformationStep({
     answer: string | string[]
   ) => {
     isUpdatingFromContextRef.current = true;
-    
+
     // Calcular novo estado fora do updater
     const newAnswers = {
       ...questionAnswers[participantIndex],
       [questionId]: answer,
     };
-    
+
     // Atualizar estado local
     setQuestionAnswers((prev) => ({
       ...prev,
       [participantIndex]: newAnswers,
     }));
-    
+
     // Salvar no contexto (fora do updater para evitar erro de setState durante render)
     updateParticipant(participantIndex, {
       questionAnswers: newAnswers,
@@ -1313,7 +1313,7 @@ export function InformationStep({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mg:gap-4 mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mg:gap-4 mt-4">
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
                               Nome completo
@@ -1341,7 +1341,7 @@ export function InformationStep({
                                 if (normalizedGender) {
                                   // Verificar se é um dos valores esperados
                                   const genderLower = normalizedGender.toLowerCase();
-                                  
+
                                   // Converter valores em inglês para português
                                   if (genderLower === "male" || genderLower === "masculino") {
                                     normalizedGender = "Masculino";
@@ -1426,14 +1426,16 @@ export function InformationStep({
                             <label className="text-sm font-medium text-gray-12">
                               Data de nascimento
                             </label>
-                            <DateOfBirthPicker
-                              value={participant.birthDate || undefined}
-                              icon={false}
-                              onChange={(value) => {
+                            <DatePickerWithConfirm
+                              value={participant.birthDate || null}
+                              onChange={(date) => {
                                 clearParticipantFieldError(participantIndex, "birthDate");
-                                updateParticipant(participantIndex, { birthDate: value });
+                                const birthDate = date
+                                  ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+                                  : "";
+                                updateParticipant(participantIndex, { birthDate });
                               }}
-                              placeholder="00/00/0000"
+                              error={!!fieldErrors[participantIndex]?.birthDate}
                             />
                             {fieldErrors[participantIndex]?.birthDate && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].birthDate}</p>

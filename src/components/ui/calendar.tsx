@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useMemo } from "react";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import {
   DayPicker,
@@ -12,6 +13,7 @@ import {
 import { cn } from "@/utils/cn";
 import { buttonVariants } from "@/components/Button";
 import { Button } from "@/components/Button";
+import { Dropdown, type DropdownOption } from "@/components/Dropdown";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   disablePastDates?: boolean;
@@ -26,7 +28,7 @@ function CalendarDayButton({ day, modifiers, ...props }: DayButtonProps) {
   const isOutside = modifiers.outside;
 
   return (
-    <button
+    <button 
       {...props}
       className={cn(
         buttonVariants({ variant: "ghost" }),
@@ -113,6 +115,83 @@ function CalendarCaption({
   );
 }
 
+const monthNames = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
+  const { goToMonth } = useDayPicker();
+  const current = calendarMonth.date;
+  const fromYear = 1900;
+  const toYear = new Date().getFullYear();
+
+  const monthOptions: DropdownOption[] = useMemo(
+    () =>
+      monthNames.map((label, i) => ({
+        id: String(i),
+        label,
+      })),
+    []
+  );
+
+  const yearOptions: DropdownOption[] = useMemo(() => {
+    const list: DropdownOption[] = [];
+    for (let y = toYear; y >= fromYear; y--) {
+      list.push({ id: String(y), label: String(y) });
+    }
+    return list;
+  }, [toYear, fromYear]);
+
+  const handleMonthSelect = (option: DropdownOption) => {
+    const month = parseInt(option.id ?? "0", 10);
+    goToMonth(new Date(current.getFullYear(), month, 1));
+  };
+
+  const handleYearSelect = (option: DropdownOption) => {
+    const year = parseInt(option.id ?? "0", 10);
+    goToMonth(new Date(year, current.getMonth(), 1));
+  };
+
+  const monthLabel = monthNames[current.getMonth()];
+  const yearLabel = String(current.getFullYear());
+  // ~10 itens visíveis, resto com scroll (item height 48px)
+  const dropdownMaxHeight = "max-h-[250px]";
+
+  return (
+    <div className="flex justify-center items-center gap-2 pt-1 pb-1 mb-1 w-full">
+      <Dropdown
+        options={monthOptions}
+        selectedIds={[String(current.getMonth())]}
+        onSelect={handleMonthSelect}
+        width="min-w-[140px]"
+        maxHeight={dropdownMaxHeight}
+        dataAttribute="calendar-month"
+        trigger={() => (
+          <div className="flex items-center justify-between gap-1.5 h-8 min-w-[120px] px-2 rounded-md border border-gray-7 bg-gray-1 text-sm font-medium text-gray-12 cursor-pointer hover:bg-gray-3 transition-colors">
+            <span className="truncate">{monthLabel}</span>
+            <ChevronDownIcon className="h-3.5 w-3.5 text-gray-11 shrink-0" />
+          </div>
+        )}
+      />
+      <Dropdown
+        options={yearOptions}
+        selectedIds={[yearLabel]}
+        onSelect={handleYearSelect}
+        width="min-w-[100px]"
+        maxHeight={dropdownMaxHeight}
+        dataAttribute="calendar-year"
+        trigger={() => (
+          <div className="flex items-center justify-between gap-1.5 h-8 min-w-[90px] px-2 rounded-md border border-gray-7 bg-gray-1 text-sm font-medium text-gray-12 cursor-pointer hover:bg-gray-3 transition-colors">
+            <span className="truncate">{yearLabel}</span>
+            <ChevronDownIcon className="h-3.5 w-3.5 text-gray-11 shrink-0" />
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+
 function Calendar({
   className,
   classNames,
@@ -148,7 +227,7 @@ function Calendar({
       }
       return <ChevronDownIcon className={cn("h-3.5 w-3.5 text-gray-11", className)} {...props} />;
     },
-    ...(captionLayout !== "dropdown" && { MonthCaption: CalendarCaption }),
+    MonthCaption: captionLayout === "dropdown" ? CalendarCaptionWithDropdowns : CalendarCaption,
   };
 
   return (
@@ -179,15 +258,15 @@ function Calendar({
             : "text-sm font-medium text-gray-12",
         dropdowns:
           captionLayout === "dropdown"
-            ? "flex h-8 w-full items-center justify-center gap-1.5 text-sm font-medium [&>*:nth-child(n+3)]:hidden"
+            ? "hidden"
             : "hidden",
         dropdown_root:
           captionLayout === "dropdown"
-            ? "relative rounded-md border border-gray-7 bg-gray-1 shadow-sm has-focus:border-primary-9 has-focus:ring-primary-9/50 has-focus:ring-[3px] transition-all min-w-[120px] h-8"
+            ? "hidden"
             : "hidden",
         dropdown:
           captionLayout === "dropdown"
-            ? "w-full h-full cursor-pointer appearance-none bg-transparent border-0 outline-none focus:border-0 focus:outline-none focus-visible:border-0 focus-visible:outline-none text-sm font-medium text-gray-12 px-2 pr-7"
+            ? "hidden"
             : "hidden",
         nav: "hidden",
         button_previous: "hidden",

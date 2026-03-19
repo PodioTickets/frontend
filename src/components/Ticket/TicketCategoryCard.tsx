@@ -191,16 +191,16 @@ export function TicketCategoryCard({
       {/* Tickets Content */}
       {tickets.length === 0 ? (
         <div className="bg-gray-3 border border-gray-6 rounded-xl flex flex-wrap gap-6 items-center justify-center p-5 w-full">
-          <div className="flex flex-1 flex-col items-center justify-center min-h-px min-w-px py-11">
+          <div className="flex flex-1 flex-col items-center justify-center min-h-px min-w-px py-0">
             <div className="bg-gray-1 flex flex-col items-start justify-center">
-              <div className={`border-2 border-dashed flex gap-4 items-center justify-center overflow-clip p-6 rounded-xl w-full transition-colors ${isOver ? "border-primary-11 bg-primary-2" : "border-gray-6"
+              <div className={`border-2 border-dashed flex gap-4 items-center justify-center overflow-clip p-4 rounded-xl w-full transition-colors ${isOver ? "border-primary-11 bg-primary-2" : "border-gray-6"
                 }`}>
                 <div className="overflow-clip relative shrink-0 size-16">
                   <Plus className="size-16 text-primary-11" />
                 </div>
                 <div className="flex flex-col items-start justify-center shrink-0">
-                  <div className="flex flex-col gap-4 items-start justify-center whitespace-pre-wrap">
-                    <p className="font-manrope font-bold leading-[1.1] text-xl text-primary-11 w-full">
+                  <div className="flex flex-col gap-2 items-start justify-center whitespace-pre-wrap">
+                    <p className="font-manrope font-bold leading-[1.1] text-lg text-primary-11 w-full">
                       Arraste um ingresso para este campo
                     </p>
                     <p className="font-family-dm-sans font-normal leading-[1.3] text-base text-gray-12 w-full">

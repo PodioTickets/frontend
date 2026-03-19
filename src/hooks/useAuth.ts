@@ -24,6 +24,7 @@ interface User {
   city: string;
   role: string;
   avatarUrl: string;
+  hasPassword?: boolean;
 }
 
 interface AuthContextType {
