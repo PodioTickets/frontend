@@ -49,6 +49,16 @@ export interface CreateOrganizationRequest {
   accountHolderDocument?: string; // CPF/CNPJ do titular
 }
 
+/** Chaves canônicas — ver API `organizations/me/members`. */
+export type OrganizerPermissionKey =
+  | "dashboard"
+  | "financial"
+  | "edit_event"
+  | "view_event"
+  | "coupons"
+  | "pixel"
+  | "notify";
+
 export interface OrganizationMember {
   id: string;
   organizationId: string;
@@ -56,6 +66,10 @@ export interface OrganizationMember {
   role: "OWNER" | "EMPLOYEE";
   createdAt: string;
   updatedAt: string;
+  /** Lista de chaves concedidas (OWNER costuma trazer todas). */
+  permissions?: string[];
+  /** Whitelist; vazio/ausente em colaborador = todos os eventos. */
+  eventIds?: string[];
   user: {
     id: string;
     firstName: string;
@@ -64,6 +78,7 @@ export interface OrganizationMember {
     phone?: string;
     mfaEnabled?: boolean;
     documentNumber?: string;
+    lastLoginAt?: string | null;
   };
   organization?: Organization;
 }
@@ -111,10 +126,103 @@ export interface CreateOrganizationMemberRequest {
   phone?: string;
   enable2FA?: boolean;
   role: "OWNER" | "EMPLOYEE";
+  /** Chaves de permissão (opcional; ausente = default do backend). */
+  permissions?: string[];
+  /** Omitir = todos os eventos da org; lista = whitelist. */
+  eventIds?: string[];
 }
 
 export interface UpdateOrganizationMemberRequest {
   role: "OWNER" | "EMPLOYEE";
+}
+
+/** PATCH .../me/members/:memberUserId/settings — campos parciais. */
+export interface UpdateOrganizationMemberSettingsRequest {
+  role?: "OWNER" | "EMPLOYEE";
+  permissions?: string[];
+  eventIds?: string[];
+}
+
+export interface OrganizationMemberDetailResponse {
+  member: OrganizationMember;
+  permissions: string[];
+  eventIds: string[];
+  lastLoginAt?: string | null;
+}
+
+export interface OrganizationAuditLogItem {
+  id: string;
+  ip: string;
+  userId?: string;
+  userName: string;
+  action: string;
+  occurredAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface OrganizationAuditLogsPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+/**
+ * Respostas crus variam: listagem/devolve `permissions: string[]`; POST/PATCH podem trazer JSON Prisma em `member.permissions`.
+ * Ver `ORGANIZATIONS_HTTP_REFERENCE.md` na raiz do frontend.
+ */
+function normalizePermissionsField(
+  p: string[] | Record<string, boolean> | null | undefined
+): string[] | undefined {
+  if (p == null) return undefined;
+  if (Array.isArray(p)) return p;
+  if (typeof p === "object") {
+    return Object.entries(p)
+      .filter(([, v]) => v === true)
+      .map(([k]) => k);
+  }
+  return undefined;
+}
+
+/** Materializa `eventIds` a partir de `eventAccesses` quando a API envia só o relacionamento. */
+export function normalizeOrganizationMember(
+  raw: OrganizationMember & {
+    permissions?: string[] | Record<string, boolean> | null;
+    eventAccesses?: { eventId: string }[];
+  }
+): OrganizationMember {
+  const permissions = normalizePermissionsField(raw.permissions as any);
+  let eventIds = raw.eventIds;
+  if (
+    (!eventIds || eventIds.length === 0) &&
+    Array.isArray(raw.eventAccesses)
+  ) {
+    eventIds = raw.eventAccesses.map((e) => e.eventId).filter(Boolean);
+  }
+  const {
+    eventAccesses: __,
+    permissions: _rawPerm,
+    ...rest
+  } = raw as OrganizationMember & {
+    eventAccesses?: { eventId: string }[];
+    permissions?: unknown;
+  };
+  return {
+    ...rest,
+    permissions,
+    eventIds,
+  };
+}
+
+function normalizeMemberDetailResponse(
+  d: OrganizationMemberDetailResponse
+): OrganizationMemberDetailResponse {
+  return {
+    member: normalizeOrganizationMember(d.member as any),
+    permissions: d.permissions ?? [],
+    eventIds: d.eventIds ?? [],
+    lastLoginAt: d.lastLoginAt ?? null,
+  };
 }
 
 export interface CreateEventRequest {
@@ -613,6 +721,80 @@ export interface RegistrationStats {
   totalCollectedChange?: number;
 }
 
+/** Ver `EVENT_NOTIFICATIONS_API.md` — alinhado ao painel Central de Comunicação. */
+export type EventNotificationChannel = "email" | "whatsapp" | "push";
+export type EventNotificationStatus = "review" | "sent" | "denied";
+
+export interface EventNotification {
+  id: string;
+  occurredAt: string;
+  title: string;
+  channels: EventNotificationChannel[];
+  status: EventNotificationStatus;
+  messageHtml?: string;
+}
+
+export interface EventNotificationsPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface CreateEventNotificationRequest {
+  title: string;
+  messageHtml: string;
+  channels: EventNotificationChannel[];
+}
+
+const EVENT_NOTIFICATION_CHANNELS: EventNotificationChannel[] = [
+  "email",
+  "whatsapp",
+  "push",
+];
+
+const EVENT_NOTIFICATION_STATUSES: EventNotificationStatus[] = [
+  "review",
+  "sent",
+  "denied",
+];
+
+function normalizeEventNotification(raw: Record<string, unknown>): EventNotification {
+  const chRaw = raw.channels;
+  const channels: EventNotificationChannel[] = Array.isArray(chRaw)
+    ? (chRaw.filter((c) =>
+        typeof c === "string" &&
+        (EVENT_NOTIFICATION_CHANNELS as string[]).includes(c)
+      ) as EventNotificationChannel[])
+    : [];
+
+  const st = raw.status;
+  const status: EventNotificationStatus =
+    typeof st === "string" &&
+    (EVENT_NOTIFICATION_STATUSES as string[]).includes(st)
+      ? (st as EventNotificationStatus)
+      : "review";
+
+  const occurredAt =
+    (typeof raw.occurredAt === "string" && raw.occurredAt) ||
+    (typeof raw.occurred_at === "string" && raw.occurred_at) ||
+    "";
+
+  const messageHtml =
+    (typeof raw.messageHtml === "string" && raw.messageHtml) ||
+    (typeof raw.message_html === "string" && raw.message_html) ||
+    undefined;
+
+  return {
+    id: String(raw.id ?? ""),
+    occurredAt,
+    title: typeof raw.title === "string" ? raw.title : "",
+    channels,
+    status,
+    messageHtml,
+  };
+}
+
 export class OrganizerService {
   constructor(private apiClient: ApiClient) { }
 
@@ -753,12 +935,22 @@ export class OrganizerService {
     isMember: boolean;
     role?: "OWNER" | "EMPLOYEE";
     organizationId?: string;
+    organization?: {
+      id: string;
+      name: string;
+      tradeName?: string | null;
+    } | null;
   }> {
     const { data: response } = await this.apiClient.get<{
       data: {
         isMember: boolean;
         role?: "OWNER" | "EMPLOYEE";
         organizationId?: string;
+        organization?: {
+          id: string;
+          name: string;
+          tradeName?: string | null;
+        } | null;
       };
     }>("/api/v1/organizations/me/check");
     return response.data;
@@ -769,7 +961,7 @@ export class OrganizerService {
     const { data: response } = await this.apiClient.get<{ data: { members: OrganizationMember[] } }>(
       "/api/v1/organizations/me/members"
     );
-    return response.data.members;
+    return response.data.members.map((m) => normalizeOrganizationMember(m as any));
   }
 
   async addOrganizationMember(
@@ -779,7 +971,7 @@ export class OrganizerService {
       "/api/v1/organizations/me/members",
       data
     );
-    return response.data.member;
+    return normalizeOrganizationMember(response.data.member as any);
   }
 
   async updateOrganizationMemberRole(
@@ -790,13 +982,62 @@ export class OrganizerService {
       `/api/v1/organizations/me/members/${memberUserId}`,
       data
     );
-    return response.data.member;
+    return normalizeOrganizationMember(response.data.member as any);
   }
 
+  /** DELETE responde só `{ message }` — sem `data` (ver ORGANIZATIONS_HTTP_REFERENCE.md). */
   async removeOrganizationMember(memberUserId: string): Promise<void> {
     await this.apiClient.delete(
       `/api/v1/organizations/me/members/${memberUserId}`
     );
+  }
+
+  async getOrganizationMember(
+    memberUserId: string
+  ): Promise<OrganizationMemberDetailResponse> {
+    const { data: response } = await this.apiClient.get<{
+      data: OrganizationMemberDetailResponse;
+    }>(`/api/v1/organizations/me/members/${memberUserId}`);
+    return normalizeMemberDetailResponse(response.data);
+  }
+
+  /** Resposta = mesmo formato do GET detalhe (`member` + `permissions` + `eventIds` + `lastLoginAt`). */
+  async updateOrganizationMemberSettings(
+    memberUserId: string,
+    body: UpdateOrganizationMemberSettingsRequest
+  ): Promise<OrganizationMemberDetailResponse> {
+    const { data: response } = await this.apiClient.patch<{
+      data: OrganizationMemberDetailResponse;
+    }>(`/api/v1/organizations/me/members/${memberUserId}/settings`, body);
+    return normalizeMemberDetailResponse(response.data);
+  }
+
+  async getOrganizationAuditLogs(params?: {
+    q?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    items: OrganizationAuditLogItem[];
+    pagination: OrganizationAuditLogsPagination;
+  }> {
+    const { page = 1, limit = 20, q, from, to } = params || {};
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        items: OrganizationAuditLogItem[];
+        pagination: OrganizationAuditLogsPagination;
+      };
+    }>("/api/v1/organizations/me/audit-logs", {
+      params: {
+        page,
+        limit,
+        ...(q ? { q } : {}),
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+      },
+    });
+    return response.data;
   }
 
   async createEvent(data: CreateEventRequest): Promise<Event> {
@@ -846,6 +1087,73 @@ export class OrganizerService {
       data: { event: Event };
     }>(`/api/v1/events/${id}`);
     return response.data.event;
+  }
+
+  /**
+   * Lista notificações do evento (sem `messageHtml` na lista). Ver EVENT_NOTIFICATIONS_API.md.
+   */
+  async getEventNotifications(
+    eventId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      q?: string;
+      status?: EventNotificationStatus;
+    }
+  ): Promise<{
+    items: EventNotification[];
+    pagination: EventNotificationsPagination;
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      data: {
+        items: Record<string, unknown>[];
+        pagination: EventNotificationsPagination;
+      };
+    }>(`/api/v1/organizer/events/${eventId}/notifications`, {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        q: params?.q?.trim() || undefined,
+        status: params?.status || undefined,
+      },
+    });
+
+    const items = (response.data.items ?? []).map((row) =>
+      normalizeEventNotification(row)
+    );
+    const p = response.data.pagination;
+    const pagination: EventNotificationsPagination = {
+      page: p?.page ?? 1,
+      limit: p?.limit ?? 8,
+      total: p?.total ?? 0,
+      totalPages: Math.max(1, p?.totalPages ?? 1),
+    };
+
+    return { items, pagination };
+  }
+
+  /** Detalhe com `messageHtml` completo. */
+  async getEventNotification(
+    eventId: string,
+    notificationId: string
+  ): Promise<EventNotification> {
+    const { data: response } = await this.apiClient.get<{
+      data: Record<string, unknown>;
+    }>(
+      `/api/v1/organizer/events/${eventId}/notifications/${notificationId}`
+    );
+    return normalizeEventNotification(response.data);
+  }
+
+  async createEventNotification(
+    eventId: string,
+    body: CreateEventNotificationRequest
+  ): Promise<EventNotification> {
+    const { data: response } = await this.apiClient.post<{
+      message?: string;
+      data: Record<string, unknown>;
+    }>(`/api/v1/organizer/events/${eventId}/notifications`, body);
+    return normalizeEventNotification(response.data);
   }
 
   async updateEvent(

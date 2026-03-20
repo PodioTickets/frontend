@@ -109,6 +109,7 @@ export default function AdsPage() {
     { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
     { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
     { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+    { label: "Notificações", href: `/organizer/events/${eventId}/notifications` },
   ];
 
   if (!authChecked || loading) {

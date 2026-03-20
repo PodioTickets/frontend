@@ -15,6 +15,7 @@ import { organizerService } from "@/services";
 import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
 import { ConfigIcon } from "../Icons/ConfigIcon";
+import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
 
 export function OrganizerSidebar() {
@@ -55,6 +56,11 @@ export function OrganizerSidebar() {
       label: "Organização",
       href: "/organizer/organization/settings",
       icon: Building2,
+    },
+    {
+      label: "Equipe",
+      href: "/organizer/team",
+      icon: UsersIcon,
     },
   ];
 

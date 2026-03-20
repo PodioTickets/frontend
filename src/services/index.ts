@@ -20,3 +20,11 @@ export const apiClient = new ApiClient(API_BASE_URL);
 export const userService = new UserService(apiClient);
 export const eventService = new EventService(apiClient);
 export const organizerService = new OrganizerService(apiClient);
+
+export type {
+  EventNotification,
+  EventNotificationsPagination,
+  CreateEventNotificationRequest,
+  EventNotificationChannel,
+  EventNotificationStatus,
+} from "./organizer/OrganizerService";

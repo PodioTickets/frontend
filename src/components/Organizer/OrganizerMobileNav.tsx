@@ -9,6 +9,7 @@ import { Menu, X, Building2 } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
 import { TicketIcon } from "../Icons/TicketIcon";
+import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { LogOutIcon } from "../Icons/LogOutIcon";
 import { organizerService } from "@/services";
 import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
@@ -21,6 +22,11 @@ const navItems = [
     label: "Organização",
     href: "/organizer/organization/settings",
     icon: Building2,
+  },
+  {
+    label: "Equipe",
+    href: "/organizer/team",
+    icon: UsersIcon,
   },
 ];
 

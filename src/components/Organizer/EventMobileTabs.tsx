@@ -18,6 +18,7 @@ export function getEventTabs(eventId: string): EventTabItem[] {
     { label: "Editar", href: `/organizer/events/${eventId}/edit` },
     { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
     { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+    { label: "Notificações", href: `/organizer/events/${eventId}/notifications` },
   ];
 }
 

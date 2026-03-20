@@ -98,6 +98,16 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
           >
             Ads
           </Link>
+
+          <Link
+            href={`/organizer/events/${eventId}/notifications`}
+            className={`pb-3 px-1 text-sm transition-colors border-b-2 ${pathname.includes("/notifications")
+              ? "border-primary-10 text-primary-10 font-manrope font-bold"
+              : "border-transparent text-gray-11 hover:text-gray-12 font-family-dm-sans font-normal"
+              }`}
+          >
+            Notificações
+          </Link>
         </div>
       </div>
     </div>

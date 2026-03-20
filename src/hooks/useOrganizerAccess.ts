@@ -7,6 +7,11 @@ export interface OrganizerAccess {
   isMember: boolean;
   role?: "OWNER" | "EMPLOYEE";
   organizationId?: string;
+  organization?: {
+    id: string;
+    name: string;
+    tradeName?: string | null;
+  } | null;
 }
 
 export function useOrganizerAccess() {
