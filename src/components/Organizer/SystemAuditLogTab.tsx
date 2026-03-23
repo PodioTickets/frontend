@@ -35,6 +35,19 @@ function getInitials(name: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
+/** Resumo de `metadata` para linha auxiliar (kind, page). */
+function auditLogContextLine(
+  meta: Record<string, unknown> | undefined
+): string | null {
+  if (!meta) return null;
+  const kind = typeof meta.kind === "string" ? meta.kind : null;
+  const page = typeof meta.page === "string" ? meta.page : null;
+  const parts: string[] = [];
+  if (kind) parts.push(kind);
+  if (page) parts.push(page);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 export function SystemAuditLogTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -184,7 +197,9 @@ export function SystemAuditLogTab() {
               : "Nenhum registro disponível."}
           </div>
         ) : (
-          items.map((row) => (
+          items.map((row) => {
+            const metaHint = auditLogContextLine(row.metadata);
+            return (
             <div
               key={row.id}
               className="rounded-xl border border-gray-6 bg-gray-1 p-3.5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
@@ -208,6 +223,11 @@ export function SystemAuditLogTab() {
                 <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
                   {row.action}
                 </p>
+                {metaHint ? (
+                  <p className="mt-1 text-xs text-gray-11 font-family-dm-sans wrap-break-word">
+                    {metaHint}
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-3 rounded-lg border border-gray-6 bg-gray-2 px-3 py-2 flex items-center justify-between gap-2">
@@ -219,7 +239,8 @@ export function SystemAuditLogTab() {
                 </span>
               </div>
             </div>
-          ))
+          );
+          })
         )}
       </div>
 
@@ -264,7 +285,9 @@ export function SystemAuditLogTab() {
                   </td>
                 </tr>
               ) : (
-                items.map((row, idx) => (
+                items.map((row, idx) => {
+                  const metaHint = auditLogContextLine(row.metadata);
+                  return (
                   <tr
                     key={row.id}
                     className={cn(
@@ -283,9 +306,14 @@ export function SystemAuditLogTab() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-snug">
+                      <span className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-snug block">
                         {row.action}
                       </span>
+                      {metaHint ? (
+                        <span className="mt-1 block text-xs text-gray-11 font-family-dm-sans wrap-break-word max-w-md">
+                          {metaHint}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="text-sm font-normal text-gray-11 font-family-dm-sans whitespace-nowrap">
@@ -293,7 +321,8 @@ export function SystemAuditLogTab() {
                       </span>
                     </td>
                   </tr>
-                ))
+                );
+                })
               )}
             </tbody>
           </table>

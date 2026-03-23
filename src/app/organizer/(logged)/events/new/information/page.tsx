@@ -14,6 +14,7 @@ import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 
 interface ViaCEPResponse {
   cep: string;
@@ -383,7 +384,9 @@ export default function InformacoesPage() {
 
       let event;
       if (formData.createdEventId) {
-        event = await organizerService.updateEvent(formData.createdEventId, eventData);
+        event = await organizerService.updateEvent(formData.createdEventId, eventData, {
+          clientPage: organizerNewEventClientPage("information"),
+        });
       } else {
         event = await organizerService.createEvent(eventData);
         updateFormData({ createdEventId: event.id });

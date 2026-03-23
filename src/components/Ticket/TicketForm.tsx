@@ -14,7 +14,7 @@ import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Info, Plus, Trash2 } from "lucide-react";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import type { ModalityTemplate, ModalityGroup } from "@/services/organizer/OrganizerService";
@@ -89,6 +89,13 @@ const defaultBatch: Batch = {
   price: "",
   startType: "date",
 };
+
+/** `id` de lote persistido no backend (UUID). Demais valores são só chave de UI. */
+function isPersistedBatchId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    id.trim()
+  );
+}
 
 export function TicketForm({
   eventId,
@@ -487,21 +494,6 @@ export function TicketForm({
       if ((batch.quantitySold ?? 0) > 0) return;
     }
 
-    if (field === "quantity") {
-      const sold = batch.quantitySold ?? 0;
-      const currentQty = parseInt(batch.quantity, 10) || 0;
-      if (sold > 0 && currentQty > 0 && sold >= currentQty) return; // lote esgotado: não editar
-      if (sold > 0) {
-        const num = parseInt(value, 10);
-        if (value !== "" && !Number.isNaN(num) && num < sold) {
-          toast.error(
-            `A quantidade de vagas não pode ser menor que o número já vendido (${sold}).`
-          );
-          return;
-        }
-      }
-    }
-
     setBatches(batches.map((b) => (b.id === batchId ? { ...b, [field]: value } : b)));
   };
 
@@ -557,12 +549,16 @@ export function TicketForm({
       return;
     }
 
-    const invalidBatch = batches.find(
-      (b) => (b.quantitySold ?? 0) > 0 && (parseInt(b.quantity, 10) || 0) < (b.quantitySold ?? 0)
-    );
+    const invalidBatch = batches.find((b) => {
+      const sold = b.quantitySold ?? 0;
+      if (sold <= 0) return false;
+      const q = parseInt(b.quantity, 10);
+      return Number.isNaN(q) || q < sold;
+    });
     if (invalidBatch) {
+      const sold = invalidBatch.quantitySold ?? 0;
       toast.error(
-        `A quantidade de vagas não pode ser menor que o número já vendido (${invalidBatch.quantitySold}) em algum lote.`
+        `A quantidade de vagas precisa ser igual ou maior que o número já vendido (${sold}) em cada lote com vendas.`
       );
       return;
     }
@@ -600,12 +596,30 @@ export function TicketForm({
           // Convert to cents (multiply by 100) to ensure 2 decimal places are preserved
           const priceInCents = Math.round(priceInReais * 100);
 
-          return {
-            quantity: parseInt(b.quantity) || 0,
+          const startDate =
+            b.startType === "date" && b.startDate
+              ? `${b.startDate}T${b.startTime || "00:00"}:00`
+              : undefined;
+          const endDate = b.endDate
+            ? `${b.endDate}T${b.endTime || "23:59"}:59`
+            : undefined;
+
+          const base = {
+            quantity: parseInt(b.quantity, 10) || 0,
             price: priceInCents,
-            startDate: b.startDate || undefined,
-            endDate: b.endDate || undefined,
+            ...(startDate ? { startDate } : {}),
+            ...(endDate ? { endDate } : {}),
           };
+
+          // PATCH/PUT: lote já salvo envia `id` (UUID); lote novo omite `id`
+          if (
+            mode === "edit" &&
+            ticketId &&
+            isPersistedBatchId(b.id)
+          ) {
+            return { id: b.id, ...base };
+          }
+          return base;
         }),
       };
 
@@ -645,13 +659,18 @@ export function TicketForm({
     }
   };
 
-  // Build dropdown options
-  const modalityOptions: DropdownOption[] = modalityTemplates.map((template) => ({
-    id: template.id,
-    label: template.label,
-    icon: template.icon,
-    onClick: () => setSelectedModality(template.id),
-  }));
+  // Build dropdown options — "Outros" sempre por último (alinhado a constants)
+  const modalityOptions: DropdownOption[] = (() => {
+    const mapped = modalityTemplates.map((template) => ({
+      id: template.id,
+      label: template.label,
+      icon: template.icon,
+      onClick: () => setSelectedModality(template.id),
+    }));
+    const isOutros = (o: DropdownOption) =>
+      o.id === "outros" || o.label?.trim().toLowerCase() === "outros";
+    return [...mapped.filter((o) => !isOutros(o)), ...mapped.filter((o) => isOutros(o))];
+  })();
 
   const genderOptions: DropdownOption[] = [
     { id: "all", label: "Geral", onClick: () => setGender("all") },
@@ -959,8 +978,11 @@ export function TicketForm({
 
             {batches.map((batch, index) => {
               const sold = batch.quantitySold ?? 0;
-              const qtyNum = parseInt(batch.quantity, 10) || 0;
-              const soldOut = sold > 0 && qtyNum > 0 && sold >= qtyNum;
+              const qtyParsed =
+                batch.quantity.trim() === "" ? NaN : parseInt(batch.quantity, 10);
+              const qtyNum = Number.isNaN(qtyParsed) ? 0 : qtyParsed;
+              const quantityBelowSold =
+                sold > 0 && !Number.isNaN(qtyParsed) && qtyParsed < sold;
               const priceLocked = sold > 0;
 
               return (
@@ -986,34 +1008,33 @@ export function TicketForm({
                     <div className="flex flex-col gap-2">
                       <label className="text-gray-12 text-sm font-family-dm-sans">
                         Quantidade de vagas
-                        {sold > 0 && !soldOut && (
-                          <span className="ml-1.5 text-gray-11 font-normal text-xs">
-                            ({sold} já vendidos)
-                          </span>
-                        )}
-                        {soldOut && (
-                          <span className="ml-1.5 text-gray-11 font-normal text-xs">
-                            (esgotado – não editável)
-                          </span>
-                        )}
                       </label>
                       <Input
                         type="number"
                         value={batch.quantity}
                         onChange={(e) => handleBatchChange(batch.id, "quantity", e.target.value)}
                         placeholder="Ex: 500"
-                        readOnly={soldOut}
-                        className={`h-12 ${soldOut ? "bg-gray-4 text-gray-11 cursor-not-allowed" : ""}`}
+                        className="h-12"
                       />
+
+                      {sold >= 1 && (
+                        <div className="flex items-start gap-1">
+                          <Info className="size-5 text-gray-11 shrink-0" />
+                          <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
+                            {sold} vaga{sold === 1 ? "" : "s"} {sold === 1 ? "foi" : "foram"} vendida
+                            {sold === 1 ? "" : "s"}.
+                            {quantityBelowSold && (
+                              <span className="block mt-0.5 text-red-11">
+                                A quantidade precisa ser superior ao total vendido.
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-gray-12 text-sm font-family-dm-sans">
                         Preço do ingresso
-                        {priceLocked && (
-                          <span className="ml-1.5 text-gray-11 font-normal text-xs">
-                            (ja vendido)
-                          </span>
-                        )}
                       </label>
                       <Input
                         type="text"
@@ -1030,6 +1051,14 @@ export function TicketForm({
                         readOnly={priceLocked}
                         className={`h-12 ${priceLocked ? "bg-gray-4 text-gray-11 cursor-not-allowed" : ""}`}
                       />
+                      {priceLocked && (
+                        <div className="flex items-center gap-1">
+                          <Info className="size-5 text-gray-11" />
+                          <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
+                            Preço não pode ser alterado — já possui vendas
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

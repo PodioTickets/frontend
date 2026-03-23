@@ -1,5 +1,6 @@
 import type { ApiClient } from "../base/ApiClient";
 import type { Event } from "@/interfaces/event";
+import { sanitizeOrganizerAuditPageKey } from "@/lib/organizerAudit";
 
 export interface CreateOrganizerRequest {
   name: string;
@@ -134,6 +135,8 @@ export interface CreateOrganizationMemberRequest {
 
 export interface UpdateOrganizationMemberRequest {
   role: "OWNER" | "EMPLOYEE";
+  /** Contexto para audit no backend (opcional). */
+  clientPage?: string;
 }
 
 /** PATCH .../me/members/:memberUserId/settings — campos parciais. */
@@ -141,6 +144,8 @@ export interface UpdateOrganizationMemberSettingsRequest {
   role?: "OWNER" | "EMPLOYEE";
   permissions?: string[];
   eventIds?: string[];
+  /** Contexto para audit no backend (opcional). */
+  clientPage?: string;
 }
 
 export interface OrganizationMemberDetailResponse {
@@ -165,6 +170,62 @@ export interface OrganizationAuditLogsPagination {
   limit: number;
   total: number;
   totalPages: number;
+}
+
+function normalizeOrganizationAuditLogItem(
+  raw: Record<string, unknown>,
+  index: number
+): OrganizationAuditLogItem {
+  const actor = (raw.actor ?? raw.user) as Record<string, unknown> | undefined;
+  const firstName = typeof actor?.firstName === "string" ? actor.firstName : "";
+  const lastName = typeof actor?.lastName === "string" ? actor.lastName : "";
+  const actorName = `${firstName} ${lastName}`.trim();
+  const userName =
+    (typeof raw.userName === "string" && raw.userName) ||
+    (typeof raw.user_name === "string" && raw.user_name) ||
+    actorName ||
+    (typeof actor?.email === "string" ? actor.email : "") ||
+    "—";
+
+  const id =
+    typeof raw.id === "string" && raw.id
+      ? raw.id
+      : typeof raw.uuid === "string" && raw.uuid
+        ? raw.uuid
+        : `audit-${index}`;
+
+  const ip = String(
+    raw.ip ?? raw.ipAddress ?? raw.ip_address ?? "—"
+  );
+  const action = String(raw.action ?? raw.message ?? "—");
+  const occurredAt = String(
+    raw.occurredAt ?? raw.occurred_at ?? new Date().toISOString()
+  );
+  const userId =
+    typeof raw.userId === "string"
+      ? raw.userId
+      : typeof raw.user_id === "string"
+        ? raw.user_id
+        : typeof actor?.id === "string"
+          ? actor.id
+          : undefined;
+
+  const metadata =
+    raw.metadata &&
+    typeof raw.metadata === "object" &&
+    !Array.isArray(raw.metadata)
+      ? (raw.metadata as Record<string, unknown>)
+      : undefined;
+
+  return {
+    id,
+    ip,
+    userId,
+    userName,
+    action,
+    occurredAt,
+    metadata,
+  };
 }
 
 /**
@@ -1012,6 +1073,22 @@ export class OrganizerService {
     return normalizeMemberDetailResponse(response.data);
   }
 
+  /**
+   * Registra acesso à tela (dedupe no servidor ~30 min).
+   * Ver ORGANIZER_AUDIT_FRONTEND.md — falhas não devem bloquear o usuário.
+   */
+  async recordOrganizerAuditPageView(pageKey: string): Promise<void> {
+    const key = sanitizeOrganizerAuditPageKey(pageKey);
+    if (!key) return;
+    try {
+      await this.apiClient.post("/api/v1/organizations/me/audit/page-view", {
+        pageKey: key,
+      });
+    } catch {
+      /* 401 / 403 / rede */
+    }
+  }
+
   async getOrganizationAuditLogs(params?: {
     q?: string;
     from?: string;
@@ -1037,7 +1114,24 @@ export class OrganizerService {
         ...(to ? { to } : {}),
       },
     });
-    return response.data;
+    const rawItems = response.data?.items ?? [];
+    const pagination = response.data?.pagination ?? {
+      page,
+      limit,
+      total: 0,
+      totalPages: 1,
+    };
+    return {
+      items: rawItems.map((item, i) =>
+        normalizeOrganizationAuditLogItem(item as unknown as Record<string, unknown>, i)
+      ),
+      pagination: {
+        page: pagination.page ?? page,
+        limit: pagination.limit ?? limit,
+        total: pagination.total ?? 0,
+        totalPages: Math.max(1, pagination.totalPages ?? 1),
+      },
+    };
   }
 
   async createEvent(data: CreateEventRequest): Promise<Event> {
@@ -1158,11 +1252,16 @@ export class OrganizerService {
 
   async updateEvent(
     id: string,
-    data: Partial<CreateEventRequest>
+    data: Partial<CreateEventRequest>,
+    options?: { clientPage?: string }
   ): Promise<Event> {
+    const payload: Record<string, unknown> = { ...(data as Record<string, unknown>) };
+    const cp = options?.clientPage?.trim();
+    if (cp) payload.clientPage = cp;
+
     const { data: response } = await this.apiClient.patch<{
       data: { event: Event };
-    }>(`/api/v1/events/${id}`, data);
+    }>(`/api/v1/events/${id}`, payload);
     return response.data.event;
   }
 

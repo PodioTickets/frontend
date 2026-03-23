@@ -213,7 +213,7 @@ export default function EditTicketsPage() {
 
   const handleEditTicket = useCallback(
     (ticketId: string) => {
-      router.push(`/organizer/events/${eventId}/edit/tickets/edit/${ticketId}`);
+      router.push(`/organizer/events/${eventId}/edit/tickets/${ticketId}`);
     },
     [router, eventId]
   );
@@ -774,7 +774,7 @@ export default function EditTicketsPage() {
               variant="default"
               className="text-[20px] font-bold px-10"
             >
-              Confirmar ingressos
+              Salvar alterações
             </Button>
           </div>
         </div>

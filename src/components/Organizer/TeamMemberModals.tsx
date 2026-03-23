@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { X, Check, ArrowLeft, Search } from "lucide-react";
+import {
+  X,
+  Check,
+  ArrowLeft,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ImageIcon,
+} from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { organizerService } from "@/services";
@@ -12,6 +21,15 @@ import type {
 } from "@/services/organizer/OrganizerService";
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
+import { organizerMemberSettingsClientPage } from "@/lib/organizerAudit";
+
+const EVENTS_PER_PAGE = 5;
+
+function eventListImageUrl(ev: Event): string | null {
+  const ext = ev as Event & { cardImageUrl?: string | null };
+  const u = (ext.cardImageUrl || ev.bannerUrl || "").trim();
+  return u || null;
+}
 
 const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
   {
@@ -148,6 +166,61 @@ function FieldShell({
   );
 }
 
+/** Mesmo padrão visual de `NotificationsPagination` / lista mobile da equipe (setas + páginas). */
+function CollaboratorDrawerEventsPagination({
+  totalPages,
+  safePage,
+  onPageChange,
+  disabled,
+}: {
+  totalPages: number;
+  safePage: number;
+  onPageChange: (page: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      className="flex items-center justify-end gap-2 min-w-0 w-full overflow-x-auto py-2 [&::-webkit-scrollbar]:hidden"
+      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    >
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.max(1, safePage - 1))}
+        disabled={disabled || safePage <= 1}
+        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+        aria-label="Página anterior"
+      >
+        <ChevronLeft className="size-4 text-gray-12" />
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => onPageChange(p)}
+          disabled={disabled}
+          className={cn(
+            "size-8 shrink-0 rounded-lg border text-sm font-medium font-family-dm-sans transition-colors",
+            safePage === p
+              ? "bg-primary-11 text-gray-1 border-primary-11"
+              : "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
+          )}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
+        disabled={disabled || safePage >= totalPages}
+        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+        aria-label="Próxima página"
+      >
+        <ChevronRight className="size-4 text-gray-12" />
+      </button>
+    </div>
+  );
+}
+
 export function CollaboratorDrawer({
   open,
   mode,
@@ -179,6 +252,7 @@ export function CollaboratorDrawer({
   const [detailLoading, setDetailLoading] = useState(false);
   const [whitelistFromApi, setWhitelistFromApi] = useState<string[]>([]);
   const [eventSearch, setEventSearch] = useState("");
+  const [eventsListPage, setEventsListPage] = useState(1);
 
   const isOwnerMember = mode === "edit" && member?.role === "OWNER";
 
@@ -191,6 +265,7 @@ export function CollaboratorDrawer({
     setEventSelection({});
     setWhitelistFromApi([]);
     setEventSearch("");
+    setEventsListPage(1);
   }, []);
 
   const loadEvents = useCallback(async () => {
@@ -292,11 +367,34 @@ export function CollaboratorDrawer({
     if (!open) setEventSearch("");
   }, [open]);
 
+  useEffect(() => {
+    if (open) setEventsListPage(1);
+  }, [open]);
+
+  useEffect(() => {
+    setEventsListPage(1);
+  }, [eventSearch]);
+
   const filteredEventsForList = useMemo(() => {
     const q = eventSearch.trim().toLowerCase();
     if (!q) return events;
     return events.filter((ev) => (ev.name || "").toLowerCase().includes(q));
   }, [events, eventSearch]);
+
+  const eventsTotalPages = Math.max(
+    1,
+    Math.ceil(filteredEventsForList.length / EVENTS_PER_PAGE)
+  );
+  const safeEventsPage = Math.min(eventsListPage, eventsTotalPages);
+
+  useEffect(() => {
+    setEventsListPage((p) => Math.min(p, eventsTotalPages));
+  }, [eventsTotalPages]);
+
+  const paginatedFilteredEvents = useMemo(() => {
+    const start = (safeEventsPage - 1) * EVENTS_PER_PAGE;
+    return filteredEventsForList.slice(start, start + EVENTS_PER_PAGE);
+  }, [filteredEventsForList, safeEventsPage]);
 
   const allPermissionIds = useMemo(
     () => PERMISSION_ROWS.map((r) => r.id),
@@ -401,6 +499,7 @@ export function CollaboratorDrawer({
         role: "EMPLOYEE",
         permissions: permissionsToArray(permissions),
         eventIds: buildEventIdsForSettings(events, eventSelection),
+        clientPage: organizerMemberSettingsClientPage(member.userId),
       });
       toast.success("Colaborador atualizado.");
       onSuccess();
@@ -728,25 +827,54 @@ export function CollaboratorDrawer({
                       Nenhum evento corresponde à busca.
                     </p>
                   ) : (
-                    filteredEventsForList.map((ev) => (
-                      <button
-                        key={ev.id}
-                        type="button"
-                        onClick={() => toggleEvent(ev.id)}
+                    <>
+                      {paginatedFilteredEvents.map((ev) => {
+                        const img = eventListImageUrl(ev);
+                        return (
+                          <button
+                            key={ev.id}
+                            type="button"
+                            onClick={() => toggleEvent(ev.id)}
+                            disabled={saving || removing || isOwnerMember}
+                            className={cn(
+                              "flex w-full items-center gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50",
+                              "disabled:opacity-50"
+                            )}
+                          >
+                            <PermissionCheckbox
+                              checked={!!eventSelection[ev.id]}
+                            />
+                            <span className="relative size-11 shrink-0 overflow-hidden rounded-lg border border-gray-6 bg-gray-3">
+                              {img ? (
+                                <Image
+                                  src={img}
+                                  alt={ev.name}
+                                  width={44}
+                                  height={44}
+                                  className="size-11 object-cover"
+                                />
+                              ) : (
+                                <span className="flex size-full items-center justify-center">
+                                  <ImageIcon
+                                    className="size-5 text-gray-11"
+                                    aria-hidden
+                                  />
+                                </span>
+                              )}
+                            </span>
+                            <p className="min-w-0 flex-1 text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
+                              {ev.name}
+                            </p>
+                          </button>
+                        );
+                      })}
+                      <CollaboratorDrawerEventsPagination
+                        totalPages={eventsTotalPages}
+                        safePage={safeEventsPage}
+                        onPageChange={setEventsListPage}
                         disabled={saving || removing || isOwnerMember}
-                        className={cn(
-                          "flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50",
-                          "disabled:opacity-50"
-                        )}
-                      >
-                        <PermissionCheckbox
-                          checked={!!eventSelection[ev.id]}
-                        />
-                        <p className="text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3]">
-                          {ev.name}
-                        </p>
-                      </button>
-                    ))
+                      />
+                    </>
                   )}
                 </div>
               )}

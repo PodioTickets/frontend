@@ -296,7 +296,9 @@ export default function EditInformationPage() {
         eventData.regulationUrl = regulationUrl;
       }
 
-      await organizerService.updateEvent(eventId, eventData);
+      await organizerService.updateEvent(eventId, eventData, {
+        clientPage: `events/${eventId}/general`,
+      });
       toast.success("Informações salvas com sucesso!");
 
       // Navigate to banner step
@@ -605,7 +607,7 @@ export default function EditInformationPage() {
               disabled={saving}
               className="h-[52px] px-11 text-xl font-bold font-manrope"
             >
-              {saving ? "Salvando..." : "Próxima etapa"}
+              {saving ? "Salvando..." : "Salvar alterações"}
             </Button>
           </div>
         </form>

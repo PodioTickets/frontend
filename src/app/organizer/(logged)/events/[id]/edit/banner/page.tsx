@@ -13,6 +13,7 @@ import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 
 export default function EditBannerPage() {
   const router = useRouter();
@@ -134,9 +135,11 @@ export default function EditBannerPage() {
         updateFormData({ bannerUrl: fullUrl });
 
         try {
-          await organizerService.updateEvent(eventId, {
-            bannerUrl: fullUrl,
-          });
+          await organizerService.updateEvent(
+            eventId,
+            { bannerUrl: fullUrl },
+            { clientPage: organizerEventEditClientPage(eventId, "banner") }
+          );
         } catch (updateError) {
           console.error("Error updating event with banner:", updateError);
         }
@@ -398,7 +401,7 @@ export default function EditBannerPage() {
             disabled={uploadingBanner}
             className="w-[270px] font-bold text-lg"
           >
-            {uploadingBanner ? "Enviando..." : "Confirmar imagem"}
+            {uploadingBanner ? "Enviando..." : "Salvar alterações"}
           </Button>
         </div>
       </div>

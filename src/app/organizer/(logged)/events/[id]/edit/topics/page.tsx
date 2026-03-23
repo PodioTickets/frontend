@@ -11,6 +11,7 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { useTopicModal } from "@/stores/modalStore";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { organizerEventEditClientPage } from "@/lib/organizerAudit";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 
 export default function EditTopicsPage() {
@@ -91,9 +92,11 @@ export default function EditTopicsPage() {
     try {
       // Garantir que o conteúdo padrão está salvo
       if (content) {
-        await organizerService.updateEvent(eventId, {
-          description: content,
-        });
+        await organizerService.updateEvent(
+          eventId,
+          { description: content },
+          { clientPage: organizerEventEditClientPage(eventId, "topics") }
+        );
       }
       toast.success("Tópicos salvos com sucesso!");
       router.push(`/organizer/events/${eventId}/edit/questionnaire`);
@@ -140,9 +143,11 @@ export default function EditTopicsPage() {
 
       if (isEditing && topicId === "default") {
         // Editando o tópico padrão (description do evento)
-        await organizerService.updateEvent(eventId, {
-          description: topicData.content,
-        });
+        await organizerService.updateEvent(
+          eventId,
+          { description: topicData.content },
+          { clientPage: organizerEventEditClientPage(eventId, "topics") }
+        );
         setContent(topicData.content);
         toast.success("Conteúdo padrão atualizado com sucesso!");
       } else if (isEditing && topicId) {
@@ -197,9 +202,11 @@ export default function EditTopicsPage() {
 
     setSaving(true);
     try {
-      await organizerService.updateEvent(eventId, {
-        description: topicData.content,
-      });
+      await organizerService.updateEvent(
+        eventId,
+        { description: topicData.content },
+        { clientPage: organizerEventEditClientPage(eventId, "topics") }
+      );
       setContent(topicData.content);
       toast.success("Conteúdo padrão atualizado com sucesso!");
     } catch (error: any) {
@@ -372,7 +379,7 @@ export default function EditTopicsPage() {
               disabled={saving || loading}
               className="text-[20px] font-bold px-11 h-[52px] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? "Salvando..." : "Confirmar tópicos"}
+              {saving ? "Salvando..." : "Salvar alterações"}
             </Button>
           </div>
         </div>

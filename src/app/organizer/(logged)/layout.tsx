@@ -2,6 +2,7 @@
 
 import { OrganizerSidebar } from "@/components/Organizer/OrganizerSidebar";
 import { OrganizerMobileNav } from "@/components/Organizer/OrganizerMobileNav";
+import { OrganizerAuditPageViewTracker } from "@/components/Organizer/OrganizerAuditPageViewTracker";
 import { useOrganizerAccess } from "@/hooks/useOrganizerAccess";
 import { Loading } from "@/components/Loading";
 
@@ -26,6 +27,7 @@ export default function OrganizerLayout({
 
   return (
     <div className="min-h-screen bg-gray-2 flex pt-16 md:pt-0">
+      <OrganizerAuditPageViewTracker />
       {/* Mobile: top bar + hamburger menu (drawer) */}
       <OrganizerMobileNav />
 

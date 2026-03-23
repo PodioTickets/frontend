@@ -129,10 +129,10 @@ function RegistrationRow({
       <div className="flex flex-1 h-full items-center w-[140px] p-4">
         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
           <span className="text-gray-11 text-xs truncate max-w-[140px] block">
-            {registration.ticket.category.name}
+            {registration.ticket?.category?.name ?? "—"}
           </span>
           <span className="text-gray-12">
-            {registration.ticket.name}
+            {registration.ticket?.name ?? "—"}
           </span>
         </p>
       </div>
@@ -153,7 +153,12 @@ function RegistrationRow({
       {/* Valor */}
       <div className="flex h-full items-center justify-center p-4 w-[120px]">
         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
-          R$ {(registration.ticket.price ? (registration.ticket.price / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00")}
+          R$ {(registration.ticket?.price
+            ? (registration.ticket.price / 100).toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            : "0,00")}
         </p>
       </div>
 

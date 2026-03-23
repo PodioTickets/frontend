@@ -15,6 +15,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ArrowRightIcon } from "lucide-react";
+import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 
 export default function BannerPage() {
   const router = useRouter();
@@ -199,9 +200,11 @@ export default function BannerPage() {
 
         if (formData.createdEventId) {
           try {
-            await organizerService.updateEvent(formData.createdEventId, {
-              bannerUrl: fullUrl,
-            });
+            await organizerService.updateEvent(
+              formData.createdEventId,
+              { bannerUrl: fullUrl },
+              { clientPage: organizerNewEventClientPage("banner") }
+            );
           } catch (updateError) {
             console.error("Error updating event with banner:", updateError);
           }
@@ -229,9 +232,11 @@ export default function BannerPage() {
 
             if (formData.createdEventId) {
               try {
-                await organizerService.updateEvent(formData.createdEventId, {
-                  bannerUrl: fullUrl,
-                });
+                await organizerService.updateEvent(
+                  formData.createdEventId,
+                  { bannerUrl: fullUrl },
+                  { clientPage: organizerNewEventClientPage("banner") }
+                );
               } catch (updateError) {
                 console.error("Error updating event with banner:", updateError);
               }

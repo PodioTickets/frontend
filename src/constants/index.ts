@@ -71,19 +71,10 @@ export const modalitiesColumns: ModalityOption[][] = [
   [
     {
       id: "corrida-de-rua",
-      label: "Corrida de rua",
+      label: "Corrida",
       icon: "/icons-3d/Icon3D-corrida-de-rua.webp",
     },
     { id: "natacao", label: "Natação", icon: "/icons-3d/Icon3D-natacao.webp" },
-    {
-      id: "caminhada",
-      label: "Caminhada",
-      icon: "/icons-3d/Icon3D-caminhada.webp",
-    },
-    { id: "criancas", label: "Crianças", icon: "/icons-3d/Icon3D-kids.webp" },
-    { id: "praia", label: "Praia", icon: "/icons-3d/Icon3D-praia.webp" },
-    { id: "ate-4k", label: "Até 4k", icon: "/icons-3d/Icon3D-4k.webp" },
-    { id: "42k", label: "42k", icon: "/icons-3d/Icon3D-42K.webp" },
   ],
   [
     {
@@ -91,89 +82,16 @@ export const modalitiesColumns: ModalityOption[][] = [
       label: "Ciclismo",
       icon: "/icons-3d/Icon3D-ciclismo.webp",
     },
-    { id: "uphill", label: "Uphill", icon: "/icons-3d/Icon3D-Uphill.webp" },
-    {
-      id: "corridas-virtuais",
-      label: "Corridas virtuais",
-      icon: "/icons-3d/Icon3D-corrida-virtual.webp",
-    },
-    {
-      id: "grupos-esportivos",
-      label: "Grupos esportivos",
-      icon: "/icons-3d/Icon3D-Grupo-de-pessoa.webp",
-    },
-    {
-      id: "circuito",
-      label: "Circuito",
-      icon: "/icons-3d/Icon3D-circuito.webp",
-    },
-    {
-      id: "de-5k-a-10k",
-      label: "De 5k a 10k",
-      icon: "/icons-3d/Icon3D-10k.webp",
-    },
-    {
-      id: "ciclismo-montanha",
-      label: "Ciclismo na montanha",
-      icon: "/icons-3d/Icon3D-Ciclismo-montanha.webp",
-    },
+
   ],
-  // Coluna 3
   [
-    {
-      id: "corrida-aventura",
-      label: "Corrida de aventura",
-      icon: "/icons-3d/Icon3D-Corrida aventura.webp",
-    },
-    {
-      id: "corrida-noturna",
-      label: "Corrida noturna",
-      icon: "/icons-3d/Icon3D-Corrida-noturna.webp",
-    },
-    {
-      id: "beach-tennis",
-      label: "Beach tennis",
-      icon: "/icons-3d/Icon3D-Beach-tennis.webp",
-    },
-    {
-      id: "canoagem-vaa",
-      label: "Canoagem va'a",
-      icon: "/icons-3d/Icon3D-canoa.webp",
-    },
-    {
-      id: "de-11k-a-20k",
-      label: "De 11k a 20k",
-      icon: "/icons-3d/Icon3D-11k-a-20k.webp",
-    },
     {
       id: "triathlon",
       label: "Triathlon",
       icon: "/icons-3d/Icon-3D-Triathlon.webp",
     },
-    {
-      id: "corrida-trilha",
-      label: "Corrida em trilha",
-      icon: "/icons-3d/Icon3D-Corrida-em-trilha.webp",
-    },
   ],
-  // Coluna 4
   [
-    {
-      id: "so-mulheres",
-      label: "Só mulheres",
-      icon: "/icons-3d/Icon3D-mulheres.webp",
-    },
-    {
-      id: "futevolei",
-      label: "Futevôlei",
-      icon: "/icons-3d/Icon3D-futevolei.webp",
-    },
-    {
-      id: "capacitacao",
-      label: "Capacitação",
-      icon: "/icons-3d/Icon3D-corrida-de-revezamento.webp",
-    },
-    { id: "21k", label: "21k", icon: "/icons-3d/Icon3D-21k.webp" },
     { id: "outros", label: "Outros", icon: "/icons-3d/Icon3D-outros.webp" },
   ],
 ];

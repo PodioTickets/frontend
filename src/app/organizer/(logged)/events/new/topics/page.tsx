@@ -11,6 +11,7 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { useTopicModal } from "@/stores/modalStore";
 import { Plus, Download } from "lucide-react";
 import toast from "react-hot-toast";
+import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 
 export default function TopicosPage() {
@@ -110,9 +111,11 @@ Come and be part of this collaborative approach to professional learning. Togeth
     try {
       // Garantir que o conteúdo padrão está salvo
       if (content) {
-        await organizerService.updateEvent(formData.createdEventId, {
-          description: content
-        });
+        await organizerService.updateEvent(
+          formData.createdEventId,
+          { description: content },
+          { clientPage: organizerNewEventClientPage("topics") }
+        );
       }
       toast.success("Tópicos salvos com sucesso!");
       router.push("/organizer/events/new/questionnaire");
@@ -160,9 +163,11 @@ Come and be part of this collaborative approach to professional learning. Togeth
 
       if (isEditing && topicId === "default") {
         // Editando o tópico padrão (description do evento)
-        await organizerService.updateEvent(formData.createdEventId, {
-          description: topicData.content
-        });
+        await organizerService.updateEvent(
+          formData.createdEventId,
+          { description: topicData.content },
+          { clientPage: organizerNewEventClientPage("topics") }
+        );
         setContent(topicData.content);
         toast.success("Conteúdo padrão atualizado com sucesso!");
       } else if (isEditing && topicId) {
@@ -218,9 +223,11 @@ Come and be part of this collaborative approach to professional learning. Togeth
 
     setSaving(true);
     try {
-      await organizerService.updateEvent(formData.createdEventId, {
-        description: topicData.content
-      });
+      await organizerService.updateEvent(
+        formData.createdEventId,
+        { description: topicData.content },
+        { clientPage: organizerNewEventClientPage("topics") }
+      );
       setContent(topicData.content);
       toast.success("Conteúdo padrão atualizado com sucesso!");
     } catch (error: any) {

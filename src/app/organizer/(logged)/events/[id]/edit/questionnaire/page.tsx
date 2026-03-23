@@ -217,7 +217,7 @@ export default function EditQuestionnairePage() {
             variant="default"
             className="text-gray-12 text-lg font-bold px-11 h-[52px]"
           >
-            Finalizar edição
+            Salvar alterações
           </Button>
         </div>
       </div>

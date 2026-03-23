@@ -59,11 +59,11 @@ export function CreateProductModal() {
         setVariations(
           Array.isArray(p.variations)
             ? p.variations.map((v: any) => ({
-                id: v.id || String(Date.now() + Math.random()),
-                name: v.name ?? "",
-                price: formatPriceFromApi(v.price),
-                stock: v.stock != null ? String(v.stock) : "",
-              }))
+              id: v.id || String(Date.now() + Math.random()),
+              name: v.name ?? "",
+              price: formatPriceFromApi(v.price),
+              stock: v.stock != null ? String(v.stock) : "",
+            }))
             : []
         );
       } else {
@@ -517,8 +517,8 @@ export function CreateProductModal() {
                             </span>
                           </div>
                           <div className="w-[188px] px-4 flex items-center justify-center">
-                            <span className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                              Preço específico
+                            <span className="text-gray-12 text-sm font-medium font-inter leading-[1.3] flex items-center gap-1">
+                              Preço específico <Info className="size-5 text-gray-12" />
                             </span>
                           </div>
                           <div className="w-[132px] px-4 flex items-center justify-center">
@@ -550,17 +550,17 @@ export function CreateProductModal() {
                             </div>
                             <div className="w-[188px] px-4 flex items-center justify-center">
                               {isIncludedInTicket ? (
-                                <span className="text-sm font-medium font-inter text-gray-11">
+                                <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
                                   Incluso
                                 </span>
                               ) : (
-                                <div className="flex gap-0.5 items-center text-sm font-semibold font-inter text-gray-12">
+                                <div className="flex gap-0.5 items-center text-sm font-semibold font-inter text-gray-11 cursor-not-allowed">
                                   <span>R$</span>
                                   <input
                                     type="text"
                                     value={variation.price}
                                     onChange={(e) => handlePriceChange(variation.id, e.target.value)}
-                                    className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:border-0"
+                                    className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-11 focus:outline-none focus:border-0 cursor-not-allowed"
                                     placeholder="0,00"
                                   />
                                 </div>

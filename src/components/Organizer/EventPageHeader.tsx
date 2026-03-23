@@ -106,7 +106,7 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
               : "border-transparent text-gray-11 hover:text-gray-12 font-family-dm-sans font-normal"
               }`}
           >
-            Notificações
+            Notificação
           </Link>
         </div>
       </div>

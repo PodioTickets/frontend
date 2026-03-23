@@ -224,12 +224,12 @@ export function CreateNotificationDrawer({
       if (e?.response?.status === 429) {
         toast.error(
           e?.response?.data?.message ||
-            "Muitas tentativas. Aguarde um minuto e tente de novo."
+          "Muitas tentativas. Aguarde um minuto e tente de novo."
         );
       } else {
         toast.error(
           e?.response?.data?.message ||
-            "Não foi possível enviar. Tente novamente."
+          "Não foi possível enviar. Tente novamente."
         );
       }
     } finally {
@@ -358,11 +358,7 @@ export function CreateNotificationDrawer({
                   <label className="text-base text-gray-12 font-normal font-family-dm-sans leading-[1.3]">
                     Mensagem
                   </label>
-                  <span className="text-xs text-gray-11 font-family-dm-sans hidden sm:inline">
-                    Use a barra para{" "}
-                    <span className="font-semibold text-gray-12">negrito</span> e{" "}
-                    <span className="font-semibold text-gray-12">link</span>
-                  </span>
+
                 </div>
                 {open ? (
                   <NotificationMessageEditor

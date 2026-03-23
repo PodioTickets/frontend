@@ -66,11 +66,13 @@ export function useEventMutations() {
     mutationFn: async ({
       eventId,
       data,
+      clientPage,
     }: {
       eventId: string;
       data: any;
+      clientPage?: string;
     }) => {
-      return organizerService.updateEvent(eventId, data);
+      return organizerService.updateEvent(eventId, data, { clientPage });
     },
     onSuccess: (_, variables) => {
       invalidateQueries.events.detail(variables.eventId);
@@ -86,8 +88,8 @@ export function useEventMutations() {
 
   return {
     createEvent: (eventData: any) => createMutation.mutateAsync(eventData),
-    updateEvent: (eventId: string, data: any) =>
-      updateMutation.mutateAsync({ eventId, data }),
+    updateEvent: (eventId: string, data: any, clientPage?: string) =>
+      updateMutation.mutateAsync({ eventId, data, clientPage }),
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
   };
