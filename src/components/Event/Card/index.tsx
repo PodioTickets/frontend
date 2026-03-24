@@ -177,7 +177,7 @@ export function EventCard({ event }: EventCardProps) {
               : inscricoesEmBreve
                 ? "Inscrições em breve"
                 : vagasEsgotadas
-                  ? "Vagas esgotadas"
+                  ? "Vagas esgotadas!"
                   : getStatusText(event.status)}
           </h1>
         </div>

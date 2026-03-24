@@ -75,23 +75,16 @@ export const modalitiesColumns: ModalityOption[][] = [
       icon: "/icons-3d/Icon3D-corrida-de-rua.webp",
     },
     { id: "natacao", label: "Natação", icon: "/icons-3d/Icon3D-natacao.webp" },
-  ],
-  [
-    {
-      id: "ciclismo",
-      label: "Ciclismo",
-      icon: "/icons-3d/Icon3D-ciclismo.webp",
-    },
-
-  ],
-  [
     {
       id: "triathlon",
       label: "Triathlon",
       icon: "/icons-3d/Icon-3D-Triathlon.webp",
     },
-  ],
-  [
+    {
+      id: "ciclismo",
+      label: "Ciclismo",
+      icon: "/icons-3d/Icon3D-ciclismo.webp",
+    },
     { id: "outros", label: "Outros", icon: "/icons-3d/Icon3D-outros.webp" },
   ],
 ];

@@ -800,7 +800,7 @@ export default function EventPage() {
                             disabled
                             variant="outline"
                           >
-                            Esgotado
+                            Esgotado!
                           </Button>
                           <p className="text-sm text-gray-11 text-center mt-2">
                             Este evento não possui mais vagas disponíveis.

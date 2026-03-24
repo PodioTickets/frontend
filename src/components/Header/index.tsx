@@ -156,12 +156,7 @@ export function Header() {
                 Calendário de eventos
               </Link>
               <Dropdown
-                options={[
-                  ...modalitiesColumns[0],
-                  ...modalitiesColumns[1],
-                  ...modalitiesColumns[2],
-                  ...modalitiesColumns[3],
-                ]}
+                options={modalitiesColumns.flat()}
                 dataAttribute="modalities"
                 width="w-48"
                 maxHeight="max-h-[430px]"
@@ -274,25 +269,22 @@ export function Header() {
             >
               <div className="w-6 h-5 flex flex-col items-center justify-center gap-1.5 relative">
                 <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${
-                    mobileMenuOpen
+                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
                       ? "bg-gray-4 rotate-45 translate-y-[10px]"
                       : "bg-gray-4"
-                  }`}
+                    }`}
                 />
                 <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${
-                    mobileMenuOpen
+                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
                       ? "opacity-0 scale-0"
                       : "bg-gray-4 opacity-100 scale-100"
-                  }`}
+                    }`}
                 />
                 <span
-                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${
-                    mobileMenuOpen
+                  className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
                       ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
                       : "bg-gray-4"
-                  }`}
+                    }`}
                 />
               </div>
             </button>
