@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { useCreateQuestionModal } from "@/stores/modalStore";
+import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import type { Question } from "@/services/organizer/OrganizerService";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
+import { Loading } from "@/components/Loading";
 
 export default function QuestionnairePage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
   const { formData } = useCreateEvent();
   const { openCreateQuestionModal, setOnModalSave } = useCreateQuestionModal();
+  const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -88,10 +88,6 @@ export default function QuestionnairePage() {
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta pergunta?")) {
-      return;
-    }
-
     if (!formData.createdEventId) {
       toast.error("Evento não encontrado");
       return;
@@ -118,7 +114,7 @@ export default function QuestionnairePage() {
   if (!authChecked || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
@@ -205,7 +201,11 @@ export default function QuestionnairePage() {
                         <Pencil className="size-5 text-gray-11" />
                       </button>
                       <button
-                        onClick={() => handleDeleteQuestion(question.id)}
+                        onClick={() =>
+                          openDeleteQuestionModal({
+                            onConfirm: () => handleDeleteQuestion(question.id),
+                          })
+                        }
                         className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors cursor-pointer"
                       >
                         <TrashIcon className="size-5 text-red-12" />

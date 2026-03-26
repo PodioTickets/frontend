@@ -85,7 +85,14 @@ export interface AuthError {
   message: string;
   code?: string;
   field?: string;
+  /** Para exibir erro no input do cadastro (CPF ↔ documentNumber na API). */
+  formFieldErrors?: Partial<Record<"cpf", string>>;
 }
+
+export type DocumentAvailabilityResult = {
+  available: boolean;
+  message?: string;
+};
 
 export interface UserItem {
   id: string;
@@ -180,29 +187,82 @@ export class UserService {
         data: loginData,
       };
     } catch (error: any) {
-      // Extrai a mensagem de erro da resposta da API
-      let errorMessage = "Erro ao fazer login. Tente novamente.";
-
-      if (error.response?.data) {
-        // Tenta várias formas de obter a mensagem de erro
-        errorMessage =
-          error.response.data.message ||
-          error.response.data.error ||
-          error.response.data.errors?.message ||
-          (typeof error.response.data === "string"
-            ? error.response.data
-            : errorMessage);
-      } else if (error.message && !error.message.includes("No refresh token")) {
-        // Usa a mensagem do erro, mas ignora mensagens de refresh token
-        errorMessage = error.message;
-      }
-
-      const handledError = this.handleError(error);
+      const handled = this.parseAuthErrorPayload(error);
+      const fallback = "Erro ao fazer login. Tente novamente.";
       return {
         success: false,
-        error: handledError.message || errorMessage,
+        error:
+          handled.message && handled.message !== "An error occurred"
+            ? handled.message
+            : error?.message && !String(error.message).includes("No refresh token")
+              ? error.message
+              : fallback,
         data: undefined,
       };
+    }
+  }
+
+  /**
+   * Verifica se documento (CPF) pode ser usado no cadastro.
+   * GET /api/v1/auth/document/availability?documentNumber=...&excludeUserId=...
+   * Resposta esperada (flexível): { available: boolean, message? } ou { data: { ... } }.
+   * 404 na rota = endpoint ausente (não bloqueia; confiar no erro do register/patch).
+   */
+  async checkDocumentNumberAvailability(
+    documentNumber: string,
+    options?: { excludeUserId?: string }
+  ): Promise<DocumentAvailabilityResult> {
+    const digits = documentNumber.replace(/\D/g, "");
+    if (digits.length !== 11) {
+      return { available: true };
+    }
+    try {
+      const { data } = await this.apiClient.get("/api/v1/auth/document/availability", {
+        params: {
+          documentNumber: digits,
+          ...(options?.excludeUserId
+            ? { excludeUserId: options.excludeUserId }
+            : {}),
+        },
+      });
+      const raw = (data as { data?: unknown })?.data ?? data;
+      const r = raw as Record<string, unknown>;
+
+      let available = true;
+      if (typeof r?.available === "boolean") available = r.available;
+      else if (typeof r?.inUse === "boolean") available = !r.inUse;
+      else if (typeof r?.exists === "boolean") available = !r.exists;
+
+      const msg = r?.message != null ? String(r.message) : undefined;
+      if (!available) {
+        return {
+          available: false,
+          message: this.mapAuthErrorMessageToPtBr(
+            msg || "Este CPF já está cadastrado",
+            undefined
+          ),
+        };
+      }
+      return { available: true };
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: unknown } };
+      const status = err.response?.status;
+      if (status === 404) {
+        return { available: true };
+      }
+      const data = err.response?.data as Record<string, unknown> | undefined;
+      if (status === 409 || status === 400) {
+        const m =
+          data?.message ?? data?.error ?? "Este CPF já está cadastrado";
+        const text = Array.isArray(m)
+          ? m.filter((x) => typeof x === "string").join(" ")
+          : String(m);
+        return {
+          available: false,
+          message: this.mapAuthErrorMessageToPtBr(text, status),
+        };
+      }
+      this.handleError(error);
     }
   }
 
@@ -381,11 +441,14 @@ export class UserService {
     }
   }
 
-  async forgotPassword(data: { email: string; accountType?: "USER" | "ORGANIZER" }): Promise<{ message: string }> {
+  async forgotPassword(data: {
+    email: string;
+    accountType?: "USER" | "ORGANIZER";
+  }): Promise<{ success?: boolean; message?: string }> {
     try {
       const payload = {
         email: data.email,
-        ...(data.accountType && { accountType: data.accountType }),
+        accountType: data.accountType ?? "USER",
       };
       const response = await this.apiClient.post(
         "/api/v1/auth/forgot-password",
@@ -414,11 +477,14 @@ export class UserService {
     }
   }
 
-  async resendResetCode(data: { email: string; accountType?: "USER" | "ORGANIZER" }): Promise<{ message: string }> {
+  async resendResetCode(data: {
+    email: string;
+    accountType?: "USER" | "ORGANIZER";
+  }): Promise<{ success?: boolean; message?: string }> {
     try {
       const payload = {
         email: data.email,
-        ...(data.accountType && { accountType: data.accountType }),
+        accountType: data.accountType ?? "USER",
       };
       const response = await this.apiClient.post(
         "/api/v1/auth/resend-reset-code",
@@ -437,7 +503,7 @@ export class UserService {
   async resetPassword(data: {
     token: string;
     password: string;
-  }): Promise<{ message: string }> {
+  }): Promise<{ success?: boolean; message?: string }> {
     try {
       const response = await this.apiClient.post(
         "/api/v1/auth/reset-password",
@@ -591,21 +657,70 @@ export class UserService {
     }
   }
 
-  private handleError(error: any): AuthError {
+  /** Mensagens conhecidas da API em inglês → texto exibido ao usuário (toast / input). */
+  private mapAuthErrorMessageToPtBr(
+    message: string,
+    httpStatus?: number
+  ): string {
+    const m = message.trim();
+    if (
+      /user\s+with\s+this\s+document\s+number\s+already\s+exists/i.test(m)
+    ) {
+      return "Já existe um usuário cadastrado com este CPF.";
+    }
+    if (
+      httpStatus === 409 &&
+      /document/i.test(m) &&
+      /already\s+exists|already registered/i.test(m)
+    ) {
+      return "Já existe um usuário cadastrado com este CPF.";
+    }
+    return message;
+  }
+
+  private parseAuthErrorPayload(error: any): AuthError {
     if (error.response?.data) {
       const data = error.response.data;
-      const message =
-        data.message ||
-        data.error ||
-        data.errors?.message ||
-        (Array.isArray(data.errors) && data.errors[0]?.message) ||
-        (typeof data === "string" ? data : null) ||
-        "An error occurred";
+      const statusCode: number | undefined = error.response.status;
+      const rawMsg =
+        data.message ??
+        data.error ??
+        data.errors?.message ??
+        (Array.isArray(data.errors) && data.errors[0]?.message) ??
+        (typeof data === "string" ? data : null);
+
+      let messageStr = "An error occurred";
+      const stringMessages: string[] = [];
+
+      if (Array.isArray(rawMsg)) {
+        for (const x of rawMsg) {
+          if (typeof x === "string") stringMessages.push(x);
+        }
+        messageStr = stringMessages.join(" ") || messageStr;
+      } else if (typeof rawMsg === "string") {
+        messageStr = rawMsg;
+        stringMessages.push(rawMsg);
+      }
+
+      const localized = this.mapAuthErrorMessageToPtBr(messageStr, statusCode);
+
+      const formFieldErrors: Partial<Record<"cpf", string>> = {};
+      if (data.field === "documentNumber" && localized) {
+        formFieldErrors.cpf = localized;
+      }
+      for (const m of stringMessages) {
+        if (/document|cpf|cnpj/i.test(m)) {
+          formFieldErrors.cpf = this.mapAuthErrorMessageToPtBr(m, statusCode);
+          break;
+        }
+      }
 
       return {
-        message,
+        message: localized,
         code: data.code,
         field: data.field,
+        formFieldErrors:
+          Object.keys(formFieldErrors).length > 0 ? formFieldErrors : undefined,
       };
     }
 
@@ -617,8 +732,18 @@ export class UserService {
     }
 
     return {
-      message: error.message || "An unexpected error occurred",
+      message: error?.message || "An unexpected error occurred",
       code: "UNKNOWN_ERROR",
     };
+  }
+
+  private handleError(error: any): never {
+    const p = this.parseAuthErrorPayload(error);
+    const err = new Error(p.message) as Error & AuthError;
+    err.code = p.code;
+    err.field = p.field;
+    err.formFieldErrors = p.formFieldErrors;
+    err.name = "AuthError";
+    throw err;
   }
 }

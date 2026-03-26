@@ -3,6 +3,7 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useOrganizerAuth } from "@/hooks/useOrganizerAuth";
 import { TicketForm } from "@/components/Ticket/TicketForm";
+import { Loading } from "@/components/Loading";
 
 export default function EditCreateTicketPage() {
   const params = useParams();
@@ -14,7 +15,7 @@ export default function EditCreateTicketPage() {
   if (isLoading || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }

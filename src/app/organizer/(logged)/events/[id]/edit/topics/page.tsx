@@ -2,33 +2,33 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
 import { userService, organizerService } from "@/services";
-import { useEditEvent } from "@/contexts/EditEventContext";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { useTopicModal } from "@/stores/modalStore";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
-import { organizerEventEditClientPage } from "@/lib/organizerAudit";
-import { TrashIcon } from "@/components/Icons/TrashIcon";
+import { Loading } from "@/components/Loading";
+import { SortableTopicsList } from "@/components/Topic/SortableTopicsList";
+import {
+  buildTopicSectionsFromEvent,
+  DEFAULT_TOPIC_SENTINEL,
+  topicIdsInUiOrder,
+  type TopicSectionRow,
+} from "@/lib/eventTopicSections";
 
 export default function EditTopicsPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
-  const { isAuthenticated } = useAuth();
-  const { formData } = useEditEvent();
-  const { openTopicModal, data: modalData, setOnModalSave } = useTopicModal();
+  const { openTopicModal, setOnModalSave } = useTopicModal();
   const [authChecked, setAuthChecked] = useState(false);
-  const [topics, setTopics] = useState<Array<{ id: string; title: string; content: string }>>([]);
+  const [sections, setSections] = useState<TopicSectionRow[]>([]);
+  const defaultTopicApiIdRef = useRef<string | null>(null);
   const editingTopicRef = useRef<{ topicId?: string; isEditing: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [content, setContent] = useState("");
 
-  // Verificar autenticação
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
@@ -41,7 +41,6 @@ export default function EditTopicsPage() {
     return () => clearTimeout(timer);
   }, [router]);
 
-  // Carregar tópicos do evento
   useEffect(() => {
     const loadTopics = async () => {
       if (!authChecked || !eventId) return;
@@ -49,24 +48,9 @@ export default function EditTopicsPage() {
       setLoading(true);
       try {
         const event = await organizerService.getEventById(eventId);
-
-        // Carregar description como conteúdo padrão
-        if (event.description) {
-          setContent(event.description);
-        }
-
-        // Carregar tópicos adicionais (excluindo o padrão)
-        if (event.topics && event.topics.length > 0) {
-          const additionalTopics = event.topics
-            .filter((topic) => !topic.isDefault)
-            .sort((a, b) => (a.order || 0) - (b.order || 0))
-            .map((topic) => ({
-              id: topic.id,
-              title: topic.title,
-              content: topic.content,
-            }));
-          setTopics(additionalTopics);
-        }
+        const { sections: next, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
+        defaultTopicApiIdRef.current = defaultTopicApiId;
+        setSections(next);
       } catch (error: any) {
         console.error("Error loading topics:", error);
         toast.error("Erro ao carregar tópicos");
@@ -82,22 +66,63 @@ export default function EditTopicsPage() {
     router.push(`/organizer/events/${eventId}/edit/tickets`);
   };
 
+  const persistTopicOrder = async (reordered: TopicSectionRow[]) => {
+    if (!eventId || reordered.length === 0) return;
+    const mapped = topicIdsInUiOrder(reordered, defaultTopicApiIdRef.current);
+    await organizerService.reorderEventTopics(eventId, mapped);
+  };
+
   const handleSave = async () => {
     if (!eventId) {
       toast.error("Evento não encontrado. Por favor, crie o evento primeiro.");
       return;
     }
 
+    const defaultRow = sections.find((s) => !s.allowDelete);
+    if (!defaultRow) {
+      toast.error("Tópico obrigatório não encontrado.");
+      return;
+    }
+    if (!defaultRow.content?.trim()) {
+      toast.error("Preencha o tópico obrigatório (detalhes do evento).");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Garantir que o conteúdo padrão está salvo
-      if (content) {
-        await organizerService.updateEvent(
-          eventId,
-          { description: content },
-          { clientPage: organizerEventEditClientPage(eventId, "topics") }
+      let working = sections;
+
+      if (defaultRow.id === DEFAULT_TOPIC_SENTINEL) {
+        const idx = sections.indexOf(defaultRow);
+        const created = await organizerService.createTopic(eventId, {
+          title: defaultRow.title,
+          content: defaultRow.content,
+          isEnabled: true,
+          isDefault: true,
+          order: idx + 1,
+        });
+        defaultTopicApiIdRef.current = created.id;
+        working = sections.map((s) =>
+          s.id === DEFAULT_TOPIC_SENTINEL
+            ? {
+                id: created.id,
+                title: created.title?.trim() || defaultRow.title,
+                content: created.content,
+                allowDelete: false,
+                variant: "default" as const,
+              }
+            : s
         );
+        setSections(working);
+      } else {
+        await organizerService.updateTopic(eventId, defaultRow.id, {
+          title: defaultRow.title,
+          content: defaultRow.content,
+        });
       }
+
+      await persistTopicOrder(working);
+
       toast.success("Tópicos salvos com sucesso!");
       router.push(`/organizer/events/${eventId}/edit/questionnaire`);
     } catch (error: any) {
@@ -142,48 +167,91 @@ export default function EditTopicsPage() {
       const topicId = editingState?.topicId;
 
       if (isEditing && topicId === "default") {
-        // Editando o tópico padrão (description do evento)
-        await organizerService.updateEvent(
-          eventId,
-          { description: topicData.content },
-          { clientPage: organizerEventEditClientPage(eventId, "topics") }
-        );
-        setContent(topicData.content);
+        const defaultRow = sections.find((s) => !s.allowDelete);
+        if (!defaultRow) {
+          toast.error("Tópico obrigatório não encontrado.");
+          return;
+        }
+        const titleToSave =
+          topicData.title?.trim() ||
+          defaultRow.title ||
+          "Detalhes do evento (Obrigatório)";
+
+        if (defaultRow.id !== DEFAULT_TOPIC_SENTINEL) {
+          const updated = await organizerService.updateTopic(eventId, defaultRow.id, {
+            title: titleToSave,
+            content: topicData.content,
+          });
+          defaultTopicApiIdRef.current = updated.id;
+          setSections((prev) =>
+            prev.map((s) =>
+              s.id === defaultRow.id
+                ? {
+                    ...s,
+                    title: updated.title?.trim() || titleToSave,
+                    content: updated.content,
+                  }
+                : s
+            )
+          );
+        } else {
+          const idx = sections.findIndex((s) => s.id === DEFAULT_TOPIC_SENTINEL);
+          const created = await organizerService.createTopic(eventId, {
+            title: titleToSave,
+            content: topicData.content,
+            isEnabled: true,
+            isDefault: true,
+            order: idx + 1,
+          });
+          defaultTopicApiIdRef.current = created.id;
+          const next = sections.map((s) =>
+            s.id === DEFAULT_TOPIC_SENTINEL
+              ? {
+                  id: created.id,
+                  title: created.title?.trim() || titleToSave,
+                  content: created.content,
+                  allowDelete: false,
+                  variant: "default" as const,
+                }
+              : s
+          );
+          setSections(next);
+          await persistTopicOrder(next);
+        }
         toast.success("Conteúdo padrão atualizado com sucesso!");
       } else if (isEditing && topicId) {
-        // Editando tópico existente
         const updatedTopic = await organizerService.updateTopic(eventId, topicId, {
           title: topicData.title,
           content: topicData.content,
         });
-        setTopics((prevTopics) =>
-          prevTopics.map((topic) =>
-            topic.id === topicId
-              ? { ...topic, title: updatedTopic.title, content: updatedTopic.content }
-              : topic
+        setSections((prev) =>
+          prev.map((s) =>
+            s.id === topicId
+              ? { ...s, title: updatedTopic.title, content: updatedTopic.content }
+              : s
           )
         );
         toast.success("Tópico atualizado com sucesso!");
       } else {
-        // Criando novo tópico
         const newTopic = await organizerService.createTopic(eventId, {
           title: topicData.title,
           content: topicData.content,
           isEnabled: true,
-          order: topics.length + 1,
+          order: sections.length + 1,
         });
-        setTopics((prevTopics) => [
-          ...prevTopics,
+        setSections((prev) => [
+          ...prev,
           {
             id: newTopic.id,
             title: newTopic.title,
             content: newTopic.content,
+            allowDelete: true,
+            variant: "topic",
           },
         ]);
         toast.success("Tópico criado com sucesso!");
       }
 
-      // Limpar a ref após salvar
       editingTopicRef.current = null;
     } catch (error: any) {
       console.error("Error saving topic:", error);
@@ -194,43 +262,56 @@ export default function EditTopicsPage() {
     }
   };
 
-  const handleSaveDefaultTopic = async (topicData: { title: string; content: string }) => {
-    if (!eventId) {
-      toast.error("Evento não encontrado. Por favor, crie o evento primeiro.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await organizerService.updateEvent(
-        eventId,
-        { description: topicData.content },
-        { clientPage: organizerEventEditClientPage(eventId, "topics") }
-      );
-      setContent(topicData.content);
-      toast.success("Conteúdo padrão atualizado com sucesso!");
-    } catch (error: any) {
-      console.error("Error saving default topic:", error);
-      const errorMessage =
-        error.response?.data?.message || error.message || "Erro ao salvar conteúdo";
-      toast.error(errorMessage);
-    } finally {
-      setSaving(false);
+  const handleEditTopic = (topicId: string) => {
+    const row = sections.find((s) => s.id === topicId);
+    if (!row) return;
+    setOnModalSave(handleSaveTopic);
+    if (!row.allowDelete) {
+      editingTopicRef.current = { topicId: "default", isEditing: true };
+      openTopicModal({
+        title: row.title,
+        content: row.content,
+        isEditing: true,
+        topicId: "default",
+      });
+    } else {
+      editingTopicRef.current = { topicId: row.id, isEditing: true };
+      openTopicModal({
+        title: row.title,
+        content: row.content,
+        isEditing: true,
+        topicId: row.id,
+      });
     }
   };
 
-  const handleEditTopic = (topicId: string) => {
-    const topic = topics.find((t) => t.id === topicId);
-    if (topic) {
-      editingTopicRef.current = { topicId: topic.id, isEditing: true };
-      setOnModalSave(handleSaveTopic);
-      openTopicModal({
-        title: topic.title,
-        content: topic.content,
-        isEditing: true,
-        topicId: topic.id,
-      });
+  const reloadTopicsFromEvent = async () => {
+    if (!eventId) return;
+    const event = await organizerService.getEventById(eventId);
+    const { sections: next, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
+    defaultTopicApiIdRef.current = defaultTopicApiId;
+    setSections(next);
+  };
+
+  const handlePersistOrderWithRollback = async (reordered: TopicSectionRow[]) => {
+    if (!eventId || reordered.length === 0) return;
+    try {
+      const mapped = topicIdsInUiOrder(reordered, defaultTopicApiIdRef.current);
+      await organizerService.reorderEventTopics(eventId, mapped);
+    } catch (error: any) {
+      console.error("Error persisting topic order:", error);
+      toast.error("Erro ao salvar a ordem dos tópicos");
+      try {
+        await reloadTopicsFromEvent();
+      } catch {
+        /* ignore */
+      }
     }
+  };
+
+  const handleTopicsReorder = (reordered: TopicSectionRow[]) => {
+    setSections(reordered);
+    void handlePersistOrderWithRollback(reordered);
   };
 
   const handleDeleteTopic = async (topicId: string) => {
@@ -238,6 +319,9 @@ export default function EditTopicsPage() {
       toast.error("Evento não encontrado.");
       return;
     }
+    if (topicId === DEFAULT_TOPIC_SENTINEL) return;
+    const row = sections.find((s) => s.id === topicId);
+    if (!row?.allowDelete) return;
 
     if (!confirm("Tem certeza que deseja excluir este tópico?")) {
       return;
@@ -245,7 +329,7 @@ export default function EditTopicsPage() {
 
     try {
       await organizerService.deleteTopic(eventId, topicId);
-      setTopics((prevTopics) => prevTopics.filter((topic) => topic.id !== topicId));
+      setSections((prev) => prev.filter((s) => s.id !== topicId));
       toast.success("Tópico excluído com sucesso!");
     } catch (error: any) {
       console.error("Error deleting topic:", error);
@@ -258,15 +342,14 @@ export default function EditTopicsPage() {
   if (!authChecked || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
 
   return (
     <div className="pb-20">
-      <div className="w-full flex flex-col gap-9">
-        {/* Title Section */}
+      <div className="w-full max-w-[843px] mx-auto flex flex-col gap-9 px-5 md:px-0">
         <div className="flex gap-3 items-center">
           <button
             onClick={handleBack}
@@ -279,81 +362,14 @@ export default function EditTopicsPage() {
           </h1>
         </div>
 
-        {/* Main Content Card */}
-        <div className="flex flex-col items-start rounded-xl w-full">
-          <div className="border border-gray-8 rounded-xl w-full flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="bg-gray-1 border-b border-gray-6 flex items-center justify-between px-5 py-2">
-              <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">Ações</p>
-              <button
-                onClick={() => {
-                  setOnModalSave(handleSaveDefaultTopic);
-                  openTopicModal({
-                    title: "Detalhes do evento",
-                    content: content,
-                    isEditing: true,
-                    topicId: "default",
-                  });
-                }}
-                className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg p-2 hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-              >
-                <PencilIcon className="size-5 text-gray-11" />
-              </button>
-            </div>
+        <div className="flex flex-col items-stretch w-full max-w-full min-w-0">
+          <SortableTopicsList
+            topics={sections}
+            onReorder={handleTopicsReorder}
+            onEditTopic={handleEditTopic}
+            onDeleteTopic={handleDeleteTopic}
+          />
 
-            {/* Content */}
-            <div className="flex flex-col gap-6 p-5">
-              <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                Detalhes do evento (Obrigatório)
-              </h2>
-              <div
-                className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: content }}
-              />
-            </div>
-          </div>
-
-          {/* Additional Topics */}
-          {topics.map((topic) => (
-            <div
-              key={topic.id}
-              className="border border-gray-8 rounded-xl w-full flex flex-col overflow-hidden mt-6"
-            >
-              {/* Topic Header */}
-              <div className="bg-gray-1 border-b border-gray-6 flex items-center justify-between px-5 py-2">
-                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                  Ações
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEditTopic(topic.id)}
-                    className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-                  >
-                    <PencilIcon className="size-5 text-gray-11" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTopic(topic.id)}
-                    className="bg-red-2 border-[1.5px] border-red-6 p-2 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-                  >
-                    <TrashIcon className="size-5 text-red-11" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Topic Content */}
-              <div className="flex flex-col gap-6 p-5">
-                <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                  {topic.title}
-                </h3>
-                <div
-                  className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: topic.content }}
-                />
-              </div>
-            </div>
-          ))}
-
-          {/* Add Section Button */}
           <div className="flex items-center justify-center py-10 w-full">
             <Button
               variant="outline"
@@ -365,7 +381,6 @@ export default function EditTopicsPage() {
             </Button>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-2 items-start justify-end w-full pb-4 mt-10">
             <Button
               variant="outline"

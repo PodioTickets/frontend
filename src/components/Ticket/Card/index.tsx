@@ -103,17 +103,17 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     <div
       onClick={handleClick}
       className={cn(
-        "bg-gray-2 flex flex-col items-start overflow-hidden rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full max-w-[308px] cursor-pointer border border-transparent hover:border-gray-6 hover:translate-y-[-5px] transition-all duration-300",
+        "bg-gray-2 flex flex-col items-start overflow-hidden rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full max-w-[300px] cursor-pointer border border-transparent hover:border-gray-6 hover:translate-y-[-5px] transition-all duration-300",
         className
       )}
     >
       {/* Image */}
-      <div className="h-[232px] relative rounded-t-lg shrink-0 w-full">
+      <div className="relative aspect-square w-full shrink-0 rounded-t-lg overflow-hidden bg-gray-4">
         <Image
           src={imageUrl}
           alt={ticket.event.name}
           fill
-          className="object-cover rounded-t-lg"
+          className="object-cover"
           onError={(e) => {
             e.currentTarget.src = "/banners/card_placeholder.png";
           }}

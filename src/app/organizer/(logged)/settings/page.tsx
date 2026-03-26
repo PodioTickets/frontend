@@ -13,6 +13,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ArrowButton } from "@/components/ArrowButton";
+import { Loading } from "@/components/Loading";
 
 export default function OrganizerSettingsPage() {
   const router = useRouter();
@@ -154,7 +155,7 @@ export default function OrganizerSettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }

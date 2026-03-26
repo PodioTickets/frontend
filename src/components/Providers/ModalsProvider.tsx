@@ -7,6 +7,7 @@ import { ChangePasswordModal } from "@/components/Auth/ChangePasswordModal";
 import { DeleteParticipantModal } from "@/components/Checkout/DeleteParticipantModal";
 import { TopicModal } from "@/components/TopicModal";
 import { CreateQuestionModal } from "@/components/Questionnaire/CreateQuestionModal";
+import { DeleteQuestionModal } from "@/components/Questionnaire/DeleteQuestionModal";
 import { CreateProductModal } from "@/components/Product/CreateProductModal";
 import { AddExistingProductsModal } from "@/components/Product/AddExistingProductsModal";
 import { CreateCouponModal } from "@/components/Coupon/CreateCouponModal";
@@ -31,6 +32,7 @@ export function ModalsProvider() {
       <DeleteParticipantModal />
       <TopicModal />
       <CreateQuestionModal />
+      <DeleteQuestionModal />
       <CreateProductModal />
       <AddExistingProductsModal />
       <CreateCouponModal />
@@ -48,4 +50,4 @@ export function ModalsProvider() {
   );
 }
 
-export { useLoginModal, useRegisterModal, useChangeEmailModal, useChangePasswordModal, useDeleteParticipantModal, useTopicModal, useCreateQuestionModal, useCreateProductModal, useAddExistingProductsModal, useViewVoucherModal, usePublishEventModal, useViewRegistrationModal, useExportDataModal, usePaymentDetailsModal, useRequestTransferModal } from "@/stores/modalStore";
+export { useLoginModal, useRegisterModal, useChangeEmailModal, useChangePasswordModal, useDeleteParticipantModal, useTopicModal, useCreateQuestionModal, useDeleteQuestionModal, useCreateProductModal, useAddExistingProductsModal, useViewVoucherModal, usePublishEventModal, useViewRegistrationModal, useExportDataModal, usePaymentDetailsModal, useRequestTransferModal } from "@/stores/modalStore";

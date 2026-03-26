@@ -15,6 +15,7 @@ import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { organizerNewEventClientPage } from "@/lib/organizerAudit";
+import { Loading } from "@/components/Loading";
 
 interface ViaCEPResponse {
   cep: string;
@@ -74,7 +75,7 @@ export default function InformacoesPage() {
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
@@ -474,8 +475,7 @@ export default function InformacoesPage() {
               <div className="flex items-center gap-1">
                 <InfoIcon className="size-5 text-gray-11" />
                 <p className="text-gray-11 text-base font-family-dm-sans flex-1">
-                  Use a data e o horário oficiais de início do evento. As largadas
-                  por modalidade podem ser detalhadas depois
+                  Use a data oficial em que o evento começa.
                 </p>
               </div>
               {errors.eventDate && (
@@ -544,8 +544,7 @@ export default function InformacoesPage() {
                 Local do evento
               </h2>
               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                Informe onde o evento será realizado. Essas informações aparecem
-                na página do evento e ajudam o participante a chegar até o local.
+                Essas informações serão exibidas na página e ajudam o participante a chegar ao destino.
               </p>
             </div>
 
@@ -649,7 +648,7 @@ export default function InformacoesPage() {
           {/* PDF Upload Section */}
           <div className="flex flex-col items-start justify-center w-full">
             <div
-              className="border-2 border-dashed border-gray-6 rounded-[12px] p-[24px] flex gap-[16px] items-center justify-center w-full cursor-pointer hover:border-gray-7 transition-colors"
+              className="border-2 border-dashed border-gray-6 rounded-[12px] p-6 flex gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-7 transition-colors"
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
@@ -660,7 +659,7 @@ export default function InformacoesPage() {
               <div className="flex flex-col gap-4 items-start justify-center flex-1">
                 <div className="flex flex-col gap-2 items-start justify-center w-full">
                   <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">
-                    Envie o regulamento do evento em PDF para que os participantes possam baixar na página do evento.
+                    Envie o regulamento do evento em PDF para que os participantes possam visualizar na página do evento.
                   </p>
                   <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
                     Formato recomendado: PDF
@@ -682,9 +681,7 @@ export default function InformacoesPage() {
             />
             {pdfFile && (
               <div className="mt-2 flex items-center gap-2">
-                <p className="text-gray-11 text-sm">
-                  Arquivo selecionado: {pdfFile.name}
-                </p>
+                <p className="text-gray-11 text-sm">Arquivo selecionado: {pdfFile.name}</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -698,6 +695,19 @@ export default function InformacoesPage() {
                 >
                   Remover
                 </button>
+              </div>
+            )}
+            {(pdfUrl || formData.regulationUrl) && !pdfFile && (
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-gray-11 text-sm">PDF atual do regulamento</p>
+                <a
+                  href={pdfUrl || formData.regulationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-11 text-sm hover:underline"
+                >
+                  Ver PDF
+                </a>
               </div>
             )}
           </div>

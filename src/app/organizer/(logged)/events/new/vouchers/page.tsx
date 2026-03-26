@@ -13,6 +13,7 @@ import { TrashIcon } from "@/components/Icons/TrashIcon";
 import toast from "react-hot-toast";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCreateVoucherModal, useDeleteVoucherModal, useViewVoucherModal, usePublishEventModal } from "@/stores/modalStore";
+import { Loading } from "@/components/Loading";
 
 interface VoucherGroup {
   name: string;
@@ -167,7 +168,7 @@ export default function VouchersPage() {
   if (!authChecked || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
@@ -246,8 +247,8 @@ export default function VouchersPage() {
                           </td>
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-2 justify-end">
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 className="border-gray-6 text-gray-12 h-[36px] text-sm mr-4"
                                 onClick={() => openViewVoucherModal({
                                   eventId: formData.createdEventId || "",

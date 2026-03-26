@@ -97,8 +97,8 @@ export function SystemAuditLogTab() {
         } else {
           toast.error(
             e?.response?.data?.message ||
-              e?.message ||
-              "Erro ao carregar o log do sistema."
+            e?.message ||
+            "Erro ao carregar o log do sistema."
           );
           setItems([]);
           setTotal(0);
@@ -200,46 +200,46 @@ export function SystemAuditLogTab() {
           items.map((row) => {
             const metaHint = auditLogContextLine(row.metadata);
             return (
-            <div
-              key={row.id}
-              className="rounded-xl border border-gray-6 bg-gray-1 p-3.5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
-            >
-              <p className="text-xs text-gray-11 font-family-dm-sans mb-2">
-                IP: {row.ip}
-              </p>
-              <div className="flex items-start gap-2.5">
-                <div className="size-8 rounded-md bg-gray-5 text-xs font-semibold text-gray-12 font-family-dm-sans flex items-center justify-center shrink-0">
-                  {getInitials(row.userName)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
-                    {row.userName}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-2.5">
-                <p className="text-xs text-gray-11 font-family-dm-sans">Ação:</p>
-                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
-                  {row.action}
+              <div
+                key={row.id}
+                className="rounded-xl border border-gray-6 bg-gray-1 p-3.5 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]"
+              >
+                <p className="text-xs text-gray-11 font-family-dm-sans mb-2">
+                  IP: {row.ip}
                 </p>
-                {metaHint ? (
-                  <p className="mt-1 text-xs text-gray-11 font-family-dm-sans wrap-break-word">
-                    {metaHint}
-                  </p>
-                ) : null}
-              </div>
+                <div className="flex items-start gap-2.5">
+                  <div className="size-8 rounded-md bg-gray-5 text-xs font-semibold text-gray-12 font-family-dm-sans flex items-center justify-center shrink-0">
+                    {getInitials(row.userName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
+                      {row.userName}
+                    </p>
+                  </div>
+                </div>
 
-              <div className="mt-3 rounded-lg border border-gray-6 bg-gray-2 px-3 py-2 flex items-center justify-between gap-2">
-                <span className="text-xs text-gray-11 font-family-dm-sans">
-                  Data/Hora:
-                </span>
-                <span className="text-sm font-semibold text-gray-12 font-family-dm-sans whitespace-nowrap">
-                  {formatLogDateTime(row.occurredAt)}
-                </span>
+                <div className="mt-2.5">
+                  <p className="text-xs text-gray-11 font-family-dm-sans">Ação:</p>
+                  <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
+                    {row.action}
+                  </p>
+                  {metaHint ? (
+                    <p className="mt-1 text-xs text-gray-11 font-family-dm-sans wrap-break-word">
+                      {metaHint}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 rounded-lg border border-gray-6 bg-gray-2 px-3 py-2 flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-11 font-family-dm-sans">
+                    Data/Hora:
+                  </span>
+                  <span className="text-sm font-semibold text-gray-12 font-family-dm-sans whitespace-nowrap">
+                    {formatLogDateTime(row.occurredAt)}
+                  </span>
+                </div>
               </div>
-            </div>
-          );
+            );
           })
         )}
       </div>
@@ -288,40 +288,35 @@ export function SystemAuditLogTab() {
                 items.map((row, idx) => {
                   const metaHint = auditLogContextLine(row.metadata);
                   return (
-                  <tr
-                    key={row.id}
-                    className={cn(
-                      "transition-colors hover:bg-gray-2/60",
-                      idx % 2 === 1 ? "bg-gray-2/35" : "bg-gray-1"
-                    )}
-                  >
-                    <td className="py-3.5 px-4">
-                      <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {row.ip}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {row.userName}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-snug block">
-                        {row.action}
-                      </span>
-                      {metaHint ? (
-                        <span className="mt-1 block text-xs text-gray-11 font-family-dm-sans wrap-break-word max-w-md">
-                          {metaHint}
+                    <tr
+                      key={row.id}
+                      className={cn(
+                        "transition-colors hover:bg-gray-2/60",
+                        idx % 2 === 1 ? "bg-gray-2/35" : "bg-gray-1"
+                      )}
+                    >
+                      <td className="py-3.5 px-4">
+                        <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                          {row.ip}
                         </span>
-                      ) : null}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="text-sm font-normal text-gray-11 font-family-dm-sans whitespace-nowrap">
-                        {formatLogDateTime(row.occurredAt)}
-                      </span>
-                    </td>
-                  </tr>
-                );
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                          {row.userName}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-snug block">
+                          {row.action}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-sm font-normal text-gray-11 font-family-dm-sans whitespace-nowrap">
+                          {formatLogDateTime(row.occurredAt)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
                 })
               )}
             </tbody>

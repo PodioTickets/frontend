@@ -84,13 +84,15 @@ export function EventCard({ event }: EventCardProps) {
 
   const cardContent = (
     <>
-      <Image
-        src={event.bannerUrl}
-        alt={event.name}
-        width={50000}
-        height={50000}
-        className="rounded-lg object-cover lg:h-[232px]"
-      />
+      <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-4">
+        <Image
+          src={event.bannerUrl}
+          alt={event.name}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 300px"
+        />
+      </div>
 
       <div className="flex flex-col gap-2 px-3 mt-2">
         <h1 className="font-bold truncate">{event.name}</h1>

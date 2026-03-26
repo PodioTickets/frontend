@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRegisterModal, useLoginModal } from "@/stores/modalStore";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
+import type { AuthError } from "@/services/user/UserService";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Dropdown } from "@/components/Dropdown";
@@ -206,22 +207,63 @@ export function RegisterModal() {
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      // Step 1 = dados de acesso (email/senha)
       if (validateStep2()) {
         setCurrentStep(2);
       }
-    } else if (currentStep === 2) {
-      // Step 2 = informações pessoais
-      if (validateStep1()) {
-        await handleRegister();
+      return;
+    }
+
+    if (currentStep === 2) {
+      if (!validateStep1()) return;
+
+      const cpfDigits = formData.cpf.replace(/\D/g, "");
+      const existingDigits = ((user as any)?.documentNumber || "").replace(
+        /\D/g,
+        ""
+      );
+      const skipCpfAvailabilityCheck =
+        isCompletingProfile &&
+        !!existingDigits &&
+        cpfDigits === existingDigits;
+
+      setIsSubmitting(true);
+      try {
+        if (!skipCpfAvailabilityCheck && cpfDigits.length === 11) {
+          const check = await userService.checkDocumentNumberAvailability(
+            cpfDigits,
+            {
+              excludeUserId:
+                isCompletingProfile && user?.id ? user.id : undefined,
+            }
+          );
+          if (!check.available) {
+            const msg = check.message || "Este CPF já está cadastrado";
+            setErrors((prev) => ({ ...prev, cpf: msg }));
+            toast.error(msg);
+            return;
+          }
+        }
+
+        await submitRegistration();
+      } catch (error: unknown) {
+        const e = error as Error & Partial<Pick<AuthError, "formFieldErrors">>;
+        const errorMessage =
+          e?.message || "Erro ao realizar cadastro. Tente novamente.";
+        if (e.formFieldErrors?.cpf) {
+          setErrors((prev) => ({
+            ...prev,
+            cpf: e.formFieldErrors!.cpf!,
+          }));
+        }
+        toast.error(errorMessage);
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
 
-  const handleRegister = async () => {
-    setIsSubmitting(true);
-    try {
-      if (isCompletingProfile && user) {
+  const submitRegistration = async () => {
+    if (isCompletingProfile && user) {
         // Se for completar cadastro, usa updateUser
         const updateData: any = {};
 
@@ -352,16 +394,6 @@ export function RegisterModal() {
         setCurrentStep(3);
         toast.success("Cadastro realizado com sucesso!");
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Erro ao realizar cadastro. Tente novamente.";
-      toast.error(errorMessage);
-      // Não avança para o passo 3 se houver erro
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleFinish = () => {

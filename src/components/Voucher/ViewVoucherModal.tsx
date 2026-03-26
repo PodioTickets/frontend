@@ -12,6 +12,7 @@ import { Button } from "@/components/Button";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
+import { Loading } from "../Loading";
 
 interface Voucher {
   id: string;
@@ -53,18 +54,18 @@ export function ViewVoucherModal() {
   // Encontrar tickets vinculados ao voucher
   const getLinkedTickets = () => {
     if (!groupInfo || !tickets.length) return [];
-    
+
     if (groupInfo.appliesTo === "all") {
       return tickets;
     }
-    
+
     if (Array.isArray(groupInfo.appliesTo)) {
-      const ticketIds = groupInfo.appliesTo.map((item: any) => 
+      const ticketIds = groupInfo.appliesTo.map((item: any) =>
         typeof item === "string" ? item : item.id
       );
       return tickets.filter((ticket) => ticketIds.includes(ticket.id));
     }
-    
+
     return [];
   };
 
@@ -197,7 +198,7 @@ export function ViewVoucherModal() {
               <div className="flex-1 overflow-y-auto p-5">
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-11">Carregando...</div>
+                    <Loading />
                   </div>
                 ) : voucherData ? (
                   <div className="flex flex-col gap-8">

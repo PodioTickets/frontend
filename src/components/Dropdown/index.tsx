@@ -280,17 +280,22 @@ const OptionItem = memo(
 
 OptionItem.displayName = "OptionItem";
 
+export type DropdownChildrenRender = (helpers: {
+  close: () => void;
+}) => ReactNode;
+
 export interface DropdownProps {
   options?: DropdownOption[];
   trigger: ReactNode | ((isOpen: boolean) => ReactNode);
   onSelect?: (option: DropdownOption) => void;
+  onOpenChange?: (open: boolean) => void;
   position?: "top" | "bottom" | "left" | "right";
   align?: "start" | "end" | "center";
   width?: string;
   maxHeight?: string;
   className?: string;
   dataAttribute?: string;
-  children?: ReactNode;
+  children?: ReactNode | DropdownChildrenRender;
   columns?: Array<Array<{ id: string; label: string; icon?: string }>>;
   multiSelect?: boolean;
   selectedIds?: string[];
@@ -301,6 +306,7 @@ export function Dropdown({
   options = [],
   trigger,
   onSelect,
+  onOpenChange,
   position = "bottom",
   align = "start",
   width = "w-48",
@@ -318,6 +324,8 @@ export function Dropdown({
     useState<string[]>(selectedIds);
   const prevSelectedIdsRef = useRef<string[]>(selectedIds);
   const isInternalUpdateRef = useRef(false);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
 
   const selectedIdsSet = useMemo(
     () => new Set(internalSelectedIds),
@@ -347,6 +355,10 @@ export function Dropdown({
       setInternalSelectedIds(selectedIds);
     }
   }, [selectedIds]);
+
+  useEffect(() => {
+    onOpenChangeRef.current?.(isOpen);
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -491,11 +503,22 @@ export function Dropdown({
           className={`${maxHeight} overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full`}
         >
           {children ? (
-            children
+            typeof children === "function" ? (
+              children({
+                close: () => {
+                  startTransition(() => {
+                    setIsOpen(false);
+                  });
+                },
+              })
+            ) : (
+              children
+            )
           ) : columns && multiSelect ? (
             <div
-              className="grid grid-cols-4"
+              className="grid"
               style={{
+                gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
                 contentVisibility: "auto",
                 contain: "layout",
               }}

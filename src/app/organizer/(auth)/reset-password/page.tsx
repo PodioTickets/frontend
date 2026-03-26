@@ -17,8 +17,7 @@ export default function OrganizerResetPasswordPage() {
   const searchParams = useSearchParams();
   const { resetPassword, isPending } = useResetPassword();
 
-  const token = searchParams.get("token") || "";
-  const email = searchParams.get("email") || "";
+  const token = searchParams.get("token")?.trim() || "";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,10 +27,9 @@ export default function OrganizerResetPasswordPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Validar token ao carregar a página
   useEffect(() => {
     if (!token) {
-      toast.error("Token inválido. Por favor, solicite um novo código.");
+      toast.error("Link inválido ou incompleto. Solicite um novo e-mail.");
       router.push("/organizer/forgot-password");
     }
   }, [token, router]);
@@ -135,7 +133,7 @@ export default function OrganizerResetPasswordPage() {
       });
 
       if (!token) {
-        toast.error("Token inválido. Por favor, solicite um novo código.");
+        toast.error("Link inválido ou incompleto. Solicite um novo e-mail.");
         router.push("/organizer/forgot-password");
         return;
       }

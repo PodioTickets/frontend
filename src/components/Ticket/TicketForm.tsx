@@ -19,6 +19,7 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import type { ModalityTemplate, ModalityGroup } from "@/services/organizer/OrganizerService";
 import { useCreateProductModal, useAddExistingProductsModal } from "@/stores/modalStore";
+import { Loading } from "../Loading";
 
 // Types
 export interface Batch {
@@ -72,6 +73,30 @@ function formatProductPrice(value: number | string | undefined): string {
   return String(value);
 }
 
+/**
+ * createProduct/updateProduct podem retornar o recurso direto ou embrulhado em `product` / `data`.
+ */
+function unwrapSavedProductFromApi(saved: unknown): Record<string, unknown> | null {
+  if (!saved || typeof saved !== "object") return null;
+  const o = saved as Record<string, unknown>;
+  const ok = (x: Record<string, unknown>) =>
+    x.id != null &&
+    String(x.id).trim() !== "" &&
+    x.name != null &&
+    String(x.name).trim() !== "";
+
+  if (ok(o)) return o;
+  const inner = o.product;
+  if (inner && typeof inner === "object" && ok(inner as Record<string, unknown>)) {
+    return inner as Record<string, unknown>;
+  }
+  const data = o.data;
+  if (data && typeof data === "object" && ok(data as Record<string, unknown>)) {
+    return data as Record<string, unknown>;
+  }
+  return null;
+}
+
 export interface TicketFormProps {
   eventId: string;
   ticketId?: string;
@@ -97,6 +122,41 @@ function isPersistedBatchId(id: string): boolean {
   );
 }
 
+/** Mesma regra de montagem de ISO usada no envio do formulário (início / fim da venda do lote). */
+function getBatchSalePeriodBounds(batch: Batch): { startMs: number; endMs: number } | null {
+  if (batch.startType !== "date" || !batch.startDate?.trim() || !batch.endDate?.trim()) {
+    return null;
+  }
+  const startTime = batch.startTime?.trim() || "00:00";
+  const endTime = batch.endTime?.trim() || "23:59";
+  const start = new Date(`${batch.startDate.trim()}T${startTime}:00`);
+  const end = new Date(`${batch.endDate.trim()}T${endTime}:59`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return null;
+  }
+  return { startMs: start.getTime(), endMs: end.getTime() };
+}
+
+function isBatchEndBeforeSaleStart(batch: Batch): boolean {
+  const bounds = getBatchSalePeriodBounds(batch);
+  if (!bounds) return false;
+  return bounds.endMs < bounds.startMs;
+}
+
+function parseLocalYmd(dateStr: string | undefined): Date | undefined {
+  const s = dateStr?.trim();
+  if (!s) return undefined;
+  const parts = s.split("-");
+  if (parts.length !== 3) return undefined;
+  const y = Number(parts[0]);
+  const m = Number(parts[1]) - 1;
+  const d = Number(parts[2]);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return undefined;
+  const dt = new Date(y, m, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m || dt.getDate() !== d) return undefined;
+  return dt;
+}
+
 export function TicketForm({
   eventId,
   ticketId,
@@ -111,9 +171,6 @@ export function TicketForm({
   const queryClient = useQueryClient();
   const { openCreateProductModal, setOnModalSave: setOnCreateProductSave } = useCreateProductModal();
   const { openAddExistingProductsModal, setOnModalSave: setOnAddProductsSave } = useAddExistingProductsModal();
-
-  const setOnCreateProductSaveRef = useRef(setOnCreateProductSave);
-  const setOnAddProductsSaveRef = useRef(setOnAddProductsSave);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -137,7 +194,7 @@ export function TicketForm({
   const [modalityTemplates, setModalityTemplates] = useState<ModalityTemplate[]>([]);
   const [ticketCategories, setTicketCategories] = useState<ModalityGroup[]>([]);
 
-  // Description editing state (for category)
+  // Observação para o cliente (descrição do ingresso, não da categoria)
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editingDescription, setEditingDescription] = useState("");
 
@@ -224,14 +281,6 @@ export function TicketForm({
 
     loadData();
   }, [eventId]);
-
-  // Update editingDescription when selectedGroupId changes
-  useEffect(() => {
-    if (!isEditingDescription && selectedGroupId) {
-      const category = ticketCategories.find((cat) => cat.id === selectedGroupId);
-      setEditingDescription(category?.description || "");
-    }
-  }, [selectedGroupId, ticketCategories, isEditingDescription]);
 
   // Load existing ticket data (only for edit mode)
   useEffect(() => {
@@ -353,68 +402,62 @@ export function TicketForm({
 
   // Setup modal callbacks
   useEffect(() => {
-    const createProductCallback = async (data: { product?: Product | any }) => {
+    const createProductCallback = async (data: { product?: unknown }) => {
       try {
-        if (data?.product) {
-          const rawProduct = data.product;
-
-          // Debug: log the raw product to understand its structure
-          console.log("Raw product received from modal:", rawProduct);
-
-          // Normalize product data - convert basePrice from number to formatted string if needed
-          let formattedBasePrice: string | undefined = undefined;
-          if (rawProduct.basePrice !== undefined && rawProduct.basePrice !== null) {
-            if (typeof rawProduct.basePrice === "number") {
-              // If it's a number, format it (assuming it's in reais, not cents)
-              formattedBasePrice = rawProduct.basePrice.toFixed(2).replace(".", ",");
-            } else if (typeof rawProduct.basePrice === "string") {
-              // If it's already a string, use it as is
-              formattedBasePrice = rawProduct.basePrice;
-            }
-          }
-
-          const normalizedProduct: Product = {
-            id: rawProduct.id || "",
-            name: rawProduct.name || "",
-            image: rawProduct.image || undefined,
-            isIncludedInTicket: rawProduct.isIncludedInTicket ?? true,
-            basePrice: formattedBasePrice,
-          };
-
-          console.log("Normalized product:", normalizedProduct);
-
-          // Validate that we have at least an id and name
-          if (!normalizedProduct.id || !normalizedProduct.name) {
-            console.error("Invalid product data received:", rawProduct);
-            toast.error("Dados do produto inválidos");
-            return;
-          }
-
-          setProducts((prevProducts) => {
-            const existingIndex = prevProducts.findIndex((p) => p.productId === normalizedProduct.id);
-            if (existingIndex >= 0) {
-              const updated = [...prevProducts];
-              updated[existingIndex] = {
-                id: normalizedProduct.id,
-                product: normalizedProduct,
-                productId: normalizedProduct.id,
-                ticketId: prevProducts[existingIndex].ticketId
-              };
-              return updated;
-            } else {
-              // When creating a new product, use ticketId from props or empty string if creating a new ticket
-              const newTicketId = ticketId || "";
-              return [...prevProducts, {
-                id: normalizedProduct.id,
-                product: normalizedProduct,
-                productId: normalizedProduct.id,
-                ticketId: newTicketId
-              }];
-            }
-          });
-        } else {
-          toast.error("Produto não encontrado");
+        const entity = unwrapSavedProductFromApi(data?.product);
+        if (!entity) {
+          toast.error("Não foi possível obter os dados do produto após salvar.");
+          return;
         }
+
+        let formattedBasePrice: string | undefined = undefined;
+        const bp = entity.basePrice;
+        if (bp !== undefined && bp !== null) {
+          if (typeof bp === "number") {
+            formattedBasePrice = (bp / 100).toFixed(2).replace(".", ",");
+          } else if (typeof bp === "string") {
+            formattedBasePrice = bp;
+          }
+        }
+
+        const id = String(entity.id ?? "").trim();
+        const name = String(entity.name ?? "").trim();
+        const normalizedProduct: Product = {
+          id,
+          name,
+          image: typeof entity.image === "string" ? entity.image : undefined,
+          isIncludedInTicket: entity.isIncludedInTicket !== false,
+          basePrice: formattedBasePrice,
+        };
+
+        if (!id || !name) {
+          toast.error("Dados do produto inválidos");
+          return;
+        }
+
+        setProducts((prevProducts) => {
+          const existingIndex = prevProducts.findIndex((p) => p.productId === normalizedProduct.id);
+          if (existingIndex >= 0) {
+            const updated = [...prevProducts];
+            updated[existingIndex] = {
+              id: normalizedProduct.id,
+              product: normalizedProduct,
+              productId: normalizedProduct.id,
+              ticketId: prevProducts[existingIndex].ticketId,
+            };
+            return updated;
+          }
+          const newTicketId = ticketId || "";
+          return [
+            ...prevProducts,
+            {
+              id: normalizedProduct.id,
+              product: normalizedProduct,
+              productId: normalizedProduct.id,
+              ticketId: newTicketId,
+            },
+          ];
+        });
       } catch (error) {
         console.error("Error in createProductCallback:", error);
       }
@@ -454,14 +497,14 @@ export function TicketForm({
       }
     };
 
-    setOnCreateProductSaveRef.current(createProductCallback);
-    setOnAddProductsSaveRef.current(addProductsCallback);
+    setOnCreateProductSave(createProductCallback);
+    setOnAddProductsSave(addProductsCallback);
 
     return () => {
-      setOnCreateProductSaveRef.current(undefined);
-      setOnAddProductsSaveRef.current(undefined);
+      setOnCreateProductSave(undefined);
+      setOnAddProductsSave(undefined);
     };
-  }, []);
+  }, [setOnCreateProductSave, setOnAddProductsSave, ticketId]);
 
   // Handlers
   const handleBack = () => {
@@ -497,38 +540,56 @@ export function TicketForm({
     setBatches(batches.map((b) => (b.id === batchId ? { ...b, [field]: value } : b)));
   };
 
+  const handleBatchSalePeriodChange = (
+    batchId: string,
+    field: "startDate" | "startTime" | "endDate" | "endTime",
+    value: string | undefined
+  ) => {
+    const normalized = value ?? "";
+    setBatches((prev) => {
+      const batch = prev.find((b) => b.id === batchId);
+      if (!batch) return prev;
+      const next: Batch = { ...batch, [field]: normalized };
+      if (isBatchEndBeforeSaleStart(next)) {
+        toast.error("A data de término da venda não pode ser anterior à data de início.");
+        return prev;
+      }
+      return prev.map((b) => (b.id === batchId ? next : b));
+    });
+  };
+
   const handleSaveDescription = async () => {
-    if (!selectedGroupId) {
-      toast.error("Selecione uma categoria primeiro");
-      setIsEditingDescription(false);
-      return;
+    const trimmed = editingDescription.trim();
+    setTicketDescription(trimmed);
+
+    if (mode === "edit" && ticketId && eventId) {
+      try {
+        await organizerService.updateTicket(eventId, ticketId, {
+          description: trimmed.length > 0 ? trimmed : undefined,
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.events.tickets(eventId),
+        });
+        toast.success("Observação atualizada com sucesso!");
+      } catch (error: unknown) {
+        console.error("Error updating ticket description:", error);
+        const raw =
+          error &&
+          typeof error === "object" &&
+          "response" in error &&
+          (error as { response?: { data?: { message?: unknown } } }).response?.data
+            ?.message;
+        const msg = typeof raw === "string" ? raw : "Erro ao atualizar observação";
+        toast.error(msg);
+        return;
+      }
     }
 
-    try {
-      await organizerService.updateTicketCategory(eventId, selectedGroupId, {
-        description: editingDescription.trim(),
-      });
-
-      // Atualizar a categoria localmente
-      setTicketCategories((prev) =>
-        prev.map((cat) =>
-          cat.id === selectedGroupId
-            ? { ...cat, description: editingDescription.trim() }
-            : cat
-        )
-      );
-
-      setIsEditingDescription(false);
-      toast.success("Observação atualizada com sucesso!");
-    } catch (error: any) {
-      console.error("Error updating category description:", error);
-      toast.error(error.response?.data?.message || "Erro ao atualizar observação");
-    }
+    setIsEditingDescription(false);
   };
 
   const handleCancelDescription = () => {
-    const category = ticketCategories.find((cat) => cat.id === selectedGroupId);
-    setEditingDescription(category?.description || "");
+    setEditingDescription(ticketDescription);
     setIsEditingDescription(false);
   };
 
@@ -559,6 +620,14 @@ export function TicketForm({
       const sold = invalidBatch.quantitySold ?? 0;
       toast.error(
         `A quantidade de vagas precisa ser igual ou maior que o número já vendido (${sold}) em cada lote com vendas.`
+      );
+      return;
+    }
+
+    const batchWithInvalidPeriod = batches.findIndex(isBatchEndBeforeSaleStart);
+    if (batchWithInvalidPeriod !== -1) {
+      toast.error(
+        `No lote ${batchWithInvalidPeriod + 1}, a data de término da venda não pode ser anterior à data de início.`
       );
       return;
     }
@@ -700,7 +769,7 @@ export function TicketForm({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
@@ -739,53 +808,48 @@ export function TicketForm({
             </div>
 
             <div className="w-full">
-              {(() => {
-                const category = ticketCategories.find((cat) => cat.id === selectedGroupId);
-                const categoryDescription = category?.description || "";
-
-                return isEditingDescription ? (
-                  <input
-                    type="text"
-                    value={editingDescription}
-                    onChange={(e) => setEditingDescription(e.target.value)}
-                    onBlur={handleSaveDescription}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSaveDescription();
-                      } else if (e.key === "Escape") {
-                        handleCancelDescription();
-                      }
-                    }}
-                    placeholder="Adicione uma observação para o cliente..."
-                    className="text-gray-11 font-normal font-manrope leading-[1.4] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 w-full"
-                    autoFocus
-                  />
-                ) : (
-                  <div className="flex items-center gap-2">
-                    {categoryDescription ? (
-                      <p
-                        onClick={() => {
-                          setIsEditingDescription(true);
-                          setEditingDescription(categoryDescription);
-                        }}
-                        className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-12 transition-colors"
-                      >
-                        {categoryDescription}
-                      </p>
-                    ) : (
-                      <p
-                        onClick={() => {
-                          setIsEditingDescription(true);
-                          setEditingDescription("");
-                        }}
-                        className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-11 transition-colors"
-                      >
-                        Adicione uma observação para o cliente...
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
+              {isEditingDescription ? (
+                <input
+                  type="text"
+                  value={editingDescription}
+                  onChange={(e) => setEditingDescription(e.target.value)}
+                  onBlur={handleSaveDescription}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSaveDescription();
+                    } else if (e.key === "Escape") {
+                      handleCancelDescription();
+                    }
+                  }}
+                  placeholder="Adicione uma observação para o cliente..."
+                  className="text-gray-11 font-normal font-manrope leading-[1.4] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 w-full"
+                  autoFocus
+                />
+              ) : (
+                <div className="flex items-center gap-2">
+                  {ticketDescription ? (
+                    <p
+                      onClick={() => {
+                        setIsEditingDescription(true);
+                        setEditingDescription(ticketDescription);
+                      }}
+                      className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-12 transition-colors"
+                    >
+                      {ticketDescription}
+                    </p>
+                  ) : (
+                    <p
+                      onClick={() => {
+                        setIsEditingDescription(true);
+                        setEditingDescription("");
+                      }}
+                      className="text-gray-11 font-normal font-manrope leading-[1.4] w-full cursor-text hover:text-gray-11 transition-colors"
+                    >
+                      Adicione uma observação para o cliente...
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -890,7 +954,7 @@ export function TicketForm({
               Gênero
             </label>
             <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-              Selecione um gênero para restringir este ingresso ou deixe em geral para todos
+              Selecione um gênero para este ingresso ou deixe como “Geral” para todos.
             </p>
             <Dropdown
               options={genderOptions}
@@ -971,8 +1035,7 @@ export function TicketForm({
                 Lotes do ingresso
               </h2>
               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                Defina quantas vagas terá cada lote, quando ele será vendido e o valor. Você pode
-                criar mais de um lote
+                Defina a quantidade, o período de venda e o valor de cada lote. Você pode criar vários lotes.
               </p>
             </div>
 
@@ -1047,7 +1110,7 @@ export function TicketForm({
                             : "";
                           handleBatchChange(batch.id, "price", formatted);
                         }}
-                        placeholder="R$00,00"
+                        placeholder="R$0,00"
                         readOnly={priceLocked}
                         className={`h-12 ${priceLocked ? "bg-gray-4 text-gray-11 cursor-not-allowed" : ""}`}
                       />
@@ -1099,12 +1162,17 @@ export function TicketForm({
                             <div className="flex gap-2">
                               <DatePicker
                                 value={batch.startDate}
-                                onChange={(value) => handleBatchChange(batch.id, "startDate", value)}
+                                onChange={(value) =>
+                                  handleBatchSalePeriodChange(batch.id, "startDate", value)
+                                }
+                                maxDate={parseLocalYmd(batch.endDate)}
                                 className="w-max"
                               />
                               <TimePicker
                                 value={batch.startTime}
-                                onChange={(value) => handleBatchChange(batch.id, "startTime", value)}
+                                onChange={(value) =>
+                                  handleBatchSalePeriodChange(batch.id, "startTime", value)
+                                }
                                 className="w-max"
                               />
                             </div>
@@ -1116,12 +1184,17 @@ export function TicketForm({
                             <div className="flex gap-2">
                               <DatePicker
                                 value={batch.endDate}
-                                onChange={(value) => handleBatchChange(batch.id, "endDate", value)}
+                                onChange={(value) =>
+                                  handleBatchSalePeriodChange(batch.id, "endDate", value)
+                                }
+                                minDate={parseLocalYmd(batch.startDate)}
                                 className="w-max"
                               />
                               <TimePicker
                                 value={batch.endTime}
-                                onChange={(value) => handleBatchChange(batch.id, "endTime", value)}
+                                onChange={(value) =>
+                                  handleBatchSalePeriodChange(batch.id, "endTime", value)
+                                }
                                 className="w-max"
                               />
                             </div>
@@ -1218,7 +1291,7 @@ export function TicketForm({
                         className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px]"
                       >
                         <div className="border-b border-gray-6 flex gap-3 items-center p-4">
-                          {product.product.image && (
+                          {product.product.image ? (
                             <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
                               <Image
                                 src={product.product.image}
@@ -1226,6 +1299,10 @@ export function TicketForm({
                                 fill
                                 className="object-cover rounded"
                               />
+                            </div>
+                          ) : (
+                            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0 flex items-center justify-center text-gray-11 text-base font-semibold font-family-dm-sans leading-[1.1]">
+                              {product.product.name.slice(0, 1).toUpperCase()}
                             </div>
                           )}
                           <div className="flex flex-col justify-between h-full py-2 gap-2 flex-1 min-w-0">

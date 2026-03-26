@@ -1,5 +1,11 @@
 import type { Event, EventResponse, Question } from "@/interfaces/event";
 import type { ApiClient } from "../base/ApiClient";
+import { normalizeSearchLocationsPayload } from "@/utils/locationFacets";
+
+export type EventSearchLocationPair = {
+  state: string;
+  city: string | null;
+};
 
 export interface SearchEventsParams {
   q?: string;
@@ -89,6 +95,12 @@ export class EventService {
         query: q,
       }
     );
+  }
+
+  /** Pares distintos estado/cidade com eventos — `GET /api/v1/events/search/locations`. */
+  async getSearchLocationFacets(): Promise<EventSearchLocationPair[]> {
+    const { data } = await this.apiClient.get("/api/v1/events/search/locations");
+    return normalizeSearchLocationsPayload(data);
   }
 
   async getEventQuestions(eventId: string): Promise<Question[]> {

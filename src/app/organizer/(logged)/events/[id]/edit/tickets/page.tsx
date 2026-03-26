@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { useTickets, type Ticket } from "@/hooks/useTickets";
 import { userService, organizerService } from "@/services";
@@ -10,6 +9,7 @@ import { useEditEvent } from "@/contexts/EditEventContext";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { Button } from "@/components/Button";
+import { Loading } from "@/components/Loading";
 import { ArrowButton } from "@/components/ArrowButton";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -18,6 +18,7 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
 import { TicketTable } from "@/components/Ticket/TicketTable";
+import { DeleteTicketModal } from "@/components/Ticket/DeleteTicketModal";
 import {
   DndContext,
   closestCenter,
@@ -45,6 +46,10 @@ export default function EditTicketsPage() {
   const [newGroupName, setNewGroupName] = useState("");
   const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<Record<string, "table" | "cards">>({});
+  const [ticketPendingDelete, setTicketPendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Hooks para gerenciar dados
   const {
@@ -198,15 +203,7 @@ export default function EditTicketsPage() {
 
   const handleDeleteTicket = useCallback(
     async (ticketId: string) => {
-      if (!confirm("Tem certeza que deseja excluir este ingresso?")) {
-        return;
-      }
-
-      try {
-        await deleteTicket(ticketId);
-      } catch (error) {
-        // Error já foi tratado no hook
-      }
+      await deleteTicket(ticketId);
     },
     [deleteTicket]
   );
@@ -492,22 +489,30 @@ export default function EditTicketsPage() {
   }, [router, eventId]);
 
   if (!authChecked || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-11">Carregando...</div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className="pb-20">
+    <>
+      <DeleteTicketModal
+        open={!!ticketPendingDelete}
+        onClose={() => setTicketPendingDelete(null)}
+        ticketName={ticketPendingDelete?.name}
+        onConfirm={async () => {
+          const target = ticketPendingDelete;
+          if (target) {
+            await handleDeleteTicket(target.id);
+          }
+        }}
+      />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="pb-20">
         <div className="w-full flex flex-col gap-9">
           {/* Title Section */}
           <div className="flex flex-col gap-4">
@@ -523,8 +528,7 @@ export default function EditTicketsPage() {
               </h1>
             </div>
             <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-              Crie categorias e ingressos com lotes, valores e regras. Depois, vincule um kit para o
-              participante configurar durante a inscrição
+              Crie categorias e ingressos com lotes, valores e regras, incluindo o kit que será definido dentro do ingresso para o participante escolher na inscrição.
             </p>
           </div>
 
@@ -570,6 +574,13 @@ export default function EditTicketsPage() {
                   onPageChange={(page) => setCurrentPage({ ...currentPage, all: page })}
                   onEdit={handleEditTicket}
                   onDuplicate={handleDuplicateTicket}
+                  onRequestDeleteTicket={(id: string) => {
+                    const t = allTickets.find((x) => x.id === id);
+                    setTicketPendingDelete({
+                      id,
+                      name: t?.name?.trim() || "Ingresso",
+                    });
+                  }}
                   productsMap={productsMap}
                 />
               </div>
@@ -788,6 +799,7 @@ export default function EditTicketsPage() {
           </div>
         ) : null}
       </DragOverlay>
-    </DndContext>
+      </DndContext>
+    </>
   );
 }

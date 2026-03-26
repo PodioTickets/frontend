@@ -15,6 +15,7 @@ import { Plus, ChevronLeft } from "lucide-react";
 import type { Organization } from "@/services/organizer/OrganizerService";
 import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { ArrowButton } from "@/components/ArrowButton";
+import { Loading } from "@/components/Loading";
 
 const BRAZIL_STATES = [
   { id: "AC", label: "Acre" },
@@ -332,7 +333,7 @@ export default function OrganizationSettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }

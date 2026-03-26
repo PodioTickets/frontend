@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { TrashIcon } from "@/components/Icons/TrashIcon";
 import Image from "next/image";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -13,32 +14,41 @@ interface TicketTableProps {
   onPageChange: (page: number) => void;
   onEdit: (ticketId: string) => void;
   onDuplicate: (ticketId: string) => void;
+  /** Abre fluxo de confirmação para excluir (ex.: modal no pai) */
+  onRequestDeleteTicket?: (ticketId: string) => void;
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
 }
 
 const formatPrice = (price: string) => {
   if (!price) return "R$ 0,00";
-  
+
   // Se já está formatado com R$, retorna como está
   if (price.startsWith("R$")) {
     return price;
   }
-  
+
   // Se é um número (em centavos), converte para reais
   const numericValue = parseFloat(price);
   if (!isNaN(numericValue)) {
     return `R$ ${(numericValue / 100).toFixed(2).replace(".", ",")}`;
   }
-  
+
   // Caso contrário, apenas adiciona R$
   return `R$ ${price}`;
 };
 
-function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {
+function DraggableTicketRow({
+  ticket,
+  productsMap,
+  onEdit,
+  onDuplicate,
+  onRequestDeleteTicket,
+}: {
   ticket: Ticket;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
   onEdit: (ticketId: string) => void;
   onDuplicate: (ticketId: string) => void;
+  onRequestDeleteTicket?: (ticketId: string) => void;
 }) {
   const MAX_VISIBLE_PRODUCTS = 5;
   const ticketProducts = ticket.products
@@ -107,18 +117,20 @@ function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {
             {ticketProducts.map((product, idx) => (
               <div
                 key={product.id}
-                className="flex h-9 items-start max-w-[36.5px] overflow-clip rounded-[6.45px] w-[36px]"
+                className="flex h-9 items-start max-w-[36.5px] overflow-clip rounded-md w-[36px]"
               >
-                <div className="relative size-9 rounded-[6.45px] border-[0.537px] border-gray-6 overflow-hidden bg-gray-3">
+                <div className="relative size-9 rounded-md border-[0.537px] border-gray-6 overflow-hidden bg-gray-3">
                   {product.image ? (
                     <Image
                       src={product.image}
                       alt={product.name}
                       fill
-                      className="object-cover rounded-[6.45px]"
+                      className="object-cover rounded-md"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gray-4" />
+                    <div className="h-full w-full rounded-md overflow-hidden flex items-center justify-center text-gray-11 text-base font-semibold font-family-dm-sans">
+                      {product.name.slice(0, 1).toUpperCase()}
+                    </div>
                   )}
                 </div>
               </div>
@@ -153,8 +165,10 @@ function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {
       </div>
 
       {/* Ações */}
-      <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
+      <div className="flex gap-1 h-full items-center justify-center px-2 py-2 w-[148px] shrink-0">
         <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onEdit(ticket.id);
@@ -164,6 +178,8 @@ function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {
           <Pencil className="size-5 text-gray-11" />
         </button>
         <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onDuplicate(ticket.id);
@@ -172,6 +188,19 @@ function DraggableTicketRow({ ticket, productsMap, onEdit, onDuplicate }: {
         >
           <Plus className="size-5 text-gray-11" />
         </button>
+        {onRequestDeleteTicket ? (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestDeleteTicket(ticket.id);
+            }}
+            className="bg-red-2 border border-red-6 rounded-lg size-8 flex items-center justify-center hover:bg-red-3 transition-colors cursor-pointer"
+          >
+            <TrashIcon className="size-5 text-red-12" />
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -184,6 +213,7 @@ export function TicketTable({
   onPageChange,
   onEdit,
   onDuplicate,
+  onRequestDeleteTicket,
   productsMap = {},
 }: TicketTableProps) {
   return (
@@ -210,7 +240,7 @@ export function TicketTable({
             Produtos relacionados
           </p>
         </div>
-        <div className="flex h-full items-center justify-center p-4 w-[112px]">
+        <div className="flex h-full items-center justify-center p-4 w-[148px] shrink-0">
           <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
             Ações
           </p>
@@ -226,6 +256,7 @@ export function TicketTable({
             productsMap={productsMap}
             onEdit={onEdit}
             onDuplicate={onDuplicate}
+            onRequestDeleteTicket={onRequestDeleteTicket}
           />
         ))}
       </div>
@@ -245,8 +276,8 @@ export function TicketTable({
               key={p}
               onClick={() => onPageChange(p)}
               className={`size-8 flex items-center justify-center border rounded-lg ${currentPage === p
-                  ? "bg-[#59E373] border-[#59E373] text-gray-12"
-                  : "border-gray-6 hover:bg-gray-3"
+                ? "bg-[#59E373] border-[#59E373] text-gray-12"
+                : "border-gray-6 hover:bg-gray-3"
                 }`}
             >
               {p}

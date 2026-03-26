@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
@@ -13,6 +13,12 @@ import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { FlagIcon } from "@/components/Icons/FlagIcon";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import {
+  ImageUploadWithCrop,
+  type ImageUploadWithCropRef,
+} from "@/components/ImageUploadWithCrop";
+import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { Loading } from "@/components/Loading";
 
 export default function PreviaPage() {
   const router = useRouter();
@@ -23,7 +29,7 @@ export default function PreviaPage() {
   );
   const [uploadingCard, setUploadingCard] = useState(false);
   const [selectedCardFile, setSelectedCardFile] = useState<File | null>(null);
-  const cardInputRef = useRef<HTMLInputElement>(null);
+  const cardCropRef = useRef<ImageUploadWithCropRef>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
   // Verificar autenticação
@@ -54,10 +60,19 @@ export default function PreviaPage() {
     }
   }, [formData.cardImageUrl]);
 
+  const applyCroppedCard = useCallback((file: File) => {
+    setSelectedCardFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCardPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
@@ -65,16 +80,8 @@ export default function PreviaPage() {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      const input = document.createElement("input");
-      input.type = "file";
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      input.files = dataTransfer.files;
-      const fakeEvent = {
-        target: input,
-      } as unknown as React.ChangeEvent<HTMLInputElement>;
-      handleCardSelect(fakeEvent);
+    if (file?.type.startsWith("image/")) {
+      cardCropRef.current?.openWithFile(file);
     }
   };
 
@@ -89,40 +96,6 @@ export default function PreviaPage() {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
-  };
-
-  const handleCardSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo de 10MB.");
-      return;
-    }
-
-    // Apenas criar preview, não fazer upload ainda
-    setSelectedCardFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setCardPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    if (cardInputRef.current) {
-      cardInputRef.current.value = "";
-    }
   };
 
   const handleCardUpload = async () => {
@@ -151,7 +124,7 @@ export default function PreviaPage() {
 
       // Log response for debugging
       console.log("Card upload response status:", response.status, response.statusText);
-      
+
       let result;
       try {
         const text = await response.text();
@@ -182,7 +155,7 @@ export default function PreviaPage() {
       // - { imageUrl: "..." }
       // - { data: { url: "..." } }
       const imageUrl = result.imageUrl || result.url || result.data?.url || result.data?.imageUrl;
-      
+
       if (imageUrl) {
         const fullUrl = imageUrl.startsWith("http")
           ? imageUrl
@@ -206,14 +179,14 @@ export default function PreviaPage() {
         // If upload was successful (status 200/201) but no URL in response, 
         // check if file was actually uploaded by checking response structure
         console.warn("Card upload response missing URL, but status was OK:", result);
-        
+
         // If response indicates success but no URL, maybe the backend returns differently
         if (response.status === 200 || response.status === 201) {
           // Try to extract URL from any field
-          const possibleUrl = Object.values(result).find((v: any) => 
+          const possibleUrl = Object.values(result).find((v: any) =>
             typeof v === 'string' && (v.startsWith('http') || v.startsWith('/'))
           ) as string | undefined;
-          
+
           if (possibleUrl) {
             const fullUrl = possibleUrl.startsWith("http")
               ? possibleUrl
@@ -236,7 +209,7 @@ export default function PreviaPage() {
             return;
           }
         }
-        
+
         console.error("Card upload response missing URL:", result);
         throw new Error(result.message || "Resposta do servidor inválida - URL não encontrada");
       }
@@ -314,12 +287,12 @@ export default function PreviaPage() {
               <div className="flex flex-1 flex-col gap-6">
                 <div className="flex flex-col gap-4">
                   <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                    Imagem 308 × 232
+                    Imagem 300 × 300 px (quadrado)
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => cardInputRef.current?.click()}
+                  onClick={() => cardCropRef.current?.open()}
                   className="border-[1.5px] border-gray-6 rounded-lg h-11 flex gap-2 items-center justify-center px-6 hover:bg-gray-3 transition-colors"
                 >
                   <svg
@@ -343,34 +316,20 @@ export default function PreviaPage() {
                   </p>
                 </button>
               </div>
-              <input
-                ref={cardInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCardSelect}
-                className="hidden"
-              />
             </div>
           ) : (
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               className="border-2 border-dashed border-gray-6 rounded-xl p-6 flex flex-col gap-6 items-center justify-center min-h-[300px] cursor-pointer hover:border-primary-8 transition-colors w-full"
-              onClick={() => cardInputRef.current?.click()}
+              onClick={() => cardCropRef.current?.open()}
             >
-              <input
-                ref={cardInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCardSelect}
-                className="hidden"
-              />
               <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">
                 Arraste uma imagem para este campo ou clique aqui
               </p>
               <div className="flex flex-col gap-4 items-center text-center">
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                  Imagem 308 × 232
+                  Imagem 300 × 300 px (quadrado)
                 </p>
               </div>
             </div>
@@ -383,7 +342,7 @@ export default function PreviaPage() {
             </h2>
             <div className="bg-gray-2 flex flex-col items-start overflow-hidden rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full">
               {/* Card Image */}
-              <div className="aspect-213/165 relative rounded-t-lg shrink-0 w-full">
+              <div className="aspect-square relative rounded-t-lg shrink-0 w-full">
                 {cardPreview ? (
                   <Image
                     src={cardPreview}
@@ -468,6 +427,16 @@ export default function PreviaPage() {
           </Button>
         </div>
       </div>
+
+      <ImageUploadWithCrop
+        ref={cardCropRef}
+        spec={EVENT_IMAGE_SPECS.card}
+        outputBaseName="card"
+        modalTitle="Ajustar imagem do card"
+        onCropped={applyCroppedCard}
+        onInvalidFile={(msg) => toast.error(msg)}
+        onCropFailed={(msg) => toast.error(msg)}
+      />
     </div>
   );
 }

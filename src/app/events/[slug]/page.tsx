@@ -12,7 +12,7 @@ import { useEventBySlug } from "@/hooks/useEvent";
 import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
-import { Fragment, useState, useEffect } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
@@ -22,6 +22,7 @@ import {
   phoneDigitsForTel,
 } from "@/utils/organization";
 import { cn } from "@/utils/cn";
+import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 
 function OrganizerAvatar({
   logoUrl,
@@ -61,6 +62,11 @@ export default function EventPage() {
   const router = useRouter();
   const eventSlug = params.slug as string;
   const { event, loading: isLoading, error } = useEventBySlug(eventSlug);
+
+  const topicSections = useMemo(() => {
+    if (!event) return [];
+    return getEnabledTopicsSorted(event);
+  }, [event]);
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
   const [imageError, setImageError] = useState(false);
@@ -166,12 +172,12 @@ export default function EventPage() {
   const registrationOpensDateText =
     registrationsNotOpenYet && registrationOpensAt
       ? new Intl.DateTimeFormat("pt-BR", {
-          day: "numeric",
-          month: "long",
-          ...(registrationOpensAt.getFullYear() !== new Date().getFullYear()
-            ? { year: "numeric" }
-            : {}),
-        }).format(registrationOpensAt)
+        day: "numeric",
+        month: "long",
+        ...(registrationOpensAt.getFullYear() !== new Date().getFullYear()
+          ? { year: "numeric" }
+          : {}),
+      }).format(registrationOpensAt)
       : "";
 
   const registrationSlotsSoldOut =
@@ -424,34 +430,32 @@ export default function EventPage() {
 
 
 
-        {/* Content Cards */}
+        {/* Apenas tópicos habilitados (sem descrição do evento). */}
         <div className="px-4 space-y-4">
-          {event.topics?.map((topic, index) => {
-            const isExpanded = expandedSections[topic.id] || false;
-            // Check if content has more than just text (has HTML tags)
-            const hasHTML = topic.content.includes('<');
+          {topicSections.map((section, index) => {
+            const isExpanded = expandedSections[section.id] || false;
+            const hasHTML = section.content.includes("<");
             const textLength = hasHTML
-              ? topic.content.replace(/<[^>]*>/g, '').length
-              : topic.content.length;
+              ? section.content.replace(/<[^>]*>/g, "").length
+              : section.content.length;
             const shouldTruncate = textLength > 150;
 
             return (
-              <Fragment key={topic.id}>
+              <Fragment key={section.id}>
                 <div
-                  key={topic.id}
                   className={`${index === 0 ? "mb-4" : "my-4"}`}
                 >
                   <h2 className="text-lg font-bold text-gray-12 mb-3">
-                    {topic.title}
+                    {section.title}
                   </h2>
                   <div
                     className={`text-sm text-gray-11 mb-3 prose prose-sm max-w-none ${!isExpanded && shouldTruncate ? "line-clamp-3" : ""}`}
-                    dangerouslySetInnerHTML={{ __html: topic.content }}
+                    dangerouslySetInnerHTML={{ __html: section.content }}
                   />
                   {shouldTruncate && (
                     <Button
                       variant="ghost"
-                      onClick={() => toggleSection(topic.id)}
+                      onClick={() => toggleSection(section.id)}
                       className="underline text-gray-11 font-bold px-0"
                     >
                       {isExpanded ? "Mostrar menos" : "Mostrar mais"}
@@ -855,27 +859,17 @@ export default function EventPage() {
               className={`${event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "-mt-14 w-3/4 pr-8" : "flex-1 pr-8"
                 }`}
             >
-              <div
-                className={`flex flex-col gap-2 mb-10`}
-              >
-                <h1 className="text-2xl font-bold text-gray-12">
-                  Descrição do evento
-                </h1>
-                <p className="text-gray-11 text-sm" dangerouslySetInnerHTML={{ __html: event.description }} />
-              </div>
-              <div className="w-full h-px bg-gray-6" />
-              {event.topics?.map((topic, index) => (
-                <Fragment key={topic.id}>
+              {topicSections.map((section, index) => (
+                <Fragment key={section.id}>
                   <div
-                    className={`flex flex-col gap-2 ${index === 0 ? "my-10" : "my-10"
-                      }`}
+                    className={`flex flex-col gap-2 ${index === 0 ? "mb-10" : "my-10"}`}
                   >
                     <h1 className="text-2xl font-bold text-gray-12">
-                      {topic.title}
+                      {section.title}
                     </h1>
                     <div
                       className="text-gray-11 text-sm prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: topic.content }}
+                      dangerouslySetInnerHTML={{ __html: section.content }}
                     />
                   </div>
                   <div className="w-full h-px bg-gray-6" />

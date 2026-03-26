@@ -431,6 +431,7 @@ export interface CreateQuestionRequest {
   options?: string[];
   isRequired?: boolean;
   order?: number;
+  appliesTo?: "all" | string[];
 }
 
 export interface Question {
@@ -440,6 +441,7 @@ export interface Question {
   options?: string[];
   isRequired: boolean;
   order: number;
+  appliesTo?: "all" | string[];
   eventId: string;
   createdAt: string;
   updatedAt: string;
@@ -854,6 +856,18 @@ function normalizeEventNotification(raw: Record<string, unknown>): EventNotifica
     status,
     messageHtml,
   };
+}
+
+/** Resposta de create/update de produto pode trazer o recurso em `product` em vez de no nível raiz. */
+function unwrapProductApiPayload(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  if (o.id != null && o.name != null) return raw;
+  const p = o.product;
+  if (p && typeof p === "object" && (p as Record<string, unknown>).id != null) {
+    return p;
+  }
+  return raw;
 }
 
 export class OrganizerService {
@@ -1514,6 +1528,7 @@ export class OrganizerService {
       content: string;
       isEnabled?: boolean;
       order?: number;
+      isDefault?: boolean;
     }
   ): Promise<EventTopic> {
     const { data: response } = await this.apiClient.post<{
@@ -1530,12 +1545,22 @@ export class OrganizerService {
       content: string;
       isEnabled: boolean;
       order: number;
+      isDefault: boolean;
     }>
   ): Promise<EventTopic> {
     const { data: response } = await this.apiClient.patch<{
       data: { topic: EventTopic };
     }>(`/api/v1/events/${eventId}/topics/${topicId}`, data);
     return response.data.topic;
+  }
+
+  /** Body order is 0-based (`order` = index in `topicIds`). Must list every topic id once. */
+  async reorderEventTopics(eventId: string, topicIds: string[]): Promise<EventTopic[]> {
+    const { data: response } = await this.apiClient.patch<{
+      message: string;
+      data: { topics: EventTopic[] };
+    }>(`/api/v1/events/${eventId}/topics/reorder`, { topicIds });
+    return response.data.topics;
   }
 
   async deleteTopic(eventId: string, topicId: string): Promise<void> {
@@ -1688,7 +1713,7 @@ export class OrganizerService {
       `/api/v1/products/events/${eventId}`,
       data
     );
-    return response.data;
+    return unwrapProductApiPayload(response.data);
   }
 
   async getProducts(
@@ -1717,7 +1742,7 @@ export class OrganizerService {
       `/api/v1/products/events/${eventId}/${productId}`,
       data
     );
-    return response.data;
+    return unwrapProductApiPayload(response.data);
   }
 
   async deleteProduct(eventId: string, productId: string): Promise<void> {

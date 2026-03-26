@@ -339,8 +339,7 @@ export default function EditInformationPage() {
             Editar evento
           </h1>
           <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-            Comece pelo básico. Defina nome, data, local e as imagens principais. Você poderá
-            ajustar os detalhes depois.
+            Comece pelo básico. Defina o nome, a data e o local. Você poderá ajustar essas informações depois.
           </p>
         </div>
 
@@ -377,8 +376,7 @@ export default function EditInformationPage() {
               <div className="flex items-center gap-1">
                 <InfoIcon className="size-5 text-gray-11 shrink-0" />
                 <p className="text-gray-11 text-base font-family-dm-sans flex-1">
-                  Use a data e o horário oficiais de início do evento. As largadas por modalidade
-                  podem ser detalhadas depois
+                  Use a data oficial em que o evento começa.
                 </p>
               </div>
               {errors.eventDate && <p className="text-red-10 text-sm">{errors.eventDate}</p>}
@@ -441,8 +439,7 @@ export default function EditInformationPage() {
                 Local do evento
               </h2>
               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                Informe onde o evento será realizado. Essas informações aparecem na página do evento
-                e ajudam o participante a chegar até o local.
+                Essas informações serão exibidas na página e ajudam o participante a chegar ao destino.
               </p>
             </div>
 
@@ -546,11 +543,10 @@ export default function EditInformationPage() {
               <div className="flex flex-col gap-4 items-start justify-center flex-1">
                 <div className="flex flex-col gap-2 items-start justify-center w-full">
                   <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">
-                    Envie o regulamento do evento em PDF para que os participantes possam baixar na
-                    página do evento.
+                    Envie o regulamento do evento em PDF para que os participantes possam visualizar na página do evento.
                   </p>
                   <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
-                    Formato aceito: PDF
+                    Formato recomendado: PDF
                   </p>
                 </div>
                 <div className="flex gap-1 items-center justify-center">

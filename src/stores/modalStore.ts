@@ -1,6 +1,7 @@
+import { useCallback } from "react";
 import { create } from "zustand";
 
-export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "changePassword" | "deleteParticipant" | "topic" | "createQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | "viewRegistration" | "exportData" | "paymentDetails" | "requestTransfer" | "accessAllOrganizations" | null;
+export type ModalType = "deposit" | "withdraw" | "confirm" | "login" | "register" | "changeEmail" | "changePassword" | "deleteParticipant" | "topic" | "createQuestion" | "deleteQuestion" | "createProduct" | "addExistingProducts" | "createCoupon" | "deleteCoupon" | "createVoucher" | "deleteVoucher" | "viewVoucher" | "publishEvent" | "viewRegistration" | "exportData" | "paymentDetails" | "requestTransfer" | "accessAllOrganizations" | null;
 
 interface ModalData {
   amount?: number;
@@ -179,31 +180,76 @@ export const useCreateQuestionModal = () => {
   };
 };
 
-export const useCreateProductModal = () => {
-  const { openModal, closeModal, isOpen, type, data, setCallback } = useModalStore();
-  const callbacks = useModalStore((state) => state.callbacks);
+export const useDeleteQuestionModal = () => {
+  const { openModal, closeModal, isOpen, type, data } = useModalStore();
 
   return {
-    isOpen: isOpen && type === "createProduct",
+    isOpen: isOpen && type === "deleteQuestion",
     data: data as ModalData | null,
-    openCreateProductModal: (data?: ModalData) => openModal("createProduct", data),
+    openDeleteQuestionModal: (data?: ModalData) => openModal("deleteQuestion", data),
+    closeDeleteQuestionModal: closeModal,
+  };
+};
+
+export const useCreateProductModal = () => {
+  const openModal = useModalStore((s) => s.openModal);
+  const closeModal = useModalStore((s) => s.closeModal);
+  const isOpen = useModalStore((s) => s.isOpen && s.type === "createProduct");
+  const data = useModalStore((s) =>
+    s.type === "createProduct" ? s.data : null
+  ) as ModalData | null;
+  const setCallback = useModalStore((s) => s.setCallback);
+  const onModalSave = useModalStore((s) => s.callbacks["createProduct"]);
+
+  const setOnModalSave = useCallback(
+    (callback?: (data: any) => void | Promise<void>) =>
+      setCallback("createProduct", callback),
+    [setCallback]
+  );
+
+  const openCreateProductModal = useCallback(
+    (modalData?: ModalData) => openModal("createProduct", modalData),
+    [openModal]
+  );
+
+  return {
+    isOpen,
+    data,
+    openCreateProductModal,
     closeCreateProductModal: closeModal,
-    onModalSave: callbacks["createProduct"],
-    setOnModalSave: (callback?: (data: any) => void | Promise<void>) => setCallback("createProduct", callback),
+    onModalSave,
+    setOnModalSave,
   };
 };
 
 export const useAddExistingProductsModal = () => {
-  const { openModal, closeModal, isOpen, type, data, setCallback } = useModalStore();
-  const callbacks = useModalStore((state) => state.callbacks);
+  const openModal = useModalStore((s) => s.openModal);
+  const closeModal = useModalStore((s) => s.closeModal);
+  const isOpen = useModalStore((s) => s.isOpen && s.type === "addExistingProducts");
+  const data = useModalStore((s) =>
+    s.type === "addExistingProducts" ? s.data : null
+  ) as ModalData | null;
+  const setCallback = useModalStore((s) => s.setCallback);
+  const onModalSave = useModalStore((s) => s.callbacks["addExistingProducts"]);
+
+  const setOnModalSave = useCallback(
+    (callback?: (data: any) => void | Promise<void>) =>
+      setCallback("addExistingProducts", callback),
+    [setCallback]
+  );
+
+  const openAddExistingProductsModal = useCallback(
+    (modalData?: ModalData) => openModal("addExistingProducts", modalData),
+    [openModal]
+  );
 
   return {
-    isOpen: isOpen && type === "addExistingProducts",
-    data: data as ModalData | null,
-    openAddExistingProductsModal: (data?: ModalData) => openModal("addExistingProducts", data),
+    isOpen,
+    data,
+    openAddExistingProductsModal,
     closeAddExistingProductsModal: closeModal,
-    onModalSave: callbacks["addExistingProducts"],
-    setOnModalSave: (callback?: (data: any) => void | Promise<void>) => setCallback("addExistingProducts", callback),
+    onModalSave,
+    setOnModalSave,
   };
 };
 

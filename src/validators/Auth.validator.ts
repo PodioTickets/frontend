@@ -11,6 +11,8 @@ export const loginSchema = z.object({
     .min(6, "A senha deve ter pelo menos 6 caracteres"),
 });
 
+export const forgotPasswordStep1Schema = loginSchema.pick({ email: true });
+
 // Helper function to validate CPF format
 const validateCPFFormat = (cpf: string): boolean => {
   const numbers = cpf.replace(/\D/g, "");

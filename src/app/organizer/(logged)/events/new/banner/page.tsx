@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
@@ -16,6 +16,12 @@ import toast from "react-hot-toast";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ArrowRightIcon } from "lucide-react";
 import { organizerNewEventClientPage } from "@/lib/organizerAudit";
+import {
+  ImageUploadWithCrop,
+  type ImageUploadWithCropRef,
+} from "@/components/ImageUploadWithCrop";
+import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { Loading } from "@/components/Loading";
 
 export default function BannerPage() {
   const router = useRouter();
@@ -24,7 +30,7 @@ export default function BannerPage() {
   const [bannerPreview, setBannerPreview] = useState<string>("");
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const bannerCropRef = useRef<ImageUploadWithCropRef>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
   // Verificar autenticação
@@ -63,10 +69,19 @@ export default function BannerPage() {
     }
   }, [formData.bannerUrl]);
 
+  const applyCroppedBanner = useCallback((file: File) => {
+    setSelectedBannerFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBannerPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
@@ -74,16 +89,8 @@ export default function BannerPage() {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      const input = document.createElement("input");
-      input.type = "file";
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      input.files = dataTransfer.files;
-      const fakeEvent = {
-        target: input,
-      } as unknown as React.ChangeEvent<HTMLInputElement>;
-      handleBannerSelect(fakeEvent);
+    if (file?.type.startsWith("image/")) {
+      bannerCropRef.current?.openWithFile(file);
     }
   };
 
@@ -98,40 +105,6 @@ export default function BannerPage() {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
-  };
-
-  const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo de 10MB.");
-      return;
-    }
-
-    // Apenas criar preview, não fazer upload ainda
-    setSelectedBannerFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setBannerPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    if (bannerInputRef.current) {
-      bannerInputRef.current.value = "";
-    }
   };
 
   const handleBannerUpload = async () => {
@@ -160,7 +133,7 @@ export default function BannerPage() {
 
       // Log response for debugging
       console.log("Banner upload response status:", response.status, response.statusText);
-      
+
       let result;
       try {
         const text = await response.text();
@@ -191,7 +164,7 @@ export default function BannerPage() {
       // - { imageUrl: "..." }
       // - { data: { url: "..." } }
       const imageUrl = result.imageUrl || result.url || result.data?.url || result.data?.imageUrl;
-      
+
       if (imageUrl) {
         const fullUrl = imageUrl.startsWith("http")
           ? imageUrl
@@ -216,14 +189,14 @@ export default function BannerPage() {
         // If upload was successful (status 200/201) but no URL in response, 
         // check if file was actually uploaded by checking response structure
         console.warn("Banner upload response missing URL, but status was OK:", result);
-        
+
         // If response indicates success but no URL, maybe the backend returns differently
         if (response.status === 200 || response.status === 201) {
           // Try to extract URL from any field
-          const possibleUrl = Object.values(result).find((v: any) => 
+          const possibleUrl = Object.values(result).find((v: any) =>
             typeof v === 'string' && (v.startsWith('http') || v.startsWith('/'))
           ) as string | undefined;
-          
+
           if (possibleUrl) {
             const fullUrl = possibleUrl.startsWith("http")
               ? possibleUrl
@@ -247,7 +220,7 @@ export default function BannerPage() {
             return;
           }
         }
-        
+
         console.error("Banner upload response missing URL:", result);
         throw new Error(result.message || "Resposta do servidor inválida - URL não encontrada");
       }
@@ -325,7 +298,7 @@ export default function BannerPage() {
               <div className="flex flex-1 flex-col gap-6">
                 <div className="flex flex-col gap-4">
                   <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                    Tamanho recomendado: 843 × 404 px
+                    Tamanho recomendado: 880 × 400 px
                   </p>
                   <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                     Use uma arte com boa resolução e pouco texto, para ficar
@@ -333,7 +306,8 @@ export default function BannerPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => bannerInputRef.current?.click()}
+                  type="button"
+                  onClick={() => bannerCropRef.current?.open()}
                   className="border-[1.5px] border-gray-6 rounded-lg h-11 flex gap-2 items-center justify-center px-6 hover:bg-gray-3 transition-colors"
                 >
                   <svg
@@ -357,34 +331,20 @@ export default function BannerPage() {
                   </p>
                 </button>
               </div>
-              <input
-                ref={bannerInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleBannerSelect}
-                className="hidden"
-              />
             </div>
           ) : (
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               className="border-2 border-dashed border-gray-6 rounded-xl p-6 flex flex-col gap-6 items-center justify-center min-h-[300px] cursor-pointer hover:border-primary-8 transition-colors w-[710px]"
-              onClick={() => bannerInputRef.current?.click()}
+              onClick={() => bannerCropRef.current?.open()}
             >
-              <input
-                ref={bannerInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleBannerSelect}
-                className="hidden"
-              />
               <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">
                 Arraste uma imagem para este campo ou clique aqui
               </p>
               <div className="flex flex-col gap-4 items-center text-center">
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                  Tamanho recomendado: 843 × 404 px
+                  Tamanho recomendado: 880 × 400 px
                 </p>
                 <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                   Use uma arte com boa resolução e pouco texto, para ficar
@@ -404,16 +364,17 @@ export default function BannerPage() {
               <div className="flex flex-col gap-[52px] flex-1">
                 {/* Banner Preview */}
                 {bannerPreview ? (
-                  <div className="h-[300px] relative rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] w-[625px]">
+                  <div className="relative w-[625px] max-w-full aspect-880/400 rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
                     <Image
                       src={bannerPreview}
                       alt="Banner preview"
                       fill
                       className="object-cover"
+                      sizes="625px"
                     />
                   </div>
                 ) : (
-                  <div className="h-[300px] bg-gray-4 rounded-2xl w-[625px]" />
+                  <div className="w-[625px] max-w-full aspect-880/400 bg-gray-4 rounded-2xl" />
                 )}
 
                 {/* Content Preview Placeholder */}
@@ -523,6 +484,16 @@ export default function BannerPage() {
           </Button>
         </div>
       </div>
+
+      <ImageUploadWithCrop
+        ref={bannerCropRef}
+        spec={EVENT_IMAGE_SPECS.banner}
+        outputBaseName="banner"
+        modalTitle="Ajustar banner do evento"
+        onCropped={applyCroppedBanner}
+        onInvalidFile={(msg) => toast.error(msg)}
+        onCropFailed={(msg) => toast.error(msg)}
+      />
     </div>
   );
 }

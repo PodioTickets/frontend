@@ -7,17 +7,19 @@ import { userService, organizerService } from "@/services";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { useCreateQuestionModal } from "@/stores/modalStore";
+import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
 import toast from "react-hot-toast";
 import { Plus, Pencil } from "lucide-react";
 import type { Question } from "@/services/organizer/OrganizerService";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
+import { Loading } from "@/components/Loading";
 
 export default function EditQuestionnairePage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
   const { openCreateQuestionModal, setOnModalSave } = useCreateQuestionModal();
+  const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -56,7 +58,7 @@ export default function EditQuestionnairePage() {
 
   // Setup modal save callback
   useEffect(() => {
-    setOnModalSave(async () => {  
+    setOnModalSave(async () => {
       await loadQuestions();
     });
   }, [setOnModalSave, eventId]);
@@ -84,10 +86,6 @@ export default function EditQuestionnairePage() {
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta pergunta?")) {
-      return;
-    }
-
     if (!eventId) {
       toast.error("Evento não encontrado");
       return;
@@ -111,7 +109,7 @@ export default function EditQuestionnairePage() {
   if (!authChecked || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
@@ -197,7 +195,11 @@ export default function EditQuestionnairePage() {
                         <Pencil className="size-5 text-gray-11" />
                       </button>
                       <button
-                        onClick={() => handleDeleteQuestion(question.id)}
+                        onClick={() =>
+                          openDeleteQuestionModal({
+                            onConfirm: () => handleDeleteQuestion(question.id),
+                          })
+                        }
                         className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors cursor-pointer"
                       >
                         <TrashIcon className="size-5 text-red-12" />

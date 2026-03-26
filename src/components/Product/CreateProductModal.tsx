@@ -631,7 +631,7 @@ export function CreateProductModal() {
                       </div>
                       <div className="p-4">
                         <p className="text-base text-gray-12 mb-2">
-                          Escolha o tamanho
+                          Escolha a variação
                         </p>
                         <Dropdown
                           options={variations.map((variation, index) => ({

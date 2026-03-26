@@ -1,31 +1,313 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useLoginModal, useRegisterModal } from "@/stores/modalStore";
 import { useAuth } from "@/hooks/useAuth";
+import { useForgotPassword } from "@/hooks/useForgotPassword";
+import { useResetPassword } from "@/hooks/useResetPassword";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Mail, Lock, X } from "lucide-react";
+import { Mail, Lock, X, Clock, ArrowLeft } from "lucide-react";
 import Image from "next/image";
-import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
+import {
+  loginSchema,
+  forgotPasswordStep1Schema,
+  resetPasswordSchema,
+  type LoginFormData,
+} from "@/validators/Auth.validator";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
-const FacebookIcon = () => (
-  <svg
-    width="28"
-    height="28"
-    viewBox="0 0 28 28"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M14 0C6.268 0 0 6.268 0 14C0 20.956 5.124 26.756 11.812 27.84V18.06H8.26V14H11.812V10.92C11.812 7.532 13.904 5.6 16.996 5.6C18.536 5.6 20.16 5.88 20.16 5.88V9.24H18.396C16.66 9.24 16.188 10.248 16.188 11.284V14H20.02L19.348 18.06H16.188V27.84C22.876 26.756 28 20.956 28 14C28 6.268 21.732 0 14 0Z"
-      fill="#1877F2"
-    />
-  </svg>
-);
+function ForgotPasswordPanel({
+  email,
+  onEmailChange,
+  error,
+  onSubmit,
+  isPending,
+  onClose,
+}: {
+  email: string;
+  onEmailChange: (value: string) => void;
+  error?: string;
+  onSubmit: (e: FormEvent) => void;
+  isPending: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
+        <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
+          Esqueceu sua senha?
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+          aria-label="Fechar modal"
+        >
+          <X className="size-[18px] text-gray-12" />
+        </button>
+      </div>
+      <form onSubmit={onSubmit} className="flex flex-col w-full">
+        <div className="flex flex-col gap-8 pt-4 pb-6 px-6">
+          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+            Informe o e-mail da sua conta e enviaremos um link para criar uma
+            nova senha
+          </p>
+          <div className="flex flex-col gap-2 w-full min-w-0">
+            <label
+              htmlFor="forgot-password-email"
+              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+            >
+              E-mail cadastrado
+            </label>
+            <div className="relative w-full">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+              <Input
+                id="forgot-password-email"
+                type="email"
+                autoComplete="email"
+                placeholder="Seu@email.com"
+                value={email}
+                onChange={(e) => onEmailChange(e.target.value)}
+                className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
+                  }`}
+                aria-invalid={!!error}
+              />
+            </div>
+            {error ? (
+              <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex px-6 pt-4 pb-8 w-full">
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPending ? "Enviando..." : "Enviar link de recuperação"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function ForgotPasswordCheckEmailPanel({
+  sentToEmail,
+  onClose,
+  onResend,
+  isResending,
+  resendCooldownSeconds,
+}: {
+  sentToEmail: string;
+  onClose: () => void;
+  onResend: () => void;
+  isResending: boolean;
+  resendCooldownSeconds: number;
+}) {
+  const steps = [
+    "Abra seu e-mail e procure por Podioticket",
+    'Clique no link "Redefinir minha senha"',
+    "Crie sua nova senha",
+  ] as const;
+
+  return (
+    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
+        <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
+          Verifique seu e-mail
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+          aria-label="Fechar modal"
+        >
+          <X className="size-[18px] text-gray-12" />
+        </button>
+      </div>
+      <div className="flex flex-col gap-8 pt-4 pb-6 px-6 w-full">
+        <div className="flex flex-col gap-4 w-full min-w-0">
+          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+            Se uma conta existir com{" "}
+            <span className="font-bold text-gray-12">{sentToEmail}</span>, você
+            receberá um e-mail em instantes com o link para redefinir a senha.
+          </p>
+          <div className="flex flex-col gap-3 w-full">
+            {steps.map((text, index) => (
+              <div
+                key={text}
+                className="flex gap-2 items-center w-full min-w-0 rounded-lg"
+              >
+                <div className="flex size-6 shrink-0 items-center justify-center rounded bg-primary-4">
+                  <span className="font-medium text-sm leading-[1.3] text-primary-12 font-family-dm-sans">
+                    {index + 1}
+                  </span>
+                </div>
+                <p className="font-medium text-sm leading-[1.3] text-primary-12 font-family-dm-sans min-w-0">
+                  {text}
+                </p>
+              </div>
+            ))}
+            <div className="flex gap-1 items-center w-full rounded-lg bg-yellow-3 p-3">
+              <Clock
+                className="size-5 shrink-0 text-yellow-12"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <p className="font-medium text-sm leading-[1.3] text-yellow-12 font-family-dm-sans">
+                O link expira em até 1 hora
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center justify-center w-full">
+          <p className="font-medium text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
+            Não recebeu o email?
+          </p>
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={isResending || resendCooldownSeconds > 0}
+            className="font-semibold text-sm leading-[1.3] text-primary-10 font-family-dm-sans hover:text-primary-11 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-transparent border-0 p-0"
+          >
+            {isResending
+              ? "Reenviando..."
+              : resendCooldownSeconds > 0
+                ? `Reenviar em ${resendCooldownSeconds}s`
+                : "Reenviar e-mail"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ForgotPasswordNewPasswordPanel({
+  password,
+  confirmPassword,
+  onPasswordChange,
+  onConfirmPasswordChange,
+  fieldErrors,
+  onSubmit,
+  onBack,
+  onClose,
+  isPending,
+}: {
+  password: string;
+  confirmPassword: string;
+  onPasswordChange: (value: string) => void;
+  onConfirmPasswordChange: (value: string) => void;
+  fieldErrors: { password?: string; confirmPassword?: string };
+  onSubmit: (e: FormEvent) => void;
+  onBack: () => void;
+  onClose: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
+      <div className="flex items-start justify-between px-4 py-4 border-b border-gray-6 shrink-0 gap-2">
+        <div className="flex gap-0.5 items-center min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="size-[18px] text-gray-12" />
+          </button>
+          <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans truncate pl-0.5">
+            Alterar senha
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+          aria-label="Fechar modal"
+        >
+          <X className="size-[18px] text-gray-12" />
+        </button>
+      </div>
+      <form onSubmit={onSubmit} className="flex flex-col w-full">
+        <div className="flex flex-col gap-6 p-6 w-full">
+          <div className="flex flex-col gap-2 w-full min-w-0">
+            <label
+              htmlFor="new-password-field"
+              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+            >
+              Nova senha
+            </label>
+            <div className="relative w-full">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+              <Input
+                id="new-password-field"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Digite uma nova senha"
+                value={password}
+                onChange={(e) => onPasswordChange(e.target.value)}
+                className={`pl-10 h-12 rounded-lg ${
+                  fieldErrors.password
+                    ? "border-red-9 focus-visible:border-red-9"
+                    : ""
+                }`}
+                aria-invalid={!!fieldErrors.password}
+              />
+            </div>
+            {fieldErrors.password ? (
+              <p className="text-sm text-red-9 font-family-dm-sans">
+                {fieldErrors.password}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2 w-full min-w-0">
+            <label
+              htmlFor="confirm-new-password-field"
+              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+            >
+              Confirmar nova senha
+            </label>
+            <div className="relative w-full">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+              <Input
+                id="confirm-new-password-field"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Digite sua senha novamente"
+                value={confirmPassword}
+                onChange={(e) => onConfirmPasswordChange(e.target.value)}
+                className={`pl-10 h-12 rounded-lg ${
+                  fieldErrors.confirmPassword
+                    ? "border-red-9 focus-visible:border-red-9"
+                    : ""
+                }`}
+                aria-invalid={!!fieldErrors.confirmPassword}
+              />
+            </div>
+            {fieldErrors.confirmPassword ? (
+              <p className="text-sm text-red-9 font-family-dm-sans">
+                {fieldErrors.confirmPassword}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex px-6 pt-4 pb-8 w-full">
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 const GoogleIcon = () => (
   <svg
@@ -54,25 +336,20 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const AppleIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="19"
-    height="24"
-    viewBox="0 0 19 24"
-    fill="none"
-  >
-    <path
-      d="M17.384 20.9986C16.4121 22.4865 15.3816 23.9384 13.8125 23.9624C12.2434 23.9984 11.7399 23.0145 9.95998 23.0145C8.16836 23.0145 7.618 23.9384 6.13081 23.9984C4.59682 24.0584 3.43754 22.4145 2.45391 20.9626C0.451521 17.9988 -1.08247 12.5392 0.978465 8.86741C1.99722 7.04353 3.82397 5.89161 5.80293 5.85561C7.30183 5.83161 8.73044 6.89954 9.65552 6.89954C10.5689 6.89954 12.302 5.61563 14.117 5.80761C14.8781 5.84361 17.0093 6.11959 18.3794 8.18346C18.274 8.25545 15.8383 9.71935 15.8618 12.7552C15.8969 16.3789 18.9649 17.5908 19 17.6028C18.9649 17.6868 18.5082 19.3307 17.384 20.9986ZM10.6977 1.79988C11.5525 0.803947 12.9694 0.0479968 14.1404 0C14.2926 1.40391 13.7423 2.81981 12.9226 3.82775C12.1146 4.84768 10.7797 5.63963 9.46816 5.53163C9.29251 4.15172 9.94827 2.71182 10.6977 1.79988Z"
-      fill="black"
-    />
-  </svg>
-);
+type ForgotFlow = "idle" | "email" | "check-email" | "new-password";
 
 export function LoginModal() {
-  const { isOpen, closeLoginModal } = useLoginModal();
+  const { isOpen, closeLoginModal, openLoginModal, data: loginModalData } =
+    useLoginModal();
   const { openRegisterModal } = useRegisterModal();
   const { login, isLoading: authLoading } = useAuth();
+  const {
+    forgotPassword,
+    resendCode,
+    isPending: forgotPasswordPending,
+    isResending: forgotPasswordResending,
+  } = useForgotPassword();
+  const { resetPassword, isPending: resetPasswordPending } = useResetPassword();
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -80,9 +357,59 @@ export function LoginModal() {
     password: "",
   });
 
+  const [forgotFlow, setForgotFlow] = useState<ForgotFlow>("idle");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [passwordResetEmail, setPasswordResetEmail] = useState("");
+  const [forgotEmailError, setForgotEmailError] = useState<string | undefined>(
+    undefined
+  );
+  const [resetPasswordToken, setResetPasswordToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [resetPasswordFieldErrors, setResetPasswordFieldErrors] = useState<{
+    password?: string;
+    confirmPassword?: string;
+  }>({});
+  /** Cooldown alinhado ao backend (1 min entre reenvios efetivos) */
+  const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
+
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setForgotFlow("idle");
+      setForgotEmail("");
+      setPasswordResetEmail("");
+      setForgotEmailError(undefined);
+      setResetPasswordToken("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setResetPasswordFieldErrors({});
+      setForgotResendCooldown(0);
+    }
+  }, [isOpen]);
+
+  const forgotResendTimerActive = forgotResendCooldown > 0;
+  useEffect(() => {
+    if (!forgotResendTimerActive) return;
+    const id = setInterval(() => {
+      setForgotResendCooldown((s) => Math.max(0, s - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [forgotResendTimerActive]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const raw = loginModalData?.passwordResetToken;
+    const token =
+      typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : "";
+    if (token) {
+      setResetPasswordToken(token);
+      setForgotFlow("new-password");
+    }
+  }, [isOpen, loginModalData?.passwordResetToken]);
 
   const handleGoogleLogin = () => {
     // Salva a URL atual para redirecionar após o login
@@ -157,6 +484,144 @@ export function LoginModal() {
     }
   };
 
+  const handleForgotEmailChange = (value: string) => {
+    setForgotEmail(value);
+    if (forgotEmailError) setForgotEmailError(undefined);
+  };
+
+  const handleForgotPasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      forgotPasswordStep1Schema.parse({ email: forgotEmail });
+      setForgotEmailError(undefined);
+      await forgotPassword({ email: forgotEmail, accountType: "USER" });
+      setPasswordResetEmail(forgotEmail);
+      setForgotResendCooldown(60);
+      setForgotFlow("check-email");
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const first = error.issues[0];
+        setForgotEmailError(first?.message ?? "Email inválido");
+        if (first?.message) toast.error(first.message);
+        return;
+      }
+      // API errors are toasted by useForgotPassword
+    }
+  };
+
+  const handleResendResetEmail = async () => {
+    if (!passwordResetEmail || forgotResendCooldown > 0) return;
+    try {
+      await resendCode({ email: passwordResetEmail, accountType: "USER" });
+      setForgotResendCooldown(60);
+    } catch {
+      // Erro tratado no hook (toast)
+    }
+  };
+
+  const handleNewPasswordChange = (value: string) => {
+    setNewPassword(value);
+    if (resetPasswordFieldErrors.password) {
+      setResetPasswordFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.password;
+        return next;
+      });
+    }
+  };
+
+  const handleConfirmNewPasswordChange = (value: string) => {
+    setConfirmNewPassword(value);
+    if (resetPasswordFieldErrors.confirmPassword) {
+      setResetPasswordFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.confirmPassword;
+        return next;
+      });
+    }
+  };
+
+  const handleBackFromNewPassword = () => {
+    setResetPasswordFieldErrors({});
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setResetPasswordToken("");
+    if (passwordResetEmail) {
+      setForgotFlow("check-email");
+    } else {
+      setForgotFlow("email");
+    }
+  };
+
+  const handleNewPasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!resetPasswordToken) {
+      toast.error("Link inválido ou expirado. Solicite um novo e-mail.");
+      return;
+    }
+    try {
+      const validated = resetPasswordSchema.parse({
+        password: newPassword,
+        confirmPassword: confirmNewPassword,
+      });
+      setResetPasswordFieldErrors({});
+      await resetPassword({
+        token: resetPasswordToken,
+        password: validated.password,
+      });
+      closeLoginModal();
+      setTimeout(() => openLoginModal(), 0);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const next: { password?: string; confirmPassword?: string } = {};
+        error.issues.forEach((issue) => {
+          const key = issue.path[0];
+          if (key === "password" || key === "confirmPassword") {
+            next[key] = issue.message;
+          }
+        });
+        setResetPasswordFieldErrors(next);
+        const first = error.issues[0];
+        if (first?.message) toast.error(first.message);
+        return;
+      }
+    }
+  };
+
+  const showForgotFlow = forgotFlow !== "idle";
+
+  const forgotStepContent =
+    forgotFlow === "email" ? (
+      <ForgotPasswordPanel
+        email={forgotEmail}
+        onEmailChange={handleForgotEmailChange}
+        error={forgotEmailError}
+        onSubmit={handleForgotPasswordSubmit}
+        isPending={forgotPasswordPending}
+        onClose={closeLoginModal}
+      />
+    ) : forgotFlow === "check-email" ? (
+      <ForgotPasswordCheckEmailPanel
+        sentToEmail={passwordResetEmail}
+        onClose={closeLoginModal}
+        onResend={handleResendResetEmail}
+        isResending={forgotPasswordResending}
+        resendCooldownSeconds={forgotResendCooldown}
+      />
+    ) : forgotFlow === "new-password" ? (
+      <ForgotPasswordNewPasswordPanel
+        password={newPassword}
+        confirmPassword={confirmNewPassword}
+        onPasswordChange={handleNewPasswordChange}
+        onConfirmPasswordChange={handleConfirmNewPasswordChange}
+        fieldErrors={resetPasswordFieldErrors}
+        onSubmit={handleNewPasswordSubmit}
+        onBack={handleBackFromNewPassword}
+        onClose={closeLoginModal}
+        isPending={resetPasswordPending}
+      />
+    ) : null;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -176,232 +641,224 @@ export function LoginModal() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="bg-gray-1 rounded-t-[12px] min-h-full relative overflow-hidden"
             >
-              {/* Header with glow effect */}
-              <div className="relative h-[164px] flex items-end justify-between pb-7 pt-8 px-4 overflow-hidden">
-                {/* Glow effect background */}
-                <div className="absolute top-[-190px] left-1/2 -translate-x-1/2 w-[390px] h-[312px] flex items-center justify-center pointer-events-none">
-                  <div className="rotate-90 w-[312px] h-[390px] relative">
-                    <div className="absolute inset-[-60.87%_-76.09%] opacity-20">
-                      <div className="w-full h-full bg-primary-5 rounded-full blur-3xl" />
-                    </div>
-                  </div>
+              {showForgotFlow ? (
+                <div className="flex flex-col min-h-full p-4 pt-6 pb-8">
+                  {forgotStepContent}
                 </div>
-
-                {/* Close button */}
-                <button
-                  onClick={closeLoginModal}
-                  className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
-                  aria-label="Fechar modal"
-                >
-                  <X className="size-5 text-gray-12" />
-                </button>
-
-                {/* Left decorative */}
-                <div className="absolute left-0 top-0 w-[162px] h-[80px]">
-                  <Image
-                    src="/images/login_left.png"
-                    alt="Decorative left"
-                    width={162}
-                    height={80}
-                    draggable={false}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-
-                {/* Logo */}
-                <div className="relative w-full z-10 flex items-center justify-center gap-2.5">
-                  <Image
-                    src="/images/logo_horizontal_black.png"
-                    alt="Pódio Ticket"
-                    width={33}
-                    height={33}
-                    priority
-                    className="h-8 w-auto"
-                    draggable={false}
-                  />
-                </div>
-
-                {/* Right decorative */}
-                <div className="absolute right-0 top-0 w-[162px] h-[80px]">
-                  <Image
-                    src="/images/login_right.png"
-                    alt="Decorative right"
-                    width={162}
-                    height={80}
-                    draggable={false}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex flex-col items-center w-full min-h-[648px]">
-                {/* Welcome text */}
-                <div className="flex flex-col items-center justify-center pt-3 px-4 pb-0">
-                  <h2 className="font-extrabold text-2xl leading-[1.1] text-gray-12 font-manrope">
-                    Bem-vindo de volta
-                  </h2>
-                </div>
-
-                {/* Form inputs */}
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex flex-col gap-5 items-start px-4 py-6 w-full"
-                >
-                  <div className="flex flex-col gap-5 items-start w-full">
-                    {/* Email input */}
-                    <div className="flex flex-col gap-2 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Email
-                      </label>
-                      <div className="relative w-full">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                        <Input
-                          type="email"
-                          placeholder="Digite seu email"
-                          value={formData.email}
-                          onChange={(e) =>
-                            handleInputChange("email", e.target.value)
-                          }
-                          className={`pl-10 h-12 ${
-                            errors.email
-                              ? "border-red-9 focus-visible:border-red-9"
-                              : ""
-                          }`}
-                          aria-invalid={!!errors.email}
-                        />
+              ) : (
+                <>
+                  {/* Header with glow effect */}
+                  <div className="relative h-[164px] flex items-end justify-between pb-7 pt-8 px-4 overflow-hidden">
+                    {/* Glow effect background */}
+                    <div className="absolute top-[-190px] left-1/2 -translate-x-1/2 w-[390px] h-[312px] flex items-center justify-center pointer-events-none">
+                      <div className="rotate-90 w-[312px] h-[390px] relative">
+                        <div className="absolute inset-[-60.87%_-76.09%] opacity-20">
+                          <div className="w-full h-full bg-primary-5 rounded-full blur-3xl" />
+                        </div>
                       </div>
-                      {errors.email && (
-                        <p className="text-sm text-red-9 font-family-dm-sans">
-                          {errors.email}
-                        </p>
-                      )}
                     </div>
 
-                    {/* Password input */}
-                    <div className="flex flex-col gap-2 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Senha
-                      </label>
-                      <div className="relative w-full">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                        <Input
-                          type="password"
-                          placeholder="Digite sua senha"
-                          value={formData.password}
-                          onChange={(e) =>
-                            handleInputChange("password", e.target.value)
-                          }
-                          className={`pl-10 h-12 ${
-                            errors.password
-                              ? "border-red-9 focus-visible:border-red-9"
-                              : ""
-                          }`}
-                          aria-invalid={!!errors.password}
-                        />
-                      </div>
-                      {errors.password && (
-                        <p className="text-sm text-red-9 font-family-dm-sans">
-                          {errors.password}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Forgot password link */}
+                    {/* Close button */}
                     <button
-                      type="button"
-                      className="font-semibold text-sm leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
+                      onClick={closeLoginModal}
+                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                      aria-label="Fechar modal"
                     >
-                      Esqueci minha senha
+                      <X className="size-5 text-gray-12" />
                     </button>
+
+                    {/* Left decorative */}
+                    <div className="absolute left-0 top-0 w-[162px] h-[80px]">
+                      <Image
+                        src="/images/login_left.png"
+                        alt="Decorative left"
+                        width={162}
+                        height={80}
+                        draggable={false}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+
+                    {/* Logo */}
+                    <div className="relative w-full z-10 flex items-center justify-center gap-2.5">
+                      <Image
+                        src="/images/logo_horizontal_black.png"
+                        alt="Pódio Ticket"
+                        width={33}
+                        height={33}
+                        priority
+                        className="h-8 w-auto"
+                        draggable={false}
+                      />
+                    </div>
+
+                    {/* Right decorative */}
+                    <div className="absolute right-0 top-0 w-[162px] h-[80px]">
+                      <Image
+                        src="/images/login_right.png"
+                        alt="Decorative right"
+                        width={162}
+                        height={80}
+                        draggable={false}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                   </div>
 
-                  {/* Login button */}
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || authLoading}
-                    className="w-full h-11 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting || authLoading
-                      ? "Conectando..."
-                      : "Conectar-se"}
-                  </Button>
-                </form>
+                  {/* Content */}
+                  <div className="flex flex-col items-center w-full min-h-[648px]">
+                    {/* Welcome text */}
+                    <div className="flex flex-col items-center justify-center pt-3 px-4 pb-0">
+                      <h2 className="font-extrabold text-2xl leading-[1.1] text-gray-12 font-manrope">
+                        Bem-vindo de volta
+                      </h2>
+                    </div>
 
-                {/* Social login section */}
-                <div className="flex-1 flex flex-col gap-6 items-center justify-between pb-8 pt-4 px-4 w-full">
-                  <div className="flex flex-col gap-6 items-start w-full">
-                    {/* Divider */}
-                    <div className="flex gap-2.5 items-center justify-center w-full">
-                      <div className="flex-1 h-px bg-gray-6" />
-                      <p className="font-normal text-sm leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
-                        Ou conecte-se com
+                    {/* Form inputs */}
+                    <form
+                      onSubmit={handleSubmit}
+                      className="flex flex-col gap-5 items-start px-4 py-6 w-full"
+                    >
+                      <div className="flex flex-col gap-5 items-start w-full">
+                        {/* Email input */}
+                        <div className="flex flex-col gap-2 items-start w-full">
+                          <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
+                            Email
+                          </label>
+                          <div className="relative w-full">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <Input
+                              type="email"
+                              placeholder="Digite seu email"
+                              value={formData.email}
+                              onChange={(e) =>
+                                handleInputChange("email", e.target.value)
+                              }
+                              className={`pl-10 h-12 ${errors.email
+                                  ? "border-red-9 focus-visible:border-red-9"
+                                  : ""
+                                }`}
+                              aria-invalid={!!errors.email}
+                            />
+                          </div>
+                          {errors.email && (
+                            <p className="text-sm text-red-9 font-family-dm-sans">
+                              {errors.email}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Password input */}
+                        <div className="flex flex-col gap-2 items-start w-full">
+                          <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
+                            Senha
+                          </label>
+                          <div className="relative w-full">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <Input
+                              type="password"
+                              placeholder="Digite sua senha"
+                              value={formData.password}
+                              onChange={(e) =>
+                                handleInputChange("password", e.target.value)
+                              }
+                              className={`pl-10 h-12 ${errors.password
+                                  ? "border-red-9 focus-visible:border-red-9"
+                                  : ""
+                                }`}
+                              aria-invalid={!!errors.password}
+                            />
+                          </div>
+                          {errors.password && (
+                            <p className="text-sm text-red-9 font-family-dm-sans">
+                              {errors.password}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Forgot password link */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotEmail(formData.email);
+                            setForgotEmailError(undefined);
+                            setForgotFlow("email");
+                          }}
+                          className="font-semibold text-sm leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
+                        >
+                          Esqueci minha senha
+                        </button>
+                      </div>
+
+                      {/* Login button */}
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || authLoading}
+                        className="w-full h-11 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSubmitting || authLoading
+                          ? "Conectando..."
+                          : "Conectar-se"}
+                      </Button>
+                    </form>
+
+                    {/* Social login section */}
+                    <div className="flex-1 flex flex-col gap-6 items-center justify-between pb-8 pt-4 px-4 w-full">
+                      <div className="flex flex-col gap-6 items-start w-full">
+                        {/* Divider */}
+                        <div className="flex gap-2.5 items-center justify-center w-full">
+                          <div className="flex-1 h-px bg-gray-6" />
+                          <p className="font-normal text-sm leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
+                            Ou conecte-se com
+                          </p>
+                          <div className="flex-1 h-px bg-gray-6" />
+                        </div>
+
+                        <div className="w-full">
+                          <Button
+                            variant="ghost"
+                            onClick={handleGoogleLogin}
+                            className="w-full border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                          >
+                            <GoogleIcon />
+                            <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
+                              Entrar com Google
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Sign up link */}
+                      <div className="flex gap-1 items-center">
+                        <p className="font-medium text-sm leading-[1.3] text-gray-12 text-center font-family-dm-sans">
+                          Ainda não possui uma conta?
+                        </p>
+                        <button
+                          onClick={() => {
+                            closeLoginModal();
+                            openRegisterModal();
+                          }}
+                          className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
+                        >
+                          Cadastrar-se
+                        </button>
+                      </div>
+
+                      {/* Terms and privacy */}
+                      <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
+                        Ao continuar você concorda com nossos{" "}
+                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                          Termos de serviço
+                        </button>{" "}
+                        e{" "}
+                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                          Política de privacidade
+                        </button>
                       </p>
-                      <div className="flex-1 h-px bg-gray-6" />
-                    </div>
-
-                    {/* Social login buttons */}
-                    <div className="flex flex-wrap gap-2 items-center w-full">
-                      <Button
-                        variant="ghost"
-                        onClick={handleGoogleLogin}
-                        className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors flex-1 min-w-[167px]"
-                      >
-                        <GoogleIcon />
-                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Entrar Google
-                        </span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors flex-1 min-w-[167px]"
-                      >
-                        <FacebookIcon />
-                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Entrar Facebook
-                        </span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors w-full"
-                      >
-                        <AppleIcon />
-                        <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Entrar Apple
-                        </span>
-                      </Button>
                     </div>
                   </div>
-
-                  {/* Sign up link */}
-                  <div className="flex gap-1 items-center">
-                    <p className="font-medium text-sm leading-[1.3] text-gray-12 text-center font-family-dm-sans">
-                      Ainda não possui uma conta?
-                    </p>
-                    <button
-                      onClick={() => {
-                        closeLoginModal();
-                        openRegisterModal();
-                      }}
-                      className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
-                    >
-                      Cadastrar-se
-                    </button>
-                  </div>
-
-                  {/* Terms and privacy */}
-                  <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
-                    Ao continuar você concorda com nossos{" "}
-                    <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                      Termos de serviço
-                    </button>{" "}
-                    e{" "}
-                    <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                      Política de privacidade
-                    </button>
-                  </p>
-                </div>
-              </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
 
@@ -420,222 +877,215 @@ export function LoginModal() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-1 rounded-xl shadow-2xl w-full max-w-[600px] mx-4 relative overflow-hidden"
+              className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden ${showForgotFlow
+                  ? "max-w-[460px] bg-transparent"
+                  : "max-w-[600px] bg-gray-1"
+                }`}
             >
-              <div className="relative pt-8 pb-3 px-6 flex items-center justify-center">
-                {/* Close button */}
-                <button
-                  onClick={closeLoginModal}
-                  className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
-                  aria-label="Fechar modal"
-                >
-                  <X className="size-5 text-gray-12" />
-                </button>
-
-                <div className="absolute left-0 top-0 w-[162px] h-[80px] flex items-center justify-center">
-                  <Image
-                    src="/images/login_left.png"
-                    alt="Decorative left"
-                    width={162}
-                    height={80}
-                    draggable={false}
-                  />
-                </div>
-
-                <div className="relative z-10 flex items-center">
-                  <Image
-                    src="/images/logo_horizontal_black.png"
-                    alt="Pódio Ticket"
-                    width={210}
-                    height={36}
-                    priority
-                    className="h-9 w-auto"
-                    draggable={false}
-                  />
-                </div>
-
-                <div className="absolute right-0 top-0 w-[162px] h-[80px]">
-                  <Image
-                    src="/images/login_right.png"
-                    alt="Decorative right"
-                    width={162}
-                    height={80}
-                    draggable={false}
-                  />
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex flex-col items-center w-full">
-                {/* Welcome text */}
-                <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
-                  <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
-                    Bem-vindo de volta
-                  </h2>
-                  <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
-                    Por favor, preencha os campos para conectar-se
-                  </p>
-                </div>
-
-                {/* Form inputs */}
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex flex-col gap-5 items-start p-6 w-full"
-                >
-                  <div className="flex flex-col gap-5 items-start w-full">
-                    {/* Email input */}
-                    <div className="flex flex-col gap-1 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Email
-                      </label>
-                      <div className="relative w-full">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                        <Input
-                          type="email"
-                          placeholder="Digite seu email"
-                          value={formData.email}
-                          onChange={(e) =>
-                            handleInputChange("email", e.target.value)
-                          }
-                          className={`pl-10 h-12 ${
-                            errors.email
-                              ? "border-red-9 focus-visible:border-red-9"
-                              : ""
-                          }`}
-                          aria-invalid={!!errors.email}
-                        />
-                      </div>
-                      {errors.email && (
-                        <p className="text-sm text-red-9 font-family-dm-sans">
-                          {errors.email}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Password input */}
-                    <div className="flex flex-col gap-1 items-start w-full">
-                      <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Senha
-                      </label>
-                      <div className="relative w-full">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
-                        <Input
-                          type="password"
-                          placeholder="Digite sua senha"
-                          value={formData.password}
-                          onChange={(e) =>
-                            handleInputChange("password", e.target.value)
-                          }
-                          className={`pl-10 h-12 ${
-                            errors.password
-                              ? "border-red-9 focus-visible:border-red-9"
-                              : ""
-                          }`}
-                          aria-invalid={!!errors.password}
-                        />
-                      </div>
-                      {errors.password && (
-                        <p className="text-sm text-red-9 font-family-dm-sans">
-                          {errors.password}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Forgot password link */}
+              {showForgotFlow ? (
+                forgotStepContent
+              ) : (
+                <>
+                  <div className="relative pt-8 pb-3 px-6 flex items-center justify-center">
+                    {/* Close button */}
                     <button
-                      type="button"
-                      className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
+                      onClick={closeLoginModal}
+                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                      aria-label="Fechar modal"
                     >
-                      Esqueci minha senha
+                      <X className="size-5 text-gray-12" />
                     </button>
+
+                    <div className="absolute left-0 top-0 w-[162px] h-[80px] flex items-center justify-center">
+                      <Image
+                        src="/images/login_left.png"
+                        alt="Decorative left"
+                        width={162}
+                        height={80}
+                        draggable={false}
+                      />
+                    </div>
+
+                    <div className="relative z-10 flex items-center">
+                      <Image
+                        src="/images/logo_horizontal_black.png"
+                        alt="Pódio Ticket"
+                        width={210}
+                        height={36}
+                        priority
+                        className="h-9 w-auto"
+                        draggable={false}
+                      />
+                    </div>
+
+                    <div className="absolute right-0 top-0 w-[162px] h-[80px]">
+                      <Image
+                        src="/images/login_right.png"
+                        alt="Decorative right"
+                        width={162}
+                        height={80}
+                        draggable={false}
+                      />
+                    </div>
                   </div>
 
-                  {/* Login button */}
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || authLoading}
-                    className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting || authLoading
-                      ? "Conectando..."
-                      : "Conectar-se"}
-                  </Button>
-                </form>
-
-                {/* Social login section */}
-                <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
-                  <div className="flex flex-col gap-6 items-start w-full">
-                    {/* Divider */}
-                    <div className="flex gap-2.5 items-center justify-center w-full">
-                      <div className="flex-1 h-px bg-gray-6" />
-                      <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
-                        Ou conecte-se com
+                  {/* Content */}
+                  <div className="flex flex-col items-center w-full">
+                    {/* Welcome text */}
+                    <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
+                      <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
+                        Bem-vindo de volta
+                      </h2>
+                      <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
+                        Por favor, preencha os campos para conectar-se
                       </p>
-                      <div className="flex-1 h-px bg-gray-6" />
                     </div>
 
-                    {/* Social login buttons */}
-                    <div className="flex gap-2 items-center w-full">
-                      <Button
-                        variant="ghost"
-                        className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                      >
-                        <FacebookIcon />
-                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Entrar Facebook
-                        </span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={handleGoogleLogin}
-                        className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                      >
-                        <GoogleIcon />
-                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Entrar Google
-                        </span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex-1 border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
-                      >
-                        <AppleIcon />
-                        <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                          Entrar Apple
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Sign up link */}
-                  <div className="flex gap-1 items-start">
-                    <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-family-dm-sans">
-                      Ainda não possui uma conta?
-                    </p>
-                    <button
-                      onClick={() => {
-                        closeLoginModal();
-                        openRegisterModal();
-                      }}
-                      className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
+                    {/* Form inputs */}
+                    <form
+                      onSubmit={handleSubmit}
+                      className="flex flex-col gap-5 items-start p-6 w-full"
                     >
-                      Cadastrar-se
-                    </button>
-                  </div>
+                      <div className="flex flex-col gap-5 items-start w-full">
+                        {/* Email input */}
+                        <div className="flex flex-col gap-1 items-start w-full">
+                          <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
+                            Email
+                          </label>
+                          <div className="relative w-full">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <Input
+                              type="email"
+                              placeholder="Digite seu email"
+                              value={formData.email}
+                              onChange={(e) =>
+                                handleInputChange("email", e.target.value)
+                              }
+                              className={`pl-10 h-12 ${errors.email
+                                  ? "border-red-9 focus-visible:border-red-9"
+                                  : ""
+                                }`}
+                              aria-invalid={!!errors.email}
+                            />
+                          </div>
+                          {errors.email && (
+                            <p className="text-sm text-red-9 font-family-dm-sans">
+                              {errors.email}
+                            </p>
+                          )}
+                        </div>
 
-                  {/* Terms and privacy */}
-                  <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
-                    Ao continuar você concorda com nossos{" "}
-                    <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                      Termos de serviço
-                    </button>{" "}
-                    e{" "}
-                    <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                      Política de privacidade
-                    </button>
-                  </p>
-                </div>
-              </div>
+                        {/* Password input */}
+                        <div className="flex flex-col gap-1 items-start w-full">
+                          <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
+                            Senha
+                          </label>
+                          <div className="relative w-full">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <Input
+                              type="password"
+                              placeholder="Digite sua senha"
+                              value={formData.password}
+                              onChange={(e) =>
+                                handleInputChange("password", e.target.value)
+                              }
+                              className={`pl-10 h-12 ${errors.password
+                                  ? "border-red-9 focus-visible:border-red-9"
+                                  : ""
+                                }`}
+                              aria-invalid={!!errors.password}
+                            />
+                          </div>
+                          {errors.password && (
+                            <p className="text-sm text-red-9 font-family-dm-sans">
+                              {errors.password}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Forgot password link */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotEmail(formData.email);
+                            setForgotEmailError(undefined);
+                            setForgotFlow("email");
+                          }}
+                          className="font-semibold text-base leading-[1.3] text-gray-11 hover:text-primary-10 transition-colors font-family-dm-sans cursor-pointer underline"
+                        >
+                          Esqueci minha senha
+                        </button>
+                      </div>
+
+                      {/* Login button */}
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || authLoading}
+                        className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSubmitting || authLoading
+                          ? "Conectando..."
+                          : "Conectar-se"}
+                      </Button>
+                    </form>
+
+                    {/* Social login section */}
+                    <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
+                      <div className="flex flex-col gap-6 items-start w-full">
+                        {/* Divider */}
+                        <div className="flex gap-2.5 items-center justify-center w-full">
+                          <div className="flex-1 h-px bg-gray-6" />
+                          <p className="font-normal text-base leading-[1.3] text-gray-11 text-center font-family-dm-sans whitespace-nowrap">
+                            Ou conecte-se com
+                          </p>
+                          <div className="flex-1 h-px bg-gray-6" />
+                        </div>
+
+                        <div className="w-full">
+                          <Button
+                            variant="ghost"
+                            onClick={handleGoogleLogin}
+                            className="w-full border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
+                          >
+                            <GoogleIcon />
+                            <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                              Entrar com Google
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Sign up link */}
+                      <div className="flex gap-1 items-start">
+                        <p className="font-normal text-base leading-[1.3] text-gray-12 text-center font-family-dm-sans">
+                          Ainda não possui uma conta?
+                        </p>
+                        <button
+                          onClick={() => {
+                            closeLoginModal();
+                            openRegisterModal();
+                          }}
+                          className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
+                        >
+                          Cadastrar-se
+                        </button>
+                      </div>
+
+                      {/* Terms and privacy */}
+                      <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
+                        Ao continuar você concorda com nossos{" "}
+                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                          Termos de serviço
+                        </button>{" "}
+                        e{" "}
+                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
+                          Política de privacidade
+                        </button>
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         </>

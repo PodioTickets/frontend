@@ -11,6 +11,8 @@ import { EventMap } from "@/components/EventMap";
 import Image from "next/image";
 import { Download } from "lucide-react";
 import Link from "next/link";
+import { Loading } from "@/components/Loading";
+import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +23,6 @@ export default function PreviewEventPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [event, setEvent] = useState<any>(null);
-  const [topics, setTopics] = useState<any[]>([]);
   const [kits, setKits] = useState<any[]>([]);
 
   // Verificar autenticação
@@ -47,14 +48,6 @@ export default function PreviewEventPage() {
         const eventData = await organizerService.getEventById(formData.createdEventId);
         setEvent(eventData);
 
-        // Carregar tópicos
-        if (eventData.topics) {
-          const sortedTopics = eventData.topics
-            .filter((topic: any) => topic.isEnabled)
-            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-          setTopics(sortedTopics);
-        }
-
         // Carregar kits
         try {
           const kitsData = await organizerService.getKits(formData.createdEventId);
@@ -79,14 +72,12 @@ export default function PreviewEventPage() {
   if (!authChecked || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }
 
-  // Separar tópicos especiais e outros tópicos
-  const defaultTopic = topics.find((topic) => topic.isDefault);
-  const otherTopics = topics.filter((topic) => !topic.isDefault);
+  const topicSections = event ? getEnabledTopicsSorted(event) : [];
 
   return (
     <div className="bg-gray-2 min-h-screen">
@@ -123,40 +114,32 @@ export default function PreviewEventPage() {
 
             {/* Info Sections */}
             <div className="flex flex-col items-start rounded-xl w-full">
-              {/* Tópico padrão (Detalhes do evento) */}
-              {defaultTopic && (
-                <div className="border-b border-gray-8 pb-10 w-full">
+              {topicSections.map((section, index) => (
+                <div
+                  key={section.id}
+                  className={`border-b border-gray-8 w-full ${index === 0 ? "pb-10" : "py-10"}`}
+                >
                   <div className="flex flex-col gap-6 items-start">
                     <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                      {defaultTopic.title || "Detalhes do evento"}
+                      {section.title}
                     </h2>
                     <div
                       className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: defaultTopic.content || event?.description || "" }}
+                      dangerouslySetInnerHTML={{ __html: section.content }}
                     />
-                    <div className="bg-gray-2 flex flex-col items-center justify-center pt-7 w-full">
-                      <button className="flex gap-2 items-center justify-center rounded-lg">
-                        <Download className="size-5 text-gray-11" />
-                        <p className="text-gray-11 text-base font-bold font-manrope leading-[1.1]">
-                          Label
-                        </p>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Todos os outros tópicos criados */}
-              {otherTopics.map((topic) => (
-                <div key={topic.id} className="border-b border-gray-8 py-10 w-full">
-                  <div className="flex flex-col gap-6 items-start">
-                    <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                      {topic.title}
-                    </h2>
-                    <div
-                      className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: topic.content }}
-                    />
+                    {section.isDefault ? (
+                      <div className="bg-gray-2 flex flex-col items-center justify-center pt-7 w-full">
+                        <button
+                          type="button"
+                          className="flex gap-2 items-center justify-center rounded-lg"
+                        >
+                          <Download className="size-5 text-gray-11" />
+                          <p className="text-gray-11 text-base font-bold font-manrope leading-[1.1]">
+                            Label
+                          </p>
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}

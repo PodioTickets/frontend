@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useCreateCouponModal, useDeleteCouponModal } from "@/stores/modalStore";
+import { Loading } from "@/components/Loading";
 
 interface Coupon {
   id: string;
@@ -195,7 +196,7 @@ export default function CouponsPage() {
   if (!authChecked || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-11">Carregando...</div>
+        <Loading />
       </div>
     );
   }

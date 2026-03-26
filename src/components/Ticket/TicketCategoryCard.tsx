@@ -7,6 +7,8 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { TicketTable } from "./TicketTable";
+import { DeleteTicketCategoryModal } from "./DeleteTicketCategoryModal";
+import { DeleteTicketModal } from "./DeleteTicketModal";
 import type { Ticket } from "@/hooks/useTickets";
 
 interface TicketCategoryCardProps {
@@ -16,7 +18,7 @@ interface TicketCategoryCardProps {
   totalPages: number;
   onEdit: (categoryId: string, name: string) => void;
   onEditDescription?: (categoryId: string, description: string) => void;
-  onDelete: (categoryId: string) => void;
+  onDelete: (categoryId: string) => void | Promise<void>;
   onEditTicket: (ticketId: string) => void;
   onDeleteTicket: (ticketId: string) => void;
   onPageChange: (categoryId: string, page: number) => void;
@@ -44,6 +46,11 @@ export function TicketCategoryCard({
   const [editingName, setEditingName] = useState(category.name);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editingDescription, setEditingDescription] = useState(category.description || "");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [ticketPendingDelete, setTicketPendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const { setNodeRef, isOver } = useDroppable({
     id: `category-${category.id}`,
@@ -78,6 +85,13 @@ export function TicketCategoryCard({
   };
 
   return (
+    <>
+      <DeleteTicketCategoryModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        canDelete={tickets.length === 0}
+        onConfirm={() => onDelete(category.id)}
+      />
     <div
       ref={setNodeRef}
       data-category-id={category.id}
@@ -121,11 +135,9 @@ export function TicketCategoryCard({
           </div>
           <div className="flex items-center">
             <button
-              onClick={() => {
-                if (confirm("Tem certeza que deseja excluir esta categoria?")) {
-                  onDelete(category.id);
-                }
-              }}
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => setDeleteModalOpen(true)}
               className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
             >
               <TrashIcon className="size-5 text-red-12" />
@@ -215,9 +227,17 @@ export function TicketCategoryCard({
           onPageChange={(page) => onPageChange(category.id, page)}
           onEdit={onEditTicket}
           onDuplicate={onDuplicateTicket}
+          onRequestDeleteTicket={(id: string) => {
+            const t = tickets.find((x) => x.id === id);
+            setTicketPendingDelete({
+              id,
+              name: t?.name?.trim() || "Ingresso",
+            });
+          }}
           productsMap={productsMap}
         />
       )}
     </div>
+    </>
   );
 }

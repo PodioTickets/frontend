@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type QuillInstance = InstanceType<typeof import("quill").default>;
 
+let quillResizeModuleRegistered = false;
+
 export function TopicModal() {
   const { isOpen, closeTopicModal, data, onModalSave } = useTopicModal();
   const [title, setTitle] = useState("");
@@ -15,6 +17,7 @@ export function TopicModal() {
   const quillRef = useRef<HTMLDivElement>(null);
   const quillInstanceRef = useRef<QuillInstance | null>(null);
   const quillLoadedRef = useRef(false);
+  const quillToolbarMousedownCleanupRef = useRef<(() => void) | null>(null);
 
   const initialTitle = data?.title || "";
   const initialContent = data?.content || "";
@@ -30,6 +33,7 @@ export function TopicModal() {
           try {
             // @ts-ignore - CSS import doesn't have type declarations
             await import("quill/dist/quill.snow.css");
+            await import("quill-resize-module/dist/resize.css");
           } catch (e) {
             // CSS import might fail in SSR, that's okay
           }
@@ -39,6 +43,11 @@ export function TopicModal() {
         // Import Quill dynamically
         const QuillModule = await import("quill");
         const Quill = QuillModule.default;
+        const QuillResize = (await import("quill-resize-module")).default;
+        if (!quillResizeModuleRegistered) {
+          Quill.register("modules/resize", QuillResize);
+          quillResizeModuleRegistered = true;
+        }
 
         // Clean up previous instance if exists
         if (quillInstanceRef.current) {
@@ -58,6 +67,19 @@ export function TopicModal() {
           theme: 'snow',
           placeholder: 'Descreva sobre o tópico...',
           modules: {
+            resize: {
+              modules: ["Resize"],
+              parchment: {
+                image: {
+                  attribute: ["width"],
+                  limit: { minWidth: 48, maxWidth: 2000 },
+                },
+              },
+              onChangeSize: () => {
+                const q = quillInstanceRef.current;
+                if (q) setContent(q.root.innerHTML);
+              },
+            },
             toolbar: {
               container: [
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
@@ -129,6 +151,14 @@ export function TopicModal() {
           ]
         });
 
+        quillInstanceRef.current = quill;
+
+        /** quill-resize-module sets user-select:none on the document while an image is active; it only clears on hide(), which does not run for toolbar clicks (outside .ql-editor). */
+        const hideQuillResizer = () => {
+          const r = (quill as unknown as { resizer?: { activeEle?: unknown; hide?: () => void } }).resizer;
+          if (r?.activeEle) r.hide?.();
+        };
+
         // Function to update image alignment based on parent paragraph
         const updateImageAlignment = () => {
           const editor = quillRef.current?.querySelector('.ql-editor') as HTMLElement;
@@ -140,90 +170,47 @@ export function TopicModal() {
             const parent = img.parentElement;
             
             if (parent && parent.tagName === 'P') {
-              // Reset margins
               img.style.marginLeft = '';
               img.style.marginRight = '';
-              img.style.width = '';
-              
-              // Apply alignment based on parent class
-              if (parent.classList.contains('ql-align-center')) {
-                img.style.marginLeft = 'auto';
-                img.style.marginRight = 'auto';
-              } else if (parent.classList.contains('ql-align-right')) {
-                img.style.marginLeft = 'auto';
-                img.style.marginRight = '0';
-              } else if (parent.classList.contains('ql-align-left')) {
-                img.style.marginLeft = '0';
-                img.style.marginRight = 'auto';
-              } else if (parent.classList.contains('ql-align-justify')) {
+
+              if (parent.classList.contains('ql-align-justify')) {
                 img.style.width = '100%';
                 img.style.marginLeft = '0';
                 img.style.marginRight = '0';
               } else {
-                // Default to left if no alignment class
-                img.style.marginLeft = '0';
-                img.style.marginRight = 'auto';
+                const legacyPct = img.dataset.topicImgWidth;
+                img.style.width = legacyPct ? `${legacyPct}%` : '';
+                if (parent.classList.contains('ql-align-center')) {
+                  img.style.marginLeft = 'auto';
+                  img.style.marginRight = 'auto';
+                } else if (parent.classList.contains('ql-align-right')) {
+                  img.style.marginLeft = 'auto';
+                  img.style.marginRight = '0';
+                } else if (parent.classList.contains('ql-align-left')) {
+                  img.style.marginLeft = '0';
+                  img.style.marginRight = 'auto';
+                } else {
+                  img.style.marginLeft = '0';
+                  img.style.marginRight = 'auto';
+                }
               }
             }
           });
         };
 
-        // Style images to work with Quill's align format
+        // Only apply layout CSS to images — do not call formatLine here (DOM text length ≠ Quill index and was resetting alignment on unrelated lines).
         const styleImages = () => {
           const editor = quillRef.current?.querySelector('.ql-editor') as HTMLElement;
-          const quill = quillInstanceRef.current;
-          if (!editor || !quill) return;
+          if (!editor) return;
 
           const allImages = editor.querySelectorAll('img');
           allImages.forEach((imgElement) => {
             const img = imgElement as HTMLImageElement;
-            
-            // Skip if image doesn't have a valid src
             if (!img.src || img.src === '' || img.src === window.location.href) return;
-            
-            // Style image to be block-level
             img.style.maxWidth = '100%';
             img.style.height = 'auto';
             img.style.display = 'block';
-            
-            // Find the line containing this image and ensure it has alignment
-            try {
-              // Find image position in editor
-              const editorElement = quillRef.current?.querySelector('.ql-editor');
-              if (editorElement) {
-                const range = document.createRange();
-                range.selectNodeContents(editorElement);
-                range.setStartBefore(img);
-                const preCaretRange = range.cloneRange();
-                preCaretRange.setStart(editorElement, 0);
-                const textLength = preCaretRange.toString().length;
-                
-                // Get the line containing the image
-                const [line, offset] = quill.getLine(textLength);
-                if (line) {
-                  // Check if line already has alignment
-                  const formats = quill.getFormat(line.offset());
-                  if (!formats.align) {
-                    // Apply center alignment by default
-                    quill.formatLine(line.offset(), 1, 'align', 'center');
-                  }
-                }
-              }
-            } catch (e) {
-              // If API fails, fallback to DOM manipulation
-              const parent = img.parentElement;
-              if (parent && parent.tagName === 'P') {
-                if (!parent.classList.contains('ql-align-left') && 
-                    !parent.classList.contains('ql-align-center') && 
-                    !parent.classList.contains('ql-align-right') &&
-                    !parent.classList.contains('ql-align-justify')) {
-                  parent.classList.add('ql-align-center');
-                }
-              }
-            }
           });
-          
-          // Update alignment after styling
           updateImageAlignment();
         };
 
@@ -238,8 +225,10 @@ export function TopicModal() {
           }, 100);
         });
 
-        // Update image alignment on selection change (when user changes alignment)
-        quill.on('selection-change', () => {
+        quill.on('selection-change', (range) => {
+          if (range != null) {
+            hideQuillResizer();
+          }
           setTimeout(() => {
             updateImageAlignment();
           }, 50);
@@ -267,6 +256,13 @@ export function TopicModal() {
           const editor = quillRef.current?.querySelector('.ql-editor') as HTMLElement;
 
           if (toolbar) {
+            quillToolbarMousedownCleanupRef.current?.();
+            const onToolbarMousedown = () => hideQuillResizer();
+            toolbar.addEventListener('mousedown', onToolbarMousedown);
+            quillToolbarMousedownCleanupRef.current = () => {
+              toolbar.removeEventListener('mousedown', onToolbarMousedown);
+            };
+
             toolbar.style.backgroundColor = '#fcfcfc';
             toolbar.style.padding = '20px';
             toolbar.style.display = 'flex';
@@ -365,8 +361,6 @@ export function TopicModal() {
           });
         }, 150);
 
-          quillInstanceRef.current = quill;
-
           // Set initial content if provided
           if (initialContent) {
             quill.root.innerHTML = initialContent;
@@ -386,7 +380,8 @@ export function TopicModal() {
     }
 
     return () => {
-      // Cleanup on unmount or when isOpen changes
+      quillToolbarMousedownCleanupRef.current?.();
+      quillToolbarMousedownCleanupRef.current = null;
       if (!isOpen && quillInstanceRef.current) {
         quillInstanceRef.current = null;
       }
@@ -415,34 +410,31 @@ export function TopicModal() {
                 const parent = img.parentElement;
                 
                 if (parent && parent.tagName === 'P') {
-                  // Style image
                   img.style.maxWidth = '100%';
                   img.style.height = 'auto';
                   img.style.display = 'block';
-                  
-                  // Reset margins
                   img.style.marginLeft = '';
                   img.style.marginRight = '';
-                  img.style.width = '';
-                  
-                  // Apply alignment based on saved parent class
-                  if (parent.classList.contains('ql-align-center')) {
-                    img.style.marginLeft = 'auto';
-                    img.style.marginRight = 'auto';
-                  } else if (parent.classList.contains('ql-align-right')) {
-                    img.style.marginLeft = 'auto';
-                    img.style.marginRight = '0';
-                  } else if (parent.classList.contains('ql-align-left')) {
-                    img.style.marginLeft = '0';
-                    img.style.marginRight = 'auto';
-                  } else if (parent.classList.contains('ql-align-justify')) {
+                  if (parent.classList.contains('ql-align-justify')) {
                     img.style.width = '100%';
                     img.style.marginLeft = '0';
                     img.style.marginRight = '0';
                   } else {
-                    // Default to left if no alignment class
-                    img.style.marginLeft = '0';
-                    img.style.marginRight = 'auto';
+                    const legacyPct = img.dataset.topicImgWidth;
+                    img.style.width = legacyPct ? `${legacyPct}%` : '';
+                    if (parent.classList.contains('ql-align-center')) {
+                      img.style.marginLeft = 'auto';
+                      img.style.marginRight = 'auto';
+                    } else if (parent.classList.contains('ql-align-right')) {
+                      img.style.marginLeft = 'auto';
+                      img.style.marginRight = '0';
+                    } else if (parent.classList.contains('ql-align-left')) {
+                      img.style.marginLeft = '0';
+                      img.style.marginRight = 'auto';
+                    } else {
+                      img.style.marginLeft = '0';
+                      img.style.marginRight = 'auto';
+                    }
                   }
                 }
               });
@@ -486,30 +478,31 @@ export function TopicModal() {
             const parent = img.parentElement;
             
             if (parent && parent.tagName === 'P') {
-              // Ensure image has basic styles
               img.style.maxWidth = '100%';
               img.style.height = 'auto';
               img.style.display = 'block';
-              
-              // Apply alignment styles based on parent class
-              // These inline styles will be preserved in the saved HTML
-              if (parent.classList.contains('ql-align-center')) {
-                img.style.marginLeft = 'auto';
-                img.style.marginRight = 'auto';
-              } else if (parent.classList.contains('ql-align-right')) {
-                img.style.marginLeft = 'auto';
-                img.style.marginRight = '0';
-              } else if (parent.classList.contains('ql-align-left')) {
-                img.style.marginLeft = '0';
-                img.style.marginRight = 'auto';
-              } else if (parent.classList.contains('ql-align-justify')) {
+              img.style.marginLeft = '';
+              img.style.marginRight = '';
+              if (parent.classList.contains('ql-align-justify')) {
                 img.style.width = '100%';
                 img.style.marginLeft = '0';
                 img.style.marginRight = '0';
               } else {
-                // Default to left if no alignment class
-                img.style.marginLeft = '0';
-                img.style.marginRight = 'auto';
+                const legacyPct = img.dataset.topicImgWidth;
+                img.style.width = legacyPct ? `${legacyPct}%` : '';
+                if (parent.classList.contains('ql-align-center')) {
+                  img.style.marginLeft = 'auto';
+                  img.style.marginRight = 'auto';
+                } else if (parent.classList.contains('ql-align-right')) {
+                  img.style.marginLeft = 'auto';
+                  img.style.marginRight = '0';
+                } else if (parent.classList.contains('ql-align-left')) {
+                  img.style.marginLeft = '0';
+                  img.style.marginRight = 'auto';
+                } else {
+                  img.style.marginLeft = '0';
+                  img.style.marginRight = 'auto';
+                }
               }
             }
           });
@@ -551,9 +544,9 @@ export function TopicModal() {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] min-h-0 flex flex-col shadow-2xl">
               {/* Header */}
-              <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3">
+              <div className="shrink-0 border-b border-gray-6 flex items-center justify-between px-5 py-3">
                 <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   {isEditing ? "Editar seção" : "Criar seção"}
                 </h2>
@@ -565,10 +558,9 @@ export function TopicModal() {
                 </button>
               </div>
 
-              {/* Content */}
-              <div className="flex-1 overflow-hidden">
-                {/* Text Content */}
-                <div className="flex-1 overflow-y-auto">
+              {/* Content — min-h-0 lets this flex child shrink so overflow-y-auto can scroll */}
+              <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
                   <div className="flex flex-col gap-6 p-6">
                     <div className="flex flex-col gap-2">
                       <input
@@ -581,8 +573,8 @@ export function TopicModal() {
                     </div>
 
                     {/* Content Editor */}
-                    <div className="flex flex-col gap-2">
-                      <div className="overflow-hidden">
+                    <div className="flex min-w-0 flex-col gap-2">
+                      <div className="min-w-0">
                         <div
                           ref={quillRef}
                           className="min-h-[300px]"
@@ -594,7 +586,7 @@ export function TopicModal() {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-gray-6 flex items-center justify-end gap-3 px-6 py-4">
+              <div className="shrink-0 border-t border-gray-6 flex items-center justify-end gap-3 px-6 py-4">
                 <Button
                   variant="outline"
                   onClick={closeTopicModal}

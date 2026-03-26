@@ -1,6 +1,7 @@
 "use client";
-import { modalitiesColumns, locationsOptions } from "@/constants";
-import { Dropdown, DropdownOption } from "../Dropdown";
+import { modalitiesColumns } from "@/constants";
+import { resolveLegacyLocationSlug } from "@/constants/legacyLocationSlugs";
+import { Dropdown } from "../Dropdown";
 import { LocationIcon } from "../Icons/LocationIcon";
 import { MoneyIcon } from "../Icons/MoneyIcon";
 import { SneakersIcon } from "../Icons/SneakersIcon";
@@ -12,8 +13,15 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 import Link from "next/link";
+import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
+import { LocationCascadePicker } from "@/components/LocationCascadePicker";
 
 interface HomeFiltersProps {
+  /** Valor exato de `state` na API / URL */
+  initialState?: string | null;
+  /** Valor exato de `city` na API / URL */
+  initialCity?: string | null;
+  /** @deprecated use `initialState` / `initialCity` */
   initialLocation?: string | null;
   initialModalities?: string[];
   initialDateRange?: DateRange | undefined;
@@ -42,38 +50,72 @@ const priceRangesEqual = (a: [number, number], b: [number, number]) => {
   return a[0] === b[0] && a[1] === b[1];
 };
 
+function resolveInitialFromProps(
+  initialState: string | null | undefined,
+  initialCity: string | null | undefined,
+  initialLocation: string | null | undefined
+): { state: string | null; city: string | null } {
+  if (initialState) {
+    return { state: initialState, city: initialCity ?? null };
+  }
+  const leg = resolveLegacyLocationSlug(initialLocation);
+  if (leg) {
+    return { state: leg.state, city: leg.city };
+  }
+  return { state: null, city: null };
+}
+
 export function HomeFilters({
+  initialState = null,
+  initialCity = null,
   initialLocation = null,
   initialModalities = [],
   initialDateRange = undefined,
   initialPriceRange = [0, 10000],
 }: HomeFiltersProps = {}) {
   const router = useRouter();
+  const { facets, isLoading: facetsLoading } = useEventLocationFacets();
 
   const [selectedModalities, setSelectedModalities] =
     useState<string[]>(initialModalities);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(
-    initialLocation
+  const [selectedStateApi, setSelectedStateApi] = useState<string | null>(() =>
+    resolveInitialFromProps(initialState, initialCity, initialLocation).state
   );
+  const [selectedCityApi, setSelectedCityApi] = useState<string | null>(() =>
+    resolveInitialFromProps(initialState, initialCity, initialLocation).city
+  );
+  const [locationPickerKey, setLocationPickerKey] = useState(0);
   const [selectedDateRange, setSelectedDateRange] = useState<
     DateRange | undefined
   >(initialDateRange);
   const [priceRange, setPriceRange] =
     useState<[number, number]>(initialPriceRange);
 
-  // Use refs to track previous values and avoid unnecessary updates
+  const prevInitialStateRef = useRef(initialState);
+  const prevInitialCityRef = useRef(initialCity);
   const prevInitialLocationRef = useRef(initialLocation);
   const prevInitialModalitiesRef = useRef(initialModalities);
   const prevInitialDateRangeRef = useRef(initialDateRange);
   const prevInitialPriceRangeRef = useRef(initialPriceRange);
 
-  // Sync with initial props when they change (only if actually different)
   useEffect(() => {
-    if (prevInitialLocationRef.current !== initialLocation) {
-      setSelectedLocation(initialLocation);
+    if (
+      prevInitialStateRef.current !== initialState ||
+      prevInitialCityRef.current !== initialCity ||
+      prevInitialLocationRef.current !== initialLocation
+    ) {
+      const next = resolveInitialFromProps(
+        initialState,
+        initialCity,
+        initialLocation
+      );
+      setSelectedStateApi(next.state);
+      setSelectedCityApi(next.city);
+      prevInitialStateRef.current = initialState;
+      prevInitialCityRef.current = initialCity;
       prevInitialLocationRef.current = initialLocation;
     }
-  }, [initialLocation]);
+  }, [initialState, initialCity, initialLocation]);
 
   useEffect(() => {
     if (!arraysEqual(prevInitialModalitiesRef.current, initialModalities)) {
@@ -104,12 +146,6 @@ export function HomeFilters({
 
   const handlePriceRangeChange = useCallback((range: [number, number]) => {
     setPriceRange(range);
-  }, []);
-
-  const handleLocationSelect = useCallback((option: DropdownOption) => {
-    if (option.id) {
-      setSelectedLocation(option.id);
-    }
   }, []);
 
   const handleDateRangeSelect = useCallback((range: DateRange | undefined) => {
@@ -162,11 +198,24 @@ export function HomeFilters({
     return formatDate(selectedDateRange.from);
   }, [selectedDateRange]);
 
+  const locationSummary = useMemo(() => {
+    if (!selectedStateApi) return null;
+    const facet = facets.find((f) => f.apiValue === selectedStateApi);
+    const stateName = facet?.displayLabel ?? selectedStateApi;
+    if (!selectedCityApi) {
+      return `${stateName} — todas as cidades`;
+    }
+    return `${selectedCityApi}, ${stateName}`;
+  }, [facets, selectedStateApi, selectedCityApi]);
+
   const handleSearch = useCallback(() => {
     const params = new URLSearchParams();
 
-    if (selectedLocation) {
-      params.set("location", selectedLocation);
+    if (selectedStateApi) {
+      params.set("state", selectedStateApi);
+    }
+    if (selectedCityApi) {
+      params.set("city", selectedCityApi);
     }
 
     if (selectedModalities.length > 0) {
@@ -195,16 +244,13 @@ export function HomeFilters({
     const queryString = params.toString();
     router.push(`/search${queryString ? `?${queryString}` : ""}`);
   }, [
-    selectedLocation,
+    selectedStateApi,
+    selectedCityApi,
     selectedModalities,
     selectedDateRange,
     priceRange,
     router,
   ]);
-
-  const selectedLocationOption = locationsOptions.find(
-    (loc) => loc.id === selectedLocation
-  );
 
   return (
     <div className="w-full md:px-0 mt-6 md:mt-14">
@@ -226,27 +272,43 @@ export function HomeFilters({
       {/* Desktop Layout */}
       <div className="hidden md:flex relative items-center justify-between shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-4xl h-[75px]">
         <Dropdown
-          options={locationsOptions}
           dataAttribute="location"
-          width="w-full"
+          width="w-full min-w-[280px] max-w-[320px]"
           maxHeight="max-h-[430px]"
           className="top-20"
-          selectedIds={selectedLocation ? [selectedLocation] : []}
-          onSelect={handleLocationSelect}
+          onOpenChange={(open) => {
+            if (open) setLocationPickerKey((k) => k + 1);
+          }}
           trigger={() => (
             <div className="flex items-center w-[280px] gap-2 px-4 h-full bg-transparent hover:bg-gray-6 transition-all duration-200 rounded-2xl cursor-pointer">
               <LocationIcon />
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <h1 className="font-family-manrope font-bold">Local</h1>
-                <p className="font-family-dm-sans font-normal text-gray-11">
-                  {selectedLocationOption
-                    ? selectedLocationOption.label
-                    : "Selecione um local"}
+                <p className="font-family-dm-sans font-normal text-gray-11 truncate">
+                  {locationSummary ?? "Selecione um local"}
                 </p>
               </div>
             </div>
           )}
-        />
+        >
+          {({ close }) => (
+            <LocationCascadePicker
+              key={locationPickerKey}
+              facets={facets}
+              isLoading={facetsLoading}
+              selectedStateApi={selectedStateApi}
+              onSelect={({ stateApi, cityApi }) => {
+                setSelectedStateApi(stateApi);
+                setSelectedCityApi(cityApi);
+              }}
+              onClear={() => {
+                setSelectedStateApi(null);
+                setSelectedCityApi(null);
+              }}
+              close={close}
+            />
+          )}
+        </Dropdown>
 
         <div className="w-px h-[30px] bg-gray-6" />
 
@@ -281,11 +343,11 @@ export function HomeFilters({
 
         <Dropdown
           dataAttribute="modalities"
-          width="w-auto min-w-[960px]"
+          width="w-auto min-w-[280px]"
           maxHeight="max-h-[430px]"
           className="top-20 left-1/2 -translate-x-1/2"
           align="center"
-          columns={modalitiesColumns}
+          columns={[modalitiesColumns.flat()]}
           multiSelect={true}
           selectedIds={memoizedSelectedModalities}
           onMultiSelectChange={handleModalitiesChange}

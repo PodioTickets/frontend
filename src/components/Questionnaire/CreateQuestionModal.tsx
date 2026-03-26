@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useCreateQuestionModal } from "@/stores/modalStore";
+import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { Dropdown } from "@/components/Dropdown";
 import { Radio } from "@/components/Radio";
-import { X, Plus, Trash2, Info, ChevronDown } from "lucide-react";
+import { X, Plus, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { organizerService } from "@/services";
 import { CreateQuestionRequest } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
 import { TrashIcon } from "../Icons/TrashIcon";
+import { SelectTicketsModal } from "../Coupon/SelectTicketsModal";
+import { ArrowButton } from "../ArrowButton";
+import { Dropdown } from "../Dropdown";
 
 type QuestionType = "text" | "true_false" | "number" | "select" | "multiple_choice";
 
@@ -25,11 +27,14 @@ const QUESTION_TYPES: Array<{ label: string; value: QuestionType }> = [
 
 export function CreateQuestionModal() {
   const { isOpen, closeCreateQuestionModal, data, onModalSave } = useCreateQuestionModal();
+  const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [question, setQuestion] = useState("");
   const [type, setType] = useState<QuestionType>("text");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [isRequired, setIsRequired] = useState(true);
-  const [appliesTo, setAppliesTo] = useState("Geral");
+  const [appliesTo, setAppliesTo] = useState<"all" | "specific">("all");
+  const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
+  const [showSelectTicketsModal, setShowSelectTicketsModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditing = data?.questionId !== undefined;
@@ -45,13 +50,28 @@ export function CreateQuestionModal() {
         setType(q.type);
         setOptions(q.options && q.options.length > 0 ? q.options : ["", ""]);
         setIsRequired(q.isRequired);
+        const appliesToData = (q as any).appliesTo;
+        if (appliesToData === "all" || !appliesToData) {
+          setAppliesTo("all");
+          setSelectedTicketIds([]);
+        } else if (Array.isArray(appliesToData)) {
+          const ticketIds = appliesToData.map((ticket: any) =>
+            typeof ticket === "string" ? ticket : ticket.id
+          );
+          setAppliesTo(ticketIds.length > 0 ? "specific" : "all");
+          setSelectedTicketIds(ticketIds);
+        } else {
+          setAppliesTo("all");
+          setSelectedTicketIds([]);
+        }
       } else {
         // Create mode - reset form
         setQuestion("");
         setType("text");
         setOptions(["", ""]);
         setIsRequired(true);
-        setAppliesTo("Geral");
+        setAppliesTo("all");
+        setSelectedTicketIds([]);
       }
     }
   }, [isOpen, isEditing, data]);
@@ -113,6 +133,10 @@ export function CreateQuestionModal() {
         options: (type === "select" || type === "multiple_choice")
           ? options.filter(opt => opt.trim() !== "")
           : undefined,
+        appliesTo:
+          appliesTo === "specific" && selectedTicketIds.length > 0
+            ? selectedTicketIds
+            : "all",
       };
 
       if (isEditing && data?.questionId) {
@@ -139,10 +163,6 @@ export function CreateQuestionModal() {
   const handleDelete = async () => {
     if (!isEditing || !data?.questionId || !eventId) return;
 
-    if (!confirm("Tem certeza que deseja excluir esta pergunta?")) {
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -168,45 +188,46 @@ export function CreateQuestionModal() {
   const showNumberSection = type === "number";
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/90 z-50"
-            onClick={closeCreateQuestionModal}
-          />
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/90 z-50"
+              onClick={closeCreateQuestionModal}
+            />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[982px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-              {/* Header */}
-              <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                  {isEditing ? "Editar pergunta" : "Criar pergunta"}
-                </h2>
-                <button
-                  onClick={closeCreateQuestionModal}
-                  className="text-gray-11 hover:text-gray-12 transition-colors p-1"
-                >
-                  <X className="size-6" />
-                </button>
-              </div>
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[982px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
+                  <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
+                    {isEditing ? "Editar pergunta" : "Criar pergunta"}
+                  </h2>
+                  <button
+                    onClick={closeCreateQuestionModal}
+                    className="text-gray-11 hover:text-gray-12 transition-colors p-1"
+                  >
+                    <X className="size-6" />
+                  </button>
+                </div>
 
-              {/* Content */}
-              <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
-                <div className="flex flex-col gap-9 p-5">
+                {/* Content */}
+                <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
+                  <div className="flex flex-col gap-9 p-5">
                     {/* Pergunta Input */}
                     <div className="flex flex-col gap-2.5">
                       <div className="flex flex-col gap-2">
@@ -249,12 +270,11 @@ export function CreateQuestionModal() {
                               <span className="text-gray-11 text-base font-normal font-family-dm-sans">
                                 {selectedTypeLabel}
                               </span>
-                              <ChevronDown className="size-6 text-gray-11" />
+                              <ArrowButton isOpen={false} />
                             </div>
                           }
+                          onSelect={(option) => setType(option.id as QuestionType)}
                           width="w-[276px]"
-                          position="bottom"
-                          align="start"
                         />
                       </div>
 
@@ -342,7 +362,7 @@ export function CreateQuestionModal() {
                               <div className="flex items-center gap-2">
                                 <Radio
                                   checked={true}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   name="true_false"
                                   disabled
                                   className="size-6"
@@ -354,7 +374,7 @@ export function CreateQuestionModal() {
                               <div className="flex items-center gap-2">
                                 <Radio
                                   checked={false}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   name="true_false"
                                   disabled
                                   className="size-6"
@@ -429,62 +449,75 @@ export function CreateQuestionModal() {
                       <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                         Aplicar em quais ingressos?
                       </label>
-                      <Dropdown
-                        options={[
-                          { id: "geral", label: "Geral", onClick: () => setAppliesTo("Geral") }
-                        ]}
-                        trigger={
-                          <div className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors">
-                            <span className="text-gray-11 text-base font-normal font-family-dm-sans">
-                              {appliesTo}
-                            </span>
-                            <ChevronDown className="size-6 text-gray-11" />
-                          </div>
-                        }
-                        width="w-[276px]"
-                        position="bottom"
-                        align="start"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSelectTicketsModal(true)}
+                        className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors text-left"
+                      >
+                        <span className="text-gray-11 text-base font-normal font-family-dm-sans">
+                          {appliesTo === "all"
+                            ? "Todos os ingressos"
+                            : selectedTicketIds.length > 0
+                              ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
+                              : "Selecione"}
+                        </span>
+                        <ArrowButton />
+                      </button>
                     </div>
                   </div>
-              </div>
+                </div>
 
-              {/* Footer */}
-              <div className="border-t border-gray-6 flex items-center justify-end gap-3 px-6 py-4 shrink-0">
-                <Button
-                  variant="outline"
-                  onClick={closeCreateQuestionModal}
-                  disabled={isSubmitting}
-                  className="border-gray-6 text-gray-11 px-4 py-2"
-                >
-                  Cancelar
-                </Button>
-                {isEditing && (
+                {/* Footer */}
+                <div className="border-t border-gray-6 flex items-center justify-end gap-3 px-6 py-4 shrink-0">
                   <Button
-                    variant="destructive"
-                    onClick={handleDelete}
+                    variant="outline"
+                    onClick={closeCreateQuestionModal}
                     disabled={isSubmitting}
-                    className="bg-red-11 hover:bg-red-10 text-red-2 px-6 py-2"
+                    className="border-gray-6 text-gray-12 px-4 py-2"
                   >
-                    Deletar pergunta
+                    Cancelar
                   </Button>
-                )}
-                <Button
-                  onClick={handleSave}
-                  disabled={isSubmitting || !question.trim()}
-                  className="bg-primary-11 hover:bg-primary-10 disabled:bg-gray-6 disabled:cursor-not-allowed text-primary-2 px-6 py-2"
-                >
-                  {isSubmitting
-                    ? "Salvando..."
-                    : isEditing
-                      ? "Confirmar e editar"
-                      : "Confirmar e criar"}
-                </Button>
+                  {isEditing && (
+                    <Button
+                      variant="destructive"
+                    onClick={() => openDeleteQuestionModal({ onConfirm: handleDelete })}
+                      disabled={isSubmitting}
+                    >
+                      Deletar pergunta
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSubmitting || !question.trim()}
+                    className="disabled:bg-opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting
+                      ? "Salvando..."
+                      : isEditing
+                        ? "Confirmar e editar"
+                        : "Confirmar e criar"}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      <SelectTicketsModal
+        isOpen={showSelectTicketsModal}
+        onClose={() => setShowSelectTicketsModal(false)}
+        onConfirm={(ticketIds) => {
+          if (ticketIds.length === 0) {
+            setAppliesTo("all");
+            setSelectedTicketIds([]);
+          } else {
+            setAppliesTo("specific");
+            setSelectedTicketIds(ticketIds);
+          }
+        }}
+        eventId={eventId || null}
+        selectedTicketIds={appliesTo === "specific" ? selectedTicketIds : []}
+      />
+    </>
   );
 }

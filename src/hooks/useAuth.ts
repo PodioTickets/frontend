@@ -127,12 +127,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         }
         
-        // Só limpa dados se for erro de autenticação e não houver refresh token
+        // Erro de autenticação no /auth/profile (ex.: JWT só de organizador)
         if ((profileError?.response?.status === 401 || profileError?.response?.status === 403)) {
           const apiClient = (userService as any).apiClient;
           const refreshToken = apiClient?.getRefreshToken?.();
           if (!refreshToken) {
             clearAuthData();
+          } else {
+            try {
+              const cachedUser = localStorage.getItem("user");
+              if (cachedUser) {
+                setUser(JSON.parse(cachedUser));
+              }
+            } catch {
+              /* ignore */
+            }
           }
         }
       }
@@ -221,7 +230,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         const userWithCache = { ...user, _cachedAt: Date.now() };
         localStorage.setItem("user", JSON.stringify(userWithCache));
-        await refetchUser();
+        // JWT de organizador não deve chamar /auth/profile (participante): 401/403 limpa sessão em refetchUser.
+        if (data.accountType === "ORGANIZER") {
+          setUser(user as User);
+        } else {
+          await refetchUser();
+        }
       } else {
         const errorMessage =
           response.error || "Erro ao fazer login. Tente novamente.";
@@ -329,11 +343,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setError(errorMessage);
         // Não relança o erro para não quebrar o fluxo de registro
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Registration error:", err);
+      const e = err as Error;
       const errorMessage =
-        err.message || "Erro ao realizar cadastro. Tente novamente.";
-      setError(errorMessage);
+        e?.message || "Erro ao realizar cadastro. Tente novamente.";
+      setError(errorMessage as any);
+      if (e instanceof Error) {
+        throw e;
+      }
       throw new Error(errorMessage);
     } finally {
       setIsLoading(false);

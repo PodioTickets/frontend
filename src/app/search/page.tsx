@@ -10,10 +10,12 @@ import { useEventSearch } from "@/hooks/useEventSearch";
 import {
   statusOptions,
   orderOptions,
-  locationsOptions,
   modalitiesColumns,
 } from "@/constants";
-import { ArrowLeft, Plus, Minus, Search, Menu } from "lucide-react";
+import { resolveLegacyLocationSlug } from "@/constants/legacyLocationSlugs";
+import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
+import { LocationCascadePicker } from "@/components/LocationCascadePicker";
+import { ArrowLeft, Plus, Minus } from "lucide-react";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { SneakersIcon } from "@/components/Icons/SneakersIcon";
@@ -29,6 +31,7 @@ function MobileAdvancedSearch() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
+  const { facets, isLoading: facetsLoading } = useEventLocationFacets();
 
   const [expandedSections, setExpandedSections] = useState({
     local: false,
@@ -37,10 +40,30 @@ function MobileAdvancedSearch() {
     preco: false,
   });
 
-  const [locationSearch, setLocationSearch] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(
-    searchParams.get("location") || null
+  const legacyLocation = searchParams.get("location");
+  const stateFromUrl = searchParams.get("state");
+  const cityFromUrl = searchParams.get("city");
+
+  const effectiveLocation = useMemo(() => {
+    if (stateFromUrl) {
+      return { state: stateFromUrl, city: cityFromUrl };
+    }
+    const leg = resolveLegacyLocationSlug(legacyLocation);
+    if (leg) return { state: leg.state, city: leg.city };
+    return { state: null as string | null, city: null as string | null };
+  }, [stateFromUrl, cityFromUrl, legacyLocation]);
+
+  const [selectedStateApi, setSelectedStateApi] = useState<string | null>(
+    effectiveLocation.state
   );
+  const [selectedCityApi, setSelectedCityApi] = useState<string | null>(
+    effectiveLocation.city
+  );
+
+  useEffect(() => {
+    setSelectedStateApi(effectiveLocation.state);
+    setSelectedCityApi(effectiveLocation.city);
+  }, [effectiveLocation.state, effectiveLocation.city]);
   const [selectedModalities, setSelectedModalities] = useState<string[]>(
     searchParams.get("modalities")?.split(",").filter(Boolean) || []
   );
@@ -82,6 +105,8 @@ function MobileAdvancedSearch() {
 
   const { events, pagination, isLoading, query } = useEventSearch({
     q: searchQuery,
+    state: effectiveLocation.state || undefined,
+    city: effectiveLocation.city || undefined,
     startDate,
     endDate,
     page: currentPage,
@@ -91,7 +116,13 @@ function MobileAdvancedSearch() {
   // Resetar página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateFrom, dateTo, searchQuery]);
+  }, [
+    dateFrom,
+    dateTo,
+    searchQuery,
+    effectiveLocation.state,
+    effectiveLocation.city,
+  ]);
 
   // Filtrar eventos por modalidades e preço (filtros que não estão na API)
   const filteredEvents = useMemo(() => {
@@ -139,7 +170,9 @@ function MobileAdvancedSearch() {
       modalities.length > 0 ||
       priceMin ||
       priceMax ||
-      selectedLocation
+      effectiveLocation.state ||
+      effectiveLocation.city ||
+      legacyLocation
     );
   }, [
     searchQuery,
@@ -148,7 +181,9 @@ function MobileAdvancedSearch() {
     modalities,
     priceMin,
     priceMax,
-    selectedLocation,
+    effectiveLocation.state,
+    effectiveLocation.city,
+    legacyLocation,
   ]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -158,13 +193,15 @@ function MobileAdvancedSearch() {
     }));
   };
 
-  const filteredLocations = useMemo(() => {
-    if (!locationSearch.trim()) return locationsOptions;
-    const search = locationSearch.toLowerCase();
-    return locationsOptions.filter((loc) =>
-      loc.label.toLowerCase().includes(search)
-    );
-  }, [locationSearch]);
+  const mobileLocationSummary = useMemo(() => {
+    if (!selectedStateApi) return null;
+    const facet = facets.find((f) => f.apiValue === selectedStateApi);
+    const stateName = facet?.displayLabel ?? selectedStateApi;
+    if (!selectedCityApi) {
+      return `${stateName} — todas as cidades`;
+    }
+    return `${selectedCityApi}, ${stateName}`;
+  }, [facets, selectedStateApi, selectedCityApi]);
 
   const formatDateRange = () => {
     if (!selectedDateRange?.from) {
@@ -200,14 +237,13 @@ function MobileAdvancedSearch() {
     )}`;
   };
 
-  const selectedLocationOption = locationsOptions.find(
-    (loc) => loc.id === selectedLocation
-  );
-
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (selectedLocation) {
-      params.set("location", selectedLocation);
+    if (selectedStateApi) {
+      params.set("state", selectedStateApi);
+    }
+    if (selectedCityApi) {
+      params.set("city", selectedCityApi);
     }
     if (selectedModalities.length > 0) {
       params.set("modalities", selectedModalities.join(","));
@@ -231,11 +267,11 @@ function MobileAdvancedSearch() {
   };
 
   const handleClearAll = () => {
-    setSelectedLocation(null);
+    setSelectedStateApi(null);
+    setSelectedCityApi(null);
     setSelectedModalities([]);
     setSelectedDateRange(undefined);
     setPriceRange([0, 10000]);
-    setLocationSearch("");
     router.push("/search");
   };
 
@@ -290,9 +326,7 @@ function MobileAdvancedSearch() {
                   Local
                 </h2>
                 <p className="font-normal text-xs text-gray-11 font-family-dm-sans truncate">
-                  {selectedLocationOption
-                    ? selectedLocationOption.label
-                    : "Selecione um local"}
+                  {mobileLocationSummary ?? "Selecione um local"}
                 </p>
               </div>
               {expandedSections.local ? (
@@ -302,41 +336,20 @@ function MobileAdvancedSearch() {
               )}
             </button>
             {expandedSections.local && (
-              <div className="flex flex-col pt-4">
-                <div className="px-4 pb-4">
-                  <div className="border border-gray-6 rounded-lg h-11 px-3 flex items-center gap-2">
-                    <Search className="size-5 text-gray-12 shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Procure um local..."
-                      value={locationSearch}
-                      onChange={(e) => setLocationSearch(e.target.value)}
-                      className="flex-1 bg-transparent text-sm text-gray-12 placeholder:text-gray-11 outline-none font-family-dm-sans"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  {filteredLocations.map((location, index) => (
-                    <button
-                      key={location.id}
-                      onClick={() => {
-                        setSelectedLocation(location.id);
-                        toggleSection("local");
-                      }}
-                      className={`flex items-center gap-2 h-[52px] px-4 border-b border-gray-4 ${
-                        index === filteredLocations.length - 1
-                          ? "border-b-0"
-                          : ""
-                      } hover:bg-gray-3 transition-colors`}
-                    >
-                      <LocationIcon className="size-5 shrink-0" />
-                      <span className="font-medium text-sm text-gray-12 font-family-dm-sans">
-                        {location.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <LocationCascadePicker
+                facets={facets}
+                isLoading={facetsLoading}
+                selectedStateApi={selectedStateApi}
+                onSelect={({ stateApi, cityApi }) => {
+                  setSelectedStateApi(stateApi);
+                  setSelectedCityApi(cityApi);
+                }}
+                onClear={() => {
+                  setSelectedStateApi(null);
+                  setSelectedCityApi(null);
+                }}
+                close={() => toggleSection("local")}
+              />
             )}
           </div>
 
@@ -528,12 +541,22 @@ function SearchContent() {
   // Extrair parâmetros da URL
   const searchQuery = searchParams.get("q") || undefined;
   const country = searchParams.get("country") || undefined;
-  const state = searchParams.get("state") || undefined;
-  const city = searchParams.get("city") || undefined;
   const dateFrom = searchParams.get("dateFrom") || undefined;
   const dateTo = searchParams.get("dateTo") || undefined;
   const includePast = searchParams.get("includePast") === "true";
-  const location = searchParams.get("location");
+  const legacyLocation = searchParams.get("location");
+  const stateFromUrl = searchParams.get("state");
+  const cityFromUrl = searchParams.get("city");
+
+  const effectiveLocation = useMemo(() => {
+    if (stateFromUrl) {
+      return { state: stateFromUrl, city: cityFromUrl };
+    }
+    const leg = resolveLegacyLocationSlug(legacyLocation);
+    if (leg) return { state: leg.state, city: leg.city };
+    return { state: null as string | null, city: null as string | null };
+  }, [stateFromUrl, cityFromUrl, legacyLocation]);
+
   const modalities =
     searchParams.get("modalities")?.split(",").filter(Boolean) || [];
   const priceMin = searchParams.get("priceMin");
@@ -553,8 +576,8 @@ function SearchContent() {
   const { events, pagination, isLoading, query } = useEventSearch({
     q: searchQuery,
     country,
-    state,
-    city,
+    state: effectiveLocation.state || undefined,
+    city: effectiveLocation.city || undefined,
     startDate,
     endDate,
     includePast: includePast || undefined,
@@ -565,7 +588,15 @@ function SearchContent() {
   // Resetar página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, country, state, city, dateFrom, dateTo, includePast]);
+  }, [
+    searchQuery,
+    country,
+    effectiveLocation.state,
+    effectiveLocation.city,
+    dateFrom,
+    dateTo,
+    includePast,
+  ]);
 
   const initialDateRange = useMemo(() => {
     if (dateFrom || dateTo) {
@@ -633,8 +664,9 @@ function SearchContent() {
     return !!(
       searchQuery ||
       country ||
-      state ||
-      city ||
+      effectiveLocation.state ||
+      effectiveLocation.city ||
+      legacyLocation ||
       dateFrom ||
       dateTo ||
       includePast ||
@@ -644,8 +676,9 @@ function SearchContent() {
   }, [
     searchQuery,
     country,
-    state,
-    city,
+    effectiveLocation.state,
+    effectiveLocation.city,
+    legacyLocation,
     dateFrom,
     dateTo,
     includePast,
@@ -695,7 +728,9 @@ function SearchContent() {
       <MobileAdvancedSearch />
       <section className="hidden md:flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8">
         <HomeFilters
-          initialLocation={location}
+          initialState={effectiveLocation.state}
+          initialCity={effectiveLocation.city}
+          initialLocation={legacyLocation}
           initialModalities={modalities}
           initialDateRange={initialDateRange}
           initialPriceRange={initialPriceRange}
