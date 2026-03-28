@@ -50,6 +50,9 @@ export default function EditTicketsPage() {
     id: string;
     name: string;
   } | null>(null);
+  const [duplicatingTicketId, setDuplicatingTicketId] = useState<string | null>(
+    null,
+  );
 
   // Hooks para gerenciar dados
   const {
@@ -222,6 +225,7 @@ export default function EditTicketsPage() {
         return;
       }
 
+      setDuplicatingTicketId(ticketId);
       try {
         await organizerService.duplicateTicket(eventId, ticketId);
 
@@ -239,9 +243,11 @@ export default function EditTicketsPage() {
       } catch (error: any) {
         console.error("Error duplicating ticket:", error);
         toast.error(error.response?.data?.message || "Erro ao duplicar ingresso");
+      } finally {
+        setDuplicatingTicketId(null);
       }
     },
-    [eventId, queryClient]
+    [eventId, queryClient],
   );
 
   const handlePageChange = useCallback((categoryId: string, page: number) => {
@@ -574,6 +580,7 @@ export default function EditTicketsPage() {
                   onPageChange={(page) => setCurrentPage({ ...currentPage, all: page })}
                   onEdit={handleEditTicket}
                   onDuplicate={handleDuplicateTicket}
+                  duplicatingTicketId={duplicatingTicketId}
                   onRequestDeleteTicket={(id: string) => {
                     const t = allTickets.find((x) => x.id === id);
                     setTicketPendingDelete({
@@ -771,6 +778,7 @@ export default function EditTicketsPage() {
                     onDeleteTicket={handleDeleteTicket}
                     onPageChange={handlePageChange}
                     onDuplicateTicket={handleDuplicateTicket}
+                    duplicatingTicketId={duplicatingTicketId}
                     productsMap={productsMap}
                     onDropTicket={handleDropTicket}
                   />

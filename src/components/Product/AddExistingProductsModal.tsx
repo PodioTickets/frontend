@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAddExistingProductsModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -44,14 +44,44 @@ export function AddExistingProductsModal() {
 
   const eventId = data?.eventId;
 
+  const excludeProductIds = useMemo(() => {
+    const raw = data?.excludeProductIds;
+    if (!Array.isArray(raw)) return new Set<string>();
+    return new Set(
+      raw.filter(
+        (id): id is string => typeof id === "string" && id.trim().length > 0,
+      ),
+    );
+  }, [data?.excludeProductIds]);
+
+  const availableProducts = useMemo(
+    () => products.filter((p) => !excludeProductIds.has(p.id)),
+    [products, excludeProductIds],
+  );
+
+  const filteredProducts = useMemo(
+    () =>
+      availableProducts.filter((product) =>
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [availableProducts, searchQuery],
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery("");
+      setSelectedProducts(new Set());
+      setExpandedProductId(null);
+    }
+  }, [isOpen]);
+
   // Load products and tickets
   useEffect(() => {
     if (isOpen && eventId) {
-      console.log("Modal opened, onModalSave:", onModalSave);
       loadProducts();
       loadTickets();
     }
-  }, [isOpen, eventId, onModalSave]);
+  }, [isOpen, eventId]);
 
   const loadProducts = async () => {
     if (!eventId) return;
@@ -81,10 +111,6 @@ export function AddExistingProductsModal() {
       toast.error("Erro ao carregar ingressos");
     }
   };
-
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleToggleProduct = (productId: string) => {
     const newSelected = new Set(selectedProducts);
@@ -139,10 +165,8 @@ export function AddExistingProductsModal() {
       }
 
       if (onModalSave) {
-        console.log("Calling onModalSave with:", selectedProductsData);
         try {
           await onModalSave({ products: selectedProductsData });
-          console.log("onModalSave completed");
           // Toast será exibido pelo callback, não precisa aqui
         } catch (error) {
           console.error("Error in onModalSave callback:", error);
@@ -217,8 +241,12 @@ export function AddExistingProductsModal() {
                   {/* Products Grid */}
                   {filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20">
-                      <p className="text-gray-11 text-base font-family-dm-sans">
-                        {searchQuery ? "Nenhum produto encontrado" : "Nenhum produto cadastrado"}
+                      <p className="text-gray-11 text-base font-family-dm-sans text-center max-w-md">
+                        {searchQuery.trim()
+                          ? "Nenhum produto encontrado"
+                          : availableProducts.length === 0 && products.length > 0
+                            ? "Todos os produtos já estão adicionados a este ingresso"
+                            : "Nenhum produto cadastrado"}
                       </p>
                     </div>
                   ) : (

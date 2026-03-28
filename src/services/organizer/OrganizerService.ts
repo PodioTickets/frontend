@@ -172,7 +172,7 @@ export interface OrganizationAuditLogsPagination {
   totalPages: number;
 }
 
-function normalizeOrganizationAuditLogItem(
+export function normalizeOrganizationAuditLogItem(
   raw: Record<string, unknown>,
   index: number
 ): OrganizationAuditLogItem {
@@ -210,12 +210,41 @@ function normalizeOrganizationAuditLogItem(
           ? actor.id
           : undefined;
 
-  const metadata =
+  let metadata: Record<string, unknown> | undefined =
     raw.metadata &&
     typeof raw.metadata === "object" &&
     !Array.isArray(raw.metadata)
-      ? (raw.metadata as Record<string, unknown>)
+      ? { ...(raw.metadata as Record<string, unknown>) }
       : undefined;
+
+  const mergeAuditEditRootFields = (target: Record<string, unknown>) => {
+    if (
+      typeof raw.editedFields === "string" &&
+      target.editedFields === undefined
+    ) {
+      target.editedFields = raw.editedFields;
+    }
+    if (
+      Array.isArray(raw.fieldsEdited) &&
+      target.fieldsEdited === undefined
+    ) {
+      target.fieldsEdited = raw.fieldsEdited;
+    }
+    if (Array.isArray(raw.changes) && target.changes === undefined) {
+      target.changes = raw.changes;
+    }
+  };
+
+  if (metadata) {
+    mergeAuditEditRootFields(metadata);
+  } else if (
+    typeof raw.editedFields === "string" ||
+    Array.isArray(raw.fieldsEdited) ||
+    Array.isArray(raw.changes)
+  ) {
+    metadata = {};
+    mergeAuditEditRootFields(metadata);
+  }
 
   return {
     id,

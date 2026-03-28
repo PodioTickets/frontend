@@ -123,6 +123,11 @@ export function CreateQuestionModal() {
       return;
     }
 
+    if (appliesTo === "specific" && selectedTicketIds.length === 0) {
+      toast.error("Selecione pelo menos um ingresso");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -244,12 +249,6 @@ export function CreateQuestionModal() {
                             className="h-12 px-3 pr-24"
                           />
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Info className="size-5 text-gray-11" />
-                        <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Limite de 200 Caracteres
-                        </span>
                       </div>
                     </div>
 
@@ -444,25 +443,57 @@ export function CreateQuestionModal() {
                       </div>
                     </div>
 
-                    {/* Aplicar em quais ingressos */}
-                    <div className="flex flex-col gap-2 w-[276px]">
+                    {/* Aplicação aos ingressos */}
+                    <div className="flex flex-col gap-3">
                       <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                        Aplicar em quais ingressos?
+                        Quer aplicar essa pergunta a todos os ingressos?
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowSelectTicketsModal(true)}
-                        className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors text-left"
-                      >
-                        <span className="text-gray-11 text-base font-normal font-family-dm-sans">
-                          {appliesTo === "all"
-                            ? "Todos os ingressos"
-                            : selectedTicketIds.length > 0
-                              ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
-                              : "Selecione"}
-                        </span>
-                        <ArrowButton />
-                      </button>
+                      <div className="flex flex-wrap gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Radio
+                            checked={appliesTo === "all"}
+                            onChange={() => {
+                              setAppliesTo("all");
+                              setSelectedTicketIds([]);
+                            }}
+                            name="apply-question-tickets"
+                            className="size-6"
+                          />
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                            Sim
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Radio
+                            checked={appliesTo === "specific"}
+                            onChange={() => setAppliesTo("specific")}
+                            name="apply-question-tickets"
+                            className="size-6"
+                          />
+                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                            Não
+                          </span>
+                        </label>
+                      </div>
+                      {appliesTo === "specific" && (
+                        <div className="flex flex-col gap-2 w-full max-w-[276px]">
+                          <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                            Aplicar em quais ingressos?
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowSelectTicketsModal(true)}
+                            className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors text-left"
+                          >
+                            <span className="text-gray-11 text-base font-normal font-family-dm-sans">
+                              {selectedTicketIds.length > 0
+                                ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
+                                : "Selecione os ingressos"}
+                            </span>
+                            <ArrowButton />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -507,13 +538,7 @@ export function CreateQuestionModal() {
         isOpen={showSelectTicketsModal}
         onClose={() => setShowSelectTicketsModal(false)}
         onConfirm={(ticketIds) => {
-          if (ticketIds.length === 0) {
-            setAppliesTo("all");
-            setSelectedTicketIds([]);
-          } else {
-            setAppliesTo("specific");
-            setSelectedTicketIds(ticketIds);
-          }
+          setSelectedTicketIds(ticketIds);
         }}
         eventId={eventId || null}
         selectedTicketIds={appliesTo === "specific" ? selectedTicketIds : []}

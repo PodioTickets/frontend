@@ -49,6 +49,9 @@ export default function IngressosPage() {
     id: string;
     name: string;
   } | null>(null);
+  const [duplicatingTicketId, setDuplicatingTicketId] = useState<string | null>(
+    null,
+  );
 
   // Hooks para gerenciar dados
   const {
@@ -209,11 +212,10 @@ export default function IngressosPage() {
       return;
     }
 
+    setDuplicatingTicketId(ticketId);
     try {
-      // Chamar API de duplicação
       await organizerService.duplicateTicket(formData.createdEventId, ticketId);
 
-      // Invalidar e refetch queries para atualizar a lista
       await queryClient.invalidateQueries({
         queryKey: queryKeys.events.tickets(formData.createdEventId),
       });
@@ -222,13 +224,14 @@ export default function IngressosPage() {
         queryKey: queryKeys.events.tickets(formData.createdEventId),
       });
 
-      // Disparar evento customizado para atualizar a página (backup)
       window.dispatchEvent(new CustomEvent("ticketCreated"));
 
       toast.success("Ingresso duplicado com sucesso!");
     } catch (error: any) {
       console.error("Error duplicating ticket:", error);
       toast.error(error.response?.data?.message || "Erro ao duplicar ingresso");
+    } finally {
+      setDuplicatingTicketId(null);
     }
   }, [formData.createdEventId, queryClient]);
 
@@ -578,6 +581,7 @@ export default function IngressosPage() {
                   onPageChange={(page) => setCurrentPage({ ...currentPage, all: page })}
                   onEdit={handleEditTicket}
                   onDuplicate={handleDuplicateTicket}
+                  duplicatingTicketId={duplicatingTicketId}
                   onRequestDeleteTicket={(id: string) => {
                     const t = allTickets.find((x) => x.id === id);
                     setTicketPendingDelete({
@@ -764,6 +768,7 @@ export default function IngressosPage() {
                     onDeleteTicket={handleDeleteTicket}
                     onPageChange={handlePageChange}
                     onDuplicateTicket={handleDuplicateTicket}
+                    duplicatingTicketId={duplicatingTicketId}
                     productsMap={productsMap}
                     onDropTicket={handleDropTicket}
                   />

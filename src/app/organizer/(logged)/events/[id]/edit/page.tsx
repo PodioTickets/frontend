@@ -10,7 +10,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
 import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { Plus } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface ViaCEPResponse {
@@ -514,7 +514,7 @@ export default function EditInformationPage() {
 
             {/* URL do Google Maps */}
             <div className="flex flex-col gap-2 w-full">
-              <label className="text-gray-12 text-base font-family-dm-sans">URL do google</label>
+              <label className="text-gray-12 text-base font-family-dm-sans flex items-center gap-1">URL do google <Info className="size-5 text-gray-11 shrink-0" /></label>
               <div className="relative">
                 <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12" />
                 <Input

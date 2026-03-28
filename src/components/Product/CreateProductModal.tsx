@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useCreateProductModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
-import { X, Plus, Info, Upload } from "lucide-react";
+import { X, Plus, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { TrashIcon } from "../Icons/TrashIcon";
@@ -13,6 +13,12 @@ import Image from "next/image";
 import { ArrowButton } from "../ArrowButton";
 import { Dropdown } from "../Dropdown";
 import { organizerService } from "@/services";
+import { Tooltip } from "@/components/Tooltip";
+import {
+  ImageUploadWithCrop,
+  type ImageUploadWithCropRef,
+} from "@/components/ImageUploadWithCrop";
+import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 
 interface ProductVariation {
   id: string;
@@ -22,7 +28,8 @@ interface ProductVariation {
 }
 
 export function CreateProductModal() {
-  const { isOpen, closeCreateProductModal, data, onModalSave } = useCreateProductModal();
+  const { isOpen, closeCreateProductModal, data, onModalSave } =
+    useCreateProductModal();
   const [productName, setProductName] = useState("");
   const [productImage, setProductImage] = useState<string | null>(null);
   const [isIncludedInTicket, setIsIncludedInTicket] = useState(true);
@@ -31,100 +38,141 @@ export function CreateProductModal() {
   const [variationTypeName, setVariationTypeName] = useState("");
   const [variations, setVariations] = useState<ProductVariation[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [formInitVersion, setFormInitVersion] = useState(0);
+  const [productFormBaseline, setProductFormBaseline] = useState<string | null>(
+    null,
+  );
+  const productCropRef = useRef<ImageUploadWithCropRef>(null);
 
   const isEditing = data?.productId !== undefined;
   const eventId = data?.eventId;
 
+  const filledVariationsCount = variations.filter((v) => v.name.trim()).length;
+  /** Criar: no mínimo 2 nomes preenchidos. Editar: no mínimo 1 (produtos legados). */
+  const hasMinVariations = isEditing
+    ? filledVariationsCount >= 1
+    : filledVariationsCount >= 2;
+
   // Helper: API retorna preços em centavos; exibir em reais (formato "10,50")
   const formatPriceFromApi = (value: number | string | undefined): string => {
     if (value == null || value === "") return "";
-    if (typeof value === "number") return (value / 100).toFixed(2).replace(".", ",");
+    if (typeof value === "number")
+      return (value / 100).toFixed(2).replace(".", ",");
     const s = String(value).trim().replace(".", ",");
     return s;
   };
 
+  const productFormSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        productName: productName.trim(),
+        productImage,
+        isIncludedInTicket,
+        basePrice,
+        isRequired,
+        variationTypeName: variationTypeName.trim(),
+        variations: variations.map((v) => ({
+          name: v.name.trim(),
+          price: v.price,
+          stock: v.stock,
+        })),
+      }),
+    [
+      productName,
+      productImage,
+      isIncludedInTicket,
+      basePrice,
+      isRequired,
+      variationTypeName,
+      variations,
+    ],
+  );
+
+  const isProductFormDirty =
+    productFormBaseline !== null && productFormSnapshot !== productFormBaseline;
+
   // Initialize form when modal opens
   useEffect(() => {
-    if (isOpen) {
-      if (isEditing && data?.product) {
-        // Editing mode - load product data (API envia preços em centavos)
-        const p = data.product;
-        setProductName(p.name || "");
-        setProductImage(p.image || null);
-        setIsIncludedInTicket(p.isIncludedInTicket ?? true);
-        setBasePrice(formatPriceFromApi(p.basePrice));
-        setIsRequired(p.isRequired ?? true);
-        setVariationTypeName(p.variationType || "");
-        setVariations(
-          Array.isArray(p.variations)
-            ? p.variations.map((v: any) => ({
+    if (!isOpen) {
+      setFormInitVersion(0);
+      setProductFormBaseline(null);
+      return;
+    }
+    if (isEditing && data?.product) {
+      // Editing mode - load product data (API envia preços em centavos)
+      const p = data.product;
+      setProductName(p.name || "");
+      setProductImage(p.image || null);
+      setIsIncludedInTicket(p.isIncludedInTicket ?? true);
+      setBasePrice(formatPriceFromApi(p.basePrice));
+      setIsRequired(p.isRequired ?? true);
+      setVariationTypeName(p.variationType || "");
+      setVariations(
+        Array.isArray(p.variations)
+          ? p.variations.map((v: any) => ({
               id: v.id || String(Date.now() + Math.random()),
               name: v.name ?? "",
               price: formatPriceFromApi(v.price),
               stock: v.stock != null ? String(v.stock) : "",
             }))
-            : []
-        );
-      } else {
-        // Create mode - reset form
-        setProductName("");
-        setProductImage(null);
-        setIsIncludedInTicket(true);
-        setBasePrice("");
-        setIsRequired(true);
-        setVariationTypeName("");
-        setVariations([]);
-      }
+          : [],
+      );
+    } else {
+      // Create mode: 1ª variação "Padrão" + estoque = soma dos lotes; 2ª vazia (obrigatório nome para habilitar salvar)
+      setProductName("");
+      setProductImage(null);
+      setIsIncludedInTicket(true);
+      setBasePrice("");
+      setIsRequired(true);
+      setVariationTypeName("");
+      const sumFromTicket =
+        typeof data?.ticketBatchesTotalQuantity === "number" &&
+        Number.isFinite(data.ticketBatchesTotalQuantity)
+          ? Math.max(0, Math.floor(data.ticketBatchesTotalQuantity))
+          : 0;
+      const t = Date.now();
+      setVariations([
+        {
+          id: `${t}-a`,
+          name: "Padrão",
+          price: "",
+          stock: String(sumFromTicket),
+        },
+        {
+          id: `${t}-b`,
+          name: "",
+          price: "",
+          stock: "",
+        },
+      ]);
     }
+    setFormInitVersion((v) => v + 1);
   }, [isOpen, isEditing, data]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Formato inválido. Use JPG, PNG, GIF ou WebP.");
+  useEffect(() => {
+    if (!isOpen) {
+      setProductFormBaseline(null);
       return;
     }
+    if (formInitVersion === 0) return;
+    setProductFormBaseline(productFormSnapshot);
+    // Baseline só quando o formulário é (re)inicializado — não incluir productFormSnapshot nas deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, formInitVersion]);
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo de 10MB.");
-      return;
-    }
-
-    // Apenas criar preview, não fazer upload ainda
+  const handleProductCropped = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       setProductImage(reader.result as string);
     };
     reader.readAsDataURL(file);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  }, []);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
-      const input = document.createElement("input");
-      input.type = "file";
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      input.files = dataTransfer.files;
-      const fakeEvent = {
-        target: input,
-      } as unknown as React.ChangeEvent<HTMLInputElement>;
-      handleImageSelect(fakeEvent);
+      productCropRef.current?.openWithFile(file);
     }
   };
 
@@ -143,17 +191,26 @@ export function CreateProductModal() {
   };
 
   const handleRemoveVariation = (id: string) => {
-    if (variations.length <= 1) {
-      toast.error("É necessário ter pelo menos uma variação");
+    const minRows = isEditing ? 1 : 2;
+    if (variations.length <= minRows) {
+      toast.error(
+        minRows >= 2
+          ? "É necessário ter pelo menos duas variações"
+          : "É necessário ter pelo menos uma variação",
+      );
       return;
     }
-    setVariations(variations.filter(v => v.id !== id));
+    setVariations(variations.filter((v) => v.id !== id));
   };
 
-  const handleVariationChange = (id: string, field: keyof ProductVariation, value: string) => {
-    setVariations(variations.map(v =>
-      v.id === id ? { ...v, [field]: value } : v
-    ));
+  const handleVariationChange = (
+    id: string,
+    field: keyof ProductVariation,
+    value: string,
+  ) => {
+    setVariations(
+      variations.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
+    );
   };
 
   const formatPrice = (value: string) => {
@@ -184,8 +241,12 @@ export function CreateProductModal() {
       return;
     }
 
-    if (variations.length === 0) {
-      toast.error("Adicione pelo menos uma variação");
+    if (!hasMinVariations) {
+      toast.error(
+        isEditing
+          ? "Preencha o nome de pelo menos uma variação"
+          : "Preencha o nome de pelo menos duas variações",
+      );
       return;
     }
 
@@ -198,7 +259,9 @@ export function CreateProductModal() {
 
     try {
       // Enviar preços em centavos para a API
-      const basePriceReais = basePrice ? parseFloat(basePrice.replace(",", ".")) : 0;
+      const basePriceReais = basePrice
+        ? parseFloat(basePrice.replace(",", "."))
+        : 0;
       const productData = {
         name: productName.trim(),
         image: productImage,
@@ -206,24 +269,34 @@ export function CreateProductModal() {
         basePrice: Math.round(basePriceReais * 100),
         isRequired,
         variationType: variationTypeName.trim() || undefined,
-        variations: variations.map(v => {
-          const priceReais = parseFloat(String(v.price || "0").replace(",", ".")) || 0;
-          return {
-            name: v.name,
-            price: Math.round(priceReais * 100),
-            stock: parseInt(v.stock) || 0,
-          };
-        }),
+        variations: variations
+          .filter((v) => v.name.trim())
+          .map((v) => {
+            const priceReais =
+              parseFloat(String(v.price || "0").replace(",", ".")) || 0;
+            return {
+              name: v.name.trim(),
+              price: Math.round(priceReais * 100),
+              stock: parseInt(v.stock) || 0,
+            };
+          }),
       };
 
       let savedProduct;
       if (isEditing && data?.productId) {
         // Atualizar produto existente
-        savedProduct = await organizerService.updateProduct(eventId, data.productId, productData);
+        savedProduct = await organizerService.updateProduct(
+          eventId,
+          data.productId,
+          productData,
+        );
         toast.success("Produto atualizado com sucesso!");
       } else {
         // Criar novo produto
-        savedProduct = await organizerService.createProduct(eventId, productData);
+        savedProduct = await organizerService.createProduct(
+          eventId,
+          productData,
+        );
         toast.success("Produto criado com sucesso!");
       }
 
@@ -247,9 +320,17 @@ export function CreateProductModal() {
     }
   };
 
-  const previewPrice = variations.length > 0 && variations.some(v => parseFloat(String(v.price || "0").replace(",", ".")) > 0)
-    ? variations.find(v => parseFloat(String(v.price || "0").replace(",", ".")) > 0)?.price || basePrice || "0,00"
-    : basePrice || "0,00";
+  const previewPrice =
+    variations.length > 0 &&
+    variations.some(
+      (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
+    )
+      ? variations.find(
+          (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
+        )?.price ||
+        basePrice ||
+        "0,00"
+      : basePrice || "0,00";
 
   return (
     <AnimatePresence>
@@ -300,7 +381,9 @@ export function CreateProductModal() {
                           Adicione uma imagem do produto
                         </h3>
                         <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Boas fotos ajudam na decisão do participante
+                          Boas fotos ajudam na decisão do participante. Depois de
+                          escolher o arquivo, ajuste posição e zoom no recorte —
+                          mesmo fluxo do banner e do card do evento.
                         </p>
                       </div>
                       {productImage ? (
@@ -316,14 +399,16 @@ export function CreateProductModal() {
                           <div className="flex flex-1 flex-col gap-6">
                             <div className="flex flex-col gap-4">
                               <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                                Arraste uma imagem para este campo ou clique abaixo
+                                Arraste uma imagem para este campo ou clique
+                                abaixo
                               </p>
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 PNG ou JPG, máximo 10MB
                               </p>
                             </div>
                             <Button
-                              onClick={() => fileInputRef.current?.click()}
+                              type="button"
+                              onClick={() => productCropRef.current?.open()}
                               variant="outline"
                               className="w-full border-gray-6 text-gray-12"
                             >
@@ -332,28 +417,22 @@ export function CreateProductModal() {
                               </p>
                             </Button>
                           </div>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageSelect}
-                            className="hidden"
-                          />
                         </div>
                       ) : (
                         <div
                           onDrop={handleDrop}
                           onDragOver={handleDragOver}
                           className="border-2 border-dashed border-gray-6 rounded-xl p-6 flex flex-col gap-6 items-center justify-center min-h-[120px] cursor-pointer hover:border-primary-8 transition-colors w-full"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={() => productCropRef.current?.open()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              productCropRef.current?.open();
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                         >
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageSelect}
-                            className="hidden"
-                          />
                           <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">
                             Arraste uma imagem para este campo ou clique aqui
                           </p>
@@ -379,16 +458,10 @@ export function CreateProductModal() {
                           type="text"
                           value={productName}
                           onChange={(e) => setProductName(e.target.value)}
-                          placeholder="Ex: (ítem extra) Camiseta da Nike"
+                          placeholder="Ex: Camisa Premium"
                           maxLength={25}
                           className="h-12 px-3"
                         />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Info className="size-5 text-gray-11" />
-                        <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Limite de 25 Caracteres
-                        </span>
                       </div>
                     </div>
 
@@ -398,7 +471,23 @@ export function CreateProductModal() {
                         <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Este produto está incluso no ingresso?
                         </label>
-                        <Info className="size-5 text-gray-11" />
+                        <Tooltip
+                          content={
+                            <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
+                              Ao comprar este ingresso, o participante receberá
+                              este produto sem custo adicional.
+                            </p>
+                          }
+                          position="topRight"
+                        >
+                          <button
+                            type="button"
+                            className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
+                            aria-label="Informação: produto incluso no ingresso"
+                          >
+                            <Info className="size-5 shrink-0" />
+                          </button>
+                        </Tooltip>
                       </div>
                       <div className="flex gap-2.5">
                         <div className="flex items-center gap-2">
@@ -433,7 +522,9 @@ export function CreateProductModal() {
                             <Input
                               type="text"
                               value={basePrice ? `R$ ${basePrice}` : ""}
-                              onChange={(e) => handleBasePriceChange(e.target.value)}
+                              onChange={(e) =>
+                                handleBasePriceChange(e.target.value)
+                              }
                               placeholder="R$ 0,00"
                               className="h-12 px-3"
                             />
@@ -441,7 +532,8 @@ export function CreateProductModal() {
                           <div className="flex items-center gap-1">
                             <Info className="size-5 text-gray-11" />
                             <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] flex-1">
-                              Você ainda poderá escolher um preço específico nas variações
+                              Você ainda poderá escolher um preço específico nas
+                              variações
                             </span>
                           </div>
                         </div>
@@ -454,7 +546,23 @@ export function CreateProductModal() {
                         <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Este produto é obrigatório ou opcional?
                         </label>
-                        <Info className="size-5 text-gray-11" />
+                        <Tooltip
+                          content={
+                            <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
+                              Se for obrigatório, o participante deverá
+                              selecioná-lo para concluir a inscrição.
+                            </p>
+                          }
+                          position="topRight"
+                        >
+                          <button
+                            type="button"
+                            className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
+                            aria-label="Informação: produto obrigatório ou opcional"
+                          >
+                            <Info className="size-5 shrink-0" />
+                          </button>
+                        </Tooltip>
                       </div>
                       <div className="flex gap-2.5">
                         <div className="flex items-center gap-2">
@@ -489,7 +597,9 @@ export function CreateProductModal() {
                           Variações e estoque
                         </h3>
                         <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Crie opções como tamanhos e controle estoque por variação. Você pode reaproveitar um conjunto de variações para não repetir trabalho.
+                          Crie opções como tamanhos e controle estoque por
+                          variação. Você pode reaproveitar um conjunto de
+                          variações para não repetir trabalho.
                         </p>
                       </div>
 
@@ -518,7 +628,36 @@ export function CreateProductModal() {
                           </div>
                           <div className="w-[188px] px-4 flex items-center justify-center">
                             <span className="text-gray-12 text-sm font-medium font-inter leading-[1.3] flex items-center gap-1">
-                              Preço específico <Info className="size-5 text-gray-12" />
+                              Preço específico{" "}
+                              <Tooltip
+                                content={
+                                  <div className="flex flex-col gap-2 font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left w-full">
+                                    <p>
+                                      Defina um preço específico para esta
+                                      variação, caso ela tenha um valor diferente
+                                      do produto principal.
+                                    </p>
+                                    <p>
+                                      Por exemplo: a camiseta custa R$50, mas a
+                                      variação na cor azul pode custar R$60.
+                                    </p>
+                                    <p>
+                                      Se este campo não for preenchido, o sistema
+                                      utilizará automaticamente o preço padrão do
+                                      produto.
+                                    </p>
+                                  </div>
+                                }
+                                position="topRight"
+                              >
+                                <button
+                                  type="button"
+                                  className="inline-flex cursor-help text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
+                                  aria-label="Informação: preço específico da variação"
+                                >
+                                  <Info className="size-5 shrink-0" />
+                                </button>
+                              </Tooltip>
                             </span>
                           </div>
                           <div className="w-[132px] px-4 flex items-center justify-center">
@@ -543,7 +682,13 @@ export function CreateProductModal() {
                               <input
                                 type="text"
                                 value={variation.name}
-                                onChange={(e) => handleVariationChange(variation.id, "name", e.target.value)}
+                                onChange={(e) =>
+                                  handleVariationChange(
+                                    variation.id,
+                                    "name",
+                                    e.target.value,
+                                  )
+                                }
                                 placeholder="Ex: P, M, G"
                                 className="h-auto border-0 bg-transparent px-0 focus:ring-0 text-sm font-medium font-inter text-gray-12 focus:outline-none focus:border-0 w-full"
                               />
@@ -559,7 +704,12 @@ export function CreateProductModal() {
                                   <input
                                     type="text"
                                     value={variation.price}
-                                    onChange={(e) => handlePriceChange(variation.id, e.target.value)}
+                                    onChange={(e) =>
+                                      handlePriceChange(
+                                        variation.id,
+                                        e.target.value,
+                                      )
+                                    }
                                     className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-11 focus:outline-none focus:border-0 cursor-not-allowed"
                                     placeholder="0,00"
                                   />
@@ -570,14 +720,22 @@ export function CreateProductModal() {
                               <input
                                 type="number"
                                 value={variation.stock}
-                                onChange={(e) => handleVariationChange(variation.id, "stock", e.target.value)}
+                                onChange={(e) =>
+                                  handleVariationChange(
+                                    variation.id,
+                                    "stock",
+                                    e.target.value,
+                                  )
+                                }
                                 className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:border-0 text-center"
                                 placeholder="0"
                               />
                             </div>
                             <div className="flex items-center justify-center px-4 w-[74px]">
                               <button
-                                onClick={() => handleRemoveVariation(variation.id)}
+                                onClick={() =>
+                                  handleRemoveVariation(variation.id)
+                                }
                                 className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
                               >
                                 <TrashIcon className="size-5 text-red-12" />
@@ -640,9 +798,9 @@ export function CreateProductModal() {
                           }))}
                           width="w-full"
                           maxHeight="max-h-[200px]"
-                          selectedIds={
-                            variations.map(variation => variation.id)
-                          }
+                          selectedIds={variations.map(
+                            (variation) => variation.id,
+                          )}
                           trigger={(isOpen: boolean) => (
                             <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
                               <p className="text-base text-gray-11">
@@ -670,7 +828,13 @@ export function CreateProductModal() {
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={isSubmitting || !productName.trim()}
+                  disabled={
+                    isSubmitting ||
+                    !productName.trim() ||
+                    !hasMinVariations ||
+                    productFormBaseline === null ||
+                    !isProductFormDirty
+                  }
                 >
                   {isSubmitting
                     ? "Salvando..."
@@ -681,8 +845,19 @@ export function CreateProductModal() {
               </div>
             </div>
           </motion.div>
+
+          <ImageUploadWithCrop
+            ref={productCropRef}
+            spec={EVENT_IMAGE_SPECS.product}
+            outputBaseName="produto"
+            modalTitle="Ajustar imagem do produto"
+            onCropped={handleProductCropped}
+            onInvalidFile={(msg) => toast.error(msg)}
+            onCropFailed={(msg) => toast.error(msg)}
+          />
         </>
       )}
     </AnimatePresence>
   );
 }
+

@@ -23,6 +23,7 @@ interface TicketCategoryCardProps {
   onDeleteTicket: (ticketId: string) => void;
   onPageChange: (categoryId: string, page: number) => void;
   onDuplicateTicket: (ticketId: string) => void;
+  duplicatingTicketId?: string | null;
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
   onDropTicket?: (ticketId: string, categoryId: string) => void;
 }
@@ -39,6 +40,7 @@ export function TicketCategoryCard({
   onDeleteTicket,
   onPageChange,
   onDuplicateTicket,
+  duplicatingTicketId = null,
   productsMap = {},
   onDropTicket,
 }: TicketCategoryCardProps) {
@@ -91,6 +93,16 @@ export function TicketCategoryCard({
         onClose={() => setDeleteModalOpen(false)}
         canDelete={tickets.length === 0}
         onConfirm={() => onDelete(category.id)}
+      />
+      <DeleteTicketModal
+        open={!!ticketPendingDelete}
+        onClose={() => setTicketPendingDelete(null)}
+        ticketName={ticketPendingDelete?.name}
+        onConfirm={async () => {
+          const target = ticketPendingDelete;
+          if (!target) return;
+          await onDeleteTicket(target.id);
+        }}
       />
     <div
       ref={setNodeRef}
@@ -227,6 +239,7 @@ export function TicketCategoryCard({
           onPageChange={(page) => onPageChange(category.id, page)}
           onEdit={onEditTicket}
           onDuplicate={onDuplicateTicket}
+          duplicatingTicketId={duplicatingTicketId}
           onRequestDeleteTicket={(id: string) => {
             const t = tickets.find((x) => x.id === id);
             setTicketPendingDelete({

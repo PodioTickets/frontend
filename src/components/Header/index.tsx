@@ -69,6 +69,7 @@ export function Header() {
   const [search, setSearch] = useState("");
   const pathname = usePathname();
   const isOrganizer = pathname.includes("/organizer");
+  const isAdmin = pathname.includes("/admin");
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
@@ -124,7 +125,7 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
-  if (isOrganizer) {
+  if (isOrganizer || isAdmin) {
     return null;
   }
 

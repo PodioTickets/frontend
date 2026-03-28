@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys, invalidateQueries } from "@/services/cache/QueryClient";
 import toast from "react-hot-toast";
@@ -26,6 +26,8 @@ export interface Ticket {
 }
 
 export function useTickets(eventId: string | null, enabled: boolean = true) {
+  const queryClient = useQueryClient();
+
   // Query para buscar tickets
   const {
     data: tickets = [],
@@ -59,10 +61,26 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
     enabled: enabled && !!eventId,
   });
 
-  // Mutation para deletar ticket
+  // Mutation para deletar ticket (desvincula da categoria antes, se necessário)
   const deleteMutation = useMutation({
     mutationFn: async (ticketId: string) => {
       if (!eventId) throw new Error("Event ID is required");
+      const list = queryClient.getQueryData<Ticket[]>(
+        queryKeys.events.tickets(eventId),
+      );
+      const ticket = list?.find((t) => t.id === ticketId);
+      if (ticket?.groupId && ticket.groupId !== "uncategorized") {
+        try {
+          await organizerService.updateTicket(eventId, ticketId, {
+            categoryId: null,
+          });
+        } catch (e) {
+          console.warn(
+            "Could not unlink ticket from category before delete:",
+            e,
+          );
+        }
+      }
       return organizerService.deleteTicket(eventId, ticketId);
     },
     onSuccess: () => {

@@ -12,7 +12,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
 import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { Plus } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 import { Loading } from "@/components/Loading";
@@ -70,7 +70,6 @@ export default function InformacoesPage() {
       }
     }
   }, [authChecked, isAuthenticated, router]);
-
 
   if (!authChecked) {
     return (
@@ -209,7 +208,11 @@ export default function InformacoesPage() {
       });
 
       // Log response for debugging
-      console.log("PDF upload response status:", response.status, response.statusText);
+      console.log(
+        "PDF upload response status:",
+        response.status,
+        response.statusText,
+      );
 
       let result;
       try {
@@ -234,39 +237,54 @@ export default function InformacoesPage() {
         });
 
         // Check if error is about image files (backend validation issue)
-        const errorMessage = result.message || result.error?.message || "Erro ao fazer upload";
-        if (errorMessage.includes("image") || errorMessage.includes("Only image")) {
-          toast.error("Erro: O backend está rejeitando PDFs. Verifique a configuração do servidor.");
+        const errorMessage =
+          result.message || result.error?.message || "Erro ao fazer upload";
+        if (
+          errorMessage.includes("image") ||
+          errorMessage.includes("Only image")
+        ) {
+          toast.error(
+            "Erro: O backend está rejeitando PDFs. Verifique a configuração do servidor.",
+          );
         } else {
           toast.error(errorMessage);
         }
         throw new Error(errorMessage);
       }
-      const fileUrl = result.url || result.fileUrl || result.data?.url || result.data?.fileUrl;
+      const fileUrl =
+        result.url ||
+        result.fileUrl ||
+        result.data?.url ||
+        result.data?.fileUrl;
 
       if (fileUrl) {
-        const fullUrl = fileUrl.startsWith('http')
+        const fullUrl = fileUrl.startsWith("http")
           ? fileUrl
-          : `${apiUrl}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
+          : `${apiUrl}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
         setPdfUrl(fullUrl);
         toast.success("PDF enviado com sucesso!");
         return fullUrl;
       } else {
-        // If upload was successful (status 200/201) but no URL in response, 
+        // If upload was successful (status 200/201) but no URL in response,
         // check if file was actually uploaded by checking response structure
-        console.warn("PDF upload response missing URL, but status was OK:", result);
+        console.warn(
+          "PDF upload response missing URL, but status was OK:",
+          result,
+        );
 
         // If response indicates success but no URL, maybe the backend returns differently
         if (response.status === 200 || response.status === 201) {
           // Try to extract URL from any field
-          const possibleUrl = Object.values(result).find((v: any) =>
-            typeof v === 'string' && (v.startsWith('http') || v.startsWith('/'))
+          const possibleUrl = Object.values(result).find(
+            (v: any) =>
+              typeof v === "string" &&
+              (v.startsWith("http") || v.startsWith("/")),
           ) as string | undefined;
 
           if (possibleUrl) {
-            const fullUrl = possibleUrl.startsWith('http')
+            const fullUrl = possibleUrl.startsWith("http")
               ? possibleUrl
-              : `${apiUrl}${possibleUrl.startsWith('/') ? '' : '/'}${possibleUrl}`;
+              : `${apiUrl}${possibleUrl.startsWith("/") ? "" : "/"}${possibleUrl}`;
             setPdfUrl(fullUrl);
             toast.success("PDF enviado com sucesso!");
             return fullUrl;
@@ -274,7 +292,10 @@ export default function InformacoesPage() {
         }
 
         console.error("PDF upload response missing URL:", result);
-        throw new Error(result.message || "Resposta do servidor inválida - URL não encontrada");
+        throw new Error(
+          result.message ||
+            "Resposta do servidor inválida - URL não encontrada",
+        );
       }
     } catch (error: any) {
       console.error("Error uploading PDF:", error);
@@ -306,7 +327,6 @@ export default function InformacoesPage() {
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
-
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -379,15 +399,19 @@ export default function InformacoesPage() {
         eventData.registrationEndDate = registrationEndDateTime;
       }
 
-      if (regulationUrl && typeof regulationUrl === 'string') {
+      if (regulationUrl && typeof regulationUrl === "string") {
         eventData.regulationUrl = regulationUrl;
       }
 
       let event;
       if (formData.createdEventId) {
-        event = await organizerService.updateEvent(formData.createdEventId, eventData, {
-          clientPage: organizerNewEventClientPage("information"),
-        });
+        event = await organizerService.updateEvent(
+          formData.createdEventId,
+          eventData,
+          {
+            clientPage: organizerNewEventClientPage("information"),
+          },
+        );
       } else {
         event = await organizerService.createEvent(eventData);
         updateFormData({ createdEventId: event.id });
@@ -466,7 +490,9 @@ export default function InformacoesPage() {
                 </label>
                 <DatePicker
                   value={formData.eventDate}
-                  onChange={(value) => handleDateChange("eventDate", value || "")}
+                  onChange={(value) =>
+                    handleDateChange("eventDate", value || "")
+                  }
                   placeholder={getCurrentDatePlaceholder()}
                   className="w-max"
                   hideIcon={false}
@@ -507,7 +533,9 @@ export default function InformacoesPage() {
                   />
                   <TimePicker
                     value={formData.registrationStartTime}
-                    onChange={(value) => handleTimeChange("registrationStartTime", value)}
+                    onChange={(value) =>
+                      handleTimeChange("registrationStartTime", value)
+                    }
                     className="w-max"
                   />
                 </div>
@@ -529,7 +557,9 @@ export default function InformacoesPage() {
                   />
                   <TimePicker
                     value={formData.registrationEndTime}
-                    onChange={(value) => handleTimeChange("registrationEndTime", value)}
+                    onChange={(value) =>
+                      handleTimeChange("registrationEndTime", value)
+                    }
                     className="w-max"
                   />
                 </div>
@@ -544,7 +574,8 @@ export default function InformacoesPage() {
                 Local do evento
               </h2>
               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                Essas informações serão exibidas na página e ajudam o participante a chegar ao destino.
+                Essas informações serão exibidas na página e ajudam o
+                participante a chegar ao destino.
               </p>
             </div>
 
@@ -627,8 +658,8 @@ export default function InformacoesPage() {
 
               {/* URL do Google Maps */}
               <div className="flex flex-col gap-2 w-full">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  URL do google
+                <label className="text-gray-12 text-base font-family-dm-sans flex items-center gap-1">
+                  URL do google <Info className="size-5 text-gray-11 shrink-0" />
                 </label>
                 <div className="relative">
                   <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12" />
@@ -659,7 +690,8 @@ export default function InformacoesPage() {
               <div className="flex flex-col gap-4 items-start justify-center flex-1">
                 <div className="flex flex-col gap-2 items-start justify-center w-full">
                   <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">
-                    Envie o regulamento do evento em PDF para que os participantes possam visualizar na página do evento.
+                    Envie o regulamento do evento em PDF para que os
+                    participantes possam visualizar na página do evento.
                   </p>
                   <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
                     Formato recomendado: PDF
@@ -681,7 +713,9 @@ export default function InformacoesPage() {
             />
             {pdfFile && (
               <div className="mt-2 flex items-center gap-2">
-                <p className="text-gray-11 text-sm">Arquivo selecionado: {pdfFile.name}</p>
+                <p className="text-gray-11 text-sm">
+                  Arquivo selecionado: {pdfFile.name}
+                </p>
                 <button
                   type="button"
                   onClick={() => {
@@ -727,3 +761,4 @@ export default function InformacoesPage() {
     </div>
   );
 }
+

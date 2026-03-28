@@ -459,7 +459,9 @@ export default function EditBannerPage() {
                       className="size-10 rounded-full object-cover shrink-0"
                     />
                   ) : (
-                    <div className="size-10 rounded-full bg-gray-6 shrink-0" />
+                    <div className="size-10 rounded-full bg-gray-6 shrink-0 flex items-center justify-center">
+                      <span className="text-gray-11 font-family-dm-sans leading-[1.3] truncate">{orgName?.[0]?.toUpperCase() || "O"}</span>
+                    </div>
                   )}
                   <div className="flex flex-col min-w-0">
                     <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] truncate">

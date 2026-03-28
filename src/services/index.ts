@@ -2,6 +2,7 @@ import { ApiClient } from "./base/ApiClient";
 import { EventService } from "./events/EventService";
 import { UserService } from "./user/UserService";
 import { OrganizerService } from "./organizer/OrganizerService";
+import { AdminService } from "./admin/AdminService";
 
 export type { ApiResponse } from "./base/ApiClient";
 export type {
@@ -20,6 +21,9 @@ export const apiClient = new ApiClient(API_BASE_URL);
 export const userService = new UserService(apiClient);
 export const eventService = new EventService(apiClient);
 export const organizerService = new OrganizerService(apiClient);
+export const adminService = new AdminService(apiClient);
+
+export type { AdminAuditLogItem } from "./admin/AdminService";
 
 export type {
   EventNotification,

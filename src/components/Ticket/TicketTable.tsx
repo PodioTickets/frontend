@@ -14,6 +14,8 @@ interface TicketTableProps {
   onPageChange: (page: number) => void;
   onEdit: (ticketId: string) => void;
   onDuplicate: (ticketId: string) => void;
+  /** Ingresso em processo de duplicação (mostra spinner no botão) */
+  duplicatingTicketId?: string | null;
   /** Abre fluxo de confirmação para excluir (ex.: modal no pai) */
   onRequestDeleteTicket?: (ticketId: string) => void;
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
@@ -37,17 +39,28 @@ const formatPrice = (price: string) => {
   return `R$ ${price}`;
 };
 
+function DuplicateRowSpinner() {
+  return (
+    <span
+      className="inline-block size-[18px] shrink-0 animate-spin rounded-full border-2 border-gray-6 border-b-primary-11"
+      aria-hidden
+    />
+  );
+}
+
 function DraggableTicketRow({
   ticket,
   productsMap,
   onEdit,
   onDuplicate,
+  duplicatingTicketId,
   onRequestDeleteTicket,
 }: {
   ticket: Ticket;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
   onEdit: (ticketId: string) => void;
   onDuplicate: (ticketId: string) => void;
+  duplicatingTicketId?: string | null;
   onRequestDeleteTicket?: (ticketId: string) => void;
 }) {
   const MAX_VISIBLE_PRODUCTS = 5;
@@ -75,6 +88,9 @@ function DraggableTicketRow({
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const duplicateInProgress = duplicatingTicketId != null;
+  const isThisRowDuplicating = duplicatingTicketId === ticket.id;
 
   return (
     <div
@@ -182,11 +198,19 @@ function DraggableTicketRow({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
+            if (duplicateInProgress) return;
             onDuplicate(ticket.id);
           }}
-          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+          disabled={duplicateInProgress}
+          aria-busy={isThisRowDuplicating}
+          title="Duplicar ingresso"
+          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-gray-2"
         >
-          <Plus className="size-5 text-gray-11" />
+          {isThisRowDuplicating ? (
+            <DuplicateRowSpinner />
+          ) : (
+            <Plus className="size-5 text-gray-11" />
+          )}
         </button>
         {onRequestDeleteTicket ? (
           <button
@@ -213,6 +237,7 @@ export function TicketTable({
   onPageChange,
   onEdit,
   onDuplicate,
+  duplicatingTicketId = null,
   onRequestDeleteTicket,
   productsMap = {},
 }: TicketTableProps) {
@@ -256,6 +281,7 @@ export function TicketTable({
             productsMap={productsMap}
             onEdit={onEdit}
             onDuplicate={onDuplicate}
+            duplicatingTicketId={duplicatingTicketId}
             onRequestDeleteTicket={onRequestDeleteTicket}
           />
         ))}

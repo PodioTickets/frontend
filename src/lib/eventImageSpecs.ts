@@ -10,6 +10,12 @@ export const EVENT_IMAGE_SPECS = {
     outputWidth: 300,
     outputHeight: 300,
   },
+  /** Kit / produto do ingresso (quadrado, mesmo fluxo de corte do card do evento). */
+  product: {
+    aspect: 1,
+    outputWidth: 600,
+    outputHeight: 600,
+  },
 } as const;
 
 export type EventImageSpec = (typeof EVENT_IMAGE_SPECS)[keyof typeof EVENT_IMAGE_SPECS];

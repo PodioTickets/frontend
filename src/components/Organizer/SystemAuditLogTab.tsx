@@ -48,6 +48,147 @@ function auditLogContextLine(
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  name: "Nome",
+  eventDate: "Data do evento",
+  slug: "Slug",
+  title: "Título",
+  description: "Descrição",
+  startDate: "Data de início",
+  endDate: "Data de término",
+  location: "Local",
+  address: "Endereço",
+  city: "Cidade",
+  state: "Estado",
+  zipCode: "CEP",
+  capacity: "Capacidade",
+  status: "Status",
+  visibility: "Visibilidade",
+  image: "Imagem",
+  banner: "Banner",
+};
+
+function formatAuditFieldLabel(field: string): string {
+  const key = field.trim();
+  return AUDIT_FIELD_LABELS[key] || key;
+}
+
+function stringifyAuditValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+type AuditChangeEntry = { field: string; oldVal: string; newVal: string };
+
+function parseAuditEditDetails(meta: Record<string, unknown> | undefined): {
+  summaryLine: string | null;
+  changes: AuditChangeEntry[];
+} | null {
+  if (!meta || typeof meta !== "object") return null;
+
+  const kind = meta.kind;
+  const hasChanges = Array.isArray(meta.changes);
+  const hasEditedFieldsStr = typeof meta.editedFields === "string";
+  const hasFieldsEdited = Array.isArray(meta.fieldsEdited);
+
+  const isEditLike =
+    kind === "EVENT_UPDATE" ||
+    hasChanges ||
+    hasEditedFieldsStr ||
+    hasFieldsEdited;
+
+  if (!isEditLike) return null;
+
+  const changes: AuditChangeEntry[] = [];
+  if (hasChanges) {
+    for (const item of meta.changes as unknown[]) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const field = typeof o.field === "string" ? o.field : "";
+      if (!field) continue;
+      const oldVal =
+        o.old ?? o.oldValue ?? o.valorAntigo ?? o.previous ?? o.from;
+      const newVal =
+        o.new ?? o.newValue ?? o.valorNovo ?? o.current ?? o.to;
+      changes.push({
+        field,
+        oldVal: stringifyAuditValue(oldVal),
+        newVal: stringifyAuditValue(newVal),
+      });
+    }
+  }
+
+  const editedFieldsStr =
+    hasEditedFieldsStr ? (meta.editedFields as string).trim() : "";
+
+  const fieldsEdited = hasFieldsEdited
+    ? (meta.fieldsEdited as unknown[]).filter(
+        (x): x is string => typeof x === "string" && x.trim() !== ""
+      )
+    : [];
+
+  let summaryLine: string | null = null;
+  if (editedFieldsStr) {
+    summaryLine = editedFieldsStr;
+  } else if (fieldsEdited.length > 0) {
+    summaryLine = fieldsEdited.map(formatAuditFieldLabel).join(", ");
+  } else if (changes.length > 0) {
+    summaryLine = changes.map((c) => formatAuditFieldLabel(c.field)).join(", ");
+  }
+
+  if (!summaryLine && changes.length === 0) return null;
+
+  return { summaryLine, changes };
+}
+
+function AuditLogEditDetailsBlock({
+  meta,
+}: {
+  meta: Record<string, unknown> | undefined;
+}) {
+  const parsed = parseAuditEditDetails(meta);
+  if (!parsed) return null;
+
+  const { summaryLine, changes } = parsed;
+
+  return (
+    <div className="mt-2 space-y-1.5 border-t border-gray-6 pt-2">
+      {summaryLine ? (
+        <p className="text-xs text-gray-11 font-family-dm-sans wrap-break-word">
+          <span className="font-semibold text-gray-12">Campos alterados: </span>
+          {summaryLine}
+        </p>
+      ) : null}
+      {changes.length > 0 ? (
+        <ul className="list-none space-y-1 m-0 p-0">
+          {changes.map((c, i) => (
+            <li
+              key={`${c.field}-${i}`}
+              className="text-xs text-gray-11 font-family-dm-sans wrap-break-word"
+            >
+              <span className="font-semibold text-gray-12">
+                {formatAuditFieldLabel(c.field)}:
+              </span>{" "}
+              <span className="text-gray-11 line-through decoration-gray-8">
+                {c.oldVal}
+              </span>
+              <span className="text-gray-11"> → </span>
+              <span className="text-gray-12 font-medium">{c.newVal}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export function SystemAuditLogTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -228,6 +369,7 @@ export function SystemAuditLogTab() {
                       {metaHint}
                     </p>
                   ) : null}
+                  <AuditLogEditDetailsBlock meta={row.metadata} />
                 </div>
 
                 <div className="mt-3 rounded-lg border border-gray-6 bg-gray-2 px-3 py-2 flex items-center justify-between gap-2">
@@ -305,10 +447,16 @@ export function SystemAuditLogTab() {
                           {row.userName}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <span className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-snug block">
+                      <td className="py-3.5 px-4 max-w-[min(100%,420px)]">
+                        <span className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-snug block wrap-break-word">
                           {row.action}
                         </span>
+                        {metaHint ? (
+                          <span className="text-xs text-gray-11 font-family-dm-sans block mt-1 wrap-break-word">
+                            {metaHint}
+                          </span>
+                        ) : null}
+                        <AuditLogEditDetailsBlock meta={row.metadata} />
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="text-sm font-normal text-gray-11 font-family-dm-sans whitespace-nowrap">
