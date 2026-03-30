@@ -185,6 +185,7 @@ export function PaymentDetailsModal() {
   const participants = paymentDetailsWithRegistrations?.registrations && Array.isArray(paymentDetailsWithRegistrations.registrations) && paymentDetailsWithRegistrations.registrations.length > 0
     ? paymentDetailsWithRegistrations.registrations.map((reg: any) => ({
       id: reg.id,
+      viewRegistrationId: reg.id as string,
       registrationId: reg.id?.slice(0, 8) || "—",
       name: reg.name || "Participante",
       email: reg.email || "",
@@ -193,6 +194,7 @@ export function PaymentDetailsModal() {
     }))
     : registration?.ticket ? [{
       id: registration.id,
+      viewRegistrationId: registration.id as string,
       registrationId: registration.id?.slice(0, 8) || "—",
       name: buyerData?.firstName && buyerData?.lastName
         ? `${buyerData.firstName} ${buyerData.lastName}`
@@ -202,6 +204,7 @@ export function PaymentDetailsModal() {
       category: registration.ticket?.category?.name || "Nome da categoria",
     }] : registration?.modalities?.map((mod: any, index: number) => ({
       id: `${registration.id}-${index}`,
+      viewRegistrationId: registration.id as string,
       registrationId: registration.id?.slice(0, 8) || "—",
       name: buyerData?.firstName && buyerData?.lastName
         ? `${buyerData.firstName} ${buyerData.lastName}`
@@ -257,6 +260,15 @@ export function PaymentDetailsModal() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const goToParticipantDetails = (registrationIdForView: string) => {
+    closePaymentDetailsModal();
+    openViewRegistrationModal({
+      registrationId: registrationIdForView,
+      eventId,
+      eventName,
+    });
   };
 
   const ticketsPerPage = 4;
@@ -350,7 +362,7 @@ export function PaymentDetailsModal() {
                   <div className="flex flex-col gap-3">
                     <h2 className="font-manrope font-bold text-xl text-gray-12">Detalhes do pedido</h2>
                     <p className="font-family-dm-sans font-normal text-base text-gray-11">
-                      ID do pedido: <span className="text-gray-12">#{paymentDetails?.orderId ? paymentDetails.orderId.slice(0, 6) : registration.id?.slice(0, 6)}...{paymentDetails?.orderId ? paymentDetails.orderId.slice(-4) : registration.id?.slice(-4)}</span>
+                      ID do pedido: <span className="text-gray-12">#{paymentDetails?.orderId}</span>
                     </p>
                   </div>
                   {/* Buyer info list */}
@@ -518,7 +530,7 @@ export function PaymentDetailsModal() {
                           ID do pedido:
                         </p>
                         <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                          #{paymentDetails?.orderId ? paymentDetails.orderId.slice(0, 6) : registration.id?.slice(0, 6)}...{paymentDetails?.orderId ? paymentDetails.orderId.slice(-4) : registration.id?.slice(-4)}
+                          #{paymentDetails?.orderId}
                         </p>
                       </div>
 
@@ -817,7 +829,12 @@ export function PaymentDetailsModal() {
                                 </p>
                               </div>
                               <div className="flex-1 px-4 py-2 flex justify-end">
-                                <button className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer">
+                                <button
+                                  type="button"
+                                  aria-label="Informações do participante"
+                                  onClick={() => goToParticipantDetails(participant.viewRegistrationId)}
+                                  className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                                >
                                   <Eye className="size-4 text-gray-11" />
                                 </button>
                               </div>
@@ -861,11 +878,6 @@ export function PaymentDetailsModal() {
                           </div>
                         )}
                       </div>
-
-                      {/* Download Button */}
-                      <Button variant="outline" className="border-gray-6 rounded-lg text-gray-12 w-fit">
-                        Baixar comprovante
-                      </Button>
                     </div>
                   </div>
                 </div>

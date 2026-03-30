@@ -29,6 +29,7 @@ import {
 import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
 import { cn } from "@/utils/cn";
+import { ArrowButton } from "@/components/ArrowButton";
 
 /** Alinhado à API: status SUSPENDED (POST …/suspend e …/resume). */
 function isEventSuspended(event: { status?: string }) {
@@ -114,6 +115,8 @@ export default function OrganizerEventsPage() {
   const filteredEvents = events.filter((event) =>
     event.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const eventsPaginationTotalPages = Math.max(1, pagination.totalPages || 1);
 
   const getStatusBadge = (event: { status: string }) => {
     if (isEventSuspended(event)) {
@@ -432,45 +435,52 @@ export default function OrganizerEventsPage() {
           </>
         )}
 
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="mt-8 flex items-center justify-center gap-2">
+        <div className="mt-8 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                page: Math.max(1, prev.page - 1),
+              }))
+            }
+            disabled={pagination.page <= 1}
+            className="size-8 rotate-180 rounded-md border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+          >
+            <ArrowButton isOpen={false} />
+          </button>
+          {Array.from(
+            { length: eventsPaginationTotalPages },
+            (_, i) => i + 1
+          ).map((page) => (
             <button
+              type="button"
+              key={page}
               onClick={() =>
-                setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
+                setPagination((prev) => ({ ...prev, page }))
               }
-              disabled={pagination.page === 1}
-              className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+              className={`size-8 rounded-md border transition-colors font-family-dm-sans text-sm ${pagination.page === page
+                ? "bg-primary-11 text-white border-primary-11"
+                : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
+                }`}
             >
-              <ChevronLeft className="size-4 text-gray-11" />
+              {page}
             </button>
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
-              (page) => (
-                <button
-                  key={page}
-                  onClick={() =>
-                    setPagination((prev) => ({ ...prev, page }))
-                  }
-                  className={`size-8 rounded-full border transition-colors font-family-dm-sans text-sm ${pagination.page === page
-                    ? "bg-primary-11 text-white border-primary-11"
-                    : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
-                    }`}
-                >
-                  {page}
-                </button>
-              )
-            )}
-            <button
-              onClick={() =>
-                setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
-              }
-              disabled={pagination.page === pagination.totalPages}
-              className="size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            >
-              <ChevronRight className="size-4 text-gray-11" />
-            </button>
-          </div>
-        )}
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                page: Math.min(eventsPaginationTotalPages, prev.page + 1),
+              }))
+            }
+            disabled={pagination.page >= eventsPaginationTotalPages}
+            className="size-8 rounded-md border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+          >
+            <ArrowButton isOpen={false} />
+          </button>
+        </div>
 
         <SuspendEventModal
           open={!!suspendModalEvent}

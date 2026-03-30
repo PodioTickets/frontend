@@ -1723,6 +1723,21 @@ export class OrganizerService {
     return response.data;
   }
 
+  async reorderTicketProducts(
+    eventId: string,
+    ticketId: string,
+    productIds: string[]
+  ): Promise<{ ticketId: string; productIds: string[] }> {
+    const { data: body } = await this.apiClient.patch<{
+      message?: string;
+      data: { ticketId: string; productIds: string[] };
+    }>(
+      `/api/v1/tickets/events/${eventId}/${ticketId}/products/reorder`,
+      { productIds }
+    );
+    return body.data;
+  }
+
   async deleteTicket(eventId: string, ticketId: string): Promise<void> {
     await this.apiClient.delete(
       `/api/v1/tickets/events/${eventId}/${ticketId}`

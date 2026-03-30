@@ -8,7 +8,9 @@ import React, {
   memo,
   useCallback,
   startTransition,
+  useLayoutEffect,
 } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Checkbox } from "../CheckBox";
 import { VirtualList } from "../VirtualList";
@@ -17,6 +19,8 @@ export interface DropdownOption {
   icon?: any;
   href?: string;
   label: string;
+  /** Texto à direita (ex.: preço), em negrito — usado em layouts tipo lista com valor alinhado à direita */
+  suffix?: string;
   onClick?: () => void;
   isDivider?: boolean;
   id?: string;
@@ -224,7 +228,7 @@ const OptionItem = memo(
             </p>
           </div>
         ) : (
-          <div className="h-[48px] px-4 flex items-center gap-3 text-gray-12 hover:bg-gray-3 transition-colors duration-150 cursor-pointer group">
+          <div className="h-[48px] px-4 flex items-center gap-3 text-gray-12 hover:bg-gray-3 transition-colors duration-150 cursor-pointer group min-w-0">
             {isIconComponent && (
               <div className="shrink-0 w-5 h-5 flex items-center justify-center text-gray-11 group-hover:text-gray-12 transition-colors">
                 {React.createElement(option.icon, { className: "w-5 h-5" })}
@@ -241,9 +245,21 @@ const OptionItem = memo(
                 decoding="async"
               />
             )}
-            <span className="text-sm font-normal text-gray-12 truncate">
-              {option.label}
-            </span>
+            {option.suffix != null ? (
+              <div className="flex flex-1 min-w-0 items-center gap-1">
+                <span className="text-sm font-normal text-gray-12 truncate min-w-0">
+                  {option.label}
+                </span>
+                <span className="text-sm font-normal text-gray-12 truncate min-w-0">-</span>
+                <span className="text-sm font-bold text-gray-12 shrink-0 tabular-nums">
+                  {option.suffix}
+                </span>
+              </div>
+            ) : (
+              <span className="text-sm font-normal text-gray-12 truncate">
+                {option.label}
+              </span>
+            )}
           </div>
         )}
       </>
@@ -300,6 +316,8 @@ export interface DropdownProps {
   multiSelect?: boolean;
   selectedIds?: string[];
   onMultiSelectChange?: (selectedIds: string[]) => void;
+  /** Renderiza o painel com position:fixed no body — evita corte dentro de modais com overflow */
+  menuInPortal?: boolean;
 }
 
 export function Dropdown({
@@ -318,8 +336,17 @@ export function Dropdown({
   multiSelect = false,
   selectedIds = [],
   onMultiSelectChange,
+  menuInPortal = false,
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [portalPlacement, setPortalPlacement] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const [internalSelectedIds, setInternalSelectedIds] =
     useState<string[]>(selectedIds);
   const prevSelectedIdsRef = useRef<string[]>(selectedIds);
@@ -359,6 +386,51 @@ export function Dropdown({
   useEffect(() => {
     onOpenChangeRef.current?.(isOpen);
   }, [isOpen]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!menuInPortal || !isOpen || !triggerRef.current) {
+      setPortalPlacement(null);
+      return;
+    }
+
+    const el = triggerRef.current;
+
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      const gap = 8;
+      if (position === "top") {
+        setPortalPlacement({
+          bottom: window.innerHeight - r.top + gap,
+          left: r.left,
+          width: r.width,
+        });
+      } else if (position === "bottom") {
+        setPortalPlacement({
+          top: r.bottom + gap,
+          left: r.left,
+          width: r.width,
+        });
+      } else {
+        setPortalPlacement({
+          top: r.bottom + gap,
+          left: r.left,
+          width: r.width,
+        });
+      }
+    };
+
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [menuInPortal, isOpen, position]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -473,9 +545,125 @@ export function Dropdown({
     return options && options.length > 10;
   }, [options]);
 
+  const menuBody = (
+    <div
+      className={`${maxHeight} overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full`}
+    >
+      {children ? (
+        typeof children === "function" ? (
+          children({
+            close: () => {
+              startTransition(() => {
+                setIsOpen(false);
+              });
+            },
+          })
+        ) : (
+          children
+        )
+      ) : columns && multiSelect ? (
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
+            contentVisibility: "auto",
+            contain: "layout",
+          }}
+        >
+          {columns.map((column, colIndex) => {
+            const columnKey = `col-${colIndex}`;
+            return (
+              <div
+                key={columnKey}
+                className={`flex flex-col ${colIndex > 0 ? "border-l border-gray-6" : ""
+                  }`}
+              >
+                {column.map((item, itemIndex) => {
+                  const isSelected = selectedIdsSet.has(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className={itemIndex > 0 ? "border-t border-gray-6" : ""}
+                    >
+                      <ModalityItemWrapper
+                        item={item}
+                        isSelected={isSelected}
+                        onSelect={handleSelect}
+                        isVisible={isOpen}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      ) : shouldUseVirtualList ? (
+        <VirtualList
+          items={options}
+          itemHeight={50}
+          containerHeight={containerHeight}
+          overscan={3}
+          className="[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
+          renderItem={(option, index) => (
+            <OptionItem
+              key={option.id || option.label || index}
+              option={option}
+              index={index}
+              onSelect={handleSelect}
+              allOptions={options}
+            />
+          )}
+        />
+      ) : (
+        options?.map((option, index) => {
+          return (
+            <OptionItem
+              key={index}
+              option={option}
+              index={index}
+              onSelect={handleSelect}
+              allOptions={options}
+            />
+          );
+        })
+      )}
+    </div>
+  );
+
+  const portalMenu =
+    mounted &&
+      menuInPortal &&
+      isOpen &&
+      portalPlacement &&
+      typeof document !== "undefined"
+      ? createPortal(
+        <div
+          {...dropdownDataAttr}
+          className={`bg-gray-1 rounded-lg shadow-lg border border-gray-6 z-300 overflow-hidden ${className}`}
+          style={{
+            position: "fixed",
+            left: portalPlacement.left,
+            width: portalPlacement.width,
+            maxHeight: containerHeight,
+            ...(portalPlacement.top != null
+              ? { top: portalPlacement.top }
+              : {}),
+            ...(portalPlacement.bottom != null
+              ? { bottom: portalPlacement.bottom }
+              : {}),
+          }}
+        >
+          {menuBody}
+        </div>,
+        document.body,
+      )
+      : null;
+
   return (
     <div className="relative h-full">
       <div
+        ref={triggerRef}
         {...buttonDataAttr}
         onClick={() => {
           startTransition(() => {
@@ -486,106 +674,23 @@ export function Dropdown({
       >
         {triggerContent}
       </div>
-      <div
-        {...dropdownDataAttr}
-        className={`absolute ${positionClasses} ${width} ${maxHeight} bg-gray-1 rounded-lg shadow-lg border border-gray-6 z-50 overflow-hidden transition-all duration-200 ease-out origin-top ${className} ${
-          isOpen
-            ? "opacity-100 scale-y-100 translate-y-0 pointer-events-auto visible"
-            : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none invisible"
-        }`}
-        style={{
-          willChange: "transform, opacity",
-          contentVisibility: isOpen ? "auto" : "hidden",
-          contain: "layout style paint",
-        }}
-      >
+      {!menuInPortal && (
         <div
-          className={`${maxHeight} overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full`}
+          {...dropdownDataAttr}
+          className={`absolute ${positionClasses} ${width} ${maxHeight} bg-gray-1 rounded-lg shadow-lg border border-gray-6 z-50 overflow-hidden transition-all duration-200 ease-out origin-top ${className} ${isOpen
+              ? "opacity-100 scale-y-100 translate-y-0 pointer-events-auto visible"
+              : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none invisible"
+            }`}
+          style={{
+            willChange: "transform, opacity",
+            contentVisibility: isOpen ? "auto" : "hidden",
+            contain: "layout style paint",
+          }}
         >
-          {children ? (
-            typeof children === "function" ? (
-              children({
-                close: () => {
-                  startTransition(() => {
-                    setIsOpen(false);
-                  });
-                },
-              })
-            ) : (
-              children
-            )
-          ) : columns && multiSelect ? (
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
-                contentVisibility: "auto",
-                contain: "layout",
-              }}
-            >
-              {columns.map((column, colIndex) => {
-                const columnKey = `col-${colIndex}`;
-                return (
-                  <div
-                    key={columnKey}
-                    className={`flex flex-col ${
-                      colIndex > 0 ? "border-l border-gray-6" : ""
-                    }`}
-                  >
-                    {column.map((item, itemIndex) => {
-                      const isSelected = selectedIdsSet.has(item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          className={
-                            itemIndex > 0 ? "border-t border-gray-6" : ""
-                          }
-                        >
-                          <ModalityItemWrapper
-                            item={item}
-                            isSelected={isSelected}
-                            onSelect={handleSelect}
-                            isVisible={isOpen}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          ) : shouldUseVirtualList ? (
-            <VirtualList
-              items={options}
-              itemHeight={50}
-              containerHeight={containerHeight}
-              overscan={3}
-              className="[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
-              renderItem={(option, index) => (
-                <OptionItem
-                  key={option.id || option.label || index}
-                  option={option}
-                  index={index}
-                  onSelect={handleSelect}
-                  allOptions={options}
-                />
-              )}
-            />
-          ) : (
-            options?.map((option, index) => {
-              return (
-                <OptionItem
-                  key={index}
-                  option={option}
-                  index={index}
-                  onSelect={handleSelect}
-                  allOptions={options}
-                />
-              );
-            })
-          )}
+          {menuBody}
         </div>
-      </div>
+      )}
+      {portalMenu}
     </div>
   );
 }

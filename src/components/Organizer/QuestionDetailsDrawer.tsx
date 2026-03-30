@@ -14,7 +14,7 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Texto livre",
   true_false: "Verdadeiro ou falso",
   number: "Número",
-  select: "Seleção única",
+  select: "Lista",
   multiple_choice: "Múltipla escolha",
 };
 

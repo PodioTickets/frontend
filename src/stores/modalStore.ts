@@ -28,6 +28,10 @@ interface ModalState {
   onModalSave?: (data: any) => void;
   setOnModalSave: (callback?: (data: any) => void) => void;
 
+  /** Exclusão de tópico (fluxo do TopicModal; confirmação fica no DeleteTopicModal). */
+  onModalDelete?: () => void | Promise<void>;
+  setOnModalDelete: (callback?: () => void | Promise<void>) => void;
+
   // Callbacks específicos por tipo de modal
   callbacks: Record<string, ((data: any) => void | Promise<void>) | undefined>;
   setCallback: (modalType: string, callback?: (data: any) => void | Promise<void>) => void;
@@ -67,6 +71,12 @@ export const useModalStore = create<ModalState>()((set, get) => ({
   setOnModalSave: (callback) => {
     set({
       onModalSave: callback,
+    });
+  },
+
+  setOnModalDelete: (callback) => {
+    set({
+      onModalDelete: callback,
     });
   },
 
@@ -155,7 +165,17 @@ export const useDeleteParticipantModal = () => {
 };
 
 export const useTopicModal = () => {
-  const { openModal, closeModal, isOpen, type, data, onModalSave, setOnModalSave } = useModalStore();
+  const {
+    openModal,
+    closeModal,
+    isOpen,
+    type,
+    data,
+    onModalSave,
+    setOnModalSave,
+    onModalDelete,
+    setOnModalDelete,
+  } = useModalStore();
 
   return {
     isOpen: isOpen && type === "topic",
@@ -164,6 +184,8 @@ export const useTopicModal = () => {
     closeTopicModal: closeModal,
     onModalSave,
     setOnModalSave,
+    onModalDelete,
+    setOnModalDelete,
   };
 };
 

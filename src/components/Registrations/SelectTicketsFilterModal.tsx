@@ -64,7 +64,7 @@ export function SelectTicketsFilterModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-gray-1 rounded-xl w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-lg">
+      <div className="relative bg-gray-1 rounded-xl w-full max-w-[1098px] max-h-[90vh] overflow-hidden flex flex-col shadow-lg">
         {/* Header */}
         <div className="border-b border-gray-6 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">

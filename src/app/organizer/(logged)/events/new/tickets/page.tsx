@@ -18,7 +18,6 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
 import { TicketTable } from "@/components/Ticket/TicketTable";
-import { DeleteTicketModal } from "@/components/Ticket/DeleteTicketModal";
 import { organizerService } from "@/services";
 import {
   DndContext,
@@ -45,10 +44,6 @@ export default function IngressosPage() {
   const [newGroupName, setNewGroupName] = useState("");
   const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<Record<string, "table" | "cards">>({});
-  const [ticketPendingDelete, setTicketPendingDelete] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
   const [duplicatingTicketId, setDuplicatingTicketId] = useState<string | null>(
     null,
   );
@@ -66,7 +61,6 @@ export default function IngressosPage() {
     tickets,
     loading: ticketsLoading,
     loadTickets,
-    deleteTicket,
   } = useTickets(formData.createdEventId, authChecked);
 
   const loading = categoriesLoading || ticketsLoading;
@@ -197,10 +191,6 @@ export default function IngressosPage() {
       // Error já foi tratado no hook
     }
   }, [deleteCategory]);
-
-  const handleDeleteTicket = useCallback(async (ticketId: string) => {
-    await deleteTicket(ticketId);
-  }, [deleteTicket]);
 
   const handleEditTicket = useCallback((ticketId: string) => {
     router.push(`/organizer/events/new/tickets/edit/${ticketId}`);
@@ -501,17 +491,6 @@ export default function IngressosPage() {
 
   return (
     <>
-      <DeleteTicketModal
-        open={!!ticketPendingDelete}
-        onClose={() => setTicketPendingDelete(null)}
-        ticketName={ticketPendingDelete?.name}
-        onConfirm={async () => {
-          const target = ticketPendingDelete;
-          if (target) {
-            await handleDeleteTicket(target.id);
-          }
-        }}
-      />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -582,13 +561,6 @@ export default function IngressosPage() {
                   onEdit={handleEditTicket}
                   onDuplicate={handleDuplicateTicket}
                   duplicatingTicketId={duplicatingTicketId}
-                  onRequestDeleteTicket={(id: string) => {
-                    const t = allTickets.find((x) => x.id === id);
-                    setTicketPendingDelete({
-                      id,
-                      name: t?.name?.trim() || "Ingresso",
-                    });
-                  }}
                   productsMap={productsMap}
                 />
               </div>
@@ -765,7 +737,6 @@ export default function IngressosPage() {
                     onEditDescription={handleUpdateGroupDescription}
                     onDelete={handleDeleteGroup}
                     onEditTicket={handleEditTicket}
-                    onDeleteTicket={handleDeleteTicket}
                     onPageChange={handlePageChange}
                     onDuplicateTicket={handleDuplicateTicket}
                     duplicatingTicketId={duplicatingTicketId}

@@ -190,6 +190,7 @@ export class AdminService {
     page?: number;
     limit?: number;
     organizationId?: string;
+    userId?: string;
     kind?: string;
   }): Promise<{
     items: AdminAuditLogItem[];
@@ -202,6 +203,7 @@ export class AdminService {
       from,
       to,
       organizationId,
+      userId,
       kind,
     } = params || {};
 
@@ -215,6 +217,7 @@ export class AdminService {
           ...(from ? { from } : {}),
           ...(to ? { to } : {}),
           ...(organizationId ? { organizationId } : {}),
+          ...(userId ? { userId } : {}),
           ...(kind?.trim() ? { kind: kind.trim() } : {}),
         },
       }

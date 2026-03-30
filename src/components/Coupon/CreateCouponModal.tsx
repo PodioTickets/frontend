@@ -59,14 +59,14 @@ export function CreateCouponModal() {
         setNote(c.note || "");
         setDiscountType(c.type || "PERCENTAGE");
         setValue(c.value?.toString() || "");
-        
+
         // Handle appliesTo - pode ser "all" ou array de objetos com ingressos
         if (c.appliesTo === "all" || !c.appliesTo) {
           setAppliesTo("all");
           setSelectedTicketIds([]);
         } else if (Array.isArray(c.appliesTo)) {
           // Se for array, extrair os IDs dos objetos
-          const ticketIds = c.appliesTo.map((ticket: any) => 
+          const ticketIds = c.appliesTo.map((ticket: any) =>
             typeof ticket === "string" ? ticket : ticket.id
           );
           setAppliesTo("specific");
@@ -75,7 +75,7 @@ export function CreateCouponModal() {
           setAppliesTo("all");
           setSelectedTicketIds([]);
         }
-        
+
         setExpiryDate(c.expiryDate || null);
         setExpiryEnabled(!!c.expiryDate);
         setMinCartValue(c.minCartValue?.toString() || "");
@@ -265,762 +265,762 @@ export function CreateCouponModal() {
 
   return (
     <>
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/90 z-50"
-            onClick={closeCreateCouponModal}
-          />
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/90 z-50"
+              onClick={closeCreateCouponModal}
+            />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
-              {/* Header */}
-              <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                  Criar cupom
-                </h2>
-                <button
-                  onClick={closeCreateCouponModal}
-                  className="text-gray-11 hover:text-gray-12 transition-colors p-1 rounded-lg hover:bg-gray-3"
-                >
-                  <X className="size-6" />
-                </button>
-              </div>
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
+                {/* Header */}
+                <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
+                  <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
+                    Criar cupom
+                  </h2>
+                  <button
+                    onClick={closeCreateCouponModal}
+                    className="text-gray-11 hover:text-gray-12 transition-colors p-1 rounded-lg hover:bg-gray-3"
+                  >
+                    <X className="size-6" />
+                  </button>
+                </div>
 
-              {/* Content */}
-              <div className="flex-1 overflow-hidden flex">
-                <div className="flex-1 overflow-y-auto p-5">
-                  <div className="flex flex-col gap-9 max-w-full">
-                    {/* Tipo de cupom */}
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-3">
-                        <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                          O que você quer criar?
-                        </h3>
+                {/* Content */}
+                <div className="flex-1 overflow-hidden flex">
+                  <div className="flex-1 overflow-y-auto p-5">
+                    <div className="flex flex-col gap-9 max-w-full">
+                      {/* Tipo de cupom */}
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-3">
+                          <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                            O que você quer criar?
+                          </h3>
+                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                            Escolha um tipo de desconto para configurar
+                          </p>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => {
+                              setCouponType("DISCOUNT");
+                              setMinQuantity("");
+                              setAgeValue("");
+                              setAgeRule("MIN");
+                            }}
+                            className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "DISCOUNT"
+                              ? "bg-primary-4 border-primary-8"
+                              : "border-gray-6 hover:bg-gray-2"
+                              }`}
+                          >
+                            <Checkbox checked={couponType === "DISCOUNT"} />
+                            <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "DISCOUNT" ? "text-gray-12" : "text-gray-11"
+                              }`}>
+                              Cupom de desconto
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setCouponType("QUANTITY");
+                              setAgeValue("");
+                              setAgeRule("MIN");
+                            }}
+                            className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "QUANTITY"
+                              ? "bg-primary-4 border-primary-8"
+                              : "border-gray-6 hover:bg-gray-2"
+                              }`}
+                          >
+                            <Checkbox checked={couponType === "QUANTITY"} />
+                            <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "QUANTITY" ? "text-gray-12" : "text-gray-11"
+                              }`}>
+                              Cupom por quantidade
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setCouponType("AGE");
+                              setMinQuantity("");
+                            }}
+                            className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "AGE"
+                              ? "bg-primary-4 border-primary-8"
+                              : "border-gray-6 hover:bg-gray-2"
+                              }`}
+                          >
+                            <Checkbox checked={couponType === "AGE"} />
+                            <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "AGE" ? "text-gray-12" : "text-gray-11"
+                              }`}>
+                              Cupom por idade
+                            </span>
+                          </button>
+                        </div>
                         <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                          Escolha um tipo de desconto para configurar
+                          {couponType === "DISCOUNT" && "O participante digita um código no pagamento"}
+                          {couponType === "QUANTITY" && "Aplica ao comprar uma quantidade mínima de ingressos"}
+                          {couponType === "AGE" && "Aplica conforme a idade do participante na data do evento"}
                         </p>
                       </div>
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => {
-                            setCouponType("DISCOUNT");
-                            setMinQuantity("");
-                            setAgeValue("");
-                            setAgeRule("MIN");
-                          }}
-                          className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "DISCOUNT"
-                            ? "bg-primary-4 border-primary-8"
-                            : "border-gray-6 hover:bg-gray-2"
-                            }`}
-                        >
-                          <Checkbox checked={couponType === "DISCOUNT"} />
-                          <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "DISCOUNT" ? "text-gray-12" : "text-gray-11"
-                            }`}>
-                            Cupom de desconto
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setCouponType("QUANTITY");
-                            setAgeValue("");
-                            setAgeRule("MIN");
-                          }}
-                          className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "QUANTITY"
-                            ? "bg-primary-4 border-primary-8"
-                            : "border-gray-6 hover:bg-gray-2"
-                            }`}
-                        >
-                          <Checkbox checked={couponType === "QUANTITY"} />
-                          <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "QUANTITY" ? "text-gray-12" : "text-gray-11"
-                            }`}>
-                            Cupom por quantidade
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setCouponType("AGE");
-                            setMinQuantity("");
-                          }}
-                          className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "AGE"
-                            ? "bg-primary-4 border-primary-8"
-                            : "border-gray-6 hover:bg-gray-2"
-                            }`}
-                        >
-                          <Checkbox checked={couponType === "AGE"} />
-                          <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "AGE" ? "text-gray-12" : "text-gray-11"
-                            }`}>
-                            Cupom por idade
-                          </span>
-                        </button>
-                      </div>
-                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                        {couponType === "DISCOUNT" && "O participante digita um código no pagamento"}
-                        {couponType === "QUANTITY" && "Aplica ao comprar uma quantidade mínima de ingressos"}
-                        {couponType === "AGE" && "Aplica conforme a idade do participante na data do evento"}
-                      </p>
-                    </div>
 
-                    {/* Renderizar inputs apenas após selecionar um tipo */}
-                    {couponType && (
-                      <>
-                        {/* Título do tipo de cupom selecionado */}
-                        {couponType === "DISCOUNT" && (
-                          <div className="flex flex-col gap-3">
-                            <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                              Cupom de desconto
-                            </h3>
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              Crie um código para o participante digitar no pagamento e receber o desconto
-                            </p>
-                          </div>
-                        )}
-
-                        {couponType === "QUANTITY" && (
-                          <div className="flex flex-col gap-3">
-                            <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                              Cupom por quantidade (automático)
-                            </h3>
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos
-                            </p>
-                          </div>
-                        )}
-
-                        {couponType === "AGE" && (
-                          <div className="flex flex-col gap-3">
-                            <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                              Cupom por idade (automático)
-                            </h3>
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              Desconto automático para participantes dentro de uma faixa de idade na data do evento
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Quantidade mínima de ingressos - apenas para QUANTITY */}
-                        {couponType === "QUANTITY" && (
-                          <div className="flex flex-col gap-2.5 w-[596px]">
-                            <div className="flex flex-col gap-2">
-                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Quantidade mínima de ingressos
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: 3"
-                                value={minQuantity}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/[^0-9]/g, "");
-                                  setMinQuantity(val);
-                                }}
-                                className="h-12"
-                              />
-                            </div>
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Regra de idade - apenas para AGE */}
-                        {couponType === "AGE" && (
-                          <div className="flex flex-col gap-5 w-full">
+                      {/* Renderizar inputs apenas após selecionar um tipo */}
+                      {couponType && (
+                        <>
+                          {/* Título do tipo de cupom selecionado */}
+                          {couponType === "DISCOUNT" && (
                             <div className="flex flex-col gap-3">
-                              <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                Regra de idade
+                              <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+                                Cupom de desconto
                               </h3>
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Aplica para participantes com idade a partir de X
+                                Crie um código para o participante digitar no pagamento e receber o desconto
                               </p>
                             </div>
-                            <div className="flex gap-4">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={ageRule === "MIN"}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) setAgeRule("MIN");
-                                  }}
-                                />
-                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                  Idade mínima
-                                </span>
-                              </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={ageRule === "MAX"}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) setAgeRule("MAX");
-                                  }}
-                                />
-                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                  Idade máxima
-                                </span>
-                              </label>
-                            </div>
-                            <div className="flex flex-col gap-2 w-[132px]">
-                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Título
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: 9 anos"
-                                value={ageValue}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setAgeValue(val);
-                                }}
-                                className="h-12"
-                              />
-                            </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Código do cupom - apenas para DISCOUNT */}
-                        {couponType === "DISCOUNT" && (
+                          {couponType === "QUANTITY" && (
+                            <div className="flex flex-col gap-3">
+                              <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+                                Cupom por quantidade (automático)
+                              </h3>
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos
+                              </p>
+                            </div>
+                          )}
+
+                          {couponType === "AGE" && (
+                            <div className="flex flex-col gap-3">
+                              <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+                                Cupom por idade (automático)
+                              </h3>
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                Desconto automático para participantes dentro de uma faixa de idade na data do evento
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Quantidade mínima de ingressos - apenas para QUANTITY */}
+                          {couponType === "QUANTITY" && (
+                            <div className="flex flex-col gap-2.5 w-[596px]">
+                              <div className="flex flex-col gap-2">
+                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                  Quantidade mínima de ingressos
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Ex: 3"
+                                  value={minQuantity}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, "");
+                                    setMinQuantity(val);
+                                  }}
+                                  className="h-12"
+                                />
+                              </div>
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                Ao atingir essa quantidade no carrinho, o cupom é aplicado automaticamente
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Regra de idade - apenas para AGE */}
+                          {couponType === "AGE" && (
+                            <div className="flex flex-col gap-5 w-full">
+                              <div className="flex flex-col gap-3">
+                                <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                  Regra de idade
+                                </h3>
+                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                  Aplica para participantes com idade a partir de X
+                                </p>
+                              </div>
+                              <div className="flex gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={ageRule === "MIN"}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) setAgeRule("MIN");
+                                    }}
+                                  />
+                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                    Idade mínima
+                                  </span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={ageRule === "MAX"}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) setAgeRule("MAX");
+                                    }}
+                                  />
+                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                    Idade máxima
+                                  </span>
+                                </label>
+                              </div>
+                              <div className="flex flex-col gap-2 w-[132px]">
+                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                  Título
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Ex: 9 anos"
+                                  value={ageValue}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setAgeValue(val);
+                                  }}
+                                  className="h-12"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Código do cupom - apenas para DISCOUNT */}
+                          {couponType === "DISCOUNT" && (
+                            <div className="flex flex-col gap-2.5">
+                              <div className="flex flex-col gap-2">
+                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                  Título
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Ex: PODIO10"
+                                  value={code}
+                                  onChange={(e) => {
+                                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                    if (val.length <= 25) {
+                                      setCode(val);
+                                    }
+                                  }}
+                                  maxLength={25}
+                                  className="h-12"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <InfoIcon className="size-5 text-gray-11 shrink-0" />
+                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                  Limite de 25 Caracteres, use letras e números, sem espaços
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Código do cupom - para QUANTITY */}
+                          {couponType === "QUANTITY" && (
+                            <div className="flex flex-col gap-2.5">
+                              <div className="flex flex-col gap-2">
+                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                  Título
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Ex: PODIO10"
+                                  value={code}
+                                  onChange={(e) => {
+                                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                    if (val.length <= 25) {
+                                      setCode(val);
+                                    }
+                                  }}
+                                  maxLength={25}
+                                  className="h-12"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <InfoIcon className="size-5 text-gray-11 shrink-0" />
+                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                  Limite de 25 Caracteres, use letras e números, sem espaços
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Nota (opcional) */}
                           <div className="flex flex-col gap-2.5">
                             <div className="flex flex-col gap-2">
                               <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Título
+                                Nota <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">(opcional)</span>
                               </label>
                               <Input
                                 type="text"
-                                placeholder="Ex: PODIO10"
-                                value={code}
-                                onChange={(e) => {
-                                  const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                                  if (val.length <= 25) {
-                                    setCode(val);
-                                  }
-                                }}
-                                maxLength={25}
+                                placeholder="Ex: Cupom para parceiros / campanha de Instagram"
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
                                 className="h-12"
                               />
                             </div>
                             <div className="flex items-center gap-1">
                               <InfoIcon className="size-5 text-gray-11 shrink-0" />
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Limite de 25 Caracteres, use letras e números, sem espaços
+                                Essa nota é só para organização interna
                               </p>
                             </div>
                           </div>
-                        )}
 
-                        {/* Código do cupom - para QUANTITY */}
-                        {couponType === "QUANTITY" && (
-                          <div className="flex flex-col gap-2.5">
-                            <div className="flex flex-col gap-2">
-                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Título
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: PODIO10"
-                                value={code}
-                                onChange={(e) => {
-                                  const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                                  if (val.length <= 25) {
-                                    setCode(val);
-                                  }
-                                }}
-                                maxLength={25}
-                                className="h-12"
-                              />
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Limite de 25 Caracteres, use letras e números, sem espaços
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Nota (opcional) */}
-                        <div className="flex flex-col gap-2.5">
-                          <div className="flex flex-col gap-2">
-                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Nota <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">(opcional)</span>
-                            </label>
-                            <Input
-                              type="text"
-                              placeholder="Ex: Cupom para parceiros / campanha de Instagram"
-                              value={note}
-                              onChange={(e) => setNote(e.target.value)}
-                              className="h-12"
-                            />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              Essa nota é só para organização interna
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Tipo de desconto */}
-                        <div className="flex flex-col gap-4">
-                          <div className="flex flex-col gap-3">
-                            <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                              Tipo de desconto
-                            </h3>
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              Escolha como o desconto será aplicado
-                            </p>
-                          </div>
-                          <div className="flex gap-2.5">
-                            <label className="flex items-center gap-2">
-                              <Radio
-                                checked={discountType === "PERCENTAGE"}
-                                onChange={() => setDiscountType("PERCENTAGE")}
-                              />
-                              <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                Percentual (%)
-                              </span>
-                            </label>
-                            <label className="flex items-center gap-2">
-                              <Radio
-                                checked={discountType === "FIXED"}
-                                onChange={() => setDiscountType("FIXED")}
-                              />
-                              <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                Valor fixo (R$)
-                              </span>
-                            </label>
-                          </div>
-                          <div className="flex flex-col gap-2 w-[259px]">
-                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Valor
-                            </label>
-                            <Input
-                              type="text"
-                              placeholder={discountType === "PERCENTAGE" ? "Ex: 10%" : "Ex: 20,00"}
-                              value={value}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (discountType === "PERCENTAGE") {
-                                  const num = val.replace(/[^0-9]/g, "");
-                                  if (num === "" || (parseInt(num) >= 0 && parseInt(num) <= 100)) {
-                                    setValue(num ? `${num}%` : "");
-                                  }
-                                } else {
-                                  // Format as currency
-                                  const num = val.replace(/[^0-9]/g, "");
-                                  if (num === "") {
-                                    setValue("");
-                                  } else {
-                                    const formatted = (parseInt(num) / 100).toFixed(2).replace(".", ",");
-                                    setValue(`R$ ${formatted}`);
-                                  }
-                                }
-                              }}
-                              className="h-12"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Aplicar em ingressos - para DISCOUNT */}
-                        {couponType === "DISCOUNT" && (
+                          {/* Tipo de desconto */}
                           <div className="flex flex-col gap-4">
                             <div className="flex flex-col gap-3">
                               <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                                Aplicar em ingressos
+                                Tipo de desconto
                               </h3>
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Deseja aplicar em todos os ingressos?
+                                Escolha como o desconto será aplicado
                               </p>
                             </div>
-                            <div className="flex gap-4">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={appliesTo === "all"}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) setAppliesTo("all");
-                                  }}
+                            <div className="flex gap-2.5">
+                              <label className="flex items-center gap-2">
+                                <Radio
+                                  checked={discountType === "PERCENTAGE"}
+                                  onChange={() => setDiscountType("PERCENTAGE")}
                                 />
                                 <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                  Sim
+                                  Percentual (%)
                                 </span>
                               </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={appliesTo === "specific"}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) setAppliesTo("specific");
-                                  }}
+                              <label className="flex items-center gap-2">
+                                <Radio
+                                  checked={discountType === "FIXED"}
+                                  onChange={() => setDiscountType("FIXED")}
                                 />
                                 <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                  Ingressos específicos
+                                  Valor fixo (R$)
                                 </span>
                               </label>
                             </div>
-                            {appliesTo === "specific" && (
-                              <div className="flex flex-col gap-2 w-[276px]">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowSelectTicketsModal(true)}
-                                  className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
-                                >
-                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                    {selectedTicketIds.length > 0
-                                      ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
-                                      : "Selecione os ingressos"}
-                                  </span>
-                                  <ChevronDown className="size-6 text-gray-11" />
-                                </button>
+                            <div className="flex flex-col gap-2 w-[259px]">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                Valor
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder={discountType === "PERCENTAGE" ? "Ex: 10%" : "Ex: 20,00"}
+                                value={value}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (discountType === "PERCENTAGE") {
+                                    const num = val.replace(/[^0-9]/g, "");
+                                    if (num === "" || (parseInt(num) >= 0 && parseInt(num) <= 100)) {
+                                      setValue(num ? `${num}%` : "");
+                                    }
+                                  } else {
+                                    // Format as currency
+                                    const num = val.replace(/[^0-9]/g, "");
+                                    if (num === "") {
+                                      setValue("");
+                                    } else {
+                                      const formatted = (parseInt(num) / 100).toFixed(2).replace(".", ",");
+                                      setValue(`R$ ${formatted}`);
+                                    }
+                                  }
+                                }}
+                                className="h-12"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Aplicar em ingressos - para DISCOUNT */}
+                          {couponType === "DISCOUNT" && (
+                            <div className="flex flex-col gap-4">
+                              <div className="flex flex-col gap-3">
+                                <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                  Aplicar em ingressos
+                                </h3>
+                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                  Deseja aplicar em todos os ingressos?
+                                </p>
                               </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Aplicar em ingressos - para QUANTITY */}
-                        {couponType === "QUANTITY" && (
-                          <div className="flex flex-col gap-2 w-[276px]">
-                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Aplicar em quais ingressos?
-                            </label>
-                            <Dropdown
-                              trigger={
-                                <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
-                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                    {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
+                              <div className="flex gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={appliesTo === "all"}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) setAppliesTo("all");
+                                    }}
+                                  />
+                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                    Sim
                                   </span>
-                                  <ChevronDown className="size-6 text-gray-11" />
-                                </div>
-                              }
-                              options={[
-                                { id: "all", label: "Todos os ingressos" },
-                                // TODO: Adicionar ingressos específicos quando disponível
-                              ]}
-                              onSelect={(option) => {
-                                setAppliesTo(option.id === "all" ? "all" : "specific");
-                              }}
-                              width="w-[276px]"
-                            />
-                          </div>
-                        )}
-
-                        {/* Aplicar em ingressos - para AGE */}
-                        {couponType === "AGE" && (
-                          <div className="flex flex-col gap-2 w-[276px]">
-                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Aplicar em quais ingressos?
-                            </label>
-                            <Dropdown
-                              trigger={
-                                <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
-                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                    {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={appliesTo === "specific"}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) setAppliesTo("specific");
+                                    }}
+                                  />
+                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                    Ingressos específicos
                                   </span>
-                                  <ChevronDown className="size-6 text-gray-11" />
+                                </label>
+                              </div>
+                              {appliesTo === "specific" && (
+                                <div className="flex flex-col gap-2 w-[276px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowSelectTicketsModal(true)}
+                                    className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
+                                  >
+                                    <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
+                                      {selectedTicketIds.length > 0
+                                        ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
+                                        : "Selecione os ingressos"}
+                                    </span>
+                                    <ChevronDown className="size-6 text-gray-11" />
+                                  </button>
                                 </div>
-                              }
-                              options={[
-                                { id: "all", label: "Todos os ingressos" },
-                                // TODO: Adicionar ingressos específicos quando disponível
-                              ]}
-                              onSelect={(option) => {
-                                setAppliesTo(option.id === "all" ? "all" : "specific");
-                              }}
-                              width="w-[276px]"
-                            />
-                          </div>
-                        )}
+                              )}
+                            </div>
+                          )}
 
-                        {/* Conteúdo avançado */}
-                        <div className="flex flex-col gap-5">
-                          <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
-                          >
-                            <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
-                              Mostrar conteúdo avançado opcionais
-                            </span>
-                            <ArrowButton isOpen={showAdvanced} />
-                          </button>
+                          {/* Aplicar em ingressos - para QUANTITY */}
+                          {couponType === "QUANTITY" && (
+                            <div className="flex flex-col gap-2 w-[276px]">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                Aplicar em quais ingressos?
+                              </label>
+                              <Dropdown
+                                trigger={
+                                  <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
+                                    <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
+                                      {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
+                                    </span>
+                                    <ChevronDown className="size-6 text-gray-11" />
+                                  </div>
+                                }
+                                options={[
+                                  { id: "all", label: "Todos os ingressos" },
+                                  // TODO: Adicionar ingressos específicos quando disponível
+                                ]}
+                                onSelect={(option) => {
+                                  setAppliesTo(option.id === "all" ? "all" : "specific");
+                                }}
+                                width="w-[276px]"
+                              />
+                            </div>
+                          )}
 
-                          <AnimatePresence>
-                            {showAdvanced && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden flex flex-col gap-9"
-                              >
-                                {/* Validade do cupom */}
-                                <div className="flex flex-col gap-5">
-                                  <div className="flex flex-col gap-3">
-                                    <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                      Validade do cupom
-                                    </h3>
-                                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                      Após essa data, o cupom não poderá ser usado
-                                    </p>
+                          {/* Aplicar em ingressos - para AGE */}
+                          {couponType === "AGE" && (
+                            <div className="flex flex-col gap-2 w-[276px]">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                Aplicar em quais ingressos?
+                              </label>
+                              <Dropdown
+                                trigger={
+                                  <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
+                                    <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
+                                      {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
+                                    </span>
+                                    <ChevronDown className="size-6 text-gray-11" />
                                   </div>
-                                  <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                      <Checkbox
-                                        checked={!expiryEnabled}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) {
-                                            setExpiryEnabled(false);
-                                            setExpiryDate(null);
-                                          }
-                                        }}
-                                      />
-                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                        Desabilitar
-                                      </span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                      <Checkbox
-                                        checked={expiryEnabled}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) setExpiryEnabled(true);
-                                        }}
-                                      />
-                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                        Habilitar
-                                      </span>
-                                    </label>
-                                  </div>
-                                  {expiryEnabled && (
+                                }
+                                options={[
+                                  { id: "all", label: "Todos os ingressos" },
+                                  // TODO: Adicionar ingressos específicos quando disponível
+                                ]}
+                                onSelect={(option) => {
+                                  setAppliesTo(option.id === "all" ? "all" : "specific");
+                                }}
+                                width="w-[276px]"
+                              />
+                            </div>
+                          )}
+
+                          {/* Conteúdo avançado */}
+                          <div className="flex flex-col gap-5">
+                            <button
+                              onClick={() => setShowAdvanced(!showAdvanced)}
+                              className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
+                            >
+                              <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
+                                Mostrar conteúdo avançado opcionais
+                              </span>
+                              <ArrowButton isOpen={showAdvanced} />
+                            </button>
+
+                            <AnimatePresence>
+                              {showAdvanced && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="overflow-hidden flex flex-col gap-9"
+                                >
+                                  {/* Validade do cupom */}
+                                  <div className="flex flex-col gap-5">
                                     <div className="flex flex-col gap-3">
-                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                        Expira em:
-                                      </label>
-                                      <DatePicker
-                                        value={expiryDate || undefined}
-                                        onChange={setExpiryDate}
-                                        placeholder="00/00/2026"
-                                        className="w-auto"
-                                      />
+                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                        Validade do cupom
+                                      </h3>
+                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                        Após essa data, o cupom não poderá ser usado
+                                      </p>
                                     </div>
-                                  )}
-                                </div>
+                                    <div className="flex gap-4">
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={!expiryEnabled}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) {
+                                              setExpiryEnabled(false);
+                                              setExpiryDate(null);
+                                            }
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                          Desabilitar
+                                        </span>
+                                      </label>
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={expiryEnabled}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) setExpiryEnabled(true);
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                          Habilitar
+                                        </span>
+                                      </label>
+                                    </div>
+                                    {expiryEnabled && (
+                                      <div className="flex flex-col gap-3">
+                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                          Expira em:
+                                        </label>
+                                        <DatePicker
+                                          value={expiryDate || undefined}
+                                          onChange={setExpiryDate}
+                                          placeholder="00/00/2026"
+                                          className="w-auto"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
 
-                                {/* Valor mínimo do carrinho */}
-                                <div className="flex flex-col gap-5">
-                                  <div className="flex flex-col gap-3">
-                                    <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                      Valor mínimo do carrinho
-                                    </h3>
-                                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                      O cupom só será aplicado se o carrinho atingir esse valor
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                      <Checkbox
-                                        checked={!minCartEnabled}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) {
-                                            setMinCartEnabled(false);
-                                            setMinCartValue("");
-                                          }
-                                        }}
-                                      />
-                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                        Desabilitar
-                                      </span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                      <Checkbox
-                                        checked={minCartEnabled}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) setMinCartEnabled(true);
-                                        }}
-                                      />
-                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                        Habilitar
-                                      </span>
-                                    </label>
-                                  </div>
-                                  {minCartEnabled && (
-                                    <div className="flex flex-col gap-2 w-[259px]">
-                                      <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                  {/* Valor mínimo do carrinho */}
+                                  <div className="flex flex-col gap-5">
+                                    <div className="flex flex-col gap-3">
+                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                         Valor mínimo do carrinho
+                                      </h3>
+                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                        O cupom só será aplicado se o carrinho atingir esse valor
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={!minCartEnabled}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) {
+                                              setMinCartEnabled(false);
+                                              setMinCartValue("");
+                                            }
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                          Desabilitar
+                                        </span>
                                       </label>
-                                      <Input
-                                        type="text"
-                                        placeholder="Ex: 100,00"
-                                        value={minCartValue}
-                                        onChange={(e) => {
-                                          const num = e.target.value.replace(/[^0-9]/g, "");
-                                          if (num === "") {
-                                            setMinCartValue("");
-                                          } else {
-                                            const formatted = (parseInt(num) / 100).toFixed(2).replace(".", ",");
-                                            setMinCartValue(`R$ ${formatted}`);
-                                          }
-                                        }}
-                                        className="h-12"
-                                      />
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={minCartEnabled}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) setMinCartEnabled(true);
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                          Habilitar
+                                        </span>
+                                      </label>
                                     </div>
-                                  )}
-                                </div>
-
-                                {/* Lista exclusiva por CPF */}
-                                <div className="flex flex-col gap-4">
-                                  <div className="flex flex-col gap-3">
-                                    <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                                      Deseja ativar lista exclusiva por CPF?
-                                    </h3>
-                                    <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                      Restrinja o cupom para uma lista específica de CPFs
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                      <Checkbox
-                                        checked={cpfListStatus === "DISABLED"}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) setCpfListStatus("DISABLED");
-                                        }}
-                                      />
-                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                        Desabilitado
-                                      </span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                      <Checkbox
-                                        checked={cpfListStatus === "ENABLED"}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) setCpfListStatus("ENABLED");
-                                        }}
-                                      />
-                                      <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                        Habilitar
-                                      </span>
-                                    </label>
-                                  </div>
-
-                                  {cpfListStatus === "ENABLED" && (
-                                    <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg flex flex-col">
-                                      <div className="p-5 flex flex-col gap-3">
-                                        <h4 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                          Lista exclusiva
-                                        </h4>
-                                        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                          Restrinja o cupom para uma lista específica de CPFs. Importe um CSV com 1 CPF por linha (apenas números)
-                                        </p>
+                                    {minCartEnabled && (
+                                      <div className="flex flex-col gap-2 w-[259px]">
+                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                          Valor mínimo do carrinho
+                                        </label>
+                                        <Input
+                                          type="text"
+                                          placeholder="Ex: 100,00"
+                                          value={minCartValue}
+                                          onChange={(e) => {
+                                            const num = e.target.value.replace(/[^0-9]/g, "");
+                                            if (num === "") {
+                                              setMinCartValue("");
+                                            } else {
+                                              const formatted = (parseInt(num) / 100).toFixed(2).replace(".", ",");
+                                              setMinCartValue(`R$ ${formatted}`);
+                                            }
+                                          }}
+                                          className="h-12"
+                                        />
                                       </div>
-                                      <div className="flex flex-col">
-                                        <div className="bg-gray-3 border-t border-b border-gray-6 flex h-11 items-center">
-                                          <div className="flex-1 px-4">
-                                            <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                                              CPFs autorizados
-                                            </p>
-                                          </div>
-                                          <div className="border-r border-gray-6 px-4">
-                                            <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                                              Ações
-                                            </p>
-                                          </div>
+                                    )}
+                                  </div>
+
+                                  {/* Lista exclusiva por CPF */}
+                                  <div className="flex flex-col gap-4">
+                                    <div className="flex flex-col gap-3">
+                                      <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                        Deseja ativar lista exclusiva por CPF?
+                                      </h3>
+                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                        Restrinja o cupom para uma lista específica de CPFs
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={cpfListStatus === "DISABLED"}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) setCpfListStatus("DISABLED");
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                          Desabilitado
+                                        </span>
+                                      </label>
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={cpfListStatus === "ENABLED"}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) setCpfListStatus("ENABLED");
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                          Habilitar
+                                        </span>
+                                      </label>
+                                    </div>
+
+                                    {cpfListStatus === "ENABLED" && (
+                                      <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg flex flex-col">
+                                        <div className="p-5 flex flex-col gap-3">
+                                          <h4 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                            Lista exclusiva
+                                          </h4>
+                                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                            Restrinja o cupom para uma lista específica de CPFs. Importe um CSV com 1 CPF por linha (apenas números)
+                                          </p>
                                         </div>
-                                        {cpfList.length === 0 ? (
-                                          <div className="p-8 text-center">
-                                            <p className="text-gray-11 text-sm">Nenhum CPF adicionado</p>
-                                          </div>
-                                        ) : (
-                                          cpfList.map((cpf, index) => (
-                                            <div
-                                              key={index}
-                                              className="border-b border-gray-6 flex h-[52px] items-center"
-                                            >
-                                              <div className="flex-1 px-4">
-                                                <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                                                  {formatCPF(cpf)}
-                                                </p>
-                                              </div>
-                                              <div className="px-4">
-                                                <button
-                                                  onClick={() => handleRemoveCPF(index)}
-                                                  className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
-                                                >
-                                                  <TrashIcon className="size-4 text-red-12" />
-                                                </button>
-                                              </div>
+                                        <div className="flex flex-col">
+                                          <div className="bg-gray-3 border-t border-b border-gray-6 flex h-11 items-center">
+                                            <div className="flex-1 px-4">
+                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                                                CPFs autorizados
+                                              </p>
                                             </div>
-                                          ))
-                                        )}
-                                        <div className="p-4 flex justify-start">
-                                          <button
-                                            onClick={handleAddCPF}
-                                            className="flex items-center gap-2 px-4 py-2 text-gray-11 hover:text-gray-12 transition-colors"
-                                          >
-                                            <Plus className="size-5" />
-                                            <span className="text-base font-semibold font-family-dm-sans leading-[1.3]">
-                                              Adicionar campo
-                                            </span>
-                                          </button>
+                                            <div className="border-r border-gray-6 px-4">
+                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                                                Ações
+                                              </p>
+                                            </div>
+                                          </div>
+                                          {cpfList.length === 0 ? (
+                                            <div className="p-8 text-center">
+                                              <p className="text-gray-11 text-sm">Nenhum CPF adicionado</p>
+                                            </div>
+                                          ) : (
+                                            cpfList.map((cpf, index) => (
+                                              <div
+                                                key={index}
+                                                className="border-b border-gray-6 flex h-[52px] items-center"
+                                              >
+                                                <div className="flex-1 px-4">
+                                                  <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                                                    {formatCPF(cpf)}
+                                                  </p>
+                                                </div>
+                                                <div className="px-4">
+                                                  <button
+                                                    onClick={() => handleRemoveCPF(index)}
+                                                    className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
+                                                  >
+                                                    <TrashIcon className="size-4 text-red-12" />
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ))
+                                          )}
+                                          <div className="p-4 flex justify-start">
+                                            <button
+                                              onClick={handleAddCPF}
+                                              className="flex items-center gap-2 px-4 py-2 text-gray-11 hover:text-gray-12 transition-colors"
+                                            >
+                                              <Plus className="size-5" />
+                                              <span className="text-base font-semibold font-family-dm-sans leading-[1.3]">
+                                                Adicionar campo
+                                              </span>
+                                            </button>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </>
-                    )}
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Footer */}
-              <div className="bg-gray-2 border-t border-gray-6 flex items-center justify-end gap-2 px-4 py-3 shrink-0">
-                <Button
-                  onClick={closeCreateCouponModal}
-                  variant="outline"
-                  className="border-gray-6 text-gray-12 h-11 px-5"
-                  disabled={isSubmitting}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  variant="default"
-                  className="h-11 px-5"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Salvando..." : "Criar cupom"}
-                </Button>
+                {/* Footer */}
+                <div className="bg-gray-2 border-t border-gray-6 flex items-center justify-end gap-2 px-4 py-3 shrink-0">
+                  <Button
+                    onClick={closeCreateCouponModal}
+                    variant="outline"
+                    className="border-gray-6 text-gray-12 h-11 px-5"
+                    disabled={isSubmitting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    variant="default"
+                    className="h-11 px-5"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Salvando..." : "Criar cupom"}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
-    {/* Modal de seleção de ingressos */}
-    <SelectTicketsModal
-      isOpen={showSelectTicketsModal}
-      onClose={() => setShowSelectTicketsModal(false)}
-      onConfirm={(ticketIds) => {
-        setSelectedTicketIds(ticketIds);
-        if (ticketIds.length > 0) {
-          setAppliesTo("specific");
-        }
-      }}
-      eventId={eventId}
-      selectedTicketIds={selectedTicketIds}
-    />
+      {/* Modal de seleção de ingressos */}
+      <SelectTicketsModal
+        isOpen={showSelectTicketsModal}
+        onClose={() => setShowSelectTicketsModal(false)}
+        onConfirm={(ticketIds) => {
+          setSelectedTicketIds(ticketIds);
+          if (ticketIds.length > 0) {
+            setAppliesTo("specific");
+          }
+        }}
+        eventId={eventId}
+        selectedTicketIds={selectedTicketIds}
+      />
     </>
   );
 }

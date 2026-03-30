@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAddExistingProductsModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { X, Search, Link2, Check } from "lucide-react";
+import { X, Search, Link2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -22,16 +23,34 @@ interface Product {
   linkedTickets?: string[];
 }
 
+/** API envia preço base em centavos (number ou string numérica). */
 function formatProductPrice(value: number | string | undefined): string {
+  console.log("value", value);
   if (value == null || value === "") return "0,00";
-  if (typeof value === "number") return (value / 100).toFixed(2).replace(".", ",");
-  return String(value);
+  let cents: number;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    cents = value;
+  } else {
+    const s = String(value).trim().replace(",", ".");
+    const n = parseFloat(s);
+    if (!Number.isFinite(n)) return "0,00";
+    cents = n;
+  }
+  const reais = cents / 100;
+  return reais.toFixed(2).replace(".", ",");
 }
 
 interface Ticket {
   id: string;
   name: string;
 }
+
+type LinkedTicketsPopoverPlacement = {
+  top: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+};
 
 export function AddExistingProductsModal() {
   const { isOpen, closeAddExistingProductsModal, data, onModalSave } = useAddExistingProductsModal();
@@ -40,9 +59,73 @@ export function AddExistingProductsModal() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [linkedPopoverPlacement, setLinkedPopoverPlacement] =
+    useState<LinkedTicketsPopoverPlacement | null>(null);
   const [productLinkedTickets, setProductLinkedTickets] = useState<Record<string, Set<string>>>({});
+  const [portalMounted, setPortalMounted] = useState(false);
+
+  const linkTriggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const linkedPopoverRef = useRef<HTMLDivElement | null>(null);
 
   const eventId = data?.eventId;
+
+  useEffect(() => {
+    setPortalMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!expandedProductId) {
+      setLinkedPopoverPlacement(null);
+      return;
+    }
+
+    const el = linkTriggerRefs.current.get(expandedProductId);
+    if (!el) {
+      setLinkedPopoverPlacement(null);
+      return;
+    }
+
+    const update = () => {
+      const trigger = linkTriggerRefs.current.get(expandedProductId);
+      if (!trigger) return;
+      const r = trigger.getBoundingClientRect();
+      const minW = 260;
+      const maxW = Math.min(380, window.innerWidth - 16);
+      const width = Math.min(Math.max(r.width, minW), maxW);
+      let left = r.left;
+      if (left + width > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - width - 8);
+      }
+      if (left < 8) left = 8;
+      const gap = 8;
+      const top = r.bottom + gap;
+      const maxHeight = Math.min(280, Math.max(120, window.innerHeight - top - 12));
+      setLinkedPopoverPlacement({ top, left, width, maxHeight });
+    };
+
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [expandedProductId]);
+
+  useEffect(() => {
+    if (!expandedProductId) return;
+
+    const onPointerDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      const trigger = linkTriggerRefs.current.get(expandedProductId);
+      if (trigger?.contains(t)) return;
+      if (linkedPopoverRef.current?.contains(t)) return;
+      setExpandedProductId(null);
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [expandedProductId]);
 
   const excludeProductIds = useMemo(() => {
     const raw = data?.excludeProductIds;
@@ -254,12 +337,11 @@ export function AddExistingProductsModal() {
                       {filteredProducts.map((product) => {
                         const isSelected = selectedProducts.has(product.id);
                         const isExpanded = expandedProductId === product.id;
-                        const linkedTickets = productLinkedTickets[product.id] || new Set();
 
                         return (
                           <div
                             key={product.id}
-                            className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col gap-3 relative"
+                            className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col gap-3"
                           >
                             <div className="flex items-center gap-3 p-4">
                               {/* Product Image */}
@@ -295,52 +377,30 @@ export function AddExistingProductsModal() {
                               </div>
                             </div>
 
-                            {/* Linked Tickets Section */}
-                            <div className="relative bg-gray-2 border-t border-gray-6 rounded-b-xl p-2">
+                            {/* Ver ingressos — painel em portal (fora do card) */}
+                            <div className="bg-gray-2 border-t border-gray-6 rounded-b-xl p-2">
                               <div className="flex items-center justify-between gap-2">
-                                <button onClick={() => {
-                                  setExpandedProductId(isExpanded ? null : product.id);
-                                }}
-                                  className="flex items-center gap-2 text-gray-11 hover:text-gray-12 transition-colors"
+                                <button
+                                  type="button"
+                                  ref={(el) => {
+                                    if (el) linkTriggerRefs.current.set(product.id, el);
+                                    else linkTriggerRefs.current.delete(product.id);
+                                  }}
+                                  onClick={() => {
+                                    setExpandedProductId(isExpanded ? null : product.id);
+                                  }}
+                                  className="flex items-center gap-2 text-gray-11 hover:text-gray-12 transition-colors text-left"
                                 >
-                                  <Link2 className="size-4" />
+                                  <Link2 className="size-4 shrink-0" />
                                   <span className="text-sm font-normal font-family-dm-sans">
-                                    Ingressos vínculados
+                                    Ver ingressos vinculados
                                   </span>
-
                                 </button>
                                 <Checkbox
                                   checked={isSelected}
                                   onCheckedChange={() => handleToggleProduct(product.id)}
                                 />
                               </div>
-
-                              {/* Tickets Dropdown */}
-                              <AnimatePresence>
-                                {isExpanded && (
-                                  <motion.div
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="absolute top-full left-0 right-0 mt-2 border border-gray-6 rounded-lg shadow-lg z-10 p-2 max-h-[200px] overflow-y-auto flex flex-wrap gap-2"
-                                  >
-                                    {tickets.length === 0 ? (
-                                      <p className="text-gray-11 text-sm font-family-dm-sans p-2">
-                                        Nenhum ingresso disponível
-                                      </p>
-                                    ) : (
-                                      tickets.map((ticket) => {
-                                        return (
-                                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans bg-gray-3 p-2 rounded-full">
-                                            {ticket.name}
-                                          </span>
-                                        );
-                                      })
-                                    )}
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
                             </div>
                           </div>
                         );
@@ -369,6 +429,58 @@ export function AddExistingProductsModal() {
               </div>
             </div>
           </motion.div>
+
+          {portalMounted &&
+            isOpen &&
+            expandedProductId &&
+            linkedPopoverPlacement &&
+            typeof document !== "undefined" &&
+            createPortal(
+              <motion.div
+                key={expandedProductId}
+                ref={linkedPopoverRef}
+                role="dialog"
+                aria-labelledby="add-existing-linked-popover-title"
+                aria-label="Ingressos vinculados ao produto"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.12 }}
+                className="fixed z-[200] flex flex-col overflow-hidden rounded-lg border border-gray-6 bg-gray-1 shadow-lg"
+                style={{
+                  top: linkedPopoverPlacement.top,
+                  left: linkedPopoverPlacement.left,
+                  width: linkedPopoverPlacement.width,
+                  maxHeight: linkedPopoverPlacement.maxHeight,
+                }}
+                data-add-existing-linked-popover
+              >
+                <div className="shrink-0 border-b border-gray-6 px-3 py-2.5">
+                  <p
+                    id="add-existing-linked-popover-title"
+                    className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3]"
+                  >
+                    Ingressos vinculados
+                  </p>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-2 flex flex-wrap gap-2 content-start">
+                  {tickets.length === 0 ? (
+                    <p className="text-gray-11 text-sm font-family-dm-sans p-2 w-full">
+                      Nenhum ingresso disponível
+                    </p>
+                  ) : (
+                    tickets.map((ticket) => (
+                      <span
+                        key={ticket.id}
+                        className="text-gray-12 text-sm font-normal font-family-dm-sans bg-gray-3 px-3 py-1.5 rounded-md"
+                      >
+                        {ticket.name}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </motion.div>,
+              document.body,
+            )}
         </>
       )
       }

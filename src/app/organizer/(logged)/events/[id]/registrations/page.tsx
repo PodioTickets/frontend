@@ -155,9 +155,9 @@ function RegistrationRow({
         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
           R$ {(registration.ticket?.price
             ? (registration.ticket.price / 100).toLocaleString("pt-BR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
             : "0,00")}
         </p>
       </div>
@@ -454,6 +454,22 @@ export default function EventRegistrationsPage() {
     return matchesSearch && matchesStatus && matchesDateRange && matchesTickets;
   });
 
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 ||
+    statusFilter !== "all" ||
+    selectedTicketIds.length > 0 ||
+    Boolean(dateRange?.from || dateRange?.to) ||
+    Boolean(appliedDateRange?.from || appliedDateRange?.to);
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setSelectedTicketIds([]);
+    setDateRange(undefined);
+    setAppliedDateRange(undefined);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
   // Full-page loading só na carga inicial (ainda sem dados). Refetch (filtros, data etc.) mostra loading só na lista.
   if (loading && registrations.length === 0) {
     return (
@@ -464,14 +480,14 @@ export default function EventRegistrationsPage() {
   }
 
   const eventTabs = [
-      { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-      { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-      { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-      { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-      { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-      { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-      { label: "Notificações", href: `/organizer/events/${eventId}/notifications` },
-    ];
+    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
+    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
+    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
+    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
+    { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
+    { label: "Ads", href: `/organizer/events/${eventId}/ads` },
+    { label: "Notificações", href: `/organizer/events/${eventId}/notifications` },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-2">
@@ -492,7 +508,7 @@ export default function EventRegistrationsPage() {
         <div className="mb-6 hidden md:block">
           <h1 className="text-3xl font-bold text-gray-12 mb-2">Inscrições</h1>
           <p className="text-gray-11">
-            Gerencie todos os projetos e pagamentos deste evento
+            Acompanhe todas as inscrições do evento e gerencie pedidos, pagamentos e status.
           </p>
         </div>
 
@@ -504,7 +520,7 @@ export default function EventRegistrationsPage() {
                 <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
                   <CartIcon className="size-5 text-blue-12" />
                 </div>
-                <p className="font-family-dm-sans font-normal text-base text-gray-11">Total de inscrições</p>
+                <p className="font-family-dm-sans font-normal text-base text-gray-11">Inscrições Confirmadas</p>
               </div>
               <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.total.toLocaleString()}</p>
               <div className="flex items-center gap-1">
@@ -545,11 +561,11 @@ export default function EventRegistrationsPage() {
 
         {/* Summary Cards - Desktop */}
         <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Total de inscrições */}
+          {/* Inscrições Confirmadas */}
           <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
             <div className="mb-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-11 mb-1">Total de inscrições</p>
+                <p className="text-sm text-gray-11 mb-1">Inscrições Confirmadas</p>
                 <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-3 flex items-center justify-center">
                   <CartIcon className="size-5 text-blue-12" />
                 </div>
@@ -617,9 +633,9 @@ export default function EventRegistrationsPage() {
           </div>
         </div>
 
-        {/* Mobile: Search + Filtros row */}
-        <div className="md:hidden flex gap-3 items-center mb-4">
-          <div className="flex-1 min-w-0 border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
+        {/* Mobile: Search + Limpar + Filtros row */}
+        <div className="md:hidden flex flex-wrap gap-2 items-center mb-4">
+          <div className="flex-1 min-w-[140px] border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
             <Search className="size-5 text-gray-11 shrink-0" />
             <input
               type="text"
@@ -629,10 +645,19 @@ export default function EventRegistrationsPage() {
               className="flex-1 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
             />
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!hasActiveFilters}
+            onClick={handleClearFilters}
+            className="shrink-0 h-10 px-3 text-sm border-gray-6 text-gray-12 disabled:opacity-50"
+          >
+            Limpar filtros
+          </Button>
           <button
             type="button"
             onClick={() => setMobileFiltersOpen((v) => !v)}
-            className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 font-family-dm-sans font-normal text-sm"
+            className="shrink-0 flex items-center gap-2 px-3 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 font-family-dm-sans font-normal text-sm h-10"
           >
             Filtros
             <ArrowButton isOpen={mobileFiltersOpen} />
@@ -649,7 +674,7 @@ export default function EventRegistrationsPage() {
               align="start"
               options={[
                 { id: "all", label: "Todos" },
-                { id: "COMPLETED", label: "Concluída", icon: CheckCircle },
+                { id: "COMPLETED", label: "Pago", icon: CheckCircle },
                 { id: "CANCELLED", label: "Cancelado", icon: XCircle },
                 { id: "CHARGEBACK", label: "ChargeBack", icon: XCircle },
                 { id: "REFUNDED", label: "Estornado", icon: XCircle },
@@ -662,7 +687,7 @@ export default function EventRegistrationsPage() {
               trigger={() => {
                 const statusLabels: Record<string, string> = {
                   all: "Todos",
-                  COMPLETED: "Concluída",
+                  COMPLETED: "Pago",
                   CANCELLED: "Cancelado",
                   CHARGEBACK: "ChargeBack",
                   REFUNDED: "Estornado",
@@ -716,7 +741,7 @@ export default function EventRegistrationsPage() {
         )}
 
         {/* Search and Filters - Desktop */}
-        <div className="hidden md:flex mb-6 flex-col sm:flex-row gap-4 items-center p-4 bg-gray-1 rounded-lg border border-gray-6">
+        <div className="hidden md:flex mb-6 flex-col sm:flex-row gap-4 items-center p-4 bg-gray-1 rounded-lg border border-gray-6 flex-wrap">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
             <Input
@@ -737,7 +762,7 @@ export default function EventRegistrationsPage() {
             align="start"
             options={[
               { id: "all", label: "Todos" },
-              { id: "COMPLETED", label: "Concluída", icon: CheckCircle },
+              { id: "COMPLETED", label: "Pago", icon: CheckCircle },
               { id: "CANCELLED", label: "Cancelado", icon: XCircle },
 
               { id: "CHARGEBACK", label: "ChargeBack", icon: XCircle },
@@ -840,6 +865,16 @@ export default function EventRegistrationsPage() {
               value={dateRange}
             />
           </Dropdown>
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!hasActiveFilters}
+            onClick={handleClearFilters}
+            className="h-[46px] shrink-0 border-gray-6 text-gray-12 disabled:opacity-50 px-4"
+          >
+            Limpar filtros
+          </Button>
         </div>
 
         {/* Registrations List */}
@@ -853,7 +888,7 @@ export default function EventRegistrationsPage() {
             <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center">
               <Users className="size-12 text-gray-11 mx-auto mb-4" />
               <p className="text-gray-11 mb-4">
-                {searchTerm || statusFilter !== "all"
+                {hasActiveFilters
                   ? "Nenhuma inscrição encontrada"
                   : "Nenhuma inscrição ainda"}
               </p>

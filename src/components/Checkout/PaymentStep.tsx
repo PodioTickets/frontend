@@ -1038,10 +1038,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
         // Adicionar questionAnswers se existirem
         if (participant.questionAnswers && Object.keys(participant.questionAnswers).length > 0) {
-          participantData.questionAnswers = Object.entries(participant.questionAnswers).map(([questionId, answer]) => ({
-            questionId,
-            answer: answer as string | boolean | number,
-          }));
+          participantData.questionAnswers = Object.entries(participant.questionAnswers).map(
+            ([questionId, answer]) => ({
+              questionId,
+              answer: Array.isArray(answer)
+                ? JSON.stringify(answer)
+                : (answer as string | boolean | number),
+            })
+          );
         }
 
         // Adicionar produtos selecionados se existirem

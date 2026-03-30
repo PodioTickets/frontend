@@ -18,7 +18,6 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
 import { TicketTable } from "@/components/Ticket/TicketTable";
-import { DeleteTicketModal } from "@/components/Ticket/DeleteTicketModal";
 import {
   DndContext,
   closestCenter,
@@ -46,10 +45,6 @@ export default function EditTicketsPage() {
   const [newGroupName, setNewGroupName] = useState("");
   const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<Record<string, "table" | "cards">>({});
-  const [ticketPendingDelete, setTicketPendingDelete] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
   const [duplicatingTicketId, setDuplicatingTicketId] = useState<string | null>(
     null,
   );
@@ -67,7 +62,6 @@ export default function EditTicketsPage() {
     tickets,
     loading: ticketsLoading,
     loadTickets,
-    deleteTicket,
   } = useTickets(eventId, authChecked);
 
   const loading = categoriesLoading || ticketsLoading;
@@ -202,13 +196,6 @@ export default function EditTicketsPage() {
       }
     },
     [deleteCategory]
-  );
-
-  const handleDeleteTicket = useCallback(
-    async (ticketId: string) => {
-      await deleteTicket(ticketId);
-    },
-    [deleteTicket]
   );
 
   const handleEditTicket = useCallback(
@@ -500,17 +487,6 @@ export default function EditTicketsPage() {
 
   return (
     <>
-      <DeleteTicketModal
-        open={!!ticketPendingDelete}
-        onClose={() => setTicketPendingDelete(null)}
-        ticketName={ticketPendingDelete?.name}
-        onConfirm={async () => {
-          const target = ticketPendingDelete;
-          if (target) {
-            await handleDeleteTicket(target.id);
-          }
-        }}
-      />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -581,13 +557,6 @@ export default function EditTicketsPage() {
                   onEdit={handleEditTicket}
                   onDuplicate={handleDuplicateTicket}
                   duplicatingTicketId={duplicatingTicketId}
-                  onRequestDeleteTicket={(id: string) => {
-                    const t = allTickets.find((x) => x.id === id);
-                    setTicketPendingDelete({
-                      id,
-                      name: t?.name?.trim() || "Ingresso",
-                    });
-                  }}
                   productsMap={productsMap}
                 />
               </div>
@@ -775,7 +744,6 @@ export default function EditTicketsPage() {
                     onEditDescription={handleUpdateGroupDescription}
                     onDelete={handleDeleteGroup}
                     onEditTicket={handleEditTicket}
-                    onDeleteTicket={handleDeleteTicket}
                     onPageChange={handlePageChange}
                     onDuplicateTicket={handleDuplicateTicket}
                     duplicatingTicketId={duplicatingTicketId}

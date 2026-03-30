@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTopicModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
+import { DeleteTopicModal } from "@/components/Topic/DeleteTopicModal";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -11,7 +12,8 @@ type QuillInstance = InstanceType<typeof import("quill").default>;
 let quillResizeModuleRegistered = false;
 
 export function TopicModal() {
-  const { isOpen, closeTopicModal, data, onModalSave } = useTopicModal();
+  const { isOpen, closeTopicModal, data, onModalSave, onModalDelete } = useTopicModal();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const quillRef = useRef<HTMLDivElement>(null);
@@ -22,6 +24,11 @@ export function TopicModal() {
   const initialTitle = data?.title || "";
   const initialContent = data?.content || "";
   const isEditing = data?.isEditing || false;
+  const allowDelete = data?.allowDelete === true;
+
+  useEffect(() => {
+    if (!isOpen) setDeleteModalOpen(false);
+  }, [isOpen]);
 
   // Initialize Quill
   useEffect(() => {
@@ -523,10 +530,24 @@ export function TopicModal() {
   };
 
 
+  const handleConfirmDeleteTopic = async () => {
+    if (!onModalDelete) {
+      throw new Error("Exclusão indisponível");
+    }
+    await onModalDelete();
+    closeTopicModal();
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
+          <DeleteTopicModal
+            open={deleteModalOpen}
+            onClose={() => setDeleteModalOpen(false)}
+            topicTitle={title.trim() || initialTitle.trim() || undefined}
+            onConfirm={handleConfirmDeleteTopic}
+          />
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -586,21 +607,35 @@ export function TopicModal() {
               </div>
 
               {/* Footer */}
-              <div className="shrink-0 border-t border-gray-6 flex items-center justify-end gap-3 px-6 py-4">
-                <Button
-                  variant="outline"
-                  onClick={closeTopicModal}
-                  className="border-gray-6 text-gray-11 px-4 py-2"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={!title.trim()}
-                  className="bg-primary-11 hover:bg-primary-10 disabled:bg-gray-6 disabled:cursor-not-allowed text-primary-2 px-6 py-2"
-                >
-                  {isEditing ? "Salvar alteração" : "Criar"}
-                </Button>
+              <div className="shrink-0 border-t border-gray-6 flex items-center justify-between gap-3 px-6 py-4">
+                <div className="min-w-0">
+                  {isEditing && allowDelete ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setDeleteModalOpen(true)}
+                      className="py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      Excluir tópico
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="flex items-center justify-end gap-3 shrink-0">
+                  <Button
+                    variant="outline"
+                    onClick={closeTopicModal}
+                    className="border-gray-6 text-gray-12 px-4 py-2"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={!title.trim()}
+                    className="disabled:bg-gray-6 disabled:cursor-not-allowed px-6 py-2"
+                  >
+                    {isEditing ? "Salvar alteração" : "Criar"}
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>

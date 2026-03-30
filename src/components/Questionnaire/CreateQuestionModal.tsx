@@ -277,16 +277,18 @@ export function CreateQuestionModal() {
                         />
                       </div>
 
-                      {/* Lista Section */}
+                      {/* Lista / múltipla escolha — opções */}
                       {showListSection && (
                         <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg w-full">
                           <div className="p-5 flex flex-col gap-3">
                             <div className="flex flex-col gap-3">
                               <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                Lista
+                                {type === "select" ? "Lista" : "Múltipla escolha"}
                               </h3>
                               <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                                Objetivo: participante escolhe uma opção num dropdown. Adicione pelo menos 2 opções para o participante escolher
+                                {type === "select"
+                                  ? "O participante pode marcar mais de uma opção entre as que você cadastrar. Adicione pelo menos 2 opções."
+                                  : "O participante escolhe apenas uma opção entre as listadas. Adicione pelo menos 2 opções."}
                               </p>
                             </div>
                           </div>

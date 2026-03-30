@@ -12,6 +12,7 @@ import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { Info, Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { BookIcon } from "@/components/Icons/BookIcon";
 
 interface ViaCEPResponse {
   cep: string;
@@ -514,7 +515,7 @@ export default function EditInformationPage() {
 
             {/* URL do Google Maps */}
             <div className="flex flex-col gap-2 w-full">
-              <label className="text-gray-12 text-base font-family-dm-sans flex items-center gap-1">URL do google <Info className="size-5 text-gray-11 shrink-0" /></label>
+              <label className="text-gray-12 text-base font-family-dm-sans flex items-center gap-1">URL do google <BookIcon className="size-5 text-gray-11 shrink-0" /></label>
               <div className="relative">
                 <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12" />
                 <Input

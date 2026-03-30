@@ -108,6 +108,17 @@ export function ParticipantSummaryModal({
     }).format(price);
   };
 
+  /** Preços da API em centavos — mesma lógica do passo de inscrição / modal de produto. */
+  const formatVariationSidePriceFromCents = (
+    basePriceCents: number,
+    variationPriceCents: number,
+  ): string => {
+    const base = basePriceCents / 100;
+    const v = variationPriceCents / 100;
+    if (v < base) return formatPrice(v);
+    return formatPrice(Math.max(0, v - base));
+  };
+
   const maskCPF = (cpf: string) => {
     if (!cpf) return "";
     const cleaned = cpf.replace(/\D/g, "");
@@ -565,9 +576,19 @@ export function ParticipantSummaryModal({
                           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
                             {product.variationType || "Escolha o tamanho"}
                           </p>
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            {product.selectedVariation?.name || "Não selecionado"}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
+                              {product.selectedVariation?.name || "Não selecionado"}
+                            </p>
+                            {product.selectedVariation ? (
+                              <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
+                                {formatVariationSidePriceFromCents(
+                                  product.basePrice,
+                                  product.selectedVariation.price,
+                                )}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -615,7 +636,9 @@ export function ParticipantSummaryModal({
                             {product.name}
                           </p>
                           <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                            {formatPrice((product.selectedVariation?.price ?? product.basePrice) / 100)}
+                            {product.isIncludedInTicket
+                              ? "Grátis"
+                              : formatPrice(product.basePrice / 100)}
                           </p>
                         </div>
                       </div>
@@ -625,9 +648,19 @@ export function ParticipantSummaryModal({
                           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
                             {product.variationType || "Escolha o tamanho"}
                           </p>
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            {product.selectedVariation?.name || "Não selecionado"}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12 truncate min-w-0">
+                              {product.selectedVariation?.name || "Não selecionado"}
+                            </p>
+                            {product.selectedVariation ? (
+                              <p className="font-family-dm-sans font-bold text-base leading-[1.3] text-gray-12 shrink-0 tabular-nums">
+                                {formatVariationSidePriceFromCents(
+                                  product.basePrice,
+                                  product.selectedVariation.price,
+                                )}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     </div>

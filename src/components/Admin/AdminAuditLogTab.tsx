@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Building2,
+  UserRound,
+} from "lucide-react";
 import { cn } from "@/utils/cn";
 import { DatePicker } from "@/components/DatePicker";
 import { Button } from "@/components/Button";
@@ -12,6 +19,13 @@ import { AdminAuditLogDetailsDrawer } from "./AdminAuditLogDetailsDrawer";
 import type { AdminAuditChangeDetail } from "@/services/admin/AdminService";
 
 const ITEMS_PER_PAGE = 20;
+
+const UUID_PARAM_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidUuidParam(value: string): boolean {
+  return UUID_PARAM_RE.test(value.trim());
+}
 
 const KIND_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "Todos os tipos" },
@@ -170,6 +184,11 @@ function changeDetailsPreviewLine(
 export function AdminAuditLogTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [organizationFilter, setOrganizationFilter] = useState("");
+  const [debouncedOrganizationFilter, setDebouncedOrganizationFilter] =
+    useState("");
+  const [userFilter, setUserFilter] = useState("");
+  const [debouncedUserFilter, setDebouncedUserFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [kindFilter, setKindFilter] = useState("");
   const [page, setPage] = useState(1);
@@ -186,8 +205,27 @@ export function AdminAuditLogTab() {
   }, [search]);
 
   useEffect(() => {
+    const t = setTimeout(
+      () => setDebouncedOrganizationFilter(organizationFilter.trim()),
+      400
+    );
+    return () => clearTimeout(t);
+  }, [organizationFilter]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedUserFilter(userFilter.trim()), 400);
+    return () => clearTimeout(t);
+  }, [userFilter]);
+
+  useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, dateFilter, kindFilter]);
+  }, [
+    debouncedSearch,
+    debouncedOrganizationFilter,
+    debouncedUserFilter,
+    dateFilter,
+    kindFilter,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +233,12 @@ export function AdminAuditLogTab() {
       setLoading(true);
       try {
         const from = dateFilter || undefined;
+        const organizationId = isValidUuidParam(debouncedOrganizationFilter)
+          ? debouncedOrganizationFilter.trim()
+          : undefined;
+        const userId = isValidUuidParam(debouncedUserFilter)
+          ? debouncedUserFilter.trim()
+          : undefined;
         const { items: nextItems, pagination } =
           await adminService.getAuditLogs({
             page,
@@ -203,6 +247,8 @@ export function AdminAuditLogTab() {
             from,
             to: from,
             kind: kindFilter.trim() || undefined,
+            organizationId,
+            userId,
           });
         if (cancelled) return;
         setItems(nextItems);
@@ -235,7 +281,14 @@ export function AdminAuditLogTab() {
     return () => {
       cancelled = true;
     };
-  }, [page, debouncedSearch, dateFilter, kindFilter]);
+  }, [
+    page,
+    debouncedSearch,
+    debouncedOrganizationFilter,
+    debouncedUserFilter,
+    dateFilter,
+    kindFilter,
+  ]);
 
   const safePage = Math.min(page, totalPages);
 
@@ -255,6 +308,19 @@ export function AdminAuditLogTab() {
     row.organizationName?.trim() ||
     row.organizationId ||
     "—";
+
+  const organizationFilterInvalid =
+    organizationFilter.trim().length > 0 &&
+    !isValidUuidParam(organizationFilter);
+  const userFilterInvalid =
+    userFilter.trim().length > 0 && !isValidUuidParam(userFilter);
+
+  const filtersActiveForEmptyCopy =
+    Boolean(debouncedSearch) ||
+    Boolean(dateFilter) ||
+    Boolean(kindFilter) ||
+    Boolean(debouncedOrganizationFilter) ||
+    Boolean(debouncedUserFilter);
 
   return (
     <div>
@@ -327,6 +393,77 @@ export function AdminAuditLogTab() {
             ) : null}
           </div>
         </div>
+
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:flex-wrap">
+          <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
+            <label className="sr-only">Filtrar por organização (UUID)</label>
+            <Building2 className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+            <input
+              type="text"
+              value={organizationFilter}
+              onChange={(e) => setOrganizationFilter(e.target.value)}
+              placeholder="ID da organização (UUID)"
+              autoComplete="off"
+              spellCheck={false}
+              className={cn(
+                inputShell,
+                "pl-11 md:pl-12 text-base md:text-sm font-mono",
+                organizationFilterInvalid &&
+                  "border-yellow-8 focus-visible:border-yellow-8 focus-visible:ring-yellow-8/40"
+              )}
+            />
+            {organizationFilterInvalid ? (
+              <p className="mt-1 text-xs text-yellow-11 font-family-dm-sans">
+                Informe um UUID válido para filtrar por organização.
+              </p>
+            ) : null}
+          </div>
+          <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
+            <label className="sr-only">Filtrar por usuário (UUID)</label>
+            <UserRound className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+            <input
+              type="text"
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              placeholder="ID do usuário (UUID)"
+              autoComplete="off"
+              spellCheck={false}
+              className={cn(
+                inputShell,
+                "pl-11 md:pl-12 text-base md:text-sm font-mono",
+                userFilterInvalid &&
+                  "border-yellow-8 focus-visible:border-yellow-8 focus-visible:ring-yellow-8/40"
+              )}
+            />
+            {userFilterInvalid ? (
+              <p className="mt-1 text-xs text-yellow-11 font-family-dm-sans">
+                Informe um UUID válido para filtrar por usuário.
+              </p>
+            ) : null}
+          </div>
+          <div className="flex w-full sm:w-auto shrink-0 gap-1.5 items-start">
+            {organizationFilter ? (
+              <button
+                type="button"
+                onClick={() => setOrganizationFilter("")}
+                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
+                aria-label="Limpar filtro de organização"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+            {userFilter ? (
+              <button
+                type="button"
+                onClick={() => setUserFilter("")}
+                className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
+                aria-label="Limpar filtro de usuário"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <p className="text-sm text-gray-11 font-medium font-family-dm-sans mb-3 md:mb-4">
@@ -340,7 +477,7 @@ export function AdminAuditLogTab() {
           </div>
         ) : items.length === 0 ? (
           <div className="rounded-xl border border-gray-6 bg-gray-1 py-14 text-center text-sm text-gray-11 font-family-dm-sans shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] px-4">
-            {debouncedSearch || dateFilter || kindFilter
+            {filtersActiveForEmptyCopy
               ? "Nenhum registro encontrado com os filtros atuais."
               : "Nenhum registro disponível."}
           </div>
@@ -488,7 +625,7 @@ export function AdminAuditLogTab() {
                     colSpan={7}
                     className="py-16 text-center text-sm text-gray-11 font-family-dm-sans"
                   >
-                    {debouncedSearch || dateFilter || kindFilter
+                    {filtersActiveForEmptyCopy
                       ? "Nenhum registro encontrado com os filtros atuais."
                       : "Nenhum registro disponível."}
                   </td>

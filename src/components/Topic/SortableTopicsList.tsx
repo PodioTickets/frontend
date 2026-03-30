@@ -21,18 +21,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
-import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { GripVertical } from "lucide-react";
 import type { TopicSectionRow } from "@/lib/eventTopicSections";
 
 function SortableTopicCard({
   topic,
   onEdit,
-  onDelete,
 }: {
   topic: TopicSectionRow;
   onEdit: (id: string) => void;
-  onDelete: (id: string) => void | Promise<void>;
 }) {
   const {
     attributes,
@@ -84,15 +81,6 @@ function SortableTopicCard({
           >
             <PencilIcon className="size-5 text-gray-11" />
           </button>
-          {topic.allowDelete ? (
-            <button
-              type="button"
-              onClick={() => onDelete(topic.id)}
-              className="bg-red-2 border-[1.5px] border-red-6 p-2 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-            >
-              <TrashIcon className="size-5 text-red-11" />
-            </button>
-          ) : null}
         </div>
       </div>
 
@@ -115,12 +103,10 @@ export function SortableTopicsList({
   topics,
   onReorder,
   onEditTopic,
-  onDeleteTopic,
 }: {
   topics: TopicSectionRow[];
   onReorder: (reordered: TopicSectionRow[]) => void;
   onEditTopic: (id: string) => void;
-  onDeleteTopic: (id: string) => void | Promise<void>;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -170,7 +156,6 @@ export function SortableTopicsList({
               key={topic.id}
               topic={topic}
               onEdit={onEditTopic}
-              onDelete={onDeleteTopic}
             />
           ))}
         </div>

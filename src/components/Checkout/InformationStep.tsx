@@ -844,7 +844,9 @@ export function InformationStep({
     participantIndex: number,
     questionId: string
   ): string | string[] => {
-    return questionAnswers[participantIndex]?.[questionId] || "";
+    const v = questionAnswers[participantIndex]?.[questionId];
+    if (v === undefined || v === null) return "";
+    return v;
   };
 
   // Renderizar campo de pergunta baseado no tipo
@@ -881,39 +883,41 @@ export function InformationStep({
 
       case "select": {
         const questionError = fieldErrors[participantIndex]?.[`question_${question.id}`];
+        const selectedOptions: string[] = Array.isArray(answer)
+          ? answer
+          : typeof answer === "string" && answer.trim()
+            ? [answer]
+            : [];
         return (
           <div className="flex flex-col gap-2">
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
-            <div className="w-full">
-              <Dropdown
-                width="w-full"
-                className="z-60"
-                trigger={(open: boolean) => (
-                  <div className={`rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer border ${questionError ? "border-red-6" : "border-gray-7"}`}>
-                    <div className="flex gap-1 items-center flex-1 min-w-0">
-                      <span className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans truncate">
-                        {typeof answer === "string" && answer
-                          ? answer
-                          : "Selecione"}
-                      </span>
-                    </div>
-                    <ArrowButton isOpen={open} />
-                  </div>
-                )}
-                options={
-                  question.options?.map((opt) => ({
-                    id: opt,
-                    label: opt,
-                  })) || []
-                }
-                onSelect={(option) => {
-                  clearParticipantFieldError(participantIndex, `question_${question.id}`);
-                  updateQuestionAnswer(participantIndex, question.id, option.label);
-                }}
-              />
+            <div className="flex flex-col gap-3">
+              {question.options?.map((option) => {
+                const isSelected = selectedOptions.includes(option);
+                return (
+                  <label
+                    key={option}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => {
+                        clearParticipantFieldError(participantIndex, `question_${question.id}`);
+                        const next = checked
+                          ? [...selectedOptions, option]
+                          : selectedOptions.filter((o) => o !== option);
+                        updateQuestionAnswer(participantIndex, question.id, next);
+                      }}
+                    />
+                    <span className="text-sm text-gray-12 font-family-dm-sans">
+                      {option}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
             {questionError && <p className="text-sm text-red-11">{questionError}</p>}
           </div>

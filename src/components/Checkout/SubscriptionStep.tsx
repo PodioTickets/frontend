@@ -36,7 +36,16 @@ interface Product {
   }>;
 }
 
-// Função para formatar preço
+/** API envia valores monetários em centavos (inteiro ou string numérica). */
+function productPriceFromApiToReais(value: unknown): number {
+  if (value == null || value === "") return 0;
+  if (typeof value === "number" && Number.isFinite(value)) return value / 100;
+  const s = String(value).trim().replace(",", ".");
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n / 100 : 0;
+}
+
+// Função para formatar preço (valor em reais)
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -46,12 +55,26 @@ const formatPrice = (price: number) => {
   }).format(price);
 };
 
-// Função para formatar o label da variação com preço (só mostra preço se > 0)
-const formatVariationLabel = (variation: { name: string; price: number }): string => {
-  if (variation.price === 0) {
-    return variation.name;
+/**
+ * Mesma regra da prévia do modal de produto: à direita da variação, acréscimo sobre a base
+ * quando variação ≥ base; se variação < base, mostra o preço total da variação.
+ */
+const formatCheckoutVariationSidePrice = (
+  basePriceReais: number,
+  variationPriceReais: number,
+): string => {
+  const base = basePriceReais;
+  const v = variationPriceReais;
+  if (v < base) {
+    return formatPrice(v);
   }
-  return `${variation.name} - ${formatPrice(variation.price)}`;
+  return formatPrice(Math.max(0, v - base));
+};
+
+/** Preço exibido no card do produto (preço geral / base), alinhado ao modal de criação. */
+const formatProductCardBasePriceLabel = (product: Product): string => {
+  if (product.isIncludedInTicket) return "Grátis";
+  return formatPrice(product.basePrice);
 };
 
 export function SubscriptionStep({
@@ -150,10 +173,15 @@ export function SubscriptionStep({
       id: product.id,
       name: product.name,
       image: product.image || null,
-      basePrice: product.basePrice || 0,
+      basePrice: productPriceFromApiToReais(product.basePrice),
       isRequired: product.isRequired || false,
       isIncludedInTicket: product.isIncludedInTicket || false,
-      variations: product.variations || [],
+      variations: (product.variations || []).map((v: any) => ({
+        id: v.id,
+        name: v.name,
+        price: productPriceFromApiToReais(v.price),
+        stock: typeof v.stock === "number" ? v.stock : parseInt(String(v.stock), 10) || 0,
+      })),
     }));
   }, [productsData]);
 
@@ -575,7 +603,11 @@ export function SubscriptionStep({
     }
     return product.variations.map((variation, index) => ({
       id: variation.id || `${product.id}-${index}`,
-      label: formatVariationLabel(variation),
+      label: variation.name,
+      suffix: formatCheckoutVariationSidePrice(
+        product.basePrice,
+        variation.price,
+      ),
     }));
   };
 
@@ -585,15 +617,6 @@ export function SubscriptionStep({
     const selectedId = selectedVariations[variationKey];
     if (!selectedId) return null;
     return product.variations.find((v, i) => (v.id || `${product.id}-${i}`) === selectedId);
-  };
-
-  // Obter preço do produto (base ou variação selecionada)
-  const getProductPrice = (participantIndex: number, product: Product): number => {
-    const selectedVariation = getSelectedVariation(participantIndex, product);
-    if (selectedVariation) {
-      return selectedVariation.price;
-    }
-    return product.basePrice;
   };
 
   // Calcular total de produtos adicionais selecionados por participante
@@ -889,9 +912,7 @@ export function SubscriptionStep({
                                   {product.name}
                                 </p>
                                 <p className="text-sm font-semibold text-gray-11">
-                                  {getProductPrice(participantIndex, product) === 0
-                                    ? "Grátis"
-                                    : formatPrice(getProductPrice(participantIndex, product))}
+                                  {formatProductCardBasePriceLabel(product)}
                                 </p>
                               </div>
                             </div>
@@ -925,13 +946,27 @@ export function SubscriptionStep({
                                 trigger={() => {
                                   const selected = getSelectedVariation(participantIndex, product);
                                   return (
-                                    <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                                      <p className="text-base text-gray-11">
-                                        {selected
-                                          ? formatVariationLabel(selected)
-                                          : "Selecione a opção"}
-                                      </p>
-                                      <span className="text-gray-12">›</span>
+                                    <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
+                                      {selected ? (
+                                        <>
+                                          <p className="text-base text-gray-11 truncate min-w-0">
+                                            {selected.name}
+                                          </p>
+                                          <p className="text-base font-bold text-gray-12 shrink-0 tabular-nums">
+                                            {formatCheckoutVariationSidePrice(
+                                              product.basePrice,
+                                              selected.price,
+                                            )}
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <p className="text-base text-gray-11">
+                                            Selecione a opção
+                                          </p>
+                                          <span className="text-gray-12 shrink-0">›</span>
+                                        </>
+                                      )}
                                     </div>
                                   );
                                 }}
@@ -974,7 +1009,7 @@ export function SubscriptionStep({
                                     {product.name}
                                   </p>
                                   <p className="text-base font-semibold text-gray-12">
-                                    {formatPrice(getProductPrice(participantIndex, product))}
+                                    {formatProductCardBasePriceLabel(product)}
                                   </p>
                                 </div>
                               </div>
@@ -1008,13 +1043,27 @@ export function SubscriptionStep({
                                   trigger={() => {
                                     const selected = getSelectedVariation(participantIndex, product);
                                     return (
-                                      <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                                        <p className="text-base text-gray-11">
-                                          {selected
-                                            ? formatVariationLabel(selected)
-                                            : "Selecione a opção"}
-                                        </p>
-                                        <span className="text-gray-12">›</span>
+                                      <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
+                                        {selected ? (
+                                          <>
+                                            <p className="text-base text-gray-11 truncate min-w-0">
+                                              {selected.name}
+                                            </p>
+                                            <p className="text-base font-bold text-gray-12 shrink-0 tabular-nums">
+                                              {formatCheckoutVariationSidePrice(
+                                                product.basePrice,
+                                                selected.price,
+                                              )}
+                                            </p>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <p className="text-base text-gray-11">
+                                              Selecione a opção
+                                            </p>
+                                            <span className="text-gray-12 shrink-0">›</span>
+                                          </>
+                                        )}
                                       </div>
                                     );
                                   }}
@@ -1176,9 +1225,7 @@ export function SubscriptionStep({
                           {product.name}
                         </p>
                         <p className="text-sm text-gray-11 font-semibold">
-                          {getProductPrice(selectedParticipant, product) === 0
-                            ? "Grátis"
-                            : formatPrice(getProductPrice(selectedParticipant, product))}
+                          {formatProductCardBasePriceLabel(product)}
                         </p>
                       </div>
                     </div>
@@ -1207,13 +1254,27 @@ export function SubscriptionStep({
                         trigger={() => {
                           const selected = getSelectedVariation(selectedParticipant, product);
                           return (
-                            <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                              <p className="text-sm text-gray-12">
-                                {selected
-                                  ? formatVariationLabel(selected)
-                                  : "Selecione a opção"}
-                              </p>
-                              <span className="text-gray-12">›</span>
+                            <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
+                              {selected ? (
+                                <>
+                                  <p className="text-sm text-gray-12 truncate min-w-0">
+                                    {selected.name}
+                                  </p>
+                                  <p className="text-sm font-bold text-gray-12 shrink-0 tabular-nums">
+                                    {formatCheckoutVariationSidePrice(
+                                      product.basePrice,
+                                      selected.price,
+                                    )}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-sm text-gray-12">
+                                    Selecione a opção
+                                  </p>
+                                  <span className="text-gray-12 shrink-0">›</span>
+                                </>
+                              )}
                             </div>
                           );
                         }}
@@ -1256,7 +1317,7 @@ export function SubscriptionStep({
                             {product.name}
                           </p>
                           <p className="text-sm text-gray-12 font-semibold">
-                            {formatPrice(getProductPrice(selectedParticipant, product))}
+                            {formatProductCardBasePriceLabel(product)}
                           </p>
                         </div>
                       </div>
@@ -1285,13 +1346,27 @@ export function SubscriptionStep({
                           trigger={() => {
                             const selected = getSelectedVariation(selectedParticipant, product);
                             return (
-                              <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                                <p className="text-sm text-gray-12">
-                                  {selected
-                                    ? formatVariationLabel(selected)
-                                    : "Selecione a opção"}
-                                </p>
-                                <span className="text-gray-12">›</span>
+                              <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
+                                {selected ? (
+                                  <>
+                                    <p className="text-sm text-gray-12 truncate min-w-0">
+                                      {selected.name}
+                                    </p>
+                                    <p className="text-sm font-bold text-gray-12 shrink-0 tabular-nums">
+                                      {formatCheckoutVariationSidePrice(
+                                        product.basePrice,
+                                        selected.price,
+                                      )}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-sm text-gray-12">
+                                      Selecione a opção
+                                    </p>
+                                    <span className="text-gray-12 shrink-0">›</span>
+                                  </>
+                                )}
                               </div>
                             );
                           }}

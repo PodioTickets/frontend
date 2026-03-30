@@ -688,10 +688,10 @@ export default function EventDashboardPage() {
             </div>
           </div>
 
-          {/* Total de Inscrições */}
+          {/* Inscrições Confirmadas */}
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
-              <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Total de Inscrições</p>
+              <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Inscrições Confirmadas</p>
               <div className="w-[28px] h-[28px] p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center">
                 <DolarIcon className="size-5 text-[#202020]" />
               </div>
@@ -1058,7 +1058,7 @@ export default function EventDashboardPage() {
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
-              <p className="font-family-dm-sans font-normal text-base text-gray-11">Total de Inscrições</p>
+              <p className="font-family-dm-sans font-normal text-base text-gray-11">Inscrições Confirmadas</p>
               <div className="w-7 h-7 p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center shrink-0">
                 <DolarIcon className="size-5 text-gray-12" />
               </div>

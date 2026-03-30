@@ -21,7 +21,7 @@ export default function EditTopicsPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
-  const { openTopicModal, setOnModalSave } = useTopicModal();
+  const { openTopicModal, setOnModalSave, setOnModalDelete } = useTopicModal();
   const [authChecked, setAuthChecked] = useState(false);
   const [sections, setSections] = useState<TopicSectionRow[]>([]);
   const defaultTopicApiIdRef = useRef<string | null>(null);
@@ -137,19 +137,26 @@ export default function EditTopicsPage() {
   const handleOpenModal = (topic?: { id?: string; title: string; content: string }) => {
     setOnModalSave(handleSaveTopic);
     if (topic) {
+      const row = topic.id ? sections.find((s) => s.id === topic.id) : undefined;
       editingTopicRef.current = { topicId: topic.id, isEditing: true };
+      setOnModalDelete(
+        row?.allowDelete && topic.id ? () => handleDeleteTopicConfirmed(topic.id!) : undefined
+      );
       openTopicModal({
         title: topic.title,
         content: topic.content,
         isEditing: true,
         topicId: topic.id,
+        allowDelete: row?.allowDelete ?? false,
       });
     } else {
       editingTopicRef.current = { isEditing: false };
+      setOnModalDelete(undefined);
       openTopicModal({
         title: "",
         content: "",
         isEditing: false,
+        allowDelete: false,
       });
     }
   };
@@ -266,6 +273,11 @@ export default function EditTopicsPage() {
     const row = sections.find((s) => s.id === topicId);
     if (!row) return;
     setOnModalSave(handleSaveTopic);
+    if (row.allowDelete) {
+      setOnModalDelete(() => handleDeleteTopicConfirmed(row.id));
+    } else {
+      setOnModalDelete(undefined);
+    }
     if (!row.allowDelete) {
       editingTopicRef.current = { topicId: "default", isEditing: true };
       openTopicModal({
@@ -273,6 +285,7 @@ export default function EditTopicsPage() {
         content: row.content,
         isEditing: true,
         topicId: "default",
+        allowDelete: false,
       });
     } else {
       editingTopicRef.current = { topicId: row.id, isEditing: true };
@@ -281,6 +294,7 @@ export default function EditTopicsPage() {
         content: row.content,
         isEditing: true,
         topicId: row.id,
+        allowDelete: true,
       });
     }
   };
@@ -314,17 +328,17 @@ export default function EditTopicsPage() {
     void handlePersistOrderWithRollback(reordered);
   };
 
-  const handleDeleteTopic = async (topicId: string) => {
+  const handleDeleteTopicConfirmed = async (topicId: string) => {
     if (!eventId) {
       toast.error("Evento não encontrado.");
-      return;
+      throw new Error("no event");
     }
-    if (topicId === DEFAULT_TOPIC_SENTINEL) return;
+    if (topicId === DEFAULT_TOPIC_SENTINEL) {
+      throw new Error("invalid topic");
+    }
     const row = sections.find((s) => s.id === topicId);
-    if (!row?.allowDelete) return;
-
-    if (!confirm("Tem certeza que deseja excluir este tópico?")) {
-      return;
+    if (!row?.allowDelete) {
+      throw new Error("not deletable");
     }
 
     try {
@@ -336,6 +350,7 @@ export default function EditTopicsPage() {
       const errorMessage =
         error.response?.data?.message || error.message || "Erro ao excluir tópico";
       toast.error(errorMessage);
+      throw error;
     }
   };
 
@@ -367,7 +382,6 @@ export default function EditTopicsPage() {
             topics={sections}
             onReorder={handleTopicsReorder}
             onEditTopic={handleEditTopic}
-            onDeleteTopic={handleDeleteTopic}
           />
 
           <div className="flex items-center justify-center py-10 w-full">

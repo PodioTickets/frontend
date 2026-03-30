@@ -19,6 +19,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { BookIcon } from "../Icons/BookIcon";
 
 interface ProductVariation {
   id: string;
@@ -37,6 +38,10 @@ export function CreateProductModal() {
   const [isRequired, setIsRequired] = useState(true);
   const [variationTypeName, setVariationTypeName] = useState("");
   const [variations, setVariations] = useState<ProductVariation[]>([]);
+  /** Padrão Figma: «Não» — liberar edição da variação pelo comprador */
+  const [buyerCanEditVariation, setBuyerCanEditVariation] = useState(false);
+  const [variationChangeDeadlineDays, setVariationChangeDeadlineDays] =
+    useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formInitVersion, setFormInitVersion] = useState(0);
   const [productFormBaseline, setProductFormBaseline] = useState<string | null>(
@@ -61,6 +66,40 @@ export function CreateProductModal() {
     const s = String(value).trim().replace(".", ",");
     return s;
   };
+
+  /** Prévia do dropdown: acréscimo sobre a base quando a variação ≥ base; se a variação for menor, mostra o preço total. */
+  const previewVariationListPriceLabel = useCallback(
+    (variationPriceStr: string) => {
+      const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
+      const v =
+        parseFloat(String(variationPriceStr || "0").replace(",", ".")) || 0;
+      const hasExplicitVariationPrice =
+        String(variationPriceStr ?? "").trim() !== "";
+      const fmt = (n: number) =>
+        n.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      if (!hasExplicitVariationPrice) {
+        return `R$ ${fmt(0)}`;
+      }
+      if (v < base) {
+        return `R$ ${fmt(v)}`;
+      }
+      return `R$ ${fmt(Math.max(0, v - base))}`;
+    },
+    [basePrice],
+  );
+
+  const productPreviewDropdownOptions = useMemo(
+    () =>
+      variations.map((variation) => ({
+        id: variation.id,
+        label: variation.name.trim() || "Variação",
+        suffix: previewVariationListPriceLabel(variation.price),
+      })),
+    [variations, previewVariationListPriceLabel],
+  );
 
   const productFormSnapshot = useMemo(
     () =>
@@ -110,13 +149,27 @@ export function CreateProductModal() {
       setVariations(
         Array.isArray(p.variations)
           ? p.variations.map((v: any) => ({
-              id: v.id || String(Date.now() + Math.random()),
-              name: v.name ?? "",
-              price: formatPriceFromApi(v.price),
-              stock: v.stock != null ? String(v.stock) : "",
-            }))
+            id: v.id || String(Date.now() + Math.random()),
+            name: v.name ?? "",
+            price: formatPriceFromApi(v.price),
+            stock: v.stock != null ? String(v.stock) : "",
+          }))
           : [],
       );
+      const rawP = p as Record<string, unknown>;
+      const allowed =
+        rawP.buyerVariationEditAllowed === true ||
+        rawP.allowBuyerVariationEdit === true;
+      const daysRaw =
+        rawP.variationEditDeadlineDays ?? rawP.variationChangeDeadlineDays;
+      const daysNum =
+        typeof daysRaw === "number" && Number.isFinite(daysRaw)
+          ? Math.max(0, Math.floor(daysRaw))
+          : typeof daysRaw === "string" && /^\d+$/.test(daysRaw.trim())
+            ? Math.max(0, parseInt(daysRaw, 10))
+            : 30;
+      setBuyerCanEditVariation(Boolean(allowed));
+      setVariationChangeDeadlineDays(String(daysNum));
     } else {
       // Create mode: 1ª variação "Padrão" + estoque = soma dos lotes; 2ª vazia (obrigatório nome para habilitar salvar)
       setProductName("");
@@ -127,7 +180,7 @@ export function CreateProductModal() {
       setVariationTypeName("");
       const sumFromTicket =
         typeof data?.ticketBatchesTotalQuantity === "number" &&
-        Number.isFinite(data.ticketBatchesTotalQuantity)
+          Number.isFinite(data.ticketBatchesTotalQuantity)
           ? Math.max(0, Math.floor(data.ticketBatchesTotalQuantity))
           : 0;
       const t = Date.now();
@@ -145,6 +198,8 @@ export function CreateProductModal() {
           stock: "",
         },
       ]);
+      setBuyerCanEditVariation(false);
+      setVariationChangeDeadlineDays("30");
     }
     setFormInitVersion((v) => v + 1);
   }, [isOpen, isEditing, data]);
@@ -262,6 +317,15 @@ export function CreateProductModal() {
       const basePriceReais = basePrice
         ? parseFloat(basePrice.replace(",", "."))
         : 0;
+      const daysParsed = parseInt(
+        String(variationChangeDeadlineDays || "0").replace(/\D/g, ""),
+        10,
+      );
+      const deadlineDays = buyerCanEditVariation
+        ? variationChangeDeadlineDays.trim() === ""
+          ? 30
+          : Math.max(0, Number.isFinite(daysParsed) ? daysParsed : 30)
+        : 0;
       const productData = {
         name: productName.trim(),
         image: productImage,
@@ -280,6 +344,8 @@ export function CreateProductModal() {
               stock: parseInt(v.stock) || 0,
             };
           }),
+        buyerVariationEditAllowed: buyerCanEditVariation,
+        variationEditDeadlineDays: buyerCanEditVariation ? deadlineDays : 0,
       };
 
       let savedProduct;
@@ -322,14 +388,14 @@ export function CreateProductModal() {
 
   const previewPrice =
     variations.length > 0 &&
-    variations.some(
-      (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
-    )
+      variations.some(
+        (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
+      )
       ? variations.find(
-          (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
-        )?.price ||
-        basePrice ||
-        "0,00"
+        (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
+      )?.price ||
+      basePrice ||
+      "0,00"
       : basePrice || "0,00";
 
   return (
@@ -485,7 +551,7 @@ export function CreateProductModal() {
                             className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                             aria-label="Informação: produto incluso no ingresso"
                           >
-                            <Info className="size-5 shrink-0" />
+                            <BookIcon className="size-5 shrink-0" />
                           </button>
                         </Tooltip>
                       </div>
@@ -560,7 +626,7 @@ export function CreateProductModal() {
                             className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                             aria-label="Informação: produto obrigatório ou opcional"
                           >
-                            <Info className="size-5 shrink-0" />
+                            <BookIcon className="size-5 shrink-0" />
                           </button>
                         </Tooltip>
                       </div>
@@ -655,7 +721,7 @@ export function CreateProductModal() {
                                   className="inline-flex cursor-help text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
                                   aria-label="Informação: preço específico da variação"
                                 >
-                                  <Info className="size-5 shrink-0" />
+                                  <BookIcon className="size-5 shrink-0" />
                                 </button>
                               </Tooltip>
                             </span>
@@ -759,7 +825,75 @@ export function CreateProductModal() {
                   </div>
 
                   {/* Right Column - Preview */}
-                  <div className="w-[406px] shrink-0 flex flex-col gap-4 sticky top-5">
+                  <div className="shrink-0 flex flex-col gap-4 sticky top-5">
+                    {/* Edição de variação pelo comprador — Figma node 2898:109765 */}
+                    <div className="flex flex-col gap-5 w-full">
+                      <div className="flex flex-col gap-3">
+                        <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                          Deseja liberar a edição da variação pelo comprador?
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-[10px] gap-y-2">
+                          <div className="flex items-center gap-2">
+                            <Radio
+                              name="buyerVariationEdit"
+                              checked={buyerCanEditVariation}
+                              onChange={() => setBuyerCanEditVariation(true)}
+                            />
+                            <button
+                              type="button"
+                              className="text-sm text-gray-12 font-normal font-family-dm-sans leading-[1.3] cursor-pointer select-none bg-transparent border-none p-0 text-left hover:text-gray-12"
+                              onClick={() => setBuyerCanEditVariation(true)}
+                            >
+                              Sim
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Radio
+                              name="buyerVariationEdit"
+                              checked={!buyerCanEditVariation}
+                              onChange={() => setBuyerCanEditVariation(false)}
+                            />
+                            <button
+                              type="button"
+                              className="text-sm text-gray-12 font-normal font-family-dm-sans leading-[1.3] cursor-pointer select-none bg-transparent border-none p-0 text-left hover:text-gray-12"
+                              onClick={() => setBuyerCanEditVariation(false)}
+                            >
+                              Não
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        className={`flex flex-col gap-3 ${!buyerCanEditVariation ? "opacity-50 pointer-events-none" : ""}`}
+                      >
+                        <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                          Até quantos dias antes do evento o participante pode
+                          alterar a variação?
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={4}
+                            value={variationChangeDeadlineDays}
+                            onChange={(e) =>
+                              setVariationChangeDeadlineDays(
+                                e.target.value.replace(/\D/g, "").slice(0, 4),
+                              )
+                            }
+                            disabled={!buyerCanEditVariation}
+                            className="h-9 min-w-13 w-10 shrink-0 rounded-lg border border-gray-7 bg-gray-1 px-2 text-center text-base font-normal font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:border-primary-8 focus:outline-none disabled:cursor-not-allowed"
+                            placeholder="30"
+                            aria-label="Dias antes do evento para alterar variação"
+                          />
+                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                            dias antes do evento
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                       Prévia
                     </h3>
@@ -783,7 +917,7 @@ export function CreateProductModal() {
                             {productName || "Nome do produto"}
                           </p>
                           <p className="text-gray-11 text-base font-semibold font-manrope leading-[1.1]">
-                            R$ {previewPrice}
+                            R$ {basePrice.trim() ? basePrice : previewPrice}
                           </p>
                         </div>
                       </div>
@@ -792,10 +926,8 @@ export function CreateProductModal() {
                           Escolha a variação
                         </p>
                         <Dropdown
-                          options={variations.map((variation, index) => ({
-                            id: variation.id,
-                            label: variation.name,
-                          }))}
+                          options={productPreviewDropdownOptions}
+                          menuInPortal
                           width="w-full"
                           maxHeight="max-h-[200px]"
                           selectedIds={variations.map(

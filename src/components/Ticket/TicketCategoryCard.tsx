@@ -8,7 +8,6 @@ import { TrashIcon } from "@/components/Icons/TrashIcon";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { TicketTable } from "./TicketTable";
 import { DeleteTicketCategoryModal } from "./DeleteTicketCategoryModal";
-import { DeleteTicketModal } from "./DeleteTicketModal";
 import type { Ticket } from "@/hooks/useTickets";
 
 interface TicketCategoryCardProps {
@@ -20,7 +19,6 @@ interface TicketCategoryCardProps {
   onEditDescription?: (categoryId: string, description: string) => void;
   onDelete: (categoryId: string) => void | Promise<void>;
   onEditTicket: (ticketId: string) => void;
-  onDeleteTicket: (ticketId: string) => void;
   onPageChange: (categoryId: string, page: number) => void;
   onDuplicateTicket: (ticketId: string) => void;
   duplicatingTicketId?: string | null;
@@ -37,7 +35,6 @@ export function TicketCategoryCard({
   onEditDescription,
   onDelete,
   onEditTicket,
-  onDeleteTicket,
   onPageChange,
   onDuplicateTicket,
   duplicatingTicketId = null,
@@ -49,10 +46,6 @@ export function TicketCategoryCard({
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editingDescription, setEditingDescription] = useState(category.description || "");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [ticketPendingDelete, setTicketPendingDelete] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
 
   const { setNodeRef, isOver } = useDroppable({
     id: `category-${category.id}`,
@@ -93,16 +86,6 @@ export function TicketCategoryCard({
         onClose={() => setDeleteModalOpen(false)}
         canDelete={tickets.length === 0}
         onConfirm={() => onDelete(category.id)}
-      />
-      <DeleteTicketModal
-        open={!!ticketPendingDelete}
-        onClose={() => setTicketPendingDelete(null)}
-        ticketName={ticketPendingDelete?.name}
-        onConfirm={async () => {
-          const target = ticketPendingDelete;
-          if (!target) return;
-          await onDeleteTicket(target.id);
-        }}
       />
     <div
       ref={setNodeRef}
@@ -240,13 +223,6 @@ export function TicketCategoryCard({
           onEdit={onEditTicket}
           onDuplicate={onDuplicateTicket}
           duplicatingTicketId={duplicatingTicketId}
-          onRequestDeleteTicket={(id: string) => {
-            const t = tickets.find((x) => x.id === id);
-            setTicketPendingDelete({
-              id,
-              name: t?.name?.trim() || "Ingresso",
-            });
-          }}
           productsMap={productsMap}
         />
       )}

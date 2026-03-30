@@ -1,8 +1,27 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  KeyboardSensor,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
@@ -27,6 +46,8 @@ import {
 } from "@/stores/modalStore";
 import { Loading } from "../Loading";
 import { UnsavedTicketChangesModal } from "./UnsavedTicketChangesModal";
+import { DeleteTicketModal } from "./DeleteTicketModal";
+import { useTickets } from "@/hooks/useTickets";
 
 // Types
 export interface Batch {
@@ -129,6 +150,100 @@ const defaultBatch: Batch = {
   startType: "date",
 };
 
+function SortableTicketProductCard({
+  product,
+  onEdit,
+  onRemove,
+  dragDisabled,
+}: {
+  product: ProductData;
+  onEdit: () => void;
+  onRemove: () => void;
+  dragDisabled?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: product.productId,
+    disabled: dragDisabled,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px] ${isDragging ? "z-10 opacity-70 shadow-lg ring-2 ring-primary-8/25" : ""
+        } ${dragDisabled
+          ? ""
+          : "cursor-grab touch-none active:cursor-grabbing [&_.ticket-product-actions]:cursor-default"
+        }`}
+      {...(dragDisabled ? {} : attributes)}
+      {...(dragDisabled ? {} : listeners)}
+    >
+      <div className="border-b border-gray-6 flex gap-3 items-center p-4">
+        <div className="flex gap-3 items-center flex-1 min-w-0">
+          {product.product.image ? (
+            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
+              <Image
+                src={product.product.image}
+                alt={product.product.name}
+                fill
+                className="object-cover rounded"
+              />
+            </div>
+          ) : (
+            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0 flex items-center justify-center text-gray-11 text-base font-semibold font-family-dm-sans leading-[1.1]">
+              {product.product.name.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div className="flex flex-col justify-between h-full py-2 gap-2 flex-1 min-w-0">
+            <h3 className="text-gray-12 text-base font-semibold font-family-dm-sans leading-[1.1] truncate">
+              {product.product.name}
+            </h3>
+            <p className="text-gray-11 text-sm font-semibold font-family-dm-sans leading-[1.3]">
+              {product.product.isIncludedInTicket
+                ? "Valor incluso no ingresso"
+                : `R$ ${formatProductPrice(product.product.basePrice)}`}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="ticket-product-actions flex flex-col items-end justify-center p-4"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex gap-2 items-center">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="bg-gray-2 border border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors"
+          >
+            <PencilIcon className="size-5 text-gray-11" />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="bg-red-2 border border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
+          >
+            <TrashIcon className="size-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** `id` de lote persistido no backend (UUID). Demais valores são só chave de UI. */
 function isPersistedBatchId(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -205,7 +320,7 @@ function buildTicketFormSnapshot(p: {
     endDate: b.endDate ?? "",
     endTime: b.endTime ?? "",
   }));
-  const productIds = [...p.products.map((x) => x.productId)].sort().join(",");
+  const productIds = p.products.map((x) => x.productId).join(",");
   return JSON.stringify({
     ticketName: p.ticketName,
     ticketDescription: p.ticketDescription,
@@ -365,6 +480,7 @@ export function TicketForm({
 }: TicketFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { deleteTicket } = useTickets(eventId, !!eventId);
   const { openCreateProductModal, setOnModalSave: setOnCreateProductSave } =
     useCreateProductModal();
   const { openAddExistingProductsModal, setOnModalSave: setOnAddProductsSave } =
@@ -376,6 +492,7 @@ export function TicketForm({
   const [formBaseline, setFormBaseline] = useState<string | null>(null);
   const [ticketHydrateNonce, setTicketHydrateNonce] = useState(0);
   const [leavePromptOpen, setLeavePromptOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const guardPushedRef = useRef(false);
   const isDirtyRef = useRef(false);
@@ -408,6 +525,101 @@ export function TicketForm({
   );
   const [products, setProducts] = useState<ProductData[]>(
     initialData?.products || [],
+  );
+  const [activeProductDragId, setActiveProductDragId] = useState<string | null>(
+    null,
+  );
+  const [reorderingProducts, setReorderingProducts] = useState(false);
+
+  const productDndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleTicketProductsDragStart = useCallback((e: DragStartEvent) => {
+    if (reorderingProducts) return;
+    setActiveProductDragId(e.active.id as string);
+  }, [reorderingProducts]);
+
+  const handleTicketProductsDragCancel = useCallback(() => {
+    setActiveProductDragId(null);
+  }, []);
+
+  const handleTicketProductsDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveProductDragId(null);
+      if (reorderingProducts) return;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = products.findIndex((p) => p.productId === active.id);
+      const newIndex = products.findIndex((p) => p.productId === over.id);
+      if (oldIndex < 0 || newIndex < 0) return;
+
+      const previous = products;
+      const reordered = arrayMove(products, oldIndex, newIndex);
+      setProducts(reordered);
+
+      if (mode !== "edit" || !ticketId || !eventId) return;
+
+      setReorderingProducts(true);
+      try {
+        await organizerService.reorderTicketProducts(
+          eventId,
+          ticketId,
+          reordered.map((p) => p.productId),
+        );
+        toast.success("Ordem dos produtos atualizada");
+        setFormBaseline((baseline) => {
+          if (!baseline) return baseline;
+          try {
+            const o = JSON.parse(baseline) as { productIds?: string };
+            return JSON.stringify({
+              ...o,
+              productIds: reordered.map((p) => p.productId).join(","),
+            });
+          } catch {
+            return baseline;
+          }
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.events.tickets(eventId),
+        });
+      } catch (err: unknown) {
+        setProducts(previous);
+        const msg =
+          err &&
+          typeof err === "object" &&
+          "response" in err &&
+          (err as { response?: { data?: { message?: string } } }).response
+            ?.data?.message;
+        toast.error(
+          typeof msg === "string" && msg.trim()
+            ? msg
+            : "Não foi possível atualizar a ordem dos produtos",
+        );
+      } finally {
+        setReorderingProducts(false);
+      }
+    },
+    [
+      products,
+      mode,
+      ticketId,
+      eventId,
+      queryClient,
+      reorderingProducts,
+    ],
+  );
+
+  const activeDragProduct = useMemo(
+    () =>
+      activeProductDragId
+        ? products.find((p) => p.productId === activeProductDragId)
+        : undefined,
+    [activeProductDragId, products],
   );
 
   // Data from API
@@ -784,8 +996,11 @@ export function TicketForm({
               const productsResponse =
                 await organizerService.getProducts(eventId);
               const allProducts = productsResponse?.products || [];
-              const loadedProducts = allProducts
-                .filter((p: Product) => productIdsToLoad.includes(p.id))
+              const loadedProducts = productIdsToLoad
+                .map((id: string) =>
+                  allProducts.find((p: Product) => p.id === id),
+                )
+                .filter((p): p is Product => p != null)
                 .map(
                   (p: Product): ProductData => ({
                     id: p.id,
@@ -982,6 +1197,13 @@ export function TicketForm({
     }
     router.push(backUrl);
   };
+
+  const handleConfirmDeleteTicket = useCallback(async () => {
+    if (!ticketId) return;
+    await deleteTicket(ticketId);
+    window.dispatchEvent(new CustomEvent("ticketCreated"));
+    router.push(backUrl);
+  }, [ticketId, deleteTicket, router, backUrl]);
 
   const handleSaveDraftAndLeave = () => {
     try {
@@ -1186,9 +1408,9 @@ export function TicketForm({
         ageLimit:
           hasAgeRestriction && (minAge || maxAge)
             ? {
-                min: minAge ? parseInt(minAge) : undefined,
-                max: maxAge ? parseInt(maxAge) : undefined,
-              }
+              min: minAge ? parseInt(minAge) : undefined,
+              max: maxAge ? parseInt(maxAge) : undefined,
+            }
             : undefined,
         hasKit: hasKit || false,
         productIds: products.map((p) => p.productId),
@@ -1256,7 +1478,7 @@ export function TicketForm({
         error instanceof Error
           ? error.message
           : (error as { response?: { data?: { message?: string } } })?.response
-              ?.data?.message || "Erro ao salvar ingresso";
+            ?.data?.message || "Erro ao salvar ingresso";
       toast.error(errorMessage);
       return false;
     } finally {
@@ -1290,10 +1512,10 @@ export function TicketForm({
     { id: "", label: "Sem categoria", onClick: () => setSelectedGroupId("") },
     ...(Array.isArray(ticketCategories)
       ? ticketCategories.map((group) => ({
-          id: group.id,
-          label: group.name,
-          onClick: () => setSelectedGroupId(group.id),
-        }))
+        id: group.id,
+        label: group.name,
+        onClick: () => setSelectedGroupId(group.id),
+      }))
       : []),
   ];
 
@@ -1304,9 +1526,9 @@ export function TicketForm({
     genderOptions.find((g) => g.id === gender)?.label || "Selecione";
   const selectedGroupLabel = Array.isArray(ticketCategories)
     ? ticketCategories.find((g) => g.id === selectedGroupId)?.name ||
-      (initialGroupId
-        ? ticketCategories.find((g) => g.id === initialGroupId)?.name
-        : "Sem categoria")
+    (initialGroupId
+      ? ticketCategories.find((g) => g.id === initialGroupId)?.name
+      : "Sem categoria")
     : "Sem categoria";
 
   if (loading) {
@@ -1321,14 +1543,14 @@ export function TicketForm({
     <div className={className}>
       <div className="w-full flex flex-col gap-9">
         {/* Title Section */}
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleBack}
-            className="border border-gray-6 rounded-[52px] rotate-180 size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+            className="border border-gray-6 rounded-[52px] rotate-180 size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer shrink-0"
           >
             <ArrowButton isOpen={false} />
           </button>
-          <h1 className="text-gray-12 text-[28px] font-bold font-family-dm-sans leading-[1.1]">
+          <h1 className="text-gray-12 text-[28px] font-bold font-family-dm-sans leading-[1.1] min-w-0">
             {mode === "edit" ? "Editar ingresso" : "Criação de ingresso"}
           </h1>
         </div>
@@ -1407,11 +1629,10 @@ export function TicketForm({
                 trigger={(isOpen) => (
                   <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
                     <span
-                      className={`text-base font-family-dm-sans ${
-                        selectedGroupId || initialGroupId
-                          ? "text-gray-12"
-                          : "text-gray-11"
-                      }`}
+                      className={`text-base font-family-dm-sans ${selectedGroupId || initialGroupId
+                        ? "text-gray-12"
+                        : "text-gray-11"
+                        }`}
                     >
                       {selectedGroupId || initialGroupId
                         ? selectedGroupLabel
@@ -1436,9 +1657,8 @@ export function TicketForm({
                 trigger={(isOpen) => (
                   <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-[250px] hover:bg-gray-3 transition-colors">
                     <span
-                      className={`text-base font-family-dm-sans ${
-                        selectedModality ? "text-gray-12" : "text-gray-11"
-                      }`}
+                      className={`text-base font-family-dm-sans ${selectedModality ? "text-gray-12" : "text-gray-11"
+                        }`}
                     >
                       {selectedModalityLabel}
                     </span>
@@ -1854,7 +2074,8 @@ export function TicketForm({
                   </h2>
                   <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                     Adicione e gerencie os produtos do kit que ficarão
-                    disponíveis neste ingresso
+                    disponíveis neste ingresso. Arraste os cards para alterar a
+                    ordem de exibição.
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -1907,76 +2128,65 @@ export function TicketForm({
                   </p>
                 </div>
               ) : (
-                <div className="bg-gray-2 border border-gray-6 rounded-xl p-5">
-                  <div className="flex flex-wrap gap-3">
-                    {products.map((product, index) => (
-                      <div
-                        key={product.id || `product-${index}`}
-                        className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px]"
-                      >
-                        <div className="border-b border-gray-6 flex gap-3 items-center p-4">
-                          {product.product.image ? (
-                            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
-                              <Image
-                                src={product.product.image}
-                                alt={product.product.name}
-                                fill
-                                className="object-cover rounded"
-                              />
-                            </div>
-                          ) : (
-                            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0 flex items-center justify-center text-gray-11 text-base font-semibold font-family-dm-sans leading-[1.1]">
-                              {product.product.name.slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="flex flex-col justify-between h-full py-2 gap-2 flex-1 min-w-0">
-                            <h3 className="text-gray-12 text-base font-semibold font-family-dm-sans leading-[1.1]">
-                              {product.product.name}
-                            </h3>
-                            <p className="text-gray-11 text-sm font-semibold font-family-dm-sans leading-[1.3]">
-                              {product.product.isIncludedInTicket
-                                ? "Valor incluso no ingresso"
-                                : `R$ ${formatProductPrice(product.product.basePrice)}`}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col items-end justify-center p-4">
-                          <div className="flex gap-2 items-center">
-                            <button
-                              onClick={() => {
-                                if (!eventId) {
-                                  toast.error("Evento não encontrado");
-                                  return;
-                                }
-                                openCreateProductModal({
-                                  eventId,
-                                  productId: product.productId,
-                                  product: product.product,
-                                });
-                              }}
-                              className="bg-gray-2 border border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors"
-                            >
-                              <PencilIcon className="size-5 text-gray-11" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setProducts(
-                                  products.filter(
-                                    (p) => p.productId !== product.productId,
-                                  ),
-                                );
-                                toast.success("Produto removido do ingresso");
-                              }}
-                              className="bg-red-2 border border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
-                            >
-                              <TrashIcon className="size-5" />
-                            </button>
-                          </div>
-                        </div>
+                <div
+                  className={`bg-gray-2 border border-gray-6 rounded-xl p-5 ${reorderingProducts ? "pointer-events-none opacity-75" : ""
+                    }`}
+                >
+                  <DndContext
+                    sensors={productDndSensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleTicketProductsDragStart}
+                    onDragEnd={handleTicketProductsDragEnd}
+                    onDragCancel={handleTicketProductsDragCancel}
+                  >
+                    <SortableContext
+                      items={products.map((p) => p.productId)}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className="flex flex-wrap gap-3">
+                        {products.map((product) => (
+                          <SortableTicketProductCard
+                            key={product.productId}
+                            product={product}
+                            dragDisabled={products.length < 2}
+                            onEdit={() => {
+                              if (!eventId) {
+                                toast.error("Evento não encontrado");
+                                return;
+                              }
+                              openCreateProductModal({
+                                eventId,
+                                productId: product.productId,
+                                product: product.product,
+                              });
+                            }}
+                            onRemove={() => {
+                              setProducts((prev) =>
+                                prev.filter(
+                                  (p) =>
+                                    p.productId !== product.productId,
+                                ),
+                              );
+                              toast.success("Produto removido do ingresso");
+                            }}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                    <DragOverlay dropAnimation={null}>
+                      {activeDragProduct ? (
+                        <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px] shadow-2xl opacity-95 cursor-grabbing">
+                          <div className="border-b border-gray-6 flex gap-3 items-center p-4">
+                            <div className="flex flex-col justify-center min-w-0 flex-1 py-1">
+                              <p className="text-gray-12 text-base font-semibold font-family-dm-sans truncate">
+                                {activeDragProduct.product.name}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
                 </div>
               )}
             </div>
@@ -1984,11 +2194,21 @@ export function TicketForm({
         </div>
 
         {/* Footer Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {mode === "edit" && ticketId ? (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setDeleteModalOpen(true)}
+              className="h-[52px] py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
+            >
+              Excluir ingresso
+            </Button>
+          ) : null}
           <Button
             onClick={handleSubmit}
             disabled={saving || !isDirty}
-            className="text-xl font-bold px-11 h-[52px]"
+            className="font-bold px-11 h-[52px]"
           >
             {saving
               ? mode === "edit"
@@ -2010,6 +2230,13 @@ export function TicketForm({
           releaseUnsavedHistoryGuard();
           router.push(backUrl);
         }}
+      />
+
+      <DeleteTicketModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        ticketName={ticketName.trim() || undefined}
+        onConfirm={handleConfirmDeleteTicket}
       />
     </div>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { Pencil, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { TrashIcon } from "@/components/Icons/TrashIcon";
 import Image from "next/image";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -16,8 +15,6 @@ interface TicketTableProps {
   onDuplicate: (ticketId: string) => void;
   /** Ingresso em processo de duplicação (mostra spinner no botão) */
   duplicatingTicketId?: string | null;
-  /** Abre fluxo de confirmação para excluir (ex.: modal no pai) */
-  onRequestDeleteTicket?: (ticketId: string) => void;
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
 }
 
@@ -54,14 +51,12 @@ function DraggableTicketRow({
   onEdit,
   onDuplicate,
   duplicatingTicketId,
-  onRequestDeleteTicket,
 }: {
   ticket: Ticket;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
   onEdit: (ticketId: string) => void;
   onDuplicate: (ticketId: string) => void;
   duplicatingTicketId?: string | null;
-  onRequestDeleteTicket?: (ticketId: string) => void;
 }) {
   const MAX_VISIBLE_PRODUCTS = 5;
   const ticketProducts = ticket.products
@@ -101,8 +96,8 @@ function DraggableTicketRow({
       className="bg-gray-1 border-b border-gray-6 flex h-[52px] items-center justify-between w-full last:border-b-0 cursor-move hover:bg-gray-2 transition-colors"
     >
       {/* Nome do ingresso */}
-      <div className="flex h-full items-center p-4 w-[318px]">
-        <p className="flex-1 font-family-dm-sans font-semibold leading-[1.3] min-h-px min-w-px overflow-hidden text-sm text-gray-12 text-ellipsis whitespace-nowrap">
+      <div className="flex h-full items-center p-4 w-[318px] min-w-0">
+        <p className="flex-1 min-w-0 font-family-dm-sans font-semibold leading-[1.3] overflow-hidden text-sm text-gray-12 text-ellipsis whitespace-nowrap">
           {ticket.name}
         </p>
       </div>
@@ -212,19 +207,6 @@ function DraggableTicketRow({
             <Plus className="size-5 text-gray-11" />
           )}
         </button>
-        {onRequestDeleteTicket ? (
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRequestDeleteTicket(ticket.id);
-            }}
-            className="bg-red-2 border border-red-6 rounded-lg size-8 flex items-center justify-center hover:bg-red-3 transition-colors cursor-pointer"
-          >
-            <TrashIcon className="size-5 text-red-12" />
-          </button>
-        ) : null}
       </div>
     </div>
   );
@@ -238,7 +220,6 @@ export function TicketTable({
   onEdit,
   onDuplicate,
   duplicatingTicketId = null,
-  onRequestDeleteTicket,
   productsMap = {},
 }: TicketTableProps) {
   return (
@@ -282,7 +263,6 @@ export function TicketTable({
             onEdit={onEdit}
             onDuplicate={onDuplicate}
             duplicatingTicketId={duplicatingTicketId}
-            onRequestDeleteTicket={onRequestDeleteTicket}
           />
         ))}
       </div>
