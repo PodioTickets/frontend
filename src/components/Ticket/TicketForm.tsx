@@ -2078,8 +2078,7 @@ export function TicketForm({
                   </h2>
                   <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                     Adicione e gerencie os produtos do kit que ficarão
-                    disponíveis neste ingresso. Arraste os cards para alterar a
-                    ordem de exibição.
+                    disponíveis neste ingresso.
                   </p>
                 </div>
                 <div className="flex gap-2">
