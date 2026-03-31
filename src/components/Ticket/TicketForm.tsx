@@ -1623,7 +1623,7 @@ export function TicketForm({
           {Array.isArray(ticketCategories) && ticketCategories.length > 0 && (
             <div className="flex flex-col gap-2">
               <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                Categoria (opcional)
+                Categoria
               </label>
               <Dropdown
                 options={groupOptions}
@@ -1782,7 +1782,7 @@ export function TicketForm({
               </div>
             </div>
             {hasAgeRestriction && (
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-2">
                 <div className="flex flex-col gap-2 w-max">
                   <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
                     Idade mínima
@@ -1790,7 +1790,7 @@ export function TicketForm({
                   <Input
                     value={minAge}
                     onChange={(e) => setMinAge(e.target.value)}
-                    placeholder="Ex: 21 anos"
+                    placeholder="Ex: 18 anos"
                     className="h-12"
                   />
                 </div>
