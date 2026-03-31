@@ -70,14 +70,14 @@ export function UnsavedTicketChangesModal({
                   type="button"
                   variant="outline"
                   onClick={onClose}
-                  className="w-full h-12 min-h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
+                  className="w-full h-12 min-h-12 border-[1.5px] jus border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
                 >
                   Continuar editando
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={ onLeaveWithoutSaving}
+                  onClick={onLeaveWithoutSaving}
                   className="w-full h-12 min-h-12 text-gray-11 font-bold text-base font-manrope leading-[1.1] rounded-lg hover:bg-gray-3"
                 >
                   Sair sem salvar
