@@ -181,15 +181,6 @@ export function TicketCategoryCard({
                   Adicione uma observação para o cliente...
                 </p>
               )}
-              <button
-                onClick={() => {
-                  setIsEditingDescription(true);
-                  setEditingDescription(category.description || "");
-                }}
-                className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-7 flex items-center justify-center cursor-pointer shrink-0"
-              >
-                <PencilIcon className="size-4 text-gray-11" />
-              </button>
             </div>
           )}
         </div>

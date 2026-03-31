@@ -47,6 +47,7 @@ import {
 import { Loading } from "../Loading";
 import { UnsavedTicketChangesModal } from "./UnsavedTicketChangesModal";
 import { DeleteTicketModal } from "./DeleteTicketModal";
+import { TicketAdvancedKitDisplayOptions } from "./TicketAdvancedKitDisplayOptions";
 import { useTickets } from "@/hooks/useTickets";
 
 // Types
@@ -1749,15 +1750,15 @@ export function TicketForm({
           </div>
 
           {/* Restrição de idade */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-              Restrição de idade (opcional)
+              Restrição de idade
             </label>
             <div className="flex flex-col gap-2">
-              <p className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+              <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
                 Esse evento tem restrição de idade?
               </p>
-              <div className="flex gap-4">
+              <div className="flex gap-4 mt-2">
                 <div className="flex items-center gap-2">
                   <Radio
                     name="ageRestriction"
@@ -2066,7 +2067,10 @@ export function TicketForm({
           </div>
 
           {hasKit && (
-            <div className="flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-4">
+            <div
+              id="ticket-form-kit-products"
+              className="flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-4"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-2">
                   <h2 className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.1]">
@@ -2191,16 +2195,26 @@ export function TicketForm({
               )}
             </div>
           )}
+
+          {!hasKit ? (
+            <TicketAdvancedKitDisplayOptions
+              onEditImagePositions={() => {
+                document
+                  .getElementById("ticket-form-kit-products")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
+          ) : null}
         </div>
 
         {/* Footer Button */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-between">
           {mode === "edit" && ticketId ? (
             <Button
               type="button"
               variant="destructive"
               onClick={() => setDeleteModalOpen(true)}
-              className="h-[52px] py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
+              className="py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
             >
               Excluir ingresso
             </Button>
@@ -2208,7 +2222,7 @@ export function TicketForm({
           <Button
             onClick={handleSubmit}
             disabled={saving || !isDirty}
-            className="font-bold px-11 h-[52px]"
+            className="font-bold px-11"
           >
             {saving
               ? mode === "edit"

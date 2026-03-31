@@ -1,5 +1,8 @@
 import type { Organizer } from "./user";
 import type { Organization } from "@/services/organizer/OrganizerService";
+import type { EventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
+
+export type { EventKitSelectionDisplay };
 
 export interface Event {
   id: string;
@@ -40,6 +43,8 @@ export interface Event {
     registrations?: number;
     modalities?: number;
   };
+  /** Exibição do kit na escolha de ingressos (organizer). Opcional até o backend expor o campo. */
+  kitSelectionDisplay?: EventKitSelectionDisplay | null;
 }
 
 export interface Question {

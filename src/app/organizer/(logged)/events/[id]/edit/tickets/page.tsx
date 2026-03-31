@@ -18,6 +18,18 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
 import { TicketTable } from "@/components/Ticket/TicketTable";
+import { TicketAdvancedKitDisplayOptions } from "@/components/Ticket/TicketAdvancedKitDisplayOptions";
+import {
+  KitImagePositionDrawer,
+  type KitImageLayoutMode,
+  type KitImagePositionCategorySection,
+} from "@/components/Ticket/KitImagePositionDrawer";
+import {
+  defaultEventKitSelectionDisplay,
+  drawerModeToApiLayout,
+  layoutToDrawerMode,
+  parseEventKitSelectionDisplay,
+} from "@/lib/eventKitSelectionDisplay";
 import {
   DndContext,
   closestCenter,
@@ -36,7 +48,7 @@ export default function EditTicketsPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
-  const { formData } = useEditEvent();
+  const { event, reloadEvent } = useEditEvent();
   const queryClient = useQueryClient();
   const [authChecked, setAuthChecked] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
@@ -48,6 +60,8 @@ export default function EditTicketsPage() {
   const [duplicatingTicketId, setDuplicatingTicketId] = useState<string | null>(
     null,
   );
+  const [kitImagePositionDrawerOpen, setKitImagePositionDrawerOpen] =
+    useState(false);
 
   // Hooks para gerenciar dados
   const {
@@ -154,6 +168,7 @@ export default function EditTicketsPage() {
       try {
         await createCategory(nameToUse);
         setNewGroupName("");
+        setEditingGroupName("");
         setShowCreateGroupSection(false);
         setEditingGroupId(null);
       } catch (error) {
@@ -462,6 +477,34 @@ export default function EditTicketsPage() {
     return hasNoCategories ? tickets : uncategorizedTickets;
   }, [hasNoCategories, tickets, uncategorizedTickets]);
 
+  /** Nova categoria em edição sem nome — bloqueia "Salvar alterações". */
+  const hasIncompleteNewCategoryDraft = useMemo(() => {
+    if (showCreateGroupSection && editingGroupId === "new") {
+      return !newGroupName.trim();
+    }
+    if (hasNoCategories && allTickets.length === 0 && editingGroupId === "new") {
+      return !editingGroupName.trim();
+    }
+    return false;
+  }, [
+    showCreateGroupSection,
+    editingGroupId,
+    newGroupName,
+    editingGroupName,
+    hasNoCategories,
+    allTickets.length,
+  ]);
+
+  const handleSaveChangesNavigate = useCallback(() => {
+    if (hasIncompleteNewCategoryDraft) {
+      toast.error(
+        "Informe o nome da nova categoria ou cancele a criação antes de salvar as alterações."
+      );
+      return;
+    }
+    router.push(`/organizer/events/${eventId}/edit/topics`);
+  }, [hasIncompleteNewCategoryDraft, router, eventId]);
+
   const getPaginatedTickets = useCallback(
     (categoryId: string) => {
       const categoryTickets = ticketsByCategory[categoryId] || [];
@@ -475,6 +518,111 @@ export default function EditTicketsPage() {
       };
     },
     [ticketsByCategory, currentPage]
+  );
+
+  const kitImagePositionDrawerData = useMemo(() => {
+    const ticketToRow = (t: Ticket) => ({
+      id: t.id,
+      name: t.name,
+      images: (t.products || []).map((productId: string) => ({
+        productId,
+        url: productsMap[productId]?.image ?? null,
+        name: productsMap[productId]?.name ?? null,
+      })),
+    });
+
+    if (hasNoCategories) {
+      return {
+        sections: [] as KitImagePositionCategorySection[],
+        uncategorized: {
+          id: "uncategorized",
+          name: "",
+          tickets: uncategorizedTickets.map(ticketToRow),
+        },
+      };
+    }
+
+    return {
+      sections: categories.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        tickets: (ticketsByCategory[cat.id] || []).map(ticketToRow),
+      })),
+      uncategorized:
+        uncategorizedTickets.length > 0
+          ? {
+              id: "uncategorized",
+              name: "",
+              tickets: uncategorizedTickets.map(ticketToRow),
+            }
+          : null,
+    };
+  }, [
+    hasNoCategories,
+    categories,
+    ticketsByCategory,
+    uncategorizedTickets,
+    productsMap,
+  ]);
+
+  const kitSelection = useMemo(
+    () => parseEventKitSelectionDisplay(event?.kitSelectionDisplay),
+    [event?.kitSelectionDisplay]
+  );
+
+  const drawerInitialKitSelection = useMemo(
+    () => ({
+      layout: layoutToDrawerMode(kitSelection.kitImagesLayout),
+      primaryByTicket: { ...kitSelection.primaryKitProductByTicketId },
+      primaryByCategory: { ...kitSelection.primaryKitProductByCategoryId },
+    }),
+    [kitSelection]
+  );
+
+  const handleShowKitImagesPersist = useCallback(
+    async (value: boolean) => {
+      try {
+        const merged = {
+          ...defaultEventKitSelectionDisplay(),
+          ...kitSelection,
+          showKitImagesOnSelection: value,
+        };
+        await organizerService.updateEvent(
+          eventId,
+          { kitSelectionDisplay: merged },
+          { clientPage: `events/${eventId}/tickets` }
+        );
+        await reloadEvent();
+        toast.success("Preferência salva.");
+      } catch (err) {
+        console.error(err);
+        toast.error("Não foi possível salvar a preferência.");
+      }
+    },
+    [eventId, kitSelection, reloadEvent]
+  );
+
+  const handleKitDrawerSave = useCallback(
+    async (payload: {
+      layout: KitImageLayoutMode;
+      primaryProductIdByTicketId: Record<string, string>;
+      primaryProductIdByCategoryId: Record<string, string>;
+    }) => {
+      const merged = {
+        ...defaultEventKitSelectionDisplay(),
+        ...kitSelection,
+        kitImagesLayout: drawerModeToApiLayout(payload.layout),
+        primaryKitProductByTicketId: payload.primaryProductIdByTicketId,
+        primaryKitProductByCategoryId: payload.primaryProductIdByCategoryId,
+      };
+      await organizerService.updateEvent(
+        eventId,
+        { kitSelectionDisplay: merged },
+        { clientPage: `events/${eventId}/tickets` }
+      );
+      await reloadEvent();
+    },
+    [eventId, kitSelection, reloadEvent]
   );
 
   const handleBack = useCallback(() => {
@@ -572,12 +720,21 @@ export default function EditTicketsPage() {
                     type="text"
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
+                    onBlur={(e) => {
+                      const next =
+                        e.relatedTarget instanceof HTMLElement
+                          ? e.relatedTarget.closest("[data-category-draft-toolbar]")
+                          : null;
+                      if (next) return;
+                      const value = newGroupName.trim();
+                      if (value) void handleCreateGroup(value);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const value = (e.target as HTMLInputElement).value.trim();
                         if (value) {
-                          handleCreateGroup(value);
+                          void handleCreateGroup(value);
                         } else {
                           toast.error("Nome da categoria é obrigatório");
                         }
@@ -585,6 +742,7 @@ export default function EditTicketsPage() {
                         setShowCreateGroupSection(false);
                         setEditingGroupId(null);
                         setNewGroupName("");
+                        setEditingGroupName("");
                       }
                     }}
                     className="text-gray-12 text-2xl font-bold font-manrope bg-transparent focus:outline-none flex-1"
@@ -596,8 +754,12 @@ export default function EditTicketsPage() {
                     Adicione um nome a esta categoria...
                   </h3>
                 )}
-                <div className="flex gap-[10px] items-center">
+                <div
+                  className="flex gap-[10px] items-center"
+                  data-category-draft-toolbar
+                >
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingGroupId("new");
                       setNewGroupName("");
@@ -607,6 +769,7 @@ export default function EditTicketsPage() {
                     <PencilIcon className="size-5 text-gray-11" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       setShowCreateGroupSection(false);
                       setEditingGroupId(null);
@@ -659,9 +822,15 @@ export default function EditTicketsPage() {
                       type="text"
                       value={editingGroupName}
                       onChange={(e) => setEditingGroupName(e.target.value)}
-                      onBlur={() => {
-                        if (editingGroupName.trim()) {
-                          handleCreateGroup(editingGroupName.trim());
+                      onBlur={(e) => {
+                        const next =
+                          e.relatedTarget instanceof HTMLElement
+                            ? e.relatedTarget.closest("[data-category-draft-toolbar]")
+                            : null;
+                        if (next) return;
+                        const value = editingGroupName.trim();
+                        if (value) {
+                          void handleCreateGroup(value);
                         } else {
                           setEditingGroupId(null);
                           setEditingGroupName("");
@@ -670,7 +839,7 @@ export default function EditTicketsPage() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           if (editingGroupName.trim()) {
-                            handleCreateGroup(editingGroupName.trim());
+                            void handleCreateGroup(editingGroupName.trim());
                           }
                         } else if (e.key === "Escape") {
                           setEditingGroupId(null);
@@ -686,8 +855,12 @@ export default function EditTicketsPage() {
                       Adicione um nome a esta categoria...
                     </h3>
                   )}
-                  <div className="flex gap-[10px] items-center">
+                  <div
+                    className="flex gap-[10px] items-center"
+                    data-category-draft-toolbar
+                  >
                     <button
+                      type="button"
                       onClick={() => {
                         setEditingGroupId("new");
                         setEditingGroupName("");
@@ -697,6 +870,7 @@ export default function EditTicketsPage() {
                       <PencilIcon className="size-5 text-gray-11" />
                     </button>
                     <button
+                      type="button"
                       disabled
                       className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center opacity-50 cursor-not-allowed"
                     >
@@ -755,9 +929,29 @@ export default function EditTicketsPage() {
             </div>
           )}
 
+          <div className="w-full">
+            <TicketAdvancedKitDisplayOptions
+              showKitImagesOnSelection={kitSelection.showKitImagesOnSelection}
+              onShowKitImagesOnSelectionChange={handleShowKitImagesPersist}
+              kitImagesLayout={kitSelection.kitImagesLayout}
+              onOpenKitImagePositionDrawer={() => {
+                const hasKit = tickets.some(
+                  (t) => (t.products?.length ?? 0) > 0
+                );
+                if (!hasKit) {
+                  toast.error(
+                    "Adicione produtos (kit) a um ingresso para editar as imagens."
+                  );
+                  return;
+                }
+                setKitImagePositionDrawerOpen(true);
+              }}
+            />
+          </div>
+
           <div className="flex justify-end">
             <Button
-              onClick={() => router.push(`/organizer/events/${eventId}/edit/topics`)}
+              onClick={handleSaveChangesNavigate}
               variant="default"
               className="text-[20px] font-bold px-10"
             >
@@ -776,6 +970,15 @@ export default function EditTicketsPage() {
         ) : null}
       </DragOverlay>
       </DndContext>
+
+      <KitImagePositionDrawer
+        isOpen={kitImagePositionDrawerOpen}
+        onClose={() => setKitImagePositionDrawerOpen(false)}
+        sections={kitImagePositionDrawerData.sections}
+        uncategorized={kitImagePositionDrawerData.uncategorized}
+        initialKitSelection={drawerInitialKitSelection}
+        onSave={handleKitDrawerSave}
+      />
     </>
   );
 }

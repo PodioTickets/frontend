@@ -1,5 +1,6 @@
 import type { ApiClient } from "../base/ApiClient";
 import type { Event } from "@/interfaces/event";
+import type { EventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { sanitizeOrganizerAuditPageKey } from "@/lib/organizerAudit";
 
 export interface CreateOrganizerRequest {
@@ -330,6 +331,11 @@ export interface CreateEventRequest {
   status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" | "SUSPENDED";
   /** Quando true, inscrições/vendas do evento ficam pausadas (reativar com false). */
   isSuspended?: boolean;
+  /**
+   * Opções avançadas: imagens do kit na tela de escolha de ingressos.
+   * Ver `EVENT_KIT_SELECTION_DISPLAY_API.md`.
+   */
+  kitSelectionDisplay?: EventKitSelectionDisplay;
 }
 
 export interface EventTopic {
