@@ -64,29 +64,23 @@ export function UnsavedTicketChangesModal({
               </div>
 
               <div className="flex flex-col gap-2 w-full">
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleSave}
-                  className="w-full h-12 min-h-12 font-bold text-base font-manrope leading-[1.1] rounded-lg"
-                >
-                  Salvar rascunho
-                </Button>
+
+
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onLeaveWithoutSaving}
+                  onClick={onClose}
                   className="w-full h-12 min-h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
                 >
-                  Sair sem salvar
+                  Continuar editando
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={onClose}
+                  onClick={ onLeaveWithoutSaving}
                   className="w-full h-12 min-h-12 text-gray-11 font-bold text-base font-manrope leading-[1.1] rounded-lg hover:bg-gray-3"
                 >
-                  Continuar editando
+                  Sair sem salvar
                 </Button>
               </div>
             </div>
