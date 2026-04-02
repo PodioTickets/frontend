@@ -21,9 +21,6 @@ import { cn } from "@/utils/cn";
 import {
   Info,
   X,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
   Star,
   Image as ImageIconLucide,
 } from "lucide-react";
@@ -57,9 +54,7 @@ export interface KitImagePositionDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   sections: KitImagePositionCategorySection[];
-  /** Bloco “(Sem categoria)” — opcional */
   uncategorized?: KitImagePositionCategorySection | null;
-  /** Estado salvo (API). Quando ausente, usa primeiro produto de cada ingresso/categoria. */
   initialKitSelection?: {
     layout: KitImageLayoutMode;
     primaryByTicket: Record<string, string>;
@@ -67,12 +62,9 @@ export interface KitImagePositionDrawerProps {
   } | null;
   onSave?: (payload: {
     layout: KitImageLayoutMode;
-    /** Modo “Nos ingressos”: principal por ingresso */
     primaryProductIdByTicketId: Record<string, string>;
-    /** Modo “Nas categorias”: principal por categoria (id da categoria ou `"uncategorized"`) */
     primaryProductIdByCategoryId: Record<string, string>;
   }) => void | Promise<void>;
-  /** Mensagem após confirmar no drawer (ex.: quando a persistência é na página). */
   saveSuccessMessage?: string;
 }
 
@@ -581,11 +573,11 @@ const UncategorizedCategoriesBlock = memo(
               <>
                 {section.name}{" "}
                 <span className="font-normal text-sm text-gray-11 font-family-dm-sans">
-                  (Sem categoria)
+                  Ingressos avulsos
                 </span>
               </>
             ) : (
-              "(Sem categoria)"
+              "Ingressos avulsos"
             )}
           </p>
         </div>
@@ -684,6 +676,11 @@ export function KitImagePositionDrawer({
   const [primaryByCategory, setPrimaryByCategory] = useState<
     Record<string, string>
   >({});
+
+  const sectionsWithTickets = useMemo(
+    () => sections.filter((s) => s.tickets.length > 0),
+    [sections],
+  );
 
   const allTicketRows = useMemo(() => {
     const rows: KitImagePositionTicketRow[] = [];
@@ -912,7 +909,7 @@ export function KitImagePositionDrawer({
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {sections.map((section) => (
+                  {sectionsWithTickets.map((section) => (
                     <CategoryBlock
                       key={section.id}
                       section={section}
@@ -928,11 +925,11 @@ export function KitImagePositionDrawer({
                             <>
                               {uncategorized.name}{" "}
                               <span className="font-normal text-sm text-gray-11 font-family-dm-sans">
-                                (Sem categoria)
+                                Ingressos avulsos
                               </span>
                             </>
                           ) : (
-                            "(Sem categoria)"
+                            "Ingressos avulsos"
                           )}
                         </p>
                       </div>
@@ -969,18 +966,6 @@ export function KitImagePositionDrawer({
                     onSelectPrimary={handleSelectPrimaryCategory}
                   />
                 ))}
-                {uncategorized && uncategorized.tickets.length > 0 ? (
-                  <UncategorizedCategoriesBlock
-                    section={uncategorized}
-                    aggregatedImages={
-                      categoryAggregates[UNCATEGORIZED_CATEGORY_KEY] ?? []
-                    }
-                    primaryProductId={
-                      primaryByCategory[UNCATEGORIZED_CATEGORY_KEY]
-                    }
-                    onSelectPrimary={handleSelectPrimaryCategory}
-                  />
-                ) : null}
               </div>
             )}
           </div>

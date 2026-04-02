@@ -55,15 +55,31 @@ const formatPrice = (price: number) => {
   }).format(price);
 };
 
+/** Preço específico da variação ≠ 0 (0 = “só base”, igual ao modal). */
+const variationHasMeaningfulSpecificPriceReais = (priceReais: number): boolean => {
+  if (!Number.isFinite(priceReais)) return false;
+  return Math.round(priceReais * 100) !== 0;
+};
+
+const productAnyVariationHasSpecificPrice = (product: Product): boolean =>
+  product.variations.some((v) => variationHasMeaningfulSpecificPriceReais(v.price));
+
 /**
- * Mesma regra da prévia do modal de produto: à direita da variação, acréscimo sobre a base
- * quando variação ≥ base; se variação < base, mostra o preço total da variação.
+ * Mesma regra da prévia do CreateProductModal: sem preço específico em nenhuma variação,
+ * não mostra valores à direita; com pelo menos um, linhas sem preço específico mostram a base;
+ * com preço específico: total se variação < base, senão acréscimo sobre a base.
  */
-const formatCheckoutVariationSidePrice = (
-  basePriceReais: number,
+const previewVariationListPriceLabelForProduct = (
+  product: Product,
   variationPriceReais: number,
-): string => {
-  const base = basePriceReais;
+): string | undefined => {
+  if (!productAnyVariationHasSpecificPrice(product)) {
+    return undefined;
+  }
+  const base = product.basePrice;
+  if (!variationHasMeaningfulSpecificPriceReais(variationPriceReais)) {
+    return formatPrice(base);
+  }
   const v = variationPriceReais;
   if (v < base) {
     return formatPrice(v);
@@ -71,9 +87,9 @@ const formatCheckoutVariationSidePrice = (
   return formatPrice(Math.max(0, v - base));
 };
 
-/** Preço exibido no card do produto (preço geral / base), alinhado ao modal de criação. */
+/** Preço exibido no card do produto (preço geral / base), alinhado à prévia do modal. */
 const formatProductCardBasePriceLabel = (product: Product): string => {
-  if (product.isIncludedInTicket) return "Grátis";
+  if (product.isIncludedInTicket) return "Incluso no ingresso";
   return formatPrice(product.basePrice);
 };
 
@@ -604,10 +620,7 @@ export function SubscriptionStep({
     return product.variations.map((variation, index) => ({
       id: variation.id || `${product.id}-${index}`,
       label: variation.name,
-      suffix: formatCheckoutVariationSidePrice(
-        product.basePrice,
-        variation.price,
-      ),
+      suffix: previewVariationListPriceLabelForProduct(product, variation.price),
     }));
   };
 
@@ -947,6 +960,12 @@ export function SubscriptionStep({
                                 )}
                                 trigger={() => {
                                   const selected = getSelectedVariation(participantIndex, product);
+                                  const variationSideLabel = selected
+                                    ? previewVariationListPriceLabelForProduct(
+                                      product,
+                                      selected.price,
+                                    )
+                                    : undefined;
                                   return (
                                     <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
                                       {selected ? (
@@ -954,12 +973,11 @@ export function SubscriptionStep({
                                           <p className="text-base text-gray-11 truncate min-w-0">
                                             {selected.name}
                                           </p>
-                                          <p className="text-base font-bold text-gray-12 shrink-0 tabular-nums">
-                                            {formatCheckoutVariationSidePrice(
-                                              product.basePrice,
-                                              selected.price,
-                                            )}
-                                          </p>
+                                          {variationSideLabel != null ? (
+                                            <p className="text-base font-bold text-gray-12 shrink-0 tabular-nums">
+                                              {variationSideLabel}
+                                            </p>
+                                          ) : null}
                                         </>
                                       ) : (
                                         <>
@@ -1042,6 +1060,12 @@ export function SubscriptionStep({
                                   )}
                                   trigger={() => {
                                     const selected = getSelectedVariation(participantIndex, product);
+                                    const variationSideLabel = selected
+                                      ? previewVariationListPriceLabelForProduct(
+                                        product,
+                                        selected.price,
+                                      )
+                                      : undefined;
                                     return (
                                       <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
                                         {selected ? (
@@ -1049,12 +1073,11 @@ export function SubscriptionStep({
                                             <p className="text-base text-gray-11 truncate min-w-0">
                                               {selected.name}
                                             </p>
-                                            <p className="text-base font-bold text-gray-12 shrink-0 tabular-nums">
-                                              {formatCheckoutVariationSidePrice(
-                                                product.basePrice,
-                                                selected.price,
-                                              )}
-                                            </p>
+                                            {variationSideLabel != null ? (
+                                              <p className="text-base font-bold text-gray-12 shrink-0 tabular-nums">
+                                                {variationSideLabel}
+                                              </p>
+                                            ) : null}
                                           </>
                                         ) : (
                                           <>
@@ -1259,6 +1282,12 @@ export function SubscriptionStep({
                         )}
                         trigger={() => {
                           const selected = getSelectedVariation(selectedParticipant, product);
+                          const variationSideLabel = selected
+                            ? previewVariationListPriceLabelForProduct(
+                              product,
+                              selected.price,
+                            )
+                            : undefined;
                           return (
                             <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
                               {selected ? (
@@ -1266,12 +1295,11 @@ export function SubscriptionStep({
                                   <p className="text-sm text-gray-12 truncate min-w-0">
                                     {selected.name}
                                   </p>
-                                  <p className="text-sm font-bold text-gray-12 shrink-0 tabular-nums">
-                                    {formatCheckoutVariationSidePrice(
-                                      product.basePrice,
-                                      selected.price,
-                                    )}
-                                  </p>
+                                  {variationSideLabel != null ? (
+                                    <p className="text-sm font-bold text-gray-12 shrink-0 tabular-nums">
+                                      {variationSideLabel}
+                                    </p>
+                                  ) : null}
                                 </>
                               ) : (
                                 <>
@@ -1349,6 +1377,12 @@ export function SubscriptionStep({
                           )}
                           trigger={() => {
                             const selected = getSelectedVariation(selectedParticipant, product);
+                            const variationSideLabel = selected
+                              ? previewVariationListPriceLabelForProduct(
+                                product,
+                                selected.price,
+                              )
+                              : undefined;
                             return (
                               <div className="w-full p-2 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
                                 {selected ? (
@@ -1356,12 +1390,11 @@ export function SubscriptionStep({
                                     <p className="text-sm text-gray-12 truncate min-w-0">
                                       {selected.name}
                                     </p>
-                                    <p className="text-sm font-bold text-gray-12 shrink-0 tabular-nums">
-                                      {formatCheckoutVariationSidePrice(
-                                        product.basePrice,
-                                        selected.price,
-                                      )}
-                                    </p>
+                                    {variationSideLabel != null ? (
+                                      <p className="text-sm font-bold text-gray-12 shrink-0 tabular-nums">
+                                        {variationSideLabel}
+                                      </p>
+                                    ) : null}
                                   </>
                                 ) : (
                                   <>

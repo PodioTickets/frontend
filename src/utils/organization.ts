@@ -2,6 +2,34 @@ import type { Event } from "@/interfaces/event";
 import type { Organization } from "@/services/organizer/OrganizerService";
 import type { Organizer } from "@/interfaces/user";
 
+/**
+ * Formata CPF (11 dígitos) ou CNPJ (14 dígitos) para exibição.
+ * Outros tamanhos: devolve o texto original (trim) sem máscara.
+ */
+export function formatBrazilianCnpjCpf(
+  value: string | undefined | null
+): string {
+  if (!value?.trim()) return "";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  }
+  if (digits.length === 14) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+  }
+  return value.trim();
+}
+
+/** Rótulo para documento da organização com base só nos dígitos. */
+export function organizationDocumentKind(
+  value: string | undefined | null
+): "CNPJ" | "CPF" | "Documento" {
+  const n = value?.replace(/\D/g, "").length ?? 0;
+  if (n === 14) return "CNPJ";
+  if (n === 11) return "CPF";
+  return "Documento";
+}
+
 /** Formata telefone BR para exibição: (11) 98765-4321, (11) 3030-3030 */
 export function formatBrazilianPhone(phone: string | undefined | null): string {
   if (!phone?.trim()) return "";
@@ -44,12 +72,16 @@ export function getEventOrganizer(event: Event): {
   phone?: string;
   description?: string;
   logoUrl?: string;
+  /** CPF/CNPJ da organização (prioriza `document`, depois titular da conta). */
+  document?: string;
 } | null {
   // Prioriza organization (novo formato)
   if (event.organization) {
     const org = event.organization as Organization;
     const displayName =
       org.tradeName?.trim() || org.name;
+    const document =
+      org.document?.trim() || org.accountHolderDocument?.trim() || undefined;
     return {
       id: org.id,
       name: displayName,
@@ -57,6 +89,7 @@ export function getEventOrganizer(event: Event): {
       phone: org.phone,
       description: org.description,
       logoUrl: org.logoUrl,
+      document,
     };
   }
 

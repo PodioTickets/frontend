@@ -422,6 +422,8 @@ export function CreateVoucherModal() {
                                             </div>
                                             <div className="px-4">
                                               <button
+                                                type="button"
+                                                title="Remover CPF"
                                                 onClick={() => handleRemoveCPF(index)}
                                                 className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
                                               >

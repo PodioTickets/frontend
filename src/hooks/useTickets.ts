@@ -7,6 +7,8 @@ export interface Ticket {
   id: string;
   name: string;
   groupId: string;
+  /** Ordem de exibição dentro da categoria (ou entre avulsos). */
+  sortOrder?: number;
   modality: string;
   distance: string;
   distanceUnit: string;
@@ -40,11 +42,16 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
     queryKey: queryKeys.events.tickets(eventId || ""),
     queryFn: async () => {
       if (!eventId) return [];
-      const response = await organizerService.getTickets(eventId);
+      const response = await organizerService.getTickets(eventId, {
+        page: 1,
+        limit: 500,
+      });
       const formattedTickets: Ticket[] = response.tickets.map((ticket: any) => ({
         id: ticket.id,
         name: ticket.name,
         groupId: ticket.categoryId || "uncategorized",
+        sortOrder:
+          typeof ticket.sortOrder === "number" ? ticket.sortOrder : undefined,
         modality: ticket.modality || "",
         distance: ticket.distance || "",
         distanceUnit: ticket.distanceUnit || "KM",

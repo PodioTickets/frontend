@@ -14,6 +14,8 @@ import { SortableTopicsList } from "@/components/Topic/SortableTopicsList";
 import {
   buildTopicSectionsFromEvent,
   DEFAULT_TOPIC_SENTINEL,
+  isPendingTopicId,
+  newPendingTopicId,
   topicIdsInUiOrder,
   type TopicSectionRow,
 } from "@/lib/eventTopicSections";
@@ -122,6 +124,29 @@ export default function TopicosPage() {
         });
       }
 
+      for (let i = 0; i < working.length; i++) {
+        const row = working[i];
+        if (!isPendingTopicId(row.id)) continue;
+        const created = await organizerService.createTopic(formData.createdEventId, {
+          title: row.title,
+          content: row.content,
+          isEnabled: true,
+          order: i + 1,
+        });
+        working = working.map((s) =>
+          s.id === row.id
+            ? {
+                id: created.id,
+                title: created.title?.trim() || row.title,
+                content: created.content,
+                allowDelete: true,
+                variant: "topic" as const,
+              }
+            : s
+        );
+      }
+      setSections(working);
+
       await persistTopicOrder(working);
 
       toast.success("Tópicos salvos com sucesso!");
@@ -168,12 +193,41 @@ export default function TopicosPage() {
       return;
     }
 
+    const editingState = editingTopicRef.current;
+    const isEditing = editingState?.isEditing;
+    const topicId = editingState?.topicId;
+
+    if (isEditing && topicId && isPendingTopicId(topicId)) {
+      setSections((prev) =>
+        prev.map((s) =>
+          s.id === topicId
+            ? { ...s, title: topicData.title, content: topicData.content }
+            : s
+        )
+      );
+      toast.success("Tópico atualizado. Salve as alterações para confirmar.");
+      editingTopicRef.current = null;
+      return;
+    }
+
+    if (!isEditing) {
+      setSections((prev) => [
+        ...prev,
+        {
+          id: newPendingTopicId(),
+          title: topicData.title,
+          content: topicData.content,
+          allowDelete: true,
+          variant: "topic",
+        },
+      ]);
+      toast.success("Tópico adicionado. Salve as alterações para confirmar.");
+      editingTopicRef.current = null;
+      return;
+    }
+
     setSaving(true);
     try {
-      const editingState = editingTopicRef.current;
-      const isEditing = editingState?.isEditing;
-      const topicId = editingState?.topicId;
-
       if (isEditing && topicId === "default") {
         const defaultRow = sections.find((s) => !s.allowDelete);
         if (!defaultRow) {
@@ -247,24 +301,6 @@ export default function TopicosPage() {
           )
         );
         toast.success("Tópico atualizado com sucesso!");
-      } else {
-        const newTopic = await organizerService.createTopic(formData.createdEventId, {
-          title: topicData.title,
-          content: topicData.content,
-          isEnabled: true,
-          order: sections.length + 1,
-        });
-        setSections((prev) => [
-          ...prev,
-          {
-            id: newTopic.id,
-            title: newTopic.title,
-            content: newTopic.content,
-            allowDelete: true,
-            variant: "topic",
-          },
-        ]);
-        toast.success("Tópico criado com sucesso!");
       }
 
       editingTopicRef.current = null;
@@ -322,6 +358,12 @@ export default function TopicosPage() {
     const row = sections.find((s) => s.id === topicId);
     if (!row?.allowDelete) {
       throw new Error("not deletable");
+    }
+
+    if (isPendingTopicId(topicId)) {
+      setSections((prev) => prev.filter((s) => s.id !== topicId));
+      toast.success("Tópico removido.");
+      return;
     }
 
     try {

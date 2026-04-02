@@ -7,7 +7,12 @@ import { MessageIcon } from "../Icons/MessageIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
-import { getEventOrganizer } from "@/utils/organization";
+import {
+  formatBrazilianCnpjCpf,
+  getEventOrganizer,
+  organizationDocumentKind,
+} from "@/utils/organization";
+import { getAvatarUrl } from "@/utils/avatar";
 
 interface EventInfoProps {
   event: Event;
@@ -166,25 +171,40 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
           {(() => {
             const organizer = getEventOrganizer(event);
             if (!organizer) return null;
-            
+
+            const docFormatted = formatBrazilianCnpjCpf(organizer.document);
+            const docKind = organizationDocumentKind(organizer.document);
+
             return (
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-gray-3 flex items-center justify-center">
-                  <span className="text-xs font-bold text-gray-11">
-                    {organizer.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <ImageWithInitialFallback
+                  src={getAvatarUrl(organizer.logoUrl)}
+                  alt={organizer.name}
+                  name={organizer.name}
+                  width={48}
+                  height={48}
+                  className="rounded-full size-12 border border-primary-8"
+                  imgClassName="object-cover"
+                  letterClassName="text-xs"
+                />
                 <div>
                   <p className="text-sm font-medium text-gray-12">
                     {organizer.name}
                   </p>
-                  <p className="text-sm text-gray-11">{organizer.email}</p>
+                  {docFormatted ? (
+                    <p className="text-sm text-gray-11 font-family-dm-sans">
+                      <span className="text-gray-11">{docKind}:</span>{" "}
+                      <span className="text-gray-11">
+                        {docFormatted}
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
               </div>
             );
           })()}
 
-          <Button variant="ghost" className="w-full border border-gray-6 mt-4">
+          <Button variant="ghost" className="w-full border border-gray-6 mt-2">
             <MessageIcon className="size-5" />
             Falar com organizador
           </Button>

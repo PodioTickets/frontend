@@ -214,10 +214,19 @@ export const useCreateProductModal = () => {
   ) as ModalData | null;
   const setCallback = useModalStore((s) => s.setCallback);
   const onModalSave = useModalStore((s) => s.callbacks["createProduct"]);
+  const onModalProductDelete = useModalStore(
+    (s) => s.callbacks["createProductDelete"],
+  );
 
   const setOnModalSave = useCallback(
     (callback?: (data: any) => void | Promise<void>) =>
       setCallback("createProduct", callback),
+    [setCallback]
+  );
+
+  const setOnModalProductDelete = useCallback(
+    (callback?: (data: any) => void | Promise<void>) =>
+      setCallback("createProductDelete", callback),
     [setCallback]
   );
 
@@ -233,6 +242,8 @@ export const useCreateProductModal = () => {
     closeCreateProductModal: closeModal,
     onModalSave,
     setOnModalSave,
+    onModalProductDelete,
+    setOnModalProductDelete,
   };
 };
 

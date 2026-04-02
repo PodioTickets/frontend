@@ -108,6 +108,8 @@ export function SortableTicketCategoryItem({
                     onChange={(e) => setEditingName(e.target.value)}
                     onBlur={handleSave}
                     onKeyDown={(e) => {
+                      // Evita que Space/setas acionem o KeyboardSensor do DnD no header arrastável.
+                      e.stopPropagation();
                       if (e.key === "Enter") {
                         handleSave();
                       } else if (e.key === "Escape") {
@@ -126,6 +128,7 @@ export function SortableTicketCategoryItem({
             )}
             <button
               type="button"
+              title="Editar"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => {
                 setIsEditing(true);
@@ -139,6 +142,7 @@ export function SortableTicketCategoryItem({
           </div>
           <button
             type="button"
+            title="Deletar"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() =>
               totalTicketsInCategory > 0
@@ -146,7 +150,7 @@ export function SortableTicketCategoryItem({
                 : setDeleteModalOpen(true)
             }
             className="shrink-0 flex size-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 p-1 transition-colors hover:bg-red-3"
-            aria-label="Excluir categoria"
+            aria-label="Deletar categoria"
           >
             <TrashIcon className="size-5 text-red-12" />
           </button>

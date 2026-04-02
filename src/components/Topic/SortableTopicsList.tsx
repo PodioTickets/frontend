@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import type { TopicSectionRow } from "@/lib/eventTopicSections";
 
 function SortableTopicCard({
@@ -44,11 +45,6 @@ function SortableTopicCard({
     transition,
   };
 
-  const headingClass =
-    topic.variant === "default"
-      ? "text-gray-12 text-2xl font-bold font-manrope leading-[1.1]"
-      : "text-gray-12 text-xl font-bold font-manrope leading-[1.1]";
-
   return (
     <div
       ref={setNodeRef}
@@ -63,12 +59,13 @@ function SortableTopicCard({
           className="flex min-w-0 flex-1 items-center rounded-md px-1 py-1 -mx-1 -my-0.5 touch-none outline-none focus-visible:ring-2 focus-visible:ring-primary-8/35 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-1"
         >
           <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] truncate min-w-0">
-            Ações
+            {topic.title}
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
           <button
             type="button"
+            title="Editar"
             onClick={() => onEdit(topic.id)}
             className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
           >
@@ -78,14 +75,11 @@ function SortableTopicCard({
       </div>
 
       <div className="flex flex-col gap-4 p-5 min-h-0">
-        {topic.variant === "default" ? (
-          <h2 className={headingClass}>{topic.title}</h2>
-        ) : (
-          <h3 className={headingClass}>{topic.title}</h3>
-        )}
         <div
-          className="topic-rich-html text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none max-h-[min(42vh,360px)] overflow-y-auto pr-1 min-h-0"
-          dangerouslySetInnerHTML={{ __html: topic.content }}
+          className="topic-rich-html text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none max-h-[min(42vh,360px)] overflow-y-auto pr-1 min-h-0 [&_a]:pointer-events-none [&_a]:cursor-default"
+          dangerouslySetInnerHTML={{
+            __html: normalizeTopicHtmlAnchorHrefs(topic.content),
+          }}
         />
       </div>
     </div>

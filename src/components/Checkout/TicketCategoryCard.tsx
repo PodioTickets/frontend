@@ -3,23 +3,32 @@
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { ArrowButton } from "../ArrowButton";
 import { DistanceIcon } from "../Icons/DistanceIcon";
-import { CalendarIcon } from "../Icons/CalendarIcon";
-import { ClockIcon } from "../Icons/ClockIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
-import type { Event } from "@/interfaces/event";
+import type { Event, EventKitSelectionDisplay } from "@/interfaces/event";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { modalitiesColumns } from "@/constants";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { getTicketProductCarouselItems } from "@/utils/ticketProductVisuals";
+import {
+  getTicketProductCarouselItems,
+  getCategoryKitCarouselItems,
+} from "@/utils/ticketProductVisuals";
+import { CategoryKitHorizontalCarousel } from "./CategoryKitHorizontalCarousel";
+import { cn } from "@/utils/cn";
 
 interface TicketCategoryCardProps {
+  categoryId: string;
   categoryName: string;
+  /** Texto do kit / categoria (organizer). */
+  categoryDescription?: string;
   tickets: Ticket[];
   index: number;
+  /** Quando informado, substitui `index === 0` para estado inicial aberto. */
+  expandedByDefault?: boolean;
   event: Event;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
+  kitSelectionDisplay: EventKitSelectionDisplay;
 }
 
 // Funções utilitárias fora do componente
@@ -102,6 +111,7 @@ const TicketItemMobile = memo(({
   quantity,
   onDecrease,
   onIncrease,
+  kitSelectionDisplay,
 }: {
   ticket: Ticket;
   event: Event;
@@ -109,6 +119,7 @@ const TicketItemMobile = memo(({
   quantity: number;
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
+  kitSelectionDisplay: EventKitSelectionDisplay;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -118,9 +129,24 @@ const TicketItemMobile = memo(({
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getModalityInfo(ticket, event), [ticket, event]);
+  const showPerTicketGallery =
+    kitSelectionDisplay.showKitImagesOnSelection &&
+    kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
+
   const productItems = useMemo(
-    () => getTicketProductCarouselItems(ticket, productsMap),
-    [ticket, productsMap]
+    () =>
+      showPerTicketGallery
+        ? getTicketProductCarouselItems(ticket, productsMap, {
+          primaryProductId:
+            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+        })
+        : [],
+    [
+      ticket,
+      productsMap,
+      showPerTicketGallery,
+      kitSelectionDisplay.primaryKitProductByTicketId,
+    ]
   );
 
   useEffect(() => {
@@ -236,46 +262,48 @@ const TicketItemMobile = memo(({
         <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
           {ticket.name}
         </h2>
-        <div className="grid grid-cols-2 gap-4 items-center">
-          {distanceKm > 0 && (
-            <div className="flex items-center gap-2">
-              <DistanceIcon className="size-6 shrink-0" />
-              <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                {distanceKm} Km
-              </p>
-            </div>
-          )}
-          {modalityInfo && (
-            <div className="flex items-center gap-2">
-              {modalityInfo.icon ? (
-                <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
-                  <ImageWithInitialFallback
-                    src={modalityInfo.icon}
-                    alt={modalityInfo.name}
-                    name={modalityInfo.name}
-                    width={24}
-                    height={24}
-                    className="size-6"
-                    imgClassName="object-contain"
-                    letterClassName="text-[10px]"
-                  />
-                </div>
-              ) : (
-                <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-              )}
-              <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                {modalityInfo.name}
-              </p>
-            </div>
-          )}
-        </div>
-        {ageLimitText && (
-          <div className="bg-yellow-3 rounded-full px-4 py-3 w-fit">
-            <p className="text-xs font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
-              Limite de idade: {ageLimitText}
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+          <div className="flex flex-wrap gap-4 items-center min-w-0">
+            {distanceKm > 0 && (
+              <div className="flex items-center gap-2">
+                <DistanceIcon className="size-6 shrink-0" />
+                <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                  {distanceKm} Km
+                </p>
+              </div>
+            )}
+            {modalityInfo && (
+              <div className="flex items-center gap-2">
+                {modalityInfo.icon ? (
+                  <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
+                    <ImageWithInitialFallback
+                      src={modalityInfo.icon}
+                      alt={modalityInfo.name}
+                      name={modalityInfo.name}
+                      width={24}
+                      height={24}
+                      className="size-6"
+                      imgClassName="object-contain"
+                      letterClassName="text-[10px]"
+                    />
+                  </div>
+                ) : (
+                  <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                )}
+                <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                  {modalityInfo.name}
+                </p>
+              </div>
+            )}
           </div>
-        )}
+          {ageLimitText ? (
+            <div className="bg-yellow-3 rounded-full px-4 py-3 shrink-0 max-w-full">
+              <p className="text-base font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
+                Limite de idade: {ageLimitText}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -329,6 +357,7 @@ const TicketItemDesktop = memo(({
   quantity,
   onDecrease,
   onIncrease,
+  kitSelectionDisplay,
 }: {
   ticket: Ticket;
   event: Event;
@@ -336,6 +365,7 @@ const TicketItemDesktop = memo(({
   quantity: number;
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
+  kitSelectionDisplay: EventKitSelectionDisplay;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -345,9 +375,24 @@ const TicketItemDesktop = memo(({
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getModalityInfo(ticket, event), [ticket, event]);
+  const showPerTicketGallery =
+    kitSelectionDisplay.showKitImagesOnSelection &&
+    kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
+
   const productItems = useMemo(
-    () => getTicketProductCarouselItems(ticket, productsMap),
-    [ticket, productsMap]
+    () =>
+      showPerTicketGallery
+        ? getTicketProductCarouselItems(ticket, productsMap, {
+          primaryProductId:
+            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+        })
+        : [],
+    [
+      ticket,
+      productsMap,
+      showPerTicketGallery,
+      kitSelectionDisplay.primaryKitProductByTicketId,
+    ]
   );
 
   useEffect(() => {
@@ -458,49 +503,58 @@ const TicketItemDesktop = memo(({
         </div>
       )}
 
-      <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 w-full flex flex-col gap-6">
+      <div
+        className={cn(
+          "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-6",
+          productItems.length > 0 ? "min-w-0 w-full ml-4" : "w-full"
+        )}
+      >
         <div className="flex flex-col gap-5">
-          <h2 className="text-xl font-bold">{ticket.name}</h2>
-          <div className="flex items-center gap-8 flex-wrap">
-            {distanceKm > 0 && (
-              <div className="flex items-center gap-2">
-                <DistanceIcon className="size-6" />
-                <p className="text-lg font-medium text-gray-12">
-                  {distanceKm} km
-                </p>
-              </div>
-            )}
-            {modalityInfo && (
-              <div className="flex items-center gap-2">
-                {modalityInfo.icon ? (
-                  <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
-                    <ImageWithInitialFallback
-                      src={modalityInfo.icon}
-                      alt={modalityInfo.name}
-                      name={modalityInfo.name}
-                      width={24}
-                      height={24}
-                      className="size-6"
-                      imgClassName="object-contain"
-                      letterClassName="text-[10px]"
-                    />
-                  </div>
-                ) : (
-                  <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                )}
-                <p className="text-lg font-medium text-gray-12">
-                  {modalityInfo.name}
-                </p>
-              </div>
-            )}
-          </div>
-          {ageLimitText && (
-            <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 w-fit">
-              <p className="text-base font-medium">
-                Limite de idade: {ageLimitText}
-              </p>
+          <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
+            {ticket.name}
+          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+            <div className="flex items-center gap-8 flex-wrap min-w-0">
+              {distanceKm > 0 && (
+                <div className="flex items-center gap-2">
+                  <DistanceIcon className="size-6 shrink-0" />
+                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {distanceKm} km
+                  </p>
+                </div>
+              )}
+              {modalityInfo && (
+                <div className="flex items-center gap-2">
+                  {modalityInfo.icon ? (
+                    <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                      <ImageWithInitialFallback
+                        src={modalityInfo.icon}
+                        alt={modalityInfo.name}
+                        name={modalityInfo.name}
+                        width={24}
+                        height={24}
+                        className="size-6 bg-transparent"
+                        imgClassName="object-contain bg-transparent"
+                        letterClassName="text-[10px]"
+                      />
+                    </div>
+                  ) : (
+                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                  )}
+                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {modalityInfo.name}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+            {ageLimitText ? (
+              <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 shrink-0 max-w-full">
+                <p className="text-base font-medium font-family-dm-sans leading-[1.3]">
+                  Limite de idade: {ageLimitText}
+                </p>
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-xl font-bold text-gray-12">
@@ -547,13 +601,25 @@ const TicketItemDesktop = memo(({
 
 TicketItemDesktop.displayName = "TicketItemDesktop";
 
-export function TicketCategoryCard({ categoryName, tickets, index, event, productsMap }: TicketCategoryCardProps) {
-  const [isExpanded, setIsExpanded] = useState(index === 0);
+export function TicketCategoryCard({
+  categoryId,
+  categoryName,
+  categoryDescription,
+  tickets,
+  index,
+  expandedByDefault,
+  event,
+  productsMap,
+  kitSelectionDisplay,
+}: TicketCategoryCardProps) {
+  const [isExpanded, setIsExpanded] = useState(
+    expandedByDefault ?? index === 0
+  );
   const { raceQuantities, updateRaceQuantity } = useCheckout();
 
   // Memoizar tickets válidos
   const validTickets = useMemo(() => {
-    return tickets.filter(t => getTicketPrice(t) > 0);
+    return tickets.filter((t) => getTicketPrice(t) > 0);
   }, [tickets]);
 
   // Memoizar minPrice
@@ -561,6 +627,30 @@ export function TicketCategoryCard({ categoryName, tickets, index, event, produc
     if (validTickets.length === 0) return 0;
     return Math.min(...validTickets.map(getTicketPrice));
   }, [validTickets]);
+
+  const showCategoryLevelKit =
+    kitSelectionDisplay.showKitImagesOnSelection &&
+    kitSelectionDisplay.kitImagesLayout === "ON_CATEGORIES";
+
+  const categoryCarouselItems = useMemo(
+    () =>
+      showCategoryLevelKit
+        ? getCategoryKitCarouselItems(
+          validTickets,
+          productsMap,
+          kitSelectionDisplay.primaryKitProductByCategoryId[categoryId]
+        )
+        : [],
+    [
+      showCategoryLevelKit,
+      validTickets,
+      productsMap,
+      categoryId,
+      kitSelectionDisplay.primaryKitProductByCategoryId,
+    ]
+  );
+
+  const headerThumbItem = categoryCarouselItems[0] ?? null;
 
   // Handlers memoizados
   const handleToggle = useCallback(() => {
@@ -581,18 +671,38 @@ export function TicketCategoryCard({ categoryName, tickets, index, event, produc
     <>
       {/* Mobile Layout */}
       <div className="w-full md:hidden">
-        <div className="border border-gray-6 rounded-lg overflow-hidden">
+        <div className="border border-gray-6 rounded-xl overflow-hidden bg-gray-1">
           <div
-            className="flex items-center justify-between px-4 py-4 cursor-pointer"
+            className="flex items-center justify-between gap-3 px-3 py-4 cursor-pointer"
             onClick={handleToggle}
           >
-            <div className="flex flex-col gap-1">
-              <h1 className="text-base font-bold text-gray-12">{categoryName}</h1>
-              <div className="flex items-center gap-1">
-                <p className="text-sm text-gray-11">A partir de:</p>
-                <span className="text-sm text-gray-12 font-bold">
-                  {formatPrice(minPrice)}
-                </span>
+            <div className="flex flex-1 items-center gap-3 min-w-0">
+              {showCategoryLevelKit && headerThumbItem ? (
+                <div className="size-20 shrink-0 rounded-lg border border-gray-6 overflow-hidden relative bg-gray-2">
+                  <ImageWithInitialFallback
+                    src={headerThumbItem.src}
+                    alt={categoryName}
+                    name={headerThumbItem.name}
+                    fallbackId={headerThumbItem.id}
+                    fill
+                    sizes="80px"
+                    className="size-full"
+                    letterClassName="text-lg"
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-1 min-w-0">
+                <h1 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                  {categoryName}
+                </h1>
+                <div className="flex flex-wrap items-center gap-1 text-base">
+                  <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
+                    A partir de:
+                  </p>
+                  <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
+                    {formatPrice(minPrice)}
+                  </span>
+                </div>
               </div>
             </div>
             <ArrowButton isOpen={isExpanded} />
@@ -602,12 +712,20 @@ export function TicketCategoryCard({ categoryName, tickets, index, event, produc
           <div
             className="overflow-hidden transition-all duration-200 ease-out"
             style={{
-              maxHeight: isExpanded ? '10000px' : '0',
+              maxHeight: isExpanded ? "10000px" : "0",
               opacity: isExpanded ? 1 : 0,
             }}
           >
-            <div className="px-4 pb-4 border-t border-gray-6">
-              <div className="flex flex-col gap-4">
+            <div className="px-4 pb-7 border-t border-gray-6 flex flex-col gap-6">
+              {categoryDescription?.trim() ? (
+                <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3] pt-6">
+                  {categoryDescription.trim()}
+                </p>
+              ) : null}
+              {showCategoryLevelKit && categoryCarouselItems.length > 0 ? (
+                <CategoryKitHorizontalCarousel items={categoryCarouselItems} />
+              ) : null}
+              <div className="flex flex-col gap-3">
                 {validTickets.map((ticket) => (
                   <TicketItemMobile
                     key={ticket.id}
@@ -617,6 +735,7 @@ export function TicketCategoryCard({ categoryName, tickets, index, event, produc
                     quantity={raceQuantities[ticket.id] || 0}
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
+                    kitSelectionDisplay={kitSelectionDisplay}
                   />
                 ))}
               </div>
@@ -627,43 +746,73 @@ export function TicketCategoryCard({ categoryName, tickets, index, event, produc
 
       {/* Desktop Layout */}
       <div className="hidden md:block w-full">
-        <div
-          className="flex items-center w-full justify-between rounded-lg border border-gray-6 px-3 py-4 cursor-pointer hover:bg-gray-2 transition-colors"
-          onClick={handleToggle}
-        >
-          <div className="flex flex-col items-start justify-center gap-4">
-            <h1 className="text-xl font-bold">{categoryName}</h1>
-            <div className="flex items-center gap-1">
-              <p className="text-base text-gray-11">A partir de:</p>
-              <span className="text-base text-gray-12 font-bold">
-                {formatPrice(minPrice)}
-              </span>
+        <div className="rounded-xl border border-gray-6 overflow-hidden bg-gray-1">
+          <div
+            className="flex items-center w-full justify-between gap-3 border-b border-gray-6 px-4 py-4 cursor-pointer hover:bg-gray-2/80 transition-colors"
+            onClick={handleToggle}
+          >
+            <div className="flex flex-1 items-center gap-3 min-w-0">
+              {showCategoryLevelKit && headerThumbItem ? (
+                <div className="size-20 shrink-0 rounded-lg border border-gray-6 overflow-hidden relative bg-gray-2">
+                  <ImageWithInitialFallback
+                    src={headerThumbItem.src}
+                    alt={categoryName}
+                    name={headerThumbItem.name}
+                    fallbackId={headerThumbItem.id}
+                    fill
+                    sizes="80px"
+                    className="size-full"
+                    letterClassName="text-lg"
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-col items-start justify-center gap-6">
+                <h1 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
+                  {categoryName}
+                </h1>
+                <div className="flex items-center gap-1 text-base">
+                  <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
+                    A partir de:
+                  </p>
+                  <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
+                    {formatPrice(minPrice)}
+                  </span>
+                </div>
+              </div>
             </div>
+            <ArrowButton isOpen={isExpanded} className="text-gray-12 size-4" />
           </div>
-          <ArrowButton isOpen={isExpanded} />
-        </div>
 
-        {/* Conteúdo sempre renderizado, controlado por CSS */}
-        <div
-          className="overflow-hidden transition-all duration-200 ease-out"
-          style={{
-            maxHeight: isExpanded ? '10000px' : '0',
-            opacity: isExpanded ? 1 : 0,
-          }}
-        >
-          <div className="mt-6">
-            <div className="flex flex-col gap-6">
-              {validTickets.map((ticket) => (
-                <TicketItemDesktop
-                  key={ticket.id}
-                  ticket={ticket}
-                  event={event}
-                  productsMap={productsMap}
-                  quantity={raceQuantities[ticket.id] || 0}
-                  onDecrease={handleDecrease}
-                  onIncrease={handleIncrease}
-                />
-              ))}
+          <div
+            className="overflow-hidden transition-all duration-200 ease-out"
+            style={{
+              maxHeight: isExpanded ? "10000px" : "0",
+              opacity: isExpanded ? 1 : 0,
+            }}
+          >
+            <div className="px-4 pb-7 pt-6 flex flex-col gap-6">
+              {categoryDescription?.trim() ? (
+                <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
+                  {categoryDescription.trim()}
+                </p>
+              ) : null}
+              {showCategoryLevelKit && categoryCarouselItems.length > 0 ? (
+                <CategoryKitHorizontalCarousel items={categoryCarouselItems} />
+              ) : null}
+              <div className="flex flex-col gap-3">
+                {validTickets.map((ticket) => (
+                  <TicketItemDesktop
+                    key={ticket.id}
+                    ticket={ticket}
+                    event={event}
+                    productsMap={productsMap}
+                    quantity={raceQuantities[ticket.id] || 0}
+                    onDecrease={handleDecrease}
+                    onIncrease={handleIncrease}
+                    kitSelectionDisplay={kitSelectionDisplay}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>

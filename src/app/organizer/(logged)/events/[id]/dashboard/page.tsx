@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import {
   ArrowDown,
+  ChevronLeft,
+  ChevronRight,
   DollarSign,
   TrendingUp,
   Users,
@@ -35,7 +37,63 @@ import type { BestSellingVariationItem } from "@/components/Organizer/BestSellin
 import { Tooltip } from "@/components/Tooltip";
 import { cn } from "@/utils/cn";
 
-function DashboardRankingCategoryLabel({ category }: { category: string }) {
+const LOTS_NEAR_DEPLETION_PAGE_SIZE = 4;
+
+function LotsNearDepletionPaginationBar({
+  page,
+  totalPages,
+  onPageChange,
+  compact,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  compact?: boolean;
+}) {
+  if (totalPages <= 1) return null;
+  const btnClass =
+    "size-8 rounded-lg border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-1 flex items-center justify-center transition-colors";
+  const textClass = compact
+    ? "font-family-dm-sans text-xs text-gray-11 tabular-nums"
+    : "font-family-dm-sans text-sm text-gray-11 tabular-nums";
+  return (
+    <div className="flex items-center justify-center gap-3 px-4 py-3 border-t border-gray-6">
+      <button
+        type="button"
+        className={btnClass}
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+        aria-label="Página anterior"
+      >
+        <ChevronLeft className="size-4 text-gray-11" />
+      </button>
+      <span className={textClass}>
+        {page} / {totalPages}
+      </span>
+      <button
+        type="button"
+        className={btnClass}
+        disabled={page >= totalPages}
+        onClick={() => onPageChange(page + 1)}
+        aria-label="Próxima página"
+      >
+        <ChevronRight className="size-4 text-gray-11" />
+      </button>
+    </div>
+  );
+}
+
+function DashboardRankingTruncatedLabel({
+  text,
+  emptyDisplay = "—",
+  mobileTapAriaLabel,
+  lineClassName,
+}: {
+  text: string;
+  emptyDisplay?: string;
+  mobileTapAriaLabel: string;
+  lineClassName: string;
+}) {
   const [hoverTrigger, setHoverTrigger] = useState(true);
 
   useEffect(() => {
@@ -46,9 +104,7 @@ function DashboardRankingCategoryLabel({ category }: { category: string }) {
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  const display = category.trim() || "—";
-  const lineClass =
-    "font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0";
+  const display = text.trim() || emptyDisplay;
 
   return (
     <Tooltip
@@ -64,20 +120,47 @@ function DashboardRankingCategoryLabel({ category }: { category: string }) {
       contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
     >
       {hoverTrigger ? (
-        <span className={cn(lineClass, "block cursor-help")}>{display}</span>
+        <span className={cn(lineClassName, "block cursor-help")}>{display}</span>
       ) : (
         <button
           type="button"
           className={cn(
-            lineClass,
+            lineClassName,
             "text-left cursor-pointer rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
           )}
-          aria-label="Toque para ver o nome completo da categoria"
+          aria-label={mobileTapAriaLabel}
         >
           {display}
         </button>
       )}
     </Tooltip>
+  );
+}
+
+function DashboardRankingCategoryLabel({ category }: { category: string }) {
+  return (
+    <DashboardRankingTruncatedLabel
+      text={category}
+      mobileTapAriaLabel="Toque para ver o nome completo da categoria"
+      lineClassName="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0"
+    />
+  );
+}
+
+function DashboardRankingTicketNameLabel({
+  name,
+  size = "md",
+}: {
+  name: string;
+  size?: "md" | "sm";
+}) {
+  const sizeClass = size === "sm" ? "text-sm" : "text-[14px]";
+  return (
+    <DashboardRankingTruncatedLabel
+      text={name}
+      mobileTapAriaLabel="Toque para ver o nome completo do ingresso"
+      lineClassName={`font-family-dm-sans font-semibold ${sizeClass} leading-[1.3] text-gray-12 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0`}
+    />
   );
 }
 
@@ -94,6 +177,7 @@ export default function EventDashboardPage() {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
+  const [lotsNearDepletionPage, setLotsNearDepletionPage] = useState(1);
   const { tickets } = useTickets(eventId, true);
 
   // Mock data - substituir com dados reais da API
@@ -117,6 +201,7 @@ export default function EventDashboardPage() {
       chartData: {
         labels: string[];
         revenue: number[];
+        dailyData?: unknown[];
       };
     };
     ticketRanking: Array<{
@@ -431,6 +516,31 @@ export default function EventDashboardPage() {
       setLoading(false);
     }
   };
+
+  const lotsNearDepletionList = dashboardData.lotsNearDepletion;
+  const lotsNearDepletionTotalPages = Math.max(
+    1,
+    Math.ceil(lotsNearDepletionList.length / LOTS_NEAR_DEPLETION_PAGE_SIZE),
+  );
+
+  useEffect(() => {
+    setLotsNearDepletionPage(1);
+  }, [lotsNearDepletionList]);
+
+  useEffect(() => {
+    setLotsNearDepletionPage((p) =>
+      Math.min(Math.max(1, p), lotsNearDepletionTotalPages),
+    );
+  }, [lotsNearDepletionTotalPages]);
+
+  const lotsNearDepletionSliceStart =
+    (lotsNearDepletionPage - 1) * LOTS_NEAR_DEPLETION_PAGE_SIZE;
+  const paginatedLotsNearDepletion = useMemo(() => {
+    return lotsNearDepletionList.slice(
+      lotsNearDepletionSliceStart,
+      lotsNearDepletionSliceStart + LOTS_NEAR_DEPLETION_PAGE_SIZE,
+    );
+  }, [lotsNearDepletionList, lotsNearDepletionSliceStart]);
 
   // Variações mais vendidas: da API topProductVariations (flatten: um item por variação)
   const bestSellingVariations = useMemo((): BestSellingVariationItem[] => {
@@ -821,6 +931,7 @@ export default function EventDashboardPage() {
                 data={{
                   labels: dashboardData.registrationsTrend.chartData?.labels || ["Jan", "Fev", "Mar", "Abr"],
                   revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) || [4000, 12000, 8000, 10000],
+                  dailyData: dashboardData.registrationsTrend.chartData?.dailyData,
                 }}
               />
             </div>
@@ -852,7 +963,7 @@ export default function EventDashboardPage() {
                 >
                   <div className="px-4 py-3 flex flex-col gap-2 justify-center">
                     <DashboardRankingCategoryLabel category={ticket.category} />
-                    <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 overflow-hidden text-ellipsis whitespace-nowrap">{ticket.name}</p>
+                    <DashboardRankingTicketNameLabel name={ticket.name} />
                   </div>
                   <div className="px-4 py-3 flex items-center justify-center">
                     <p className="font-inter font-semibold text-[14px] leading-[1.3] text-gray-12">{ticket.quantity.toLocaleString("pt-BR")}</p>
@@ -958,7 +1069,8 @@ export default function EventDashboardPage() {
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Lotes próximos de esgotamento</p>
             </div>
             <div>
-              {dashboardData.lotsNearDepletion.map((lot, index) => {
+              {paginatedLotsNearDepletion.map((lot, index) => {
+                const globalIndex = lotsNearDepletionSliceStart + index;
                 const percentage = (lot.sold / lot.total) * 100;
                 const getStatusColor = (status: string) => {
                   if (status === "Crítico") return "bg-red-11";
@@ -966,7 +1078,7 @@ export default function EventDashboardPage() {
                   return "bg-gray-11";
                 };
                 return (
-                  <div key={index} className="px-4 py-2 border-b border-gray-6 last:border-b-0">
+                  <div key={`${globalIndex}-${lot.name}`} className="px-4 py-2 border-b border-gray-6 last:border-b-0">
                     <div className="flex items-center justify-between mb-4">
                       <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.2] text-gray-12">{lot.name}</p>
                       <div className={`px-2 py-1 rounded ${getStatusColor(lot.status)} text-[14px] font-family-dm-sans font-normal text-gray-1`}>
@@ -995,6 +1107,11 @@ export default function EventDashboardPage() {
                 );
               })}
             </div>
+            <LotsNearDepletionPaginationBar
+              page={lotsNearDepletionPage}
+              totalPages={lotsNearDepletionTotalPages}
+              onPageChange={setLotsNearDepletionPage}
+            />
           </div>
 
           {/* Heatmap de Dias e Horários */}
@@ -1156,6 +1273,7 @@ export default function EventDashboardPage() {
               data={{
                 labels: dashboardData.registrationsTrend.chartData?.labels || ["Jan", "Fev", "Mar", "Abr"],
                 revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) || [4000, 12000, 8000, 10000],
+                dailyData: dashboardData.registrationsTrend.chartData?.dailyData,
               }}
             />
           </div>
@@ -1171,7 +1289,7 @@ export default function EventDashboardPage() {
               <div key={index} className="px-4 py-3 flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <DashboardRankingCategoryLabel category={ticket.category} />
-                  <p className="font-family-dm-sans font-semibold text-sm text-gray-12 truncate">{ticket.name}</p>
+                  <DashboardRankingTicketNameLabel name={ticket.name} size="sm" />
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <p className="font-inter font-semibold text-sm text-gray-12">{ticket.quantity.toLocaleString("pt-BR")}</p>
@@ -1206,7 +1324,8 @@ export default function EventDashboardPage() {
             <p className="font-family-dm-sans font-normal text-base text-gray-11">Lotes próximos de esgotamento</p>
           </div>
           <div className="divide-y divide-gray-6">
-            {dashboardData.lotsNearDepletion.map((lot, index) => {
+            {paginatedLotsNearDepletion.map((lot, index) => {
+              const globalIndex = lotsNearDepletionSliceStart + index;
               const percentage = (lot.sold / lot.total) * 100;
               const getStatusColor = (status: string) => {
                 if (status === "Crítico") return "bg-red-11";
@@ -1214,7 +1333,7 @@ export default function EventDashboardPage() {
                 return "bg-gray-11";
               };
               return (
-                <div key={index} className="px-4 py-3">
+                <div key={`${globalIndex}-${lot.name}`} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-family-dm-sans font-semibold text-sm text-gray-12">{lot.name}</p>
                     <span className={`px-2 py-0.5 rounded text-xs font-family-dm-sans text-gray-1 ${getStatusColor(lot.status)}`}>{lot.status}</span>
@@ -1230,6 +1349,12 @@ export default function EventDashboardPage() {
               );
             })}
           </div>
+          <LotsNearDepletionPaginationBar
+            page={lotsNearDepletionPage}
+            totalPages={lotsNearDepletionTotalPages}
+            onPageChange={setLotsNearDepletionPage}
+            compact
+          />
         </div>
 
         {/* Heatmap - mobile */}

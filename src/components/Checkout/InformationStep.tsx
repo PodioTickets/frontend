@@ -1237,6 +1237,8 @@ export function InformationStep({
                                 {isComplete ? "Concluído" : "Pendente"}
                               </div>
                               <button
+                                type="button"
+                                title="Editar"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleParticipant(participantIndex);
@@ -1246,6 +1248,8 @@ export function InformationStep({
                                 <PencilIcon className="size-4 text-gray-12 cursor-pointer" />
                               </button>
                               <button
+                                type="button"
+                                title="Deletar"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDeleteParticipant(
@@ -1302,6 +1306,7 @@ export function InformationStep({
                               }}
                               className="p-2  flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-2 active:bg-gray-2 transition-colors cursor-pointer touch-manipulation"
                               type="button"
+                              title="Editar"
                             >
                               <PencilIcon className="size-4 text-gray-12 pointer-events-none" />
                             </button>
@@ -1315,6 +1320,7 @@ export function InformationStep({
                               }}
                               className="p-2 rounded-lg border border-red-6 hover:bg-red-1 active:bg-red-1 transition-colors cursor-pointer touch-manipulation"
                               type="button"
+                              title="Deletar"
                             >
                               <TrashIcon className="size-4 text-red-6 cursor-pointer pointer-events-none" />
                             </button>

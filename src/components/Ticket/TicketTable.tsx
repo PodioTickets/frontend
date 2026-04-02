@@ -2,8 +2,13 @@
 
 import { Pencil, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { ticketDragId } from "@/lib/organizerTicketListDnD";
 import type { Ticket } from "@/hooks/useTickets";
 
 interface TicketTableProps {
@@ -45,7 +50,7 @@ function DuplicateRowSpinner() {
   );
 }
 
-function DraggableTicketRow({
+function SortableTicketRow({
   ticket,
   productsMap,
   onEdit,
@@ -70,9 +75,10 @@ function DraggableTicketRow({
     listeners,
     setNodeRef,
     transform,
+    transition,
     isDragging,
-  } = useDraggable({
-    id: `ticket-${ticket.id}`,
+  } = useSortable({
+    id: ticketDragId(ticket.id),
     data: {
       type: "ticket",
       ticket,
@@ -80,7 +86,8 @@ function DraggableTicketRow({
   });
 
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
@@ -263,19 +270,24 @@ export function TicketTable({
         </div>
       </div>
 
-      {/* Rows */}
-      <div className="flex flex-col items-start w-full">
-        {tickets.map((ticket) => (
-          <DraggableTicketRow
-            key={ticket.id}
-            ticket={ticket}
-            productsMap={productsMap}
-            onEdit={onEdit}
-            onDuplicate={onDuplicate}
-            duplicatingTicketId={duplicatingTicketId}
-          />
-        ))}
-      </div>
+      {/* Rows — SortableContext por lista (categoria ou avulsos) para ordem + arrastar entre categorias */}
+      <SortableContext
+        items={tickets.map((t) => ticketDragId(t.id))}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="flex flex-col items-start w-full">
+          {tickets.map((ticket) => (
+            <SortableTicketRow
+              key={ticket.id}
+              ticket={ticket}
+              productsMap={productsMap}
+              onEdit={onEdit}
+              onDuplicate={onDuplicate}
+              duplicatingTicketId={duplicatingTicketId}
+            />
+          ))}
+        </div>
+      </SortableContext>
 
       {/* Pagination */}
       {totalPages > 1 && (

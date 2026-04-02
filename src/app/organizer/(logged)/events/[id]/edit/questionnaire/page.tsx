@@ -1,18 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
 import { userService, organizerService } from "@/services";
-import { useEditEvent } from "@/contexts/EditEventContext";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
+import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
+import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
 import toast from "react-hot-toast";
 import { Plus, Pencil } from "lucide-react";
 import type { Question } from "@/services/organizer/OrganizerService";
+import type { QuestionModalLocalPayload } from "@/components/Questionnaire/CreateQuestionModal";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { Loading } from "@/components/Loading";
+
+const PENDING_QUESTION_PREFIX = "__pending_question__";
+
+function isPendingQuestionId(id: string): boolean {
+  return id.startsWith(PENDING_QUESTION_PREFIX);
+}
 
 export default function EditQuestionnairePage() {
   const router = useRouter();
@@ -22,7 +29,9 @@ export default function EditQuestionnairePage() {
   const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [committedQuestionsJson, setCommittedQuestionsJson] = useState<string | null>(null);
 
   // Verificar autenticação
   useEffect(() => {
@@ -37,39 +46,118 @@ export default function EditQuestionnairePage() {
     return () => clearTimeout(timer);
   }, [router]);
 
-  // Carregar perguntas
-  const loadQuestions = async () => {
+  const refetchQuestions = useCallback(async (): Promise<Question[]> => {
+    if (!eventId) return [];
+    try {
+      const loadedQuestions = await organizerService.getQuestions(eventId).catch(() => []);
+      const sorted = [...loadedQuestions].sort((a, b) => a.order - b.order);
+      setQuestions(sorted);
+      return sorted;
+    } catch (error: any) {
+      console.error("Error loading questions:", error);
+      return [];
+    }
+  }, [eventId]);
+
+  // Carregar perguntas (estado inicial / reload com overlay)
+  const loadQuestions = useCallback(async () => {
     if (!eventId) return;
     setLoading(true);
     try {
-      const loadedQuestions = await organizerService.getQuestions(eventId).catch(() => []);
-      setQuestions(loadedQuestions.sort((a, b) => a.order - b.order));
-    } catch (error: any) {
-      console.error("Error loading questions:", error);
+      const sorted = await refetchQuestions();
+      setCommittedQuestionsJson(JSON.stringify(sorted));
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId, refetchQuestions]);
 
   useEffect(() => {
     if (!authChecked) return;
     loadQuestions();
-  }, [authChecked, eventId]);
+  }, [authChecked, loadQuestions]);
 
   // Setup modal save callback
   useEffect(() => {
-    setOnModalSave(async () => {
-      await loadQuestions();
-    });
-  }, [setOnModalSave, eventId]);
+    setOnModalSave(
+      async (payload: QuestionModalLocalPayload | undefined) => {
+        if (payload?.kind === "create") {
+          const id = `${PENDING_QUESTION_PREFIX}${crypto.randomUUID()}`;
+          setQuestions((prev) => {
+            const order = prev.length + 1;
+            const q: Question = {
+              id,
+              question: payload.questionData.question,
+              type: payload.questionData.type,
+              options: payload.questionData.options,
+              isRequired: payload.questionData.isRequired ?? true,
+              order,
+              appliesTo: payload.questionData.appliesTo ?? "all",
+              eventId,
+              createdAt: "",
+              updatedAt: "",
+            };
+            return [...prev, q].sort((a, b) => a.order - b.order);
+          });
+          return;
+        }
+        if (payload?.kind === "update") {
+          setQuestions((prev) =>
+            prev.map((q) =>
+              q.id === payload.questionId
+                ? {
+                    ...q,
+                    question: payload.questionData.question,
+                    type: payload.questionData.type,
+                    options: payload.questionData.options,
+                    isRequired: payload.questionData.isRequired ?? true,
+                    appliesTo: payload.questionData.appliesTo ?? "all",
+                  }
+                : q
+            )
+          );
+          return;
+        }
+        if (payload?.kind === "delete") {
+          setQuestions((prev) => prev.filter((q) => q.id !== payload.questionId));
+          return;
+        }
+        const sorted = await refetchQuestions();
+        setCommittedQuestionsJson(JSON.stringify(sorted));
+      }
+    );
+  }, [setOnModalSave, eventId, refetchQuestions]);
 
-  const handleBack = () => {
-    router.push(`/organizer/events/${eventId}/edit/topics`);
-  };
+  const isDirty = useMemo(
+    () =>
+      committedQuestionsJson !== null &&
+      JSON.stringify(questions) !== committedQuestionsJson,
+    [questions, committedQuestionsJson],
+  );
+
+  const discardLocalChanges = useCallback(() => {
+    if (committedQuestionsJson == null) return;
+    try {
+      setQuestions(JSON.parse(committedQuestionsJson) as Question[]);
+    } catch {
+      toast.error("Não foi possível restaurar o estado anterior.");
+    }
+  }, [committedQuestionsJson]);
+
+  const {
+    leavePromptOpen,
+    setLeavePromptOpen,
+    handleBack,
+    confirmLeaveWithoutSaving,
+    beginNavigationAfterSave,
+  } = useUnsavedLeaveGuard(isDirty, {
+    navigateTarget: `/organizer/events/${eventId}/edit/topics`,
+    onDiscard: discardLocalChanges,
+  });
 
   const handleCreateQuestion = () => {
     openCreateQuestionModal({
       eventId: eventId || "mock-event",
+      deferPersistence: true,
     });
   };
 
@@ -82,6 +170,7 @@ export default function EditQuestionnairePage() {
       eventId: eventId,
       questionId: question.id,
       question: question,
+      deferPersistence: true,
     });
   };
 
@@ -91,19 +180,63 @@ export default function EditQuestionnairePage() {
       return;
     }
 
+    if (isPendingQuestionId(questionId)) {
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+      toast.success("Pergunta removida.");
+      return;
+    }
+
     try {
       await organizerService.deleteQuestion(eventId, questionId);
       toast.success("Pergunta deletada com sucesso!");
-      loadQuestions();
+      const sorted = await refetchQuestions();
+      setCommittedQuestionsJson(JSON.stringify(sorted));
     } catch (error: any) {
       console.error("Error deleting question:", error);
       toast.error(error.response?.data?.message || "Erro ao deletar pergunta");
     }
   };
 
-  const handleFinish = () => {
-    toast.success("Evento atualizado com sucesso!");
-    router.push(`/organizer/events/${eventId}/dashboard`);
+  const handleSaveChanges = async (): Promise<boolean> => {
+    if (!eventId) {
+      toast.error("Evento não encontrado");
+      return false;
+    }
+
+    setSaving(true);
+    try {
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (!isPendingQuestionId(q.id)) continue;
+        await organizerService.createQuestion(eventId, {
+          question: q.question,
+          type: q.type,
+          isRequired: q.isRequired,
+          options: q.options,
+          order: i + 1,
+          appliesTo: q.appliesTo ?? "all",
+        });
+      }
+      const sorted = await refetchQuestions();
+      setCommittedQuestionsJson(JSON.stringify(sorted));
+      toast.success("Alterações salvas com sucesso!");
+      return true;
+    } catch (error: any) {
+      console.error("Error saving questionnaire:", error);
+      toast.error(
+        error.response?.data?.message || error.message || "Erro ao salvar questionário"
+      );
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAndLeave = async () => {
+    const ok = await handleSaveChanges();
+    if (ok) {
+      beginNavigationAfterSave();
+    }
   };
 
   if (!authChecked || loading) {
@@ -189,12 +322,16 @@ export default function EditQuestionnairePage() {
                   <div className="flex items-center justify-between mt-auto">
                     <div className={`flex gap-2.5 items-center ml-auto`}>
                       <button
+                        type="button"
+                        title="Editar"
                         onClick={() => handleEditQuestion(question)}
                         className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                       >
                         <Pencil className="size-5 text-gray-11" />
                       </button>
                       <button
+                        type="button"
+                        title="Deletar"
                         onClick={() =>
                           openDeleteQuestionModal({
                             onConfirm: () => handleDeleteQuestion(question.id),
@@ -215,14 +352,24 @@ export default function EditQuestionnairePage() {
         {/* Bottom Actions */}
         <div className="flex justify-end gap-2">
           <Button
-            onClick={handleFinish}
+            onClick={() => void handleSaveChanges()}
+            disabled={saving || loading}
             variant="default"
-            className="text-gray-12 text-lg font-bold px-11 h-[52px]"
+            className="text-gray-12 text-lg font-bold px-11 h-[52px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Salvar alterações
+            {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
         </div>
       </div>
+
+      <UnsavedChangesModal
+        open={leavePromptOpen}
+        onClose={() => setLeavePromptOpen(false)}
+        title="Alterações não salvas"
+        description="Você fez alterações no questionário. Se sair agora, elas serão perdidas."
+        onSaveAndLeave={handleSaveAndLeave}
+        onLeaveWithoutSaving={confirmLeaveWithoutSaving}
+      />
     </div>
   );
 }

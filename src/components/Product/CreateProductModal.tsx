@@ -20,6 +20,7 @@ import {
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { BookIcon } from "../Icons/BookIcon";
+import { LoadingAnimation } from "@/components/Loading";
 
 interface ProductVariation {
   id: string;
@@ -59,8 +60,13 @@ function buyerVariationEditStateFromApiProduct(p: Record<string, unknown> | null
 }
 
 export function CreateProductModal() {
-  const { isOpen, closeCreateProductModal, data, onModalSave } =
-    useCreateProductModal();
+  const {
+    isOpen,
+    closeCreateProductModal,
+    data,
+    onModalSave,
+    onModalProductDelete,
+  } = useCreateProductModal();
   const [productName, setProductName] = useState("");
   const [productImage, setProductImage] = useState<string | null>(null);
   const [isIncludedInTicket, setIsIncludedInTicket] = useState(true);
@@ -73,6 +79,12 @@ export function CreateProductModal() {
   const [variationChangeDeadlineDays, setVariationChangeDeadlineDays] =
     useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  /** Edição: carregamento do produto via API ao abrir o modal. */
+  const [productFetchStatus, setProductFetchStatus] = useState<
+    "idle" | "loading" | "loaded" | "error"
+  >("idle");
   const [formInitVersion, setFormInitVersion] = useState(0);
   const [productFormBaseline, setProductFormBaseline] = useState<string | null>(
     null,
@@ -81,6 +93,7 @@ export function CreateProductModal() {
 
   const isEditing = data?.productId !== undefined;
   const eventId = data?.eventId;
+  const isProductLoading = isEditing && productFetchStatus === "loading";
 
   /** Estoque inicial de cada variação nova: soma das vagas de todos os lotes do ingresso (vem do modal). */
   const defaultVariationStockFromBatches = useMemo(() => {
@@ -92,10 +105,22 @@ export function CreateProductModal() {
   }, [data?.ticketBatchesTotalQuantity]);
 
   const filledVariationsCount = variations.filter((v) => v.name.trim()).length;
-  /** Criar: no mínimo 2 nomes preenchidos. Editar: no mínimo 1 (produtos legados). */
-  const hasMinVariations = isEditing
-    ? filledVariationsCount >= 1
-    : filledVariationsCount >= 2;
+  /** Criar e editar: no mínimo 1 nome de variação preenchido. */
+  const hasMinVariations = filledVariationsCount >= 1;
+
+  /** Valor em reais a partir do texto "10,50" / "0,00". */
+  const parsePriceReais = (formatted: string): number => {
+    const n = parseFloat(
+      String(formatted ?? "")
+        .replace(",", ".")
+        .trim(),
+    );
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  /** Produto não incluso: preço base obrigatório e > 0. */
+  const basePriceInvalidNotIncluded =
+    !isIncludedInTicket && parsePriceReais(basePrice) <= 0;
 
   // Helper: API retorna preços em centavos; exibir em reais (formato "10,50")
   const formatPriceFromApi = (value: number | string | undefined): string => {
@@ -192,39 +217,74 @@ export function CreateProductModal() {
   const isProductFormDirty =
     productFormBaseline !== null && productFormSnapshot !== productFormBaseline;
 
-  // Initialize form when modal opens
+  const hydrateFormFromProduct = useCallback(
+    (p: unknown, emptyVariationsStockFallback: string) => {
+      const rec = p && typeof p === "object" ? (p as Record<string, unknown>) : {};
+      setProductName(String(rec.name ?? ""));
+      const img = rec.image ?? rec.image_url ?? rec.imageUrl;
+      setProductImage(typeof img === "string" ? img : null);
+      const included =
+        rec.isIncludedInTicket ?? rec.is_included_in_ticket;
+      setIsIncludedInTicket(included !== false);
+      setBasePrice(
+        formatPriceFromApi(
+          (rec.basePrice ?? rec.base_price) as number | string | undefined,
+        ),
+      );
+      const req = rec.isRequired ?? rec.is_required;
+      setIsRequired(req !== false);
+      setVariationTypeName(
+        String(rec.variationType ?? rec.variation_type ?? ""),
+      );
+      const rawVars = rec.variations;
+      const vars = Array.isArray(rawVars) ? rawVars : [];
+      setVariations(
+        vars.length > 0
+          ? vars.map((v: unknown, i: number) => {
+            const row = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+            return {
+              id: String(row.id ?? `v-${Date.now()}-${i}`),
+              name: String(row.name ?? row.variation_name ?? ""),
+              price: formatPriceFromApi(
+                (row.price ?? row.unit_price) as number | string | undefined,
+              ),
+              stock:
+                row.stock != null
+                  ? String(row.stock)
+                  : row.quantity != null
+                    ? String(row.quantity)
+                    : "",
+            };
+          })
+          : [
+            {
+              id: `${Date.now()}-a`,
+              name: "Padrão",
+              price: "",
+              stock: emptyVariationsStockFallback,
+            },
+          ],
+      );
+      const buyerEdit = buyerVariationEditStateFromApiProduct(rec);
+      setBuyerCanEditVariation(buyerEdit.allowed);
+      setVariationChangeDeadlineDays(buyerEdit.deadlineDays);
+    },
+    [],
+  );
+
+  // Abrir modal: criar = estado inicial; editar = GET /products/:id
   useEffect(() => {
     if (!isOpen) {
       setFormInitVersion(0);
       setProductFormBaseline(null);
+      setProductFetchStatus("idle");
       return;
     }
-    if (isEditing && data?.product) {
-      // Editing mode - load product data (API envia preços em centavos)
-      const p = data.product;
-      setProductName(p.name || "");
-      setProductImage(p.image || null);
-      setIsIncludedInTicket(p.isIncludedInTicket ?? true);
-      setBasePrice(formatPriceFromApi(p.basePrice));
-      setIsRequired(p.isRequired ?? true);
-      setVariationTypeName(p.variationType || "");
-      setVariations(
-        Array.isArray(p.variations)
-          ? p.variations.map((v: any) => ({
-            id: v.id || String(Date.now() + Math.random()),
-            name: v.name ?? "",
-            price: formatPriceFromApi(v.price),
-            stock: v.stock != null ? String(v.stock) : "",
-          }))
-          : [],
-      );
-      const buyerEdit = buyerVariationEditStateFromApiProduct(
-        p as Record<string, unknown>,
-      );
-      setBuyerCanEditVariation(buyerEdit.allowed);
-      setVariationChangeDeadlineDays(buyerEdit.deadlineDays);
-    } else {
-      // Create mode: 1ª variação "Padrão" + estoque = soma dos lotes; 2ª vazia (obrigatório nome para habilitar salvar)
+
+    setDeleteConfirmOpen(false);
+
+    if (!isEditing) {
+      setProductFetchStatus("idle");
       setProductName("");
       setProductImage(null);
       setIsIncludedInTicket(true);
@@ -239,18 +299,67 @@ export function CreateProductModal() {
           price: "",
           stock: defaultVariationStockFromBatches,
         },
-        {
-          id: `${t}-b`,
-          name: "",
-          price: "",
-          stock: "",
-        },
       ]);
       setBuyerCanEditVariation(false);
       setVariationChangeDeadlineDays("30");
+      setFormInitVersion((v) => v + 1);
+      return;
     }
-    setFormInitVersion((v) => v + 1);
-  }, [isOpen, isEditing, data, defaultVariationStockFromBatches]);
+
+    const productId = data?.productId;
+    if (!productId) {
+      setProductFetchStatus("error");
+      setFormInitVersion((v) => v + 1);
+      return;
+    }
+
+    let cancelled = false;
+    setProductFetchStatus("loading");
+
+    const cachedProduct = data?.product;
+
+    (async () => {
+      try {
+        const raw = await organizerService.getProductById(productId);
+        if (cancelled) return;
+        if (!raw || typeof raw !== "object") {
+          throw new Error("Resposta inválida");
+        }
+        hydrateFormFromProduct(raw, defaultVariationStockFromBatches);
+        setProductFetchStatus("loaded");
+      } catch (e) {
+        console.error("Error loading product:", e);
+        if (!cancelled) {
+          toast.error(
+            "Não foi possível carregar os dados do produto. Usando informações em cache, se houver.",
+          );
+          if (cachedProduct && typeof cachedProduct === "object") {
+            hydrateFormFromProduct(
+              cachedProduct,
+              defaultVariationStockFromBatches,
+            );
+          }
+          setProductFetchStatus("error");
+        }
+      } finally {
+        if (!cancelled) {
+          setFormInitVersion((v) => v + 1);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // cache em `cachedProduct` veio de `data.product` na abertura; não incluir `data.product` nas deps para não refazer GET por referência nova
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isOpen,
+    isEditing,
+    data?.productId,
+    defaultVariationStockFromBatches,
+    hydrateFormFromProduct,
+  ]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -294,13 +403,8 @@ export function CreateProductModal() {
   };
 
   const handleRemoveVariation = (id: string) => {
-    const minRows = isEditing ? 1 : 2;
-    if (variations.length <= minRows) {
-      toast.error(
-        minRows >= 2
-          ? "É necessário ter pelo menos duas variações"
-          : "É necessário ter pelo menos uma variação",
-      );
+    if (variations.length <= 1) {
+      toast.error("É necessário ter pelo menos uma variação");
       return;
     }
     setVariations(variations.filter((v) => v.id !== id));
@@ -319,21 +423,28 @@ export function CreateProductModal() {
   const formatPrice = (value: string) => {
     const numbers = value.replace(/\D/g, "");
     if (!numbers) return "";
-    const cents = parseInt(numbers);
+    const cents = parseInt(numbers, 10);
     return (cents / 100).toFixed(2).replace(".", ",");
   };
 
   const handlePriceChange = (id: string, value: string) => {
     const formatted = formatPrice(value);
-    handleVariationChange(id, "price", formatted);
+    handleVariationChange(
+      id,
+      "price",
+      formatted === "" ? "0,00" : formatted,
+    );
   };
 
   const handleBasePriceChange = (value: string) => {
-    const formatted = formatPrice(value);
-    setBasePrice(formatted);
+    const raw = value.replace(/^R\$\s*/i, "").trim();
+    const formatted = formatPrice(raw);
+    setBasePrice(formatted === "" ? "0,00" : formatted);
   };
 
   const handleSave = async () => {
+    if (isProductLoading) return;
+
     if (!productName.trim()) {
       toast.error("Digite o nome do produto");
       return;
@@ -345,16 +456,17 @@ export function CreateProductModal() {
     }
 
     if (!hasMinVariations) {
-      toast.error(
-        isEditing
-          ? "Preencha o nome de pelo menos uma variação"
-          : "Preencha o nome de pelo menos duas variações",
-      );
+      toast.error("Preencha o nome de pelo menos uma variação");
       return;
     }
 
     if (!eventId) {
       toast.error("Evento não encontrado");
+      return;
+    }
+
+    if (!isIncludedInTicket && parsePriceReais(basePrice) <= 0) {
+      toast.error("Informe um preço maior que zero para o produto.");
       return;
     }
 
@@ -434,6 +546,37 @@ export function CreateProductModal() {
     }
   };
 
+  const linkedTicketNamesForDelete = useMemo(() => {
+    const raw = data?.linkedTicketNames;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((n) => String(n ?? "").trim())
+      .filter(Boolean);
+  }, [data?.linkedTicketNames]);
+
+  const performDeleteProduct = async () => {
+    if (!isEditing || !data?.productId || !eventId) return;
+    setIsDeleting(true);
+    try {
+      await organizerService.deleteProduct(eventId, data.productId);
+      toast.success("Produto excluído com sucesso");
+      setDeleteConfirmOpen(false);
+      if (onModalProductDelete) {
+        try {
+          await onModalProductDelete({ productId: data.productId });
+        } catch (callbackError) {
+          console.error("Error in onModalProductDelete callback:", callbackError);
+        }
+      }
+      closeCreateProductModal();
+    } catch (error: any) {
+      console.error("Error deleting product:", error);
+      toast.error(error.response?.data?.message || "Erro ao deletar produto");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -445,7 +588,10 @@ export function CreateProductModal() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 bg-black/90 z-50"
-            onClick={closeCreateProductModal}
+            onClick={() => {
+              if (deleteConfirmOpen) return;
+              closeCreateProductModal();
+            }}
           />
 
           {/* Modal */}
@@ -457,15 +603,32 @@ export function CreateProductModal() {
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1192px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="relative bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1192px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+              {isProductLoading ? (
+                <div
+                  className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-gray-1/90 backdrop-blur-[2px]"
+                  aria-busy
+                  aria-label="Carregando produto"
+                >
+                  <LoadingAnimation />
+                </div>
+              ) : null}
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-4 py-3 shrink-0">
                 <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
                   {isEditing ? "Editar produto" : "Criação de produto"}
                 </h2>
                 <button
-                  onClick={closeCreateProductModal}
+                  type="button"
+                  onClick={() => {
+                    if (deleteConfirmOpen) {
+                      setDeleteConfirmOpen(false);
+                      return;
+                    }
+                    closeCreateProductModal();
+                  }}
                   className="text-gray-11 hover:text-gray-12 transition-colors p-1"
+                  aria-label="Fechar"
                 >
                   <X className="size-6" />
                 </button>
@@ -610,7 +773,21 @@ export function CreateProductModal() {
                         <div className="flex items-center gap-2">
                           <Radio
                             checked={!isIncludedInTicket}
-                            onChange={() => setIsIncludedInTicket(false)}
+                            onChange={() => {
+                              setIsIncludedInTicket(false);
+                              setBasePrice((p) =>
+                                (p ?? "").trim() === "" ? "0,00" : p,
+                              );
+                              setVariations((vs) =>
+                                vs.map((v) => ({
+                                  ...v,
+                                  price:
+                                    (v.price ?? "").trim() === ""
+                                      ? "0,00"
+                                      : v.price,
+                                })),
+                              );
+                            }}
                             name="included"
                             className="size-6"
                           />
@@ -627,20 +804,20 @@ export function CreateProductModal() {
                             </label>
                             <Input
                               type="text"
-                              value={basePrice ? `R$ ${basePrice}` : ""}
+                              inputMode="numeric"
+                              value={`R$ ${basePrice || "0,00"}`}
                               onChange={(e) =>
                                 handleBasePriceChange(e.target.value)
                               }
                               placeholder="R$ 0,00"
-                              className="h-12 px-3"
+                              aria-invalid={basePriceInvalidNotIncluded}
+                              className={`h-12 px-3 ${basePriceInvalidNotIncluded ? "border-red-8 focus-visible:border-red-8 focus-visible:ring-red-8/30" : ""}`}
                             />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Info className="size-5 text-gray-11" />
-                            <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] flex-1">
-                              Você ainda poderá escolher um preço específico nas
-                              variações
-                            </span>
+                            {basePriceInvalidNotIncluded ? (
+                              <p className="text-red-11 text-sm font-family-dm-sans leading-[1.3]">
+                                Informe um valor acima de R$ 0,00.
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                       )}
@@ -809,7 +986,8 @@ export function CreateProductModal() {
                                   <span>R$</span>
                                   <input
                                     type="text"
-                                    value={variation.price}
+                                    inputMode="numeric"
+                                    value={variation.price || "0,00"}
                                     onChange={(e) =>
                                       handlePriceChange(
                                         variation.id,
@@ -839,6 +1017,8 @@ export function CreateProductModal() {
                             </div>
                             <div className="flex items-center justify-center px-4 w-[74px]">
                               <button
+                                type="button"
+                                title="Remover variação"
                                 onClick={() =>
                                   handleRemoveVariation(variation.id)
                                 }
@@ -950,12 +1130,16 @@ export function CreateProductModal() {
                             letterClassName="text-2xl font-semibold"
                           />
                         </div>
-                        <div className="flex flex-col justify-between py-2 flex-1">
+                        <div className="flex flex-col justify-between flex-1 gap-4">
                           <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                             {productName || "Nome do produto"}
                           </p>
-                          {anyVariationHasSpecificPrice && (
-                            <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                          {isIncludedInTicket ? (
+                            <p className="text-gray-12 text-base font-manrope leading-[1.1]">
+                              Incluso no ingresso
+                            </p>
+                          ) : (
+                            <p className="text-gray-12 text-base font-manrope leading-[1.1]">
                               R$ {basePrice.trim() ? basePrice : "0,00"}
                             </p>
                           )}
@@ -989,31 +1173,49 @@ export function CreateProductModal() {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-gray-6 flex items-center justify-end gap-3 px-6 py-4 shrink-0">
-                <Button
-                  variant="outline"
-                  onClick={closeCreateProductModal}
-                  disabled={isSubmitting}
-                  className="border-gray-6 text-gray-11 px-4 py-2"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={
-                    isSubmitting ||
-                    !productName.trim() ||
-                    !hasMinVariations ||
-                    productFormBaseline === null ||
-                    !isProductFormDirty
-                  }
-                >
-                  {isSubmitting
-                    ? "Salvando..."
-                    : isEditing
-                      ? "Salvar alterações"
-                      : "Criar produto"}
-                </Button>
+              <div className="border-t border-gray-6 flex flex-wrap items-center justify-between gap-3 px-6 py-4 shrink-0">
+                <div className="min-w-0">
+                  {isEditing ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      disabled={isSubmitting || isDeleting || isProductLoading}
+                      className="px-4 py-2"
+                    >
+                      Deletar produto
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-3 ml-auto">
+                  <Button
+                    variant="outline"
+                    onClick={closeCreateProductModal}
+                    disabled={isSubmitting || isDeleting || isProductLoading}
+                    className="border-gray-6 text-gray-11 px-4 py-2"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={
+                      isSubmitting ||
+                      isDeleting ||
+                      isProductLoading ||
+                      !productName.trim() ||
+                      !hasMinVariations ||
+                      productFormBaseline === null ||
+                      !isProductFormDirty ||
+                      basePriceInvalidNotIncluded
+                    }
+                  >
+                    {isSubmitting
+                      ? "Salvando..."
+                      : isEditing
+                        ? "Salvar alterações"
+                        : "Criar produto"}
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -1027,6 +1229,105 @@ export function CreateProductModal() {
             onInvalidFile={(msg) => toast.error(msg)}
             onCropFailed={(msg) => toast.error(msg)}
           />
+
+          {/* Confirmação de exclusão (Figma: modal sobre o fluxo de produto) */}
+          <AnimatePresence>
+            {deleteConfirmOpen && (
+              <>
+                <motion.div
+                  key="delete-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)]"
+                  onClick={() => {
+                    if (!isDeleting) setDeleteConfirmOpen(false);
+                  }}
+                />
+                <motion.div
+                  key="delete-modal"
+                  initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="fixed inset-0 z-61 flex items-center justify-center p-4 pointer-events-none"
+                >
+                  <div
+                    className="bg-gray-1 rounded-xl w-full max-w-[652px] flex flex-col gap-11 pt-6 pb-5 px-5 shadow-2xl pointer-events-auto max-h-[min(90vh,720px)] min-h-0"
+                    onClick={(e) => e.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="delete-product-title"
+                    aria-describedby="delete-product-desc"
+                  >
+                    <div className="flex flex-col gap-6 items-stretch shrink-0">
+                      <div className="flex flex-col gap-4 items-center text-center">
+                        <h2
+                          id="delete-product-title"
+                          className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]"
+                        >
+                          Deletar produto permanentemente?
+                        </h2>
+                        <p
+                          id="delete-product-desc"
+                          className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3] max-w-full"
+                        >
+                          Ao deletar este produto, ele será removido de todos os
+                          ingressos vinculados:
+                        </p>
+                      </div>
+                      <div className="bg-gray-3 rounded-xl p-4 min-h-0 max-h-[min(40vh,320px)] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
+                        {linkedTicketNamesForDelete.length > 0 ? (
+                          <div className="flex flex-wrap gap-x-6 gap-y-6">
+                            {linkedTicketNamesForDelete.map((name, idx) => (
+                              <div
+                                key={`${name}-${idx}`}
+                                className="flex items-center gap-2 min-w-0 max-w-full"
+                              >
+                                <span
+                                  className="size-1.5 rounded-full bg-red-11 shrink-0"
+                                  aria-hidden
+                                />
+                                <span className="text-gray-12 text-sm font-medium font-family-dm-sans leading-[1.3] truncate">
+                                  {name}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-11 text-sm font-normal font-family-dm-sans leading-[1.3] text-center">
+                            Este produto pode estar vinculado a outros ingressos
+                            do evento. A exclusão removerá o produto de todos eles.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 shrink-0 flex-wrap">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => void performDeleteProduct()}
+                        disabled={isDeleting}
+                        className="font-manrope text-base rounded-lg"
+                      >
+                        {isDeleting ? "Deletando..." : "Deletar produto"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDeleteConfirmOpen(false)}
+                        disabled={isDeleting}
+                        className="border-gray-6 text-gray-12 font-manrope text-base rounded-lg"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>

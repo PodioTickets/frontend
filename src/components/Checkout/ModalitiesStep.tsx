@@ -15,6 +15,7 @@ import type { Ticket } from "@/hooks/useTickets";
 import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
+import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -56,9 +57,28 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
 
   const loading = ticketsLoading || categoriesLoading || productsLoading;
 
+  const kitSelectionDisplay = useMemo(
+    () => parseEventKitSelectionDisplay(event.kitSelectionDisplay),
+    [event.kitSelectionDisplay]
+  );
+
+  /** Avulsos: sempre galeria por ingresso (ON_TICKETS), independente do layout das categorias. */
+  const kitDisplayForUncategorizedTickets = useMemo(
+    () => ({
+      ...kitSelectionDisplay,
+      kitImagesLayout: "ON_TICKETS" as const,
+    }),
+    [kitSelectionDisplay]
+  );
+
   // Separar tickets com categoria dos avulsos
   const { categorizedTickets, uncategorizedTickets } = useMemo(() => {
-    const categorized: Array<{ id: string; name: string; tickets: Ticket[] }> = [];
+    const categorized: Array<{
+      id: string;
+      name: string;
+      description?: string;
+      tickets: Ticket[];
+    }> = [];
     const uncategorized: Ticket[] = [];
 
     // Mapear categorias por ID
@@ -87,6 +107,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
         categorized.push({
           id: category.id,
           name: category.name,
+          description: category.description,
           tickets: categoryTickets.filter((ticket) => {
             try {
               const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
@@ -229,16 +250,21 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                   ticket={ticket}
                   event={event}
                   productsMap={productsMap}
+                  kitSelectionDisplay={kitDisplayForUncategorizedTickets}
                 />
               ))}
               {categorizedTickets.map((category, index) => (
                 <TicketCategoryCard
                   key={category.id}
+                  categoryId={category.id}
                   categoryName={category.name}
+                  categoryDescription={category.description}
                   tickets={category.tickets}
                   index={index}
+                  expandedByDefault={index === 0}
                   event={event}
                   productsMap={productsMap}
+                  kitSelectionDisplay={kitSelectionDisplay}
                 />
               ))}
             </>
@@ -301,6 +327,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                         ticket={ticket}
                         event={event}
                         productsMap={productsMap}
+                        kitSelectionDisplay={kitDisplayForUncategorizedTickets}
                       />
                       {!isLast && (
                         <div className="w-full h-px bg-gray-6" />
@@ -310,15 +337,19 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                 })}
 
                 {categorizedTickets.map((category, index) => {
-                  const isLastCategory = index === categorizedTickets.length - 1
+                  const isLastCategory = index === categorizedTickets.length - 1;
                   return (
                     <Fragment key={category.id}>
                       <TicketCategoryCard
+                        categoryId={category.id}
                         categoryName={category.name}
+                        categoryDescription={category.description}
                         tickets={category.tickets}
                         index={index}
+                        expandedByDefault={index === 0}
                         event={event}
                         productsMap={productsMap}
+                        kitSelectionDisplay={kitSelectionDisplay}
                       />
                       {!isLastCategory && (
                         <div className="w-full h-px bg-gray-6" />

@@ -468,6 +468,54 @@ function PaymentMethodOption({
   );
 }
 
+function BillingAddressConfirmedSummary({
+  address,
+  onEdit,
+  className = "",
+}: {
+  address: CheckoutBillingAddress;
+  onEdit: () => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`border border-gray-6 rounded-xl p-5 flex flex-col gap-4 w-full bg-gray-1 ${className}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
+          Endereço
+        </h2>
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 border-gray-6 text-gray-12 font-semibold font-family-dm-sans"
+          onClick={onEdit}
+        >
+          Alterar endereço
+        </Button>
+      </div>
+      <div className="text-sm text-gray-12 font-family-dm-sans leading-[1.4] space-y-1">
+        <p>
+          {address.street}, {address.number}
+          {address.complement?.trim()
+            ? ` — ${address.complement.trim()}`
+            : ""}
+        </p>
+        <p>
+          {address.neighborhood} — {address.city}
+          {address.stateUf ? `/${address.stateUf}` : ""}
+        </p>
+        <p className="text-gray-11">
+          CEP {address.cep}
+          {address.country?.trim() && address.country !== "Brasil"
+            ? ` · ${address.country}`
+            : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>("credit");
@@ -1428,21 +1476,32 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         {/* Instructional Text */}
         <div className="pb-6">
           <p className="text-sm text-gray-11 font-family-dm-sans">
-            Revise seu pedido e conclua com cartão, Pix ou boleto. Os ingressos
-            são liberados após aprovação.
+            {billingAddressConfirmed
+              ? "Escolha cartão ou Pix para concluir. Os ingressos são liberados após aprovação."
+              : "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."}
           </p>
         </div>
 
-        <CheckoutAddressSection
-          values={billingAddress}
-          onChange={(patch) =>
-            setBillingAddress((prev) => ({ ...prev, ...patch }))
-          }
-          onConfirmedChange={setBillingAddressConfirmed}
-          className="mb-6"
-        />
+        {!billingAddressConfirmed ? (
+          <CheckoutAddressSection
+            values={billingAddress}
+            onChange={(patch) =>
+              setBillingAddress((prev) => ({ ...prev, ...patch }))
+            }
+            onConfirmedChange={setBillingAddressConfirmed}
+            className="mb-6"
+          />
+        ) : (
+          <BillingAddressConfirmedSummary
+            address={billingAddress}
+            onEdit={() => setBillingAddressConfirmed(false)}
+            className="mb-6"
+          />
+        )}
 
-        {/* Payment Methods */}
+        {/* Payment Methods + cupom (só após endereço confirmado) */}
+        {billingAddressConfirmed ? (
+          <>
         <div className="pb-6 flex flex-col gap-3">
           {/* Credit Card Option */}
           <div
@@ -1552,6 +1611,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   isMobile={true}
                   onProcessCheckout={handleProcessPixCheckout}
                   loading={checkoutLoading}
+                  submitDisabled={!billingAddressConfirmed}
                 />
                 <Button
                   onClick={handleProcessPixCheckout}
@@ -1611,6 +1671,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             )}
           </div>
         </div>
+          </>
+        ) : null}
       </div>
 
       {/* Mobile Footer Summary - Always Visible */}
@@ -1723,20 +1785,29 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </h1>
               </div>
               <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
-                Revise seu pedido e conclua com cartão, Pix ou boleto. Os
-                ingressos são liberados após aprovação.
+                {billingAddressConfirmed
+                  ? "Escolha cartão ou Pix para concluir. Os ingressos são liberados após aprovação."
+                  : "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."}
               </p>
             </div>
 
-            <CheckoutAddressSection
-              values={billingAddress}
-              onChange={(patch) =>
-                setBillingAddress((prev) => ({ ...prev, ...patch }))
-              }
-              onConfirmedChange={setBillingAddressConfirmed}
-            />
+            {!billingAddressConfirmed ? (
+              <CheckoutAddressSection
+                values={billingAddress}
+                onChange={(patch) =>
+                  setBillingAddress((prev) => ({ ...prev, ...patch }))
+                }
+                onConfirmedChange={setBillingAddressConfirmed}
+              />
+            ) : (
+              <BillingAddressConfirmedSummary
+                address={billingAddress}
+                onEdit={() => setBillingAddressConfirmed(false)}
+              />
+            )}
 
             {/* Métodos de Pagamento */}
+            {billingAddressConfirmed ? (
             <div className="space-y-6">
               {paymentOptions.map((option) => {
                 const isNotSelected = selectedPaymentMethod !== option.id;
@@ -1802,6 +1873,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 );
               })}
             </div>
+            ) : null}
           </div>
         </div>
 
@@ -1971,6 +2043,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           additionalProducts.length > 0 && (
                             <div className="flex gap-2 items-center mb-4">
                               <button
+                                type="button"
+                                title="Deletar"
                                 className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center"
                                 onClick={() => {
                                   // Handle delete
@@ -1979,6 +2053,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                                 <TrashIcon className="size-6 text-red-11" />
                               </button>
                               <button
+                                type="button"
+                                title="Editar"
                                 className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center"
                                 onClick={() => {
                                   // Handle edit

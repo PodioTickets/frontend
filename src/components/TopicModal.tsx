@@ -325,7 +325,8 @@ export function TopicModal() {
               root.style.flexDirection = "column";
               root.style.flex = "1";
               root.style.minHeight = "0";
-              root.style.overflow = "hidden";
+              /* visible: .ql-tooltip do link não pode ser cortado por overflow */
+              root.style.overflow = "visible";
             }
 
             if (toolbar) {
@@ -371,7 +372,9 @@ export function TopicModal() {
             }
 
             // Style all toolbar buttons to match Figma design
-            const buttons = quillRef.current?.querySelectorAll('.ql-toolbar button, .ql-toolbar .ql-picker-label');
+            const buttons = quillRef.current?.querySelectorAll(
+              ".ql-toolbar button, .ql-toolbar .ql-picker-label",
+            );
             buttons?.forEach((button) => {
               const btn = button as HTMLElement;
               btn.style.backgroundColor = '#f9f9f9';
@@ -409,14 +412,18 @@ export function TopicModal() {
             });
 
             // Style active buttons
-            const activeButtons = quillRef.current?.querySelectorAll('.ql-toolbar .ql-active');
+            const activeButtons = quillRef.current?.querySelectorAll(
+              ".ql-toolbar .ql-active",
+            );
             activeButtons?.forEach((button) => {
               const btn = button as HTMLElement;
               btn.style.backgroundColor = '#e8e8e8';
             });
 
             // Style picker dropdowns
-            const pickers = quillRef.current?.querySelectorAll('.ql-toolbar .ql-picker');
+            const pickers = quillRef.current?.querySelectorAll(
+              ".ql-toolbar .ql-picker",
+            );
             pickers?.forEach((picker) => {
               const pick = picker as HTMLElement;
               pick.style.backgroundColor = '#f9f9f9';
@@ -429,7 +436,9 @@ export function TopicModal() {
             });
 
             // Remove or hide separators
-            const separators = quillRef.current?.querySelectorAll('.ql-toolbar .ql-formats');
+            const separators = quillRef.current?.querySelectorAll(
+              ".ql-toolbar .ql-formats",
+            );
             separators?.forEach((format) => {
               const fmt = format as HTMLElement;
               fmt.style.gap = '8px';
@@ -438,7 +447,9 @@ export function TopicModal() {
             });
 
             // Hide default separators (vertical lines)
-            const spacerLines = quillRef.current?.querySelectorAll('.ql-toolbar .ql-stroke');
+            const spacerLines = quillRef.current?.querySelectorAll(
+              ".ql-toolbar .ql-stroke",
+            );
             spacerLines?.forEach((line) => {
               const parent = (line as HTMLElement).closest('.ql-separator');
               if (parent) {
@@ -631,9 +642,9 @@ export function TopicModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            <div className="bg-gray-1 rounded-xl border border-gray-6 flex max-h-[90vh] w-full min-h-0 max-w-[1098px] flex-col overflow-hidden shadow-2xl">
+            <div className="bg-gray-1 rounded-xl border border-gray-6 flex max-h-[90vh] w-full min-h-0 max-w-[1098px] flex-col overflow-visible shadow-2xl">
               {/* Header */}
               <div className="shrink-0 border-b border-gray-6 flex items-center justify-between px-5 py-3">
                 <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
@@ -647,9 +658,9 @@ export function TopicModal() {
                 </button>
               </div>
 
-              {/* Altura do card é fixa (viewport); scroll só no .ql-editor, colado entre header e footer */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden p-6">
+              {/* overflow-visible: tooltip de link do Quill não pode ser cortado pelos ancestrais */}
+              <div className="flex min-h-0 flex-1 flex-col overflow-visible">
+                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-visible p-6">
                   <div className="flex shrink-0 flex-col gap-2">
                     <input
                       type="text"
@@ -660,10 +671,10 @@ export function TopicModal() {
                     />
                   </div>
 
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  <div className="flex min-h-[240px] min-w-0 flex-1 flex-col">
                     <div
                       ref={quillRef}
-                      className="flex min-h-0 flex-1 flex-col"
+                      className="[&_.ql-tooltip]:z-200 flex min-h-[240px] flex-1 flex-col"
                       style={{ minHeight: 240 }}
                     />
                   </div>

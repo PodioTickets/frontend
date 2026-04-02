@@ -3,6 +3,21 @@ import type { Event, Topic } from "@/interfaces/event";
 /** Tópico “Detalhes do evento” quando ainda não existe registro `isDefault` persistido na API. */
 export const DEFAULT_TOPIC_SENTINEL = "__default__";
 
+/** Tópico criado no modal mas ainda não enviado à API (persistido ao salvar a página). */
+export const PENDING_TOPIC_PREFIX = "__pending_topic__";
+
+export function isPendingTopicId(id: string): boolean {
+  return id.startsWith(PENDING_TOPIC_PREFIX);
+}
+
+export function newPendingTopicId(): string {
+  const uuid =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : String(Date.now());
+  return `${PENDING_TOPIC_PREFIX}${uuid}`;
+}
+
 export type TopicSectionRow = {
   id: string;
   title: string;

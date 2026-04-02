@@ -302,13 +302,9 @@ export default function EditBannerPage() {
 
   const handleConfirmCardAndNext = async () => {
     if (selectedCardFile) {
-      const ok = await handleCardUpload();
-      if (ok) {
-        router.push(`/organizer/events/${eventId}/edit/tickets`);
-      }
+      await handleCardUpload();
       return;
     }
-    router.push(`/organizer/events/${eventId}/edit/tickets`);
   };
 
   const eventLocation =
@@ -482,7 +478,7 @@ export default function EditBannerPage() {
                     ) : null}
                   </div>
                 </div>
-                <Button variant="outline" className="w-full text-gray-12 border-gray-6">
+                <Button variant="outline" disabled className="w-full text-gray-12 border-gray-6">
                   <MessageIcon className="min-w-5 min-h-5" />
                   Falar com organizador
                 </Button>
@@ -494,7 +490,7 @@ export default function EditBannerPage() {
             </Button>
           </div>
           <div className="flex flex-col items-center justify-center gap-4">
-            <Button variant="outline" className="text-gray-11 border-gray-6">
+            <Button variant="outline" disabled className="text-gray-11 border-gray-6">
               <ShareIcon className="size-5" />
               Compartilhar
             </Button>

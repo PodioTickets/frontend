@@ -268,6 +268,15 @@ input[type="number"] {
   margin-right: 0;
 }
 
+/* Links no conteúdo dos tópicos (HTML do Quill na página do evento e afins) */
+.topic-rich-html a {
+  color: var(--blue-11);
+  text-decoration: underline;
+}
+.topic-rich-html a:hover {
+  color: var(--blue-10);
+}
+
 /* Tópicos (HTML do Quill): imagem + texto ou duas imagens lado a lado */
 .topic-rich-html::after,
 .ql-editor::after {

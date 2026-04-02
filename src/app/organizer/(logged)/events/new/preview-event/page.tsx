@@ -13,6 +13,7 @@ import { Download } from "lucide-react";
 import Link from "next/link";
 import { Loading } from "@/components/Loading";
 import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
+import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 
 export const dynamic = 'force-dynamic';
 
@@ -126,7 +127,9 @@ export default function PreviewEventPage() {
                     </h2>
                     <div
                       className="topic-rich-html text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: section.content }}
+                      dangerouslySetInnerHTML={{
+                        __html: normalizeTopicHtmlAnchorHrefs(section.content),
+                      }}
                     />
                     {section.isDefault ? (
                       <div className="bg-gray-2 flex flex-col items-center justify-center pt-7 w-full">

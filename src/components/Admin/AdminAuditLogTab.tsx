@@ -794,13 +794,6 @@ export function AdminAuditLogTab() {
         )}
       </div>
 
-      <AdminLogsPaginationBar
-        totalPages={totalPages}
-        safePage={safePage}
-        onPageChange={setPage}
-        variant="mobile"
-      />
-
       <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px]">
@@ -945,6 +938,17 @@ export function AdminAuditLogTab() {
           />
         )}
       </div>
+
+      {!loading && (
+        <div className="md:hidden mt-3">
+          <AdminLogsPaginationBar
+            totalPages={totalPages}
+            safePage={safePage}
+            onPageChange={setPage}
+            variant="mobile"
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -34,4 +34,6 @@ export type {
   CreateEventNotificationRequest,
   EventNotificationChannel,
   EventNotificationStatus,
+  EventTracking,
+  EventTrackingPatch,
 } from "./organizer/OrganizerService";

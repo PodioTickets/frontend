@@ -19,9 +19,10 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
 import { TicketTable } from "@/components/Ticket/TicketTable";
+import { UncategorizedTicketsDropShell } from "@/components/Ticket/UncategorizedTicketsDropShell";
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -42,8 +43,12 @@ import {
   parseCategorySortableId,
   persistTicketCategoryOrderApi,
 } from "@/lib/ticketCategoryOrder";
-
-const ITEMS_PER_PAGE = 10;
+import {
+  applyDraftOrderToTickets,
+  applyOrganizerTicketDragEnd,
+  categoryIdForTicketScope,
+  persistTicketOrderDrafts,
+} from "@/lib/organizerTicketListDnD";
 
 export default function IngressosPage() {
   const router = useRouter();
@@ -54,13 +59,19 @@ export default function IngressosPage() {
   const [editingGroupName, setEditingGroupName] = useState("");
   const [showCreateGroupSection, setShowCreateGroupSection] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
-  const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<Record<string, "table" | "cards">>({});
   const [duplicatingTicketId, setDuplicatingTicketId] = useState<string | null>(
     null,
   );
   const [categoryOrderIds, setCategoryOrderIds] = useState<string[]>([]);
   const [savingConfirm, setSavingConfirm] = useState(false);
+  const [ticketOrderDraft, setTicketOrderDraft] = useState<Record<string, string[]>>(
+    {},
+  );
+  /** Nomes de categoria editados na tela; persistidos só em «Confirmar ingressos». */
+  const [categoryNameDraft, setCategoryNameDraft] = useState<Record<string, string>>(
+    {},
+  );
 
   // Hooks para gerenciar dados
   const {
@@ -140,6 +151,13 @@ export default function IngressosPage() {
       .map((id) => m.get(id))
       .filter(Boolean) as ModalityGroup[];
   }, [categories, categoryOrderIds]);
+
+  const orderedCategoriesDisplay = useMemo(() => {
+    return orderedCategories.map((c) => ({
+      ...c,
+      name: categoryNameDraft[c.id] ?? c.name,
+    }));
+  }, [orderedCategories, categoryNameDraft]);
 
   // Buscar produtos usando React Query para cache
   const { data: productsData } = useQuery({
@@ -225,13 +243,20 @@ export default function IngressosPage() {
     [updateCategory]
   );
 
-  const handleDeleteGroup = useCallback(async (groupId: string) => {
-    try {
-      await deleteCategory(groupId);
-    } catch (error) {
-      // Error já foi tratado no hook
-    }
-  }, [deleteCategory]);
+  const handleDeleteGroup = useCallback(
+    async (groupId: string) => {
+      try {
+        await deleteCategory(groupId);
+        setCategoryNameDraft((prev) => {
+          const { [groupId]: _, ...rest } = prev;
+          return rest;
+        });
+      } catch (error) {
+        // Error já foi tratado no hook
+      }
+    },
+    [deleteCategory],
+  );
 
   const handleEditTicket = useCallback((ticketId: string) => {
     router.push(`/organizer/events/new/tickets/edit/${ticketId}`);
@@ -266,10 +291,6 @@ export default function IngressosPage() {
     }
   }, [formData.createdEventId, queryClient]);
 
-  const handlePageChange = useCallback((categoryId: string, page: number) => {
-    setCurrentPage((prev) => ({ ...prev, [categoryId]: page }));
-  }, []);
-
   const handleDropTicket = useCallback(async (ticketId: string, categoryId: string | null) => {
     if (!formData.createdEventId) {
       toast.error("Evento não encontrado");
@@ -282,8 +303,7 @@ export default function IngressosPage() {
       return;
     }
 
-    // Se já está na mesma categoria, não faz nada
-    if (ticket.groupId === categoryId) {
+    if (categoryIdForTicketScope(ticket, categories) === (categoryId ?? null)) {
       return;
     }
 
@@ -323,7 +343,7 @@ export default function IngressosPage() {
       console.error("Error moving ticket:", error);
       toast.error(error.response?.data?.message || "Erro ao mover ingresso");
     }
-  }, [formData.createdEventId, tickets, queryClient]);
+  }, [formData.createdEventId, tickets, queryClient, categories]);
 
   // DnD Kit sensors
   const sensors = useSensors(
@@ -387,115 +407,39 @@ export default function IngressosPage() {
       return;
     }
 
-    // Verificar se está arrastando um ticket
     if (!activeIdValue.startsWith("ticket-")) {
       setActiveId(null);
       dragEndPositionRef.current = null;
       return;
     }
 
-    const ticketId = activeIdValue.replace("ticket-", "");
-    const ticket = tickets.find((t) => t.id === ticketId);
-
-    if (!ticket) {
+    const eventId = formData.createdEventId;
+    if (!eventId) {
       setActiveId(null);
       dragEndPositionRef.current = null;
       return;
     }
 
-    // Se não soltou sobre nada, desvincular da categoria
-    if (!over) {
-      // Se o ticket estava em uma categoria, desvincular (definir categoryId como null)
-      if (ticket.groupId && ticket.groupId !== "uncategorized") {
-        handleDropTicket(ticketId, null);
-      }
-      setActiveId(null);
-      dragEndPositionRef.current = null;
-      return;
-    }
-
-    const overId = over.id?.toString() || "";
-
-    // Sempre verificar a posição real do mouse quando solta
     const dragEndPosition = dragEndPositionRef.current;
-
-    // Se temos a posição do mouse, verificar se está dentro de alguma categoria
-    let droppedInsideCategory = false;
-    let targetCategoryId: string | null = null;
-
-    if (dragEndPosition) {
-      // Usar cache de elementos para evitar querySelectorAll repetido
-      // Limpar cache se necessário (quando categorias mudarem)
-      const allCategoryElements = document.querySelectorAll('[data-category-id]');
-
-      for (const categoryElement of allCategoryElements) {
-        const categoryId = categoryElement.getAttribute('data-category-id');
-        if (!categoryId) continue;
-
-        // Usar cache se disponível, senão calcular e cachear
-        let rect = categoryElementsCacheRef.current.get(categoryId);
-        if (!rect) {
-          rect = categoryElement.getBoundingClientRect();
-          categoryElementsCacheRef.current.set(categoryId, rect);
-        } else {
-          // Verificar se o elemento ainda está na mesma posição (evitar cache stale)
-          const currentRect = categoryElement.getBoundingClientRect();
-          if (rect.left !== currentRect.left || rect.top !== currentRect.top ||
-            rect.width !== currentRect.width || rect.height !== currentRect.height) {
-            rect = currentRect;
-            categoryElementsCacheRef.current.set(categoryId, rect);
-          }
-        }
-
-        const isInside =
-          dragEndPosition.x >= rect.left &&
-          dragEndPosition.x <= rect.right &&
-          dragEndPosition.y >= rect.top &&
-          dragEndPosition.y <= rect.bottom;
-
-        if (isInside) {
-          droppedInsideCategory = true;
-          targetCategoryId = categoryId;
-          break;
-        }
-      }
-    } else if (over && overId.startsWith("category-")) {
-      // Se não temos a posição do mouse, usar o over como fallback
-      const overData = over.data.current;
-      if (overData && overData.type === "category" && overData.categoryId) {
-        droppedInsideCategory = true;
-        targetCategoryId = overData.categoryId;
-      }
-    }
-
-    // Se soltou dentro de uma categoria válida
-    if (droppedInsideCategory && targetCategoryId) {
-      // Se soltou na mesma categoria onde já está, não faz nada
-      if (ticket.groupId === targetCategoryId) {
+    void (async () => {
+      try {
+        await applyOrganizerTicketDragEnd({
+          event,
+          tickets,
+          categories,
+          eventId,
+          queryClient,
+          handleDropTicket,
+          dragEndPosition,
+          categoryElementsCacheRef,
+          setTicketOrderDraft,
+        });
+      } finally {
         setActiveId(null);
         dragEndPositionRef.current = null;
-        return;
       }
-
-      // Verificar se a categoria existe (não é "uncategorized" ou uma categoria inválida)
-      if (targetCategoryId && targetCategoryId !== "uncategorized") {
-        handleDropTicket(ticketId, targetCategoryId);
-      } else if (targetCategoryId === "uncategorized") {
-        // Se soltou na seção "uncategorized", remover da categoria atual
-        if (ticket.groupId && ticket.groupId !== "uncategorized") {
-          handleDropTicket(ticketId, null);
-        }
-      }
-    } else {
-      // Soltou fora de qualquer categoria - desvincular
-      if (ticket.groupId && ticket.groupId !== "uncategorized") {
-        handleDropTicket(ticketId, null);
-      }
-    }
-
-    setActiveId(null);
-    dragEndPositionRef.current = null;
-  }, [tickets, handleDropTicket]);
+    })();
+  }, [tickets, handleDropTicket, categories, formData.createdEventId, queryClient]);
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
@@ -511,14 +455,18 @@ export default function IngressosPage() {
       }
       map[categoryId].push(ticket);
     });
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    }
     return map;
   }, [tickets]);
 
   // Memoizar tickets sem categoria
   const uncategorizedTickets = useMemo(() => {
-    return tickets.filter(
+    const list = tickets.filter(
       (t) => !t.groupId || t.groupId === "uncategorized" || !categories.find((c) => c.id === t.groupId)
     );
+    return list.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }, [tickets, categories]);
 
   // Memoizar lista principal de tickets
@@ -527,18 +475,38 @@ export default function IngressosPage() {
     return hasNoCategories ? tickets : uncategorizedTickets;
   }, [hasNoCategories, tickets, uncategorizedTickets]);
 
-  // Helper function memoizada
-  const getPaginatedTickets = useCallback((categoryId: string) => {
-    const categoryTickets = ticketsByCategory[categoryId] || [];
-    const page = currentPage[categoryId] || 1;
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
-    return {
-      tickets: categoryTickets.slice(start, end),
-      totalPages: Math.ceil(categoryTickets.length / ITEMS_PER_PAGE),
-      currentPage: page,
-    };
-  }, [ticketsByCategory, currentPage]);
+  const ticketsByCategoryDisplay = useMemo(() => {
+    const out: Record<string, Ticket[]> = {};
+    for (const k of Object.keys(ticketsByCategory)) {
+      out[k] = applyDraftOrderToTickets(
+        ticketsByCategory[k],
+        k,
+        ticketOrderDraft,
+      );
+    }
+    return out;
+  }, [ticketsByCategory, ticketOrderDraft]);
+
+  const uncategorizedTicketsDisplay = useMemo(
+    () =>
+      applyDraftOrderToTickets(
+        uncategorizedTickets,
+        "uncategorized",
+        ticketOrderDraft,
+      ),
+    [uncategorizedTickets, ticketOrderDraft],
+  );
+
+  const allTicketsDisplay = useMemo(() => {
+    return hasNoCategories
+      ? applyDraftOrderToTickets(tickets, "uncategorized", ticketOrderDraft)
+      : uncategorizedTicketsDisplay;
+  }, [
+    hasNoCategories,
+    tickets,
+    uncategorizedTicketsDisplay,
+    ticketOrderDraft,
+  ]);
 
   const handleConfirmIngressos = useCallback(async () => {
     const eventId = formData.createdEventId;
@@ -552,7 +520,28 @@ export default function IngressosPage() {
     }
     setSavingConfirm(true);
     try {
+      if (Object.keys(categoryNameDraft).length > 0) {
+        await Promise.all(
+          Object.entries(categoryNameDraft).map(([id, name]) =>
+            updateCategory(id, { name }),
+          ),
+        );
+        setCategoryNameDraft({});
+      }
       await persistTicketCategoryOrderApi(eventId, orderedCategories);
+      const ticketList =
+        queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
+        tickets;
+      await persistTicketOrderDrafts(
+        eventId,
+        ticketList,
+        categories,
+        ticketOrderDraft,
+      );
+      setTicketOrderDraft({});
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.events.tickets(eventId),
+      });
       await queryClient.invalidateQueries({
         queryKey: queryKeys.events.ticketCategories(eventId),
       });
@@ -563,7 +552,17 @@ export default function IngressosPage() {
     } finally {
       setSavingConfirm(false);
     }
-  }, [formData.createdEventId, orderedCategories, queryClient, router]);
+  }, [
+    formData.createdEventId,
+    orderedCategories,
+    queryClient,
+    router,
+    tickets,
+    categories,
+    ticketOrderDraft,
+    categoryNameDraft,
+    updateCategory,
+  ]);
 
   const handleBack = useCallback(() => {
     router.push("/organizer/events/new/preview");
@@ -577,7 +576,7 @@ export default function IngressosPage() {
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
@@ -632,23 +631,20 @@ export default function IngressosPage() {
           </div>
 
           {allTickets.length > 0 && (
-            <div className="rounded-xl">
+            <UncategorizedTicketsDropShell>
               <div className="overflow-x-auto">
                 <TicketTable
-                  tickets={allTickets.slice(
-                    ((currentPage.all || 1) - 1) * ITEMS_PER_PAGE,
-                    ((currentPage.all || 1) - 1) * ITEMS_PER_PAGE + ITEMS_PER_PAGE
-                  )}
-                  currentPage={currentPage.all || 1}
-                  totalPages={Math.ceil(allTickets.length / ITEMS_PER_PAGE)}
-                  onPageChange={(page) => setCurrentPage({ ...currentPage, all: page })}
+                  tickets={allTicketsDisplay}
+                  currentPage={1}
+                  totalPages={1}
+                  onPageChange={() => {}}
                   onEdit={handleEditTicket}
                   onDuplicate={handleDuplicateTicket}
                   duplicatingTicketId={duplicatingTicketId}
                   productsMap={productsMap}
                 />
               </div>
-            </div>
+            </UncategorizedTicketsDropShell>
           )}
 
           {/* Create Category Section */}
@@ -686,6 +682,8 @@ export default function IngressosPage() {
                 )}
                 <div className="flex gap-[10px] items-center">
                   <button
+                    type="button"
+                    title="Editar"
                     onClick={() => {
                       setEditingGroupId("new");
                       setNewGroupName("");
@@ -695,6 +693,8 @@ export default function IngressosPage() {
                     <PencilIcon className="size-5 text-gray-11" />
                   </button>
                   <button
+                    type="button"
+                    title="Deletar"
                     onClick={() => {
                       setShowCreateGroupSection(false);
                       setEditingGroupId(null);
@@ -768,6 +768,8 @@ export default function IngressosPage() {
                   )}
                   <div className="flex gap-[10px] items-center">
                     <button
+                      type="button"
+                      title="Editar"
                       onClick={() => {
                         setEditingGroupId("new");
                         setEditingGroupName("");
@@ -777,7 +779,9 @@ export default function IngressosPage() {
                       <PencilIcon className="size-5 text-gray-11" />
                     </button>
                     <button
+                      type="button"
                       disabled
+                      title="Deletar categoria"
                       className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center opacity-50 cursor-not-allowed"
                     >
                       <PencilIcon className="size-5 text-red-12" />
@@ -810,21 +814,16 @@ export default function IngressosPage() {
               strategy={verticalListSortingStrategy}
             >
               <div className="flex flex-col gap-6">
-                {orderedCategories.map((category) => {
-                  const {
-                    tickets: paginatedTickets,
-                    totalPages,
-                    currentPage: page,
-                  } = getPaginatedTickets(category.id);
+                {orderedCategoriesDisplay.map((category) => {
+                  const categoryTickets =
+                    ticketsByCategoryDisplay[category.id] || [];
 
                   return (
                     <SortableTicketCategoryItem
                       key={category.id}
                       categoryId={category.id}
                       category={category}
-                      totalTicketsInCategory={
-                        (ticketsByCategory[category.id] || []).length
-                      }
+                      totalTicketsInCategory={categoryTickets.length}
                       onEdit={handleUpdateGroupName}
                       onDelete={handleDeleteGroup}
                     >
@@ -832,17 +831,15 @@ export default function IngressosPage() {
                         category={category}
                         className="rounded-none border-0 shadow-none"
                         hideCategoryTitleRow
-                        tickets={paginatedTickets}
-                        totalTicketsInCategory={
-                          (ticketsByCategory[category.id] || []).length
-                        }
-                        currentPage={page}
-                        totalPages={totalPages}
+                        tickets={categoryTickets}
+                        totalTicketsInCategory={categoryTickets.length}
+                        currentPage={1}
+                        totalPages={1}
                         onEdit={handleUpdateGroupName}
                         onEditDescription={handleUpdateGroupDescription}
                         onDelete={handleDeleteGroup}
                         onEditTicket={handleEditTicket}
-                        onPageChange={handlePageChange}
+                        onPageChange={() => {}}
                         onDuplicateTicket={handleDuplicateTicket}
                         duplicatingTicketId={duplicatingTicketId}
                         productsMap={productsMap}
@@ -877,8 +874,9 @@ export default function IngressosPage() {
         ) : activeId && parseCategorySortableId(activeId) ? (
           <div className="max-w-md rounded-xl border border-gray-6 bg-gray-1 p-4 opacity-95 shadow-2xl">
             <p className="text-sm font-semibold text-gray-12">
-              {orderedCategories.find((c) => categorySortableId(c.id) === activeId)
-                ?.name || "Categoria"}
+              {orderedCategoriesDisplay.find(
+                (c) => categorySortableId(c.id) === activeId,
+              )?.name || "Categoria"}
             </p>
             <p className="mt-1 text-xs text-gray-11">Alterar ordem</p>
           </div>

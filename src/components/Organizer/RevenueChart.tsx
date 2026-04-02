@@ -30,42 +30,76 @@ ChartJS.register(
 
 const MAX_LABELS_MOBILE = 6;
 
+/** Um ponto do tooltip: valores em reais e quantidade inteira. */
+type RevenueChartTooltipBucket = {
+  revenueReais: number;
+  quantity: number;
+};
+
 interface RevenueChartProps {
   data?: {
     labels: string[];
+    /** Valores do eixo Y em reais (como já enviado pelo dashboard). */
     revenue: number[];
+    /** Série alinhada por índice com labels/revenue (dados do dia/período na API). */
+    dailyData?: unknown[];
   };
 }
 
-/** No mobile, reduz a quantidade de pontos para no máximo MAX_LABELS_MOBILE (evita gráfico achatado). */
-function sampleForMobile<T>(arr: T[], isMobile: boolean, maxLabels: number): T[] {
-  if (!isMobile || !arr?.length || arr.length <= maxLabels) return arr;
-  const n = arr.length;
-  const indices = Array.from({ length: maxLabels }, (_, i) =>
-    i === maxLabels - 1 ? n - 1 : Math.round((i * (n - 1)) / (maxLabels - 1))
-  );
-  return indices.map((i) => arr[i]);
+function normalizeDailyPoint(raw: unknown): {
+  confirmedRevenueReais: number;
+  canceledRevenueReais: number;
+  refundedRevenueReais: number;
+  confirmedQty: number;
+  canceledQty: number;
+  refundedQty: number;
+} | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const num = (v: unknown) => {
+    const n = typeof v === "number" ? v : Number(String(v ?? "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const centsToReais = (v: unknown) => num(v) / 100;
+
+  return {
+    confirmedRevenueReais: centsToReais(
+      r.revenue ?? r.confirmedRevenue ?? r.confirmed_revenue ?? 0,
+    ),
+    canceledRevenueReais: centsToReais(
+      r.canceledRevenue ?? r.canceled_revenue ?? r.cancelledRevenue ?? 0,
+    ),
+    refundedRevenueReais: centsToReais(
+      r.refundedRevenue ?? r.refunded_revenue ?? r.refundRevenue ?? 0,
+    ),
+    confirmedQty: Math.max(0, Math.floor(num(r.confirmed ?? r.confirmed_count ?? 0))),
+    canceledQty: Math.max(
+      0,
+      Math.floor(num(r.canceled ?? r.cancelled ?? r.canceled_count ?? r.cancelled_count ?? 0)),
+    ),
+    refundedQty: Math.max(0, Math.floor(num(r.refunded ?? r.refunded_count ?? 0))),
+  };
 }
 
 // Função para converter formato de data "3 de fev." para "03/02" ou manter formato mensal
 const formatDateLabel = (label: string): string => {
   if (!label) return label;
-  
+
   const labelTrimmed = label.trim();
-  
+
   // Se o label já está no formato mensal com ano completo (ex: "Fev/2026", "Set/2025", "jan de 2024", "set de 2025"), retornar como está
   // Padrão 1: 3-4 letras (mês) + "/" + 4 dígitos (ano) - ex: "Fev/2026"
   const monthlyPattern1 = /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i;
   if (monthlyPattern1.test(labelTrimmed)) {
     return labelTrimmed;
   }
-  
+
   // Padrão 2: 3-4 letras (mês) + " de " + 4 dígitos (ano) - ex: "jan de 2024"
   const monthlyPattern2 = /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i;
   if (monthlyPattern2.test(labelTrimmed)) {
     return labelTrimmed;
   }
-  
+
   // Mapeamento de meses abreviados
   const monthMap: { [key: string]: string } = {
     'jan': '01',
@@ -112,8 +146,9 @@ const formatDateLabel = (label: string): string => {
 export function RevenueChart({ data }: RevenueChartProps) {
   const [tooltipData, setTooltipData] = useState<{
     date: string;
-    revenue: number;
-    tickets: number;
+    confirmadas: RevenueChartTooltipBucket;
+    cancelados: RevenueChartTooltipBucket;
+    estornados: RevenueChartTooltipBucket;
     x: number;
     y: number;
   } | null>(null);
@@ -131,10 +166,13 @@ export function RevenueChart({ data }: RevenueChartProps) {
 
   // Dados brutos
   const chartData = useMemo(() => {
-    return data || {
-      labels: ["Jan", "Fev", "Mar", "Abr"],
-      revenue: [4000, 12000, 8000, 6000],
-    };
+    return (
+      data || {
+        labels: ["Jan", "Fev", "Mar", "Abr"],
+        revenue: [4000, 12000, 8000, 6000],
+        dailyData: undefined,
+      }
+    );
   }, [data]);
 
   // No mobile com muitos pontos, amostrar para no máximo MAX_LABELS_MOBILE (gráfico legível)
@@ -142,80 +180,88 @@ export function RevenueChart({ data }: RevenueChartProps) {
     if (!isMobile || !chartData.labels?.length || chartData.labels.length <= MAX_LABELS_MOBILE) {
       return chartData;
     }
-    const labels = sampleForMobile(chartData.labels, true, MAX_LABELS_MOBILE);
-    const revenue = sampleForMobile(chartData.revenue || [], true, MAX_LABELS_MOBILE);
-    return { labels, revenue };
+    const n = chartData.labels.length;
+    const indices = Array.from({ length: MAX_LABELS_MOBILE }, (_, i) =>
+      i === MAX_LABELS_MOBILE - 1 ? n - 1 : Math.round((i * (n - 1)) / (MAX_LABELS_MOBILE - 1)),
+    );
+    const labels = indices.map((i) => chartData.labels[i]);
+    const revenue = indices.map((i) => chartData.revenue[i]);
+    const dailyData =
+      Array.isArray(chartData.dailyData) && chartData.dailyData.length > 0
+        ? indices.map((i) => chartData.dailyData![i])
+        : undefined;
+    return { labels, revenue, dailyData };
   }, [chartData, isMobile]);
 
   // Calcular valores dinâmicos para o eixo Y (usa displayData para mobile com poucos pontos)
   const yAxisScale = useMemo(() => {
     const calculateYAxisScale = () => {
-    if (!displayData.revenue || displayData.revenue.length === 0) {
-      return {
-        max: 15000,
-        stepSize: 5000,
-        ticks: [15000, 10000, 5000, 0],
-      };
-    }
+      if (!displayData.revenue || displayData.revenue.length === 0) {
+        return {
+          max: 15000,
+          stepSize: 5000,
+          ticks: [15000, 10000, 5000, 0],
+        };
+      }
 
-    const maxValue = Math.max(...displayData.revenue);
+      const maxValue = Math.max(...displayData.revenue);
 
-    // Se o valor máximo for 0, usar valores padrão
-    if (maxValue === 0) {
-      return {
-        max: 15000,
-        stepSize: 5000,
-        ticks: [15000, 10000, 5000, 0],
-      };
-    }
+      // Se o valor máximo for 0, usar valores padrão
+      if (maxValue === 0) {
+        return {
+          max: 15000,
+          stepSize: 5000,
+          ticks: [15000, 10000, 5000, 0],
+        };
+      }
 
-    // Arredondar para cima para uma escala bonita
-    // Encontrar a ordem de grandeza
-    const magnitude = Math.pow(10, Math.floor(Math.log10(maxValue)));
-    const normalized = maxValue / magnitude;
+      // Arredondar para cima para uma escala bonita
+      // Encontrar a ordem de grandeza
+      const magnitude = Math.pow(10, Math.floor(Math.log10(maxValue)));
+      const normalized = maxValue / magnitude;
 
-    // Arredondar para cima para múltiplos de 1, 2, 5, 10
-    let roundedMax: number;
-    if (normalized <= 1) {
-      roundedMax = magnitude;
-    } else if (normalized <= 2) {
-      roundedMax = 2 * magnitude;
-    } else if (normalized <= 5) {
-      roundedMax = 5 * magnitude;
-    } else {
-      roundedMax = 10 * magnitude;
-    }
+      // Arredondar para cima para múltiplos de 1, 2, 5, 10
+      let roundedMax: number;
+      if (normalized <= 1) {
+        roundedMax = magnitude;
+      } else if (normalized <= 2) {
+        roundedMax = 2 * magnitude;
+      } else if (normalized <= 5) {
+        roundedMax = 5 * magnitude;
+      } else {
+        roundedMax = 10 * magnitude;
+      }
 
-    // Adicionar 20% de margem no topo
-    roundedMax = Math.ceil(roundedMax * 1.2);
+      // Adicionar 20% de margem no topo
+      roundedMax = Math.ceil(roundedMax * 1.2);
 
-    // Calcular stepSize (dividir em 3 ou 4 divisões)
-    const stepSize = roundedMax / 3;
+      // Calcular stepSize (dividir em 3 ou 4 divisões)
+      const stepSize = roundedMax / 3;
 
-    // Arredondar stepSize para um valor "bonito"
-    const stepMagnitude = Math.pow(10, Math.floor(Math.log10(stepSize)));
-    const normalizedStep = stepSize / stepMagnitude;
-    let roundedStep: number;
-    if (normalizedStep <= 1) {
-      roundedStep = stepMagnitude;
-    } else if (normalizedStep <= 2) {
-      roundedStep = 2 * stepMagnitude;
-    } else if (normalizedStep <= 5) {
-      roundedStep = 5 * stepMagnitude;
-    } else {
-      roundedStep = 10 * stepMagnitude;
-    }
+      // Arredondar stepSize para um valor "bonito"
+      const stepMagnitude = Math.pow(10, Math.floor(Math.log10(stepSize)));
+      const normalizedStep = stepSize / stepMagnitude;
+      let roundedStep: number;
+      if (normalizedStep <= 1) {
+        roundedStep = stepMagnitude;
+      } else if (normalizedStep <= 2) {
+        roundedStep = 2 * stepMagnitude;
+      } else if (normalizedStep <= 5) {
+        roundedStep = 5 * stepMagnitude;
+      } else {
+        roundedStep = 10 * stepMagnitude;
+      }
 
-    // Ajustar roundedMax para ser múltiplo de roundedStep
-    roundedMax = Math.ceil(roundedMax / roundedStep) * roundedStep;
+      // Ajustar roundedMax para ser múltiplo de roundedStep
+      roundedMax = Math.ceil(roundedMax / roundedStep) * roundedStep;
 
-    // Gerar ticks (4 valores: max, 2/3, 1/3, 0) para melhor distribuição
-    const ticks = [
-      roundedMax,
-      Math.round((roundedMax * 2) / 3 / roundedStep) * roundedStep,
-      Math.round((roundedMax / 3) / roundedStep) * roundedStep,
-      0,
-    ];
+      // Gerar ticks (4 valores: max, 2/3, 1/3, 0) para melhor distribuição
+      const ticks = [
+        roundedMax,
+        Math.round((roundedMax * 2) / 3 / roundedStep) * roundedStep,
+        Math.round((roundedMax / 3) / roundedStep) * roundedStep,
+        0,
+      ];
 
       return {
         max: roundedMax,
@@ -346,15 +392,65 @@ export function RevenueChart({ data }: RevenueChartProps) {
     // Encontrar o mês correspondente baseado no índice
     const index = dataPoint.dataIndex;
     const originalIndex = originalIndices[index] ?? Math.floor(index / 21);
-    const monthLabel = displayData.labels[Math.min(originalIndex, displayData.labels.length - 1)] || displayData.labels[0] || "";
-    const revenue = dataPoint.parsed.y;
+    const idxSafe = Math.min(
+      Math.max(0, originalIndex),
+      Math.max(0, displayData.labels.length - 1),
+    );
+    const monthLabel = displayData.labels[idxSafe] || displayData.labels[0] || "";
 
     // Formatar data corretamente - manter formato mensal se já estiver no formato "Fev/2026"
     const formattedDate = monthLabel ? formatDateLabel(monthLabel) : "Data";
 
+    const rawDay = displayData.dailyData?.[idxSafe];
+    const parsed = normalizeDailyPoint(rawDay);
+
+    let confirmadas: RevenueChartTooltipBucket = { revenueReais: 0, quantity: 0 };
+    let cancelados: RevenueChartTooltipBucket = { revenueReais: 0, quantity: 0 };
+    let estornados: RevenueChartTooltipBucket = { revenueReais: 0, quantity: 0 };
+
+    if (parsed) {
+      confirmadas = {
+        revenueReais: parsed.confirmedRevenueReais,
+        quantity: parsed.confirmedQty,
+      };
+      cancelados = {
+        revenueReais: parsed.canceledRevenueReais,
+        quantity: parsed.canceledQty,
+      };
+      estornados = {
+        revenueReais: parsed.refundedRevenueReais,
+        quantity: parsed.refundedQty,
+      };
+      if (
+        confirmadas.revenueReais === 0 &&
+        typeof displayData.revenue[idxSafe] === "number"
+      ) {
+        confirmadas = {
+          ...confirmadas,
+          revenueReais: displayData.revenue[idxSafe],
+        };
+      }
+    } else if (typeof displayData.revenue[idxSafe] === "number") {
+      confirmadas = {
+        revenueReais: displayData.revenue[idxSafe],
+        quantity: 0,
+      };
+    }
+
     // Criar uma chave única para este tooltip para evitar atualizações desnecessárias
-    const tooltipKey = `${index}-${Math.round(x)}-${Math.round(y)}-${Math.round(revenue)}`;
-    
+    const tooltipKey = [
+      index,
+      Math.round(x),
+      Math.round(y),
+      formattedDate,
+      confirmadas.revenueReais,
+      confirmadas.quantity,
+      cancelados.revenueReais,
+      cancelados.quantity,
+      estornados.revenueReais,
+      estornados.quantity,
+    ].join("|");
+
     // Só atualizar se os dados realmente mudaram
     if (lastTooltipDataRef.current === tooltipKey) {
       return;
@@ -364,8 +460,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
     tooltipTimeoutRef.current = setTimeout(() => {
       setTooltipData({
         date: formattedDate,
-        revenue: revenue,
-        tickets: Math.floor(revenue / 10), // Mock de ingressos
+        confirmadas,
+        cancelados,
+        estornados,
         x: x,
         y: y,
       });
@@ -498,22 +595,22 @@ export function RevenueChart({ data }: RevenueChartProps) {
         <div className="absolute -bottom-5 md:-bottom-[22px] left-0 right-0 flex justify-between px-0">
           {displayData.labels.map((label, index) => {
             const totalLabels = displayData.labels.length;
-            const position = totalLabels > 1 
-              ? (index / (totalLabels - 1)) * 100 
+            const position = totalLabels > 1
+              ? (index / (totalLabels - 1)) * 100
               : 50;
-            
+
             // Verificar se é label mensal (formato "Fev/2026", "Set/2025", "set de 2025" ou "09/25") antes de formatar
-            const isMonthlyLabel = 
+            const isMonthlyLabel =
               /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i.test(label.trim()) ||
               /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) ||
               /^\d{2}\/\d{2}$/.test(label.trim());
             const formattedLabel = isMonthlyLabel ? label.trim() : formatDateLabel(label);
-            
+
             return (
-              <span 
-                key={`${label}-${index}`} 
+              <span
+                key={`${label}-${index}`}
                 className="text-xs md:text-sm text-gray-11 font-family-dm-sans"
-                style={{ 
+                style={{
                   position: 'absolute',
                   left: `${position}%`,
                   transform: 'translateX(-50%)',
@@ -529,7 +626,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       {/* Tooltip - compacto no mobile */}
       {tooltipData && (
         <div
-          className="absolute bg-gray-2 border border-gray-6 rounded p-2 md:p-[10px] shadow-lg max-w-[180px] md:max-w-none md:w-[230px] z-30 pointer-events-none"
+          className="absolute bg-gray-2 border border-gray-6 rounded p-2 md:p-[10px] shadow-lg max-w-[min(260px,calc(100vw-2rem))] md:max-w-[280px] w-max min-w-0 z-30 pointer-events-none"
           style={{
             left: `min(${tooltipData.x + 12}px, calc(100% - 12rem))`,
             top: `${Math.max(8, tooltipData.y - 72)}px`,
@@ -538,20 +635,33 @@ export function RevenueChart({ data }: RevenueChartProps) {
           <p className="font-family-dm-sans font-normal text-xs md:text-sm leading-[1.3] text-gray-11 mb-2 md:mb-3 truncate">
             {tooltipData.date}
           </p>
-          <div className="flex justify-between items-center gap-2 mb-1.5 md:mb-3 text-xs md:text-sm">
-            <span className="font-family-dm-sans font-normal leading-[1.3] text-gray-12 shrink-0">Confirmadas:</span>
-            <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12 truncate">
-              R$ {tooltipData.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex justify-between items-center gap-2 mb-1.5 md:mb-3 text-xs md:text-sm">
-            <span className="font-family-dm-sans font-normal leading-[1.3] text-gray-12 shrink-0">Cancelados:</span>
-            <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12">{Math.floor(tooltipData.tickets * 0.1)}</span>
-          </div>
-          <div className="flex justify-between items-center gap-2 text-xs md:text-sm">
-            <span className="font-family-dm-sans font-normal leading-[1.3] text-gray-12 shrink-0">Estornados:</span>
-            <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12">{Math.floor(tooltipData.tickets * 0.05)}</span>
-          </div>
+          {(
+            [
+              ["Confirmadas", tooltipData.confirmadas],
+              ["Cancelados", tooltipData.cancelados],
+              ["Estornados", tooltipData.estornados],
+            ] as const
+          ).map(([label, bucket]) => (
+            <div
+              key={label}
+              className="mb-2 md:mb-3 last:mb-0 space-y-1 text-xs md:text-sm"
+            >
+
+              <div className="flex justify-between items-center gap-3 pl-0">
+                <p className="font-family-dm-sans font-medium leading-[1.3] text-gray-12">
+                  {label}
+                </p>
+                <span className="font-family-dm-sans font-base leading-[1.3] text-gray-12 text-right tabular-nums">
+                  {bucket.quantity.toLocaleString("pt-BR")} QT /
+                  R${" "}
+                  {bucket.revenueReais.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

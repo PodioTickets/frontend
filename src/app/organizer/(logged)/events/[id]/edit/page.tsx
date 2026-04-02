@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { organizerService } from "@/services";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { Button } from "@/components/Button";
@@ -30,7 +30,6 @@ interface ViaCEPResponse {
 }
 
 export default function EditInformationPage() {
-  const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
   const { formData, updateFormData, errors, setErrors } = useEditEvent();
@@ -354,9 +353,6 @@ export default function EditInformationPage() {
         clientPage: `events/${eventId}/general`,
       });
       toast.success("Informações salvas com sucesso!");
-
-      // Navigate to banner step
-      router.push(`/organizer/events/${eventId}/edit/banner`);
     } catch (error: any) {
       console.error("Error saving event:", error);
       let errorMessage = "Erro ao salvar evento";
@@ -469,11 +465,14 @@ export default function EditInformationPage() {
                 <label className="text-gray-12 text-base font-family-dm-sans">
                   Data de encerramento das inscrições
                 </label>
-                <div className="flex gap-3 items-end">
+                <div
+                  className="flex gap-3 items-end"
+                  key={`registration-end-${formData.registrationStartDate}`}
+                >
                   <DatePicker
                     value={formData.registrationEndDate}
                     onChange={(value) => handleDateChange("registrationEndDate", value || "")}
-                    placeholder={getCurrentDatePlaceholder()}
+                    placeholder="00/00/0000"
                     className="w-max"
                     minDate={getMinDateForRegistrationEndPicker(
                       formData.registrationStartDate,
@@ -482,6 +481,7 @@ export default function EditInformationPage() {
                   <TimePicker
                     value={formData.registrationEndTime}
                     onChange={(value) => handleTimeChange("registrationEndTime", value)}
+                    placeholder="00:00"
                     className="w-max"
                   />
                 </div>

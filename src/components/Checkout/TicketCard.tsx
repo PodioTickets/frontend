@@ -6,7 +6,8 @@ import { DistanceIcon } from "../Icons/DistanceIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
-import type { Event } from "@/interfaces/event";
+import type { Event, EventKitSelectionDisplay } from "@/interfaces/event";
+import { defaultEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { modalitiesColumns } from "@/constants";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
@@ -16,9 +17,15 @@ interface TicketCardProps {
   ticket: Ticket;
   event: Event;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
+  kitSelectionDisplay?: EventKitSelectionDisplay;
 }
 
-export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
+export function TicketCard({
+  ticket,
+  event,
+  productsMap,
+  kitSelectionDisplay = defaultEventKitSelectionDisplay(),
+}: TicketCardProps) {
   const { raceQuantities, updateRaceQuantity } = useCheckout();
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -98,9 +105,24 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
     return { name: modalityValue, icon: undefined };
   }, [ticket.modality, event.modalities]);
 
+  const showPerTicketGallery =
+    kitSelectionDisplay.showKitImagesOnSelection &&
+    kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
+
   const productItems = useMemo(
-    () => getTicketProductCarouselItems(ticket, productsMap),
-    [ticket, productsMap]
+    () =>
+      showPerTicketGallery
+        ? getTicketProductCarouselItems(ticket, productsMap, {
+          primaryProductId:
+            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+        })
+        : [],
+    [
+      ticket,
+      productsMap,
+      showPerTicketGallery,
+      kitSelectionDisplay.primaryKitProductByTicketId,
+    ]
   );
 
   useEffect(() => {
@@ -345,9 +367,7 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                       className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
                       aria-label="Imagem anterior"
                     >
-                      <div className="-rotate-90">
-                        <ArrowButton isOpen={true} />
-                      </div>
+                      <ArrowButton isOpen={false} className="-rotate-90" />
                     </button>
                     {/* Thumbnails */}
                     <div className="flex flex-col gap-1">
@@ -383,9 +403,7 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                       className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
                       aria-label="Próxima imagem"
                     >
-                      <div className="rotate-90">
-                        <ArrowButton isOpen={true} />
-                      </div>
+                      <ArrowButton isOpen={true} />
                     </button>
                   </div>
                 )}
@@ -406,7 +424,31 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                     </p>
                   </div>
                 )}
+                {modalityInfo && (
+                  <div className="flex items-center gap-2">
+                    {modalityInfo.icon ? (
+                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                        <ImageWithInitialFallback
+                          src={modalityInfo.icon}
+                          alt={modalityInfo.name}
+                          name={modalityInfo.name}
+                          width={24}
+                          height={24}
+                          className="size-6 bg-transparent"
+                          imgClassName="object-cover bg-transparent"
+                          letterClassName="text-[10px]"
+                        />
+                      </div>
+                    ) : (
+                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                    )}
+                    <p className="text-lg font-medium text-gray-12">
+                      {modalityInfo.name}
+                    </p>
+                  </div>
+                )}
               </div>
+
               {ageLimitText && (
                 <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 w-fit">
                   <p className="text-base font-medium">

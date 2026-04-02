@@ -133,6 +133,7 @@ export function TicketCategoryCard({
                       onChange={(e) => setEditingName(e.target.value)}
                       onBlur={handleSave}
                       onKeyDown={(e) => {
+                        e.stopPropagation();
                         if (e.key === "Enter") {
                           handleSave();
                         } else if (e.key === "Escape") {
@@ -151,6 +152,7 @@ export function TicketCategoryCard({
               )}
               <button
                 type="button"
+                title="Editar"
                 onClick={() => {
                   setIsEditing(true);
                   setEditingName(category.name);
@@ -163,6 +165,7 @@ export function TicketCategoryCard({
             <div className="flex items-center">
               <button
                 type="button"
+                title="Deletar"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() =>
                   totalTicketsInCategory > 0
@@ -185,6 +188,7 @@ export function TicketCategoryCard({
               onChange={(e) => setEditingDescription(e.target.value)}
               onBlur={handleSaveDescription}
               onKeyDown={(e) => {
+                e.stopPropagation();
                 if (e.key === "Enter") {
                   handleSaveDescription();
                 } else if (e.key === "Escape") {

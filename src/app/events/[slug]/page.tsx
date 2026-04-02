@@ -23,6 +23,7 @@ import {
 } from "@/utils/organization";
 import { cn } from "@/utils/cn";
 import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
+import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 
 function OrganizerAvatar({
   logoUrl,
@@ -450,7 +451,9 @@ export default function EventPage() {
                   </h2>
                   <div
                     className={`topic-rich-html text-sm text-gray-11 mb-3 prose prose-sm max-w-none ${!isExpanded && shouldTruncate ? "line-clamp-3" : ""}`}
-                    dangerouslySetInnerHTML={{ __html: section.content }}
+                    dangerouslySetInnerHTML={{
+                      __html: normalizeTopicHtmlAnchorHrefs(section.content),
+                    }}
                   />
                   {shouldTruncate && (
                     <Button
@@ -869,7 +872,9 @@ export default function EventPage() {
                     </h1>
                     <div
                       className="topic-rich-html text-gray-11 text-sm prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: section.content }}
+                      dangerouslySetInnerHTML={{
+                      __html: normalizeTopicHtmlAnchorHrefs(section.content),
+                    }}
                     />
                   </div>
                   <div className="w-full h-px bg-gray-6" />

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
+import type { EventTracking, EventTrackingPatch } from "@/services";
+import { validateNonEmptyEventTrackingFields } from "@/lib/eventTrackingValidation";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
@@ -13,12 +14,57 @@ import { Loading } from "@/components/Loading";
 import toast from "react-hot-toast";
 import { GoogleIcon } from "@/components/Icons/GoogleIcon";
 import { MetaIcon } from "@/components/Icons/Organizer/MetaIcon";
-import { ArrowButton } from "@/components/ArrowButton";
 
 interface AdsTrackingData {
   metaPixelId?: string;
   googleAnalyticsId?: string;
   googleAdsId?: string;
+}
+
+const emptyAdsForm = (): AdsTrackingData => ({
+  metaPixelId: "",
+  googleAnalyticsId: "",
+  googleAdsId: "",
+});
+
+/** Comparação estável para dirty-check (trim nos valores). */
+function adsTrackingSnapshot(d: AdsTrackingData): string {
+  return JSON.stringify({
+    metaPixelId: (d.metaPixelId ?? "").trim(),
+    googleAnalyticsId: (d.googleAnalyticsId ?? "").trim(),
+    googleAdsId: (d.googleAdsId ?? "").trim(),
+  });
+}
+
+function trackingToFormData(t: EventTracking): AdsTrackingData {
+  return {
+    metaPixelId: t.metaPixelId,
+    googleAnalyticsId: t.googleAnalyticsId,
+    googleAdsId: t.googleAdsId,
+  };
+}
+
+function buildTrackingPatch(
+  form: AdsTrackingData,
+  committedSnapshot: string,
+): EventTrackingPatch {
+  const committed = JSON.parse(committedSnapshot) as {
+    metaPixelId: string;
+    googleAnalyticsId: string;
+    googleAdsId: string;
+  };
+  const cur = {
+    metaPixelId: (form.metaPixelId ?? "").trim(),
+    googleAnalyticsId: (form.googleAnalyticsId ?? "").trim(),
+    googleAdsId: (form.googleAdsId ?? "").trim(),
+  };
+  const patch: EventTrackingPatch = {};
+  if (cur.metaPixelId !== committed.metaPixelId) patch.metaPixelId = cur.metaPixelId;
+  if (cur.googleAnalyticsId !== committed.googleAnalyticsId) {
+    patch.googleAnalyticsId = cur.googleAnalyticsId;
+  }
+  if (cur.googleAdsId !== committed.googleAdsId) patch.googleAdsId = cur.googleAdsId;
+  return patch;
 }
 
 export default function AdsPage() {
@@ -29,11 +75,9 @@ export default function AdsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [event, setEvent] = useState<any>(null);
-  const [formData, setFormData] = useState<AdsTrackingData>({
-    metaPixelId: "",
-    googleAnalyticsId: "",
-    googleAdsId: "",
-  });
+  const [formData, setFormData] = useState<AdsTrackingData>(emptyAdsForm);
+  /** `null` até o primeiro load terminar — evita habilitar Salvar antes de hidratar. */
+  const [committedSnapshot, setCommittedSnapshot] = useState<string | null>(null);
 
   // Verificar autenticação
   useEffect(() => {
@@ -55,16 +99,22 @@ export default function AdsPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const eventData = await organizerService.getEventById(eventId);
+        const [eventData, tracking] = await Promise.all([
+          organizerService.getEventById(eventId),
+          organizerService.getEventTracking(eventId),
+        ]);
         setEvent(eventData);
-
-        // TODO: Carregar dados de tracking da API quando disponível
-        // Por enquanto, usando dados vazios
-        // const trackingData = await organizerService.getEventTracking(eventId);
-        // setFormData(trackingData);
+        const initial = trackingToFormData(tracking);
+        setFormData(initial);
+        setCommittedSnapshot(adsTrackingSnapshot(initial));
       } catch (error: any) {
         console.error("Error loading event:", error);
-        toast.error("Erro ao carregar evento");
+        const msg =
+          error.response?.data?.message || error.message || "Erro ao carregar evento";
+        toast.error(msg);
+        const fallback = emptyAdsForm();
+        setFormData(fallback);
+        setCommittedSnapshot(adsTrackingSnapshot(fallback));
       } finally {
         setLoading(false);
       }
@@ -72,6 +122,11 @@ export default function AdsPage() {
 
     loadData();
   }, [authChecked, eventId]);
+
+  const isDirty = useMemo(() => {
+    if (committedSnapshot === null) return false;
+    return adsTrackingSnapshot(formData) !== committedSnapshot;
+  }, [formData, committedSnapshot]);
 
   const handleInputChange = (field: keyof AdsTrackingData, value: string) => {
     setFormData((prev) => ({
@@ -81,36 +136,40 @@ export default function AdsPage() {
   };
 
   const handleSave = async () => {
-    if (!eventId) {
+    if (!eventId || committedSnapshot === null) {
       toast.error("Evento não encontrado");
+      return;
+    }
+
+    const validationError = validateNonEmptyEventTrackingFields(formData);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    const patch = buildTrackingPatch(formData, committedSnapshot);
+    if (Object.keys(patch).length === 0) {
       return;
     }
 
     setSaving(true);
     try {
-      // TODO: Implementar API call quando disponível
-      // await organizerService.updateEventTracking(eventId, formData);
-
-      // Simulação de sucesso
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const updated = await organizerService.patchEventTracking(eventId, patch);
+      const next = trackingToFormData(updated);
+      setFormData(next);
+      setCommittedSnapshot(adsTrackingSnapshot(next));
       toast.success("Configurações de rastreamento salvas com sucesso!");
     } catch (error: any) {
       console.error("Error saving tracking data:", error);
-      toast.error("Erro ao salvar configurações de rastreamento");
+      const msg =
+        error.response?.data?.message ||
+        error.message ||
+        "Erro ao salvar configurações de rastreamento";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   };
-
-  const eventTabs = [
-    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-    { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-    { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-    { label: "Notificações", href: `/organizer/events/${eventId}/notifications` },
-  ];
 
   if (!authChecked || loading) {
     return (
@@ -232,8 +291,8 @@ export default function AdsPage() {
             <Button
               onClick={handleSave}
               variant="default"
-              disabled={saving}
-              className="w-full md:w-auto h-11 md:h-auto text-base font-bold font-manrope leading-[1.1] px-6 py-5 md:px-8"
+              disabled={saving || !isDirty}
+              className="w-full md:w-auto px-10 text-base font-bold font-manrope leading-[1.1] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? "Salvando..." : "Salvar"}
             </Button>

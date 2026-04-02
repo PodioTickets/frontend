@@ -10,6 +10,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { organizerService } from "@/services";
 import { CreateQuestionRequest } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
+
+const PENDING_QUESTION_PREFIX = "__pending_question__";
+
+function isPendingQuestionId(id: string | undefined): boolean {
+  return !!id && id.startsWith(PENDING_QUESTION_PREFIX);
+}
+
+export type QuestionModalLocalPayload =
+  | { kind: "create"; questionData: CreateQuestionRequest }
+  | { kind: "update"; questionId: string; questionData: CreateQuestionRequest }
+  | { kind: "delete"; questionId: string };
 import { TrashIcon } from "../Icons/TrashIcon";
 import { SelectTicketsModal } from "../Coupon/SelectTicketsModal";
 import { ArrowButton } from "../ArrowButton";
@@ -39,6 +50,7 @@ export function CreateQuestionModal() {
 
   const isEditing = data?.questionId !== undefined;
   const eventId = data?.eventId;
+  const deferPersistence = data?.deferPersistence === true;
 
   // Initialize form when modal opens
   useEffect(() => {
@@ -144,6 +156,29 @@ export function CreateQuestionModal() {
             : "all",
       };
 
+      if (deferPersistence) {
+        if (!isEditing) {
+          if (onModalSave) {
+            await onModalSave({ kind: "create", questionData } satisfies QuestionModalLocalPayload);
+          }
+          toast.success("Pergunta adicionada. Salve as alterações para confirmar.");
+          closeCreateQuestionModal();
+          return;
+        }
+        if (isPendingQuestionId(data?.questionId)) {
+          if (onModalSave) {
+            await onModalSave({
+              kind: "update",
+              questionId: data!.questionId!,
+              questionData,
+            } satisfies QuestionModalLocalPayload);
+          }
+          toast.success("Pergunta atualizada. Salve as alterações para confirmar.");
+          closeCreateQuestionModal();
+          return;
+        }
+      }
+
       if (isEditing && data?.questionId) {
         await organizerService.updateQuestion(eventId, data.questionId, questionData);
         toast.success("Pergunta atualizada com sucesso!");
@@ -171,6 +206,18 @@ export function CreateQuestionModal() {
     setIsSubmitting(true);
 
     try {
+      if (deferPersistence && isPendingQuestionId(data.questionId)) {
+        if (onModalSave) {
+          await onModalSave({
+            kind: "delete",
+            questionId: data.questionId,
+          } satisfies QuestionModalLocalPayload);
+        }
+        toast.success("Pergunta removida.");
+        closeCreateQuestionModal();
+        return;
+      }
+
       await organizerService.deleteQuestion(eventId, data.questionId);
       toast.success("Pergunta deletada com sucesso!");
 
@@ -326,6 +373,8 @@ export function CreateQuestionModal() {
                                 </div>
                                 <div className="flex items-center justify-center px-4 w-[74px]">
                                   <button
+                                    type="button"
+                                    title="Remover opção"
                                     onClick={() => handleRemoveOption(index)}
                                     className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
                                   >

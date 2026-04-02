@@ -19,6 +19,7 @@ import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
 import { TicketTable } from "@/components/Ticket/TicketTable";
+import { UncategorizedTicketsDropShell } from "@/components/Ticket/UncategorizedTicketsDropShell";
 import { TicketAdvancedKitDisplayOptions } from "@/components/Ticket/TicketAdvancedKitDisplayOptions";
 import {
   KitImagePositionDrawer,
@@ -34,7 +35,7 @@ import {
 } from "@/lib/eventKitSelectionDisplay";
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -55,8 +56,12 @@ import {
   parseCategorySortableId,
   persistTicketCategoryOrderApi,
 } from "@/lib/ticketCategoryOrder";
-
-const ITEMS_PER_PAGE = 10;
+import {
+  applyDraftOrderToTickets,
+  applyOrganizerTicketDragEnd,
+  categoryIdForTicketScope,
+  persistTicketOrderDrafts,
+} from "@/lib/organizerTicketListDnD";
 
 export default function EditTicketsPage() {
   const router = useRouter();
@@ -69,7 +74,6 @@ export default function EditTicketsPage() {
   const [editingGroupName, setEditingGroupName] = useState("");
   const [showCreateGroupSection, setShowCreateGroupSection] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
-  const [currentPage, setCurrentPage] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<Record<string, "table" | "cards">>({});
   const [duplicatingTicketId, setDuplicatingTicketId] = useState<string | null>(
     null,
@@ -78,6 +82,14 @@ export default function EditTicketsPage() {
     useState(false);
   const [categoryOrderIds, setCategoryOrderIds] = useState<string[]>([]);
   const [savingNavigate, setSavingNavigate] = useState(false);
+  /** Ordem dos ingressos alterada por drag; persistida só em «Salvar alterações». */
+  const [ticketOrderDraft, setTicketOrderDraft] = useState<Record<string, string[]>>(
+    {},
+  );
+  /** Nomes de categoria editados na tela; persistidos só em «Salvar alterações». */
+  const [categoryNameDraft, setCategoryNameDraft] = useState<Record<string, string>>(
+    {},
+  );
 
   // Hooks para gerenciar dados
   const {
@@ -155,6 +167,13 @@ export default function EditTicketsPage() {
       .filter(Boolean) as ModalityGroup[];
   }, [categories, categoryOrderIds]);
 
+  const orderedCategoriesDisplay = useMemo(() => {
+    return orderedCategories.map((c) => ({
+      ...c,
+      name: categoryNameDraft[c.id] ?? c.name,
+    }));
+  }, [orderedCategories, categoryNameDraft]);
+
   // Buscar produtos
   const { data: productsData } = useQuery({
     queryKey: queryKeys.events.products(eventId || ""),
@@ -222,16 +241,21 @@ export default function EditTicketsPage() {
   );
 
   const handleUpdateGroupName = useCallback(
-    async (groupId: string, name: string) => {
-      try {
-        await updateCategory(groupId, { name });
-        setEditingGroupId(null);
-        setEditingGroupName("");
-      } catch (error) {
-        // Error já foi tratado no hook
-      }
+    (groupId: string, name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      setCategoryNameDraft((prev) => {
+        const cat = categories.find((c) => c.id === groupId);
+        if (cat && cat.name === trimmed) {
+          const { [groupId]: _, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [groupId]: trimmed };
+      });
+      setEditingGroupId(null);
+      setEditingGroupName("");
     },
-    [updateCategory]
+    [categories],
   );
 
   const handleUpdateGroupDescription = useCallback(
@@ -249,6 +273,10 @@ export default function EditTicketsPage() {
     async (groupId: string) => {
       try {
         await deleteCategory(groupId);
+        setCategoryNameDraft((prev) => {
+          const { [groupId]: _, ...rest } = prev;
+          return rest;
+        });
       } catch (error) {
         // Error já foi tratado no hook
       }
@@ -295,10 +323,6 @@ export default function EditTicketsPage() {
     [eventId, queryClient],
   );
 
-  const handlePageChange = useCallback((categoryId: string, page: number) => {
-    setCurrentPage((prev) => ({ ...prev, [categoryId]: page }));
-  }, []);
-
   const handleDropTicket = useCallback(
     async (ticketId: string, categoryId: string | null) => {
       if (!eventId) {
@@ -312,7 +336,7 @@ export default function EditTicketsPage() {
         return;
       }
 
-      if (ticket.groupId === categoryId) {
+      if (categoryIdForTicketScope(ticket, categories) === (categoryId ?? null)) {
         return;
       }
 
@@ -347,7 +371,7 @@ export default function EditTicketsPage() {
         toast.error(error.response?.data?.message || "Erro ao mover ingresso");
       }
     },
-    [eventId, tickets, queryClient]
+    [eventId, tickets, queryClient, categories]
   );
 
   // DnD Kit sensors
@@ -417,98 +441,27 @@ export default function EditTicketsPage() {
         return;
       }
 
-      const ticketId = activeIdValue.replace("ticket-", "");
-      const ticket = tickets.find((t) => t.id === ticketId);
-
-      if (!ticket) {
-        setActiveId(null);
-        dragEndPositionRef.current = null;
-        return;
-      }
-
-      if (!over) {
-        if (ticket.groupId && ticket.groupId !== "uncategorized") {
-          handleDropTicket(ticketId, null);
-        }
-        setActiveId(null);
-        dragEndPositionRef.current = null;
-        return;
-      }
-
-      const overId = over.id?.toString() || "";
       const dragEndPosition = dragEndPositionRef.current;
-
-      let droppedInsideCategory = false;
-      let targetCategoryId: string | null = null;
-
-      if (dragEndPosition) {
-        const allCategoryElements = document.querySelectorAll("[data-category-id]");
-
-        for (const categoryElement of allCategoryElements) {
-          const catId = categoryElement.getAttribute("data-category-id");
-          if (!catId) continue;
-
-          let rect = categoryElementsCacheRef.current.get(catId);
-          if (!rect) {
-            rect = categoryElement.getBoundingClientRect();
-            categoryElementsCacheRef.current.set(catId, rect);
-          } else {
-            const currentRect = categoryElement.getBoundingClientRect();
-            if (
-              rect.left !== currentRect.left ||
-              rect.top !== currentRect.top ||
-              rect.width !== currentRect.width ||
-              rect.height !== currentRect.height
-            ) {
-              rect = currentRect;
-              categoryElementsCacheRef.current.set(catId, rect);
-            }
-          }
-
-          const isInside =
-            dragEndPosition.x >= rect.left &&
-            dragEndPosition.x <= rect.right &&
-            dragEndPosition.y >= rect.top &&
-            dragEndPosition.y <= rect.bottom;
-
-          if (isInside) {
-            droppedInsideCategory = true;
-            targetCategoryId = catId;
-            break;
-          }
-        }
-      } else if (over && overId.startsWith("category-")) {
-        const overData = over.data.current;
-        if (overData && overData.type === "category" && overData.categoryId) {
-          droppedInsideCategory = true;
-          targetCategoryId = overData.categoryId;
-        }
-      }
-
-      if (droppedInsideCategory && targetCategoryId) {
-        if (ticket.groupId === targetCategoryId) {
+      void (async () => {
+        try {
+          await applyOrganizerTicketDragEnd({
+            event,
+            tickets,
+            categories,
+            eventId,
+            queryClient,
+            handleDropTicket,
+            dragEndPosition,
+            categoryElementsCacheRef,
+            setTicketOrderDraft,
+          });
+        } finally {
           setActiveId(null);
           dragEndPositionRef.current = null;
-          return;
         }
-
-        if (targetCategoryId && targetCategoryId !== "uncategorized") {
-          handleDropTicket(ticketId, targetCategoryId);
-        } else if (targetCategoryId === "uncategorized") {
-          if (ticket.groupId && ticket.groupId !== "uncategorized") {
-            handleDropTicket(ticketId, null);
-          }
-        }
-      } else {
-        if (ticket.groupId && ticket.groupId !== "uncategorized") {
-          handleDropTicket(ticketId, null);
-        }
-      }
-
-      setActiveId(null);
-      dragEndPositionRef.current = null;
+      })();
     },
-    [tickets, handleDropTicket]
+    [tickets, handleDropTicket, categories, eventId, queryClient]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -524,19 +477,56 @@ export default function EditTicketsPage() {
       }
       map[categoryId].push(ticket);
     });
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    }
     return map;
   }, [tickets]);
 
   const uncategorizedTickets = useMemo(() => {
-    return tickets.filter(
+    const list = tickets.filter(
       (t) => !t.groupId || t.groupId === "uncategorized" || !categories.find((c) => c.id === t.groupId)
     );
+    return list.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }, [tickets, categories]);
 
   const hasNoCategories = !Array.isArray(categories) || categories.length === 0;
   const allTickets = useMemo(() => {
     return hasNoCategories ? tickets : uncategorizedTickets;
   }, [hasNoCategories, tickets, uncategorizedTickets]);
+
+  const ticketsByCategoryDisplay = useMemo(() => {
+    const out: Record<string, Ticket[]> = {};
+    for (const k of Object.keys(ticketsByCategory)) {
+      out[k] = applyDraftOrderToTickets(
+        ticketsByCategory[k],
+        k,
+        ticketOrderDraft,
+      );
+    }
+    return out;
+  }, [ticketsByCategory, ticketOrderDraft]);
+
+  const uncategorizedTicketsDisplay = useMemo(
+    () =>
+      applyDraftOrderToTickets(
+        uncategorizedTickets,
+        "uncategorized",
+        ticketOrderDraft,
+      ),
+    [uncategorizedTickets, ticketOrderDraft],
+  );
+
+  const allTicketsDisplay = useMemo(() => {
+    return hasNoCategories
+      ? applyDraftOrderToTickets(tickets, "uncategorized", ticketOrderDraft)
+      : uncategorizedTicketsDisplay;
+  }, [
+    hasNoCategories,
+    tickets,
+    uncategorizedTicketsDisplay,
+    ticketOrderDraft,
+  ]);
 
   /** Nova categoria em edição sem nome — bloqueia "Salvar alterações". */
   const hasIncompleteNewCategoryDraft = useMemo(() => {
@@ -604,7 +594,9 @@ export default function EditTicketsPage() {
       return;
     }
     if (orderedCategories.length === 0) {
-      router.push(`/organizer/events/${eventId}/edit/topics`);
+      toast.error(
+        "Adicione pelo menos uma categoria de ingressos antes de salvar as alterações.",
+      );
       return;
     }
     setSavingNavigate(true);
@@ -624,12 +616,33 @@ export default function EditTicketsPage() {
         { kitSelectionDisplay: mergedKitDisplay },
         { clientPage: `events/${eventId}/tickets` }
       );
+      if (Object.keys(categoryNameDraft).length > 0) {
+        await Promise.all(
+          Object.entries(categoryNameDraft).map(([id, name]) =>
+            updateCategory(id, { name }),
+          ),
+        );
+        setCategoryNameDraft({});
+      }
       await persistTicketCategoryOrderApi(eventId, orderedCategories);
+      const ticketList =
+        queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
+        tickets;
+      await persistTicketOrderDrafts(
+        eventId,
+        ticketList,
+        categories,
+        ticketOrderDraft,
+      );
+      setTicketOrderDraft({});
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.events.tickets(eventId),
+      });
       await queryClient.invalidateQueries({
         queryKey: queryKeys.events.ticketCategories(eventId),
       });
       await reloadEvent();
-      router.push(`/organizer/events/${eventId}/edit/topics`);
+      toast.success("Alterações salvas com sucesso!");
     } catch (e) {
       console.error(e);
       toast.error("Não foi possível salvar as alterações desta página.");
@@ -638,28 +651,17 @@ export default function EditTicketsPage() {
     }
   }, [
     hasIncompleteNewCategoryDraft,
-    router,
     eventId,
     orderedCategories,
     queryClient,
     draftKitSelection,
     reloadEvent,
+    tickets,
+    categories,
+    ticketOrderDraft,
+    categoryNameDraft,
+    updateCategory,
   ]);
-
-  const getPaginatedTickets = useCallback(
-    (categoryId: string) => {
-      const categoryTickets = ticketsByCategory[categoryId] || [];
-      const page = currentPage[categoryId] || 1;
-      const start = (page - 1) * ITEMS_PER_PAGE;
-      const end = start + ITEMS_PER_PAGE;
-      return {
-        tickets: categoryTickets.slice(start, end),
-        totalPages: Math.ceil(categoryTickets.length / ITEMS_PER_PAGE),
-        currentPage: page,
-      };
-    },
-    [ticketsByCategory, currentPage]
-  );
 
   const kitImagePositionDrawerData = useMemo(() => {
     const ticketToRow = (t: Ticket) => ({
@@ -678,31 +680,31 @@ export default function EditTicketsPage() {
         uncategorized: {
           id: "uncategorized",
           name: "",
-          tickets: uncategorizedTickets.map(ticketToRow),
+          tickets: uncategorizedTicketsDisplay.map(ticketToRow),
         },
       };
     }
 
     return {
-      sections: orderedCategories.map((cat) => ({
+      sections: orderedCategoriesDisplay.map((cat) => ({
         id: cat.id,
         name: cat.name,
-        tickets: (ticketsByCategory[cat.id] || []).map(ticketToRow),
+        tickets: (ticketsByCategoryDisplay[cat.id] || []).map(ticketToRow),
       })),
       uncategorized:
-        uncategorizedTickets.length > 0
+        uncategorizedTicketsDisplay.length > 0
           ? {
               id: "uncategorized",
               name: "",
-              tickets: uncategorizedTickets.map(ticketToRow),
+              tickets: uncategorizedTicketsDisplay.map(ticketToRow),
             }
           : null,
     };
   }, [
     hasNoCategories,
-    orderedCategories,
-    ticketsByCategory,
-    uncategorizedTickets,
+    orderedCategoriesDisplay,
+    ticketsByCategoryDisplay,
+    uncategorizedTicketsDisplay,
     productsMap,
   ]);
 
@@ -748,7 +750,7 @@ export default function EditTicketsPage() {
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
@@ -803,23 +805,20 @@ export default function EditTicketsPage() {
           </div>
 
           {allTickets.length > 0 && (
-            <div className="rounded-xl">
+            <UncategorizedTicketsDropShell>
               <div className="overflow-x-auto">
                 <TicketTable
-                  tickets={allTickets.slice(
-                    ((currentPage.all || 1) - 1) * ITEMS_PER_PAGE,
-                    ((currentPage.all || 1) - 1) * ITEMS_PER_PAGE + ITEMS_PER_PAGE
-                  )}
-                  currentPage={currentPage.all || 1}
-                  totalPages={Math.ceil(allTickets.length / ITEMS_PER_PAGE)}
-                  onPageChange={(page) => setCurrentPage({ ...currentPage, all: page })}
+                  tickets={allTicketsDisplay}
+                  currentPage={1}
+                  totalPages={1}
+                  onPageChange={() => {}}
                   onEdit={handleEditTicket}
                   onDuplicate={handleDuplicateTicket}
                   duplicatingTicketId={duplicatingTicketId}
                   productsMap={productsMap}
                 />
               </div>
-            </div>
+            </UncategorizedTicketsDropShell>
           )}
 
           {/* Create Category Section */}
@@ -871,6 +870,7 @@ export default function EditTicketsPage() {
                 >
                   <button
                     type="button"
+                    title="Editar"
                     onClick={() => {
                       setEditingGroupId("new");
                       setNewGroupName("");
@@ -881,6 +881,7 @@ export default function EditTicketsPage() {
                   </button>
                   <button
                     type="button"
+                    title="Deletar"
                     onClick={() => {
                       setShowCreateGroupSection(false);
                       setEditingGroupId(null);
@@ -972,6 +973,7 @@ export default function EditTicketsPage() {
                   >
                     <button
                       type="button"
+                      title="Editar"
                       onClick={() => {
                         setEditingGroupId("new");
                         setEditingGroupName("");
@@ -983,6 +985,7 @@ export default function EditTicketsPage() {
                     <button
                       type="button"
                       disabled
+                      title="Deletar categoria"
                       className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center opacity-50 cursor-not-allowed"
                     >
                       <PencilIcon className="size-5 text-red-12" />
@@ -1015,21 +1018,16 @@ export default function EditTicketsPage() {
               strategy={verticalListSortingStrategy}
             >
               <div className="flex flex-col gap-6">
-                {orderedCategories.map((category) => {
-                  const {
-                    tickets: paginatedTickets,
-                    totalPages,
-                    currentPage: page,
-                  } = getPaginatedTickets(category.id);
+                {orderedCategoriesDisplay.map((category) => {
+                  const categoryTickets =
+                    ticketsByCategoryDisplay[category.id] || [];
 
                   return (
                     <SortableTicketCategoryItem
                       key={category.id}
                       categoryId={category.id}
                       category={category}
-                      totalTicketsInCategory={
-                        (ticketsByCategory[category.id] || []).length
-                      }
+                      totalTicketsInCategory={categoryTickets.length}
                       onEdit={handleUpdateGroupName}
                       onDelete={handleDeleteGroup}
                     >
@@ -1037,17 +1035,15 @@ export default function EditTicketsPage() {
                         category={category}
                         className="rounded-none border-0 shadow-none"
                         hideCategoryTitleRow
-                        tickets={paginatedTickets}
-                        totalTicketsInCategory={
-                          (ticketsByCategory[category.id] || []).length
-                        }
-                        currentPage={page}
-                        totalPages={totalPages}
+                        tickets={categoryTickets}
+                        totalTicketsInCategory={categoryTickets.length}
+                        currentPage={1}
+                        totalPages={1}
                         onEdit={handleUpdateGroupName}
                         onEditDescription={handleUpdateGroupDescription}
                         onDelete={handleDeleteGroup}
                         onEditTicket={handleEditTicket}
-                        onPageChange={handlePageChange}
+                        onPageChange={() => {}}
                         onDuplicateTicket={handleDuplicateTicket}
                         duplicatingTicketId={duplicatingTicketId}
                         productsMap={productsMap}
@@ -1102,8 +1098,9 @@ export default function EditTicketsPage() {
         ) : activeId && parseCategorySortableId(activeId) ? (
           <div className="max-w-md rounded-xl border border-gray-6 bg-gray-1 p-4 opacity-95 shadow-2xl">
             <p className="text-sm font-semibold text-gray-12">
-              {orderedCategories.find((c) => categorySortableId(c.id) === activeId)
-                ?.name || "Categoria"}
+              {orderedCategoriesDisplay.find(
+                (c) => categorySortableId(c.id) === activeId,
+              )?.name || "Categoria"}
             </p>
             <p className="mt-1 text-xs text-gray-11">Alterar ordem</p>
           </div>

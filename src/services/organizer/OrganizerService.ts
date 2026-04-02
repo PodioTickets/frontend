@@ -554,10 +554,15 @@ export interface RegistrationsTrend {
     revenue: number[];
     dailyData?: Array<{
       date: string;
+      /** Faturamento confirmado no período (geralmente centavos). */
       revenue: number;
       confirmed: number;
       canceled: number;
       refunded: number;
+      /** Opcional: valor monetário de cancelamentos no período (centavos). */
+      canceledRevenue?: number;
+      /** Opcional: valor monetário de estornos no período (centavos). */
+      refundedRevenue?: number;
     }>;
   };
 }
@@ -905,6 +910,35 @@ function unwrapProductApiPayload(raw: unknown): unknown {
   return raw;
 }
 
+export interface EventTracking {
+  metaPixelId: string;
+  googleAnalyticsId: string;
+  googleAdsId: string;
+}
+
+export type EventTrackingPatch = Partial<{
+  metaPixelId: string;
+  googleAnalyticsId: string;
+  googleAdsId: string;
+}>;
+
+function strTracking(v: unknown): string {
+  if (v == null) return "";
+  return String(v).trim();
+}
+
+function normalizeEventTracking(raw: Record<string, unknown> | null | undefined): EventTracking {
+  const t = raw ?? {};
+  return {
+    metaPixelId:
+      strTracking(t.metaPixelId) || strTracking(t.meta_pixel_id),
+    googleAnalyticsId:
+      strTracking(t.googleAnalyticsId) || strTracking(t.google_analytics_id),
+    googleAdsId:
+      strTracking(t.googleAdsId) || strTracking(t.google_ads_id),
+  };
+}
+
 export class OrganizerService {
   constructor(private apiClient: ApiClient) { }
 
@@ -1230,6 +1264,30 @@ export class OrganizerService {
       data: { event: Event };
     }>(`/api/v1/events/${id}`);
     return response.data.event;
+  }
+
+  /** Rastreamento (Meta Pixel, GA4, Google Ads). Requer JWT + permissão `edit_event`. */
+  async getEventTracking(eventId: string): Promise<EventTracking> {
+    const { data: response } = await this.apiClient.get<{
+      data: { tracking: Record<string, unknown> };
+    }>(`/api/v1/events/${eventId}/tracking`);
+    return normalizeEventTracking(response.data?.tracking);
+  }
+
+  /**
+   * Atualização parcial: só chaves enviadas são alteradas; string vazia persiste null no banco.
+   */
+  async patchEventTracking(
+    eventId: string,
+    patch: EventTrackingPatch,
+  ): Promise<EventTracking> {
+    const { data: response } = await this.apiClient.patch<{
+      data: { tracking?: Record<string, unknown> };
+    }>(`/api/v1/events/${eventId}/tracking`, patch);
+    if (response.data?.tracking) {
+      return normalizeEventTracking(response.data.tracking);
+    }
+    return this.getEventTracking(eventId);
   }
 
   /**
@@ -1733,6 +1791,21 @@ export class OrganizerService {
     return response.data;
   }
 
+  /** Ordem do array = sortOrder 0…n; todos os ingressos ativos do escopo (mesma categoryId ou sem categoria). */
+  async reorderTickets(
+    eventId: string,
+    body: { categoryId?: string | null; ticketIds: string[] },
+  ): Promise<void> {
+    const payload =
+      body.categoryId === null || body.categoryId === undefined
+        ? { ticketIds: body.ticketIds }
+        : { categoryId: body.categoryId, ticketIds: body.ticketIds };
+    await this.apiClient.patch(
+      `/api/v1/tickets/events/${eventId}/reorder-tickets`,
+      payload,
+    );
+  }
+
   async reorderTicketProducts(
     eventId: string,
     ticketId: string,
@@ -1784,7 +1857,7 @@ export class OrganizerService {
     const { data: response } = await this.apiClient.get<{ data: any }>(
       `/api/v1/products/${id}`
     );
-    return response.data;
+    return unwrapProductApiPayload(response.data);
   }
 
   async updateProduct(

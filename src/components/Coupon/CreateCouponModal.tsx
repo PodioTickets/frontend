@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCreateCouponModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -39,6 +39,9 @@ export function CreateCouponModal() {
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const modalBodyScrollRef = useRef<HTMLDivElement>(null);
+  const advancedPanelRef = useRef<HTMLDivElement>(null);
 
   // Campos específicos por tipo de cupom
   const [minQuantity, setMinQuantity] = useState(""); // Para QUANTITY
@@ -112,6 +115,75 @@ export function CreateCouponModal() {
   useEffect(() => {
     setValue("");
   }, [discountType]);
+
+  useEffect(() => {
+    if (!showAdvanced) return;
+
+    let cancelled = false;
+    let resizeObserver: ResizeObserver | null = null;
+    let rafScroll = 0;
+    const timeoutIds: number[] = [];
+
+    const scrollOverflowIntoView = () => {
+      const scrollEl = modalBodyScrollRef.current;
+      const panel = advancedPanelRef.current;
+      if (!scrollEl || !panel || cancelled) return;
+
+      const parentRect = scrollEl.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const padding = 20;
+
+      const bottomOverflow =
+        panelRect.bottom - (parentRect.bottom - padding);
+      if (bottomOverflow > 0) {
+        scrollEl.scrollTop += bottomOverflow;
+        return;
+      }
+
+      const topOverflow = parentRect.top + padding - panelRect.top;
+      if (topOverflow > 0) {
+        scrollEl.scrollTop -= topOverflow;
+      }
+    };
+
+    const scheduleScroll = () => {
+      cancelAnimationFrame(rafScroll);
+      rafScroll = requestAnimationFrame(scrollOverflowIntoView);
+    };
+
+    let attachAttempts = 0;
+    const tryAttach = () => {
+      if (cancelled) return;
+      const scrollEl = modalBodyScrollRef.current;
+      const panel = advancedPanelRef.current;
+      if (!scrollEl || !panel) {
+        attachAttempts += 1;
+        if (attachAttempts < 90) {
+          requestAnimationFrame(tryAttach);
+        }
+        return;
+      }
+
+      resizeObserver = new ResizeObserver(() => scheduleScroll());
+      resizeObserver.observe(panel);
+
+      scheduleScroll();
+      timeoutIds.push(
+        window.setTimeout(scheduleScroll, 0),
+        window.setTimeout(scheduleScroll, 100),
+        window.setTimeout(scheduleScroll, 350)
+      );
+    };
+
+    tryAttach();
+
+    return () => {
+      cancelled = true;
+      timeoutIds.forEach((id) => window.clearTimeout(id));
+      cancelAnimationFrame(rafScroll);
+      resizeObserver?.disconnect();
+    };
+  }, [showAdvanced]);
 
   const handleAddCPF = () => {
     // TODO: Implementar adição de CPF individual
@@ -303,7 +375,10 @@ export function CreateCouponModal() {
 
                 {/* Content */}
                 <div className="flex-1 overflow-hidden flex">
-                  <div className="flex-1 overflow-y-auto p-5">
+                  <div
+                    ref={modalBodyScrollRef}
+                    className="flex-1 overflow-y-auto p-5"
+                  >
                     <div className="flex flex-col gap-9 max-w-full">
                       {/* Tipo de cupom */}
                       <div className="flex flex-col gap-4">
@@ -502,20 +577,12 @@ export function CreateCouponModal() {
                                   value={code}
                                   onChange={(e) => {
                                     const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                                    if (val.length <= 25) {
-                                      setCode(val);
-                                    }
+                                    setCode(val);
                                   }}
-                                  maxLength={25}
                                   className="h-12"
                                 />
                               </div>
-                              <div className="flex items-center gap-1">
-                                <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  Limite de 25 Caracteres, use letras e números, sem espaços
-                                </p>
-                              </div>
+
                             </div>
                           )}
 
@@ -532,44 +599,15 @@ export function CreateCouponModal() {
                                   value={code}
                                   onChange={(e) => {
                                     const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                                    if (val.length <= 25) {
-                                      setCode(val);
-                                    }
+                                    setCode(val);
                                   }}
-                                  maxLength={25}
                                   className="h-12"
                                 />
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  Limite de 25 Caracteres, use letras e números, sem espaços
-                                </p>
                               </div>
                             </div>
                           )}
 
-                          {/* Nota (opcional) */}
-                          <div className="flex flex-col gap-2.5">
-                            <div className="flex flex-col gap-2">
-                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Nota <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">(opcional)</span>
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: Cupom para parceiros / campanha de Instagram"
-                                value={note}
-                                onChange={(e) => setNote(e.target.value)}
-                                className="h-12"
-                              />
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Essa nota é só para organização interna
-                              </p>
-                            </div>
-                          </div>
+
 
                           {/* Tipo de desconto */}
                           <div className="flex flex-col gap-4">
@@ -755,11 +793,30 @@ export function CreateCouponModal() {
                             <AnimatePresence>
                               {showAdvanced && (
                                 <motion.div
+                                  ref={advancedPanelRef}
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
                                   transition={{ duration: 0.2 }}
                                   className="overflow-hidden flex flex-col gap-9"
+                                  onAnimationComplete={() => {
+                                    requestAnimationFrame(() => {
+                                      const scrollEl = modalBodyScrollRef.current;
+                                      const panel = advancedPanelRef.current;
+                                      if (!scrollEl || !panel) return;
+                                      const parentRect =
+                                        scrollEl.getBoundingClientRect();
+                                      const panelRect =
+                                        panel.getBoundingClientRect();
+                                      const padding = 20;
+                                      const bottomOverflow =
+                                        panelRect.bottom -
+                                        (parentRect.bottom - padding);
+                                      if (bottomOverflow > 0) {
+                                        scrollEl.scrollTop += bottomOverflow;
+                                      }
+                                    });
+                                  }}
                                 >
                                   {/* Validade do cupom */}
                                   <div className="flex flex-col gap-5">
@@ -949,6 +1006,8 @@ export function CreateCouponModal() {
                                                 </div>
                                                 <div className="px-4">
                                                   <button
+                                                    type="button"
+                                                    title="Remover CPF"
                                                     onClick={() => handleRemoveCPF(index)}
                                                     className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
                                                   >

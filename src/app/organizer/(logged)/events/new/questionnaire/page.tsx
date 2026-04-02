@@ -107,7 +107,7 @@ export default function QuestionnairePage() {
     router.push("/organizer/events/new/coupons");
   };
 
-  const handleNext = () => {
+  const handleConfirmQuestionnaire = () => {
     router.push("/organizer/events/new/coupons");
   };
 
@@ -195,12 +195,16 @@ export default function QuestionnairePage() {
                   <div className="flex items-center justify-between mt-auto">
                     <div className={`flex gap-2.5 items-center ml-auto`}>
                       <button
+                        type="button"
+                        title="Editar"
                         onClick={() => handleEditQuestion(question)}
                         className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                       >
                         <Pencil className="size-5 text-gray-11" />
                       </button>
                       <button
+                        type="button"
+                        title="Deletar"
                         onClick={() =>
                           openDeleteQuestionModal({
                             onConfirm: () => handleDeleteQuestion(question.id),
@@ -228,7 +232,7 @@ export default function QuestionnairePage() {
             Pular etapa
           </Button>
           <Button
-            onClick={handleNext}
+            onClick={handleConfirmQuestionnaire}
             variant="default"
             className="text-gray-12 text-lg font-bold px-11 h-[52px]"
           >

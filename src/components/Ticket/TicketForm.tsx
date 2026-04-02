@@ -183,7 +183,7 @@ function SortableTicketProductCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] max-w-[368px] ${isDragging ? "z-10 opacity-70 shadow-lg ring-2 ring-primary-8/25" : ""
+      className={`bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] ${isDragging ? "z-10 opacity-70 shadow-lg ring-2 ring-primary-8/25" : ""
         } ${dragDisabled
           ? ""
           : "cursor-grab touch-none active:cursor-grabbing [&_.ticket-product-actions]:cursor-default"
@@ -225,6 +225,7 @@ function SortableTicketProductCard({
         <div className="flex gap-2 items-center">
           <button
             type="button"
+            title="Editar"
             onClick={onEdit}
             className="bg-gray-2 border border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors"
           >
@@ -232,6 +233,7 @@ function SortableTicketProductCard({
           </button>
           <button
             type="button"
+            title="Deletar"
             onClick={onRemove}
             className="bg-red-2 border border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
           >
@@ -480,8 +482,11 @@ export function TicketForm({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { deleteTicket } = useTickets(eventId, !!eventId);
-  const { openCreateProductModal, setOnModalSave: setOnCreateProductSave } =
-    useCreateProductModal();
+  const {
+    openCreateProductModal,
+    setOnModalSave: setOnCreateProductSave,
+    setOnModalProductDelete: setOnCreateProductDelete,
+  } = useCreateProductModal();
   const { openAddExistingProductsModal, setOnModalSave: setOnAddProductsSave } =
     useAddExistingProductsModal();
 
@@ -495,6 +500,10 @@ export function TicketForm({
 
   const guardPushedRef = useRef(false);
   const isDirtyRef = useRef(false);
+  /** Evita que o sync isDirty → ref e o efeito do guard rodem durante saída confirmada (modal / rascunho). */
+  const isNavigatingAwayRef = useRef(false);
+  /** Um history.back() intencional (liberar guard) dispara popstate; sem isso o handler reabre o modal. */
+  const skipUnsavedPopStateRef = useRef(false);
   const createBaselineScheduledRef = useRef(false);
 
   // Form state
@@ -759,10 +768,12 @@ export function TicketForm({
   }, [ticketHydrateNonce]);
 
   useEffect(() => {
+    if (isNavigatingAwayRef.current) return;
     isDirtyRef.current = isDirty;
   }, [isDirty]);
 
   useEffect(() => {
+    if (isNavigatingAwayRef.current) return;
     if (!isDirty) {
       if (guardPushedRef.current) {
         guardPushedRef.current = false;
@@ -782,6 +793,10 @@ export function TicketForm({
 
   useEffect(() => {
     const onPopState = () => {
+      if (skipUnsavedPopStateRef.current) {
+        skipUnsavedPopStateRef.current = false;
+        return;
+      }
       if (!isDirtyRef.current) return;
       window.history.pushState(
         { unsavedTicketGuard: true },
@@ -1126,20 +1141,39 @@ export function TicketForm({
       }
     };
 
+    const deleteProductCallback = async (payload: { productId?: string }) => {
+      const id = String(payload?.productId ?? "").trim();
+      if (!id) return;
+      setProducts((prev) => prev.filter((p) => p.productId !== id));
+    };
+
     setOnCreateProductSave(createProductCallback);
+    setOnCreateProductDelete(deleteProductCallback);
     setOnAddProductsSave(addProductsCallback);
 
     return () => {
       setOnCreateProductSave(undefined);
+      setOnCreateProductDelete(undefined);
       setOnAddProductsSave(undefined);
     };
-  }, [setOnCreateProductSave, setOnAddProductsSave, ticketId]);
+  }, [setOnCreateProductSave, setOnCreateProductDelete, setOnAddProductsSave, ticketId]);
 
   const releaseUnsavedHistoryGuard = () => {
     if (guardPushedRef.current) {
       guardPushedRef.current = false;
-      window.history.back();
+      router.push(`/organizer/events/${eventId}/edit/tickets`);
     }
+  };
+
+  /** Sai da página do ingresso após confirmar no modal: não reabrir o modal no popstate do history.back(). */
+  const leaveTicketPageAfterDiscardPrompt = () => {
+    isNavigatingAwayRef.current = true;
+    isDirtyRef.current = false;
+    if (guardPushedRef.current) {
+      skipUnsavedPopStateRef.current = true;
+    }
+    releaseUnsavedHistoryGuard();
+    router.push(`/organizer/events/${eventId}/edit/tickets`);
   };
 
   // Handlers
@@ -1148,7 +1182,7 @@ export function TicketForm({
       setLeavePromptOpen(true);
       return;
     }
-    router.push(backUrl);
+    router.push(`/organizer/events/${eventId}/edit/tickets`);
   };
 
   const handleConfirmDeleteTicket = useCallback(async () => {
@@ -1182,8 +1216,7 @@ export function TicketForm({
         "Rascunho salvo neste dispositivo. Expira em 24 horas ou ao salvar o ingresso.",
       );
       setLeavePromptOpen(false);
-      releaseUnsavedHistoryGuard();
-      router.push(backUrl);
+      leaveTicketPageAfterDiscardPrompt();
     } catch (e) {
       console.error(e);
       toast.error("Não foi possível salvar o rascunho.");
@@ -1420,7 +1453,10 @@ export function TicketForm({
       isDirtyRef.current = false;
 
       releaseUnsavedHistoryGuard();
-      router.push(backUrl);
+      // replace + frame seguinte: evita corrida entre history.back() do guard e o App Router
+      requestAnimationFrame(() => {
+        router.replace(backUrl);
+      });
       return true;
     } catch (error: unknown) {
       console.error("Error saving ticket:", error);
@@ -1644,31 +1680,33 @@ export function TicketForm({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                Categoria
-              </label>
-              <Dropdown
-                options={groupOptions}
-                width="w-full"
-                trigger={(isOpen) => (
-                  <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
-                    <span
-                      className={`text-base font-family-dm-sans ${selectedGroupId || initialGroupId
-                        ? "text-gray-12"
-                        : "text-gray-11"
-                        }`}
-                    >
-                      {selectedGroupId || initialGroupId
-                        ? selectedGroupLabel
-                        : "Sem categoria"}
-                    </span>
-                    <ArrowButton isOpen={isOpen} />
-                  </button>
-                )}
-                onSelect={(option) => setSelectedGroupId(option.id || "")}
-              />
-            </div>
+            {Array.isArray(ticketCategories) && ticketCategories.length > 0 ? (
+              <div className="flex flex-col gap-2 w-full">
+                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                  Categoria
+                </label>
+                <Dropdown
+                  options={groupOptions}
+                  width="w-full"
+                  trigger={(isOpen) => (
+                    <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
+                      <span
+                        className={`text-base font-family-dm-sans ${selectedGroupId || initialGroupId
+                          ? "text-gray-12"
+                          : "text-gray-11"
+                          }`}
+                      >
+                        {selectedGroupId || initialGroupId
+                          ? selectedGroupLabel
+                          : "Sem categoria"}
+                      </span>
+                      <ArrowButton isOpen={isOpen} />
+                    </button>
+                  )}
+                  onSelect={(option) => setSelectedGroupId(option.id || "")}
+                />
+              </div>
+            ) : null}
 
           </div>
 
@@ -1791,6 +1829,8 @@ export function TicketForm({
                     </h3>
                     {index > 0 && (
                       <button
+                        type="button"
+                        title="Remover lote"
                         onClick={() => handleRemoveBatch(batch.id)}
                         className="text-red-11 hover:text-red-12 transition-colors"
                       >
@@ -2089,7 +2129,7 @@ export function TicketForm({
                       items={products.map((p) => p.productId)}
                       strategy={rectSortingStrategy}
                     >
-                      <div className="flex flex-wrap gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3  gap-3">
                         {products.map((product) => (
                           <SortableTicketProductCard
                             key={product.productId}
@@ -2105,6 +2145,9 @@ export function TicketForm({
                                 productId: product.productId,
                                 product: product.product,
                                 ticketBatchesTotalQuantity,
+                                linkedTicketNames: ticketName.trim()
+                                  ? [ticketName.trim()]
+                                  : [],
                               });
                             }}
                             onRemove={() => {
@@ -2138,16 +2181,6 @@ export function TicketForm({
               )}
             </div>
           )}
-
-          {!hasKit ? (
-            <TicketAdvancedKitDisplayOptions
-              onEditImagePositions={() => {
-                document
-                  .getElementById("ticket-form-kit-products")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            />
-          ) : null}
         </div>
 
         {/* Footer Button */}
@@ -2184,8 +2217,7 @@ export function TicketForm({
         onSave={handleSaveDraftAndLeave}
         onLeaveWithoutSaving={() => {
           setLeavePromptOpen(false);
-          releaseUnsavedHistoryGuard();
-          router.push(backUrl);
+          leaveTicketPageAfterDiscardPrompt();
         }}
       />
 

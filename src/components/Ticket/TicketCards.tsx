@@ -37,12 +37,16 @@ export function TicketCards({
               <h4 className="text-gray-12 text-lg font-bold font-manrope">{ticket.name}</h4>
               <div className="flex gap-2">
                 <button
+                  type="button"
+                  title="Editar"
                   onClick={() => onEdit(ticket.id)}
                   className="size-8 bg-blue-2 border border-blue-6 rounded-lg flex items-center justify-center hover:bg-blue-3 transition-colors"
                 >
                   <Pencil className="size-4 text-blue-12" />
                 </button>
                 <button
+                  type="button"
+                  title="Deletar"
                   onClick={() => onDelete(ticket.id)}
                   className="size-8 bg-red-2 border border-red-6 rounded-lg flex items-center justify-center hover:bg-red-3 transition-colors"
                 >
