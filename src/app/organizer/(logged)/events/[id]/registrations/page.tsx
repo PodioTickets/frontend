@@ -97,7 +97,7 @@ function RegistrationRow({
         <div className="relative shrink-0 size-8 rounded-full overflow-hidden">
           {hasAvatar ? (
             <Image
-              src={getAvatarUrl(registration.user?.avatarUrl!)}
+              src={getAvatarUrl(registration.user?.avatarUrl ?? "") as string}
               alt={fullName || "User"}
               width={32}
               height={32}
@@ -921,7 +921,7 @@ export default function EventRegistrationsPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex gap-2 items-center min-w-0 flex-1">
                               {registration.user?.avatarUrl ? (
-                                <Image src={getAvatarUrl(registration.user.avatarUrl)} alt={fullName} width={36} height={36} className="size-9 rounded-full object-cover shrink-0" />
+                                <Image src={getAvatarUrl(registration.user.avatarUrl ?? "") as string} alt={fullName} width={36} height={36} className="size-9 rounded-full object-cover shrink-0" />
                               ) : (
                                 <div className="size-9 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
                                   <span className="text-primary-11 font-semibold text-sm">{(fullName || "U").charAt(0).toUpperCase()}</span>
