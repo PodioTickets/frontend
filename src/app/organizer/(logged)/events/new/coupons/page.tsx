@@ -131,13 +131,13 @@ export default function CouponsPage() {
 
         try {
           await organizerService.deleteCoupon(formData.createdEventId, couponId);
-          toast.success("Cupom excluído com sucesso!");
+          toast.success("Cupom deletado com sucesso!");
           loadCoupons(); // Recarregar cupons da API
         } catch (error: any) {
           console.error("Error deleting coupon:", error);
           throw error; // O modal já trata o erro
         }
-        toast.success("Cupom excluído com sucesso!");
+        toast.success("Cupom deletado com sucesso!");
       },
     });
   };
@@ -328,7 +328,7 @@ export default function CouponsPage() {
                               <button
                                 onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
                                 className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
-                                title="Excluir"
+                                title="Deletar"
                               >
                                 <TrashIcon className="size-4 text-red-12" />
                               </button>

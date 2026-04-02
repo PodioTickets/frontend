@@ -15,7 +15,7 @@ export function DeleteVoucherModal() {
         closeDeleteVoucherModal();
       } catch (error: any) {
         console.error("Error deleting voucher:", error);
-        toast.error(error.response?.data?.message || "Erro ao excluir voucher");
+        toast.error(error.response?.data?.message || "Erro ao deletar voucher");
       }
     } else {
       closeDeleteVoucherModal();
@@ -48,7 +48,7 @@ export function DeleteVoucherModal() {
                   Deletar voucher permanentemente?
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                  Esta ação remove o voucher do evento. Você só pode excluir se ele ainda não tiver sido utilizado. Depois de excluir, não será possível recuperar
+                  Esta ação remove o voucher do evento. Você só pode deletar se ele ainda não tiver sido utilizado. Depois de deletar, não será possível recuperar
                 </p>
               </div>
 

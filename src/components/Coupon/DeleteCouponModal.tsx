@@ -15,7 +15,7 @@ export function DeleteCouponModal() {
         closeDeleteCouponModal();
       } catch (error: any) {
         console.error("Error deleting coupon:", error);
-        toast.error(error.response?.data?.message || "Erro ao excluir cupom");
+        toast.error(error.response?.data?.message || "Erro ao deletar cupom");
       }
     } else {
       closeDeleteCouponModal();
@@ -48,7 +48,7 @@ export function DeleteCouponModal() {
                   Deletar cupom permanentemente?
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                  Esta ação remove o cupom do evento. Você só pode excluir se ele ainda não tiver sido utilizado. Depois de excluir, não será possível recuperar
+                  Esta ação remove o cupom do evento. Você só pode deletar se ele ainda não tiver sido utilizado. Depois de deletar, não será possível recuperar
                 </p>
               </div>
 

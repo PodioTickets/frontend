@@ -223,7 +223,6 @@ export default function EditTopicsPage() {
               : s
           );
           setSections(next);
-          await persistTopicOrder(next);
         }
         toast.success("Conteúdo padrão atualizado com sucesso!");
       } else if (isEditing && topicId) {
@@ -299,33 +298,8 @@ export default function EditTopicsPage() {
     }
   };
 
-  const reloadTopicsFromEvent = async () => {
-    if (!eventId) return;
-    const event = await organizerService.getEventById(eventId);
-    const { sections: next, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
-    defaultTopicApiIdRef.current = defaultTopicApiId;
-    setSections(next);
-  };
-
-  const handlePersistOrderWithRollback = async (reordered: TopicSectionRow[]) => {
-    if (!eventId || reordered.length === 0) return;
-    try {
-      const mapped = topicIdsInUiOrder(reordered, defaultTopicApiIdRef.current);
-      await organizerService.reorderEventTopics(eventId, mapped);
-    } catch (error: any) {
-      console.error("Error persisting topic order:", error);
-      toast.error("Erro ao salvar a ordem dos tópicos");
-      try {
-        await reloadTopicsFromEvent();
-      } catch {
-        /* ignore */
-      }
-    }
-  };
-
   const handleTopicsReorder = (reordered: TopicSectionRow[]) => {
     setSections(reordered);
-    void handlePersistOrderWithRollback(reordered);
   };
 
   const handleDeleteTopicConfirmed = async (topicId: string) => {
@@ -344,11 +318,11 @@ export default function EditTopicsPage() {
     try {
       await organizerService.deleteTopic(eventId, topicId);
       setSections((prev) => prev.filter((s) => s.id !== topicId));
-      toast.success("Tópico excluído com sucesso!");
+      toast.success("Tópico deletado com sucesso!");
     } catch (error: any) {
       console.error("Error deleting topic:", error);
       const errorMessage =
-        error.response?.data?.message || error.message || "Erro ao excluir tópico";
+        error.response?.data?.message || error.message || "Erro ao deletar tópico";
       toast.error(errorMessage);
       throw error;
     }

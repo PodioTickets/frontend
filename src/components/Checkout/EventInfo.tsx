@@ -2,7 +2,7 @@
 
 import { Button } from "../Button";
 import type { Event } from "@/interfaces/event";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { MessageIcon } from "../Icons/MessageIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
@@ -141,11 +141,15 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
   return (
     <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
       <div className="w-full h-[200px] relative">
-        <Image
+        <ImageWithInitialFallback
           src={event.bannerUrl}
           alt={event.name}
+          name={event.name}
+          fallbackId={event.id}
           fill
-          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 400px"
+          className="size-full"
+          letterClassName="text-5xl"
         />
       </div>
 

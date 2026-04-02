@@ -124,7 +124,7 @@ export const commonTranslations = {
     "common.next": "Próximo",
     "common.continue": "Continuar",
     "common.save": "Salvar",
-    "common.delete": "Excluir",
+    "common.delete": "Deletar",
     "common.edit": "Editar",
     "common.view": "Visualizar",
     "common.search": "Pesquisar",

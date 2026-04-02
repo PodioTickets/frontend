@@ -8,10 +8,25 @@ import {
 const ADMIN_AUDIT_LOGS_PATH =
   "/api/v1/organizations/admin/audit-logs";
 
+/** Listagem paginada de organizações para filtros do admin (ex.: log de auditoria). */
+const ADMIN_ORGANIZATIONS_PATH =
+  "/api/v1/organizations/admin/organizations";
+
+/** Item enxuto de `GET /api/v1/organizations/admin/organizations` (+ aninhado em audit log). */
 export interface AdminAuditOrganization {
   id: string;
   name?: string;
+  tradeName?: string;
+  document?: string | null;
+  logoUrl?: string | null;
   email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  state?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  memberCount?: number;
+  eventCount?: number;
 }
 
 export interface AdminAuditChangeDetail {
@@ -40,15 +55,87 @@ function parseOrganization(
   const o = raw as Record<string, unknown>;
   const id = typeof o.id === "string" ? o.id : "";
   if (!id) return null;
+  const name =
+    typeof o.name === "string"
+      ? o.name
+      : typeof o.organization_name === "string"
+        ? o.organization_name
+        : typeof o.organizationName === "string"
+          ? o.organizationName
+          : undefined;
+  const tradeName =
+    typeof o.tradeName === "string"
+      ? o.tradeName
+      : typeof o.trade_name === "string"
+        ? o.trade_name
+        : undefined;
+  const document =
+    typeof o.document === "string"
+      ? o.document
+      : o.document === null
+        ? null
+        : undefined;
+  const logoUrl =
+    typeof o.logoUrl === "string"
+      ? o.logoUrl
+      : typeof o.logo_url === "string"
+        ? o.logo_url
+        : o.logoUrl === null || o.logo_url === null
+          ? null
+          : undefined;
+  const emailRaw = o.email ?? o.organization_email ?? o.organizationEmail;
+  const email =
+    typeof emailRaw === "string"
+      ? emailRaw
+      : emailRaw === null
+        ? null
+        : undefined;
+  const phone =
+    typeof o.phone === "string" ? o.phone : o.phone === null ? null : undefined;
+  const city =
+    typeof o.city === "string" ? o.city : o.city === null ? null : undefined;
+  const state =
+    typeof o.state === "string"
+      ? o.state
+      : o.state === null
+        ? null
+        : undefined;
+  const createdAt =
+    typeof o.createdAt === "string"
+      ? o.createdAt
+      : typeof o.created_at === "string"
+        ? o.created_at
+        : undefined;
+  const updatedAt =
+    typeof o.updatedAt === "string"
+      ? o.updatedAt
+      : typeof o.updated_at === "string"
+        ? o.updated_at
+        : undefined;
+
+  let memberCount: number | undefined;
+  let eventCount: number | undefined;
+  const rawCount = o._count;
+  if (rawCount && typeof rawCount === "object" && !Array.isArray(rawCount)) {
+    const c = rawCount as Record<string, unknown>;
+    if (typeof c.members === "number") memberCount = c.members;
+    if (typeof c.events === "number") eventCount = c.events;
+  }
+
   return {
     id,
-    name: typeof o.name === "string" ? o.name : undefined,
-    email:
-      typeof o.email === "string"
-        ? o.email
-        : o.email === null
-          ? null
-          : undefined,
+    name,
+    tradeName,
+    document,
+    logoUrl,
+    email,
+    phone,
+    city,
+    state,
+    createdAt,
+    updatedAt,
+    memberCount,
+    eventCount,
   };
 }
 
@@ -180,8 +267,111 @@ function unwrapAuditLogsPayload(body: Record<string, unknown>): {
   return { items, pagination };
 }
 
+function unwrapOrganizationsPayload(body: Record<string, unknown>): {
+  items: unknown[];
+  pagination: OrganizationAuditLogsPagination;
+} {
+  const nested =
+    body.data != null &&
+    typeof body.data === "object" &&
+    !Array.isArray(body.data)
+      ? (body.data as Record<string, unknown>)
+      : null;
+
+  const source = nested && ("items" in nested || "organizations" in nested || "pagination" in nested)
+    ? nested
+    : body;
+
+  const rawItems = Array.isArray(source.organizations)
+    ? source.organizations
+    : Array.isArray(source.items)
+      ? source.items
+      : [];
+
+  const p = source.pagination;
+  const paginationObj =
+    p && typeof p === "object" && !Array.isArray(p)
+      ? (p as Record<string, unknown>)
+      : {};
+
+  const page = typeof paginationObj.page === "number" ? paginationObj.page : 1;
+  const limit =
+    typeof paginationObj.limit === "number" ? paginationObj.limit : 20;
+
+  const pagination: OrganizationAuditLogsPagination = {
+    page,
+    limit,
+    total: typeof paginationObj.total === "number" ? paginationObj.total : 0,
+    totalPages: Math.max(
+      1,
+      typeof paginationObj.totalPages === "number"
+        ? paginationObj.totalPages
+        : 1
+    ),
+  };
+
+  return { items: rawItems, pagination };
+}
+
 export class AdminService {
   constructor(private apiClient: ApiClient) {}
+
+  async getAdminOrganizations(params?: {
+    page?: number;
+    limit?: number;
+    q?: string;
+  }): Promise<{
+    items: AdminAuditOrganization[];
+    pagination: OrganizationAuditLogsPagination;
+  }> {
+    const { page = 1, limit = 20, q } = params || {};
+    const safeLimit = Math.min(100, Math.max(1, limit));
+
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      ADMIN_ORGANIZATIONS_PATH,
+      {
+        params: {
+          page,
+          limit: safeLimit,
+          ...(q?.trim() ? { q: q.trim() } : {}),
+        },
+      }
+    );
+
+    const body =
+      res.data && typeof res.data === "object" && !Array.isArray(res.data)
+        ? (res.data as Record<string, unknown>)
+        : {};
+
+    const { items: rawItems, pagination } = unwrapOrganizationsPayload(body);
+
+    const items: AdminAuditOrganization[] = [];
+    for (const raw of rawItems) {
+      const o =
+        raw && typeof raw === "object" && !Array.isArray(raw)
+          ? (raw as Record<string, unknown>)
+          : null;
+      if (!o) continue;
+      const id =
+        (typeof o.id === "string" && o.id) ||
+        (typeof o.organization_id === "string" && o.organization_id) ||
+        (typeof o.organizationId === "string" && o.organizationId) ||
+        "";
+      if (!id) continue;
+      const parsed = parseOrganization({ ...o, id });
+      if (parsed) items.push(parsed);
+    }
+
+    return {
+      items,
+      pagination: {
+        page: pagination.page ?? page,
+        limit: pagination.limit ?? safeLimit,
+        total: pagination.total ?? 0,
+        totalPages: Math.max(1, pagination.totalPages ?? 1),
+      },
+    };
+  }
 
   async getAuditLogs(params?: {
     q?: string;
@@ -191,6 +381,8 @@ export class AdminService {
     limit?: number;
     organizationId?: string;
     userId?: string;
+    /** Busca por nome (ou texto) do usuário quando não for UUID. */
+    userSearch?: string;
     kind?: string;
   }): Promise<{
     items: AdminAuditLogItem[];
@@ -204,6 +396,7 @@ export class AdminService {
       to,
       organizationId,
       userId,
+      userSearch,
       kind,
     } = params || {};
 
@@ -218,6 +411,7 @@ export class AdminService {
           ...(to ? { to } : {}),
           ...(organizationId ? { organizationId } : {}),
           ...(userId ? { userId } : {}),
+          ...(userSearch?.trim() ? { userSearch: userSearch.trim() } : {}),
           ...(kind?.trim() ? { kind: kind.trim() } : {}),
         },
       }

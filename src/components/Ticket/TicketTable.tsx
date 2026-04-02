@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import type { Ticket } from "@/hooks/useTickets";
@@ -131,32 +131,34 @@ function DraggableTicketRow({
                 className="flex h-9 items-start max-w-[36.5px] overflow-clip rounded-md w-[36px]"
               >
                 <div className="relative size-9 rounded-md border-[0.537px] border-gray-6 overflow-hidden bg-gray-3">
-                  {product.image ? (
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-cover rounded-md"
-                    />
-                  ) : (
-                    <div className="h-full w-full rounded-md overflow-hidden flex items-center justify-center text-gray-11 text-base font-semibold font-family-dm-sans">
-                      {product.name.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
+                  <ImageWithInitialFallback
+                    src={product.image}
+                    alt={product.name}
+                    name={product.name}
+                    fallbackId={product.id}
+                    fill
+                    sizes="36px"
+                    className="size-full rounded-md"
+                    letterClassName="text-base font-semibold"
+                  />
                 </div>
               </div>
             ))}
             {remainingCount > 0 && (
               <div className="flex h-9 items-start max-w-[36.5px] overflow-clip rounded-[2.15px] w-[36.5px] relative">
                 <div className="relative size-9 rounded-[2.15px] border-[0.537px] border-gray-6 overflow-hidden bg-gray-3">
-                  {ticketProducts.length > 0 && ticketProducts[ticketProducts.length - 1]?.image && (
-                    <Image
-                      src={ticketProducts[ticketProducts.length - 1].image!}
+                  {ticketProducts.length > 0 ? (
+                    <ImageWithInitialFallback
+                      src={ticketProducts[ticketProducts.length - 1]?.image}
                       alt=""
+                      name={ticketProducts[ticketProducts.length - 1]?.name ?? ""}
+                      fallbackId={ticketProducts[ticketProducts.length - 1]?.id}
                       fill
-                      className="object-cover rounded-[2.15px]"
+                      sizes="36px"
+                      className="size-full rounded-[2.15px]"
+                      letterClassName="text-base font-semibold"
                     />
-                  )}
+                  ) : null}
                   <div className="absolute inset-0 bg-black/80 rounded-[2.15px]" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="flex items-center gap-[2.3px]">
@@ -182,11 +184,19 @@ function DraggableTicketRow({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
+            if (isThisRowDuplicating) return;
             onEdit(ticket.id);
           }}
-          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+          disabled={isThisRowDuplicating}
+          aria-busy={isThisRowDuplicating}
+          title="Editar ingresso"
+          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-gray-2"
         >
-          <Pencil className="size-5 text-gray-11" />
+          {isThisRowDuplicating ? (
+            <DuplicateRowSpinner />
+          ) : (
+            <Pencil className="size-5 text-gray-11" />
+          )}
         </button>
         <button
           type="button"

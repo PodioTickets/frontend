@@ -21,6 +21,7 @@ import { FacebookIcon } from "../Icons/FacebookIcon";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { UserIcon } from "../Icons/UserIcon";
 import { getAvatarUrl } from "@/utils/avatar";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
   const { language, setLanguage } = useLanguage();
@@ -73,6 +74,12 @@ export function Header() {
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();
+
+  const userDisplayName = useMemo(() => {
+    if (!user) return "";
+    const full = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+    return full || user.email || "Usuário";
+  }, [user]);
 
   const searchResults = useMemo(() => {
     if (search.trim().length === 0) return [];
@@ -137,14 +144,14 @@ export function Header() {
         <div className="max-w-[1280px] h-full w-full flex items-center justify-between gap-2 md:gap-4 md:px-0">
           <div className="flex items-center gap-2 md:gap-8 h-full shrink-0">
             <Link href="/" className="flex items-center">
-              <div className="size-8 md:w-8 md:h-8 rounded-full flex items-center justify-center">
+              <div className="size-8 md:w-8 md:h-8 overflow-hidden relative shrink-0">
                 <Image
                   src="/images/logo.png"
-                  alt="Logo"
-                  width={10000}
-                  height={10000}
+                  alt="PódioTicket"
+                  fill
+                  sizes="32px"
                   priority
-                  className="size-8 md:w-8 md:h-8"
+                  className="size-full"
                 />
               </div>
             </Link>
@@ -186,19 +193,21 @@ export function Header() {
               <Dropdown
                 trigger={(isOpen) => (
                   <div className="flex items-center gap-2 cursor-pointer h-full text-gray-2">
-                    {user?.avatarUrl ? (
-                      <Image
-                        src={getAvatarUrl(user.avatarUrl)}
-                        alt="User"
-                        width={40}
-                        height={40}
-                        className="size-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="size-10 rounded-full bg-primary-10 text-gray-12 uppercase flex items-center justify-center font-semibold text-base">
-                        {(user as any).firstName?.charAt(0)}
-                      </div>
-                    )}
+                    <ImageWithInitialFallback
+                      src={
+                        user.avatarUrl?.trim()
+                          ? getAvatarUrl(user.avatarUrl)
+                          : null
+                      }
+                      alt={userDisplayName}
+                      name={userDisplayName}
+                      fallbackId={user.id}
+                      width={40}
+                      height={40}
+                      className="size-10 rounded-full shrink-0 overflow-hidden bg-primary-10"
+                      imgClassName="object-cover rounded-full"
+                      letterClassName="text-base font-semibold text-gray-12 uppercase"
+                    />
                     <ArrowButton isOpen={isOpen} />
                   </div>
                 )}
@@ -271,20 +280,20 @@ export function Header() {
               <div className="w-6 h-5 flex flex-col items-center justify-center gap-1.5 relative">
                 <span
                   className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                      ? "bg-gray-4 rotate-45 translate-y-[10px]"
-                      : "bg-gray-4"
+                    ? "bg-gray-4 rotate-45 translate-y-[10px]"
+                    : "bg-gray-4"
                     }`}
                 />
                 <span
                   className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                      ? "opacity-0 scale-0"
-                      : "bg-gray-4 opacity-100 scale-100"
+                    ? "opacity-0 scale-0"
+                    : "bg-gray-4 opacity-100 scale-100"
                     }`}
                 />
                 <span
                   className={`w-6 h-[2px] rounded-full transition-all duration-300 ease-in-out ${mobileMenuOpen
-                      ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
-                      : "bg-gray-4"
+                    ? "bg-gray-4 -rotate-45 -translate-y-[6px]"
+                    : "bg-gray-4"
                     }`}
                 />
               </div>
@@ -316,13 +325,16 @@ export function Header() {
             >
               {/* Header */}
               <div className="bg-[#191919] border-b-2 border-[#3a3a3a] flex items-center justify-between p-4 h-[64px] shrink-0">
-                <Link href="/" className="h-5">
-                  <Image
+                <Link href="/" className="h-5 w-[117px] shrink-0 block relative">
+                  <ImageWithInitialFallback
                     src="/images/logo_horizontal.png"
                     alt="PodioTicket"
-                    width={117}
-                    height={20}
-                    className="h-5 w-auto"
+                    name="Pódio"
+                    fill
+                    sizes="120px"
+                    className="size-full"
+                    imgClassName="object-contain object-left"
+                    letterClassName="text-sm font-bold text-[#EEE]"
                   />
                 </Link>
                 <button

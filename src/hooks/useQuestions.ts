@@ -72,11 +72,11 @@ export function useQuestions(eventId: string | null, enabled: boolean = true) {
     },
     onSuccess: () => {
       invalidateQueries.events.questions(eventId!);
-      toast.success("Pergunta excluída com sucesso!");
+      toast.success("Pergunta deletada com sucesso!");
     },
     onError: (error: any) => {
       console.error("Error deleting question:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir pergunta");
+      toast.error(error.response?.data?.message || "Erro ao deletar pergunta");
     },
   });
 

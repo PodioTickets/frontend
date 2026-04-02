@@ -65,7 +65,7 @@ export default function CouponsPage() {
   // Carregar dados do evento
   useEffect(() => {
     if (!authChecked || !eventId) return;
-    
+
     const loadEvent = async () => {
       try {
         const eventData = await organizerService.getEventById(eventId);
@@ -144,7 +144,7 @@ export default function CouponsPage() {
 
         try {
           await organizerService.deleteCoupon(eventId, couponId);
-          toast.success("Cupom excluído com sucesso!");
+          toast.success("Cupom deletado com sucesso!");
           loadCoupons();
         } catch (error: any) {
           console.error("Error deleting coupon:", error);
@@ -375,7 +375,7 @@ export default function CouponsPage() {
                                   <button
                                     onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
                                     className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
-                                    title="Excluir"
+                                    title="Deletar"
                                   >
                                     <TrashIcon className="size-4 text-red-12" />
                                   </button>

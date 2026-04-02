@@ -4,15 +4,14 @@ import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { queryKeys, invalidateQueries } from "@/services/cache/QueryClient";
 import toast from "react-hot-toast";
 
+/** Referência estável — evita novo `[]` a cada render quando `data` é undefined (loops em useEffect). */
+const EMPTY_CATEGORIES: ModalityGroup[] = [];
+
 export function useTicketCategories(eventId: string | null, enabled: boolean = true) {
   const queryClient = useQueryClient();
 
   // Query para buscar categorias
-  const {
-    data: categories = [],
-    isLoading,
-    error,
-  } = useQuery<ModalityGroup[]>({
+  const { data, isLoading, error } = useQuery<ModalityGroup[]>({
     queryKey: queryKeys.events.ticketCategories(eventId || ""),
     queryFn: async () => {
       if (!eventId) return [];
@@ -22,14 +21,13 @@ export function useTicketCategories(eventId: string | null, enabled: boolean = t
     enabled: enabled && !!eventId,
   });
 
+  const categories = data ?? EMPTY_CATEGORIES;
+
   // Mutation para criar categoria
   const createMutation = useMutation({
-    mutationFn: async ({ name, order }: { name: string; order?: number }) => {
+    mutationFn: async ({ name }: { name: string }) => {
       if (!eventId) throw new Error("Event ID is required");
-      return organizerService.createTicketCategory(eventId, {
-        name,
-        order: order ?? categories.length,
-      });
+      return organizerService.createTicketCategory(eventId, { name });
     },
     onSuccess: () => {
       invalidateQueries.events.ticketCategories(eventId!);
@@ -71,11 +69,11 @@ export function useTicketCategories(eventId: string | null, enabled: boolean = t
     },
     onSuccess: () => {
       invalidateQueries.events.ticketCategories(eventId!);
-      toast.success("Categoria excluída com sucesso!");
+      toast.success("Categoria deletada com sucesso!");
     },
     onError: (error: any) => {
       console.error("Error deleting category:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir categoria");
+      toast.error(error.response?.data?.message || "Erro ao deletar categoria");
     },
   });
 
@@ -83,8 +81,7 @@ export function useTicketCategories(eventId: string | null, enabled: boolean = t
     categories,
     loading: isLoading,
     error,
-    createCategory: (name: string, order?: number) =>
-      createMutation.mutateAsync({ name, order }),
+    createCategory: (name: string) => createMutation.mutateAsync({ name }),
     updateCategory: (categoryId: string, data: { name?: string; order?: number; description?: string }) =>
       updateMutation.mutateAsync({ categoryId, data }),
     deleteCategory: (categoryId: string) => deleteMutation.mutateAsync(categoryId),

@@ -228,7 +228,6 @@ export default function TopicosPage() {
               : s
           );
           setSections(next);
-          await persistTopicOrder(next);
         }
         toast.success("Conteúdo padrão atualizado com sucesso!");
       } else if (isEditing && topicId) {
@@ -308,34 +307,8 @@ export default function TopicosPage() {
     }
   };
 
-  const reloadTopicsFromEvent = async () => {
-    if (!formData.createdEventId) return;
-    const event = await organizerService.getEventById(formData.createdEventId);
-    const { sections: next, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
-    defaultTopicApiIdRef.current = defaultTopicApiId;
-    setSections(next);
-  };
-
-  const handlePersistOrderWithRollback = async (reordered: TopicSectionRow[]) => {
-    if (!formData.createdEventId || reordered.length === 0) return;
-    const eventId = formData.createdEventId;
-    try {
-      const mapped = topicIdsInUiOrder(reordered, defaultTopicApiIdRef.current);
-      await organizerService.reorderEventTopics(eventId, mapped);
-    } catch (error: any) {
-      console.error("Error persisting topic order:", error);
-      toast.error("Erro ao salvar a ordem dos tópicos");
-      try {
-        await reloadTopicsFromEvent();
-      } catch {
-        /* ignore */
-      }
-    }
-  };
-
   const handleTopicsReorder = (reordered: TopicSectionRow[]) => {
     setSections(reordered);
-    void handlePersistOrderWithRollback(reordered);
   };
 
   const handleDeleteTopicConfirmed = async (topicId: string) => {
@@ -354,10 +327,10 @@ export default function TopicosPage() {
     try {
       await organizerService.deleteTopic(formData.createdEventId, topicId);
       setSections((prev) => prev.filter((s) => s.id !== topicId));
-      toast.success("Tópico excluído com sucesso!");
+      toast.success("Tópico deletado com sucesso!");
     } catch (error: any) {
       console.error("Error deleting topic:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Erro ao excluir tópico";
+      const errorMessage = error.response?.data?.message || error.message || "Erro ao deletar tópico";
       toast.error(errorMessage);
       throw error;
     }

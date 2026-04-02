@@ -202,12 +202,6 @@ export class UserService {
     }
   }
 
-  /**
-   * Verifica se documento (CPF) pode ser usado no cadastro.
-   * GET /api/v1/auth/document/availability?documentNumber=...&excludeUserId=...
-   * Resposta esperada (flexível): { available: boolean, message? } ou { data: { ... } }.
-   * 404 na rota = endpoint ausente (não bloqueia; confiar no erro do register/patch).
-   */
   async checkDocumentNumberAvailability(
     documentNumber: string,
     options?: { excludeUserId?: string }
@@ -498,6 +492,20 @@ export class UserService {
 
   isAuthenticated(): boolean {
     return !!this.apiClient.getAccessToken();
+  }
+
+  /**
+   * Remove tokens e cache de usuário no cliente sem chamar a API.
+   * Usado ao entrar no fluxo de auth do organizador para não misturar sessão de participante
+   * (evita corrida com getProfile do AuthProvider).
+   */
+  clearLocalSession(): void {
+    try {
+      localStorage.removeItem("user");
+    } catch {
+      /* ignore */
+    }
+    this.apiClient.clearTokens();
   }
 
   async resetPassword(data: {

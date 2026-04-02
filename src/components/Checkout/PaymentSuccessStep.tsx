@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { ArrowLeft, ChevronDown, Download } from "lucide-react";
 import { Button } from "../Button";
 import { SuccessIcon } from "../Icons/SuccessIcon";
@@ -608,11 +609,15 @@ export function PaymentSuccessStep({
                                       <div className="flex flex-1 gap-3 items-center w-full">
                                         {/* Imagem do produto */}
                                         <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
-                                          <Image
-                                            src={(product as any).image || "/images/camisa.png"}
+                                          <ImageWithInitialFallback
+                                            src={(product as any).image}
                                             alt={product.name}
+                                            name={product.name}
+                                            fallbackId={String(idx)}
                                             fill
-                                            className="object-cover rounded-lg"
+                                            sizes="100px"
+                                            className="size-full rounded-lg"
+                                            letterClassName="text-2xl font-semibold"
                                           />
                                         </div>
                                         {/* Nome e informações do produto */}
@@ -1089,11 +1094,15 @@ export function PaymentSuccessStep({
                                       <div className="flex flex-1 gap-3 items-center w-full">
                                         {/* Imagem do produto */}
                                         <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
-                                          <Image
-                                            src={(product as any).image || "/images/camisa.png"}
+                                          <ImageWithInitialFallback
+                                            src={(product as any).image}
                                             alt={product.name}
+                                            name={product.name}
+                                            fallbackId={String(idx)}
                                             fill
-                                            className="object-cover rounded-lg"
+                                            sizes="100px"
+                                            className="size-full rounded-lg"
+                                            letterClassName="text-2xl font-semibold"
                                           />
                                         </div>
                                         {/* Nome e informações do produto */}

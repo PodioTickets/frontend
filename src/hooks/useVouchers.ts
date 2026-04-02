@@ -75,11 +75,11 @@ export function useVouchers(
     },
     onSuccess: () => {
       invalidateQueries.events.vouchers(eventId!);
-      toast.success("Voucher excluído com sucesso!");
+      toast.success("Voucher deletado com sucesso!");
     },
     onError: (error: any) => {
       console.error("Error deleting voucher:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir voucher");
+      toast.error(error.response?.data?.message || "Erro ao deletar voucher");
     },
   });
 

@@ -449,7 +449,7 @@ export default function EventPage() {
                     {section.title}
                   </h2>
                   <div
-                    className={`text-sm text-gray-11 mb-3 prose prose-sm max-w-none ${!isExpanded && shouldTruncate ? "line-clamp-3" : ""}`}
+                    className={`topic-rich-html text-sm text-gray-11 mb-3 prose prose-sm max-w-none ${!isExpanded && shouldTruncate ? "line-clamp-3" : ""}`}
                     dangerouslySetInnerHTML={{ __html: section.content }}
                   />
                   {shouldTruncate && (
@@ -868,7 +868,7 @@ export default function EventPage() {
                       {section.title}
                     </h1>
                     <div
-                      className="text-gray-11 text-sm prose prose-sm max-w-none"
+                      className="topic-rich-html text-gray-11 text-sm prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: section.content }}
                     />
                   </div>

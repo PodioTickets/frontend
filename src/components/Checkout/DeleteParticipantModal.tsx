@@ -95,7 +95,7 @@ export function DeleteParticipantModal() {
                   </p>
                   <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center max-w-[400px]">
                     Ao remover este participante, todos os ingressos e produtos
-                    vinculados a ele serão excluídos do seu pedido. O valor
+                    vinculados a ele serão deletados do seu pedido. O valor
                     total será atualizado antes do pagamento.
                   </p>
                 </div>

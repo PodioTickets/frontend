@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { MapPin, Calendar, Clock, Navigation } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
@@ -97,7 +97,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     ? ticket.event.imageUrl.startsWith("http")
       ? ticket.event.imageUrl
       : `${getApiClient().getBaseURL()}${ticket.event.imageUrl}`
-    : "/banners/card_placeholder.png";
+    : null;
 
   return (
     <div
@@ -109,14 +109,15 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     >
       {/* Image */}
       <div className="relative aspect-square w-full shrink-0 rounded-t-lg overflow-hidden bg-gray-4">
-        <Image
+        <ImageWithInitialFallback
           src={imageUrl}
           alt={ticket.event.name}
+          name={ticket.event.name}
+          fallbackId={ticket.event.id}
           fill
-          className="object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "/banners/card_placeholder.png";
-          }}
+          sizes="(max-width: 768px) 100vw, 300px"
+          className="size-full"
+          letterClassName="text-5xl font-bold"
         />
       </div>
 
@@ -138,13 +139,15 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
         <div className="flex flex-col gap-3 items-start px-3 w-full">
           {/* Modality */}
           <div className="flex gap-1 items-center w-full">
-            <Image
-              src={
-                ticket.modality?.icon || "/icons-3d/Icon3D-corrida-de-rua.webp"
-              }
+            <ImageWithInitialFallback
+              src={ticket.modality?.icon || "/icons-3d/Icon3D-corrida-de-rua.webp"}
               alt={ticket.modality.name}
+              name={ticket.modality.name}
               width={20}
               height={20}
+              className="shrink-0"
+              imgClassName="object-contain"
+              letterClassName="text-[10px]"
             />
             <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans line-clamp-1">
               {ticket.modality.name}

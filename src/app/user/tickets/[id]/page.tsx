@@ -314,7 +314,7 @@ export default function TicketDetailsPage() {
                       <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
                         {participant.avatarUrl ? (
                           <Image
-                            src={getAvatarUrl(participant.avatarUrl)}
+                            src={getAvatarUrl(participant.avatarUrl || "") as string}
                             alt="Avatar"
                             width={40}
                             height={40}

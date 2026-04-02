@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/utils/cn";
 import Image from "next/image";
 
@@ -8,20 +8,57 @@ interface TooltipProps {
   children: React.ReactNode;
   content: React.ReactNode;
   className?: string;
-  position?: "top" | "bottom" | "left" | "right" | "topRight";
+  /** Classes do painel interno (largura, padding, fundo, etc.) */
+  contentClassName?: string;
+  position?: "top" | "bottom" | "left" | "right" | "topRight" | "bottomLeft";
   trigger?: "hover" | "click";
+  /**
+   * Hover com botões/links: atraso ao sair para dar tempo de mover o cursor até o painel.
+   */
+  interactiveHover?: boolean;
+  leaveDelayMs?: number;
+  /** Modo controlado (útil para fechar após “Concluir” em conteúdo interativo) */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function Tooltip({
   children,
   content,
   className,
+  contentClassName,
   position = "topRight",
   trigger = "hover",
+  interactiveHover = false,
+  leaveDelayMs = 200,
+  open: openControlled,
+  onOpenChange,
 }: TooltipProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isControlled = openControlled !== undefined;
+  const isOpen = isControlled ? openControlled : internalOpen;
+
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (!isControlled) {
+        setInternalOpen(next);
+      }
+      onOpenChange?.(next);
+    },
+    [isControlled, onOpenChange]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (leaveTimerRef.current) {
+        clearTimeout(leaveTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,7 +66,7 @@ export function Tooltip({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        setOpen(false);
       }
     };
 
@@ -40,31 +77,46 @@ export function Tooltip({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, trigger]);
+  }, [isOpen, trigger, setOpen]);
 
   const positionClasses = {
     top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
     bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
+    bottomLeft: "top-full left-0",
     left: "right-full top-1/2 -translate-y-1/2 mr-2",
     right: "left-full top-1/2 -translate-y-1/2 ml-2",
     topRight: "bottom-full left-0 ml-4",
   };
 
+  const clearLeaveTimer = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+  };
+
   const handleMouseEnter = () => {
+    clearLeaveTimer();
     if (trigger === "hover") {
-      setIsOpen(true);
+      setOpen(true);
     }
   };
 
   const handleMouseLeave = () => {
-    if (trigger === "hover") {
-      setIsOpen(false);
+    if (trigger !== "hover") return;
+    if (interactiveHover) {
+      leaveTimerRef.current = setTimeout(() => {
+        setOpen(false);
+        leaveTimerRef.current = null;
+      }, leaveDelayMs);
+    } else {
+      setOpen(false);
     }
   };
 
   const handleClick = () => {
     if (trigger === "click") {
-      setIsOpen(!isOpen);
+      setOpen(!isOpen);
     }
   };
 
@@ -80,10 +132,24 @@ export function Tooltip({
       {isOpen && (
         <div
           ref={tooltipRef}
-          className={cn("absolute z-50", positionClasses[position])}
+          className={cn(
+            "absolute z-50",
+            positionClasses[position],
+            interactiveHover &&
+              (position === "bottomLeft" || position === "bottom"
+                ? "pt-2 -mt-2"
+                : position === "topRight" || position === "top"
+                  ? "pb-2 -mb-2"
+                  : "")
+          )}
           style={{ pointerEvents: "none" }}
         >
-          <div className="bg-gray-1 flex flex-col gap-6 items-center px-3 py-4 rounded-bl-[4px] rounded-br-2xl rounded-tl-2xl rounded-tr-2xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-[236px] pointer-events-auto">
+          <div
+            className={cn(
+              "bg-gray-1 flex flex-col gap-6 items-center px-3 py-4 rounded-bl-[4px] rounded-br-2xl rounded-tl-2xl rounded-tr-2xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-[236px] pointer-events-auto",
+              contentClassName
+            )}
+          >
             {content}
           </div>
         </div>

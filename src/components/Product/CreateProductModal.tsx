@@ -9,7 +9,7 @@ import { X, Plus, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { TrashIcon } from "../Icons/TrashIcon";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { ArrowButton } from "../ArrowButton";
 import { Dropdown } from "../Dropdown";
 import { organizerService } from "@/services";
@@ -26,6 +26,36 @@ interface ProductVariation {
   name: string;
   price: string;
   stock: string;
+}
+
+/** Lê campos da API (camelCase ou snake_case) para o formulário de edição. */
+function buyerVariationEditStateFromApiProduct(p: Record<string, unknown> | null | undefined): {
+  allowed: boolean;
+  deadlineDays: string;
+} {
+  if (!p || typeof p !== "object") {
+    return { allowed: false, deadlineDays: "30" };
+  }
+  const rawAllowed =
+    p.buyerVariationEditAllowed ?? p.buyer_variation_edit_allowed;
+  const allowed =
+    rawAllowed === true ||
+    rawAllowed === "true" ||
+    rawAllowed === 1 ||
+    rawAllowed === "1";
+  const rawDays =
+    p.variationEditDeadlineDays ?? p.variation_edit_deadline_days;
+  const n =
+    typeof rawDays === "number" && Number.isFinite(rawDays)
+      ? rawDays
+      : parseInt(String(rawDays ?? "").replace(/\D/g, ""), 10);
+  if (!allowed) {
+    return { allowed: false, deadlineDays: "30" };
+  }
+  if (Number.isFinite(n) && n >= 0) {
+    return { allowed: true, deadlineDays: String(n) };
+  }
+  return { allowed: true, deadlineDays: "30" };
 }
 
 export function CreateProductModal() {
@@ -52,6 +82,15 @@ export function CreateProductModal() {
   const isEditing = data?.productId !== undefined;
   const eventId = data?.eventId;
 
+  /** Estoque inicial de cada variação nova: soma das vagas de todos os lotes do ingresso (vem do modal). */
+  const defaultVariationStockFromBatches = useMemo(() => {
+    const raw = data?.ticketBatchesTotalQuantity;
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return String(Math.max(0, Math.floor(raw)));
+    }
+    return "0";
+  }, [data?.ticketBatchesTotalQuantity]);
+
   const filledVariationsCount = variations.filter((v) => v.name.trim()).length;
   /** Criar: no mínimo 2 nomes preenchidos. Editar: no mínimo 1 (produtos legados). */
   const hasMinVariations = isEditing
@@ -67,28 +106,47 @@ export function CreateProductModal() {
     return s;
   };
 
-  /** Prévia do dropdown: acréscimo sobre a base quando a variação ≥ base; se a variação for menor, mostra o preço total. */
+  /** Campo «preço específico» com valor numérico ≠ 0 (vazio ou 0 / 0,00 = sem preço específico na prévia). */
+  const variationHasMeaningfulSpecificPrice = (price: string | undefined) => {
+    const s = String(price ?? "").trim();
+    if (s === "") return false;
+    const n = parseFloat(s.replace(",", "."));
+    return Number.isFinite(n) && n !== 0;
+  };
+
+  /** Alguma variação com preço específico realmente diferente de zero. */
+  const anyVariationHasSpecificPrice = useMemo(
+    () => variations.some((v) => variationHasMeaningfulSpecificPrice(v.price)),
+    [variations],
+  );
+
+  /**
+   * Prévia do dropdown: sem nenhum preço específico (> 0), não exibe preço nas linhas.
+   * Com pelo menos um: nas demais variações mostra o preço base;
+   * onde há preço específico, acréscimo sobre a base (≥ base) ou total (< base).
+   */
   const previewVariationListPriceLabel = useCallback(
-    (variationPriceStr: string) => {
-      const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
-      const v =
-        parseFloat(String(variationPriceStr || "0").replace(",", ".")) || 0;
-      const hasExplicitVariationPrice =
-        String(variationPriceStr ?? "").trim() !== "";
+    (variationPriceStr: string): string | undefined => {
       const fmt = (n: number) =>
         n.toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
-      if (!hasExplicitVariationPrice) {
-        return `R$ ${fmt(0)}`;
+      if (!anyVariationHasSpecificPrice) {
+        return undefined;
       }
+      const base = parseFloat(String(basePrice || "0").replace(",", ".")) || 0;
+      if (!variationHasMeaningfulSpecificPrice(variationPriceStr)) {
+        return `R$ ${fmt(base)}`;
+      }
+      const v =
+        parseFloat(String(variationPriceStr || "0").replace(",", ".")) || 0;
       if (v < base) {
         return `R$ ${fmt(v)}`;
       }
       return `R$ ${fmt(Math.max(0, v - base))}`;
     },
-    [basePrice],
+    [anyVariationHasSpecificPrice, basePrice],
   );
 
   const productPreviewDropdownOptions = useMemo(
@@ -110,6 +168,8 @@ export function CreateProductModal() {
         basePrice,
         isRequired,
         variationTypeName: variationTypeName.trim(),
+        buyerCanEditVariation,
+        variationChangeDeadlineDays,
         variations: variations.map((v) => ({
           name: v.name.trim(),
           price: v.price,
@@ -123,6 +183,8 @@ export function CreateProductModal() {
       basePrice,
       isRequired,
       variationTypeName,
+      buyerCanEditVariation,
+      variationChangeDeadlineDays,
       variations,
     ],
   );
@@ -156,20 +218,11 @@ export function CreateProductModal() {
           }))
           : [],
       );
-      const rawP = p as Record<string, unknown>;
-      const allowed =
-        rawP.buyerVariationEditAllowed === true ||
-        rawP.allowBuyerVariationEdit === true;
-      const daysRaw =
-        rawP.variationEditDeadlineDays ?? rawP.variationChangeDeadlineDays;
-      const daysNum =
-        typeof daysRaw === "number" && Number.isFinite(daysRaw)
-          ? Math.max(0, Math.floor(daysRaw))
-          : typeof daysRaw === "string" && /^\d+$/.test(daysRaw.trim())
-            ? Math.max(0, parseInt(daysRaw, 10))
-            : 30;
-      setBuyerCanEditVariation(Boolean(allowed));
-      setVariationChangeDeadlineDays(String(daysNum));
+      const buyerEdit = buyerVariationEditStateFromApiProduct(
+        p as Record<string, unknown>,
+      );
+      setBuyerCanEditVariation(buyerEdit.allowed);
+      setVariationChangeDeadlineDays(buyerEdit.deadlineDays);
     } else {
       // Create mode: 1ª variação "Padrão" + estoque = soma dos lotes; 2ª vazia (obrigatório nome para habilitar salvar)
       setProductName("");
@@ -178,18 +231,13 @@ export function CreateProductModal() {
       setBasePrice("");
       setIsRequired(true);
       setVariationTypeName("");
-      const sumFromTicket =
-        typeof data?.ticketBatchesTotalQuantity === "number" &&
-          Number.isFinite(data.ticketBatchesTotalQuantity)
-          ? Math.max(0, Math.floor(data.ticketBatchesTotalQuantity))
-          : 0;
       const t = Date.now();
       setVariations([
         {
           id: `${t}-a`,
           name: "Padrão",
           price: "",
-          stock: String(sumFromTicket),
+          stock: defaultVariationStockFromBatches,
         },
         {
           id: `${t}-b`,
@@ -202,7 +250,7 @@ export function CreateProductModal() {
       setVariationChangeDeadlineDays("30");
     }
     setFormInitVersion((v) => v + 1);
-  }, [isOpen, isEditing, data]);
+  }, [isOpen, isEditing, data, defaultVariationStockFromBatches]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -240,7 +288,7 @@ export function CreateProductModal() {
       id: Date.now().toString(),
       name: "",
       price: "",
-      stock: "",
+      stock: defaultVariationStockFromBatches,
     };
     setVariations([...variations, newVariation]);
   };
@@ -326,7 +374,7 @@ export function CreateProductModal() {
           ? 30
           : Math.max(0, Number.isFinite(daysParsed) ? daysParsed : 30)
         : 0;
-      const productData = {
+      const baseProductPayload = {
         name: productName.trim(),
         image: productImage,
         isIncludedInTicket,
@@ -347,10 +395,10 @@ export function CreateProductModal() {
         buyerVariationEditAllowed: buyerCanEditVariation,
         variationEditDeadlineDays: buyerCanEditVariation ? deadlineDays : 0,
       };
+      const productData = baseProductPayload;
 
       let savedProduct;
       if (isEditing && data?.productId) {
-        // Atualizar produto existente
         savedProduct = await organizerService.updateProduct(
           eventId,
           data.productId,
@@ -385,18 +433,6 @@ export function CreateProductModal() {
       setIsSubmitting(false);
     }
   };
-
-  const previewPrice =
-    variations.length > 0 &&
-      variations.some(
-        (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
-      )
-      ? variations.find(
-        (v) => parseFloat(String(v.price || "0").replace(",", ".")) > 0,
-      )?.price ||
-      basePrice ||
-      "0,00"
-      : basePrice || "0,00";
 
   return (
     <AnimatePresence>
@@ -455,11 +491,14 @@ export function CreateProductModal() {
                       {productImage ? (
                         <div className="border-2 border-gray-6 border-dashed rounded-xl p-6 flex gap-6 items-center w-full">
                           <div className="relative rounded-2xl shrink-0 size-[120px] overflow-hidden">
-                            <Image
+                            <ImageWithInitialFallback
                               src={productImage}
                               alt="Product preview"
+                              name={productName || "Produto"}
                               fill
-                              className="object-cover"
+                              sizes="120px"
+                              className="size-full"
+                              letterClassName="text-4xl font-semibold"
                             />
                           </div>
                           <div className="flex flex-1 flex-col gap-6">
@@ -765,7 +804,7 @@ export function CreateProductModal() {
                                   Incluso
                                 </span>
                               ) : (
-                                <div className="flex gap-0.5 items-center text-sm font-semibold font-inter text-gray-11 cursor-not-allowed">
+                                <div className="flex gap-0.5 items-center text-sm font-semibold font-inter text-gray-12">
                                   <span>R$</span>
                                   <input
                                     type="text"
@@ -776,7 +815,7 @@ export function CreateProductModal() {
                                         e.target.value,
                                       )
                                     }
-                                    className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-11 focus:outline-none focus:border-0 cursor-not-allowed"
+                                    className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:border-0"
                                     placeholder="0,00"
                                   />
                                 </div>
@@ -826,7 +865,6 @@ export function CreateProductModal() {
 
                   {/* Right Column - Preview */}
                   <div className="shrink-0 flex flex-col gap-4 sticky top-5">
-                    {/* Edição de variação pelo comprador — Figma node 2898:109765 */}
                     <div className="flex flex-col gap-5 w-full">
                       <div className="flex flex-col gap-3">
                         <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
@@ -863,62 +901,63 @@ export function CreateProductModal() {
                           </div>
                         </div>
                       </div>
-                      <div
-                        className={`flex flex-col gap-3 ${!buyerCanEditVariation ? "opacity-50 pointer-events-none" : ""}`}
-                      >
-                        <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Até quantos dias antes do evento o participante pode
-                          alterar a variação?
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            maxLength={4}
-                            value={variationChangeDeadlineDays}
-                            onChange={(e) =>
-                              setVariationChangeDeadlineDays(
-                                e.target.value.replace(/\D/g, "").slice(0, 4),
-                              )
-                            }
-                            disabled={!buyerCanEditVariation}
-                            className="h-9 min-w-13 w-10 shrink-0 rounded-lg border border-gray-7 bg-gray-1 px-2 text-center text-base font-normal font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:border-primary-8 focus:outline-none disabled:cursor-not-allowed"
-                            placeholder="30"
-                            aria-label="Dias antes do evento para alterar variação"
-                          />
-                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                            dias antes do evento
-                          </span>
+                      {buyerCanEditVariation && (
+                        <div className="flex flex-col gap-3">
+                          <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                            Até quantos dias antes do evento o participante
+                            pode alterar a variação?
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={4}
+                              value={variationChangeDeadlineDays}
+                              onChange={(e) =>
+                                setVariationChangeDeadlineDays(
+                                  e.target.value
+                                    .replace(/\D/g, "")
+                                    .slice(0, 4),
+                                )
+                              }
+                              className="h-9 min-w-13 w-10 shrink-0 rounded-lg border border-gray-7 bg-gray-1 px-2 text-center text-base font-normal font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:border-primary-8 focus:outline-none"
+                              placeholder="30"
+                              aria-label="Dias antes do evento para alterar variação"
+                            />
+                            <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                              dias antes do evento
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
                       Prévia
                     </h3>
-                    <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col">
+                    <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col w-[406px]">
                       <div className="border-b border-gray-6 flex gap-3 items-center p-4">
-                        <div className="border border-gray-6 rounded size-[100px] shrink-0 overflow-hidden bg-gray-3 flex items-center justify-center">
-                          {productImage ? (
-                            <Image
-                              src={productImage}
-                              alt="Product preview"
-                              width={100}
-                              height={100}
-                              className="object-cover w-full h-full"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-4" />
-                          )}
+                        <div className="border border-gray-6 rounded size-[100px] shrink-0 overflow-hidden bg-gray-3 relative">
+                          <ImageWithInitialFallback
+                            src={productImage}
+                            alt="Product preview"
+                            name={productName || "Nome do produto"}
+                            fill
+                            sizes="100px"
+                            className="size-full"
+                            letterClassName="text-2xl font-semibold"
+                          />
                         </div>
                         <div className="flex flex-col justify-between py-2 flex-1">
                           <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                             {productName || "Nome do produto"}
                           </p>
-                          <p className="text-gray-11 text-base font-semibold font-manrope leading-[1.1]">
-                            R$ {basePrice.trim() ? basePrice : previewPrice}
-                          </p>
+                          {anyVariationHasSpecificPrice && (
+                            <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                              R$ {basePrice.trim() ? basePrice : "0,00"}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="p-4">
@@ -927,7 +966,7 @@ export function CreateProductModal() {
                         </p>
                         <Dropdown
                           options={productPreviewDropdownOptions}
-                          menuInPortal
+                          menuInline
                           width="w-full"
                           maxHeight="max-h-[200px]"
                           selectedIds={variations.map(

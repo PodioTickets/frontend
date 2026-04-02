@@ -10,7 +10,6 @@ import { mockRegistrations } from "@/constants";
 import {
   Search,
   Users,
-  Eye,
   CheckCircle,
   XCircle,
   FileText,
@@ -18,7 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import Link from "next/link";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { Dropdown } from "@/components/Dropdown";
 import type { DateRange } from "react-day-picker";
@@ -200,7 +198,7 @@ function RegistrationRow({
           onClick={onViewRegistration}
           className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
         >
-          <Eye className="size-4 text-gray-11" />
+          <TicketIcon className="size-4 text-gray-11" />
         </button>
       </div>
     </div>

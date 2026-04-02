@@ -8,6 +8,32 @@ interface InputProps extends React.ComponentProps<"input"> {
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, maxLength, value, showCharCount, ...props }, ref) => {
+    const innerRef = React.useRef<HTMLInputElement | null>(null);
+
+    const setRefs = React.useCallback(
+      (node: HTMLInputElement | null) => {
+        innerRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref != null) {
+          (ref as React.MutableRefObject<HTMLInputElement | null>).current =
+            node;
+        }
+      },
+      [ref],
+    );
+
+    React.useLayoutEffect(() => {
+      if (type !== "number") return;
+      const el = innerRef.current;
+      if (!el) return;
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+      };
+      el.addEventListener("wheel", onWheel, { passive: false });
+      return () => el.removeEventListener("wheel", onWheel);
+    }, [type]);
+
     const hasCharCount = (maxLength !== undefined && maxLength > 0) || showCharCount;
     const currentLength = typeof value === "string" ? value.length : (value as any)?.toString().length || 0;
     const maxLengthValue = maxLength || 0;
@@ -26,7 +52,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       return (
         <div className={cn("relative w-full", visibilityClasses)}>
           <input
-            ref={ref}
+            ref={setRefs}
             type={type}
             data-slot="input"
             maxLength={maxLength}
@@ -51,7 +77,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <input
-        ref={ref}
+        ref={setRefs}
         type={type}
         data-slot="input"
         maxLength={maxLength}

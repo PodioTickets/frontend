@@ -93,11 +93,11 @@ export default function EditQuestionnairePage() {
 
     try {
       await organizerService.deleteQuestion(eventId, questionId);
-      toast.success("Pergunta excluída com sucesso!");
+      toast.success("Pergunta deletada com sucesso!");
       loadQuestions();
     } catch (error: any) {
       console.error("Error deleting question:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir pergunta");
+      toast.error(error.response?.data?.message || "Erro ao deletar pergunta");
     }
   };
 

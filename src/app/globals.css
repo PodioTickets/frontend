@@ -246,33 +246,73 @@ input[type="number"] {
   text-align: justify;
 }
 
-/* Ensure images in aligned paragraphs respect alignment */
-.ql-align-center img,
-.ql-align-left img,
-.ql-align-right img,
-.ql-align-justify img {
-  display: block;
+/*
+ * Imagens no Quill: inline-block (como quill-image-resize) — mesma linha com texto
+ * ou duas imagens; alinhamento vem do text-align do <p> (.ql-align-*).
+ * Só "justificar" força bloco em largura total.
+ */
+.ql-editor p > img:not([data-layout]),
+.topic-rich-html p > img:not([data-layout]) {
+  display: inline-block;
+  vertical-align: top;
   max-width: 100%;
   height: auto;
 }
 
-.ql-align-center img {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.ql-align-right img {
-  margin-left: auto;
-  margin-right: 0;
-}
-
-.ql-align-left img {
-  margin-left: 0;
-  margin-right: auto;
-}
-
-.ql-align-justify img {
+.ql-align-justify img:not([data-layout]) {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  height: auto;
   margin-left: 0;
   margin-right: 0;
+}
+
+/* Tópicos (HTML do Quill): imagem + texto ou duas imagens lado a lado */
+.topic-rich-html::after,
+.ql-editor::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.topic-rich-html img[data-layout="left"],
+.ql-editor img[data-layout="left"] {
+  float: left;
+  display: block;
+  max-width: min(100%, 48%);
+  height: auto;
+  margin: 0 1rem 0.75rem 0;
+  box-sizing: border-box;
+}
+
+.topic-rich-html img[data-layout="right"],
+.ql-editor img[data-layout="right"] {
+  float: right;
+  display: block;
+  max-width: min(100%, 48%);
+  height: auto;
+  margin: 0 0 0.75rem 1rem;
+  box-sizing: border-box;
+}
+
+.topic-rich-html img[data-layout="inline-half"],
+.ql-editor img[data-layout="inline-half"] {
+  float: left;
+  display: block;
+  width: calc(50% - 0.5rem);
+  max-width: calc(50% - 0.5rem);
+  height: auto;
+  margin: 0 0.5rem 0.5rem 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .topic-rich-html img[data-layout="inline-half"],
+  .ql-editor img[data-layout="inline-half"] {
+    width: 100%;
+    max-width: 100%;
+    float: none;
+    margin-right: 0;
+  }
 }

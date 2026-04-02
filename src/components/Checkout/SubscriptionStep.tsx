@@ -2,7 +2,7 @@
 import { Button } from "../Button";
 import type { Event } from "@/interfaces/event";
 import { ArrowButton } from "../ArrowButton";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { TrashIcon } from "../Icons/TrashIcon";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -732,19 +732,23 @@ export function SubscriptionStep({
                       : undefined
                   }
                 >
-                  <div className="flex items-center gap-2 p-2 border border-gray-6 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-2 p-2 border border-gray-6 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
                       {participant?.name ? (
                         <span className="text-sm font-bold text-gray-12">
                           {participant.name.charAt(0).toUpperCase()}
                         </span>
                       ) : (
-                        <Image
+                        <ImageWithInitialFallback
                           src={event.bannerUrl}
-                          alt={participant?.name || "Participante"}
-                          width={40}
-                          height={40}
-                          className="w-10 h-10 rounded-full object-cover"
+                          alt={event.name}
+                          name={event.name}
+                          fallbackId={event.id}
+                          fill
+                          sizes="40px"
+                          className="size-full"
+                          imgClassName="object-cover"
+                          letterClassName="text-sm font-bold"
                         />
                       )}
                     </div>
@@ -893,20 +897,18 @@ export function SubscriptionStep({
                             className="bg-gray-2 border border-gray-6 rounded-xl"
                           >
                             <div className="flex gap-3 p-4 border-b border-gray-6">
-                              {product.image ? (
-                                <Image
+                              <div className="w-[100px] h-[100px] rounded border border-gray-6 shrink-0 relative overflow-hidden">
+                                <ImageWithInitialFallback
                                   src={product.image}
                                   alt={product.name}
-                                  width={100}
-                                  height={100}
-                                  className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
-                                  draggable={false}
+                                  name={product.name}
+                                  fallbackId={product.id}
+                                  fill
+                                  sizes="100px"
+                                  className="size-full"
+                                  letterClassName="text-2xl font-semibold"
                                 />
-                              ) : (
-                                <div className="w-[100px] h-[100px] rounded border border-gray-6 shrink-0 bg-gray-3 flex items-center justify-center">
-                                  <span className="text-gray-11 text-xs">Sem imagem</span>
-                                </div>
-                              )}
+                              </div>
                               <div className="flex flex-col justify-between flex-1 min-w-0">
                                 <p className="text-base font-semibold text-gray-12">
                                   {product.name}
@@ -990,20 +992,18 @@ export function SubscriptionStep({
                               className="bg-gray-2 border border-gray-6 rounded-xl"
                             >
                               <div className="flex gap-3 p-4 border-b border-gray-6">
-                                {product.image ? (
-                                  <Image
+                                <div className="w-[100px] h-[100px] rounded border border-gray-6 shrink-0 relative overflow-hidden">
+                                  <ImageWithInitialFallback
                                     src={product.image}
                                     alt={product.name}
-                                    width={100}
-                                    height={100}
-                                    className="w-[100px] h-[100px] object-cover rounded border border-gray-6 shrink-0"
-                                    draggable={false}
+                                    name={product.name}
+                                    fallbackId={product.id}
+                                    fill
+                                    sizes="100px"
+                                    className="size-full"
+                                    letterClassName="text-2xl font-semibold"
                                   />
-                                ) : (
-                                  <div className="w-[100px] h-[100px] rounded border border-gray-6 shrink-0 bg-gray-3 flex items-center justify-center">
-                                    <span className="text-gray-11 text-xs">Sem imagem</span>
-                                  </div>
-                                )}
+                                </div>
                                 <div className="flex flex-col justify-between flex-1 min-w-0">
                                   <p className="text-sm font-semibold text-gray-12 line-clamp-2">
                                     {product.name}
@@ -1159,18 +1159,22 @@ export function SubscriptionStep({
               Participante {selectedParticipant + 1}
             </h2>
             <div className="flex items-center gap-3 rounded-lg p-3 border border-gray-6 mb-6">
-              <div className="w-12 h-12 rounded-full bg-gray-5 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
                 {currentParticipant.name ? (
                   <span className="text-sm font-bold text-gray-12">
                     {currentParticipant.name.charAt(0).toUpperCase()}
                   </span>
                 ) : (
-                  <Image
+                  <ImageWithInitialFallback
                     src={event.bannerUrl}
-                    alt={currentParticipant.name || "Participante"}
-                    width={48}
-                    height={48}
-                    className="w-12 h-12 rounded-full object-cover"
+                    alt={event.name}
+                    name={event.name}
+                    fallbackId={event.id}
+                    fill
+                    sizes="48px"
+                    className="size-full"
+                    imgClassName="object-cover"
+                    letterClassName="text-lg font-bold"
                   />
                 )}
               </div>
@@ -1210,16 +1214,18 @@ export function SubscriptionStep({
                     className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4"
                   >
                     <div className="flex items-start gap-3">
-                      {product.image && (
-                        <Image
+                      <div className="w-[100px] h-[100px] rounded-lg shrink-0 relative overflow-hidden border border-gray-6">
+                        <ImageWithInitialFallback
                           src={product.image}
                           alt={product.name}
-                          width={100}
-                          height={100}
-                          className="w-[100px] h-[100px] object-cover rounded-lg shrink-0"
-                          draggable={false}
+                          name={product.name}
+                          fallbackId={product.id}
+                          fill
+                          sizes="100px"
+                          className="size-full"
+                          letterClassName="text-2xl font-semibold"
                         />
-                      )}
+                      </div>
                       <div className="flex flex-col gap-2 flex-1 min-w-0">
                         <p className="text-sm text-gray-12 font-semibold truncate">
                           {product.name}
@@ -1298,20 +1304,18 @@ export function SubscriptionStep({
                       className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4"
                     >
                       <div className="flex items-start gap-3">
-                        {product.image ? (
-                          <Image
+                        <div className="w-[100px] h-[100px] rounded-lg shrink-0 relative overflow-hidden border border-gray-6">
+                          <ImageWithInitialFallback
                             src={product.image}
                             alt={product.name}
-                            width={100}
-                            height={100}
-                            className="w-[100px] h-[100px] object-cover rounded-lg shrink-0"
-                            draggable={false}
+                            name={product.name}
+                            fallbackId={product.id}
+                            fill
+                            sizes="100px"
+                            className="size-full"
+                            letterClassName="text-2xl font-semibold"
                           />
-                        ) : (
-                          <div className="w-[100px] h-[100px] rounded-lg shrink-0 bg-gray-3 flex items-center justify-center border border-gray-6">
-                            <span className="text-gray-11 text-xs">Sem imagem</span>
-                          </div>
-                        )}
+                        </div>
                         <div className="flex flex-col gap-2 flex-1 min-w-0">
                           <p className="text-sm text-gray-12 font-semibold line-clamp-2">
                             {product.name}
@@ -1403,18 +1407,22 @@ export function SubscriptionStep({
                       >
                         <div className="flex items-center justify-between gap-2 mb-3">
                           <div className="flex items-center gap-2 flex-1">
-                            <div className="w-12 h-12 rounded-full bg-gray-5 flex items-center justify-center shrink-0">
+                            <div className="w-12 h-12 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
                               {participant?.name ? (
                                 <span className="text-sm font-bold text-gray-12">
                                   {participant.name.charAt(0).toUpperCase()}
                                 </span>
                               ) : (
-                                <Image
+                                <ImageWithInitialFallback
                                   src={event.bannerUrl}
-                                  alt={participant?.name || "Participante"}
-                                  width={48}
-                                  height={48}
-                                  className="w-12 h-12 rounded-full object-cover"
+                                  alt={event.name}
+                                  name={event.name}
+                                  fallbackId={event.id}
+                                  fill
+                                  sizes="48px"
+                                  className="size-full"
+                                  imgClassName="object-cover"
+                                  letterClassName="text-lg font-bold"
                                 />
                               )}
                             </div>

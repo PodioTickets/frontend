@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { FileText, Megaphone, TrendingUp } from "lucide-react";
@@ -10,6 +10,7 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { LogOutIcon } from "@/components/Icons/LogOutIcon";
+import Image from "next/image";
 
 const navItems = [
   { label: "Eventos", href: "/admin/events", icon: TicketIcon },
@@ -34,13 +35,14 @@ export function AdminSidebar() {
   return (
     <aside className="hidden md:flex bg-linear-to-b from-[#191919] to-[#222222] w-[218px] h-screen flex-col items-start justify-between px-4 py-8 shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)] fixed left-0 top-0 z-40">
       <div className="flex flex-col gap-10 items-start w-full">
-        <Link href="/admin" className="flex items-center gap-[5.057px]">
+        <Link href="/admin" className="flex items-center gap-2 min-w-0">
           <Image
-            src="/images/logo_horizontal.png"
+            src="/images/logo_admin.png"
             alt="PódioTicket"
-            width={24}
-            height={24}
-            className="h-6 w-auto shrink-0"
+            width={10000000}
+            height={10000000}
+            className="object-cover w-full"
+            priority
           />
         </Link>
 
@@ -137,21 +139,30 @@ export function AdminSidebar() {
             className="content-stretch flex items-center justify-between py-2 relative rounded-lg w-full hover:bg-[#25482D] transition-colors"
           >
             <div className="content-stretch flex flex-1 gap-2 items-center min-w-0 px-3">
-              <div className="relative shrink-0 size-9 rounded-full overflow-hidden bg-gray-6">
-                {user?.avatarUrl ? (
-                  <Image
-                    src={getAvatarUrl(user.avatarUrl)}
-                    alt={user.firstName || "Admin"}
-                    fill
-                    className="object-cover border border-gray-10 rounded-full"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-6">
-                    <span className="text-[#B4B4B4] text-sm font-medium">
-                      {user?.firstName?.[0]?.toUpperCase() || "A"}
-                    </span>
-                  </div>
-                )}
+              <div className="relative shrink-0 size-9 rounded-full overflow-hidden bg-gray-6 border border-gray-10">
+                <ImageWithInitialFallback
+                  src={
+                    user?.avatarUrl?.trim()
+                      ? getAvatarUrl(user.avatarUrl)
+                      : null
+                  }
+                  alt={
+                    user?.firstName && user?.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.email || "Admin"
+                  }
+                  name={
+                    user?.firstName && user?.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.email || "Admin"
+                  }
+                  fallbackId={user?.id}
+                  fill
+                  sizes="36px"
+                  className="size-full rounded-full"
+                  imgClassName="object-cover rounded-full"
+                  letterClassName="text-sm font-medium text-[#B4B4B4]"
+                />
               </div>
               <div className="content-stretch flex flex-1 flex-col items-start justify-center min-w-0">
                 <p className="text-[#B4B4B4] text-xs font-normal font-family-dm-sans leading-[1.3] truncate w-full">

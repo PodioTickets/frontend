@@ -12,6 +12,36 @@ export type SystemLogEntry = OrganizationAuditLogItem;
 
 const ITEMS_PER_PAGE = 8;
 
+/** Páginas visíveis com reticências (ex.: 1 … 4 5 6 … 20) para não lotar a barra. */
+function getVisiblePaginationPages(
+  current: number,
+  total: number,
+  neighbors = 1
+): (number | "ellipsis")[] {
+  if (total <= 1) return [1];
+  if (total <= 9) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const set = new Set<number>();
+  set.add(1);
+  set.add(total);
+  for (let p = current - neighbors; p <= current + neighbors; p++) {
+    if (p >= 1 && p <= total) set.add(p);
+  }
+
+  const sorted = [...set].sort((a, b) => a - b);
+  const out: (number | "ellipsis")[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const n = sorted[i];
+    if (i > 0 && n - sorted[i - 1]! > 1) {
+      out.push("ellipsis");
+    }
+    out.push(n);
+  }
+  return out;
+}
+
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
@@ -130,8 +160,8 @@ function parseAuditEditDetails(meta: Record<string, unknown> | undefined): {
 
   const fieldsEdited = hasFieldsEdited
     ? (meta.fieldsEdited as unknown[]).filter(
-        (x): x is string => typeof x === "string" && x.trim() !== ""
-      )
+      (x): x is string => typeof x === "string" && x.trim() !== ""
+    )
     : [];
 
   let summaryLine: string | null = null;
@@ -159,32 +189,81 @@ function AuditLogEditDetailsBlock({
   const { summaryLine, changes } = parsed;
 
   return (
-    <div className="mt-2 space-y-1.5 border-t border-gray-6 pt-2">
+    <div className="space-y-1.5">
       {summaryLine ? (
         <p className="text-xs text-gray-11 font-family-dm-sans wrap-break-word">
           <span className="font-semibold text-gray-12">Campos alterados: </span>
           {summaryLine}
         </p>
       ) : null}
-      {changes.length > 0 ? (
-        <ul className="list-none space-y-1 m-0 p-0">
-          {changes.map((c, i) => (
-            <li
-              key={`${c.field}-${i}`}
-              className="text-xs text-gray-11 font-family-dm-sans wrap-break-word"
-            >
-              <span className="font-semibold text-gray-12">
-                {formatAuditFieldLabel(c.field)}:
-              </span>{" "}
-              <span className="text-gray-11 line-through decoration-gray-8">
-                {c.oldVal}
-              </span>
-              <span className="text-gray-11"> → </span>
-              <span className="text-gray-12 font-medium">{c.newVal}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    </div>
+  );
+}
+
+function AuditLogPagination({
+  totalPages,
+  safePage,
+  onPage,
+  className,
+}: {
+  totalPages: number;
+  safePage: number;
+  onPage: (p: number) => void;
+  className?: string;
+}) {
+  const visible = getVisiblePaginationPages(safePage, totalPages);
+  const pageBtnClass =
+    "size-8 rounded-lg border text-sm font-medium font-family-dm-sans transition-colors shrink-0";
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 flex-wrap max-w-full min-w-0",
+        className
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => onPage(Math.max(1, safePage - 1))}
+        disabled={safePage <= 1}
+        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+        aria-label="Página anterior"
+      >
+        <ChevronLeft className="size-4 text-gray-12" />
+      </button>
+      {visible.map((item, idx) =>
+        item === "ellipsis" ? (
+          <span
+            key={`ellipsis-${idx}`}
+            className="size-1 flex items-center justify-center text-gray-11 text-sm font-medium select-none pointer-events-none shrink-0"
+            aria-hidden
+          >
+           -
+          </span>
+        ) : (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onPage(item)}
+            className={cn(
+              pageBtnClass,
+              safePage === item
+                ? "bg-primary-11 text-gray-1 border-primary-11"
+                : "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
+            )}
+          >
+            {item}
+          </button>
+        )
+      )}
+      <button
+        type="button"
+        onClick={() => onPage(Math.min(totalPages, safePage + 1))}
+        disabled={safePage >= totalPages}
+        className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+        aria-label="Próxima página"
+      >
+        <ChevronRight className="size-4 text-gray-12" />
+      </button>
     </div>
   );
 }
@@ -451,11 +530,6 @@ export function SystemAuditLogTab() {
                         <span className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-snug block wrap-break-word">
                           {row.action}
                         </span>
-                        {metaHint ? (
-                          <span className="text-xs text-gray-11 font-family-dm-sans block mt-1 wrap-break-word">
-                            {metaHint}
-                          </span>
-                        ) : null}
                         <AuditLogEditDetailsBlock meta={row.metadata} />
                       </td>
                       <td className="py-3.5 px-4">
@@ -472,80 +546,22 @@ export function SystemAuditLogTab() {
         </div>
 
         {!loading && totalPages > 1 && (
-          <div className="hidden md:flex items-center justify-end gap-2 px-4 py-5 border-t border-gray-6">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={safePage <= 1}
-              className="size-8 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              aria-label="Página anterior"
-            >
-              <ChevronLeft className="size-4 text-gray-12" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPage(p)}
-                className={cn(
-                  "size-8 rounded-lg border text-sm font-medium font-family-dm-sans transition-colors",
-                  safePage === p
-                    ? "bg-primary-11 text-gray-1 border-primary-11"
-                    : "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-                )}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage >= totalPages}
-              className="size-8 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              aria-label="Próxima página"
-            >
-              <ChevronRight className="size-4 text-gray-12" />
-            </button>
-          </div>
+          <AuditLogPagination
+            totalPages={totalPages}
+            safePage={safePage}
+            onPage={setPage}
+            className="hidden md:flex justify-end px-4 py-5 border-t border-gray-6"
+          />
         )}
       </div>
 
       {!loading && totalPages > 1 && (
-        <div className="md:hidden flex items-center justify-center gap-2 px-0 py-4">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={safePage <= 1}
-            className="size-8 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            aria-label="Página anterior"
-          >
-            <ChevronLeft className="size-4 text-gray-12" />
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPage(p)}
-              className={cn(
-                "size-8 rounded-lg border text-sm font-medium font-family-dm-sans transition-colors",
-                safePage === p
-                  ? "bg-primary-11 text-gray-1 border-primary-11"
-                  : "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-              )}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage >= totalPages}
-            className="size-8 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            aria-label="Próxima página"
-          >
-            <ChevronRight className="size-4 text-gray-12" />
-          </button>
-        </div>
+        <AuditLogPagination
+          totalPages={totalPages}
+          safePage={safePage}
+          onPage={setPage}
+          className="md:hidden justify-center px-0 py-4"
+        />
       )}
     </div>
   );

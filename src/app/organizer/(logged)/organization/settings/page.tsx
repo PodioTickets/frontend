@@ -8,7 +8,7 @@ import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Dropdown, DropdownOption } from "@/components/Dropdown";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Plus, ChevronLeft } from "lucide-react";
@@ -387,20 +387,21 @@ export default function OrganizationSettingsPage() {
                 <div className="flex gap-3 md:gap-4 items-center relative shrink-0 w-full md:w-auto">
                   {/* Logo - menor no mobile (Figma ~40px) */}
                   <div className="relative shrink-0 size-10 md:size-24 rounded-full overflow-hidden bg-gray-6">
-                    {organizer.logoUrl ? (
-                      <Image
-                        src={getAvatarUrl(organizer.logoUrl)}
-                        alt="Organization Logo"
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-6">
-                        <span className="text-gray-11 text-2xl font-medium">
-                          {organizer.name?.[0]?.toUpperCase() || "O"}
-                        </span>
-                      </div>
-                    )}
+                    <ImageWithInitialFallback
+                      src={
+                        organizer.logoUrl?.trim()
+                          ? getAvatarUrl(organizer.logoUrl)
+                          : null
+                      }
+                      alt={organizer.name || "Organização"}
+                      name={organizer.name || "Organização"}
+                      fallbackId={organizer.id}
+                      fill
+                      sizes="96px"
+                      className="size-full"
+                      imgClassName="object-cover"
+                      letterClassName="text-xl md:text-3xl font-medium text-gray-11"
+                    />
                   </div>
 
                   {/* Organization Details - texto menor no mobile (Figma) */}
@@ -421,20 +422,29 @@ export default function OrganizationSettingsPage() {
                   </p>
                   <div className="flex gap-2 items-center relative shrink-0">
                     <div className="relative shrink-0 size-10 rounded-full overflow-hidden bg-gray-6">
-                      {user?.avatarUrl ? (
-                        <Image
-                          src={getAvatarUrl(user.avatarUrl)}
-                          alt="Owner"
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-6">
-                          <span className="text-gray-11 text-sm font-medium">
-                            {user?.firstName?.[0]?.toUpperCase() || "O"}
-                          </span>
-                        </div>
-                      )}
+                      <ImageWithInitialFallback
+                        src={
+                          user?.avatarUrl?.trim()
+                            ? getAvatarUrl(user.avatarUrl)
+                            : null
+                        }
+                        alt={
+                          user?.firstName && user?.lastName
+                            ? `${user.firstName} ${user.lastName}`
+                            : user?.email || "Dono"
+                        }
+                        name={
+                          user?.firstName && user?.lastName
+                            ? `${user.firstName} ${user.lastName}`
+                            : user?.email || "Dono"
+                        }
+                        fallbackId={user?.id}
+                        fill
+                        sizes="40px"
+                        className="size-full"
+                        imgClassName="object-cover"
+                        letterClassName="text-sm font-medium text-gray-11"
+                      />
                     </div>
                     <div className="flex flex-col items-start justify-center relative shrink-0">
                       <p className="font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-lg text-gray-12">

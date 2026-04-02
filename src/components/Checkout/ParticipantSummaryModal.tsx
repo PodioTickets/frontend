@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Image from "next/image";
+import { useState, useMemo, useEffect } from "react";
 import { RemoveIcon } from "../Icons/RemoveIcon";
 import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
@@ -10,6 +9,8 @@ import type { Ticket } from "@/hooks/useTickets";
 import { ArrowButton } from "../ArrowButton";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { DistanceIcon } from "../Icons/DistanceIcon";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { getTicketProductCarouselItems } from "@/utils/ticketProductVisuals";
 
 interface Product {
   id: string;
@@ -44,6 +45,7 @@ interface ParticipantModalData {
   additionalProducts?: Product[];
   event?: {
     bannerUrl?: string;
+    name?: string;
     eventDate?: string;
     eventTime?: string;
   };
@@ -57,6 +59,8 @@ interface ParticipantSummaryModalProps {
   products?: Product[];
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
 }
+
+const EMPTY_CAROUSEL_TICKET: Pick<Ticket, "products"> = { products: [] };
 
 export function ParticipantSummaryModal({
   isOpen,
@@ -73,15 +77,35 @@ export function ParticipantSummaryModal({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Reset to initial index when modal opens
-  useMemo(() => {
+  useEffect(() => {
     if (isOpen) {
       setCurrentIndex(initialParticipantIndex);
-      setCurrentMainImageIndex(0); // Reset image gallery
-      setTimeout(() => setIsAnimating(true), 10);
-    } else {
-      setIsAnimating(false);
+      setCurrentMainImageIndex(0);
+      const id = window.setTimeout(() => setIsAnimating(true), 10);
+      return () => window.clearTimeout(id);
     }
+    setIsAnimating(false);
   }, [isOpen, initialParticipantIndex]);
+
+  const isActive = isOpen && participants.length > 0;
+  const activeParticipant = isActive ? participants[currentIndex] : undefined;
+  const ticketForCarousel =
+    activeParticipant?.ticket ?? EMPTY_CAROUSEL_TICKET;
+
+  const productItems = useMemo(
+    () => getTicketProductCarouselItems(ticketForCarousel, productsMap),
+    [ticketForCarousel, productsMap]
+  );
+
+  const carouselTicketId = activeParticipant?.ticket?.id ?? "";
+
+  useEffect(() => {
+    if (productItems.length === 0) {
+      setCurrentMainImageIndex(0);
+      return;
+    }
+    setCurrentMainImageIndex((i) => Math.min(i, productItems.length - 1));
+  }, [productItems.length, carouselTicketId]);
 
   if (!isOpen || participants.length === 0) return null;
 
@@ -216,15 +240,9 @@ export function ParticipantSummaryModal({
 
   const { requiredProducts, additionalProducts } = getParticipantProducts();
 
-  // Get product images from ticket.products using productsMap
-  const getTicketProductImages = (): string[] => {
-    if (!ticket.products || ticket.products.length === 0) return [];
-    return ticket.products
-      .map((productId) => productsMap[productId]?.image)
-      .filter((image): image is string => !!image);
-  };
+  const eventTitle = event?.name?.trim() || ticket.name;
 
-  const productImages = getTicketProductImages();
+  const currentProduct = productItems[currentMainImageIndex];
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
@@ -233,13 +251,13 @@ export function ParticipantSummaryModal({
 
   const handlePreviousImage = () => {
     setCurrentMainImageIndex((prev) =>
-      prev === 0 ? productImages.length - 1 : prev - 1
+      prev === 0 ? productItems.length - 1 : prev - 1
     );
   };
 
   const handleNextImage = () => {
     setCurrentMainImageIndex((prev) =>
-      prev === productImages.length - 1 ? 0 : prev + 1
+      prev === productItems.length - 1 ? 0 : prev + 1
     );
   };
 
@@ -398,7 +416,7 @@ export function ParticipantSummaryModal({
               <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex gap-5 items-center">
                   {/* Product Images Gallery */}
-                  {productImages.length > 0 ? (
+                  {productItems.length > 0 ? (
                     <div className="shrink-0">
                       <div className="flex items-center gap-2">
                         {/* Main Image */}
@@ -406,15 +424,21 @@ export function ParticipantSummaryModal({
                           onClick={() => handleImageClick(currentMainImageIndex)}
                           className="w-[136px] h-[136px] relative rounded-lg border border-gray-6 overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
                         >
-                          <Image
-                            src={productImages[currentMainImageIndex]}
-                            alt={ticket.name}
-                            fill
-                            className="object-cover"
-                          />
+                          {currentProduct ? (
+                            <ImageWithInitialFallback
+                              src={currentProduct.src}
+                              alt={ticket.name}
+                              name={currentProduct.name}
+                              fallbackId={currentProduct.id}
+                              fill
+                              sizes="136px"
+                              className="size-full"
+                              letterClassName="text-3xl"
+                            />
+                          ) : null}
                         </button>
                         {/* Thumbnail Navigation */}
-                        {productImages.length > 1 && (
+                        {productItems.length > 1 && (
                           <div className="flex flex-col items-center gap-1">
                             {/* Arrow up */}
                             <button
@@ -428,29 +452,31 @@ export function ParticipantSummaryModal({
                             </button>
                             {/* Thumbnails */}
                             <div className="flex flex-col gap-1">
-                              {productImages
-                                .filter((_, idx) => idx !== currentMainImageIndex)
+                              {productItems
+                                .map((item, idx) => ({ item, idx }))
+                                .filter(({ idx }) => idx !== currentMainImageIndex)
                                 .slice(0, 3)
-                                .map((image, idx) => {
-                                  const originalIndex = productImages.findIndex((img) => img === image);
-                                  return (
-                                    <button
-                                      key={originalIndex}
-                                      onClick={() => handleThumbnailClick(originalIndex)}
-                                      className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                                        ? 'border-primary-11'
-                                        : 'border-gray-6'
-                                        }`}
-                                    >
-                                      <Image
-                                        src={image}
-                                        alt={`${ticket.name} ${originalIndex + 1}`}
-                                        fill
-                                        className="object-cover"
-                                      />
-                                    </button>
-                                  );
-                                })}
+                                .map(({ item, idx: originalIndex }) => (
+                                  <button
+                                    key={item.id}
+                                    onClick={() => handleThumbnailClick(originalIndex)}
+                                    className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
+                                      ? 'border-primary-11'
+                                      : 'border-gray-6'
+                                      }`}
+                                  >
+                                    <ImageWithInitialFallback
+                                      src={item.src}
+                                      alt={item.name}
+                                      name={item.name}
+                                      fallbackId={item.id}
+                                      fill
+                                      sizes="36px"
+                                      className="size-full"
+                                      letterClassName="text-sm"
+                                    />
+                                  </button>
+                                ))}
                             </div>
                             {/* Arrow down */}
                             <button
@@ -467,13 +493,15 @@ export function ParticipantSummaryModal({
                       </div>
                     </div>
                   ) : (
-                    <div className="size-[136px] rounded border border-gray-6 overflow-hidden shrink-0">
-                      <Image
-                        src={event?.bannerUrl || "/images/placeholder-event.png"}
-                        alt={ticket.name}
-                        width={136}
-                        height={136}
-                        className="w-full h-full object-cover"
+                    <div className="size-[136px] rounded border border-gray-6 overflow-hidden shrink-0 relative">
+                      <ImageWithInitialFallback
+                        src={event?.bannerUrl}
+                        alt={eventTitle}
+                        name={eventTitle}
+                        fill
+                        sizes="136px"
+                        className="size-full"
+                        letterClassName="text-3xl"
                       />
                     </div>
                   )}
@@ -546,20 +574,17 @@ export function ParticipantSummaryModal({
                     >
                       {/* Product Info */}
                       <div className="border-b border-gray-6 p-4 flex gap-3 items-center">
-                        <div className="size-[100px] rounded border border-gray-6 overflow-hidden shrink-0">
-                          {product.image ? (
-                            <Image
-                              src={product.image}
-                              alt={product.name}
-                              width={100}
-                              height={100}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-3 flex items-center justify-center">
-                              <span className="text-xs text-gray-11">Sem imagem</span>
-                            </div>
-                          )}
+                        <div className="size-[100px] rounded border border-gray-6 overflow-hidden shrink-0 relative">
+                          <ImageWithInitialFallback
+                            src={product.image}
+                            alt={product.name}
+                            name={product.name}
+                            fallbackId={product.id}
+                            fill
+                            sizes="100px"
+                            className="size-full"
+                            letterClassName="text-2xl"
+                          />
                         </div>
                         <div className="flex flex-col justify-between h-[100px] py-2">
                           <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
@@ -616,20 +641,17 @@ export function ParticipantSummaryModal({
                     >
                       {/* Product Info */}
                       <div className="border-b border-gray-6 p-4 flex gap-3 items-center">
-                        <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
-                          {product.image ? (
-                            <Image
-                              src={product.image}
-                              alt={product.name}
-                              width={100}
-                              height={100}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-3 flex items-center justify-center">
-                              <span className="text-xs text-gray-11">Sem imagem</span>
-                            </div>
-                          )}
+                        <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
+                          <ImageWithInitialFallback
+                            src={product.image}
+                            alt={product.name}
+                            name={product.name}
+                            fallbackId={product.id}
+                            fill
+                            sizes="100px"
+                            className="size-full"
+                            letterClassName="text-2xl"
+                          />
                         </div>
                         <div className="flex flex-col justify-between h-[100px] py-2 flex-1">
                           <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
@@ -698,9 +720,9 @@ export function ParticipantSummaryModal({
       </div>
 
       {/* Image Carousel Modal */}
-      {productImages.length > 0 && (
+      {productItems.length > 0 && (
         <ImageCarouselModal
-          images={productImages}
+          items={productItems}
           initialIndex={selectedImageIndex}
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}

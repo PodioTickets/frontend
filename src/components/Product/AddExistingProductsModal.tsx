@@ -7,7 +7,7 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { X, Search, Link2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { Checkbox } from "../CheckBox";
 import { organizerService } from "@/services";
@@ -346,17 +346,16 @@ export function AddExistingProductsModal() {
                             <div className="flex items-center gap-3 p-4">
                               {/* Product Image */}
                               <div className="relative size-[100px] rounded-lg overflow-hidden bg-gray-3">
-                                {product.image ? (
-                                  <Image
-                                    src={product.image}
-                                    alt={product.name}
-                                    height={100}
-                                    width={100}
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-gray-4" />
-                                )}
+                                <ImageWithInitialFallback
+                                  src={product.image}
+                                  alt={product.name}
+                                  name={product.name}
+                                  fallbackId={product.id}
+                                  fill
+                                  sizes="100px"
+                                  className="size-full"
+                                  letterClassName="text-2xl font-semibold"
+                                />
                               </div>
 
                               {/* Product Info */}

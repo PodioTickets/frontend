@@ -75,11 +75,11 @@ export function useCoupons(
     },
     onSuccess: () => {
       invalidateQueries.events.coupons(eventId!);
-      toast.success("Cupom excluído com sucesso!");
+      toast.success("Cupom deletado com sucesso!");
     },
     onError: (error: any) => {
       console.error("Error deleting coupon:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir cupom");
+      toast.error(error.response?.data?.message || "Erro ao deletar cupom");
     },
   });
 

@@ -23,7 +23,10 @@ export const eventService = new EventService(apiClient);
 export const organizerService = new OrganizerService(apiClient);
 export const adminService = new AdminService(apiClient);
 
-export type { AdminAuditLogItem } from "./admin/AdminService";
+export type {
+  AdminAuditLogItem,
+  AdminAuditOrganization,
+} from "./admin/AdminService";
 
 export type {
   EventNotification,

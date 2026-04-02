@@ -64,7 +64,7 @@ export function DeleteTopicModal({
             <div className="flex flex-col items-center justify-center px-5 pt-6 pb-5 gap-11">
               <div className="flex flex-col gap-4 items-center justify-center w-full">
                 <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
-                  Excluir tópico?
+                  Deletar tópico?
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
                   {topicTitle ? (
@@ -97,7 +97,7 @@ export function DeleteTopicModal({
                   disabled={submitting}
                   className="flex-1 h-12 min-h-12 bg-red-11 text-red-2 font-bold text-base font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
                 >
-                  Excluir tópico
+                  Deletar tópico
                 </button>
               </div>
             </div>

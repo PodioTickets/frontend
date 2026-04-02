@@ -8,11 +8,15 @@ import { TrashIcon } from "@/components/Icons/TrashIcon";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { TicketTable } from "./TicketTable";
 import { DeleteTicketCategoryModal } from "./DeleteTicketCategoryModal";
+import { CategoryDeleteBlockedModal } from "./CategoryDeleteBlockedModal";
 import type { Ticket } from "@/hooks/useTickets";
 
 interface TicketCategoryCardProps {
   category: ModalityGroup;
+  /** Ingressos exibidos na página atual (tabela paginada). */
   tickets: Ticket[];
+  /** Total de ingressos na categoria (todas as páginas), para bloquear exclusão e avisos. */
+  totalTicketsInCategory: number;
   currentPage: number;
   totalPages: number;
   onEdit: (categoryId: string, name: string) => void;
@@ -24,11 +28,14 @@ interface TicketCategoryCardProps {
   duplicatingTicketId?: string | null;
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
   onDropTicket?: (ticketId: string, categoryId: string) => void;
+  /** Sobrescreve bordas/raio quando a categoria está dentro de um wrapper (ex.: sortable). */
+  className?: string;
 }
 
 export function TicketCategoryCard({
   category,
   tickets,
+  totalTicketsInCategory,
   currentPage,
   totalPages,
   onEdit,
@@ -40,12 +47,14 @@ export function TicketCategoryCard({
   duplicatingTicketId = null,
   productsMap = {},
   onDropTicket,
+  className: rootClassName,
 }: TicketCategoryCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingName, setEditingName] = useState(category.name);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editingDescription, setEditingDescription] = useState(category.description || "");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [blockedDeleteModalOpen, setBlockedDeleteModalOpen] = useState(false);
 
   const { setNodeRef, isOver } = useDroppable({
     id: `category-${category.id}`,
@@ -81,49 +90,64 @@ export function TicketCategoryCard({
 
   return (
     <>
+      <CategoryDeleteBlockedModal
+        open={blockedDeleteModalOpen}
+        onClose={() => setBlockedDeleteModalOpen(false)}
+      />
       <DeleteTicketCategoryModal
         open={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        canDelete={tickets.length === 0}
+        canDelete={totalTicketsInCategory === 0}
         onConfirm={() => onDelete(category.id)}
       />
     <div
       ref={setNodeRef}
       data-category-id={category.id}
       className={`flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-5 transition-colors ${isOver ? "border-primary-11" : ""
-        }`}
+        }${rootClassName ? ` ${rootClassName}` : ""}`}
     >
       {/* Category Header */}
       <div className="flex flex-col gap-3 w-full">
         <div className="flex items-center justify-between flex-wrap gap-4 w-full">
-          <div className="flex gap-[10px] items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-[10px]">
             {isEditing ? (
-              <input
-                type="text"
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onBlur={handleSave}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSave();
-                  } else if (e.key === "Escape") {
-                    handleCancel();
-                  }
-                }}
-                className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8"
-                autoFocus
-              />
+              <div className="min-w-0 max-w-full flex-1 overflow-hidden">
+                <div className="inline-grid w-[min(100%,max-content)] max-w-full align-middle">
+                  <span
+                    aria-hidden
+                    className="invisible col-start-1 row-start-1 whitespace-pre px-0 text-2xl font-bold font-manrope leading-[1.1]"
+                  >
+                    {editingName.length > 0 ? editingName : "\u00a0"}
+                  </span>
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onBlur={handleSave}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSave();
+                      } else if (e.key === "Escape") {
+                        handleCancel();
+                      }
+                    }}
+                    className="col-start-1 row-start-1 min-w-0 w-full max-w-full overflow-x-auto border-0 border-b border-gray-6 bg-transparent py-0 text-2xl font-bold font-manrope leading-[1.1] text-gray-12 focus:border-primary-8 focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+              </div>
             ) : (
-              <h3 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
+              <h3 className="min-w-0 truncate text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
                 {category.name}
               </h3>
             )}
             <button
+              type="button"
               onClick={() => {
                 setIsEditing(true);
                 setEditingName(category.name);
               }}
-              className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
+              className="shrink-0 bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
             >
               <PencilIcon className="size-5 text-gray-11" />
             </button>
@@ -132,7 +156,11 @@ export function TicketCategoryCard({
             <button
               type="button"
               onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => setDeleteModalOpen(true)}
+              onClick={() =>
+                totalTicketsInCategory > 0
+                  ? setBlockedDeleteModalOpen(true)
+                  : setDeleteModalOpen(true)
+              }
               className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
             >
               <TrashIcon className="size-5 text-red-12" />

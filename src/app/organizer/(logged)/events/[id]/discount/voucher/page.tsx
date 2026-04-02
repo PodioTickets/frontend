@@ -144,7 +144,7 @@ export default function VouchersPage() {
 
         try {
           await organizerService.deleteVoucher(eventId, groupId);
-          toast.success("Voucher excluído com sucesso!");
+          toast.success("Voucher deletado com sucesso!");
           loadVouchers();
         } catch (error: any) {
           console.error("Error deleting voucher:", error);
@@ -305,7 +305,7 @@ export default function VouchersPage() {
                                   <button
                                     onClick={() => handleDeleteVoucher(groupId, group.name)}
                                     className="size-8 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors cursor-pointer"
-                                    title="Excluir"
+                                    title="Deletar"
                                   >
                                     <TrashIcon className="size-4 text-red-12" />
                                   </button>

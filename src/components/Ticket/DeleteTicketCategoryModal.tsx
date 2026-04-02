@@ -8,7 +8,6 @@ import { Button } from "@/components/Button";
 type DeleteTicketCategoryModalProps = {
   open: boolean;
   onClose: () => void;
-  /** Só permite excluir quando não há ingressos na categoria */
   canDelete: boolean;
   onConfirm: () => void | Promise<void>;
 };
@@ -66,7 +65,7 @@ export function DeleteTicketCategoryModal({
                   Deletar categoria de ingressos?
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                  Tem certeza que deseja excluir esta categoria? Esta ação não poderá ser desfeita.
+                  Tem certeza que deseja deletar esta categoria? Esta ação não poderá ser desfeita.
                 </p>
               </div>
 

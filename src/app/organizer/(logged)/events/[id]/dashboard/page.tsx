@@ -32,6 +32,54 @@ import { QuestionDetailsDrawer } from "@/components/Organizer/QuestionDetailsDra
 import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawer";
 import type { Question } from "@/interfaces/event";
 import type { BestSellingVariationItem } from "@/components/Organizer/BestSellingVariations";
+import { Tooltip } from "@/components/Tooltip";
+import { cn } from "@/utils/cn";
+
+function DashboardRankingCategoryLabel({ category }: { category: string }) {
+  const [hoverTrigger, setHoverTrigger] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setHoverTrigger(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  const display = category.trim() || "—";
+  const lineClass =
+    "font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap w-full max-w-full min-w-0";
+
+  return (
+    <Tooltip
+      key={hoverTrigger ? "md" : "sm"}
+      className="block w-full max-w-full min-w-0"
+      trigger={hoverTrigger ? "hover" : "click"}
+      position="topRight"
+      content={
+        <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left wrap-break-word">
+          {display}
+        </p>
+      }
+      contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+    >
+      {hoverTrigger ? (
+        <span className={cn(lineClass, "block cursor-help")}>{display}</span>
+      ) : (
+        <button
+          type="button"
+          className={cn(
+            lineClass,
+            "text-left cursor-pointer rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
+          )}
+          aria-label="Toque para ver o nome completo da categoria"
+        >
+          {display}
+        </button>
+      )}
+    </Tooltip>
+  );
+}
 
 export default function EventDashboardPage() {
   const router = useRouter();
@@ -782,9 +830,6 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl">
             <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Ranking de ingressos</p>
-              <button className="text-[14px] font-family-dm-sans font-semibold text-gray-11 hover:text-gray-12 underline">
-                Ver mais
-              </button>
             </div>
             <div>
               {/* Header */}
@@ -806,7 +851,7 @@ export default function EventDashboardPage() {
                   className="grid grid-cols-[199px_81px_112px] border-b border-gray-6 last:border-b-0 bg-gray-1"
                 >
                   <div className="px-4 py-3 flex flex-col gap-2 justify-center">
-                    <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 overflow-hidden text-ellipsis whitespace-nowrap">{ticket.category}</p>
+                    <DashboardRankingCategoryLabel category={ticket.category} />
                     <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 overflow-hidden text-ellipsis whitespace-nowrap">{ticket.name}</p>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-center">
@@ -911,9 +956,6 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl">
             <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Lotes próximos de esgotamento</p>
-              <button className="text-[14px] font-family-dm-sans font-semibold text-gray-11 hover:text-gray-12 underline">
-                Ver mais
-              </button>
             </div>
             <div>
               {dashboardData.lotsNearDepletion.map((lot, index) => {
@@ -1128,7 +1170,7 @@ export default function EventDashboardPage() {
             {dashboardData.ticketRanking.map((ticket, index) => (
               <div key={index} className="px-4 py-3 flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="font-family-dm-sans font-normal text-sm text-gray-11">{ticket.category}</p>
+                  <DashboardRankingCategoryLabel category={ticket.category} />
                   <p className="font-family-dm-sans font-semibold text-sm text-gray-12 truncate">{ticket.name}</p>
                 </div>
                 <div className="flex items-center gap-4 shrink-0">

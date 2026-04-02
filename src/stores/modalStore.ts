@@ -15,24 +15,16 @@ interface ModalState {
   isOpen: boolean;
   type: ModalType;
   data: ModalData | null;
-
   isLoading: boolean;
   loadingMessage: string;
-
   openModal: (type: ModalType, data?: ModalData) => void;
   closeModal: () => void;
   setLoading: (loading: boolean, message?: string) => void;
   updateModalData: (data: Partial<ModalData>) => void;
-
-  // Callback para salvar dados do modal (mantido para compatibilidade)
   onModalSave?: (data: any) => void;
   setOnModalSave: (callback?: (data: any) => void) => void;
-
-  /** Exclusão de tópico (fluxo do TopicModal; confirmação fica no DeleteTopicModal). */
   onModalDelete?: () => void | Promise<void>;
   setOnModalDelete: (callback?: () => void | Promise<void>) => void;
-
-  // Callbacks específicos por tipo de modal
   callbacks: Record<string, ((data: any) => void | Promise<void>) | undefined>;
   setCallback: (modalType: string, callback?: (data: any) => void | Promise<void>) => void;
   getCallback: (modalType: string) => ((data: any) => void | Promise<void>) | undefined;

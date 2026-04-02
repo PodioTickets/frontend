@@ -1651,10 +1651,7 @@ export class OrganizerService {
   }
 
   // Ticket Category methods
-  async createTicketCategory(
-    eventId: string,
-    data: { name: string; order?: number }
-  ): Promise<any> {
+  async createTicketCategory(eventId: string, data: { name: string }): Promise<any> {
     const { data: response } = await this.apiClient.post<{ data: any }>(
       `/api/v1/tickets/events/${eventId}/categories`,
       data
@@ -1668,6 +1665,13 @@ export class OrganizerService {
     );
     console.log("response", response);
     return response.data.categories;
+  }
+
+  /** Índice em `categoryIds` = sortOrder 0, 1, 2… — todos os ids do evento, sem repetir (como topics/reorder). */
+  async reorderTicketCategories(eventId: string, categoryIds: string[]): Promise<void> {
+    await this.apiClient.patch(`/api/v1/tickets/events/${eventId}/categories/reorder`, {
+      categoryIds,
+    });
   }
 
   async updateTicketCategory(

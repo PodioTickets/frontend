@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 export default function OrganizerSettingsPage() {
   const router = useRouter();
@@ -118,6 +119,18 @@ export default function OrganizerSettingsPage() {
     }
   };
 
+  const maskCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 5)
+      return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
+    if (numbers.length <= 8)
+      return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`;
+    if (numbers.length <= 12)
+      return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`;
+    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -185,11 +198,16 @@ export default function OrganizerSettingsPage() {
             {/* Profile Container */}
             <div className="flex gap-[16px] items-end relative shrink-0 w-full">
               <div className="relative shrink-0 size-[96px] rounded-full overflow-hidden">
-                <Image
-                  src={getAvatarUrl(user?.avatarUrl)}
+                <ImageWithInitialFallback
+                  src={user?.avatarUrl ? getAvatarUrl(user?.avatarUrl) : null}
                   alt="Profile"
+                  name={user?.firstName && user?.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : user?.email || "Nome do usuário"}
                   fill
-                  className="object-cover"
+                  sizes="96px"
+                  className="size-full"
+                  letterClassName="text-2xl font-semibold"
                 />
               </div>
               <div className="flex flex-1 flex-col gap-[16px] items-start justify-center">
@@ -269,19 +287,22 @@ export default function OrganizerSettingsPage() {
                     </p>
                     <div className="flex gap-2 items-center relative shrink-0">
                       <div className="relative shrink-0 size-[40px] rounded-full overflow-hidden">
-                        <Image
-                          src={getAvatarUrl(organizer?.avatarUrl)}
+                        <ImageWithInitialFallback
+                          src={organizer?.avatarUrl ? getAvatarUrl(organizer?.avatarUrl) : null}
                           alt="Organization"
+                          name={organizer.name || "Nome da organização"}
                           fill
-                          className="object-cover"
+                          sizes="40px"
+                          className="size-full"
+                          letterClassName="text-base font-semibold"
                         />
                       </div>
-                      <div className="flex flex-col gap-[12px] items-start justify-center leading-[1.3] relative shrink-0">
+                      <div className="flex flex-col items-start justify-center leading-[1.3] relative shrink-0">
                         <p className="font-family-dm-sans font-semibold relative shrink-0 text-[18px] text-gray-12">
                           {organizer.name || "Nome da organização"}
                         </p>
                         <p className="font-family-dm-sans font-normal relative shrink-0 text-[14px] text-gray-11">
-                          CNPJ: {organizer.cnpj || "00.000.000/0000-00"}
+                          CNPJ: {organizer.document ? maskCNPJ(organizer.document.replace(/\D/g, "")) : "00.000.000/0000-00"}
                         </p>
                       </div>
                     </div>
@@ -293,11 +314,16 @@ export default function OrganizerSettingsPage() {
                     </p>
                     <div className="flex gap-2 items-center relative shrink-0">
                       <div className="relative shrink-0 size-[40px] rounded-full overflow-hidden">
-                        <Image
-                          src={getAvatarUrl(user?.avatarUrl)}
+                        <ImageWithInitialFallback
+                          src={user?.avatarUrl ? getAvatarUrl(user?.avatarUrl) : null}
                           alt="Owner"
+                          name={user?.firstName && user?.lastName
+                            ? `${user.firstName} ${user.lastName}`
+                            : user?.email || "Nome do dono"}
                           fill
-                          className="object-cover"
+                          sizes="40px"
+                          className="size-full"
+                          letterClassName="text-base font-semibold"
                         />
                       </div>
                       <div className="flex flex-col items-start justify-center relative shrink-0">

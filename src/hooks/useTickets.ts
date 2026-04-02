@@ -25,12 +25,14 @@ export interface Ticket {
   createdAt: string;
 }
 
+const EMPTY_TICKETS: Ticket[] = [];
+
 export function useTickets(eventId: string | null, enabled: boolean = true) {
   const queryClient = useQueryClient();
 
   // Query para buscar tickets
   const {
-    data: tickets = [],
+    data,
     isLoading,
     error,
     refetch: loadTickets,
@@ -61,6 +63,8 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
     enabled: enabled && !!eventId,
   });
 
+  const tickets = data ?? EMPTY_TICKETS;
+
   // Mutation para deletar ticket (desvincula da categoria antes, se necessário)
   const deleteMutation = useMutation({
     mutationFn: async (ticketId: string) => {
@@ -85,11 +89,11 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
     },
     onSuccess: () => {
       invalidateQueries.events.tickets(eventId!);
-      toast.success("Ingresso excluído com sucesso!");
+      toast.success("Ingresso deletado com sucesso!");
     },
     onError: (error: any) => {
       console.error("Error deleting ticket:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir ingresso");
+      toast.error(error.response?.data?.message || "Erro ao deletar ingresso");
     },
   });
 

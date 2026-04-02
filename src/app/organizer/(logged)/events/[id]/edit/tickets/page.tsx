@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { useTickets, type Ticket } from "@/hooks/useTickets";
 import { userService, organizerService } from "@/services";
+import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/services/cache/QueryClient";
@@ -29,6 +30,7 @@ import {
   drawerModeToApiLayout,
   layoutToDrawerMode,
   parseEventKitSelectionDisplay,
+  type EventKitSelectionDisplay,
 } from "@/lib/eventKitSelectionDisplay";
 import {
   DndContext,
@@ -41,6 +43,18 @@ import {
   DragStartEvent,
   DragOverlay,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableTicketCategoryItem } from "@/components/Ticket/SortableTicketCategoryItem";
+import {
+  categorySortableId,
+  parseCategorySortableId,
+  persistTicketCategoryOrderApi,
+} from "@/lib/ticketCategoryOrder";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -62,6 +76,8 @@ export default function EditTicketsPage() {
   );
   const [kitImagePositionDrawerOpen, setKitImagePositionDrawerOpen] =
     useState(false);
+  const [categoryOrderIds, setCategoryOrderIds] = useState<string[]>([]);
+  const [savingNavigate, setSavingNavigate] = useState(false);
 
   // Hooks para gerenciar dados
   const {
@@ -111,6 +127,33 @@ export default function EditTicketsPage() {
       categoryElementsCacheRef.current.clear();
     }
   }, [categories]);
+
+  useEffect(() => {
+    const ids = categories.map((c) => c.id);
+    setCategoryOrderIds((prev) => {
+      if (ids.length === 0) return prev.length === 0 ? prev : [];
+      if (prev.length === 0) return ids;
+      const prevSet = new Set(prev);
+      const idsSet = new Set(ids);
+      const sameLength = prev.length === ids.length;
+      const sameMembers =
+        sameLength &&
+        ids.every((id) => prevSet.has(id)) &&
+        prev.every((id) => idsSet.has(id));
+      if (!sameMembers) return ids;
+      return prev;
+    });
+  }, [categories]);
+
+  const orderedCategories = useMemo(() => {
+    if (!categoryOrderIds.length || categoryOrderIds.length !== categories.length) {
+      return [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+    const m = new Map(categories.map((c) => [c.id, c]));
+    return categoryOrderIds
+      .map((id) => m.get(id))
+      .filter(Boolean) as ModalityGroup[];
+  }, [categories, categoryOrderIds]);
 
   // Buscar produtos
   const { data: productsData } = useQuery({
@@ -314,7 +357,9 @@ export default function EditTicketsPage() {
         distance: 8,
       },
     }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -349,6 +394,22 @@ export default function EditTicketsPage() {
     (event: DragEndEvent) => {
       const { active, over } = event;
       const activeIdValue = active.id as string;
+
+      const sortDragId = parseCategorySortableId(activeIdValue);
+      if (sortDragId) {
+        setActiveId(null);
+        dragEndPositionRef.current = null;
+        if (!over) return;
+        const overCatId = parseCategorySortableId(over.id as string);
+        if (!overCatId || sortDragId === overCatId) return;
+        setCategoryOrderIds((prev) => {
+          const oldIndex = prev.indexOf(sortDragId);
+          const newIndex = prev.indexOf(overCatId);
+          if (oldIndex < 0 || newIndex < 0) return prev;
+          return arrayMove(prev, oldIndex, newIndex);
+        });
+        return;
+      }
 
       if (!activeIdValue.startsWith("ticket-")) {
         setActiveId(null);
@@ -495,15 +556,95 @@ export default function EditTicketsPage() {
     allTickets.length,
   ]);
 
-  const handleSaveChangesNavigate = useCallback(() => {
+  const kitSelectionDisplayKey = useMemo(
+    () => JSON.stringify(event?.kitSelectionDisplay ?? null),
+    [event?.kitSelectionDisplay]
+  );
+
+  const savedKitSelection = useMemo(
+    () => parseEventKitSelectionDisplay(event?.kitSelectionDisplay),
+    [kitSelectionDisplayKey]
+  );
+
+  const [draftKitSelection, setDraftKitSelection] =
+    useState<EventKitSelectionDisplay>(() => ({
+      ...defaultEventKitSelectionDisplay(),
+    }));
+
+  useEffect(() => {
+    setDraftKitSelection({
+      ...defaultEventKitSelectionDisplay(),
+      ...savedKitSelection,
+      primaryKitProductByTicketId: {
+        ...savedKitSelection.primaryKitProductByTicketId,
+      },
+      primaryKitProductByCategoryId: {
+        ...savedKitSelection.primaryKitProductByCategoryId,
+      },
+    });
+  }, [savedKitSelection]);
+
+  const handleDraftShowKitImagesChange = useCallback((value: boolean) => {
+    setDraftKitSelection((prev) => ({
+      ...defaultEventKitSelectionDisplay(),
+      ...prev,
+      showKitImagesOnSelection: value,
+    }));
+  }, []);
+
+  const handleSaveChangesNavigate = useCallback(async () => {
     if (hasIncompleteNewCategoryDraft) {
       toast.error(
         "Informe o nome da nova categoria ou cancele a criação antes de salvar as alterações."
       );
       return;
     }
-    router.push(`/organizer/events/${eventId}/edit/topics`);
-  }, [hasIncompleteNewCategoryDraft, router, eventId]);
+    if (!eventId) {
+      toast.error("Evento não encontrado.");
+      return;
+    }
+    if (orderedCategories.length === 0) {
+      router.push(`/organizer/events/${eventId}/edit/topics`);
+      return;
+    }
+    setSavingNavigate(true);
+    try {
+      const mergedKitDisplay = {
+        ...defaultEventKitSelectionDisplay(),
+        ...draftKitSelection,
+        primaryKitProductByTicketId: {
+          ...draftKitSelection.primaryKitProductByTicketId,
+        },
+        primaryKitProductByCategoryId: {
+          ...draftKitSelection.primaryKitProductByCategoryId,
+        },
+      };
+      await organizerService.updateEvent(
+        eventId,
+        { kitSelectionDisplay: mergedKitDisplay },
+        { clientPage: `events/${eventId}/tickets` }
+      );
+      await persistTicketCategoryOrderApi(eventId, orderedCategories);
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.events.ticketCategories(eventId),
+      });
+      await reloadEvent();
+      router.push(`/organizer/events/${eventId}/edit/topics`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Não foi possível salvar as alterações desta página.");
+    } finally {
+      setSavingNavigate(false);
+    }
+  }, [
+    hasIncompleteNewCategoryDraft,
+    router,
+    eventId,
+    orderedCategories,
+    queryClient,
+    draftKitSelection,
+    reloadEvent,
+  ]);
 
   const getPaginatedTickets = useCallback(
     (categoryId: string) => {
@@ -543,7 +684,7 @@ export default function EditTicketsPage() {
     }
 
     return {
-      sections: categories.map((cat) => ({
+      sections: orderedCategories.map((cat) => ({
         id: cat.id,
         name: cat.name,
         tickets: (ticketsByCategory[cat.id] || []).map(ticketToRow),
@@ -559,70 +700,40 @@ export default function EditTicketsPage() {
     };
   }, [
     hasNoCategories,
-    categories,
+    orderedCategories,
     ticketsByCategory,
     uncategorizedTickets,
     productsMap,
   ]);
 
-  const kitSelection = useMemo(
-    () => parseEventKitSelectionDisplay(event?.kitSelectionDisplay),
-    [event?.kitSelectionDisplay]
-  );
-
   const drawerInitialKitSelection = useMemo(
     () => ({
-      layout: layoutToDrawerMode(kitSelection.kitImagesLayout),
-      primaryByTicket: { ...kitSelection.primaryKitProductByTicketId },
-      primaryByCategory: { ...kitSelection.primaryKitProductByCategoryId },
+      layout: layoutToDrawerMode(draftKitSelection.kitImagesLayout),
+      primaryByTicket: { ...draftKitSelection.primaryKitProductByTicketId },
+      primaryByCategory: { ...draftKitSelection.primaryKitProductByCategoryId },
     }),
-    [kitSelection]
-  );
-
-  const handleShowKitImagesPersist = useCallback(
-    async (value: boolean) => {
-      try {
-        const merged = {
-          ...defaultEventKitSelectionDisplay(),
-          ...kitSelection,
-          showKitImagesOnSelection: value,
-        };
-        await organizerService.updateEvent(
-          eventId,
-          { kitSelectionDisplay: merged },
-          { clientPage: `events/${eventId}/tickets` }
-        );
-        await reloadEvent();
-        toast.success("Preferência salva.");
-      } catch (err) {
-        console.error(err);
-        toast.error("Não foi possível salvar a preferência.");
-      }
-    },
-    [eventId, kitSelection, reloadEvent]
+    [draftKitSelection]
   );
 
   const handleKitDrawerSave = useCallback(
-    async (payload: {
+    (payload: {
       layout: KitImageLayoutMode;
       primaryProductIdByTicketId: Record<string, string>;
       primaryProductIdByCategoryId: Record<string, string>;
     }) => {
-      const merged = {
+      setDraftKitSelection((prev) => ({
         ...defaultEventKitSelectionDisplay(),
-        ...kitSelection,
+        ...prev,
         kitImagesLayout: drawerModeToApiLayout(payload.layout),
-        primaryKitProductByTicketId: payload.primaryProductIdByTicketId,
-        primaryKitProductByCategoryId: payload.primaryProductIdByCategoryId,
-      };
-      await organizerService.updateEvent(
-        eventId,
-        { kitSelectionDisplay: merged },
-        { clientPage: `events/${eventId}/tickets` }
-      );
-      await reloadEvent();
+        primaryKitProductByTicketId: {
+          ...payload.primaryProductIdByTicketId,
+        },
+        primaryKitProductByCategoryId: {
+          ...payload.primaryProductIdByCategoryId,
+        },
+      }));
     },
-    [eventId, kitSelection, reloadEvent]
+    []
   );
 
   const handleBack = useCallback(() => {
@@ -899,41 +1010,54 @@ export default function EditTicketsPage() {
 
           {/* Categories List */}
           {!hasNoCategories && (
-            <div className="flex flex-col gap-6">
-              {categories.map((category) => {
-                const {
-                  tickets: paginatedTickets,
-                  totalPages,
-                  currentPage: page,
-                } = getPaginatedTickets(category.id);
+            <SortableContext
+              items={orderedCategories.map((c) => categorySortableId(c.id))}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex flex-col gap-6">
+                {orderedCategories.map((category) => {
+                  const {
+                    tickets: paginatedTickets,
+                    totalPages,
+                    currentPage: page,
+                  } = getPaginatedTickets(category.id);
 
-                return (
-                  <TicketCategoryCard
-                    key={category.id}
-                    category={category}
-                    tickets={paginatedTickets}
-                    currentPage={page}
-                    totalPages={totalPages}
-                    onEdit={handleUpdateGroupName}
-                    onEditDescription={handleUpdateGroupDescription}
-                    onDelete={handleDeleteGroup}
-                    onEditTicket={handleEditTicket}
-                    onPageChange={handlePageChange}
-                    onDuplicateTicket={handleDuplicateTicket}
-                    duplicatingTicketId={duplicatingTicketId}
-                    productsMap={productsMap}
-                    onDropTicket={handleDropTicket}
-                  />
-                );
-              })}
-            </div>
+                  return (
+                    <SortableTicketCategoryItem
+                      key={category.id}
+                      categoryId={category.id}
+                    >
+                      <TicketCategoryCard
+                        category={category}
+                        className="rounded-none border-0 shadow-none"
+                        tickets={paginatedTickets}
+                        totalTicketsInCategory={
+                          (ticketsByCategory[category.id] || []).length
+                        }
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onEdit={handleUpdateGroupName}
+                        onEditDescription={handleUpdateGroupDescription}
+                        onDelete={handleDeleteGroup}
+                        onEditTicket={handleEditTicket}
+                        onPageChange={handlePageChange}
+                        onDuplicateTicket={handleDuplicateTicket}
+                        duplicatingTicketId={duplicatingTicketId}
+                        productsMap={productsMap}
+                        onDropTicket={handleDropTicket}
+                      />
+                    </SortableTicketCategoryItem>
+                  );
+                })}
+              </div>
+            </SortableContext>
           )}
 
           <div className="w-full">
             <TicketAdvancedKitDisplayOptions
-              showKitImagesOnSelection={kitSelection.showKitImagesOnSelection}
-              onShowKitImagesOnSelectionChange={handleShowKitImagesPersist}
-              kitImagesLayout={kitSelection.kitImagesLayout}
+              showKitImagesOnSelection={draftKitSelection.showKitImagesOnSelection}
+              onShowKitImagesOnSelectionChange={handleDraftShowKitImagesChange}
+              kitImagesLayout={draftKitSelection.kitImagesLayout}
               onOpenKitImagePositionDrawer={() => {
                 const hasKit = tickets.some(
                   (t) => (t.products?.length ?? 0) > 0
@@ -951,11 +1075,12 @@ export default function EditTicketsPage() {
 
           <div className="flex justify-end">
             <Button
-              onClick={handleSaveChangesNavigate}
+              onClick={() => void handleSaveChangesNavigate()}
               variant="default"
-              className="text-[20px] font-bold px-10"
+              disabled={savingNavigate}
+              className="text-[20px] font-bold px-10 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Salvar alterações
+              {savingNavigate ? "Salvando..." : "Salvar alterações"}
             </Button>
           </div>
         </div>
@@ -966,6 +1091,14 @@ export default function EditTicketsPage() {
             <p className="text-sm font-semibold text-gray-12">
               {tickets.find((t) => `ticket-${t.id}` === activeId)?.name || "Ingresso"}
             </p>
+          </div>
+        ) : activeId && parseCategorySortableId(activeId) ? (
+          <div className="max-w-md rounded-xl border border-gray-6 bg-gray-1 p-4 opacity-95 shadow-2xl">
+            <p className="text-sm font-semibold text-gray-12">
+              {orderedCategories.find((c) => categorySortableId(c.id) === activeId)
+                ?.name || "Categoria"}
+            </p>
+            <p className="mt-1 text-xs text-gray-11">Alterar ordem</p>
           </div>
         ) : null}
       </DragOverlay>
@@ -978,6 +1111,7 @@ export default function EditTicketsPage() {
         uncategorized={kitImagePositionDrawerData.uncategorized}
         initialKitSelection={drawerInitialKitSelection}
         onSave={handleKitDrawerSave}
+        saveSuccessMessage="Posição das imagens atualizada. Clique em Salvar alterações para persistir."
       />
     </>
   );

@@ -13,6 +13,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/Button";
 import { Radio } from "@/components/Radio";
@@ -29,6 +30,7 @@ import {
 import toast from "react-hot-toast";
 import { UNCATEGORIZED_CATEGORY_KEY } from "@/lib/eventKitSelectionDisplay";
 import { ArrowButton } from "../ArrowButton";
+import { itemInitialLetter } from "@/utils/itemInitial";
 
 export type KitImagePositionProduct = {
   productId: string;
@@ -36,23 +38,6 @@ export type KitImagePositionProduct = {
   /** Nome do produto (ex.: para inicial quando não há foto). */
   name?: string | null;
 };
-
-function kitProductInitialLetter(
-  name: string | null | undefined,
-  productId: string
-): string {
-  const trimmed = name?.trim();
-  if (trimmed) {
-    const ch = [...trimmed][0];
-    return ch ? ch.toLocaleUpperCase("pt-BR") : "?";
-  }
-  const id = productId?.trim();
-  if (id) {
-    const ch = [...id][0];
-    return ch ? ch.toLocaleUpperCase("pt-BR") : "?";
-  }
-  return "?";
-}
 
 export type KitImagePositionTicketRow = {
   id: string;
@@ -87,6 +72,8 @@ export interface KitImagePositionDrawerProps {
     /** Modo “Nas categorias”: principal por categoria (id da categoria ou `"uncategorized"`) */
     primaryProductIdByCategoryId: Record<string, string>;
   }) => void | Promise<void>;
+  /** Mensagem após confirmar no drawer (ex.: quando a persistência é na página). */
+  saveSuccessMessage?: string;
 }
 
 function resolvePrimaryAmongProducts(
@@ -308,7 +295,14 @@ const KitThumb = memo(function KitThumb({
   entityId: string;
   onSelectPrimary: (entityId: string, productId: string) => void;
 }) {
-  const initial = kitProductInitialLetter(productName, productId);
+  const initial = itemInitialLetter(productName, productId);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [url]);
+
+  const showUrl = Boolean(url?.trim()) && !imageFailed;
 
   return (
     <button
@@ -321,10 +315,10 @@ const KitThumb = memo(function KitThumb({
           : "border border-gray-6"
       )}
     >
-      {url ? (
+      {showUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- thumbs pequenos: img nativo + lazy pesa menos que next/image em listas longas
         <img
-          src={url}
+          src={url!}
           alt=""
           width={80}
           height={80}
@@ -332,6 +326,7 @@ const KitThumb = memo(function KitThumb({
           decoding="async"
           fetchPriority="low"
           className="size-full object-cover"
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <div className="size-full bg-gray-4 flex items-center justify-center">
@@ -680,6 +675,7 @@ export function KitImagePositionDrawer({
   uncategorized,
   initialKitSelection,
   onSave,
+  saveSuccessMessage = "Configuração salva.",
 }: KitImagePositionDrawerProps) {
   const [layout, setLayout] = useState<KitImageLayoutMode>("on_tickets");
   const [primaryByTicket, setPrimaryByTicket] = useState<
@@ -767,12 +763,19 @@ export function KitImagePositionDrawer({
         primaryProductIdByTicketId: primaryByTicket,
         primaryProductIdByCategoryId: primaryByCategory,
       });
-      toast.success("Configuração salva.");
+      toast.success(saveSuccessMessage);
       onClose();
     } catch {
       toast.error("Não foi possível salvar.");
     }
-  }, [layout, primaryByTicket, primaryByCategory, onSave, onClose]);
+  }, [
+    layout,
+    primaryByTicket,
+    primaryByCategory,
+    onSave,
+    onClose,
+    saveSuccessMessage,
+  ]);
 
   const hasAnyImages = useMemo(
     () => allTicketRows.some((t) => t.images.length > 0),
@@ -801,11 +804,12 @@ export function KitImagePositionDrawer({
       <DrawerContent
         overlayClassName={DRAWER_OVERLAY_LIGHT}
         className="bg-gray-1 flex h-full max-h-dvh w-full flex-col sm:max-w-[730px] border-l border-gray-6 rounded-l-xl p-0"
+        aria-describedby={undefined}
       >
         <DrawerHeader className="border-b border-gray-6 px-5 py-3 flex flex-row items-center justify-between shrink-0 space-y-0 rounded-none">
-          <p className="font-semibold text-[20px] leading-[1.1] text-gray-12 font-manrope">
+          <DrawerTitle className="font-semibold text-[20px] leading-[1.1] text-gray-12 font-manrope text-left">
             Selecione a posição desejada
-          </p>
+          </DrawerTitle>
           <DrawerClose asChild>
             <button
               type="button"

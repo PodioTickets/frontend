@@ -12,7 +12,12 @@ import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { Info, Plus } from "lucide-react";
 import toast from "react-hot-toast";
-import { BookIcon } from "@/components/Icons/BookIcon";
+import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
+import {
+  getMinDateForRegistrationEndPicker,
+  REGISTRATION_END_BEFORE_START_TOAST,
+  wouldRegistrationEndBeforeStart,
+} from "@/utils/registrationPeriod";
 
 interface ViaCEPResponse {
   cep: string;
@@ -104,15 +109,60 @@ export default function EditInformationPage() {
     }
   };
 
+  const clearRegistrationPeriodErrorIfNeeded = (name: string) => {
+    if (
+      name === "registrationStartDate" ||
+      name === "registrationStartTime" ||
+      name === "registrationEndDate" ||
+      name === "registrationEndTime"
+    ) {
+      setErrors((prev) =>
+        prev.registrationPeriod ? { ...prev, registrationPeriod: "" } : prev,
+      );
+    }
+  };
+
   const handleTimeChange = (name: string, value: string) => {
+    if (
+      name === "registrationStartTime" ||
+      name === "registrationEndTime"
+    ) {
+      const next = { ...formData, [name]: value };
+      if (wouldRegistrationEndBeforeStart(next)) {
+        toast.error(REGISTRATION_END_BEFORE_START_TOAST);
+        return;
+      }
+    }
     updateFormData({ [name]: value });
+    clearRegistrationPeriodErrorIfNeeded(name);
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const handleDateChange = (name: string, value: string) => {
+    if (name === "registrationStartDate") {
+      updateFormData({
+        registrationStartDate: value,
+        registrationEndDate: "",
+        registrationEndTime: "",
+      });
+      clearRegistrationPeriodErrorIfNeeded(name);
+      if (errors[name]) {
+        setErrors((prev) => ({ ...prev, [name]: "" }));
+      }
+      return;
+    }
+
+    if (name === "registrationEndDate") {
+      const next = { ...formData, [name]: value };
+      if (wouldRegistrationEndBeforeStart(next)) {
+        toast.error(REGISTRATION_END_BEFORE_START_TOAST);
+        return;
+      }
+    }
     updateFormData({ [name]: value });
+    clearRegistrationPeriodErrorIfNeeded(name);
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -221,6 +271,9 @@ export default function EditInformationPage() {
     }
     if (!formData.eventDate) {
       newErrors.eventDate = "Data do evento é obrigatória";
+    }
+    if (wouldRegistrationEndBeforeStart(formData)) {
+      newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -422,6 +475,9 @@ export default function EditInformationPage() {
                     onChange={(value) => handleDateChange("registrationEndDate", value || "")}
                     placeholder={getCurrentDatePlaceholder()}
                     className="w-max"
+                    minDate={getMinDateForRegistrationEndPicker(
+                      formData.registrationStartDate,
+                    )}
                   />
                   <TimePicker
                     value={formData.registrationEndTime}
@@ -431,6 +487,9 @@ export default function EditInformationPage() {
                 </div>
               </div>
             </div>
+            {errors.registrationPeriod && (
+              <p className="text-red-10 text-sm">{errors.registrationPeriod}</p>
+            )}
           </div>
 
           {/* Local do Evento Section */}
@@ -515,10 +574,19 @@ export default function EditInformationPage() {
 
             {/* URL do Google Maps */}
             <div className="flex flex-col gap-2 w-full">
-              <label className="text-gray-12 text-base font-family-dm-sans flex items-center gap-1">URL do google <BookIcon className="size-5 text-gray-11 shrink-0" /></label>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <label
+                  htmlFor="event-google-maps-url"
+                  className="text-gray-12 text-base font-family-dm-sans"
+                >
+                  URL do google
+                </label>
+                <GoogleMapsUrlHelpTooltip />
+              </div>
               <div className="relative">
                 <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12" />
                 <Input
+                  id="event-google-maps-url"
                   type="url"
                   name="googleMapsLink"
                   value={formData.googleMapsLink}

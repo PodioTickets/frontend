@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useRegisterModal } from "@/stores/modalStore";
-import { isProfileComplete } from "@/utils/checkProfileComplete";
+import {
+  isProfileComplete,
+  skipsParticipantProfileFlow,
+} from "@/utils/checkProfileComplete";
 
 export function ProfileCompleteChecker() {
+  const pathname = usePathname();
   const { user, isAuthenticated } = useAuth();
   const { openRegisterModal, isOpen } = useRegisterModal();
   const lastCheckedUserIdRef = useRef<string | null>(null);
@@ -14,6 +19,10 @@ export function ProfileCompleteChecker() {
     // Só verifica se o usuário está autenticado
     if (!isAuthenticated || !user) {
       lastCheckedUserIdRef.current = null;
+      return;
+    }
+
+    if (skipsParticipantProfileFlow(user, pathname)) {
       return;
     }
 
@@ -51,7 +60,7 @@ export function ProfileCompleteChecker() {
       // Se o perfil estiver completo, atualiza a referência
       lastCheckedUserIdRef.current = user.id;
     }
-  }, [user, isAuthenticated, isOpen, openRegisterModal]);
+  }, [user, isAuthenticated, isOpen, openRegisterModal, pathname]);
 
   return null;
 }

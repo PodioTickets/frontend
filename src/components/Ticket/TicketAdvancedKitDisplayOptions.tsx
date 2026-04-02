@@ -90,38 +90,39 @@ export function TicketAdvancedKitDisplayOptions({
               </label>
             </div>
           </div>
-
-          <div className="flex flex-col gap-3 w-full">
-            <div className="flex flex-wrap gap-3 items-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  onOpenKitImagePositionDrawer
-                    ? onOpenKitImagePositionDrawer()
-                    : onEditImagePositions?.()
-                }
-                className="h-11 px-5 border-gray-6 text-gray-12 font-bold font-manrope leading-[1.1] rounded-lg gap-1"
-              >
-                Editar posição das imagens
-              </Button>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans whitespace-nowrap">
-                  Configuração atual:
-                </span>
-                <span
-                  className={cn(
-                    "inline-flex items-center justify-center px-2 py-[11px] rounded text-sm font-medium leading-[1.3] font-family-dm-sans",
-                    showKitImagesOnSelection
-                      ? "bg-primary-3 text-primary-12"
-                      : "bg-gray-3 text-gray-11"
-                  )}
+          {showKitImagesOnSelection && (
+            <div className="flex flex-col gap-3 w-full">
+              <div className="flex flex-wrap gap-3 items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    onOpenKitImagePositionDrawer
+                      ? onOpenKitImagePositionDrawer()
+                      : onEditImagePositions?.()
+                  }
+                  className="h-11 px-5 border-gray-6 text-gray-12 font-bold font-manrope leading-[1.1] rounded-lg gap-1"
                 >
-                  {configBadgeLabel}
-                </span>
+                  Editar posição das imagens
+                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans whitespace-nowrap">
+                    Configuração atual:
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center justify-center px-2 py-[11px] rounded text-sm font-medium leading-[1.3] font-family-dm-sans",
+                      showKitImagesOnSelection
+                        ? "bg-primary-3 text-primary-12"
+                        : "bg-gray-3 text-gray-11"
+                    )}
+                  >
+                    {configBadgeLabel}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       ) : null}
     </div>

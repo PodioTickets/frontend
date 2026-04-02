@@ -95,11 +95,11 @@ export default function QuestionnairePage() {
 
     try {
       await organizerService.deleteQuestion(formData.createdEventId, questionId);
-      toast.success("Pergunta excluída com sucesso!");
+      toast.success("Pergunta deletada com sucesso!");
       loadQuestions(); // Recarregar perguntas da API
     } catch (error: any) {
       console.error("Error deleting question:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir pergunta");
+      toast.error(error.response?.data?.message || "Erro ao deletar pergunta");
     }
   };
 

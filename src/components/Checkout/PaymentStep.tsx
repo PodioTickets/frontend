@@ -3,6 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { OrderSummary } from "./OrderSummary";
 import { ParticipantSummaryModal } from "./ParticipantSummaryModal";
+import {
+  CheckoutAddressSection,
+  initialBillingAddress,
+  type CheckoutBillingAddress,
+} from "./CheckoutAddressSection";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { VisaIcon } from "../Icons/VisaIcon";
@@ -14,6 +19,7 @@ import { RemoveIcon } from "../Icons/RemoveIcon";
 import { TrashIcon } from "../Icons/TrashIcon";
 import { PencilIcon } from "../Icons/PencilIcon";
 import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { Tooltip, CVVTooltip } from "../Tooltip";
 import type { Event } from "@/interfaces/event";
 import { useCheckout } from "@/contexts/CheckoutContext";
@@ -365,12 +371,14 @@ function PixForm({
   isMobile = false,
   onProcessCheckout,
   loading = false,
+  submitDisabled = false,
 }: {
   onSuccess?: () => void;
   pixValue?: number;
   isMobile?: boolean;
   onProcessCheckout?: () => void;
   loading?: boolean;
+  submitDisabled?: boolean;
 }) {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -402,7 +410,7 @@ function PixForm({
       {!isMobile && (
         <Button
           onClick={onProcessCheckout}
-          disabled={loading}
+          disabled={loading || submitDisabled}
           className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Processando...' : 'Finalizar compra'}
@@ -482,6 +490,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [pixData, setPixData] = useState<PixPayment | null>(null);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
+
+  const [billingAddress, setBillingAddress] = useState<CheckoutBillingAddress>(
+    () => initialBillingAddress()
+  );
+  const [billingAddressConfirmed, setBillingAddressConfirmed] = useState(false);
 
   const { participants, raceQuantities } = useCheckout();
   const eventId = event?.id;
@@ -1383,6 +1396,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       ticket,
       event: {
         bannerUrl: event.bannerUrl,
+        name: event.name,
         eventDate: event.eventDate,
         eventTime: undefined, // Can be added if available in event data
       },
@@ -1418,6 +1432,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             são liberados após aprovação.
           </p>
         </div>
+
+        <CheckoutAddressSection
+          values={billingAddress}
+          onChange={(patch) =>
+            setBillingAddress((prev) => ({ ...prev, ...patch }))
+          }
+          onConfirmedChange={setBillingAddressConfirmed}
+          className="mb-6"
+        />
 
         {/* Payment Methods */}
         <div className="pb-6 flex flex-col gap-3">
@@ -1481,7 +1504,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 />
                 <Button
                   onClick={handleProcessCreditCardCheckout}
-                  disabled={checkoutLoading || !isCreditCardFormValid}
+                  disabled={
+                    checkoutLoading ||
+                    !isCreditCardFormValid ||
+                    !billingAddressConfirmed
+                  }
                   className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
@@ -1528,7 +1555,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 />
                 <Button
                   onClick={handleProcessPixCheckout}
-                  disabled={checkoutLoading}
+                  disabled={checkoutLoading || !billingAddressConfirmed}
                   className="w-full bg-gray-12 text-gray-1 font-bold font-manrope"
                 >
                   {checkoutLoading ? 'Processando...' : 'Gerar QR CODE'}
@@ -1667,6 +1694,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               disabled={
                 totalParticipants === 0 ||
                 checkoutLoading ||
+                !billingAddressConfirmed ||
                 (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
               }
               className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1690,15 +1718,23 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 >
                   <ArrowButton isOpen={false} />
                 </button>
-                <h1 className="text-2xl font-bold text-gray-12">
-                  Selecione o método de pagamento
+                <h1 className="text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
+                  Pagamento
                 </h1>
               </div>
-              <p className="text-sm text-gray-11">
+              <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
                 Revise seu pedido e conclua com cartão, Pix ou boleto. Os
                 ingressos são liberados após aprovação.
               </p>
             </div>
+
+            <CheckoutAddressSection
+              values={billingAddress}
+              onChange={(patch) =>
+                setBillingAddress((prev) => ({ ...prev, ...patch }))
+              }
+              onConfirmedChange={setBillingAddressConfirmed}
+            />
 
             {/* Métodos de Pagamento */}
             <div className="space-y-6">
@@ -1758,6 +1794,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           isMobile={false}
                           onProcessCheckout={handleProcessPixCheckout}
                           loading={checkoutLoading}
+                          submitDisabled={!billingAddressConfirmed}
                         />
                       )}
                     </div>
@@ -1855,21 +1892,22 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                         {/* Participant Card */}
                         <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
                           <div className="flex items-center gap-2">
-                            <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
+                            <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
                               {participant.name ? (
                                 <span className="text-sm font-bold text-gray-12">
                                   {participant.name.charAt(0).toUpperCase()}
                                 </span>
                               ) : (
-                                <Image
-                                  src={
-                                    event.bannerUrl ||
-                                    "/images/default-avatar.png"
-                                  }
-                                  alt="Participante"
-                                  width={40}
-                                  height={40}
-                                  className="size-10 rounded-full object-cover"
+                                <ImageWithInitialFallback
+                                  src={event.bannerUrl}
+                                  alt={event.name}
+                                  name={event.name}
+                                  fallbackId={event.id}
+                                  fill
+                                  sizes="40px"
+                                  className="size-full"
+                                  imgClassName="object-cover"
+                                  letterClassName="text-sm font-bold"
                                 />
                               )}
                             </div>
@@ -1964,16 +2002,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                                   >
                                     {/* Product Header */}
                                     <div className="flex gap-3 p-4 border-b border-gray-6">
-                                      <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
-                                        <Image
-                                          src={
-                                            product.image ||
-                                            "/images/camisa.png"
-                                          }
+                                      <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
+                                        <ImageWithInitialFallback
+                                          src={product.image}
                                           alt={product.name}
-                                          width={100}
-                                          height={100}
-                                          className="w-full h-full object-cover"
+                                          name={product.name}
+                                          fallbackId={String(productIndex)}
+                                          fill
+                                          sizes="100px"
+                                          className="size-full"
+                                          letterClassName="text-2xl font-semibold"
                                         />
                                       </div>
                                       <div className="flex flex-col justify-between flex-1 min-w-0">
@@ -2116,6 +2154,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     disabled={
                       totalParticipants === 0 ||
                       checkoutLoading ||
+                      !billingAddressConfirmed ||
                       (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
                     }
                     className="bg-primary-11 text-primary-2 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"

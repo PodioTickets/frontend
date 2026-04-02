@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import type { ImageCarouselItem } from "@/utils/ticketProductVisuals";
+
+export type { ImageCarouselItem } from "@/utils/ticketProductVisuals";
 
 interface ImageCarouselModalProps {
-  images: string[];
+  items: ImageCarouselItem[];
   initialIndex: number;
   isOpen: boolean;
   onClose: () => void;
@@ -14,7 +17,7 @@ interface ImageCarouselModalProps {
 }
 
 export function ImageCarouselModal({
-  images,
+  items,
   initialIndex,
   isOpen,
   onClose,
@@ -38,11 +41,11 @@ export function ImageCarouselModal({
   }, [isOpen]);
 
   const handlePrevious = () => {
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
   };
 
   useEffect(() => {
@@ -50,10 +53,10 @@ export function ImageCarouselModal({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") {
-        setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+        setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
       }
       if (e.key === "ArrowRight") {
-        setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+        setCurrentIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
       }
       if (e.key === "Escape") onClose();
     };
@@ -61,9 +64,11 @@ export function ImageCarouselModal({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, images.length]);
+  }, [isOpen, items.length]);
 
-  if (!isOpen || images.length === 0) return null;
+  if (!isOpen || items.length === 0) return null;
+
+  const current = items[currentIndex];
 
   return (
     <AnimatePresence>
@@ -88,7 +93,7 @@ export function ImageCarouselModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={onClose}
           >
-            <div 
+            <div
               className="relative w-full max-w-6xl max-h-[60vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
@@ -104,7 +109,7 @@ export function ImageCarouselModal({
               {/* Image Container */}
               <div className="relative w-full h-[80vh] flex items-center justify-center">
                 {/* Previous Button */}
-                {images.length > 1 && (
+                {items.length > 1 && (
                   <button
                     onClick={handlePrevious}
                     className="absolute left-4 z-10 size-12 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
@@ -114,28 +119,31 @@ export function ImageCarouselModal({
                   </button>
                 )}
 
-                {/* Image */}
                 <div className="relative w-full h-full flex items-center justify-center">
                   <motion.div
-                    key={currentIndex}
+                    key={current.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                     className="relative w-full h-full max-w-5xl"
                   >
-                    <Image
-                      src={images[currentIndex]}
-                      alt={`${ticketName} - Imagem ${currentIndex + 1}`}
+                    <ImageWithInitialFallback
+                      src={current.src}
+                      alt={`${ticketName} — ${current.name}`}
+                      name={current.name}
+                      fallbackId={current.id}
                       fill
-                      className="object-contain"
-                      priority
+                      sizes="(max-width: 768px) 100vw, min(90vw, 896px)"
+                      className="w-full h-full bg-gray-4"
+                      imgClassName="object-contain"
+                      letterClassName="text-7xl md:text-8xl"
                     />
                   </motion.div>
                 </div>
 
                 {/* Next Button */}
-                {images.length > 1 && (
+                {items.length > 1 && (
                   <button
                     onClick={handleNext}
                     className="absolute right-4 z-10 size-12 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
@@ -147,11 +155,12 @@ export function ImageCarouselModal({
               </div>
 
               {/* Thumbnails */}
-              {images.length > 1 && (
+              {items.length > 1 && (
                 <div className="pt-10 flex items-center justify-center gap-2 px-4 pb-6">
-                  {images.map((image, index) => (
+                  {items.map((item, index) => (
                     <button
-                      key={index}
+                      key={item.id}
+                      type="button"
                       onClick={() => setCurrentIndex(index)}
                       className={`relative size-20 rounded-lg border-2 overflow-hidden shrink-0 transition-all ${index === currentIndex
                           ? "border-primary-11 scale-110"
@@ -159,11 +168,15 @@ export function ImageCarouselModal({
                         }`}
                       aria-label={`Ver imagem ${index + 1}`}
                     >
-                      <Image
-                        src={image}
-                        alt={`${ticketName} - Miniatura ${index + 1}`}
+                      <ImageWithInitialFallback
+                        src={item.src}
+                        alt={`${ticketName} — ${item.name}`}
+                        name={item.name}
+                        fallbackId={item.id}
                         fill
-                        className="object-cover"
+                        sizes="80px"
+                        className="size-full bg-gray-4"
+                        letterClassName="text-lg"
                       />
                     </button>
                   ))}
@@ -171,9 +184,9 @@ export function ImageCarouselModal({
               )}
 
               {/* Image Counter */}
-              {images.length > 1 && (
+              {items.length > 1 && (
                 <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
-                  {currentIndex + 1} / {images.length}
+                  {currentIndex + 1} / {items.length}
                 </div>
               )}
             </div>

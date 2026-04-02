@@ -85,11 +85,11 @@ export function useTopics(eventId: string | null, enabled: boolean = true) {
     onSuccess: () => {
       invalidateQueries.events.topics(eventId!);
       invalidateQueries.events.detail(eventId!);
-      toast.success("Tópico excluído com sucesso!");
+      toast.success("Tópico deletado com sucesso!");
     },
     onError: (error: any) => {
       console.error("Error deleting topic:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir tópico");
+      toast.error(error.response?.data?.message || "Erro ao deletar tópico");
     },
   });
 

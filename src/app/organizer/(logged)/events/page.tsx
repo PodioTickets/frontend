@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { LoadingAnimation } from "@/components/Loading";
 import { MoneyIcon } from "@/components/Icons/MoneyIcon";
 import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
@@ -98,17 +98,17 @@ export default function OrganizerEventsPage() {
   };
 
   const handleDelete = async (eventId: string, eventName: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o evento "${eventName}"?`)) {
+    if (!confirm(`Tem certeza que deseja deletar o evento "${eventName}"?`)) {
       return;
     }
 
     try {
       await organizerService.deleteEvent(eventId);
-      toast.success("Evento excluído com sucesso");
+      toast.success("Evento deletado com sucesso");
       loadEvents();
     } catch (error: any) {
       console.error("Error deleting event:", error);
-      toast.error("Erro ao excluir evento");
+      toast.error("Erro ao deletar evento");
     }
   };
 
@@ -299,7 +299,18 @@ export default function OrganizerEventsPage() {
                         >
                           <td className="py-4 px-5">
                             <div className="flex items-center gap-3">
-                              {event.bannerUrl && <Image src={event.bannerUrl} alt={event.name} width={36} height={36} className="rounded-lg max-w-[36px] max-h-[36px] object-cover h-[36px] w-[36px]" />}
+                              <div className="size-9 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
+                                <ImageWithInitialFallback
+                                  src={event.bannerUrl}
+                                  alt={event.name}
+                                  name={event.name}
+                                  fallbackId={event.id}
+                                  fill
+                                  sizes="36px"
+                                  className="size-full"
+                                  letterClassName="text-sm font-semibold"
+                                />
+                              </div>
                               <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                                 {event.name}
                               </span>

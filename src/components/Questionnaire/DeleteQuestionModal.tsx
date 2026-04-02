@@ -15,7 +15,7 @@ export function DeleteQuestionModal() {
         closeDeleteQuestionModal();
       } catch (error: any) {
         console.error("Error deleting question:", error);
-        toast.error(error.response?.data?.message || "Erro ao excluir pergunta");
+        toast.error(error.response?.data?.message || "Erro ao deletar pergunta");
       }
     } else {
       closeDeleteQuestionModal();
@@ -47,7 +47,7 @@ export function DeleteQuestionModal() {
                   Deletar pergunta permanentemente?
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                  Esta ação remove a pergunta do questionário do evento. Depois de excluir, não
+                  Esta ação remove a pergunta do questionário do evento. Depois de deletar, não
                   será possível recuperar.
                 </p>
               </div>

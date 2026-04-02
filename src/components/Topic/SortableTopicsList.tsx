@@ -21,7 +21,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
-import { GripVertical } from "lucide-react";
 import type { TopicSectionRow } from "@/lib/eventTopicSections";
 
 function SortableTopicCard({
@@ -54,22 +53,16 @@ function SortableTopicCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`border border-gray-8 rounded-xl w-full max-w-full flex flex-col overflow-hidden ${
-        isDragging ? "z-10 opacity-60 shadow-lg ring-2 ring-primary-8/30" : ""
-      }`}
+      className={`border border-gray-8 rounded-xl w-full max-w-full flex flex-col overflow-hidden ${isDragging ? "z-10 opacity-60 shadow-lg ring-2 ring-primary-8/30" : ""
+        }`}
     >
-      <div className="bg-gray-1 border-b border-gray-6 flex items-center justify-between px-5 py-2 gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <button
-            type="button"
-            className="shrink-0 cursor-grab touch-none rounded-lg border border-transparent p-1.5 text-gray-11 hover:bg-gray-3 hover:border-gray-6 active:cursor-grabbing"
-            aria-label="Arrastar para reordenar"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="size-5" />
-          </button>
-          <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] truncate">
+      <div className="bg-gray-1 border-b border-gray-6 flex items-center justify-between px-5 py-2 gap-2 cursor-grab active:cursor-grabbing" aria-label="Arrastar para reordenar o tópico"
+        {...attributes}
+        {...listeners}>
+        <div
+          className="flex min-w-0 flex-1 items-center rounded-md px-1 py-1 -mx-1 -my-0.5 touch-none outline-none focus-visible:ring-2 focus-visible:ring-primary-8/35 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-1"
+        >
+          <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] truncate min-w-0">
             Ações
           </p>
         </div>
@@ -91,7 +84,7 @@ function SortableTopicCard({
           <h3 className={headingClass}>{topic.title}</h3>
         )}
         <div
-          className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none max-h-[min(42vh,360px)] overflow-y-auto pr-1 min-h-0"
+          className="topic-rich-html text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none max-h-[min(42vh,360px)] overflow-y-auto pr-1 min-h-0"
           dangerouslySetInnerHTML={{ __html: topic.content }}
         />
       </div>

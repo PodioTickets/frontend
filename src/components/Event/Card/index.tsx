@@ -1,13 +1,15 @@
+"use client";
+
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { FlagIcon } from "@/components/Icons/FlagIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import type { Event } from "@/interfaces/event";
 import { getAvatarUrl } from "@/utils/avatar";
 import { getEventOrganizer } from "@/utils/organization";
 import { cn } from "@/utils/cn";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 interface EventCardProps {
   event: Event;
@@ -85,12 +87,15 @@ export function EventCard({ event }: EventCardProps) {
   const cardContent = (
     <>
       <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-4">
-        <Image
+        <ImageWithInitialFallback
           src={event.bannerUrl}
           alt={event.name}
+          name={event.name}
+          fallbackId={event.id}
           fill
-          className="object-cover"
           sizes="(max-width: 768px) 100vw, 300px"
+          className="size-full"
+          letterClassName="text-6xl"
         />
       </div>
 
@@ -115,11 +120,15 @@ export function EventCard({ event }: EventCardProps) {
             // Se tiver logoUrl (organization), usa ela, senão usa avatar do user (organizer antigo)
             if (organizer.logoUrl) {
               return (
-                <Image
+                <ImageWithInitialFallback
                   src={getAvatarUrl(organizer.logoUrl)}
                   alt={organizer.name}
+                  name={organizer.name}
                   width={20}
                   height={20}
+                  className="rounded-sm shrink-0"
+                  imgClassName="object-cover"
+                  letterClassName="text-xs"
                 />
               );
             }
@@ -127,11 +136,15 @@ export function EventCard({ event }: EventCardProps) {
             // Fallback para formato antigo
             if (event.organizer?.user?.avatarUrl) {
               return (
-                <Image
+                <ImageWithInitialFallback
                   src={getAvatarUrl(event.organizer.user.avatarUrl)}
                   alt={organizer.name}
+                  name={organizer.name}
                   width={20}
                   height={20}
+                  className="rounded-sm shrink-0"
+                  imgClassName="object-cover"
+                  letterClassName="text-xs"
                 />
               );
             }

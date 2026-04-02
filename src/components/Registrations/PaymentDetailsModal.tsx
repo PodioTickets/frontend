@@ -2,7 +2,7 @@
 import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
 import { usePaymentDetailsModal, useViewRegistrationModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, CheckCircle, Eye, FileText, ChevronLeft, ChevronRight, ChevronDown, XCircleIcon } from "lucide-react";
+import { X, Copy, CheckCircle, FileText, ChevronLeft, ChevronRight, ChevronDown, XCircleIcon } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import { CheckIcon } from '../Icons/Organizer/CheckIcon';
 import { PixIcon } from '../Icons/PixIcon';
 import { CardIcon } from '../Icons/CardIcon';
 import { ArrowButton } from '../ArrowButton';
+import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
 
 export function PaymentDetailsModal() {
@@ -263,11 +264,20 @@ export function PaymentDetailsModal() {
   };
 
   const goToParticipantDetails = (registrationIdForView: string) => {
+    if (!registrationId) return;
+    const paymentReturnPayload = {
+      registrationId,
+      eventId,
+      eventName,
+    };
+    // Fechar antes de abrir: ambos usam o mesmo store — closeModal() zera estado e apagaria o viewRegistration se viesse depois.
     closePaymentDetailsModal();
     openViewRegistrationModal({
       registrationId: registrationIdForView,
       eventId,
       eventName,
+      returnToPaymentDetails: true,
+      paymentDetailsModalData: paymentReturnPayload,
     });
   };
 
@@ -465,7 +475,11 @@ export function PaymentDetailsModal() {
                           <div className="p-3">
                             <button
                               type="button"
-                              onClick={() => { openViewRegistrationModal({ registrationId: participant.id, eventId, eventName }); closePaymentDetailsModal(); }}
+                              onClick={() =>
+                                goToParticipantDetails(
+                                  participant.viewRegistrationId || participant.id
+                                )
+                              }
                               className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
                             >
                               <FileText className="size-5" />
@@ -835,7 +849,7 @@ export function PaymentDetailsModal() {
                                   onClick={() => goToParticipantDetails(participant.viewRegistrationId)}
                                   className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                                 >
-                                  <Eye className="size-4 text-gray-11" />
+                                  <TicketIcon className="size-4 text-gray-11" />
                                 </button>
                               </div>
                             </div>

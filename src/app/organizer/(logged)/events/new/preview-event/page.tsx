@@ -8,7 +8,7 @@ import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { EventMap } from "@/components/EventMap";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { Download } from "lucide-react";
 import Link from "next/link";
 import { Loading } from "@/components/Loading";
@@ -101,16 +101,17 @@ export default function PreviewEventPage() {
           {/* Content */}
           <div className="flex flex-col gap-[52px] items-start w-full max-w-[843px]">
             {/* Banner Image */}
-            {event?.bannerUrl && (
-              <div className="h-[404px] relative rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] w-full overflow-hidden">
-                <Image
-                  src={event.bannerUrl}
-                  alt={event.name || "Event banner"}
-                  fill
-                  className="object-cover rounded-2xl"
-                />
-              </div>
-            )}
+            <div className="h-[404px] relative rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] w-full overflow-hidden">
+              <ImageWithInitialFallback
+                src={event?.bannerUrl}
+                alt={event?.name || "Event banner"}
+                name={event?.name || "Evento"}
+                fill
+                sizes="(max-width: 900px) 100vw, 843px"
+                className="size-full rounded-2xl"
+                letterClassName="text-7xl font-bold"
+              />
+            </div>
 
             {/* Info Sections */}
             <div className="flex flex-col items-start rounded-xl w-full">
@@ -124,7 +125,7 @@ export default function PreviewEventPage() {
                       {section.title}
                     </h2>
                     <div
-                      className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
+                      className="topic-rich-html text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: section.content }}
                     />
                     {section.isDefault ? (
@@ -160,18 +161,15 @@ export default function PreviewEventPage() {
                     {kits[0] && (
                       <div className="flex items-start w-full">
                         <div className="aspect-192/184 border border-gray-6 rounded-lg relative w-[192px] overflow-hidden">
-                          {kits[0].imageUrl ? (
-                            <Image
-                              src={kits[0].imageUrl}
-                              alt={kits[0].name}
-                              fill
-                              className="object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-4 rounded-lg flex items-center justify-center">
-                              <p className="text-gray-11 text-sm">Imagem do kit</p>
-                            </div>
-                          )}
+                          <ImageWithInitialFallback
+                            src={kits[0].imageUrl}
+                            alt={kits[0].name}
+                            name={kits[0].name}
+                            fill
+                            sizes="192px"
+                            className="size-full rounded-lg"
+                            letterClassName="text-3xl font-semibold"
+                          />
                         </div>
                       </div>
                     )}

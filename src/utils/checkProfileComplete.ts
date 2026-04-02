@@ -1,4 +1,21 @@
 /**
+ * Fluxo de "completar perfil" (CPF, nascimento, etc.) é só para participante.
+ * Organizadores não devem ver esse modal.
+ */
+export function skipsParticipantProfileFlow(
+  user: unknown,
+  pathname?: string | null,
+): boolean {
+  if (typeof pathname === "string" && pathname.startsWith("/organizer")) {
+    return true;
+  }
+  const u = user as { role?: string } | null;
+  if (!u?.role) return false;
+  const r = String(u.role).toUpperCase();
+  return r.includes("ORGANIZER");
+}
+
+/**
  * Verifica se o perfil do usuário está completo com todos os campos obrigatórios
  * @param user - Objeto do usuário
  * @returns true se o cadastro estiver completo, false caso contrário

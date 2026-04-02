@@ -172,7 +172,7 @@ export function CreateQuestionModal() {
 
     try {
       await organizerService.deleteQuestion(eventId, data.questionId);
-      toast.success("Pergunta excluída com sucesso!");
+      toast.success("Pergunta deletada com sucesso!");
 
       if (onModalSave) {
         await onModalSave(undefined);
@@ -181,7 +181,7 @@ export function CreateQuestionModal() {
       closeCreateQuestionModal();
     } catch (error: any) {
       console.error("Error deleting question:", error);
-      toast.error(error.response?.data?.message || "Erro ao excluir pergunta");
+      toast.error(error.response?.data?.message || "Erro ao deletar pergunta");
     } finally {
       setIsSubmitting(false);
     }
@@ -501,35 +501,39 @@ export function CreateQuestionModal() {
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-gray-6 flex items-center justify-end gap-3 px-6 py-4 shrink-0">
-                  <Button
-                    variant="outline"
-                    onClick={closeCreateQuestionModal}
-                    disabled={isSubmitting}
-                    className="border-gray-6 text-gray-12 px-4 py-2"
-                  >
-                    Cancelar
-                  </Button>
+                <div className="border-t border-gray-6 flex items-center justify-between gap-3 px-6 py-4 shrink-0">
                   {isEditing && (
                     <Button
                       variant="destructive"
-                    onClick={() => openDeleteQuestionModal({ onConfirm: handleDelete })}
+                      onClick={() => openDeleteQuestionModal({ onConfirm: handleDelete })}
                       disabled={isSubmitting}
                     >
                       Deletar pergunta
                     </Button>
                   )}
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSubmitting || !question.trim()}
-                    className="disabled:bg-opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting
-                      ? "Salvando..."
-                      : isEditing
-                        ? "Confirmar e editar"
-                        : "Confirmar e criar"}
-                  </Button>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={closeCreateQuestionModal}
+                      disabled={isSubmitting}
+                      className="border-gray-6 text-gray-12 px-4 py-2"
+                    >
+                      Cancelar
+                    </Button>
+
+                    <Button
+                      onClick={handleSave}
+                      disabled={isSubmitting || !question.trim()}
+                      className="disabled:bg-opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting
+                        ? "Salvando..."
+                        : isEditing
+                          ? "Salvar pergunta"
+                          : "Salvar pergunta"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>

@@ -1,11 +1,15 @@
 "use client";
 
-import { useViewRegistrationModal } from "@/stores/modalStore";
+import {
+  useViewRegistrationModal,
+  usePaymentDetailsModal,
+  useModalStore,
+} from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { organizerService } from "@/services";
@@ -16,6 +20,7 @@ import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobil
 
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();
+  const { openPaymentDetailsModal } = usePaymentDetailsModal();
   const [isQuestionsModalOpen, setIsQuestionsModalOpen] = useState(false);
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
   const [productsPage, setProductsPage] = useState(1);
@@ -29,6 +34,33 @@ export function ViewRegistrationModal() {
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
   const eventTabs = eventId ? getEventTabs(eventId) : [];
+
+  const showBackToPaymentDetails = Boolean(
+    data?.returnToPaymentDetails &&
+      data?.paymentDetailsModalData?.registrationId
+  );
+
+  const handleBackToPaymentDetails = useCallback(() => {
+    const snapshot = useModalStore.getState().data;
+    const payload = snapshot?.paymentDetailsModalData as
+      | {
+          registrationId?: string;
+          eventId?: string;
+          eventName?: string;
+        }
+      | undefined;
+    closeViewRegistrationModal();
+    if (payload?.registrationId) {
+      openPaymentDetailsModal({
+        registrationId: payload.registrationId,
+        eventId: payload.eventId ?? (snapshot?.eventId as string | undefined),
+        eventName:
+          payload.eventName ??
+          (snapshot?.eventName as string | undefined) ??
+          "Evento",
+      });
+    }
+  }, [closeViewRegistrationModal, openPaymentDetailsModal]);
 
   useEffect(() => {
     if (!isOpen || !registrationId) {
@@ -283,9 +315,17 @@ export function ViewRegistrationModal() {
                   <div className="flex items-center gap-1 h-[52px] px-4">
                     <button
                       type="button"
-                      onClick={closeViewRegistrationModal}
+                      onClick={
+                        showBackToPaymentDetails
+                          ? handleBackToPaymentDetails
+                          : closeViewRegistrationModal
+                      }
                       className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
-                      aria-label="Voltar"
+                      aria-label={
+                        showBackToPaymentDetails
+                          ? "Voltar para detalhes de pagamento"
+                          : "Voltar"
+                      }
                     >
                       <ArrowButton isOpen={false} />
                     </button>
@@ -311,11 +351,11 @@ export function ViewRegistrationModal() {
                     <ChevronDown className="size-4 -rotate-90 shrink-0" />
                     <span>Detalhes do pedido</span>
                     <ChevronDown className="size-4 -rotate-90 shrink-0" />
-                    <span className="text-gray-12">Informações do participante</span>
+                    <span className="text-gray-12">Informações da inscrição</span>
                   </div>
 
                   <h1 className="font-manrope font-bold text-xl text-gray-12 mb-5">
-                    Informações do participante
+                    Informações da inscrição
                   </h1>
 
                   {/* Participant ticket block */}
@@ -355,7 +395,7 @@ export function ViewRegistrationModal() {
                         <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
                           {user?.avatarUrl ? (
                             <Image
-                              src={getAvatarUrl(user.avatarUrl)}
+                              src={getAvatarUrl(user.avatarUrl || "") as string}
                               alt={participantName}
                               width={40}
                               height={40}
@@ -487,13 +527,26 @@ export function ViewRegistrationModal() {
               {/* Desktop: centered modal */}
               <div className="hidden md:flex flex-col bg-gray-1 rounded-lg shadow-2xl w-full max-w-[1095px] mx-4 relative overflow-hidden pointer-events-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6">
-                  <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
-                    Informações do participante
-                  </h2>
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6 gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {showBackToPaymentDetails ? (
+                      <button
+                        type="button"
+                        onClick={handleBackToPaymentDetails}
+                        className="size-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
+                        aria-label="Voltar para detalhes de pagamento"
+                      >
+                        <ChevronLeft className="size-5 text-gray-11" />
+                      </button>
+                    ) : null}
+                    <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12 truncate min-w-0">
+                      Informações da inscrição
+                    </h2>
+                  </div>
                   <button
                     onClick={closeViewRegistrationModal}
-                    className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
+                    className="size-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
+                    aria-label="Fechar"
                   >
                     <X className="size-5 text-gray-11" />
                   </button>
@@ -552,7 +605,7 @@ export function ViewRegistrationModal() {
                             <div className="relative shrink-0 size-10 rounded-full overflow-hidden">
                               {user?.avatarUrl ? (
                                 <Image
-                                  src={getAvatarUrl(user.avatarUrl)}
+                                  src={getAvatarUrl(user.avatarUrl || "") as string}
                                   alt={participantName}
                                   width={40}
                                   height={40}
@@ -607,7 +660,7 @@ export function ViewRegistrationModal() {
                           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
                             Email
                           </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12 truncate">
                             {participantEmail}
                           </p>
                         </div>
@@ -712,7 +765,7 @@ export function ViewRegistrationModal() {
                           </button>
                         )}
                       </div>
-                      <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-4 pb-4 pr-4">
                         {products.length > 0 ? (
                           products.slice(0, 2).map((product: any, index: number) => {
                             return (

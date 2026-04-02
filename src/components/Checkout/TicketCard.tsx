@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Image from "next/image";
+import { useState, useMemo, useEffect } from "react";
 import { ArrowButton } from "../ArrowButton";
 import { DistanceIcon } from "../Icons/DistanceIcon";
-import { CalendarIcon } from "../Icons/CalendarIcon";
-import { ClockIcon } from "../Icons/ClockIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import type { Event } from "@/interfaces/event";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { modalitiesColumns } from "@/constants";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { getTicketProductCarouselItems } from "@/utils/ticketProductVisuals";
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -99,13 +98,18 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
     return { name: modalityValue, icon: undefined };
   }, [ticket.modality, event.modalities]);
 
-  // Obter imagens dos produtos vinculados ao ticket
-  const getTicketProductImages = (): string[] => {
-    if (!ticket.products || ticket.products.length === 0) return [];
-    return ticket.products
-      .map((productId) => productsMap[productId]?.image)
-      .filter((image): image is string => !!image);
-  };
+  const productItems = useMemo(
+    () => getTicketProductCarouselItems(ticket, productsMap),
+    [ticket, productsMap]
+  );
+
+  useEffect(() => {
+    if (productItems.length === 0) {
+      setCurrentMainImageIndex(0);
+      return;
+    }
+    setCurrentMainImageIndex((i) => Math.min(i, productItems.length - 1));
+  }, [productItems.length]);
 
   const handleDecrease = () => {
     updateRaceQuantity(ticket.id, Math.max(0, currentQuantity - 1));
@@ -122,13 +126,13 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
 
   const handlePreviousImage = () => {
     setCurrentMainImageIndex((prev) =>
-      prev === 0 ? productImages.length - 1 : prev - 1
+      prev === 0 ? productItems.length - 1 : prev - 1
     );
   };
 
   const handleNextImage = () => {
     setCurrentMainImageIndex((prev) =>
-      prev === productImages.length - 1 ? 0 : prev + 1
+      prev === productItems.length - 1 ? 0 : prev + 1
     );
   };
 
@@ -139,8 +143,8 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
 
   const price = getTicketPrice();
   const distanceKm = getDistanceKm();
-  const productImages = getTicketProductImages();
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  const currentProduct = productItems[currentMainImageIndex];
 
   return (
     <>
@@ -148,23 +152,29 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
       <div className="w-full md:hidden">
         <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col justify-center gap-6">
           {/* Image Gallery */}
-          {productImages.length > 0 && (
-            <div className={`flex gap-3 items-center w-full ${productImages.length === 1 ? 'justify-center' : 'justify-start'}`}>
+          {productItems.length > 0 && (
+            <div className={`flex gap-3 items-center w-full ${productItems.length === 1 ? 'justify-center' : 'justify-start'}`}>
               {/* Main Image */}
               <button
                 onClick={() => handleImageClick(currentMainImageIndex)}
-                className={`${productImages.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
+                className={`${productItems.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
               >
-                <Image
-                  src={productImages[currentMainImageIndex]}
-                  alt={ticket.name}
-                  fill
-                  className="object-cover"
-                />
+                {currentProduct ? (
+                  <ImageWithInitialFallback
+                    src={currentProduct.src}
+                    alt={ticket.name}
+                    name={currentProduct.name}
+                    fallbackId={currentProduct.id}
+                    fill
+                    sizes="(max-width: 768px) 90vw, 136px"
+                    className="size-full"
+                    letterClassName="text-3xl"
+                  />
+                ) : null}
               </button>
 
               {/* Thumbnail Grid */}
-              {productImages.length > 1 && (
+              {productItems.length > 1 && (
                 <div className="flex flex-col items-center gap-1 h-[136px] justify-center">
                   {/* Seta para cima */}
                   <button
@@ -178,29 +188,31 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                   </button>
                   {/* Thumbnails */}
                   <div className="flex flex-col gap-1">
-                    {productImages
-                      .filter((_, idx) => idx !== currentMainImageIndex)
+                    {productItems
+                      .map((item, idx) => ({ item, idx }))
+                      .filter(({ idx }) => idx !== currentMainImageIndex)
                       .slice(0, 3)
-                      .map((image, idx) => {
-                        const originalIndex = productImages.findIndex((img) => img === image);
-                        return (
-                          <button
-                            key={originalIndex}
-                            onClick={() => handleThumbnailClick(originalIndex)}
-                            className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                              ? 'border-primary-11'
-                              : 'border-gray-6'
-                              }`}
-                          >
-                            <Image
-                              src={image}
-                              alt={`${ticket.name} ${originalIndex + 1}`}
-                              fill
-                              className="object-cover"
-                            />
-                          </button>
-                        );
-                      })}
+                      .map(({ item, idx: originalIndex }) => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleThumbnailClick(originalIndex)}
+                          className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
+                            ? 'border-primary-11'
+                            : 'border-gray-6'
+                            }`}
+                        >
+                          <ImageWithInitialFallback
+                            src={item.src}
+                            alt={`${item.name}`}
+                            name={item.name}
+                            fallbackId={item.id}
+                            fill
+                            sizes="36px"
+                            className="size-full"
+                            letterClassName="text-sm"
+                          />
+                        </button>
+                      ))}
                   </div>
                   {/* Seta para baixo */}
                   <button
@@ -238,12 +250,15 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                 <div className="flex items-center gap-2">
                   {modalityInfo.icon ? (
                     <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
-                      <Image
+                      <ImageWithInitialFallback
                         src={modalityInfo.icon}
                         alt={modalityInfo.name}
+                        name={modalityInfo.name}
                         width={24}
                         height={24}
-                        className="object-contain"
+                        className="size-6"
+                        imgClassName="object-contain"
+                        letterClassName="text-[10px]"
                       />
                     </div>
                   ) : (
@@ -302,23 +317,27 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
       <div className="hidden md:block w-full">
         <div className="flex gap-4 w-full">
           {/* Galeria de imagens dos produtos à esquerda */}
-          {productImages.length > 0 && (
-            <div className={`${productImages.length === 1 ? 'flex justify-center w-full' : 'shrink-0'}`}>
-              <div className={`flex items-center gap-2 ${productImages.length === 1 ? 'justify-center w-full' : ''}`}>
-                {productImages[currentMainImageIndex] && (
+          {productItems.length > 0 && (
+            <div className={`${productItems.length === 1 ? 'flex justify-center w-full' : 'shrink-0'}`}>
+              <div className={`flex items-center gap-2 ${productItems.length === 1 ? 'justify-center w-full' : ''}`}>
+                {currentProduct ? (
                   <button
                     onClick={() => handleImageClick(currentMainImageIndex)}
                     className="w-[136px] h-[136px] relative rounded-lg border border-gray-6 overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
                   >
-                    <Image
-                      src={productImages[currentMainImageIndex]}
+                    <ImageWithInitialFallback
+                      src={currentProduct.src}
                       alt={ticket.name}
+                      name={currentProduct.name}
+                      fallbackId={currentProduct.id}
                       fill
-                      className="object-cover"
+                      sizes="136px"
+                      className="size-full"
+                      letterClassName="text-3xl"
                     />
                   </button>
-                )}
-                {productImages.length > 1 && (
+                ) : null}
+                {productItems.length > 1 && (
                   <div className="flex flex-col items-center gap-1">
                     {/* Seta para cima */}
                     <button
@@ -332,29 +351,31 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
                     </button>
                     {/* Thumbnails */}
                     <div className="flex flex-col gap-1">
-                      {productImages
-                        .filter((_, idx) => idx !== currentMainImageIndex)
+                      {productItems
+                        .map((item, idx) => ({ item, idx }))
+                        .filter(({ idx }) => idx !== currentMainImageIndex)
                         .slice(0, 3)
-                        .map((image, idx) => {
-                          const originalIndex = productImages.findIndex((img) => img === image);
-                          return (
-                            <button
-                              key={originalIndex}
-                              onClick={() => handleThumbnailClick(originalIndex)}
-                              className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                                ? 'border-primary-11'
-                                : 'border-gray-6'
-                                }`}
-                            >
-                              <Image
-                                src={image}
-                                alt={`${ticket.name} ${originalIndex + 1}`}
-                                fill
-                                className="object-cover"
-                              />
-                            </button>
-                          );
-                        })}
+                        .map(({ item, idx: originalIndex }) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleThumbnailClick(originalIndex)}
+                            className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
+                              ? 'border-primary-11'
+                              : 'border-gray-6'
+                              }`}
+                          >
+                            <ImageWithInitialFallback
+                              src={item.src}
+                              alt={item.name}
+                              name={item.name}
+                              fallbackId={item.id}
+                              fill
+                              sizes="36px"
+                              className="size-full"
+                              letterClassName="text-sm"
+                            />
+                          </button>
+                        ))}
                     </div>
                     {/* Seta para baixo */}
                     <button
@@ -426,9 +447,9 @@ export function TicketCard({ ticket, event, productsMap }: TicketCardProps) {
       </div>
 
       {/* Image Carousel Modal */}
-      {productImages.length > 0 && (
+      {productItems.length > 0 && (
         <ImageCarouselModal
-          images={productImages}
+          items={productItems}
           initialIndex={selectedImageIndex}
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}

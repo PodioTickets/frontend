@@ -318,6 +318,11 @@ export interface DropdownProps {
   onMultiSelectChange?: (selectedIds: string[]) => void;
   /** Renderiza o painel com position:fixed no body — evita corte dentro de modais com overflow */
   menuInPortal?: boolean;
+  /**
+   * Lista abaixo do gatilho em fluxo normal (sem fixed/absolute). Ideal para prévias dentro de modal.
+   * Se `true`, ignora `menuInPortal`.
+   */
+  menuInline?: boolean;
 }
 
 export function Dropdown({
@@ -337,6 +342,7 @@ export function Dropdown({
   selectedIds = [],
   onMultiSelectChange,
   menuInPortal = false,
+  menuInline = false,
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -392,7 +398,7 @@ export function Dropdown({
   }, []);
 
   useLayoutEffect(() => {
-    if (!menuInPortal || !isOpen || !triggerRef.current) {
+    if (!menuInPortal || menuInline || !isOpen || !triggerRef.current) {
       setPortalPlacement(null);
       return;
     }
@@ -430,7 +436,7 @@ export function Dropdown({
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [menuInPortal, isOpen, position]);
+  }, [menuInPortal, menuInline, isOpen, position]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -634,6 +640,7 @@ export function Dropdown({
   const portalMenu =
     mounted &&
       menuInPortal &&
+      !menuInline &&
       isOpen &&
       portalPlacement &&
       typeof document !== "undefined"
@@ -661,7 +668,11 @@ export function Dropdown({
       : null;
 
   return (
-    <div className="relative h-full">
+    <div
+      className={
+        menuInline ? "relative flex w-full flex-col" : "relative h-full"
+      }
+    >
       <div
         ref={triggerRef}
         {...buttonDataAttr}
@@ -670,11 +681,19 @@ export function Dropdown({
             setIsOpen(!isOpen);
           });
         }}
-        className="cursor-pointer h-full"
+        className={menuInline ? "cursor-pointer w-full" : "cursor-pointer h-full"}
       >
         {triggerContent}
       </div>
-      {!menuInPortal && (
+      {menuInline && isOpen && (
+        <div
+          {...dropdownDataAttr}
+          className={`${width} ${maxHeight} mt-2 bg-gray-1 rounded-lg shadow-lg border border-gray-6 z-10 overflow-hidden ${className}`}
+        >
+          {menuBody}
+        </div>
+      )}
+      {!menuInPortal && !menuInline && (
         <div
           {...dropdownDataAttr}
           className={`absolute ${positionClasses} ${width} ${maxHeight} bg-gray-1 rounded-lg shadow-lg border border-gray-6 z-50 overflow-hidden transition-all duration-200 ease-out origin-top ${className} ${isOpen

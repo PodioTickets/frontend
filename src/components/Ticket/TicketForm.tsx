@@ -31,7 +31,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { Info, Plus, Trash2 } from "lucide-react";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
@@ -193,20 +193,18 @@ function SortableTicketProductCard({
     >
       <div className="border-b border-gray-6 flex gap-3 items-center p-4">
         <div className="flex gap-3 items-center flex-1 min-w-0">
-          {product.product.image ? (
-            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
-              <Image
-                src={product.product.image}
-                alt={product.product.name}
-                fill
-                className="object-cover rounded"
-              />
-            </div>
-          ) : (
-            <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0 flex items-center justify-center text-gray-11 text-base font-semibold font-family-dm-sans leading-[1.1]">
-              {product.product.name.slice(0, 1).toUpperCase()}
-            </div>
-          )}
+          <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
+            <ImageWithInitialFallback
+              src={product.product.image}
+              alt={product.product.name}
+              name={product.product.name}
+              fallbackId={product.productId}
+              fill
+              sizes="100px"
+              className="size-full rounded"
+              letterClassName="text-base font-semibold font-family-dm-sans"
+            />
+          </div>
           <div className="flex flex-col justify-between h-full py-2 gap-2 flex-1 min-w-0">
             <h3 className="text-gray-12 text-base font-semibold font-family-dm-sans leading-[1.1] truncate">
               {product.product.name}
@@ -524,14 +522,21 @@ export function TicketForm({
   const [batches, setBatches] = useState<Batch[]>(
     initialData?.batches || [defaultBatch],
   );
+  /** Soma das quantidades dos lotes — usada no modal de produto como estoque padrão das variações. */
+  const ticketBatchesTotalQuantity = useMemo(
+    () =>
+      batches.reduce((acc, b) => {
+        const n = parseInt(String(b.quantity).trim(), 10);
+        return acc + (Number.isFinite(n) ? n : 0);
+      }, 0),
+    [batches],
+  );
   const [products, setProducts] = useState<ProductData[]>(
     initialData?.products || [],
   );
   const [activeProductDragId, setActiveProductDragId] = useState<string | null>(
     null,
   );
-  const [reorderingProducts, setReorderingProducts] = useState(false);
-
   const productDndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, {
@@ -540,79 +545,26 @@ export function TicketForm({
   );
 
   const handleTicketProductsDragStart = useCallback((e: DragStartEvent) => {
-    if (reorderingProducts) return;
     setActiveProductDragId(e.active.id as string);
-  }, [reorderingProducts]);
+  }, []);
 
   const handleTicketProductsDragCancel = useCallback(() => {
     setActiveProductDragId(null);
   }, []);
 
   const handleTicketProductsDragEnd = useCallback(
-    async (event: DragEndEvent) => {
+    (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveProductDragId(null);
-      if (reorderingProducts) return;
       if (!over || active.id === over.id) return;
 
       const oldIndex = products.findIndex((p) => p.productId === active.id);
       const newIndex = products.findIndex((p) => p.productId === over.id);
       if (oldIndex < 0 || newIndex < 0) return;
 
-      const previous = products;
-      const reordered = arrayMove(products, oldIndex, newIndex);
-      setProducts(reordered);
-
-      if (mode !== "edit" || !ticketId || !eventId) return;
-
-      setReorderingProducts(true);
-      try {
-        await organizerService.reorderTicketProducts(
-          eventId,
-          ticketId,
-          reordered.map((p) => p.productId),
-        );
-        toast.success("Ordem dos produtos atualizada");
-        setFormBaseline((baseline) => {
-          if (!baseline) return baseline;
-          try {
-            const o = JSON.parse(baseline) as { productIds?: string };
-            return JSON.stringify({
-              ...o,
-              productIds: reordered.map((p) => p.productId).join(","),
-            });
-          } catch {
-            return baseline;
-          }
-        });
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.events.tickets(eventId),
-        });
-      } catch (err: unknown) {
-        setProducts(previous);
-        const msg =
-          err &&
-          typeof err === "object" &&
-          "response" in err &&
-          (err as { response?: { data?: { message?: string } } }).response
-            ?.data?.message;
-        toast.error(
-          typeof msg === "string" && msg.trim()
-            ? msg
-            : "Não foi possível atualizar a ordem dos produtos",
-        );
-      } finally {
-        setReorderingProducts(false);
-      }
+      setProducts(arrayMove(products, oldIndex, newIndex));
     },
-    [
-      products,
-      mode,
-      ticketId,
-      eventId,
-      queryClient,
-      reorderingProducts,
-    ],
+    [products],
   );
 
   const activeDragProduct = useMemo(
@@ -1282,7 +1234,21 @@ export function TicketForm({
     setBatches((prev) => {
       const batch = prev.find((b) => b.id === batchId);
       if (!batch) return prev;
-      const next: Batch = { ...batch, [field]: normalized };
+
+      let next: Batch = { ...batch, [field]: normalized };
+
+      if (
+        field === "startDate" &&
+        batch.startType === "date" &&
+        normalized.trim() !== (batch.startDate?.trim() ?? "")
+      ) {
+        next = {
+          ...next,
+          endDate: "",
+          endTime: "",
+        };
+      }
+
       if (isBatchEndBeforeSaleStart(next)) {
         toast.error(
           "A data de término da venda não pode ser anterior à data de início.",
@@ -1293,55 +1259,11 @@ export function TicketForm({
     });
   };
 
-  const handleSaveDescription = async () => {
+  /** Confirma a observação só no estado local; persistência no botão «Salvar alterações». */
+  const handleCommitDescriptionField = () => {
     const trimmed = editingDescription.trim();
     setTicketDescription(trimmed);
-
-    if (mode === "edit" && ticketId && eventId) {
-      try {
-        await organizerService.updateTicket(eventId, ticketId, {
-          description: trimmed.length > 0 ? trimmed : undefined,
-        });
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.events.tickets(eventId),
-        });
-        toast.success("Observação atualizada com sucesso!");
-      } catch (error: unknown) {
-        console.error("Error updating ticket description:", error);
-        const raw =
-          error &&
-          typeof error === "object" &&
-          "response" in error &&
-          (error as { response?: { data?: { message?: unknown } } }).response
-            ?.data?.message;
-        const msg =
-          typeof raw === "string" ? raw : "Erro ao atualizar observação";
-        toast.error(msg);
-        return;
-      }
-    }
-
     setIsEditingDescription(false);
-
-    if (formBaseline !== null) {
-      setFormBaseline(
-        buildTicketFormSnapshot({
-          ticketName,
-          ticketDescription: trimmed,
-          selectedModality,
-          distance,
-          distanceUnit,
-          gender,
-          hasAgeRestriction,
-          minAge,
-          maxAge,
-          hasKit,
-          selectedGroupId,
-          batches,
-          products,
-        }),
-      );
-    }
   };
 
   const handleCancelDescription = () => {
@@ -1398,9 +1320,12 @@ export function TicketForm({
       const modalityLabel =
         modalityTemplates.find((t) => t.id === selectedModality)?.label ||
         selectedModality;
+      const descriptionToPersist = (
+        isEditingDescription ? editingDescription : ticketDescription
+      ).trim();
       const ticketData = {
         name: ticketName.trim(),
-        description: ticketDescription.trim() || undefined,
+        description: descriptionToPersist || undefined,
         categoryId: selectedGroupId || initialGroupId || undefined,
         modality: modalityLabel,
         distance: distance || undefined,
@@ -1469,6 +1394,30 @@ export function TicketForm({
         localStorage.removeItem(localStorageKey);
       }
       clearTicketDraft(eventId, mode, ticketId);
+
+      setTicketDescription(descriptionToPersist);
+      setEditingDescription(descriptionToPersist);
+      setIsEditingDescription(false);
+
+      // Antes de history.back(): o popstate handler usa isDirtyRef; se ainda estiver true, abre o modal de saída.
+      setFormBaseline(
+        buildTicketFormSnapshot({
+          ticketName,
+          ticketDescription: descriptionToPersist,
+          selectedModality,
+          distance,
+          distanceUnit,
+          gender,
+          hasAgeRestriction,
+          minAge,
+          maxAge,
+          hasKit,
+          selectedGroupId,
+          batches,
+          products,
+        }),
+      );
+      isDirtyRef.current = false;
 
       releaseUnsavedHistoryGuard();
       router.push(backUrl);
@@ -1579,10 +1528,10 @@ export function TicketForm({
                   type="text"
                   value={editingDescription}
                   onChange={(e) => setEditingDescription(e.target.value)}
-                  onBlur={handleSaveDescription}
+                  onBlur={handleCommitDescriptionField}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSaveDescription();
+                      handleCommitDescriptionField();
                     } else if (e.key === "Escape") {
                       handleCancelDescription();
                     }
@@ -1618,34 +1567,6 @@ export function TicketForm({
               )}
             </div>
           </div>
-
-          {/* Categoria */}
-          {Array.isArray(ticketCategories) && ticketCategories.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                Categoria
-              </label>
-              <Dropdown
-                options={groupOptions}
-                trigger={(isOpen) => (
-                  <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
-                    <span
-                      className={`text-base font-family-dm-sans ${selectedGroupId || initialGroupId
-                        ? "text-gray-12"
-                        : "text-gray-11"
-                        }`}
-                    >
-                      {selectedGroupId || initialGroupId
-                        ? selectedGroupLabel
-                        : "Sem categoria"}
-                    </span>
-                    <ArrowButton isOpen={isOpen} />
-                  </button>
-                )}
-                onSelect={(option) => setSelectedGroupId(option.id || "")}
-              />
-            </div>
-          )}
 
           <div className="flex gap-4">
             {/* Modalidades */}
@@ -1722,6 +1643,33 @@ export function TicketForm({
                 </div>
               </div>
             </div>
+
+            <div className="flex flex-col gap-2 w-full">
+              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                Categoria
+              </label>
+              <Dropdown
+                options={groupOptions}
+                width="w-full"
+                trigger={(isOpen) => (
+                  <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
+                    <span
+                      className={`text-base font-family-dm-sans ${selectedGroupId || initialGroupId
+                        ? "text-gray-12"
+                        : "text-gray-11"
+                        }`}
+                    >
+                      {selectedGroupId || initialGroupId
+                        ? selectedGroupLabel
+                        : "Sem categoria"}
+                    </span>
+                    <ArrowButton isOpen={isOpen} />
+                  </button>
+                )}
+                onSelect={(option) => setSelectedGroupId(option.id || "")}
+              />
+            </div>
+
           </div>
 
           {/* Gênero */}
@@ -1857,13 +1805,15 @@ export function TicketForm({
                         Quantidade de vagas
                       </label>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
                         value={batch.quantity}
                         onChange={(e) =>
                           handleBatchChange(
                             batch.id,
                             "quantity",
-                            e.target.value,
+                            e.target.value.replace(/\D/g, ""),
                           )
                         }
                         placeholder="Ex: 500"
@@ -2108,13 +2058,7 @@ export function TicketForm({
                       }
                       openCreateProductModal({
                         eventId,
-                        ticketBatchesTotalQuantity: batches.reduce(
-                          (acc, b) => {
-                            const n = parseInt(String(b.quantity).trim(), 10);
-                            return acc + (Number.isFinite(n) ? n : 0);
-                          },
-                          0,
-                        ),
+                        ticketBatchesTotalQuantity,
                       });
                     }}
                   >
@@ -2132,8 +2076,7 @@ export function TicketForm({
                 </div>
               ) : (
                 <div
-                  className={`bg-gray-2 border border-gray-6 rounded-xl p-5 ${reorderingProducts ? "pointer-events-none opacity-75" : ""
-                    }`}
+                  className="bg-gray-2 border border-gray-6 rounded-xl p-5"
                 >
                   <DndContext
                     sensors={productDndSensors}
@@ -2161,6 +2104,7 @@ export function TicketForm({
                                 eventId,
                                 productId: product.productId,
                                 product: product.product,
+                                ticketBatchesTotalQuantity,
                               });
                             }}
                             onRemove={() => {
@@ -2215,7 +2159,7 @@ export function TicketForm({
               onClick={() => setDeleteModalOpen(true)}
               className="py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
             >
-              Excluir ingresso
+              Deletar ingresso
             </Button>
           ) : null}
           <Button

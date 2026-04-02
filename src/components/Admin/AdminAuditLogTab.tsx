@@ -8,17 +8,27 @@ import {
   X,
   Building2,
   UserRound,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { DatePicker } from "@/components/DatePicker";
 import { Button } from "@/components/Button";
 import { adminService } from "@/services";
-import type { AdminAuditLogItem } from "@/services/admin/AdminService";
+import type {
+  AdminAuditLogItem,
+  AdminAuditOrganization,
+} from "@/services/admin/AdminService";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import toast from "react-hot-toast";
 import { AdminAuditLogDetailsDrawer } from "./AdminAuditLogDetailsDrawer";
 import type { AdminAuditChangeDetail } from "@/services/admin/AdminService";
 
 const ITEMS_PER_PAGE = 20;
+const ORG_PICKER_PAGE_SIZE = 20;
 
 const UUID_PARAM_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -181,12 +191,40 @@ function changeDetailsPreviewLine(
   return parts.join(" · ") + more;
 }
 
+function formatOrgPickerLabel(org: AdminAuditOrganization): string {
+  const main = org.name?.trim() || org.tradeName?.trim();
+  if (main && org.email) return `${main} · ${org.email}`;
+  if (main) return main;
+  if (org.email?.trim()) return org.email.trim();
+  return org.id;
+}
+
+function orgListPrimaryLine(org: AdminAuditOrganization): string {
+  return (
+    org.name?.trim() ||
+    org.tradeName?.trim() ||
+    org.email?.trim() ||
+    "(Sem nome)"
+  );
+}
+
 export function AdminAuditLogTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [organizationFilter, setOrganizationFilter] = useState("");
-  const [debouncedOrganizationFilter, setDebouncedOrganizationFilter] =
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<
+    string | null
+  >(null);
+  const [selectedOrganizationLabel, setSelectedOrganizationLabel] =
     useState("");
+  const [orgPopoverOpen, setOrgPopoverOpen] = useState(false);
+  const [orgSearch, setOrgSearch] = useState("");
+  const [debouncedOrgSearch, setDebouncedOrgSearch] = useState("");
+  const [orgListPage, setOrgListPage] = useState(1);
+  const [orgListItems, setOrgListItems] = useState<AdminAuditOrganization[]>(
+    []
+  );
+  const [orgListTotalPages, setOrgListTotalPages] = useState(1);
+  const [orgListLoading, setOrgListLoading] = useState(false);
   const [userFilter, setUserFilter] = useState("");
   const [debouncedUserFilter, setDebouncedUserFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -205,12 +243,13 @@ export function AdminAuditLogTab() {
   }, [search]);
 
   useEffect(() => {
-    const t = setTimeout(
-      () => setDebouncedOrganizationFilter(organizationFilter.trim()),
-      400
-    );
+    const t = setTimeout(() => setDebouncedOrgSearch(orgSearch.trim()), 300);
     return () => clearTimeout(t);
-  }, [organizationFilter]);
+  }, [orgSearch]);
+
+  useEffect(() => {
+    setOrgListPage(1);
+  }, [debouncedOrgSearch]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedUserFilter(userFilter.trim()), 400);
@@ -221,11 +260,48 @@ export function AdminAuditLogTab() {
     setPage(1);
   }, [
     debouncedSearch,
-    debouncedOrganizationFilter,
+    selectedOrganizationId,
     debouncedUserFilter,
     dateFilter,
     kindFilter,
   ]);
+
+  useEffect(() => {
+    if (!orgPopoverOpen) return;
+    let cancelled = false;
+    (async () => {
+      setOrgListLoading(true);
+      try {
+        const { items: next, pagination } =
+          await adminService.getAdminOrganizations({
+            page: orgListPage,
+            limit: ORG_PICKER_PAGE_SIZE,
+            q: debouncedOrgSearch || undefined,
+          });
+        if (cancelled) return;
+        setOrgListItems(next);
+        setOrgListTotalPages(Math.max(1, pagination.totalPages));
+      } catch (e: any) {
+        if (cancelled) return;
+        toast.error(
+          e?.response?.data?.message ||
+            e?.message ||
+            "Erro ao carregar organizações."
+        );
+        setOrgListItems([]);
+        setOrgListTotalPages(1);
+      } finally {
+        if (!cancelled) setOrgListLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgPopoverOpen, orgListPage, debouncedOrgSearch]);
+
+  useEffect(() => {
+    setOrgListPage((p) => Math.min(p, orgListTotalPages));
+  }, [orgListTotalPages]);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,12 +309,14 @@ export function AdminAuditLogTab() {
       setLoading(true);
       try {
         const from = dateFilter || undefined;
-        const organizationId = isValidUuidParam(debouncedOrganizationFilter)
-          ? debouncedOrganizationFilter.trim()
-          : undefined;
+        const organizationId = selectedOrganizationId ?? undefined;
         const userId = isValidUuidParam(debouncedUserFilter)
           ? debouncedUserFilter.trim()
           : undefined;
+        const userSearch =
+          !userId && debouncedUserFilter.trim()
+            ? debouncedUserFilter.trim()
+            : undefined;
         const { items: nextItems, pagination } =
           await adminService.getAuditLogs({
             page,
@@ -249,6 +327,7 @@ export function AdminAuditLogTab() {
             kind: kindFilter.trim() || undefined,
             organizationId,
             userId,
+            userSearch,
           });
         if (cancelled) return;
         setItems(nextItems);
@@ -284,7 +363,7 @@ export function AdminAuditLogTab() {
   }, [
     page,
     debouncedSearch,
-    debouncedOrganizationFilter,
+    selectedOrganizationId,
     debouncedUserFilter,
     dateFilter,
     kindFilter,
@@ -309,17 +388,17 @@ export function AdminAuditLogTab() {
     row.organizationId ||
     "—";
 
-  const organizationFilterInvalid =
-    organizationFilter.trim().length > 0 &&
-    !isValidUuidParam(organizationFilter);
-  const userFilterInvalid =
-    userFilter.trim().length > 0 && !isValidUuidParam(userFilter);
+  const orgTriggerLabel = selectedOrganizationId
+    ? selectedOrganizationLabel || selectedOrganizationId
+    : "Todas as organizações";
+
+  const orgListSafePage = Math.min(orgListPage, orgListTotalPages);
 
   const filtersActiveForEmptyCopy =
     Boolean(debouncedSearch) ||
     Boolean(dateFilter) ||
     Boolean(kindFilter) ||
-    Boolean(debouncedOrganizationFilter) ||
+    selectedOrganizationId != null ||
     Boolean(debouncedUserFilter);
 
   return (
@@ -395,63 +474,204 @@ export function AdminAuditLogTab() {
         </div>
 
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:flex-wrap">
-          <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
-            <label className="sr-only">Filtrar por organização (UUID)</label>
-            <Building2 className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
-            <input
-              type="text"
-              value={organizationFilter}
-              onChange={(e) => setOrganizationFilter(e.target.value)}
-              placeholder="ID da organização (UUID)"
-              autoComplete="off"
-              spellCheck={false}
-              className={cn(
-                inputShell,
-                "pl-11 md:pl-12 text-base md:text-sm font-mono",
-                organizationFilterInvalid &&
-                  "border-yellow-8 focus-visible:border-yellow-8 focus-visible:ring-yellow-8/40"
-              )}
-            />
-            {organizationFilterInvalid ? (
-              <p className="mt-1 text-xs text-yellow-11 font-family-dm-sans">
-                Informe um UUID válido para filtrar por organização.
-              </p>
-            ) : null}
-          </div>
-          <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
-            <label className="sr-only">Filtrar por usuário (UUID)</label>
-            <UserRound className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
-            <input
-              type="text"
-              value={userFilter}
-              onChange={(e) => setUserFilter(e.target.value)}
-              placeholder="ID do usuário (UUID)"
-              autoComplete="off"
-              spellCheck={false}
-              className={cn(
-                inputShell,
-                "pl-11 md:pl-12 text-base md:text-sm font-mono",
-                userFilterInvalid &&
-                  "border-yellow-8 focus-visible:border-yellow-8 focus-visible:ring-yellow-8/40"
-              )}
-            />
-            {userFilterInvalid ? (
-              <p className="mt-1 text-xs text-yellow-11 font-family-dm-sans">
-                Informe um UUID válido para filtrar por usuário.
-              </p>
-            ) : null}
-          </div>
-          <div className="flex w-full sm:w-auto shrink-0 gap-1.5 items-start">
-            {organizationFilter ? (
+          <div className="flex flex-1 min-w-0 sm:min-w-[260px] gap-1.5 items-stretch">
+            <Popover open={orgPopoverOpen} onOpenChange={setOrgPopoverOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    inputShell,
+                    "relative flex items-center justify-between gap-2 text-left pl-11 md:pl-12 text-base md:text-sm"
+                  )}
+                >
+                  <Building2 className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+                  <span className="truncate min-w-0 font-family-dm-sans">
+                    {orgTriggerLabel}
+                  </span>
+                  <ChevronDown className="size-4 text-gray-11 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-[min(calc(100vw-2rem),400px)] p-0 border-gray-6 bg-gray-1 shadow-lg"
+              >
+                <div className="p-3 border-b border-gray-6 space-y-2">
+                  <p className="text-xs font-semibold text-gray-12 font-family-dm-sans">
+                    Organização
+                  </p>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-gray-11 pointer-events-none" />
+                    <input
+                      type="search"
+                      value={orgSearch}
+                      onChange={(e) => setOrgSearch(e.target.value)}
+                      placeholder="Nome, nome fantasia, e-mail ou documento…"
+                      className={cn(
+                        inputShell,
+                        "h-10 pl-9 text-sm py-0"
+                      )}
+                    />
+                  </div>
+                </div>
+                <div className="max-h-64 overflow-y-auto p-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedOrganizationId(null);
+                      setSelectedOrganizationLabel("");
+                      setOrgPopoverOpen(false);
+                    }}
+                    className={cn(
+                      "w-full text-left rounded-lg px-3 py-2.5 text-sm font-family-dm-sans transition-colors",
+                      selectedOrganizationId === null
+                        ? "bg-primary-3 text-primary-12 font-semibold"
+                        : "text-gray-12 hover:bg-gray-2"
+                    )}
+                  >
+                    Todas as organizações
+                  </button>
+                  {orgListLoading ? (
+                    <p className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
+                      Carregando…
+                    </p>
+                  ) : orgListItems.length === 0 ? (
+                    <p className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
+                      Nenhuma organização encontrada.
+                    </p>
+                  ) : (
+                    orgListItems.map((org) => {
+                      const primary = orgListPrimaryLine(org);
+                      const nameT = org.name?.trim();
+                      const tradeT = org.tradeName?.trim();
+                      const showFantasia = Boolean(
+                        nameT && tradeT && tradeT !== nameT
+                      );
+                      const counts =
+                        org.memberCount != null || org.eventCount != null
+                          ? [
+                              org.memberCount != null
+                                ? `${org.memberCount} membros`
+                                : null,
+                              org.eventCount != null
+                                ? `${org.eventCount} eventos`
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
+                          : null;
+                      return (
+                        <button
+                          key={org.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedOrganizationId(org.id);
+                            setSelectedOrganizationLabel(
+                              formatOrgPickerLabel(org)
+                            );
+                            setOrgPopoverOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left rounded-lg px-3 py-2.5 text-sm font-family-dm-sans transition-colors",
+                            selectedOrganizationId === org.id
+                              ? "bg-primary-3 text-primary-12"
+                              : "text-gray-12 hover:bg-gray-2"
+                          )}
+                        >
+                          <span className="font-semibold block truncate">
+                            {primary}
+                          </span>
+                          {showFantasia ? (
+                            <span className="text-xs text-gray-11 block truncate mt-0.5">
+                              {org.tradeName}
+                            </span>
+                          ) : null}
+                          {org.email ? (
+                            <span className="text-xs text-gray-11 block truncate mt-0.5">
+                              {org.email}
+                            </span>
+                          ) : null}
+                          {org.document ? (
+                            <span className="text-[11px] font-mono text-gray-11 block truncate mt-0.5">
+                              {org.document}
+                            </span>
+                          ) : null}
+                          {counts ? (
+                            <span className="text-[11px] text-gray-11 block truncate mt-0.5">
+                              {counts}
+                            </span>
+                          ) : null}
+                          <span className="text-[11px] font-mono text-gray-11/80 block truncate mt-0.5">
+                            {org.id}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                {orgListTotalPages > 1 ? (
+                  <div className="flex items-center justify-between gap-2 p-2 border-t border-gray-6">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOrgListPage((p) => Math.max(1, p - 1))
+                      }
+                      disabled={orgListSafePage <= 1}
+                      className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      aria-label="Página anterior de organizações"
+                    >
+                      <ChevronLeft className="size-4 text-gray-12" />
+                    </button>
+                    <span className="text-xs text-gray-11 font-family-dm-sans tabular-nums">
+                      {orgListSafePage} / {orgListTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOrgListPage((p) =>
+                          Math.min(orgListTotalPages, p + 1)
+                        )
+                      }
+                      disabled={orgListSafePage >= orgListTotalPages}
+                      className="size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      aria-label="Próxima página de organizações"
+                    >
+                      <ChevronRight className="size-4 text-gray-12" />
+                    </button>
+                  </div>
+                ) : null}
+              </PopoverContent>
+            </Popover>
+            {selectedOrganizationId ? (
               <button
                 type="button"
-                onClick={() => setOrganizationFilter("")}
+                onClick={() => {
+                  setSelectedOrganizationId(null);
+                  setSelectedOrganizationLabel("");
+                }}
                 className="shrink-0 size-12 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 hover:bg-gray-2 hover:text-gray-12 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] flex items-center justify-center transition-colors"
                 aria-label="Limpar filtro de organização"
               >
                 <X className="size-4" />
               </button>
             ) : null}
+          </div>
+          <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
+            <label className="sr-only">Filtrar por usuário (UUID ou nome)</label>
+            <UserRound className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+            <input
+              type="text"
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              placeholder="UUID ou nome do usuário"
+              autoComplete="off"
+              spellCheck={false}
+              className={cn(
+                inputShell,
+                "pl-11 md:pl-12 text-base md:text-sm"
+              )}
+            />
+          </div>
+          <div className="flex w-full sm:w-auto shrink-0 gap-1.5 items-start">
             {userFilter ? (
               <button
                 type="button"

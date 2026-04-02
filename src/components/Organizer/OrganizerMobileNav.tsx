@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Menu, X, Building2 } from "lucide-react";
@@ -62,13 +62,16 @@ export function OrganizerMobileNav() {
     <>
       {/* Top bar - fixed, dark background, logo + hamburger */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 bg-linear-to-b from-[#191919] to-[#222222] shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)]">
-        <Link href="/organizer" className="flex items-center shrink-0">
-          <Image
+        <Link href="/organizer" className="flex items-center shrink-0 h-6 w-[120px] relative">
+          <ImageWithInitialFallback
             src="/images/logo_horizontal.png"
             alt="PódioTicket"
-            width={24}
-            height={24}
-            className="h-6 w-auto"
+            name="Pódio"
+            fill
+            sizes="120px"
+            className="size-full"
+            imgClassName="object-contain object-left"
+            letterClassName="text-xs font-bold text-white"
           />
         </Link>
         <Drawer open={open} onOpenChange={setOpen} direction="right">
@@ -83,13 +86,18 @@ export function OrganizerMobileNav() {
           <DrawerContent className="h-full w-[85%] max-w-[320px] rounded-none flex flex-col p-0 overflow-hidden">
             {/* Header: apenas botão fechar */}
             <div className="flex flex-row items-center justify-between shrink-0 px-4 pt-4 pb-2 bg-[#191919]">
-              <Image
-                src="/images/logo_horizontal.png"
-                alt="PódioTicket"
-                width={24}
-                height={24}
-                className="h-6 w-auto"
-              />
+              <span className="relative h-6 w-[120px] shrink-0 block">
+                <ImageWithInitialFallback
+                  src="/images/logo_horizontal.png"
+                  alt="PódioTicket"
+                  name="Pódio"
+                  fill
+                  sizes="120px"
+                  className="size-full"
+                  imgClassName="object-contain object-left"
+                  letterClassName="text-xs font-bold text-white"
+                />
+              </span>
               <DrawerClose asChild>
                 <button
                   type="button"
@@ -102,20 +110,30 @@ export function OrganizerMobileNav() {
             </div>
             {/* Bloco perfil – fundo verde (Figma) */}
             <div className="bg-linear-to-r from-[#1D3A24] to-[#141A15] border-y border-[#3E7949] flex flex-col items-center justify-center px-4 py-6 shrink-0">
-              <div className="size-16 rounded-full overflow-hidden bg-gray-6 shrink-0 border-2 border-white/20">
-                {user?.avatarUrl ? (
-                  <Image
-                    src={getAvatarUrl(user.avatarUrl)}
-                    alt=""
-                    width={64}
-                    height={64}
-                    className="object-cover size-full"
-                  />
-                ) : (
-                  <div className="size-full flex items-center justify-center text-white text-xl font-semibold">
-                    {user?.firstName?.[0]?.toUpperCase() || "O"}
-                  </div>
-                )}
+              <div className="size-16 rounded-full overflow-hidden bg-gray-6 shrink-0 border-2 border-white/20 relative">
+                <ImageWithInitialFallback
+                  src={
+                    user?.avatarUrl?.trim()
+                      ? getAvatarUrl(user.avatarUrl)
+                      : null
+                  }
+                  alt={
+                    user?.firstName && user?.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.email || "Usuário"
+                  }
+                  name={
+                    user?.firstName && user?.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.email || "Usuário"
+                  }
+                  fallbackId={user?.id}
+                  fill
+                  sizes="64px"
+                  className="size-full rounded-full"
+                  imgClassName="object-cover rounded-full"
+                  letterClassName="text-xl font-semibold text-white"
+                />
               </div>
               <p className="mt-3 text-white font-manrope font-bold text-base leading-[1.2] text-center truncate w-full max-w-[240px]">
                 {user?.firstName && user?.lastName

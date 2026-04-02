@@ -5,9 +5,9 @@ import { getApiClient } from "@/services/base/ApiClient";
  * Se o avatarUrl já for uma URL completa (começa com http:// ou https://),
  * retorna diretamente. Caso contrário, concatena com a URL base da API.
  */
-export function getAvatarUrl(avatarUrl: string | null | undefined): string {
-  if (!avatarUrl) {
-    return "/images/default-avatar.png";
+export function getAvatarUrl(avatarUrl: string | null | undefined): string | null {
+  if (!avatarUrl || avatarUrl.trim() === "") {
+    return ""
   }
 
   // Se já é uma URL completa (começa com http:// ou https://), usa diretamente

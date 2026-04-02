@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { ArrowButton } from "../ArrowButton";
 import type { Event } from "@/interfaces/event";
 import { Button } from "../Button";
@@ -1065,12 +1065,16 @@ export function InformationStep({
 
           <div className="w-full">
             <div className="hidden md:flex gap-2 items-stretch rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
-              <div className="h-auto w-1/3 relative shrink-0">
-                <Image
+              <div className="h-auto w-1/3 relative shrink-0 min-h-[200px]">
+                <ImageWithInitialFallback
                   src={event.bannerUrl}
                   alt={event.name}
+                  name={event.name}
+                  fallbackId={event.id}
                   fill
-                  className="object-cover rounded-tr-xl rounded-br-xl"
+                  sizes="(max-width: 768px) 33vw, 320px"
+                  className="size-full rounded-tr-xl rounded-br-xl"
+                  letterClassName="text-5xl"
                 />
               </div>
 

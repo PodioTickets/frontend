@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Home, TrendingUp, Ticket, Settings, FileText, LogOut, ChevronDown, Medal, Sun, HelpCircle, Building2 } from "lucide-react";
@@ -17,6 +17,7 @@ import { InfoIcon } from "../Icons/InfoIcon";
 import { ConfigIcon } from "../Icons/ConfigIcon";
 import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
+import Image from "next/image";
 
 export function OrganizerSidebar() {
   const pathname = usePathname();
@@ -76,13 +77,14 @@ export function OrganizerSidebar() {
       {/* Top Section */}
       <div className="flex flex-col gap-10 items-start w-full">
         {/* Logo */}
-        <Link href="/organizer" className="flex items-center gap-[5.057px]">
+        <Link href="/organizer" className="flex items-center gap-2 min-w-0">
           <Image
-            src="/images/logo_horizontal.png"
+            src="/images/logo_organizers.png"
             alt="PódioTicket"
-            width={24}
-            height={24}
-            className="h-6 w-auto shrink-0"
+            width={10000000}
+            height={10000000}
+            className="object-cover w-full"
+            priority
           />
         </Link>
 
@@ -183,21 +185,30 @@ export function OrganizerSidebar() {
             className="content-stretch flex items-center justify-between py-2 relative rounded-lg w-full hover:bg-[#25482D] transition-colors"
           >
             <div className="content-stretch flex flex-1 gap-2 items-center min-w-0 px-3">
-              <div className="relative shrink-0 size-9 rounded-full overflow-hidden bg-gray-6">
-                {user?.avatarUrl ? (
-                  <Image
-                    src={getAvatarUrl(user.avatarUrl)}
-                    alt={user.firstName || "User"}
-                    fill
-                    className="object-cover border border-gray-10 rounded-full"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-6">
-                    <span className="text-[#B4B4B4] text-sm font-medium">
-                      {user?.firstName?.[0]?.toUpperCase() || "O"}
-                    </span>
-                  </div>
-                )}
+              <div className="relative shrink-0 size-9 rounded-full overflow-hidden bg-gray-6 border border-gray-10">
+                <ImageWithInitialFallback
+                  src={
+                    user?.avatarUrl?.trim()
+                      ? getAvatarUrl(user.avatarUrl)
+                      : null
+                  }
+                  alt={
+                    user?.firstName && user?.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.email || "Usuário"
+                  }
+                  name={
+                    user?.firstName && user?.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user?.email || "Usuário"
+                  }
+                  fallbackId={user?.id}
+                  fill
+                  sizes="36px"
+                  className="size-full rounded-full"
+                  imgClassName="object-cover rounded-full"
+                  letterClassName="text-sm font-medium text-[#B4B4B4]"
+                />
               </div>
               <div className="content-stretch flex flex-1 flex-col items-start justify-center min-w-0">
                 <p className="text-[#B4B4B4] text-sm font-medium font-family-dm-sans leading-[1.3] truncate w-full">
@@ -242,21 +253,30 @@ export function OrganizerSidebar() {
                       className="border-b border-gray-6 flex items-center p-[12px] relative shrink-0 w-full hover:bg-gray-3 transition-colors"
                     >
                       <div className="flex flex-1 gap-[8px] items-center min-w-0">
-                        <div className="relative shrink-0 size-[36px] rounded-full overflow-hidden">
-                          {user?.avatarUrl ? (
-                            <Image
-                              src={getAvatarUrl(user.avatarUrl)}
-                              alt={user.firstName || "User"}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-6">
-                              <span className="text-gray-11 text-sm font-medium">
-                                {user?.firstName?.[0]?.toUpperCase() || "U"}
-                              </span>
-                            </div>
-                          )}
+                        <div className="relative shrink-0 size-[36px] rounded-full overflow-hidden bg-gray-6">
+                          <ImageWithInitialFallback
+                            src={
+                              user?.avatarUrl?.trim()
+                                ? getAvatarUrl(user.avatarUrl)
+                                : null
+                            }
+                            alt={
+                              user?.firstName && user?.lastName
+                                ? `${user.firstName} ${user.lastName}`
+                                : user?.email || "Usuário"
+                            }
+                            name={
+                              user?.firstName && user?.lastName
+                                ? `${user.firstName} ${user.lastName}`
+                                : user?.email || "Usuário"
+                            }
+                            fallbackId={user?.id}
+                            fill
+                            sizes="36px"
+                            className="size-full rounded-full"
+                            imgClassName="object-cover"
+                            letterClassName="text-sm font-medium text-gray-11"
+                          />
                         </div>
                         <div className="flex flex-1 flex-col items-start justify-start min-w-0">
                           <p className="font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] truncate">
@@ -339,21 +359,24 @@ export function OrganizerSidebar() {
                         className="border-b border-gray-6 flex items-center justify-between p-[12px] relative shrink-0 w-full hover:bg-gray-3 transition-colors"
                       >
                         <div className="flex flex-1 gap-[8px] items-center min-w-0">
-                          <div className="relative shrink-0 size-[36px] rounded-full overflow-hidden">
-                            {organizer?.avatarUrl ? (
-                              <Image
-                                src={getAvatarUrl(organizer.avatarUrl)}
-                                alt={organizer.name || "Organization"}
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-6">
-                                <span className="text-gray-11 text-sm font-medium">
-                                  {organizer?.name?.[0]?.toUpperCase() || "O"}
-                                </span>
-                              </div>
-                            )}
+                          <div className="relative shrink-0 size-[36px] rounded-full overflow-hidden bg-gray-6">
+                            <ImageWithInitialFallback
+                              src={(() => {
+                                const url =
+                                  organizer?.logoUrl || organizer?.avatarUrl;
+                                return url?.trim()
+                                  ? getAvatarUrl(url)
+                                  : null;
+                              })()}
+                              alt={organizer.name || "Organização"}
+                              name={organizer.name || "Organização"}
+                              fallbackId={organizer.id}
+                              fill
+                              sizes="36px"
+                              className="size-full rounded-full"
+                              imgClassName="object-cover"
+                              letterClassName="text-sm font-medium text-gray-11"
+                            />
                           </div>
                           <div className="flex flex-1 flex-col items-start justify-start min-w-0">
                             <p className="font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] truncate">
