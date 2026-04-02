@@ -30,6 +30,8 @@ interface TicketCategoryCardProps {
   onDropTicket?: (ticketId: string, categoryId: string) => void;
   /** Sobrescreve bordas/raio quando a categoria está dentro de um wrapper (ex.: sortable). */
   className?: string;
+  /** Quando true, não renderiza a linha do nome + lápis + lixeira (ex.: header no SortableTicketCategoryItem). */
+  hideCategoryTitleRow?: boolean;
 }
 
 export function TicketCategoryCard({
@@ -48,6 +50,7 @@ export function TicketCategoryCard({
   productsMap = {},
   onDropTicket,
   className: rootClassName,
+  hideCategoryTitleRow = false,
 }: TicketCategoryCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingName, setEditingName] = useState(category.name);
@@ -90,83 +93,89 @@ export function TicketCategoryCard({
 
   return (
     <>
-      <CategoryDeleteBlockedModal
-        open={blockedDeleteModalOpen}
-        onClose={() => setBlockedDeleteModalOpen(false)}
-      />
-      <DeleteTicketCategoryModal
-        open={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        canDelete={totalTicketsInCategory === 0}
-        onConfirm={() => onDelete(category.id)}
-      />
+      {!hideCategoryTitleRow && (
+        <>
+          <CategoryDeleteBlockedModal
+            open={blockedDeleteModalOpen}
+            onClose={() => setBlockedDeleteModalOpen(false)}
+          />
+          <DeleteTicketCategoryModal
+            open={deleteModalOpen}
+            onClose={() => setDeleteModalOpen(false)}
+            canDelete={totalTicketsInCategory === 0}
+            onConfirm={() => onDelete(category.id)}
+          />
+        </>
+      )}
     <div
       ref={setNodeRef}
       data-category-id={category.id}
-      className={`flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-5 transition-colors ${isOver ? "border-primary-11" : ""
+      className={`flex flex-col gap-6 bg-gray-3 border border-gray-6 p-5 transition-colors ${isOver ? "border-primary-11" : ""
         }${rootClassName ? ` ${rootClassName}` : ""}`}
     >
       {/* Category Header */}
       <div className="flex flex-col gap-3 w-full">
-        <div className="flex items-center justify-between flex-wrap gap-4 w-full">
-          <div className="flex min-w-0 flex-1 items-center gap-[10px]">
-            {isEditing ? (
-              <div className="min-w-0 max-w-full flex-1 overflow-hidden">
-                <div className="inline-grid w-[min(100%,max-content)] max-w-full align-middle">
-                  <span
-                    aria-hidden
-                    className="invisible col-start-1 row-start-1 whitespace-pre px-0 text-2xl font-bold font-manrope leading-[1.1]"
-                  >
-                    {editingName.length > 0 ? editingName : "\u00a0"}
-                  </span>
-                  <input
-                    type="text"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={handleSave}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSave();
-                      } else if (e.key === "Escape") {
-                        handleCancel();
-                      }
-                    }}
-                    className="col-start-1 row-start-1 min-w-0 w-full max-w-full overflow-x-auto border-0 border-b border-gray-6 bg-transparent py-0 text-2xl font-bold font-manrope leading-[1.1] text-gray-12 focus:border-primary-8 focus:outline-none"
-                    autoFocus
-                  />
+        {!hideCategoryTitleRow && (
+          <div className="flex items-center justify-between flex-wrap gap-4 w-full">
+            <div className="flex min-w-0 flex-1 items-center gap-[10px]">
+              {isEditing ? (
+                <div className="min-w-0 max-w-full flex-1 overflow-hidden">
+                  <div className="inline-grid w-[min(100%,max-content)] max-w-full align-middle">
+                    <span
+                      aria-hidden
+                      className="invisible col-start-1 row-start-1 whitespace-pre px-0 text-2xl font-bold font-manrope leading-[1.1]"
+                    >
+                      {editingName.length > 0 ? editingName : "\u00a0"}
+                    </span>
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={handleSave}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSave();
+                        } else if (e.key === "Escape") {
+                          handleCancel();
+                        }
+                      }}
+                      className="col-start-1 row-start-1 min-w-0 w-full max-w-full overflow-x-auto border-0 border-b border-gray-6 bg-transparent py-0 text-2xl font-bold font-manrope leading-[1.1] text-gray-12 focus:border-primary-8 focus:outline-none"
+                      autoFocus
+                    />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <h3 className="min-w-0 truncate text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
-                {category.name}
-              </h3>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditing(true);
-                setEditingName(category.name);
-              }}
-              className="shrink-0 bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-            >
-              <PencilIcon className="size-5 text-gray-11" />
-            </button>
+              ) : (
+                <h3 className="min-w-0 truncate text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
+                  {category.name}
+                </h3>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(true);
+                  setEditingName(category.name);
+                }}
+                className="shrink-0 bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
+              >
+                <PencilIcon className="size-5 text-gray-11" />
+              </button>
+            </div>
+            <div className="flex items-center">
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() =>
+                  totalTicketsInCategory > 0
+                    ? setBlockedDeleteModalOpen(true)
+                    : setDeleteModalOpen(true)
+                }
+                className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
+              >
+                <TrashIcon className="size-5 text-red-12" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center">
-            <button
-              type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() =>
-                totalTicketsInCategory > 0
-                  ? setBlockedDeleteModalOpen(true)
-                  : setDeleteModalOpen(true)
-              }
-              className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-            >
-              <TrashIcon className="size-5 text-red-12" />
-            </button>
-          </div>
-        </div>
+        )}
         {/* Observation Field */}
         <div className="w-full">
           {isEditingDescription ? (

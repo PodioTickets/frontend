@@ -1026,10 +1026,17 @@ export default function EditTicketsPage() {
                     <SortableTicketCategoryItem
                       key={category.id}
                       categoryId={category.id}
+                      category={category}
+                      totalTicketsInCategory={
+                        (ticketsByCategory[category.id] || []).length
+                      }
+                      onEdit={handleUpdateGroupName}
+                      onDelete={handleDeleteGroup}
                     >
                       <TicketCategoryCard
                         category={category}
                         className="rounded-none border-0 shadow-none"
+                        hideCategoryTitleRow
                         tickets={paginatedTickets}
                         totalTicketsInCategory={
                           (ticketsByCategory[category.id] || []).length
