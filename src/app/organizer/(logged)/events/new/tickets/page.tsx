@@ -605,7 +605,7 @@ export default function IngressosPage() {
           {/* Header with Actions */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-              Ingressos geral
+              Ingressos avulsos
             </h2>
             <div className="flex gap-2">
               <Button

@@ -579,7 +579,8 @@ export function CreateProductModal() {
                         <Tooltip
                           content={
                             <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
-                              Ao comprar este ingresso, o participante receberá
+                              Ao comprar este ingresso,
+                              <br /> o participante receberá
                               este produto sem custo adicional.
                             </p>
                           }
