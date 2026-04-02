@@ -759,7 +759,7 @@ export function ViewRegistrationModal() {
                         {products.length > 2 && (
                           <button
                             onClick={() => setIsProductsModalOpen(true)}
-                            className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer"
+                            className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-11 underline hover:text-gray-12 transition-colors cursor-pointer pr-4"
                           >
                             Ver mais
                           </button>
