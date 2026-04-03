@@ -6,6 +6,102 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .map((o) => o.trim())
   .filter((o) => o.length > 0);
 
+/**
+ * Host do painel (ex.: app.podioticket.com.br). Sem protocolo; porta opcional em dev
+ * (ex.: app.localhost:3000).
+ *
+ * Com isso ativo:
+ * - /organizer só no app host; em outros hosts → redirect 307 para o app.
+ * - No app host, rotas que não forem organizador nem técnicas → redirect 307 para ROOT_SITE_URL.
+ *
+ * Defina também ROOT_SITE_URL (ex.: https://www.podioticket.com.br) para o redirect do app → site.
+ * Ajuste ALLOWED_ORIGINS e cookies (Domain) para ambos os hosts.
+ */
+function organizerAppHostConfig(): { raw: string; hostname: string } | null {
+  const raw = process.env.ORGANIZER_APP_HOST?.trim();
+  if (!raw) return null;
+  const hostname = raw.split(":")[0].toLowerCase();
+  return { raw, hostname };
+}
+
+/** Rotas que precisam responder no host app sem estarem sob /organizer. */
+function isTechnicalPathOnAppHost(pathname: string): boolean {
+  if (pathname.startsWith("/organizer")) return true;
+  if (pathname.startsWith("/_next")) return true;
+  if (pathname.startsWith("/api")) return true;
+  if (pathname.startsWith("/_vercel")) return true;
+  if (pathname.startsWith("/.well-known")) return true;
+  if (
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.json" ||
+    pathname === "/manifest.webmanifest"
+  ) {
+    return true;
+  }
+  if (pathname === "/icon" || pathname.startsWith("/icon/")) return true;
+  if (pathname === "/apple-icon" || pathname.startsWith("/apple-icon/")) return true;
+  return false;
+}
+
+function applyOrganizerHostRouting(request: NextRequest): NextResponse | null {
+  const cfg = organizerAppHostConfig();
+  if (!cfg) return null;
+
+  const currentHost = request.nextUrl.hostname.toLowerCase();
+  const onAppHost = currentHost === cfg.hostname;
+  const { pathname } = request.nextUrl;
+
+  if (onAppHost) {
+    if (isTechnicalPathOnAppHost(pathname)) return null;
+
+    const rootBase = process.env.ROOT_SITE_URL?.trim().replace(/\/$/, "");
+    if (!rootBase) {
+      console.error(
+        "proxy: define ROOT_SITE_URL quando ORGANIZER_APP_HOST está ativo (redirect app → site).",
+      );
+      return new NextResponse("Configuração do servidor incompleta.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+
+    try {
+      const dest = new URL(
+        request.nextUrl.pathname + request.nextUrl.search,
+        rootBase.endsWith("/") ? rootBase : `${rootBase}/`,
+      );
+      return NextResponse.redirect(dest, 307);
+    } catch {
+      console.error("proxy: ROOT_SITE_URL inválida:", rootBase);
+      return new NextResponse("Configuração do servidor inválida.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+  }
+
+  if (pathname.startsWith("/organizer")) {
+    const dest = request.nextUrl.clone();
+    dest.hostname = cfg.hostname;
+
+    const portFromEnv = cfg.raw.includes(":") ? cfg.raw.split(":")[1] : "";
+    if (portFromEnv) {
+      dest.port = portFromEnv;
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      dest.protocol = "https:";
+      if (!portFromEnv) dest.port = "";
+    }
+
+    return NextResponse.redirect(dest, 307);
+  }
+
+  return null;
+}
+
 function isValidOrigin(origin: string | null, host: string | null): boolean {
   if (!origin || !host) return false;
   if (ALLOWED_ORIGINS.includes(origin)) return true;
@@ -17,6 +113,9 @@ function isValidOrigin(origin: string | null, host: string | null): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostRoute = applyOrganizerHostRouting(request);
+  if (hostRoute) return hostRoute;
+
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
   const userAgent = request.headers.get("user-agent");
@@ -109,8 +208,7 @@ export async function proxy(request: NextRequest) {
 
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
-    `script-src ${trustedDomains.join(" ")} ${
-      isDev ? "'unsafe-eval'" : ""
+    `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
     } 'unsafe-inline' blob: https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
     `style-src ${trustedDomains.join(
       " "
@@ -134,5 +232,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };
