@@ -235,7 +235,7 @@ function SortableTicketProductCard({
           </button>
           <button
             type="button"
-            title="Deletar"
+            title="Remover"
             onClick={onRemove}
             className="bg-red-2 border border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
           >
