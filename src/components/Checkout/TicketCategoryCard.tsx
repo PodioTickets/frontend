@@ -503,11 +503,11 @@ const TicketItemDesktop = memo(({
 
       <div
         className={cn(
-          "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-6",
+          "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2",
           productItems.length > 0 ? "min-w-0 w-full ml-4" : "w-full"
         )}
       >
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
             {ticket.name}
           </h2>
