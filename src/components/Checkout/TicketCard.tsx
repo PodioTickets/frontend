@@ -18,6 +18,8 @@ interface TicketCardProps {
   event: Event;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
   kitSelectionDisplay?: EventKitSelectionDisplay;
+  /** Checkout ingressos: ocultar produtos do kit sem URL de imagem. */
+  omitKitProductsWithoutImage?: boolean;
 }
 
 export function TicketCard({
@@ -25,6 +27,7 @@ export function TicketCard({
   event,
   productsMap,
   kitSelectionDisplay = defaultEventKitSelectionDisplay(),
+  omitKitProductsWithoutImage = false,
 }: TicketCardProps) {
   const { raceQuantities, updateRaceQuantity } = useCheckout();
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -115,6 +118,7 @@ export function TicketCard({
         ? getTicketProductCarouselItems(ticket, productsMap, {
           primaryProductId:
             kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+          omitItemsWithoutImage: omitKitProductsWithoutImage,
         })
         : [],
     [
@@ -122,6 +126,7 @@ export function TicketCard({
       productsMap,
       showPerTicketGallery,
       kitSelectionDisplay.primaryKitProductByTicketId,
+      omitKitProductsWithoutImage,
     ]
   );
 

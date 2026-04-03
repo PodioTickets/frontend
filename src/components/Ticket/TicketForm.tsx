@@ -49,6 +49,7 @@ import { UnsavedTicketChangesModal } from "./UnsavedTicketChangesModal";
 import { DeleteTicketModal } from "./DeleteTicketModal";
 import { TicketAdvancedKitDisplayOptions } from "./TicketAdvancedKitDisplayOptions";
 import { useTickets } from "@/hooks/useTickets";
+import { RemoveIcon } from "../Icons/RemoveIcon";
 
 // Types
 export interface Batch {
@@ -237,7 +238,7 @@ function SortableTicketProductCard({
             onClick={onRemove}
             className="bg-red-2 border border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
           >
-            <TrashIcon className="size-5" />
+            <RemoveIcon className="size-5" />
           </button>
         </div>
       </div>

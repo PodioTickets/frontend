@@ -20,25 +20,15 @@ import { cn } from "@/utils/cn";
 interface TicketCategoryCardProps {
   categoryId: string;
   categoryName: string;
-  /** Texto do kit / categoria (organizer). */
   categoryDescription?: string;
   tickets: Ticket[];
   index: number;
-  /** Quando informado, substitui `index === 0` para estado inicial aberto. */
   expandedByDefault?: boolean;
   event: Event;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
   kitSelectionDisplay: EventKitSelectionDisplay;
+  omitKitProductsWithoutImage?: boolean;
 }
-
-// Funções utilitárias fora do componente
-const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-};
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -112,6 +102,7 @@ const TicketItemMobile = memo(({
   onDecrease,
   onIncrease,
   kitSelectionDisplay,
+  omitKitProductsWithoutImage,
 }: {
   ticket: Ticket;
   event: Event;
@@ -120,6 +111,7 @@ const TicketItemMobile = memo(({
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
+  omitKitProductsWithoutImage: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -139,6 +131,7 @@ const TicketItemMobile = memo(({
         ? getTicketProductCarouselItems(ticket, productsMap, {
           primaryProductId:
             kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+          omitItemsWithoutImage: omitKitProductsWithoutImage,
         })
         : [],
     [
@@ -146,6 +139,7 @@ const TicketItemMobile = memo(({
       productsMap,
       showPerTicketGallery,
       kitSelectionDisplay.primaryKitProductByTicketId,
+      omitKitProductsWithoutImage,
     ]
   );
 
@@ -358,6 +352,7 @@ const TicketItemDesktop = memo(({
   onDecrease,
   onIncrease,
   kitSelectionDisplay,
+  omitKitProductsWithoutImage,
 }: {
   ticket: Ticket;
   event: Event;
@@ -366,6 +361,7 @@ const TicketItemDesktop = memo(({
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
+  omitKitProductsWithoutImage: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -385,6 +381,7 @@ const TicketItemDesktop = memo(({
         ? getTicketProductCarouselItems(ticket, productsMap, {
           primaryProductId:
             kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+          omitItemsWithoutImage: omitKitProductsWithoutImage,
         })
         : [],
     [
@@ -392,6 +389,7 @@ const TicketItemDesktop = memo(({
       productsMap,
       showPerTicketGallery,
       kitSelectionDisplay.primaryKitProductByTicketId,
+      omitKitProductsWithoutImage,
     ]
   );
 
@@ -611,6 +609,7 @@ export function TicketCategoryCard({
   event,
   productsMap,
   kitSelectionDisplay,
+  omitKitProductsWithoutImage = false,
 }: TicketCategoryCardProps) {
   const [isExpanded, setIsExpanded] = useState(
     expandedByDefault ?? index === 0
@@ -736,6 +735,7 @@ export function TicketCategoryCard({
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
+                    omitKitProductsWithoutImage={omitKitProductsWithoutImage}
                   />
                 ))}
               </div>
@@ -810,6 +810,7 @@ export function TicketCategoryCard({
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
+                    omitKitProductsWithoutImage={omitKitProductsWithoutImage}
                   />
                 ))}
               </div>

@@ -251,6 +251,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                   event={event}
                   productsMap={productsMap}
                   kitSelectionDisplay={kitDisplayForUncategorizedTickets}
+                  omitKitProductsWithoutImage
                 />
               ))}
               {categorizedTickets.map((category, index) => (
@@ -265,6 +266,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                   event={event}
                   productsMap={productsMap}
                   kitSelectionDisplay={kitSelectionDisplay}
+                  omitKitProductsWithoutImage
                 />
               ))}
             </>
@@ -328,6 +330,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                         event={event}
                         productsMap={productsMap}
                         kitSelectionDisplay={kitDisplayForUncategorizedTickets}
+                        omitKitProductsWithoutImage
                       />
                       {!isLast && (
                         <div className="w-full h-px bg-gray-6" />
@@ -350,6 +353,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                         event={event}
                         productsMap={productsMap}
                         kitSelectionDisplay={kitSelectionDisplay}
+                        omitKitProductsWithoutImage
                       />
                       {!isLastCategory && (
                         <div className="w-full h-px bg-gray-6" />

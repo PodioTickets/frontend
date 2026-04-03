@@ -6,6 +6,10 @@ export type ImageCarouselItem = {
   id: string;
 };
 
+function carouselItemHasImage(item: ImageCarouselItem): boolean {
+  return typeof item.src === "string" && item.src.trim() !== "";
+}
+
 /** Coloca o produto principal (config do evento) na primeira posição, se existir na lista. */
 export function orderCarouselItemsWithPrimary(
   items: ImageCarouselItem[],
@@ -25,7 +29,11 @@ export function getTicketProductCarouselItems(
     string,
     { id: string; name: string; image: string | null } | undefined
   >,
-  options?: { primaryProductId?: string | null }
+  options?: {
+    primaryProductId?: string | null;
+    /** Ex.: checkout/ingressos — não exibir produtos do kit sem imagem. */
+    omitItemsWithoutImage?: boolean;
+  },
 ): ImageCarouselItem[] {
   if (!ticket.products?.length) return [];
   const raw = ticket.products.map((productId) => {
@@ -36,7 +44,11 @@ export function getTicketProductCarouselItems(
       src: p?.image ?? null,
     };
   });
-  return orderCarouselItemsWithPrimary(raw, options?.primaryProductId);
+  let ordered = orderCarouselItemsWithPrimary(raw, options?.primaryProductId);
+  if (options?.omitItemsWithoutImage) {
+    ordered = ordered.filter(carouselItemHasImage);
+  }
+  return ordered;
 }
 
 /** Imagens únicas de todos os ingressos da categoria, com principal da categoria primeiro. */
@@ -46,7 +58,8 @@ export function getCategoryKitCarouselItems(
     string,
     { id: string; name: string; image: string | null } | undefined
   >,
-  primaryProductId?: string | null
+  primaryProductId?: string | null,
+  options?: { omitItemsWithoutImage?: boolean },
 ): ImageCarouselItem[] {
   const seen = new Set<string>();
   const items: ImageCarouselItem[] = [];
@@ -62,5 +75,9 @@ export function getCategoryKitCarouselItems(
       });
     }
   }
-  return orderCarouselItemsWithPrimary(items, primaryProductId);
+  let ordered = orderCarouselItemsWithPrimary(items, primaryProductId);
+  if (options?.omitItemsWithoutImage) {
+    ordered = ordered.filter(carouselItemHasImage);
+  }
+  return ordered;
 }
