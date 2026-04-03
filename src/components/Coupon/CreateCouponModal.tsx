@@ -548,7 +548,7 @@ export function CreateCouponModal() {
                               </div>
                               <div className="flex flex-col gap-2 w-[132px]">
                                 <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Título
+                                  Nome do cupom
                                 </label>
                                 <Input
                                   type="text"
@@ -556,8 +556,12 @@ export function CreateCouponModal() {
                                   value={ageValue}
                                   onChange={(e) => {
                                     const val = e.target.value;
+                                    if (val.length > 30) {
+                                      return;
+                                    }
                                     setAgeValue(val);
                                   }}
+                                  maxLength={30}
                                   className="h-12"
                                 />
                               </div>
@@ -569,7 +573,7 @@ export function CreateCouponModal() {
                             <div className="flex flex-col gap-2.5">
                               <div className="flex flex-col gap-2">
                                 <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Título
+                                  Nome do cupom
                                 </label>
                                 <Input
                                   type="text"
@@ -577,8 +581,12 @@ export function CreateCouponModal() {
                                   value={code}
                                   onChange={(e) => {
                                     const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                    if (val.length > 30) {
+                                      return;
+                                    }
                                     setCode(val);
                                   }}
+                                  maxLength={30}
                                   className="h-12"
                                 />
                               </div>
@@ -591,7 +599,7 @@ export function CreateCouponModal() {
                             <div className="flex flex-col gap-2.5">
                               <div className="flex flex-col gap-2">
                                 <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Título
+                                  Nome do cupom
                                 </label>
                                 <Input
                                   type="text"
@@ -599,8 +607,12 @@ export function CreateCouponModal() {
                                   value={code}
                                   onChange={(e) => {
                                     const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                    if (val.length > 30) {
+                                      return;
+                                    }
                                     setCode(val);
                                   }}
+                                  maxLength={30}
                                   className="h-12"
                                 />
                               </div>
