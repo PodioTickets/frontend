@@ -22,7 +22,6 @@ import { TicketTable } from "@/components/Ticket/TicketTable";
 import { UncategorizedTicketsDropShell } from "@/components/Ticket/UncategorizedTicketsDropShell";
 import {
   DndContext,
-  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -40,8 +39,10 @@ import {
 import { SortableTicketCategoryItem } from "@/components/Ticket/SortableTicketCategoryItem";
 import {
   categorySortableId,
+  organizerTicketCategoriesCollisionDetection,
   parseCategorySortableId,
   persistTicketCategoryOrderApi,
+  resolveCategoryReorderOverId,
 } from "@/lib/ticketCategoryOrder";
 import {
   applyDraftOrderToTickets,
@@ -396,7 +397,7 @@ export default function IngressosPage() {
       setActiveId(null);
       dragEndPositionRef.current = null;
       if (!over) return;
-      const overCatId = parseCategorySortableId(over.id as string);
+      const overCatId = resolveCategoryReorderOverId(over, categories);
       if (!overCatId || sortDragId === overCatId) return;
       setCategoryOrderIds((prev) => {
         const oldIndex = prev.indexOf(sortDragId);
@@ -576,7 +577,7 @@ export default function IngressosPage() {
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={organizerTicketCategoriesCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
