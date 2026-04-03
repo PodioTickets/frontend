@@ -12,6 +12,7 @@ import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { HotelsIcon } from "@/components/Icons/Organizer/HotelsIcon";
+import { publicSiteHref } from "@/lib/organizerHostNavigation";
 
 export default function OrganizerLoginPage() {
   const router = useRouter();
@@ -209,14 +210,14 @@ export default function OrganizerLoginPage() {
         <p className="text-sm text-gray-11 font-family-dm-sans text-center max-w-[328px] leading-[1.3]">
           Ao continuar você concorda com nossos{" "}
           <Link
-            href="/terms"
+            href={publicSiteHref("/terms")}
             className="font-bold text-gray-12 underline hover:text-gray-11 transition-colors"
           >
             Termos de serviço
           </Link>{" "}
           e{" "}
           <Link
-            href="/privacy"
+            href={publicSiteHref("/privacy")}
             className="font-bold text-gray-12 underline hover:text-gray-11 transition-colors"
           >
             Política de privacidade

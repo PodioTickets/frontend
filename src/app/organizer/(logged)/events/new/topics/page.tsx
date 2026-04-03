@@ -34,7 +34,7 @@ export default function TopicosPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/");
+      router.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {

@@ -15,6 +15,8 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
  * - No app host, rotas que não forem organizador nem técnicas → redirect 307 para ROOT_SITE_URL.
  *
  * Defina também ROOT_SITE_URL (ex.: https://www.podioticket.com.br) para o redirect do app → site.
+ * No cliente, use os mesmos valores em NEXT_PUBLIC_ORGANIZER_APP_HOST e
+ * NEXT_PUBLIC_ROOT_SITE_URL (ex.: publicSiteHref) para links ao site público.
  * Ajuste ALLOWED_ORIGINS e cookies (Domain) para ambos os hosts.
  */
 function organizerAppHostConfig(): { raw: string; hostname: string } | null {
@@ -22,6 +24,16 @@ function organizerAppHostConfig(): { raw: string; hostname: string } | null {
   if (!raw) return null;
   const hostname = raw.split(":")[0].toLowerCase();
   return { raw, hostname };
+}
+
+/** Host público da requisição (Vercel/proxy costuma mandar em x-forwarded-host). */
+function effectiveRequestHostname(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-host");
+  if (forwarded) {
+    const first = forwarded.split(",")[0].trim().split(":")[0];
+    if (first) return first.toLowerCase();
+  }
+  return request.nextUrl.hostname.toLowerCase();
 }
 
 /** Rotas que precisam responder no host app sem estarem sob /organizer. */
@@ -49,7 +61,7 @@ function applyOrganizerHostRouting(request: NextRequest): NextResponse | null {
   const cfg = organizerAppHostConfig();
   if (!cfg) return null;
 
-  const currentHost = request.nextUrl.hostname.toLowerCase();
+  const currentHost = effectiveRequestHostname(request);
   const onAppHost = currentHost === cfg.hostname;
   const { pathname } = request.nextUrl;
 

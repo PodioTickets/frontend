@@ -244,7 +244,7 @@ export default function EventRegistrationsPage() {
 
     const hasToken = userService.isAuthenticated();
     if (!hasToken && !isAuthenticated) {
-      router.push("/");
+      router.push("/organizer/login");
       return;
     }
 

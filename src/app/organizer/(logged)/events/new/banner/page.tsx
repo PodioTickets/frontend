@@ -37,7 +37,7 @@ export default function BannerPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/");
+      router.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -50,7 +50,7 @@ export default function BannerPage() {
     if (authChecked && !isAuthenticated) {
       const hasToken = userService.isAuthenticated();
       if (!hasToken) {
-        router.push("/");
+        router.push("/organizer/login");
       }
     }
   }, [authChecked, isAuthenticated, router]);

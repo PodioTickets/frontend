@@ -9,6 +9,7 @@ import { Input } from "@/components/Input";
 import { Mail, Phone, FileText, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { publicSiteHref } from "@/lib/organizerHostNavigation";
 
 export default function CreateOrganizerPage() {
   const router = useRouter();
@@ -89,7 +90,7 @@ export default function CreateOrganizerPage() {
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-11 mb-4">Você precisa estar logado para criar um perfil de organizador</p>
-          <Link href="/">
+          <Link href={publicSiteHref("/")}>
             <Button>Voltar para Home</Button>
           </Link>
         </div>

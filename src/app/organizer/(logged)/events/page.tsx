@@ -61,7 +61,7 @@ export default function OrganizerEventsPage() {
 
     const hasToken = userService.isAuthenticated();
     if (!hasToken && !isAuthenticated) {
-      router.push("/");
+      router.push("/organizer/login");
       return;
     }
 
