@@ -949,7 +949,7 @@ export default function EventDashboardPage() {
                   <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Nome</p>
                 </div>
                 <div className="px-4 py-4 flex items-center justify-center">
-                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">QT</p>
+                  <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Qt</p>
                 </div>
                 <div className="px-4 py-4 flex items-center justify-end">
                   <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Total</p>
