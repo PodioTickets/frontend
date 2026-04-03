@@ -652,7 +652,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                   {label}
                 </p>
                 <span className="font-family-dm-sans font-base leading-[1.3] text-gray-12 text-right tabular-nums">
-                  {bucket.quantity.toLocaleString("pt-BR")} QT /
+                  {bucket.quantity.toLocaleString("pt-BR")} Qt /
                   R${" "}
                   {bucket.revenueReais.toLocaleString("pt-BR", {
                     minimumFractionDigits: 2,
