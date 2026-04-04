@@ -97,7 +97,7 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
         return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
       };
 
-      const ev = eventData as Record<string, unknown>;
+      const ev = eventData as unknown as Record<string, unknown>;
       const cardImageFromApi = [
         ev.cardImageUrl,
         ev.logoUrl,
