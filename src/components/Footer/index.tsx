@@ -6,11 +6,15 @@ import { FacebookIcon } from "../Icons/FacebookIcon";
 import Link from "next/link";
 import { useModalStore } from "@/stores/modalStore";
 import { usePathname } from "next/navigation";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 
 export function Footer() {
   const { openModal } = useModalStore();
   const pathname = usePathname();
-  const isOrganizer = pathname.startsWith("/organizer");
+  const appSurface = useOrganizerAppSurface();
+  const organizerPath = withOrganizerPathPrefix(pathname, appSurface);
+  const isOrganizer = organizerPath.startsWith("/organizer");
 
   if (isOrganizer) {
     return null;

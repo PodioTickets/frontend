@@ -22,6 +22,7 @@ import {
   phoneDigitsForTel,
 } from "@/utils/organization";
 import { cn } from "@/utils/cn";
+import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
 import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 
@@ -279,7 +280,9 @@ export default function EventPage() {
               {event.modalities
                 ?.filter((m) => m.isActive)
                 .map((modality) => {
-                  const icon = modality.template?.icon;
+                  const icon = resolveCheckoutModalityIconSrc(
+                    modality.template?.icon,
+                  );
                   const label = modality.template?.label;
                   if (!icon || !label) return null;
                   return (
@@ -691,7 +694,9 @@ export default function EventPage() {
                         {event.modalities
                           ?.filter((modality) => modality.isActive)
                           .map((modality) => {
-                            const icon = modality.template?.icon;
+                            const icon = resolveCheckoutModalityIconSrc(
+                              modality.template?.icon,
+                            );
                             const label = modality.template?.label;
                             if (!icon || !label) return null;
                             return (
@@ -961,7 +966,9 @@ export default function EventPage() {
                     {event.modalities
                       ?.filter((modality) => modality.isActive)
                       .map((modality) => {
-                        const icon = modality.template?.icon;
+                        const icon = resolveCheckoutModalityIconSrc(
+                          modality.template?.icon,
+                        );
                         const label = modality.template?.label;
                         if (!icon || !label) return null;
                         return (

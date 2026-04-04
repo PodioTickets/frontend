@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { userService } from "@/services";
@@ -15,6 +16,7 @@ import { Loading } from "@/components/Loading";
 
 export default function EventNotificationsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const [authChecked, setAuthChecked] = useState(false);
@@ -26,7 +28,7 @@ export default function EventNotificationsPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => setAuthChecked(true), 300);

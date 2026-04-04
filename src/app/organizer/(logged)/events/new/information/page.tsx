@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
@@ -35,6 +36,7 @@ interface ViaCEPResponse {
 
 export default function InformacoesPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated, user } = useAuth();
   const { formData, updateFormData, errors, setErrors } = useCreateEvent();
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ export default function InformacoesPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -72,7 +74,7 @@ export default function InformacoesPage() {
     if (authChecked && !isAuthenticated) {
       const hasToken = userService.isAuthenticated();
       if (!hasToken) {
-        router.push("/organizer/login");
+        orgNav.push("/organizer/login");
       }
     }
   }, [authChecked, isAuthenticated, router]);
@@ -472,7 +474,7 @@ export default function InformacoesPage() {
       }
 
       toast.success("Informações salvas com sucesso!");
-      router.push("/organizer/events/new/banner");
+      orgNav.push("/organizer/events/new/banner");
     } catch (error: any) {
       console.error("Error saving event:", error);
       let errorMessage = "Erro ao salvar evento";

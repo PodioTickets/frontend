@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
@@ -18,6 +19,7 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 
 export default function OrganizerSettingsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
   const [authChecked, setAuthChecked] = useState(false);
@@ -37,7 +39,7 @@ export default function OrganizerSettingsPage() {
 
     const hasToken = userService.isAuthenticated();
     if (!hasToken && !isAuthenticated) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
 
@@ -62,7 +64,7 @@ export default function OrganizerSettingsPage() {
     } catch (error: any) {
       console.error("Error loading organization:", error);
       if (error.response?.status === 404) {
-        router.push("/organizer/create");
+        orgNav.push("/organizer/create");
         return;
       }
       toast.error("Erro ao carregar dados da organização");

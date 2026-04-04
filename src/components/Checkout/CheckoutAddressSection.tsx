@@ -9,6 +9,7 @@ import { cn } from "@/utils/cn";
 import { ArrowButton } from "../ArrowButton";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { CountrySearchSelect } from "@/components/CountrySearchSelect";
+import { AnimatePresence, motion } from "framer-motion";
 
 const BRAZIL_UFS: Record<string, string> = {
   AC: "Acre",
@@ -150,14 +151,22 @@ export function CheckoutAddressSection({
     [onChange, invalidateConfirm, values.country]
   );
 
+  const cepDigits = values.cep.replace(/\D/g, "");
+  const showAddressRest =
+    values.country !== "Brasil" || cepDigits.length === 8;
+
   const handleConfirm = () => {
-    const cepDigits = values.cep.replace(/\D/g, "");
     if (!values.country?.trim()) {
       toast.error("Selecione o país.");
       return;
     }
-    if (cepDigits.length !== 8) {
-      toast.error("Informe um CEP válido.");
+    if (values.country === "Brasil") {
+      if (cepDigits.length !== 8) {
+        toast.error("Informe um CEP válido.");
+        return;
+      }
+    } else if (!values.cep.trim()) {
+      toast.error("Informe o CEP ou código postal.");
       return;
     }
     if (!values.stateUf) {
@@ -224,9 +233,26 @@ export function CheckoutAddressSection({
                 Buscando endereço...
               </p>
             ) : null}
+            {values.country === "Brasil" && cepDigits.length > 0 && cepDigits.length < 8 ? (
+              <p className="text-sm text-gray-11 font-family-dm-sans">
+                Preencha o CEP com 8 dígitos para liberar o restante do endereço.
+              </p>
+            ) : null}
           </div>
         </div>
+      </div>
 
+      <AnimatePresence initial={false}>
+        {showAddressRest ? (
+          <motion.div
+            key="checkout-address-rest"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+            className="flex flex-col gap-6 w-full"
+          >
+            <div className="flex flex-col w-full gap-4">
         {/* Estado + Rua */}
         <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
@@ -338,16 +364,19 @@ export function CheckoutAddressSection({
             />
           </div>
         </div>
-      </div>
+            </div>
 
-      <Button
-        type="button"
-        variant="default"
-        className="w-full h-12 font-bold font-manrope text-base"
-        onClick={handleConfirm}
-      >
-        Confirmar endereço
-      </Button>
+            <Button
+              type="button"
+              variant="default"
+              className="w-full h-12 font-bold font-manrope text-base"
+              onClick={handleConfirm}
+            >
+              Confirmar endereço
+            </Button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

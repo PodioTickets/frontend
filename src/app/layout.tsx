@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, DM_Sans } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { Analytics } from "@vercel/analytics/next";
@@ -9,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { Suspense } from "react";
 import { Loading } from "@/components/Loading";
 import { ContentWrapper } from "@/components/ContentWrapper";
+import { OrganizerAppSurfaceProvider } from "@/contexts/OrganizerAppSurfaceContext";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -52,11 +54,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const host = headersList.get("host")?.split(":")[0]?.toLowerCase() ?? "";
+  const appHost =
+    process.env.ORGANIZER_APP_HOST?.split(":")[0]?.trim().toLowerCase() ?? "";
+  const isAppOrganizerSurface = Boolean(appHost && host === appHost);
+
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
       <head>
@@ -64,18 +72,20 @@ export default function RootLayout({
       </head>
 
       <body suppressHydrationWarning className="scroll-smooth antialiased">
-        <ToasterWrapper />
-        <Providers>
-          <div className="flex flex-col min-h-screen bg-gray-2">
-            <Header />
+        <OrganizerAppSurfaceProvider value={isAppOrganizerSurface}>
+          <ToasterWrapper />
+          <Providers>
+            <div className="flex flex-col min-h-screen bg-gray-2">
+              <Header />
 
-            <Suspense fallback={<Loading />}>
-              <ContentWrapper>{children}</ContentWrapper>
-            </Suspense>
+              <Suspense fallback={<Loading />}>
+                <ContentWrapper>{children}</ContentWrapper>
+              </Suspense>
 
-            <Footer />
-          </div>
-        </Providers>
+              <Footer />
+            </div>
+          </Providers>
+        </OrganizerAppSurfaceProvider>
         <Analytics />
       </body>
     </html>

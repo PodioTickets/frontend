@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { useTickets, type Ticket } from "@/hooks/useTickets";
 import { userService, organizerService } from "@/services";
@@ -53,6 +54,7 @@ import {
 
 export default function IngressosPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { formData } = useCreateEvent();
   const queryClient = useQueryClient();
   const [authChecked, setAuthChecked] = useState(false);
@@ -95,7 +97,7 @@ export default function IngressosPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -260,7 +262,7 @@ export default function IngressosPage() {
   );
 
   const handleEditTicket = useCallback((ticketId: string) => {
-    router.push(`/organizer/events/new/tickets/edit/${ticketId}`);
+    orgNav.push(`/organizer/events/new/tickets/edit/${ticketId}`);
   }, [router]);
 
   const handleDuplicateTicket = useCallback(async (ticketId: string) => {
@@ -516,7 +518,7 @@ export default function IngressosPage() {
       return;
     }
     if (orderedCategories.length === 0) {
-      router.push("/organizer/events/new/topics");
+      orgNav.push("/organizer/events/new/topics");
       return;
     }
     setSavingConfirm(true);
@@ -546,7 +548,7 @@ export default function IngressosPage() {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.events.ticketCategories(eventId),
       });
-      router.push("/organizer/events/new/topics");
+      orgNav.push("/organizer/events/new/topics");
     } catch (e) {
       console.error(e);
       toast.error("Não foi possível salvar a ordem das categorias.");
@@ -566,7 +568,7 @@ export default function IngressosPage() {
   ]);
 
   const handleBack = useCallback(() => {
-    router.push("/organizer/events/new/preview");
+    orgNav.push("/organizer/events/new/preview");
   }, [router]);
 
   if (!authChecked || loading) {
@@ -621,7 +623,7 @@ export default function IngressosPage() {
                 Criar categoria
               </Button>
               <Button
-                onClick={() => router.push("/organizer/events/new/tickets/create")}
+                onClick={() => orgNav.push("/organizer/events/new/tickets/create")}
                 variant="default"
                 className="text-base font-bold font-manrope leading-[1.1]"
               >

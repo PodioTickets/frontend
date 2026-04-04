@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import { publicSiteHref } from "@/lib/organizerHostNavigation";
 
 export default function CreateOrganizerPage() {
-  const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { user, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -72,7 +72,7 @@ export default function CreateOrganizerPage() {
       });
 
       toast.success("Organização criada com sucesso!");
-      router.push("/organizer");
+      orgNav.push("/organizer");
     } catch (error: any) {
       console.error("Error creating organization:", error);
       const errorMessage =

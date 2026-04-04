@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService, organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -23,6 +24,7 @@ import {
 
 export default function EditTopicsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { openTopicModal, setOnModalSave, setOnModalDelete } = useTopicModal();
@@ -37,7 +39,7 @@ export default function EditTopicsPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -86,10 +88,11 @@ export default function EditTopicsPage() {
 
   const {
     leavePromptOpen,
-    setLeavePromptOpen,
     handleBack,
     confirmLeaveWithoutSaving,
     beginNavigationAfterSave,
+    dismissLeavePrompt,
+    requestNavigate,
   } = useUnsavedLeaveGuard(isDirty, {
     navigateTarget: `/organizer/events/${eventId}/edit/tickets`,
     onDiscard: discardLocalChanges,
@@ -450,7 +453,9 @@ export default function EditTopicsPage() {
           <div className="flex gap-2 items-start justify-end w-full pb-4 mt-10">
             <Button
               variant="outline"
-              onClick={() => router.push(`/organizer/events/${eventId}/preview`)}
+              onClick={() =>
+                requestNavigate(`/organizer/events/${eventId}/preview`)
+              }
               className="border-gray-6 text-gray-12 text-[20px] font-bold px-11 h-[52px]"
             >
               Prévia
@@ -468,7 +473,7 @@ export default function EditTopicsPage() {
 
       <UnsavedChangesModal
         open={leavePromptOpen}
-        onClose={() => setLeavePromptOpen(false)}
+        onClose={dismissLeavePrompt}
         title="Alterações não salvas"
         description="Você fez alterações nos tópicos. Se sair agora, elas serão perdidas."
         onSaveAndLeave={handleSaveAndLeave}

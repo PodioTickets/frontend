@@ -11,6 +11,7 @@ import { RemoveIcon } from "../Icons/RemoveIcon";
 import { ArrowButton } from "../ArrowButton";
 import { Building2, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import type { OrganizationMember } from "@/services/organizer/OrganizerService";
 
 interface OrganizationAccount {
@@ -26,6 +27,7 @@ export function AccessAllOrganizationsModal() {
   const { isOpen, closeAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
   const { user } = useAuth();
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const [organizations, setOrganizations] = useState<OrganizationAccount[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -102,7 +104,7 @@ export function AccessAllOrganizationsModal() {
 
   const handleCreateOrganization = () => {
     closeAccessAllOrganizationsModal();
-    router.push("/organizer/create");
+    orgNav.push("/organizer/create");
   };
 
   return (

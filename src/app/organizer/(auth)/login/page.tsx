@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
@@ -16,6 +17,7 @@ import { publicSiteHref } from "@/lib/organizerHostNavigation";
 
 export default function OrganizerLoginPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { login, isLoading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
@@ -51,7 +53,7 @@ export default function OrganizerLoginPage() {
 
       toast.success("Login realizado com sucesso!");
       router.refresh();
-      router.push("/organizer/events");
+      orgNav.push("/organizer/events");
       setFormData({ email: "", password: "" });
       setErrors({});
     } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService } from "@/services";
 
 interface UseOrganizerAuthOptions {
@@ -16,7 +16,7 @@ interface UseOrganizerAuthReturn {
 
 export function useOrganizerAuth(options: UseOrganizerAuthOptions = {}): UseOrganizerAuthReturn {
   const { redirectTo = "/", delay = 300 } = options;
-  const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,7 +24,7 @@ export function useOrganizerAuth(options: UseOrganizerAuthOptions = {}): UseOrga
     const hasToken = userService.isAuthenticated();
     
     if (!hasToken) {
-      router.push(redirectTo);
+      orgNav.push(redirectTo);
       return;
     }
 
@@ -35,7 +35,7 @@ export function useOrganizerAuth(options: UseOrganizerAuthOptions = {}): UseOrga
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [router, redirectTo, delay]);
+  }, [orgNav, redirectTo, delay]);
 
   return { isAuthenticated, isLoading };
 }

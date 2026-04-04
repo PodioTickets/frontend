@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
@@ -32,6 +33,7 @@ interface Coupon {
 
 export default function CouponsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated } = useAuth();
   const { formData } = useCreateEvent();
   const { copyToClipboard } = useClipboard();
@@ -52,7 +54,7 @@ export default function CouponsPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -102,7 +104,7 @@ export default function CouponsPage() {
   }, [setOnModalSave, formData.createdEventId]);
 
   const handleBack = () => {
-    router.push("/organizer/events/new/questionnaire");
+    orgNav.push("/organizer/events/new/questionnaire");
   };
 
   const handleCreateCoupon = () => {
@@ -152,11 +154,11 @@ export default function CouponsPage() {
 
   const handleSkip = () => {
     // TODO: Publicar evento diretamente
-    router.push("/organizer/events/new/vouchers");
+    orgNav.push("/organizer/events/new/vouchers");
   };
 
   const handleConfirm = () => {
-    router.push("/organizer/events/new/vouchers");
+    orgNav.push("/organizer/events/new/vouchers");
   };
 
   const formatCurrency = (value: number) => {

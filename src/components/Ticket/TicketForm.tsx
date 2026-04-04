@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -481,7 +481,7 @@ export function TicketForm({
   localStorageKey,
   className = "",
 }: TicketFormProps) {
-  const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const queryClient = useQueryClient();
   const { deleteTicket } = useTickets(eventId, !!eventId);
   const {
@@ -1006,7 +1006,7 @@ export function TicketForm({
           setTicketHydrateNonce((n) => n + 1);
         } else {
           toast.error("Ingresso não encontrado");
-          router.push(backUrl);
+          orgNav.push(backUrl);
         }
       } catch (error) {
         console.error("Error loading ticket:", error);
@@ -1015,7 +1015,7 @@ export function TicketForm({
     };
 
     loadTicket();
-  }, [mode, ticketId, eventId, modalityTemplates, router, backUrl]);
+  }, [mode, ticketId, eventId, modalityTemplates, orgNav, backUrl]);
 
   // Setup modal callbacks
   useEffect(() => {
@@ -1163,7 +1163,7 @@ export function TicketForm({
   const releaseUnsavedHistoryGuard = () => {
     if (guardPushedRef.current) {
       guardPushedRef.current = false;
-      router.push(`/organizer/events/${eventId}/edit/tickets`);
+      orgNav.push(`/organizer/events/${eventId}/edit/tickets`);
     }
   };
 
@@ -1175,7 +1175,7 @@ export function TicketForm({
       skipUnsavedPopStateRef.current = true;
     }
     releaseUnsavedHistoryGuard();
-    router.push(`/organizer/events/${eventId}/edit/tickets`);
+    orgNav.push(`/organizer/events/${eventId}/edit/tickets`);
   };
 
   // Handlers
@@ -1184,15 +1184,15 @@ export function TicketForm({
       setLeavePromptOpen(true);
       return;
     }
-    router.push(`/organizer/events/${eventId}/edit/tickets`);
+    orgNav.push(`/organizer/events/${eventId}/edit/tickets`);
   };
 
   const handleConfirmDeleteTicket = useCallback(async () => {
     if (!ticketId) return;
     await deleteTicket(ticketId);
     window.dispatchEvent(new CustomEvent("ticketCreated"));
-    router.push(backUrl);
-  }, [ticketId, deleteTicket, router, backUrl]);
+    orgNav.push(backUrl);
+  }, [ticketId, deleteTicket, orgNav, backUrl]);
 
   const handleSaveDraftAndLeave = () => {
     try {
@@ -1457,7 +1457,7 @@ export function TicketForm({
       releaseUnsavedHistoryGuard();
       // replace + frame seguinte: evita corrida entre history.back() do guard e o App Router
       requestAnimationFrame(() => {
-        router.replace(backUrl);
+        orgNav.replace(backUrl);
       });
       return true;
     } catch (error: unknown) {

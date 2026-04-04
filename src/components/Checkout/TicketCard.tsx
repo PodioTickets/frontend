@@ -9,8 +9,8 @@ import type { Ticket } from "@/hooks/useTickets";
 import type { Event, EventKitSelectionDisplay } from "@/interfaces/event";
 import { defaultEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { ImageCarouselModal } from "./ImageCarouselModal";
-import { modalitiesColumns } from "@/constants";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { getCheckoutModalityInfo } from "@/utils/checkoutModalityDisplay";
 import { getTicketProductCarouselItems } from "@/utils/ticketProductVisuals";
 
 interface TicketCardProps {
@@ -79,34 +79,10 @@ export function TicketCard({
     return parseFloat(ticket.distance) || 0;
   };
 
-  // Resolver ícone e nome da modalidade: primeiro do evento, depois das modalidades padrão
-  const modalityInfo = useMemo(() => {
-    const modalityValue = ticket.modality?.trim();
-    if (!modalityValue) return null;
-
-    const fromEvent = event.modalities?.find(
-      (m) =>
-        m.name === modalityValue ||
-        m.template?.label === modalityValue ||
-        m.template?.code === modalityValue
-    );
-    if (fromEvent) {
-      return {
-        name: fromEvent.template?.label || fromEvent.name,
-        icon: fromEvent.template?.icon,
-      };
-    }
-
-    const allModalities = modalitiesColumns.flat();
-    const byIdOrLabel = allModalities.find(
-      (m) => m.id === modalityValue || m.label === modalityValue
-    );
-    if (byIdOrLabel) {
-      return { name: byIdOrLabel.label, icon: byIdOrLabel.icon };
-    }
-
-    return { name: modalityValue, icon: undefined };
-  }, [ticket.modality, event.modalities]);
+  const modalityInfo = useMemo(
+    () => getCheckoutModalityInfo(ticket, event),
+    [ticket, event],
+  );
 
   const showPerTicketGallery =
     kitSelectionDisplay.showKitImagesOnSelection &&
@@ -180,11 +156,11 @@ export function TicketCard({
         <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col justify-center gap-6">
           {/* Image Gallery */}
           {productItems.length > 0 && (
-            <div className={`flex gap-3 items-center w-full ${productItems.length === 1 ? 'justify-center' : 'justify-start'}`}>
+            <div className="flex gap-3 items-center w-full justify-start">
               {/* Main Image */}
               <button
                 onClick={() => handleImageClick(currentMainImageIndex)}
-                className={`${productItems.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
+                className="w-[136px] h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
               >
                 {currentProduct ? (
                   <ImageWithInitialFallback
@@ -194,7 +170,7 @@ export function TicketCard({
                     fallbackId={currentProduct.id}
                     fill
                     sizes="(max-width: 768px) 90vw, 136px"
-                    className="size-full"
+                    className="size-full border-transparent"
                     letterClassName="text-3xl"
                   />
                 ) : null}
@@ -235,7 +211,7 @@ export function TicketCard({
                             fallbackId={item.id}
                             fill
                             sizes="36px"
-                            className="size-full"
+                            className="size-full border-transparent"
                             letterClassName="text-sm"
                           />
                         </button>
@@ -283,7 +259,7 @@ export function TicketCard({
                         name={modalityInfo.name}
                         width={24}
                         height={24}
-                        className="size-6"
+                        className="size-6 border-transparent"
                         imgClassName="object-contain"
                         letterClassName="text-[10px]"
                       />
@@ -345,8 +321,8 @@ export function TicketCard({
         <div className="flex gap-4 w-full">
           {/* Galeria de imagens dos produtos à esquerda */}
           {productItems.length > 0 && (
-            <div className={`${productItems.length === 1 ? 'flex justify-center w-full' : 'shrink-0'}`}>
-              <div className={`flex items-center gap-2 ${productItems.length === 1 ? 'justify-center w-full' : ''}`}>
+            <div className="shrink-0">
+              <div className="flex items-center gap-2">
                 {currentProduct ? (
                   <button
                     onClick={() => handleImageClick(currentMainImageIndex)}
@@ -359,7 +335,7 @@ export function TicketCard({
                       fallbackId={currentProduct.id}
                       fill
                       sizes="136px"
-                      className="size-full"
+                      className="size-full border-transparent"
                       letterClassName="text-3xl"
                     />
                   </button>
@@ -396,7 +372,7 @@ export function TicketCard({
                               fallbackId={item.id}
                               fill
                               sizes="36px"
-                              className="size-full"
+                              className="size-full border-transparent"
                               letterClassName="text-sm"
                             />
                           </button>
@@ -439,8 +415,8 @@ export function TicketCard({
                           name={modalityInfo.name}
                           width={24}
                           height={24}
-                          className="size-6 bg-transparent"
-                          imgClassName="object-cover bg-transparent"
+                          className="size-6 bg-transparent border-transparent"
+                          imgClassName="object-contain border-transparent"
                           letterClassName="text-[10px]"
                         />
                       </div>

@@ -1,7 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { useTickets, type Ticket } from "@/hooks/useTickets";
 import { userService, organizerService } from "@/services";
@@ -12,6 +20,8 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import { Button } from "@/components/Button";
 import { Loading } from "@/components/Loading";
 import { ArrowButton } from "@/components/ArrowButton";
+import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
+import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Plus } from "lucide-react";
@@ -62,10 +72,31 @@ import {
   applyOrganizerTicketDragEnd,
   categoryIdForTicketScope,
   persistTicketOrderDrafts,
+  sortedTicketsInScope,
 } from "@/lib/organizerTicketListDnD";
+
+function committedCategoryKeyForTicket(
+  t: Ticket,
+  categories: ModalityGroup[],
+): string {
+  const scope = categoryIdForTicketScope(t, categories);
+  return scope ?? "uncategorized";
+}
+
+function buildCommittedAssignmentsMap(
+  tickets: Ticket[],
+  categories: ModalityGroup[],
+): Record<string, string> {
+  const m: Record<string, string> = {};
+  for (const t of tickets) {
+    m[t.id] = committedCategoryKeyForTicket(t, categories);
+  }
+  return m;
+}
 
 export default function EditTicketsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { event, reloadEvent } = useEditEvent();
@@ -92,6 +123,11 @@ export default function EditTicketsPage() {
     {},
   );
 
+  const committedAssignmentRef = useRef<Record<string, string>>({});
+  const [committedAssignmentsVersion, setCommittedAssignmentsVersion] = useState(0);
+  /** true enquanto a query de tickets está carregando; ao voltar a false, alinha baseline uma vez. */
+  const prevTicketsLoadingRef = useRef(true);
+
   // Hooks para gerenciar dados
   const {
     categories,
@@ -113,7 +149,7 @@ export default function EditTicketsPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -142,7 +178,9 @@ export default function EditTicketsPage() {
   }, [categories]);
 
   useEffect(() => {
-    const ids = categories.map((c) => c.id);
+    const ids = [...categories]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((c) => c.id);
     setCategoryOrderIds((prev) => {
       if (ids.length === 0) return prev.length === 0 ? prev : [];
       if (prev.length === 0) return ids;
@@ -218,6 +256,23 @@ export default function EditTicketsPage() {
     };
   }, [eventId, queryClient]);
 
+  useEffect(() => {
+    prevTicketsLoadingRef.current = true;
+  }, [eventId]);
+
+  useLayoutEffect(() => {
+    if (!authChecked || !eventId) return;
+    if (ticketsLoading) {
+      prevTicketsLoadingRef.current = true;
+      return;
+    }
+    if (prevTicketsLoadingRef.current) {
+      prevTicketsLoadingRef.current = false;
+      committedAssignmentRef.current = buildCommittedAssignmentsMap(tickets, categories);
+      setCommittedAssignmentsVersion((v) => v + 1);
+    }
+  }, [authChecked, ticketsLoading, eventId, tickets, categories]);
+
   // Handlers
   const handleCreateGroup = useCallback(
     async (nameOverride?: string) => {
@@ -285,13 +340,6 @@ export default function EditTicketsPage() {
     [deleteCategory]
   );
 
-  const handleEditTicket = useCallback(
-    (ticketId: string) => {
-      router.push(`/organizer/events/${eventId}/edit/tickets/${ticketId}`);
-    },
-    [router, eventId]
-  );
-
   const handleDuplicateTicket = useCallback(
     async (ticketId: string) => {
       if (!eventId) {
@@ -313,6 +361,18 @@ export default function EditTicketsPage() {
 
         window.dispatchEvent(new CustomEvent("ticketCreated"));
 
+        const dupTickets =
+          queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ?? [];
+        const dupCats =
+          queryClient.getQueryData<ModalityGroup[]>(
+            queryKeys.events.ticketCategories(eventId),
+          ) ?? categories;
+        committedAssignmentRef.current = buildCommittedAssignmentsMap(
+          dupTickets,
+          dupCats,
+        );
+        setCommittedAssignmentsVersion((v) => v + 1);
+
         toast.success("Ingresso duplicado com sucesso!");
       } catch (error: any) {
         console.error("Error duplicating ticket:", error);
@@ -321,11 +381,12 @@ export default function EditTicketsPage() {
         setDuplicatingTicketId(null);
       }
     },
-    [eventId, queryClient],
+    [eventId, queryClient, categories],
   );
 
+  /** Só cache local; persistência em «Salvar alterações». */
   const handleDropTicket = useCallback(
-    async (ticketId: string, categoryId: string | null) => {
+    async (ticketId: string, categoryId: string | null): Promise<void> => {
       if (!eventId) {
         toast.error("Evento não encontrado");
         return;
@@ -341,38 +402,19 @@ export default function EditTicketsPage() {
         return;
       }
 
-      const previousTickets = queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId));
-
-      if (previousTickets) {
-        const optimisticTickets = previousTickets.map((t) =>
-          t.id === ticketId ? { ...t, groupId: categoryId || "uncategorized" } : t
-        );
-        queryClient.setQueryData(queryKeys.events.tickets(eventId), optimisticTickets);
-      }
-
-      try {
-        await organizerService.updateTicket(eventId, ticketId, {
-          categoryId: categoryId || null,
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.events.tickets(eventId),
-        });
-
-        if (categoryId) {
-          toast.success("Ingresso movido para a categoria com sucesso!");
-        } else {
-          toast.success("Ingresso desvinculado da categoria com sucesso!");
-        }
-      } catch (error: any) {
-        if (previousTickets) {
-          queryClient.setQueryData(queryKeys.events.tickets(eventId), previousTickets);
-        }
-        console.error("Error moving ticket:", error);
-        toast.error(error.response?.data?.message || "Erro ao mover ingresso");
-      }
+      queryClient.setQueryData<Ticket[]>(
+        queryKeys.events.tickets(eventId),
+        (prev) => {
+          if (!prev) return prev;
+          return prev.map((t) =>
+            t.id === ticketId
+              ? { ...t, groupId: categoryId || "uncategorized" }
+              : t
+          );
+        },
+      );
     },
-    [eventId, tickets, queryClient, categories]
+    [eventId, tickets, queryClient, categories],
   );
 
   // DnD Kit sensors
@@ -575,6 +617,147 @@ export default function EditTicketsPage() {
     });
   }, [savedKitSelection]);
 
+  const persistedCategoryOrderIds = useMemo(
+    () =>
+      [...categories]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((c) => c.id),
+    [categories],
+  );
+
+  const categoryOrderDirty = useMemo(() => {
+    if (persistedCategoryOrderIds.length === 0) return false;
+    if (categoryOrderIds.length !== persistedCategoryOrderIds.length) return true;
+    return categoryOrderIds.some(
+      (id, i) => id !== persistedCategoryOrderIds[i],
+    );
+  }, [categoryOrderIds, persistedCategoryOrderIds]);
+
+  const ticketOrderDirty = useMemo(() => {
+    for (const key of Object.keys(ticketOrderDraft)) {
+      const scopeCategoryId = key === "uncategorized" ? null : key;
+      const bucket = sortedTicketsInScope(tickets, scopeCategoryId, categories);
+      const serverIds = bucket.map((t) => t.id);
+      const draftIds = ticketOrderDraft[key];
+      if (!draftIds || draftIds.length !== serverIds.length) return true;
+      if (draftIds.some((id, i) => id !== serverIds[i])) return true;
+    }
+    return false;
+  }, [ticketOrderDraft, tickets, categories]);
+
+  const kitSelectionDirty = useMemo(() => {
+    const norm = (k: EventKitSelectionDisplay) => ({
+      show: k.showKitImagesOnSelection,
+      layout: k.kitImagesLayout,
+      byTicket: k.primaryKitProductByTicketId,
+      byCat: k.primaryKitProductByCategoryId,
+    });
+    return (
+      JSON.stringify(norm(draftKitSelection)) !==
+      JSON.stringify(norm(savedKitSelection))
+    );
+  }, [draftKitSelection, savedKitSelection]);
+
+  const categoryNamesDirty = useMemo(
+    () => Object.keys(categoryNameDraft).length > 0,
+    [categoryNameDraft],
+  );
+
+  const ticketAssignmentsDirty = useMemo(() => {
+    void committedAssignmentsVersion;
+    const baseline = committedAssignmentRef.current;
+    for (const t of tickets) {
+      if (committedCategoryKeyForTicket(t, categories) !== baseline[t.id]) {
+        return true;
+      }
+    }
+    for (const id of Object.keys(baseline)) {
+      if (!tickets.some((x) => x.id === id)) return true;
+    }
+    return false;
+  }, [tickets, categories, committedAssignmentsVersion]);
+
+  const hasPendingTicketsPageChanges =
+    categoryNamesDirty ||
+    categoryOrderDirty ||
+    ticketOrderDirty ||
+    kitSelectionDirty ||
+    ticketAssignmentsDirty;
+
+  const discardLocalChanges = useCallback(async () => {
+    if (!eventId) return;
+    setTicketOrderDraft({});
+    setCategoryNameDraft({});
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.events.tickets(eventId),
+    });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.events.ticketCategories(eventId),
+    });
+    await queryClient.refetchQueries({
+      queryKey: queryKeys.events.tickets(eventId),
+    });
+    await queryClient.refetchQueries({
+      queryKey: queryKeys.events.ticketCategories(eventId),
+    });
+    await reloadEvent();
+    const freshTickets =
+      queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ?? [];
+    const freshCats =
+      queryClient.getQueryData<ModalityGroup[]>(
+        queryKeys.events.ticketCategories(eventId),
+      ) ?? [];
+    committedAssignmentRef.current = buildCommittedAssignmentsMap(
+      freshTickets,
+      freshCats,
+    );
+    setCommittedAssignmentsVersion((v) => v + 1);
+    setCategoryOrderIds(
+      [...freshCats]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((c) => c.id),
+    );
+    try {
+      const ev = await organizerService.getEventById(eventId);
+      const parsed = parseEventKitSelectionDisplay(ev.kitSelectionDisplay);
+      setDraftKitSelection({
+        ...defaultEventKitSelectionDisplay(),
+        ...parsed,
+        primaryKitProductByTicketId: { ...parsed.primaryKitProductByTicketId },
+        primaryKitProductByCategoryId: { ...parsed.primaryKitProductByCategoryId },
+      });
+    } catch {
+      setDraftKitSelection({
+        ...defaultEventKitSelectionDisplay(),
+        ...savedKitSelection,
+        primaryKitProductByTicketId: {
+          ...savedKitSelection.primaryKitProductByTicketId,
+        },
+        primaryKitProductByCategoryId: {
+          ...savedKitSelection.primaryKitProductByCategoryId,
+        },
+      });
+    }
+    prevTicketsLoadingRef.current = false;
+  }, [
+    eventId,
+    queryClient,
+    reloadEvent,
+    savedKitSelection,
+  ]);
+
+  const {
+    leavePromptOpen,
+    handleBack,
+    confirmLeaveWithoutSaving,
+    beginNavigationAfterSave,
+    dismissLeavePrompt,
+    requestNavigate,
+  } = useUnsavedLeaveGuard(hasPendingTicketsPageChanges, {
+    navigateTarget: `/organizer/events/${eventId}/edit/banner`,
+    onDiscard: discardLocalChanges,
+  });
+
   const handleDraftShowKitImagesChange = useCallback((value: boolean) => {
     setDraftKitSelection((prev) => ({
       ...defaultEventKitSelectionDisplay(),
@@ -583,25 +766,37 @@ export default function EditTicketsPage() {
     }));
   }, []);
 
-  const handleSaveChangesNavigate = useCallback(async () => {
+  const handleSaveChangesNavigate = useCallback(async (): Promise<boolean> => {
     if (hasIncompleteNewCategoryDraft) {
       toast.error(
         "Informe o nome da nova categoria ou cancele a criação antes de salvar as alterações."
       );
-      return;
+      return false;
     }
     if (!eventId) {
       toast.error("Evento não encontrado.");
-      return;
+      return false;
     }
     if (orderedCategories.length === 0) {
       toast.error(
         "Adicione pelo menos uma categoria de ingressos antes de salvar as alterações.",
       );
-      return;
+      return false;
     }
     setSavingNavigate(true);
     try {
+      const ticketList =
+        queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
+        tickets;
+      const assignmentBaseline = { ...committedAssignmentRef.current };
+      for (const t of ticketList) {
+        const desired = committedCategoryKeyForTicket(t, categories);
+        if (assignmentBaseline[t.id] === desired) continue;
+        await organizerService.updateTicket(eventId, t.id, {
+          categoryId: desired === "uncategorized" ? null : desired,
+        });
+      }
+
       const mergedKitDisplay = {
         ...defaultEventKitSelectionDisplay(),
         ...draftKitSelection,
@@ -626,12 +821,12 @@ export default function EditTicketsPage() {
         setCategoryNameDraft({});
       }
       await persistTicketCategoryOrderApi(eventId, orderedCategories);
-      const ticketList =
+      const ticketListAfter =
         queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
-        tickets;
+        ticketList;
       await persistTicketOrderDrafts(
         eventId,
-        ticketList,
+        ticketListAfter,
         categories,
         ticketOrderDraft,
       );
@@ -642,11 +837,31 @@ export default function EditTicketsPage() {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.events.ticketCategories(eventId),
       });
+      await queryClient.refetchQueries({
+        queryKey: queryKeys.events.tickets(eventId),
+      });
+      await queryClient.refetchQueries({
+        queryKey: queryKeys.events.ticketCategories(eventId),
+      });
       await reloadEvent();
+      const freshTickets =
+        queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ?? [];
+      const freshCats =
+        queryClient.getQueryData<ModalityGroup[]>(
+          queryKeys.events.ticketCategories(eventId),
+        ) ?? [];
+      committedAssignmentRef.current = buildCommittedAssignmentsMap(
+        freshTickets,
+        freshCats,
+      );
+      setCommittedAssignmentsVersion((v) => v + 1);
+      prevTicketsLoadingRef.current = false;
       toast.success("Alterações salvas com sucesso!");
+      return true;
     } catch (e) {
       console.error(e);
       toast.error("Não foi possível salvar as alterações desta página.");
+      return false;
     } finally {
       setSavingNavigate(false);
     }
@@ -663,6 +878,20 @@ export default function EditTicketsPage() {
     categoryNameDraft,
     updateCategory,
   ]);
+
+  const handleSaveAndLeave = useCallback(async () => {
+    const ok = await handleSaveChangesNavigate();
+    if (ok) {
+      beginNavigationAfterSave();
+    }
+  }, [handleSaveChangesNavigate, beginNavigationAfterSave]);
+
+  const handleEditTicket = useCallback(
+    (ticketId: string) => {
+      requestNavigate(`/organizer/events/${eventId}/edit/tickets/${ticketId}`);
+    },
+    [requestNavigate, eventId],
+  );
 
   const kitImagePositionDrawerData = useMemo(() => {
     const ticketToRow = (t: Ticket) => ({
@@ -739,10 +968,6 @@ export default function EditTicketsPage() {
     []
   );
 
-  const handleBack = useCallback(() => {
-    router.push(`/organizer/events/${eventId}/edit/banner`);
-  }, [router, eventId]);
-
   if (!authChecked || loading) {
     return <Loading />;
   }
@@ -795,7 +1020,11 @@ export default function EditTicketsPage() {
                 Criar categoria
               </Button>
               <Button
-                onClick={() => router.push(`/organizer/events/${eventId}/edit/tickets/create`)}
+                onClick={() =>
+                  requestNavigate(
+                    `/organizer/events/${eventId}/edit/tickets/create`,
+                  )
+                }
                 variant="default"
                 className="text-base font-bold font-manrope leading-[1.1]"
               >
@@ -1081,7 +1310,7 @@ export default function EditTicketsPage() {
             <Button
               onClick={() => void handleSaveChangesNavigate()}
               variant="default"
-              disabled={savingNavigate}
+              disabled={savingNavigate || !hasPendingTicketsPageChanges}
               className="text-[20px] font-bold px-10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savingNavigate ? "Salvando..." : "Salvar alterações"}
@@ -1117,6 +1346,15 @@ export default function EditTicketsPage() {
         initialKitSelection={drawerInitialKitSelection}
         onSave={handleKitDrawerSave}
         saveSuccessMessage="Posição das imagens atualizada. Clique em Salvar alterações para persistir."
+      />
+
+      <UnsavedChangesModal
+        open={leavePromptOpen}
+        onClose={dismissLeavePrompt}
+        title="Alterações não salvas"
+        description="Você fez alterações nos ingressos ou nas categorias. Se sair agora, elas serão perdidas."
+        onSaveAndLeave={handleSaveAndLeave}
+        onLeaveWithoutSaving={confirmLeaveWithoutSaving}
       />
     </>
   );

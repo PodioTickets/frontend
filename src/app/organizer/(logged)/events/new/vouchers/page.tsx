@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
@@ -32,6 +33,7 @@ interface VoucherGroup {
 
 export default function VouchersPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { formData } = useCreateEvent();
   const { openCreateVoucherModal, setOnModalSave } = useCreateVoucherModal();
   const { openDeleteVoucherModal } = useDeleteVoucherModal();
@@ -51,7 +53,7 @@ export default function VouchersPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -101,7 +103,7 @@ export default function VouchersPage() {
   }, [setOnModalSave, formData.createdEventId]);
 
   const handleBack = () => {
-    router.push("/organizer/events/new/coupons");
+    orgNav.push("/organizer/events/new/coupons");
   };
 
   const handleCreateVoucher = () => {
@@ -153,7 +155,7 @@ export default function VouchersPage() {
   };
 
   const handleConfirm = () => {
-    router.push("/organizer/events/new/review");
+    orgNav.push("/organizer/events/new/review");
   };
 
   const formatDate = (dateString?: string) => {

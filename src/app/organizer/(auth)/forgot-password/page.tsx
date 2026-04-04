@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Mail, ArrowLeft, Clock } from "lucide-react";
@@ -20,6 +21,7 @@ const CHECK_STEPS = [
 
 export default function OrganizerForgotPasswordPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { forgotPassword, resendCode, isPending, isResending } =
     useForgotPassword();
 
@@ -224,7 +226,7 @@ export default function OrganizerForgotPasswordPage() {
                   type="button"
                   variant="outline"
                   className="w-full border-gray-6 text-gray-12"
-                  onClick={() => router.push("/organizer/login")}
+                  onClick={() => orgNav.push("/organizer/login")}
                 >
                   Voltar ao login
                 </Button>

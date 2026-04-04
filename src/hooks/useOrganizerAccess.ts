@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { organizerService } from "@/services";
 import { useAuth } from "./useAuth";
 
@@ -15,7 +15,7 @@ export interface OrganizerAccess {
 }
 
 export function useOrganizerAccess() {
-  const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [access, setAccess] = useState<OrganizerAccess | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ export function useOrganizerAccess() {
       setAccess(result);
 
       if (!result.isMember) {
-        router.push("/organizer/login");
+        orgNav.push("/organizer/login");
         return;
       }
     } catch (error: any) {
@@ -44,7 +44,7 @@ export function useOrganizerAccess() {
       setError(error.response?.data?.message || "Erro ao verificar acesso");
 
       if (error.response?.status === 404 || error.response?.status === 401) {
-        router.push("/organizer/login");
+        orgNav.push("/organizer/login");
       }
     } finally {
       setLoading(false);

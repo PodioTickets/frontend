@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { usePathname, useRouter } from "next/navigation";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { useAuth } from "@/hooks/useAuth";
 import { Home, TrendingUp, Ticket, Settings, FileText, LogOut, ChevronDown, Medal, Sun, HelpCircle, Building2 } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -20,8 +23,9 @@ import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
 import Image from "next/image";
 
 export function OrganizerSidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const organizerPath = useOrganizerPathname();
+  const appSurface = useOrganizerAppSurface();
+  const orgNav = useOrganizerNavigate();
   const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -31,7 +35,7 @@ export function OrganizerSidebar() {
 
   const handleLogout = async () => {
     await logout();
-    router.push("/organizer/login");
+    orgNav.push("/organizer/login");
   };
 
   useEffect(() => {
@@ -65,11 +69,14 @@ export function OrganizerSidebar() {
     },
   ];
 
+  const navHref = (internal: string) =>
+    organizerExternalHref(internal, appSurface);
+
   const isActive = (href: string) => {
     if (href === "/organizer") {
-      return pathname === "/organizer";
+      return organizerPath === "/organizer" || organizerPath === "/organizer/";
     }
-    return pathname.startsWith(href);
+    return organizerPath.startsWith(href);
   };
 
   return (
@@ -77,7 +84,7 @@ export function OrganizerSidebar() {
       {/* Top Section */}
       <div className="flex flex-col gap-10 items-start w-full">
         {/* Logo */}
-        <Link href="/organizer" className="flex items-center gap-2 min-w-0">
+        <Link href={navHref("/organizer")} className="flex items-center gap-2 min-w-0">
           <Image
             src="/images/logo_organizers.png"
             alt="PódioTicket"
@@ -102,12 +109,12 @@ export function OrganizerSidebar() {
                 className="relative rounded"
               >
                 <Link
-                  href={item.href}
+                  href={navHref(item.href)}
                   className="content-center flex gap-2 h-10 items-center px-3 py-3 relative rounded"
                 >
                   <motion.div
                     animate={{
-                      backgroundColor: active ? "#25482D" : "transparent",
+                      backgroundColor: active ? "#25482D" : "rgba(0, 0, 0, 0)",
                     }}
                     transition={{ duration: 0.25, ease: "easeInOut" }}
                     className="absolute inset-0 rounded"
@@ -310,7 +317,7 @@ export function OrganizerSidebar() {
                           <div className="bg-gray-6 h-px shrink-0 w-[140px]" />
                           <div className="flex flex-col items-start relative shrink-0 w-[140px]">
                             <Link
-                              href="/organizer/settings"
+                              href={navHref("/organizer/settings")}
                               className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-full hover:bg-gray-4 transition-colors"
                               onClick={() => {
                                 setIsProfileOpen(false);
@@ -323,7 +330,7 @@ export function OrganizerSidebar() {
                               </p>
                             </Link>
                             <Link
-                              href="/organizer/documentation"
+                              href={navHref("/organizer/documentation")}
                               className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-full hover:bg-gray-4 transition-colors"
                               onClick={() => {
                                 setIsProfileOpen(false);
@@ -410,7 +417,7 @@ export function OrganizerSidebar() {
                             <div className="bg-gray-6 h-px shrink-0 w-[140px]" />
                             <div className="flex flex-col items-start relative shrink-0 w-[140px]">
                               <Link
-                                href="/organizer/settings"
+                                href={navHref("/organizer/settings")}
                                 className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-full hover:bg-gray-4 transition-colors"
                                 onClick={() => {
                                   setIsProfileOpen(false);
@@ -423,7 +430,7 @@ export function OrganizerSidebar() {
                                 </p>
                               </Link>
                               <Link
-                                href="/organizer/documentation"
+                                href={navHref("/organizer/documentation")}
                                 className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-full hover:bg-gray-4 transition-colors"
                                 onClick={() => {
                                   setIsProfileOpen(false);
@@ -466,7 +473,7 @@ export function OrganizerSidebar() {
                     </p>
                   </button>
                   <Link
-                    href="/organizer/settings"
+                    href={navHref("/organizer/settings")}
                     className="border-b border-gray-6 flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors"
                     onClick={() => setIsProfileOpen(false)}
                   >

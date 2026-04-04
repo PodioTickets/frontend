@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { useAuth } from "@/hooks/useAuth";
 import { useRegisterModal } from "@/stores/modalStore";
 import {
@@ -10,7 +10,7 @@ import {
 } from "@/utils/checkProfileComplete";
 
 export function ProfileCompleteChecker() {
-  const pathname = usePathname();
+  const pathname = useOrganizerPathname();
   const { user, isAuthenticated } = useAuth();
   const { openRegisterModal, isOpen } = useRegisterModal();
   const lastCheckedUserIdRef = useRef<string | null>(null);

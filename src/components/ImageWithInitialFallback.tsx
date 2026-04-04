@@ -47,7 +47,7 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden bg-gray-3 flex items-center justify-center",
+        "relative overflow-hidden bg-gray-3 border border-primary-8 flex items-center justify-center",
         className
       )}
     >

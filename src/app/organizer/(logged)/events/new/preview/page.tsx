@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
@@ -22,6 +23,7 @@ import { Loading } from "@/components/Loading";
 
 export default function PreviaPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated, user } = useAuth();
   const { formData, updateFormData } = useCreateEvent();
   const [cardPreview, setCardPreview] = useState<string>(
@@ -36,7 +38,7 @@ export default function PreviaPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -49,7 +51,7 @@ export default function PreviaPage() {
     if (authChecked && !isAuthenticated) {
       const hasToken = userService.isAuthenticated();
       if (!hasToken) {
-        router.push("/organizer/login");
+        orgNav.push("/organizer/login");
       }
     }
   }, [authChecked, isAuthenticated, router]);
@@ -222,13 +224,13 @@ export default function PreviaPage() {
   };
 
   const handleBack = () => {
-    router.push("/organizer/events/new/banner");
+    orgNav.push("/organizer/events/new/banner");
   };
 
   const handleNext = async () => {
     // Se já tem cardImageUrl salvo, apenas navega
     if (formData.cardImageUrl && !selectedCardFile) {
-      router.push("/organizer/events/new/tickets");
+      orgNav.push("/organizer/events/new/tickets");
       return;
     }
 
@@ -237,7 +239,7 @@ export default function PreviaPage() {
       await handleCardUpload();
       // Aguarda um pouco para garantir que o upload foi processado
       setTimeout(() => {
-        router.push("/organizer/events/new/tickets");
+        orgNav.push("/organizer/events/new/tickets");
       }, 500);
       return;
     }

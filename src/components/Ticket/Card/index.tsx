@@ -145,7 +145,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
               name={ticket.modality.name}
               width={20}
               height={20}
-              className="shrink-0"
+              className="shrink-0 size-6 bg-transparent"
               imgClassName="object-contain"
               letterClassName="text-[10px]"
             />

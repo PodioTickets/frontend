@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
+import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { ArrowButton } from "../ArrowButton";
 import { Dropdown } from "../Dropdown";
 
@@ -11,8 +14,12 @@ interface EventPageHeaderProps {
 
 export function EventPageHeader({ eventName }: EventPageHeaderProps) {
   const params = useParams();
-  const pathname = usePathname();
+  const pathname = useOrganizerPathname();
+  const appSurface = useOrganizerAppSurface();
   const eventId = params.id as string;
+
+  const navHref = (internal: string) =>
+    organizerExternalHref(internal, appSurface);
 
   const tabs = [
     { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
@@ -23,8 +30,16 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
 
   // Discount dropdown options
   const discountOptions = [
-    { id: "cupom", label: "Cupom", href: `/organizer/events/${eventId}/discount/cupom` },
-    { id: "voucher", label: "Voucher", href: `/organizer/events/${eventId}/discount/voucher` },
+    {
+      id: "cupom",
+      label: "Cupom",
+      href: navHref(`/organizer/events/${eventId}/discount/cupom`),
+    },
+    {
+      id: "voucher",
+      label: "Voucher",
+      href: navHref(`/organizer/events/${eventId}/discount/voucher`),
+    },
   ];
 
   // Determine which tab is active based on current pathname
@@ -45,7 +60,7 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
         <div className="mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-11">
-            <Link href="/organizer/events" className="hover:text-gray-12">
+            <Link href={navHref("/organizer/events")} className="hover:text-gray-12">
               Eventos
             </Link>
             <ArrowButton isOpen={false} className="size-2" />
@@ -59,7 +74,7 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
             return (
               <Link
                 key={tab.href}
-                href={tab.href}
+                href={navHref(tab.href)}
                 className={`pb-3 px-1 text-sm transition-colors border-b-2 ${isActive
                   ? "border-primary-10 text-primary-10 font-manrope font-bold"
                   : "border-transparent text-gray-11 hover:text-gray-12 font-family-dm-sans font-normal"
@@ -90,7 +105,7 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
 
 
           <Link
-            href={`/organizer/events/${eventId}/ads`}
+            href={navHref(`/organizer/events/${eventId}/ads`)}
             className={`pb-3 px-1 text-sm transition-colors border-b-2 ${pathname.includes("/ads")
               ? "border-primary-10 text-primary-10 font-manrope font-bold"
               : "border-transparent text-gray-11 hover:text-gray-12 font-family-dm-sans font-normal"
@@ -100,7 +115,7 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
           </Link>
 
           <Link
-            href={`/organizer/events/${eventId}/notifications`}
+            href={navHref(`/organizer/events/${eventId}/notifications`)}
             className={`pb-3 px-1 text-sm transition-colors border-b-2 ${pathname.includes("/notifications")
               ? "border-primary-10 text-primary-10 font-manrope font-bold"
               : "border-transparent text-gray-11 hover:text-gray-12 font-family-dm-sans font-normal"

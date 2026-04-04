@@ -8,8 +8,8 @@ import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import type { Event, EventKitSelectionDisplay } from "@/interfaces/event";
 import { ImageCarouselModal } from "./ImageCarouselModal";
-import { modalitiesColumns } from "@/constants";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { getCheckoutModalityInfo } from "@/utils/checkoutModalityDisplay";
 import {
   getTicketProductCarouselItems,
   getCategoryKitCarouselItems,
@@ -65,34 +65,6 @@ const getDistanceKm = (ticket: Ticket): number => {
   return parseFloat(ticket.distance) || 0;
 };
 
-function getModalityInfo(ticket: Ticket, event: Event): { name: string; icon?: string } | null {
-  const modalityValue = ticket.modality?.trim();
-  if (!modalityValue) return null;
-
-  const fromEvent = event.modalities?.find(
-    (m) =>
-      m.name === modalityValue ||
-      m.template?.label === modalityValue ||
-      m.template?.code === modalityValue
-  );
-  if (fromEvent) {
-    return {
-      name: fromEvent.template?.label || fromEvent.name,
-      icon: fromEvent.template?.icon,
-    };
-  }
-
-  const allModalities = modalitiesColumns.flat();
-  const byIdOrLabel = allModalities.find(
-    (m) => m.id === modalityValue || m.label === modalityValue
-  );
-  if (byIdOrLabel) {
-    return { name: byIdOrLabel.label, icon: byIdOrLabel.icon };
-  }
-
-  return { name: modalityValue, icon: undefined };
-}
-
 // Componente de ticket memoizado para evitar re-renders desnecessários
 const TicketItemMobile = memo(({
   ticket,
@@ -120,7 +92,7 @@ const TicketItemMobile = memo(({
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
-  const modalityInfo = useMemo(() => getModalityInfo(ticket, event), [ticket, event]);
+  const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const showPerTicketGallery =
     kitSelectionDisplay.showKitImagesOnSelection &&
     kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
@@ -179,10 +151,10 @@ const TicketItemMobile = memo(({
     <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
       {/* Image Gallery */}
       {productItems.length > 0 && (
-        <div className={`flex gap-3 items-center w-full ${productItems.length === 1 ? 'justify-center' : 'justify-start'}`}>
+        <div className="flex gap-3 items-center w-full justify-start">
           <button
             onClick={() => handleImageClick(currentMainImageIndex)}
-            className={`${productItems.length === 1 ? 'w-full max-w-[400px]' : 'w-[136px]'} h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity`}
+            className="w-[136px] h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
           >
             {currentProduct ? (
               <ImageWithInitialFallback
@@ -192,7 +164,7 @@ const TicketItemMobile = memo(({
                 fallbackId={currentProduct.id}
                 fill
                 sizes="(max-width: 768px) 50vw, 136px"
-                className="size-full"
+                className="size-full border-transparent"
                 letterClassName="text-3xl"
               />
             ) : null}
@@ -231,7 +203,7 @@ const TicketItemMobile = memo(({
                         fallbackId={item.id}
                         fill
                         sizes="36px"
-                        className="size-full"
+                        className="size-full border-transparent"
                         letterClassName="text-sm"
                       />
                     </button>
@@ -276,7 +248,7 @@ const TicketItemMobile = memo(({
                       name={modalityInfo.name}
                       width={24}
                       height={24}
-                      className="size-6"
+                      className="size-6 border-transparent"
                       imgClassName="object-contain"
                       letterClassName="text-[10px]"
                     />
@@ -370,7 +342,7 @@ const TicketItemDesktop = memo(({
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
-  const modalityInfo = useMemo(() => getModalityInfo(ticket, event), [ticket, event]);
+  const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const showPerTicketGallery =
     kitSelectionDisplay.showKitImagesOnSelection &&
     kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
@@ -429,7 +401,7 @@ const TicketItemDesktop = memo(({
     <div className="flex w-full">
       {productItems.length > 0 && (
         <div className={`flex justify-start w-1/3`}>
-          <div className={`flex items-center gap-2 ${productItems.length === 1 ? 'justify-center' : ''}`}>
+          <div className="flex items-center gap-2">
             {currentProduct ? (
               <button
                 onClick={() => handleImageClick(currentMainImageIndex)}
@@ -442,7 +414,7 @@ const TicketItemDesktop = memo(({
                   fallbackId={currentProduct.id}
                   fill
                   sizes="136px"
-                  className="size-full"
+                  className="size-full border-transparent"
                   letterClassName="text-3xl"
                 />
               </button>
@@ -481,7 +453,7 @@ const TicketItemDesktop = memo(({
                           fallbackId={item.id}
                           fill
                           sizes="36px"
-                          className="size-full"
+                          className="size-full border-transparent"
                           letterClassName="text-sm"
                         />
                       </button>
@@ -531,8 +503,8 @@ const TicketItemDesktop = memo(({
                         name={modalityInfo.name}
                         width={24}
                         height={24}
-                        className="size-6 bg-transparent"
-                        imgClassName="object-contain bg-transparent"
+                        className="size-6 bg-transparent border-transparent"
+                        imgClassName="object-contain bg-transparent border-transparent"
                         letterClassName="text-[10px]"
                       />
                     </div>
@@ -621,7 +593,6 @@ export function TicketCategoryCard({
     return tickets.filter((t) => getTicketPrice(t) > 0);
   }, [tickets]);
 
-  // Memoizar minPrice
   const minPrice = useMemo(() => {
     if (validTickets.length === 0) return 0;
     return Math.min(...validTickets.map(getTicketPrice));
@@ -685,7 +656,7 @@ export function TicketCategoryCard({
                     fallbackId={headerThumbItem.id}
                     fill
                     sizes="80px"
-                    className="size-full"
+                    className="size-full border-transparent"
                     letterClassName="text-lg"
                   />
                 </div>
@@ -694,14 +665,16 @@ export function TicketCategoryCard({
                 <h1 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                   {categoryName}
                 </h1>
-                <div className="flex flex-wrap items-center gap-1 text-base">
-                  <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
-                    A partir de:
-                  </p>
-                  <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
-                    {formatPrice(minPrice)}
-                  </span>
-                </div>
+                {!isExpanded ? (
+                  <div className="flex flex-wrap items-center gap-1 text-base">
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
+                      A partir de:
+                    </p>
+                    <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
+                      {formatPrice(minPrice)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
             <ArrowButton isOpen={isExpanded} />
@@ -761,23 +734,25 @@ export function TicketCategoryCard({
                     fallbackId={headerThumbItem.id}
                     fill
                     sizes="80px"
-                    className="size-full"
+                    className="size-full border-transparent"
                     letterClassName="text-lg"
                   />
                 </div>
               ) : null}
-              <div className="flex flex-col items-start justify-center gap-6">
+              <div className="flex flex-col items-start justify-center gap-6 min-w-0">
                 <h1 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
                   {categoryName}
                 </h1>
-                <div className="flex items-center gap-1 text-base">
-                  <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
-                    A partir de:
-                  </p>
-                  <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
-                    {formatPrice(minPrice)}
-                  </span>
-                </div>
+                {!isExpanded ? (
+                  <div className="flex items-center gap-1 text-base">
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
+                      A partir de:
+                    </p>
+                    <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
+                      {formatPrice(minPrice)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
             <ArrowButton isOpen={isExpanded} className="text-gray-12 size-4" />

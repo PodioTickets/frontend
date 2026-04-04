@@ -1,5 +1,20 @@
 import type { NextConfig } from "next";
 
+/** Mesmo default que ApiClient — precisa estar em connect-src quando a API é outro host que o da página (ex.: app.* vs api.*). */
+const DEFAULT_PUBLIC_API_URL = "http://localhost:3333";
+
+function apiOriginForCsp(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_API_URL?.trim() || DEFAULT_PUBLIC_API_URL;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return new URL(DEFAULT_PUBLIC_API_URL).origin;
+  }
+}
+
+const apiConnectOrigin = apiOriginForCsp();
+
 const securityHeaders = [
   {
     key: "X-Content-Type-Options",
@@ -25,12 +40,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com",
-      "img-src 'self' data: https: blob: https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com",
+      `img-src 'self' data: https: blob: ${apiConnectOrigin} https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
       "font-src 'self' data: https://fonts.gstatic.com https://*.google.com",
       "frame-src 'self' https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com",
-      "connect-src 'self' https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com",
+      `connect-src 'self' ${apiConnectOrigin} wss: ws: https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com`,
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

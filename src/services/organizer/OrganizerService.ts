@@ -328,6 +328,8 @@ export interface CreateEventRequest {
   registrationEndDate?: string;
   googleMapsLink?: string;
   bannerUrl?: string;
+  /** Imagem do card na listagem; API pode persistir como `logoUrl` na resposta GET. */
+  cardImageUrl?: string;
   status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" | "SUSPENDED";
   /** Quando true, inscrições/vendas do evento ficam pausadas (reativar com false). */
   isSuspended?: boolean;

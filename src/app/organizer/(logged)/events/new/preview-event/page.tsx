@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { userService, organizerService } from "@/services";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
@@ -19,6 +20,7 @@ export const dynamic = 'force-dynamic';
 
 export default function PreviewEventPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated } = useAuth();
   const { formData } = useCreateEvent();
   const [authChecked, setAuthChecked] = useState(false);
@@ -30,7 +32,7 @@ export default function PreviewEventPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -67,7 +69,7 @@ export default function PreviewEventPage() {
   }, [authChecked, formData.createdEventId]);
 
   const handleBack = () => {
-    router.push("/organizer/events/new/topics");
+    orgNav.push("/organizer/events/new/topics");
   };
 
   if (!authChecked || loading) {

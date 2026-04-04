@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
@@ -207,6 +208,7 @@ function RegistrationRow({
 
 export default function EventRegistrationsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -244,7 +246,7 @@ export default function EventRegistrationsPage() {
 
     const hasToken = userService.isAuthenticated();
     if (!hasToken && !isAuthenticated) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
 

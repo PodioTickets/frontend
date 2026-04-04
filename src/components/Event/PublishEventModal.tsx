@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 
 export function PublishEventModal() {
   const { isOpen, closePublishEventModal, data } = usePublishEventModal();
-  const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const [isPublishing, setIsPublishing] = useState(false);
 
   const eventId = data?.eventId;
@@ -28,7 +28,7 @@ export function PublishEventModal() {
       closePublishEventModal();
       
       // Redirecionar para a página de eventos após publicar
-      router.push("/organizer/events");
+      orgNav.push("/organizer/events");
     } catch (error: any) {
       console.error("Error publishing event:", error);
       toast.error(error.response?.data?.message || "Erro ao publicar evento");

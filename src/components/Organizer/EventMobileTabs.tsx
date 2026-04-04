@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { ChevronDown } from "lucide-react";
 import { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
@@ -40,6 +42,10 @@ interface EventMobileTabsProps {
 }
 
 export function EventMobileTabs({ tabs, activeHref, onLinkClick, eventId }: EventMobileTabsProps) {
+  const appSurface = useOrganizerAppSurface();
+  const navHref = (internal: string) =>
+    organizerExternalHref(internal, appSurface);
+
   const [descontoOpen, setDescontoOpen] = useState(false);
   const descontoTriggerRef = useRef<HTMLDivElement>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -80,7 +86,7 @@ export function EventMobileTabs({ tabs, activeHref, onLinkClick, eventId }: Even
         {discountOptions.map((opt) => (
           <Link
             key={opt.id}
-            href={opt.href}
+            href={navHref(opt.href)}
             onClick={() => {
               opt.onClick?.();
               setDescontoOpen(false);
@@ -127,7 +133,7 @@ export function EventMobileTabs({ tabs, activeHref, onLinkClick, eventId }: Even
             return (
               <Link
                 key={tab.href}
-                href={tab.href}
+                href={navHref(tab.href)}
                 onClick={onLinkClick}
                 className={`shrink-0 px-4 py-3 text-base transition-colors border-b-2 -mb-px ${isActive
                   ? "border-primary-11 text-primary-11 font-manrope font-bold"

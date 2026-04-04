@@ -79,6 +79,16 @@ function resolvePrimaryAmongProducts(
   return images[0].productId;
 }
 
+function hasKitProductImageUrl(url: string | null | undefined): boolean {
+  return typeof url === "string" && url.trim().length > 0;
+}
+
+function filterProductsWithImage(
+  images: KitImagePositionProduct[]
+): KitImagePositionProduct[] {
+  return images.filter((img) => hasKitProductImageUrl(img.url));
+}
+
 function aggregateCategoryProducts(
   tickets: KitImagePositionTicketRow[]
 ): KitImagePositionProduct[] {
@@ -93,6 +103,20 @@ function aggregateCategoryProducts(
     }
   }
   return out;
+}
+
+/** Remove produtos sem URL de imagem; remove ingressos sem imagens; remove seção sem ingressos. */
+function filterSectionForDrawer(
+  section: KitImagePositionCategorySection
+): KitImagePositionCategorySection | null {
+  const tickets = section.tickets
+    .map((t) => ({
+      ...t,
+      images: filterProductsWithImage(t.images),
+    }))
+    .filter((t) => t.images.length > 0);
+  if (tickets.length === 0) return null;
+  return { ...section, tickets };
 }
 
 /** Prévia “Nos ingressos” alinhada ao Figma (nó 3340:117752): principal à esquerda, coluna vertical de thumbs + setas, cards do ingresso à direita. */
@@ -677,32 +701,40 @@ export function KitImagePositionDrawer({
     Record<string, string>
   >({});
 
-  const sectionsWithTickets = useMemo(
-    () => sections.filter((s) => s.tickets.length > 0),
+  const filteredSections = useMemo(
+    () =>
+      sections
+        .map(filterSectionForDrawer)
+        .filter((s): s is KitImagePositionCategorySection => s != null),
     [sections],
   );
 
+  const filteredUncategorized = useMemo(() => {
+    if (!uncategorized) return null;
+    return filterSectionForDrawer(uncategorized);
+  }, [uncategorized]);
+
   const allTicketRows = useMemo(() => {
     const rows: KitImagePositionTicketRow[] = [];
-    sections.forEach((s) => rows.push(...s.tickets));
-    if (uncategorized?.tickets?.length) {
-      rows.push(...uncategorized.tickets);
+    filteredSections.forEach((s) => rows.push(...s.tickets));
+    if (filteredUncategorized?.tickets?.length) {
+      rows.push(...filteredUncategorized.tickets);
     }
     return rows;
-  }, [sections, uncategorized]);
+  }, [filteredSections, filteredUncategorized]);
 
   const categoryAggregates = useMemo(() => {
     const map: Record<string, KitImagePositionProduct[]> = {};
-    sections.forEach((s) => {
+    filteredSections.forEach((s) => {
       map[s.id] = aggregateCategoryProducts(s.tickets);
     });
-    if (uncategorized?.tickets?.length) {
+    if (filteredUncategorized?.tickets?.length) {
       map[UNCATEGORIZED_CATEGORY_KEY] = aggregateCategoryProducts(
-        uncategorized.tickets
+        filteredUncategorized.tickets
       );
     }
     return map;
-  }, [sections, uncategorized]);
+  }, [filteredSections, filteredUncategorized]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -718,7 +750,7 @@ export function KitImagePositionDrawer({
     setPrimaryByTicket(nextTicket);
 
     const nextCat: Record<string, string> = {};
-    for (const s of sections) {
+    for (const s of filteredSections) {
       const imgs = aggregateCategoryProducts(s.tickets);
       const pid = resolvePrimaryAmongProducts(
         imgs,
@@ -726,8 +758,8 @@ export function KitImagePositionDrawer({
       );
       if (pid) nextCat[s.id] = pid;
     }
-    if (uncategorized?.tickets?.length) {
-      const imgs = aggregateCategoryProducts(uncategorized.tickets);
+    if (filteredUncategorized?.tickets?.length) {
+      const imgs = aggregateCategoryProducts(filteredUncategorized.tickets);
       const pid = resolvePrimaryAmongProducts(
         imgs,
         initialKitSelection?.primaryByCategory?.[UNCATEGORIZED_CATEGORY_KEY]
@@ -737,7 +769,13 @@ export function KitImagePositionDrawer({
     setPrimaryByCategory(nextCat);
 
     setLayout(initialKitSelection?.layout ?? "on_tickets");
-  }, [isOpen, allTicketRows, sections, uncategorized, initialKitSelection]);
+  }, [
+    isOpen,
+    allTicketRows,
+    filteredSections,
+    filteredUncategorized,
+    initialKitSelection,
+  ]);
 
   const handleSelectPrimary = useCallback(
     (ticketId: string, productId: string) => {
@@ -909,7 +947,7 @@ export function KitImagePositionDrawer({
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {sectionsWithTickets.map((section) => (
+                  {filteredSections.map((section) => (
                     <CategoryBlock
                       key={section.id}
                       section={section}
@@ -917,13 +955,14 @@ export function KitImagePositionDrawer({
                       onSelectPrimary={handleSelectPrimary}
                     />
                   ))}
-                  {uncategorized && uncategorized.tickets.length > 0 ? (
+                  {filteredUncategorized &&
+                  filteredUncategorized.tickets.length > 0 ? (
                     <div className="border border-gray-6 rounded-lg overflow-hidden w-full [content-visibility:auto]">
                       <div className="px-4 pt-4 pb-2">
                         <p className="font-bold text-base text-gray-12 font-manrope">
-                          {uncategorized.name ? (
+                          {filteredUncategorized.name ? (
                             <>
-                              {uncategorized.name}{" "}
+                              {filteredUncategorized.name}{" "}
                               <span className="font-normal text-sm text-gray-11 font-family-dm-sans">
                                 Ingressos avulsos
                               </span>
@@ -934,7 +973,7 @@ export function KitImagePositionDrawer({
                         </p>
                       </div>
                       <div className="flex flex-col gap-4 px-4 pb-5 bg-gray-1">
-                        {uncategorized.tickets.map((t) => (
+                        {filteredUncategorized.tickets.map((t) => (
                           <TicketProductStrip
                             key={t.id}
                             ticketId={t.id}
@@ -955,7 +994,7 @@ export function KitImagePositionDrawer({
               </p>
             ) : (
               <div className="flex flex-col gap-3">
-                {sections.map((section) => (
+                {filteredSections.map((section) => (
                   <CategoryBlockCategoriesMode
                     key={section.id}
                     section={section}
@@ -966,6 +1005,19 @@ export function KitImagePositionDrawer({
                     onSelectPrimary={handleSelectPrimaryCategory}
                   />
                 ))}
+                {filteredUncategorized &&
+                filteredUncategorized.tickets.length > 0 ? (
+                  <UncategorizedCategoriesBlock
+                    section={filteredUncategorized}
+                    aggregatedImages={
+                      categoryAggregates[UNCATEGORIZED_CATEGORY_KEY] ?? []
+                    }
+                    primaryProductId={
+                      primaryByCategory[UNCATEGORIZED_CATEGORY_KEY]
+                    }
+                    onSelectPrimary={handleSelectPrimaryCategory}
+                  />
+                ) : null}
               </div>
             )}
           </div>

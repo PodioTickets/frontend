@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
@@ -33,6 +34,7 @@ interface VoucherGroup {
 
 export default function VouchersPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { openCreateVoucherModal, setOnModalSave } = useCreateVoucherModal();
@@ -53,7 +55,7 @@ export default function VouchersPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {

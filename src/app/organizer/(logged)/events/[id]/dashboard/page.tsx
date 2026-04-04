@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import {
@@ -166,6 +167,7 @@ function DashboardRankingTicketNameLabel({
 
 export default function EventDashboardPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -284,7 +286,7 @@ export default function EventDashboardPage() {
 
     const hasToken = userService.isAuthenticated();
     if (!hasToken && !isAuthenticated) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
 
@@ -1306,6 +1308,7 @@ export default function EventDashboardPage() {
         <div className="mb-6">
           <BestSellingVariations
             items={bestSellingVariations}
+            paginationCompact
             onItemClick={(item) => setSelectedProductName(item.productName)}
           />
         </div>

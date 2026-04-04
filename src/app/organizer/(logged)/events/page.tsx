@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
@@ -38,6 +39,7 @@ function isEventSuspended(event: { status?: string }) {
 
 export default function OrganizerEventsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
@@ -61,7 +63,7 @@ export default function OrganizerEventsPage() {
 
     const hasToken = userService.isAuthenticated();
     if (!hasToken && !isAuthenticated) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
 

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
@@ -25,6 +26,7 @@ import { Loading } from "@/components/Loading";
 
 export default function BannerPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { isAuthenticated, user } = useAuth();
   const { formData, updateFormData } = useCreateEvent();
   const [bannerPreview, setBannerPreview] = useState<string>("");
@@ -37,7 +39,7 @@ export default function BannerPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -50,7 +52,7 @@ export default function BannerPage() {
     if (authChecked && !isAuthenticated) {
       const hasToken = userService.isAuthenticated();
       if (!hasToken) {
-        router.push("/organizer/login");
+        orgNav.push("/organizer/login");
       }
     }
   }, [authChecked, isAuthenticated, router]);
@@ -58,7 +60,7 @@ export default function BannerPage() {
   // Verificar se tem evento criado
   useEffect(() => {
     if (authChecked && !formData.createdEventId) {
-      router.push("/organizer/events/new/information");
+      orgNav.push("/organizer/events/new/information");
     }
   }, [authChecked, formData.createdEventId, router]);
 
@@ -233,13 +235,13 @@ export default function BannerPage() {
   };
 
   const handleBack = () => {
-    router.push("/organizer/events/new/information");
+    orgNav.push("/organizer/events/new/information");
   };
 
   const handleNext = async () => {
     // Se já tem bannerUrl salvo, apenas navega
     if (formData.bannerUrl && !selectedBannerFile) {
-      router.push("/organizer/events/new/preview");
+      orgNav.push("/organizer/events/new/preview");
       return;
     }
 
@@ -248,7 +250,7 @@ export default function BannerPage() {
       await handleBannerUpload();
       // Aguarda um pouco para garantir que o upload foi processado
       setTimeout(() => {
-        router.push("/organizer/events/new/preview");
+        orgNav.push("/organizer/events/new/preview");
       }, 500);
       return;
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { organizerService } from "@/services";
 import { resolveOrganizerAuditPageKey } from "@/lib/organizerAudit";
 
@@ -10,7 +10,7 @@ import { resolveOrganizerAuditPageKey } from "@/lib/organizerAudit";
  * Falhas de rede/403 não bloqueiam a UI — ver ORGANIZER_AUDIT_FRONTEND.md.
  */
 export function OrganizerAuditPageViewTracker() {
-  const pathname = usePathname();
+  const pathname = useOrganizerPathname();
 
   useEffect(() => {
     const pageKey = resolveOrganizerAuditPageKey(pathname);

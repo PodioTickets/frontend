@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService, organizerService } from "@/services";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { Button } from "@/components/Button";
@@ -22,6 +23,7 @@ import {
 
 export default function TopicosPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { formData } = useCreateEvent();
   const { openTopicModal, setOnModalSave, setOnModalDelete } = useTopicModal();
   const [authChecked, setAuthChecked] = useState(false);
@@ -34,7 +36,7 @@ export default function TopicosPage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -65,7 +67,7 @@ export default function TopicosPage() {
   }, [authChecked, formData.createdEventId]);
 
   const handleBack = () => {
-    router.push("/organizer/events/new/tickets");
+    orgNav.push("/organizer/events/new/tickets");
   };
 
   const persistTopicOrder = async (reordered: TopicSectionRow[]) => {
@@ -150,7 +152,7 @@ export default function TopicosPage() {
       await persistTopicOrder(working);
 
       toast.success("Tópicos salvos com sucesso!");
-      router.push("/organizer/events/new/questionnaire");
+      orgNav.push("/organizer/events/new/questionnaire");
     } catch (error: any) {
       console.error("Error saving topics:", error);
       const errorMessage = error.response?.data?.message || error.message || "Erro ao salvar tópicos";
@@ -422,7 +424,7 @@ export default function TopicosPage() {
           <div className="flex gap-2 items-start justify-end w-full pb-4 mt-10">
             <Button
               variant="outline"
-              onClick={() => router.push("/organizer/events/new/preview-event")}
+              onClick={() => orgNav.push("/organizer/events/new/preview-event")}
               className="border-gray-6 text-gray-12 text-[20px] font-bold px-11 h-[52px]"
             >
               Prévia

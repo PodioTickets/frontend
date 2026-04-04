@@ -153,7 +153,7 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
           fallbackId={event.id}
           fill
           sizes="(max-width: 768px) 100vw, 400px"
-          className="size-full"
+          className="size-full border-transparent"
           letterClassName="text-5xl"
         />
       </div>

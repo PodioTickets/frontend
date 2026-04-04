@@ -1,15 +1,24 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 
 export function ContentWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isOrganizer = pathname.startsWith("/organizer");
-  const isAuthOrganizer = pathname.startsWith("/organizer/login");
+  const isAppSurface = useOrganizerAppSurface();
+  const normalized = withOrganizerPathPrefix(pathname, isAppSurface);
+
+  const isAuthOrganizer =
+    normalized.startsWith("/organizer/login") ||
+    normalized.startsWith("/organizer/forgot-password") ||
+    normalized.startsWith("/organizer/reset-password");
 
   if (isAuthOrganizer) {
     return <div>{children}</div>;
   }
+
+  const isOrganizer = normalized.startsWith("/organizer");
 
   if (isOrganizer) {
     return <div className="mb-12">{children}</div>;

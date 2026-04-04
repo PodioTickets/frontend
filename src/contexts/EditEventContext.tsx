@@ -97,6 +97,13 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
         return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
       };
 
+      const ev = eventData as Record<string, unknown>;
+      const cardImageFromApi = [
+        ev.cardImageUrl,
+        ev.logoUrl,
+        ev.logo_url,
+      ].find((u) => typeof u === "string" && u.trim().length > 0);
+
       setFormData({
         eventId,
         name: eventData.name || "",
@@ -112,7 +119,7 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
         state: eventData.state || "",
         googleMapsLink: eventData.googleMapsLink || "",
         bannerUrl: eventData.bannerUrl || "",
-        cardImageUrl: (eventData as any).cardImageUrl || "",
+        cardImageUrl: typeof cardImageFromApi === "string" ? cardImageFromApi.trim() : "",
         regulationUrl: (eventData as any).regulationUrl || "",
         description: eventData.description || "",
       });

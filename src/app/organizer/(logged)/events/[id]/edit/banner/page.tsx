@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService, organizerService } from "@/services";
-import type { CreateEventRequest } from "@/services/organizer/OrganizerService";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -22,6 +22,7 @@ import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import type { Event } from "@/interfaces/event";
 import { getEventOrganizer } from "@/utils/organization";
 import { getAvatarUrl } from "@/utils/avatar";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 function formatOrgDocumentForDisplay(raw: string | null | undefined): {
   label: string;
@@ -84,6 +85,7 @@ const uploadSvg = (
 
 export default function EditBannerPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { formData, updateFormData, event } = useEditEvent();
@@ -258,7 +260,7 @@ export default function EditBannerPage() {
 
       await organizerService.updateEvent(
         eventId,
-        { cardImageUrl: fullUrl } as Partial<CreateEventRequest>,
+        { cardImageUrl: fullUrl },
         { clientPage: organizerEventEditClientPage(eventId, "banner") }
       );
 
@@ -277,7 +279,7 @@ export default function EditBannerPage() {
   };
 
   const handleBack = () => {
-    router.push(`/organizer/events/${eventId}/edit`);
+    orgNav.push(`/organizer/events/${eventId}/edit`);
   };
 
   /** Salva o banner se houver arquivo pendente; não navega. Abre o bloco do card em seguida. */
@@ -447,18 +449,16 @@ export default function EditBannerPage() {
                 </p>
                 <div className="flex gap-2 items-center">
                   {orgLogoSrc ? (
-                    <Image
+                    <ImageWithInitialFallback
                       src={orgLogoSrc}
-                      alt=""
+                      alt={orgName}
+                      name={orgName}
                       width={40}
                       height={40}
-                      className="size-10 rounded-full object-cover shrink-0"
+                      className="size-10 rounded-full shrink-0 object-cover"
+                      fallbackId="org-logo"
                     />
-                  ) : (
-                    <div className="size-10 rounded-full bg-gray-6 shrink-0 flex items-center justify-center">
-                      <span className="text-gray-11 font-family-dm-sans leading-[1.3] truncate">{orgName?.[0]?.toUpperCase() || "O"}</span>
-                    </div>
-                  )}
+                  ) : null}
                   <div className="flex flex-col min-w-0">
                     <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] truncate">
                       {orgName}
@@ -571,12 +571,14 @@ export default function EditBannerPage() {
           <div className="flex flex-col gap-3 px-3">
             <div className="flex gap-1 items-center min-w-0">
               {orgLogoSrc ? (
-                <Image
+                <ImageWithInitialFallback
                   src={orgLogoSrc}
-                  alt=""
+                  alt={orgName}
+                  name={orgName}
                   width={20}
                   height={20}
                   className="size-5 rounded-full shrink-0 object-cover"
+                  fallbackId="org-logo"
                 />
               ) : (
                 <div className="size-5 rounded-full bg-gray-6 shrink-0" />

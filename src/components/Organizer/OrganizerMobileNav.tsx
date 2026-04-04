@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { usePathname, useRouter } from "next/navigation";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { useAuth } from "@/hooks/useAuth";
 import { Menu, X, Building2 } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -31,8 +34,9 @@ const navItems = [
 ];
 
 export function OrganizerMobileNav() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const organizerPath = useOrganizerPathname();
+  const appSurface = useOrganizerAppSurface();
+  const orgNav = useOrganizerNavigate();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [organizer, setOrganizer] = useState<any>(null);
@@ -41,7 +45,7 @@ export function OrganizerMobileNav() {
   const handleLogout = async () => {
     setOpen(false);
     await logout();
-    router.push("/organizer/login");
+    orgNav.push("/organizer/login");
   };
 
   useEffect(() => {
@@ -56,13 +60,16 @@ export function OrganizerMobileNav() {
     loadOrganizer();
   }, []);
 
-  const isActive = (href: string) => pathname.startsWith(href);
+  const navHref = (internal: string) =>
+    organizerExternalHref(internal, appSurface);
+
+  const isActive = (href: string) => organizerPath.startsWith(href);
 
   return (
     <>
       {/* Top bar - fixed, dark background, logo + hamburger */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 bg-linear-to-b from-[#191919] to-[#222222] shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)]">
-        <Link href="/organizer" className="flex items-center shrink-0 h-6 w-[120px] relative">
+        <Link href={navHref("/organizer")} className="flex items-center shrink-0 h-6 w-[120px] relative">
           <ImageWithInitialFallback
             src="/images/logo_horizontal.png"
             alt="PódioTicket"
@@ -152,7 +159,7 @@ export function OrganizerMobileNav() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={navHref(item.href)}
                     onClick={() => setOpen(false)}
                     className={`flex items-center gap-3 h-12 px-4 rounded-lg border border-[#3A3A3A] bg-white/5 transition-colors ${active ? "bg-[#25482D] border-[#25482D] text-[#C2F0C2]" : "text-white hover:bg-white/10 font-family-dm-sans"}`}
                   >

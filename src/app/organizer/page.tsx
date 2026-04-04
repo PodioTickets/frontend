@@ -1,11 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useEffect } from "react";
 
 export default function OrganizerDashboardPage() {
-  const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   useEffect(() => {
-    router.push("/organizer/events");
-  }, [router]);
+    orgNav.push("/organizer/events");
+  }, [orgNav]);
 }

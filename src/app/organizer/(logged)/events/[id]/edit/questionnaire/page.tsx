@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService, organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -23,6 +24,7 @@ function isPendingQuestionId(id: string): boolean {
 
 export default function EditQuestionnairePage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { openCreateQuestionModal, setOnModalSave } = useCreateQuestionModal();
@@ -37,7 +39,7 @@ export default function EditQuestionnairePage() {
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
     if (!hasToken) {
-      router.push("/organizer/login");
+      orgNav.push("/organizer/login");
       return;
     }
     const timer = setTimeout(() => {
@@ -145,10 +147,10 @@ export default function EditQuestionnairePage() {
 
   const {
     leavePromptOpen,
-    setLeavePromptOpen,
     handleBack,
     confirmLeaveWithoutSaving,
     beginNavigationAfterSave,
+    dismissLeavePrompt,
   } = useUnsavedLeaveGuard(isDirty, {
     navigateTarget: `/organizer/events/${eventId}/edit/topics`,
     onDiscard: discardLocalChanges,
@@ -364,7 +366,7 @@ export default function EditQuestionnairePage() {
 
       <UnsavedChangesModal
         open={leavePromptOpen}
-        onClose={() => setLeavePromptOpen(false)}
+        onClose={dismissLeavePrompt}
         title="Alterações não salvas"
         description="Você fez alterações no questionário. Se sair agora, elas serão perdidas."
         onSaveAndLeave={handleSaveAndLeave}

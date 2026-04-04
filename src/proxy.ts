@@ -11,13 +11,11 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
  * (ex.: app.localhost:3000).
  *
  * Com isso ativo:
- * - /organizer só no app host; em outros hosts → redirect 307 para o app.
- * - No app host, rotas que não forem organizador nem técnicas → redirect 307 para ROOT_SITE_URL.
+ * - No app host: URL pública sem prefixo /organizer (ex.: app…/events) com rewrite
+ *   interno para /organizer/events; /organizer/… redireciona 307 para /… (canônico).
+ * - Fora do app: /organizer/… redireciona 307 para app… com o mesmo caminho curto.
  *
- * Defina também ROOT_SITE_URL (ex.: https://www.podioticket.com.br) para o redirect do app → site.
- * No cliente, use os mesmos valores em NEXT_PUBLIC_ORGANIZER_APP_HOST e
- * NEXT_PUBLIC_ROOT_SITE_URL (ex.: publicSiteHref) para links ao site público.
- * Ajuste ALLOWED_ORIGINS e cookies (Domain) para ambos os hosts.
+ * Rotas públicas do site (ex.: /events/slug-de-evento) no host app → redirect para ROOT_SITE_URL.
  */
 function organizerAppHostConfig(): { raw: string; hostname: string } | null {
   const raw = process.env.ORGANIZER_APP_HOST?.trim();
@@ -26,19 +24,62 @@ function organizerAppHostConfig(): { raw: string; hostname: string } | null {
   return { raw, hostname };
 }
 
-/** Host público da requisição (Vercel/proxy costuma mandar em x-forwarded-host). */
+/**
+ * Host “público” da requisição.
+ * Em dev, usar só o header `Host` evita loop: alguns ambientes preenchem
+ * `x-forwarded-host` de forma que `localhost` é confundido com `app.localhost`,
+ * e `/` redireciona para ROOT_SITE_URL na mesma origem → ERR_TOO_MANY_REDIRECTS.
+ * Em produção (Vercel etc.), `x-forwarded-host` costuma ser o domínio customizado.
+ */
 function effectiveRequestHostname(request: NextRequest): string {
+  if (process.env.NODE_ENV === "development") {
+    const hostHeader = request.headers.get("host");
+    if (hostHeader) {
+      return hostHeader.split(":")[0].trim().toLowerCase();
+    }
+    return request.nextUrl.hostname.toLowerCase();
+  }
+
   const forwarded = request.headers.get("x-forwarded-host");
   if (forwarded) {
     const first = forwarded.split(",")[0].trim().split(":")[0];
     if (first) return first.toLowerCase();
   }
+  const hostHeader = request.headers.get("host");
+  if (hostHeader) {
+    return hostHeader.split(":")[0].trim().toLowerCase();
+  }
   return request.nextUrl.hostname.toLowerCase();
 }
 
-/** Rotas que precisam responder no host app sem estarem sob /organizer. */
-function isTechnicalPathOnAppHost(pathname: string): boolean {
-  if (pathname.startsWith("/organizer")) return true;
+function urlsEquivalentForRedirect(a: URL, b: URL): boolean {
+  return (
+    a.origin === b.origin &&
+    a.pathname === b.pathname &&
+    a.search === b.search
+  );
+}
+
+/**
+ * Só trata como rota do painel em /events/:id se o segmento parecer id de backend.
+ * Slugs públicos (ex.: "maratona-2024", "2025") vão para o site principal — não usar
+ * só dígitos nem "qualquer string de 24 chars" (evita falso positivo com slug/cuid-like).
+ */
+function isProbableOrganizerEventIdSegment(segment: string): boolean {
+  if (segment === "new") return true;
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
+  ) {
+    return true;
+  }
+  if (/^c[a-z0-9]{20,31}$/i.test(segment)) {
+    return true;
+  }
+  return false;
+}
+
+/** Infra e estáticos: não reescrever para /organizer no host app. */
+function isAppHostInfrastructurePath(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/api")) return true;
   if (pathname.startsWith("/_vercel")) return true;
@@ -57,6 +98,66 @@ function isTechnicalPathOnAppHost(pathname: string): boolean {
   return false;
 }
 
+/**
+ * Caminhos que no host app são do organizador (URL curta, sem /organizer).
+ * Outros caminhos → redirect para o site principal (checkout, evento público, etc.).
+ */
+function isOrganizerSurfacePath(pathname: string): boolean {
+  if (pathname === "/") return true;
+
+  const roots = [
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/create",
+    "/settings",
+    "/team",
+    "/documentation",
+  ];
+  for (const r of roots) {
+    if (pathname === r || pathname.startsWith(`${r}/`)) return true;
+  }
+
+  if (pathname === "/organization" || pathname.startsWith("/organization/")) {
+    return true;
+  }
+
+  if (pathname === "/events" || pathname.startsWith("/events/")) {
+    if (pathname.startsWith("/events/new")) return true;
+    if (pathname === "/events") return true;
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts.length >= 3) return true;
+    const segment = parts[1];
+    return isProbableOrganizerEventIdSegment(segment);
+  }
+
+  return false;
+}
+
+function applyOrganizerHostRedirectToApp(
+  request: NextRequest,
+  cfg: { raw: string; hostname: string },
+): NextResponse {
+  const dest = request.nextUrl.clone();
+  dest.hostname = cfg.hostname;
+
+  const portFromEnv = cfg.raw.includes(":") ? cfg.raw.split(":")[1] : "";
+  if (portFromEnv) {
+    dest.port = portFromEnv;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    dest.protocol = "https:";
+    if (!portFromEnv) dest.port = "";
+  }
+
+  const rest =
+    request.nextUrl.pathname.slice("/organizer".length) || "/";
+  dest.pathname = rest === "" ? "/" : rest;
+
+  return NextResponse.redirect(dest, 307);
+}
+
 function applyOrganizerHostRouting(request: NextRequest): NextResponse | null {
   const cfg = organizerAppHostConfig();
   if (!cfg) return null;
@@ -66,49 +167,58 @@ function applyOrganizerHostRouting(request: NextRequest): NextResponse | null {
   const { pathname } = request.nextUrl;
 
   if (onAppHost) {
-    if (isTechnicalPathOnAppHost(pathname)) return null;
-
-    const rootBase = process.env.ROOT_SITE_URL?.trim().replace(/\/$/, "");
-    if (!rootBase) {
-      console.error(
-        "proxy: define ROOT_SITE_URL quando ORGANIZER_APP_HOST está ativo (redirect app → site).",
-      );
-      return new NextResponse("Configuração do servidor incompleta.", {
-        status: 503,
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
-    }
-
-    try {
-      const dest = new URL(
-        request.nextUrl.pathname + request.nextUrl.search,
-        rootBase.endsWith("/") ? rootBase : `${rootBase}/`,
-      );
+    if (pathname.startsWith("/organizer")) {
+      const rest = pathname.slice("/organizer".length) || "/";
+      const dest = request.nextUrl.clone();
+      dest.pathname = rest === "" ? "/" : rest;
+      if (urlsEquivalentForRedirect(dest, request.nextUrl)) {
+        return null;
+      }
       return NextResponse.redirect(dest, 307);
-    } catch {
-      console.error("proxy: ROOT_SITE_URL inválida:", rootBase);
-      return new NextResponse("Configuração do servidor inválida.", {
-        status: 503,
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
     }
+
+    if (isAppHostInfrastructurePath(pathname)) {
+      return null;
+    }
+
+    if (!isOrganizerSurfacePath(pathname)) {
+      const rootBase = process.env.ROOT_SITE_URL?.trim().replace(/\/$/, "");
+      if (!rootBase) {
+        console.error(
+          "proxy: ROOT_SITE_URL é necessário quando ORGANIZER_APP_HOST está ativo (rotas não-organizador no app).",
+        );
+        return new NextResponse("Configuração do servidor incompleta.", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      }
+      try {
+        const dest = new URL(
+          request.nextUrl.pathname + request.nextUrl.search,
+          rootBase.endsWith("/") ? rootBase : `${rootBase}/`,
+        );
+        if (urlsEquivalentForRedirect(dest, request.nextUrl)) {
+          return null;
+        }
+        return NextResponse.redirect(dest, 307);
+      } catch {
+        console.error("proxy: ROOT_SITE_URL inválida:", rootBase);
+        return new NextResponse("Configuração do servidor inválida.", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      }
+    }
+
+    const internalPath =
+      pathname === "/" ? "/organizer" : `/organizer${pathname}`;
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = internalPath;
+    return NextResponse.rewrite(rewriteUrl);
   }
 
   if (pathname.startsWith("/organizer")) {
-    const dest = request.nextUrl.clone();
-    dest.hostname = cfg.hostname;
-
-    const portFromEnv = cfg.raw.includes(":") ? cfg.raw.split(":")[1] : "";
-    if (portFromEnv) {
-      dest.port = portFromEnv;
-    }
-
-    if (process.env.NODE_ENV === "production") {
-      dest.protocol = "https:";
-      if (!portFromEnv) dest.port = "";
-    }
-
-    return NextResponse.redirect(dest, 307);
+    return applyOrganizerHostRedirectToApp(request, cfg);
   }
 
   return null;

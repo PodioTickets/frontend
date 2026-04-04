@@ -3,7 +3,7 @@
 import { CreateEventProvider } from "@/contexts/CreateEventContext";
 import { ReactNode, Suspense } from "react";
 import { Loading } from "@/components/Loading";
-import { usePathname } from "next/navigation";
+import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { CheckIcon } from "@/components/Icons/CheckIcon";
 import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
 import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
@@ -13,7 +13,7 @@ import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 export const dynamic = 'force-dynamic';
 
 function ProgressBar() {
-  const pathname = usePathname();
+  const pathname = useOrganizerPathname();
 
   const getStepStatus = (step: number): "completed" | "active" | "default" => {
     const isInformationStep =

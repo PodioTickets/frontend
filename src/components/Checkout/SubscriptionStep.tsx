@@ -463,6 +463,39 @@ export function SubscriptionStep({
     });
   }, [participants, participantsWithTickets, requiredProducts, additionalProducts]);
 
+  // Produto obrigatório com exatamente uma variação: pré-seleciona por participante
+  useEffect(() => {
+    if (loading) return;
+
+    setSelectedVariations((prev) => {
+      const additions: Record<string, string> = {};
+
+      for (const { participantIndex, ticketId } of participantsWithTickets) {
+        const ticketProductIds = ticketProductsMap[ticketId] || [];
+        if (ticketProductIds.length === 0) continue;
+
+        const ticketProducts = allProducts.filter((p) =>
+          ticketProductIds.includes(p.id),
+        );
+
+        for (const product of ticketProducts) {
+          if (!product.isRequired) continue;
+          if (product.variations.length !== 1) continue;
+
+          const key = getVariationKey(participantIndex, product.id);
+          const current = prev[key];
+          if (current != null && String(current).trim() !== "") continue;
+
+          const v = product.variations[0];
+          additions[key] = v.id || `${product.id}-0`;
+        }
+      }
+
+      if (Object.keys(additions).length === 0) return prev;
+      return { ...prev, ...additions };
+    });
+  }, [loading, participantsWithTickets, allProducts, ticketProductsMap]);
+
   // Calculate totals
   const { totalParticipants, totalPrice } = useMemo(() => {
     let participants = 0;

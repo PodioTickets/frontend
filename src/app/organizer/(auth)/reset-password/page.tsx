@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Lock, ArrowLeft, Eye, EyeOff } from "lucide-react";
@@ -14,6 +15,7 @@ import { SuccessIcon } from "@/components/Icons/SuccessIcon";
 
 export default function OrganizerResetPasswordPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const searchParams = useSearchParams();
   const { resetPassword, isPending } = useResetPassword();
 
@@ -30,7 +32,7 @@ export default function OrganizerResetPasswordPage() {
   useEffect(() => {
     if (!token) {
       toast.error("Link inválido ou incompleto. Solicite um novo e-mail.");
-      router.push("/organizer/forgot-password");
+      orgNav.push("/organizer/forgot-password");
     }
   }, [token, router]);
 
@@ -134,7 +136,7 @@ export default function OrganizerResetPasswordPage() {
 
       if (!token) {
         toast.error("Link inválido ou incompleto. Solicite um novo e-mail.");
-        router.push("/organizer/forgot-password");
+        orgNav.push("/organizer/forgot-password");
         return;
       }
 
@@ -223,7 +225,7 @@ export default function OrganizerResetPasswordPage() {
 
                 {/* Button */}
                 <Button
-                  onClick={() => router.push("/organizer/login")}
+                  onClick={() => orgNav.push("/organizer/login")}
                   className="w-full"
                 >
                   Entrar na plataforma

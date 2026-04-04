@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
@@ -57,6 +58,7 @@ const PIX_KEY_TYPES = [
 
 export default function OrganizationSettingsPage() {
   const router = useRouter();
+  const orgNav = useOrganizerNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -140,7 +142,7 @@ export default function OrganizationSettingsPage() {
       console.error("Error loading organization:", error);
       console.error("Error response:", error.response?.data);
       if (error.response?.status === 404) {
-        router.push("/organizer/create");
+        orgNav.push("/organizer/create");
         return;
       }
       toast.error("Erro ao carregar dados da organização");
