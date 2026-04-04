@@ -116,7 +116,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           fallbackId={ticket.event.id}
           fill
           sizes="(max-width: 768px) 100vw, 300px"
-          className="size-full"
+          className="size-full border-transparent border-0"
           letterClassName="text-5xl font-bold"
         />
       </div>

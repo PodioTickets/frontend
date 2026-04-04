@@ -93,7 +93,6 @@ const TicketItemMobile = memo(({
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
-  console.log(modalityInfo);
 
   const showPerTicketGallery =
     kitSelectionDisplay.showKitImagesOnSelection &&
@@ -401,9 +400,9 @@ const TicketItemDesktop = memo(({
   };
 
   return (
-    <div className="flex w-full">
+    <div className="flex items-center gap-4 w-full">
       {productItems.length > 0 && (
-        <div className={`flex justify-start w-1/3`}>
+        <div className="shrink-0">
           <div className="flex items-center gap-2">
             {currentProduct ? (
               <button
@@ -430,9 +429,7 @@ const TicketItemDesktop = memo(({
                   className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
                   aria-label="Imagem anterior"
                 >
-                  <div className="-rotate-90">
-                    <ArrowButton isOpen={false} />
-                  </div>
+                  <ArrowButton isOpen={false} className="-rotate-90" />
                 </button>
                 {/* Thumbnails */}
                 <div className="flex flex-col gap-1">
@@ -479,7 +476,7 @@ const TicketItemDesktop = memo(({
       <div
         className={cn(
           "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2",
-          productItems.length > 0 ? "min-w-0 w-full ml-4" : "w-full"
+          productItems.length > 0 ? "flex-1 min-w-0" : "w-full"
         )}
       >
         <div className="flex flex-col gap-1">
