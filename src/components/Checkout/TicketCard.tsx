@@ -36,14 +36,6 @@ export function TicketCard({
 
   const currentQuantity = raceQuantities[ticket.id] || 0;
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).format(date);
-  };
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -83,6 +75,7 @@ export function TicketCard({
     () => getCheckoutModalityInfo(ticket, event),
     [ticket, event],
   );
+  console.log(modalityInfo);
 
   const showPerTicketGallery =
     kitSelectionDisplay.showKitImagesOnSelection &&
@@ -262,6 +255,7 @@ export function TicketCard({
                         className="size-6 border-transparent"
                         imgClassName="object-contain"
                         letterClassName="text-[10px]"
+                        nativeImg
                       />
                     </div>
                   ) : (
@@ -418,6 +412,7 @@ export function TicketCard({
                           className="size-6 bg-transparent border-transparent"
                           imgClassName="object-contain border-transparent"
                           letterClassName="text-[10px]"
+                          nativeImg
                         />
                       </div>
                     ) : (

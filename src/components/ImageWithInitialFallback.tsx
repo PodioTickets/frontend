@@ -14,6 +14,8 @@ type BaseProps = {
   letterClassName?: string;
   imgClassName?: string;
   priority?: boolean;
+  /** Evita validação de domínio do next/image (útil para ícones de API / http). */
+  nativeImg?: boolean;
 };
 
 export type ImageWithInitialFallbackProps =
@@ -30,6 +32,7 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
     letterClassName,
     imgClassName,
     priority,
+    nativeImg,
   } = props;
 
   const fill = "fill" in props && props.fill === true;
@@ -52,7 +55,33 @@ export function ImageWithInitialFallback(props: ImageWithInitialFallbackProps) {
       )}
     >
       {showImage ? (
-        fill ? (
+        nativeImg ? (
+          fill ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={trimmed}
+              alt={alt}
+              className={cn(
+                "absolute inset-0 size-full object-cover",
+                imgClassName,
+              )}
+              onError={onError}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={trimmed}
+              alt={alt}
+              width={props.width}
+              height={props.height}
+              className={cn(
+                "object-cover size-full max-h-full max-w-full",
+                imgClassName,
+              )}
+              onError={onError}
+            />
+          )
+        ) : fill ? (
           <Image
             src={trimmed}
             alt={alt}

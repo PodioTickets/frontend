@@ -1,36 +1,82 @@
 import type { Ticket } from "@/hooks/useTickets";
 import type { Event } from "@/interfaces/event";
 import { modalitiesColumns } from "@/constants";
-import { getApiClient } from "@/services/base/ApiClient";
 
-/** Assets em `public/` (mesmo host do checkout), não na API */
+/** Assets em `public/` (mesmo host do checkout), não pela API */
 const SAME_ORIGIN_PUBLIC_PREFIXES = ["/icons-3d/", "/images/"] as const;
+
+function getConfiguredApiBase(): string {
+  return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333")
+    .trim()
+    .replace(/\/$/, "");
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return (
+    h === "localhost" ||
+    h === "127.0.0.1" ||
+    h === "[::1]" ||
+    h.endsWith(".localhost")
+  );
+}
+
+/**
+ * Ícones salvos com URL absoluta apontando para localhost (upload em dev)
+ * quebram em produção. Troca só o origin pelo da API configurada no build.
+ */
+function rehostLoopbackAssetUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+  if (!isLoopbackHost(parsed.hostname)) return url;
+  let baseParsed: URL;
+  try {
+    baseParsed = new URL(getConfiguredApiBase());
+  } catch {
+    return url;
+  }
+  if (isLoopbackHost(baseParsed.hostname)) return url;
+  return `${baseParsed.origin}${parsed.pathname}${parsed.search}`;
+}
+
+function normalizeProtocolRelative(t: string): string {
+  if (!t.startsWith("//")) return t;
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}${t}`;
+  }
+  return `https:${t}`;
+}
 
 /**
  * A API costuma devolver ícones como path relativo (/uploads/...).
  * No browser isso vira pedido ao domínio do front (404 em produção).
  * Prefixa com NEXT_PUBLIC_API_URL quando for mídia da API.
+ *
+ * Em produção é obrigatório definir NEXT_PUBLIC_API_URL com a URL pública da API
+ * usada pelo browser (não host interno Docker).
  */
 export function resolveCheckoutModalityIconSrc(
   src: string | null | undefined,
 ): string | undefined {
-  const t = src?.trim();
+  let t = src?.trim();
   if (!t) return undefined;
-  if (
-    t.startsWith("http://") ||
-    t.startsWith("https://") ||
-    t.startsWith("data:")
-  ) {
-    return t;
+  t = normalizeProtocolRelative(t);
+  if (t.startsWith("data:")) return t;
+  if (t.startsWith("http://") || t.startsWith("https://")) {
+    return rehostLoopbackAssetUrl(t);
   }
   if (t.startsWith("/")) {
     for (const p of SAME_ORIGIN_PUBLIC_PREFIXES) {
       if (t.startsWith(p)) return t;
     }
-    const base = getApiClient().getBaseURL().replace(/\/$/, "");
+    const base = getConfiguredApiBase();
     return `${base}${t}`;
   }
-  const base = getApiClient().getBaseURL().replace(/\/$/, "");
+  const base = getConfiguredApiBase();
   return `${base}/${t}`;
 }
 
@@ -44,6 +90,8 @@ export function getCheckoutModalityInfo(
   const fromEvent = event.modalities?.find(
     (m) =>
       m.name === modalityValue ||
+      m.id === modalityValue ||
+      m.templateId === modalityValue ||
       m.template?.label === modalityValue ||
       m.template?.code === modalityValue,
   );

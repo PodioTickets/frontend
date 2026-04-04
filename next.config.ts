@@ -67,10 +67,9 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
+      { protocol: "https", hostname: "**" },
+      /** API / uploads em http (dev ou legado) — sem isso o next/image recusa o src */
+      { protocol: "http", hostname: "**" },
     ],
   },
   compress: true,
