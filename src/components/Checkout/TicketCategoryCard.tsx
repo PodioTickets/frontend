@@ -94,7 +94,7 @@ const TicketItemMobile = memo(({
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   console.log(modalityInfo);
-  
+
   const showPerTicketGallery =
     kitSelectionDisplay.showKitImagesOnSelection &&
     kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
@@ -482,7 +482,7 @@ const TicketItemDesktop = memo(({
           productItems.length > 0 ? "min-w-0 w-full ml-4" : "w-full"
         )}
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
           <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
             {ticket.name}
           </h2>
@@ -490,7 +490,7 @@ const TicketItemDesktop = memo(({
             <div className="flex items-center gap-8 flex-wrap min-w-0">
               {distanceKm > 0 && (
                 <div className="flex items-center gap-2">
-                  <DistanceIcon className="size-6 shrink-0" />
+                  <DistanceIcon className="size-5 shrink-0" />
                   <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
                     {distanceKm} km
                   </p>

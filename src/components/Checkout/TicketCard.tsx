@@ -312,7 +312,7 @@ export function TicketCard({
 
       {/* Desktop Layout */}
       <div className="hidden md:block w-full">
-        <div className="flex gap-4 w-full">
+        <div className="flex items-center gap-4 w-full">
           {/* Galeria de imagens dos produtos à esquerda */}
           {productItems.length > 0 && (
             <div className="shrink-0">
@@ -387,13 +387,13 @@ export function TicketCard({
           )}
 
           {/* Card do ticket */}
-          <div className="flex-1 bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
-            <div className="flex flex-col gap-5">
+          <div className="flex-1 bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <h2 className="text-xl font-bold">{ticket.name}</h2>
               <div className="flex items-center gap-8 flex-wrap">
                 {distanceKm > 0 && (
                   <div className="flex items-center gap-2">
-                    <DistanceIcon className="size-6" />
+                    <DistanceIcon className="size-5" />
                     <p className="text-lg font-medium text-gray-12">
                       {distanceKm} km
                     </p>
@@ -407,8 +407,8 @@ export function TicketCard({
                           src={modalityInfo.icon}
                           alt={modalityInfo.name}
                           name={modalityInfo.name}
-                          width={24}
-                          height={24}
+                          width={10000}
+                          height={10000}
                           className="size-6 bg-transparent border-transparent"
                           imgClassName="object-contain border-transparent"
                           letterClassName="text-[10px]"
