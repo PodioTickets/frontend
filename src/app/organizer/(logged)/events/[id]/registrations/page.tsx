@@ -15,9 +15,11 @@ import {
   XCircle,
   FileText,
   TrendingUp,
+  TrendingDown,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import type { RegistrationStats } from "@/services/organizer/OrganizerService";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { Dropdown } from "@/components/Dropdown";
 import type { DateRange } from "react-day-picker";
@@ -36,6 +38,74 @@ import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
+
+function normalizeRegistrationStats(raw: unknown): RegistrationStats {
+  if (!raw || typeof raw !== "object") {
+    return { total: 0, paid: 0, cancelled: 0, totalCollected: 0 };
+  }
+  const r = raw as Record<string, unknown>;
+  const optNum = (v: unknown): number | undefined => {
+    if (typeof v === "number" && !Number.isNaN(v)) return v;
+    if (typeof v === "string" && v.trim() !== "") {
+      const n = Number(v);
+      return Number.isNaN(n) ? undefined : n;
+    }
+    return undefined;
+  };
+  return {
+    total: Number(r.total) || 0,
+    paid: Number(r.paid) || 0,
+    cancelled: Number(r.cancelled) || 0,
+    totalCollected: Number(r.totalCollected ?? r.total_collected) || 0,
+    totalChange: optNum(r.totalChange ?? r.total_change),
+    paidChange: optNum(r.paidChange ?? r.paid_change),
+    cancelledChange: optNum(r.cancelledChange ?? r.cancelled_change),
+    totalCollectedChange: optNum(
+      r.totalCollectedChange ?? r.total_collected_change,
+    ),
+  };
+}
+
+function RegistrationsWeekTrend({
+  change,
+  compact,
+}: {
+  change?: number;
+  compact?: boolean;
+}) {
+  if (
+    change === undefined ||
+    change === null ||
+    Number.isNaN(Number(change))
+  ) {
+    return (
+      <span
+        className={`font-family-dm-sans font-normal text-gray-11 ${compact ? "text-xs" : "text-sm"}`}
+      >
+        {compact ? "—" : "Sem dado da semana passada"}
+      </span>
+    );
+  }
+  const n = Number(change);
+  const up = n >= 0;
+  const iconClass = compact ? "size-3 shrink-0" : "size-4 shrink-0";
+  const textClass = compact ? "text-xs" : "text-sm";
+  return (
+    <div className="flex items-center gap-1">
+      {up ? (
+        <TrendingUp className={`${iconClass} text-primary-11`} />
+      ) : (
+        <TrendingDown className={`${iconClass} text-red-11`} />
+      )}
+      <span
+        className={`font-family-dm-sans font-normal ${textClass} ${up ? "text-primary-11" : "text-red-11"}`}
+      >
+        {Math.abs(n).toFixed(2)}%
+        {compact ? " vs. sem. passada" : " vs. semana passada"}
+      </span>
+    </div>
+  );
+}
 
 // Função auxiliar para calcular o status final de um registro
 function getFinalStatus(registration: any): string {
@@ -227,7 +297,7 @@ export default function EventRegistrationsPage() {
   const { openViewRegistrationModal } = useViewRegistrationModal();
   const { openExportDataModal } = useExportDataModal();
   const { openPaymentDetailsModal } = usePaymentDetailsModal();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<RegistrationStats>({
     total: 0,
     paid: 0,
     cancelled: 0,
@@ -291,7 +361,7 @@ export default function EventRegistrationsPage() {
         setEvent(eventData || { id: eventId, name: "Evento de Exemplo" });
         setRegistrations(registrationsData.registrations);
         setPagination(registrationsData.pagination);
-        setStats(registrationsData.stats);
+        setStats(normalizeRegistrationStats(registrationsData.stats));
       } catch (apiError) {
         // Usar mocks quando API falhar
         const eventData = { id: eventId, name: "Evento de Exemplo" };
@@ -523,10 +593,7 @@ export default function EventRegistrationsPage() {
                 <p className="font-family-dm-sans font-normal text-base text-gray-11">Inscrições Confirmadas</p>
               </div>
               <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.total.toLocaleString()}</p>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="size-3 text-primary-11" />
-                <span className="font-family-dm-sans font-normal text-xs text-primary-11">12% vs. sem. passada</span>
-              </div>
+              <RegistrationsWeekTrend change={stats.totalChange} compact />
             </div>
             <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
               <div className="flex flex-col gap-3">
@@ -536,10 +603,7 @@ export default function EventRegistrationsPage() {
                 <p className="font-family-dm-sans font-normal text-base text-gray-11">Inscrições confirmadas</p>
               </div>
               <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.paid.toLocaleString()}</p>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="size-3 text-primary-11" />
-                <span className="font-family-dm-sans font-normal text-xs text-primary-11">12% vs. sem. passada</span>
-              </div>
+              <RegistrationsWeekTrend change={stats.paidChange} compact />
             </div>
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
@@ -552,10 +616,7 @@ export default function EventRegistrationsPage() {
             <p className="font-manrope font-extrabold text-lg text-gray-12">
               R$ {(stats.totalCollected / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <div className="flex items-center gap-1">
-              <TrendingUp className="size-3 text-primary-11" />
-              <span className="font-family-dm-sans font-normal text-xs text-primary-11">12% vs. sem. passada</span>
-            </div>
+            <RegistrationsWeekTrend change={stats.totalCollectedChange} compact />
           </div>
         </div>
 
@@ -572,10 +633,7 @@ export default function EventRegistrationsPage() {
               </div>
               <p className="text-2xl font-bold text-gray-12">{stats.total.toLocaleString()}</p>
             </div>
-            <div className="flex items-center gap-1 text-sm text-primary-11">
-              <TrendingUp className="size-4" />
-              <span>12% vs. semana passada</span>
-            </div>
+            <RegistrationsWeekTrend change={stats.totalChange} />
           </div>
 
           {/* Pagos */}
@@ -589,10 +647,7 @@ export default function EventRegistrationsPage() {
               </div>
               <p className="text-2xl font-bold text-gray-12">{stats.paid.toLocaleString()}</p>
             </div>
-            <div className="flex items-center gap-1 text-sm text-primary-11">
-              <TrendingUp className="size-4" />
-              <span>12% vs. semana passada</span>
-            </div>
+            <RegistrationsWeekTrend change={stats.paidChange} />
           </div>
 
           {/* Cancelados */}
@@ -606,10 +661,7 @@ export default function EventRegistrationsPage() {
               </div>
               <p className="text-2xl font-bold text-gray-12">{stats.cancelled.toLocaleString()}</p>
             </div>
-            <div className="flex items-center gap-1 text-sm text-primary-11">
-              <TrendingUp className="size-4" />
-              <span>12% vs. semana passada</span>
-            </div>
+            <RegistrationsWeekTrend change={stats.cancelledChange} />
           </div>
 
           {/* Total arrecadado */}
@@ -626,10 +678,7 @@ export default function EventRegistrationsPage() {
                 R$ {(stats.totalCollected / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="flex items-center gap-1 text-sm text-primary-11">
-              <TrendingUp className="size-4" />
-              <span>12% vs. semana passada</span>
-            </div>
+            <RegistrationsWeekTrend change={stats.totalCollectedChange} />
           </div>
         </div>
 
