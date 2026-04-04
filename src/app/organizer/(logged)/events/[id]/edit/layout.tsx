@@ -2,6 +2,7 @@
 
 import { ReactNode, Suspense } from "react";
 import { useParams, usePathname } from "next/navigation";
+import { cn } from "@/utils/cn";
 import { Loading } from "@/components/Loading";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { EditEventProvider, useEditEvent } from "@/contexts/EditEventContext";
@@ -131,7 +132,11 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   const { event, loading } = useEditEvent();
   const params = useParams();
   const eventId = params.id as string;
-
+  const pathname = usePathname();
+  const pathNoQuery = pathname.split("?")[0].replace(/\/+$/, "");
+  const hideProgressOnMobile =
+    pathNoQuery === `/organizer/events/${eventId}/edit` ||
+    pathNoQuery === `/organizer/events/${eventId}/edit/banner`;
 
   if (loading) {
     return (
@@ -145,7 +150,11 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-gray-2">
       <EventPageHeader eventName={event?.name} />
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
-        <EditProgressBar />
+        <div
+          className={cn(hideProgressOnMobile && "hidden md:block")}
+        >
+          <EditProgressBar />
+        </div>
         {children}
       </div>
     </div>

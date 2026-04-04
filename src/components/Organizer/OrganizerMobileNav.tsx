@@ -18,6 +18,7 @@ import { organizerService } from "@/services";
 import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
+import Image from "next/image";
 
 const navItems = [
   { label: "Eventos", href: "/organizer/events", icon: TicketIcon },
@@ -70,15 +71,12 @@ export function OrganizerMobileNav() {
       {/* Top bar - fixed, dark background, logo + hamburger */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 bg-linear-to-b from-[#191919] to-[#222222] shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)]">
         <Link href={navHref("/organizer")} className="flex items-center shrink-0 h-6 w-[120px] relative">
-          <ImageWithInitialFallback
+          <Image
             src="/images/logo_horizontal.png"
             alt="PódioTicket"
-            name="Pódio"
-            fill
-            sizes="120px"
-            className="size-full"
-            imgClassName="object-contain object-left"
-            letterClassName="text-xs font-bold text-white"
+            width={120}
+            height={120}
+            className="size-full object-contain object-left"
           />
         </Link>
         <Drawer open={open} onOpenChange={setOpen} direction="right">

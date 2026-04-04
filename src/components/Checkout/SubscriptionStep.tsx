@@ -3,7 +3,6 @@ import { Button } from "../Button";
 import type { Event } from "@/interfaces/event";
 import { ArrowButton } from "../ArrowButton";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { TrashIcon } from "../Icons/TrashIcon";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useCheckout } from "@/contexts/CheckoutContext";
@@ -951,7 +950,7 @@ export function SubscriptionStep({
                                   fallbackId={product.id}
                                   fill
                                   sizes="100px"
-                                  className="size-full"
+                                  className="size-full border-transparent border-0"
                                   letterClassName="text-2xl font-semibold"
                                 />
                               </div>
@@ -1051,7 +1050,7 @@ export function SubscriptionStep({
                                     fallbackId={product.id}
                                     fill
                                     sizes="100px"
-                                    className="size-full"
+                                    className="size-full border-transparent border-0"
                                     letterClassName="text-2xl font-semibold"
                                   />
                                 </div>
@@ -1228,8 +1227,8 @@ export function SubscriptionStep({
                     fallbackId={event.id}
                     fill
                     sizes="48px"
-                    className="size-full"
-                    imgClassName="object-cover"
+                    className="size-full border-transparent border-0"
+                    imgClassName="object-cover "
                     letterClassName="text-lg font-bold"
                   />
                 )}
@@ -1278,7 +1277,7 @@ export function SubscriptionStep({
                           fallbackId={product.id}
                           fill
                           sizes="100px"
-                          className="size-full"
+                          className="size-full border-transparent border-0"
                           letterClassName="text-2xl font-semibold"
                         />
                       </div>
@@ -1373,7 +1372,7 @@ export function SubscriptionStep({
                             fallbackId={product.id}
                             fill
                             sizes="100px"
-                            className="size-full"
+                            className="size-full border-transparent border-0"
                             letterClassName="text-2xl font-semibold"
                           />
                         </div>
@@ -1486,7 +1485,7 @@ export function SubscriptionStep({
                                   fallbackId={event.id}
                                   fill
                                   sizes="48px"
-                                  className="size-full"
+                                  className="size-full border-transparent border-0"
                                   imgClassName="object-cover"
                                   letterClassName="text-lg font-bold"
                                 />

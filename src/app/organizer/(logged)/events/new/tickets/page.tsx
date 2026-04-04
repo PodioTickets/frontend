@@ -568,8 +568,8 @@ export default function IngressosPage() {
   ]);
 
   const handleBack = useCallback(() => {
-    orgNav.push("/organizer/events/new/preview");
-  }, [router]);
+    orgNav.push("/organizer/events/new/banner");
+  }, [orgNav]);
 
   if (!authChecked || loading) {
     return <Loading />;

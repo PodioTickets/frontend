@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
+import Link from "next/link";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
@@ -13,7 +14,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
 import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { Info, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 import { Loading } from "@/components/Loading";
@@ -23,6 +24,12 @@ import {
   REGISTRATION_END_BEFORE_START_TOAST,
   wouldRegistrationEndBeforeStart,
 } from "@/utils/registrationPeriod";
+import { ArrowButton } from "@/components/ArrowButton";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
+import type { Event } from "@/interfaces/event";
+
+const EVENT_NAME_MAX_LENGTH = 100;
 
 interface ViaCEPResponse {
   cep: string;
@@ -35,14 +42,13 @@ interface ViaCEPResponse {
 }
 
 export default function InformacoesPage() {
-  const router = useRouter();
   const orgNav = useOrganizerNavigate();
+  const appSurface = useOrganizerAppSurface();
   const { isAuthenticated, user } = useAuth();
   const { formData, updateFormData, errors, setErrors } = useCreateEvent();
   const [loading, setLoading] = useState(false);
   const [loadingCEP, setLoadingCEP] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const [cepFetched, setCepFetched] = useState(false);
   const [uploadingPDF, setUploadingPDF] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
@@ -68,7 +74,7 @@ export default function InformacoesPage() {
       setAuthChecked(true);
     }, 300);
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [orgNav]);
 
   useEffect(() => {
     if (authChecked && !isAuthenticated) {
@@ -77,7 +83,7 @@ export default function InformacoesPage() {
         orgNav.push("/organizer/login");
       }
     }
-  }, [authChecked, isAuthenticated, router]);
+  }, [authChecked, isAuthenticated, orgNav]);
 
   if (!authChecked) {
     return (
@@ -111,7 +117,6 @@ export default function InformacoesPage() {
 
         if (data.erro) {
           toast.error("CEP não encontrado");
-          setCepFetched(false);
         } else {
           updateFormData({
             street: data.logradouro || "",
@@ -119,24 +124,20 @@ export default function InformacoesPage() {
             city: data.localidade || "",
             state: data.uf || "",
           });
-          setCepFetched(true);
           toast.success("Endereço encontrado!");
         }
       } catch (error: any) {
         console.error("Error fetching CEP:", error);
         toast.error("Erro ao buscar CEP");
-        setCepFetched(false);
       } finally {
         setLoadingCEP(false);
       }
-    } else {
-      setCepFetched(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "name" && value.length > 25) {
+    if (name === "name" && value.length > EVENT_NAME_MAX_LENGTH) {
       return;
     }
     updateFormData({ [name]: value });
@@ -432,15 +433,20 @@ export default function InformacoesPage() {
           : undefined;
 
       const eventData: any = {
-        name: formData.name,
+        name: formData.name.trim(),
         eventDate: formData.eventDate,
         country: "BR",
+        // API exige strings em create (CreateEventDto); não depender só de busca de CEP.
+        location: (formData.street ?? "").trim(),
+        city: (formData.city ?? "").trim(),
+        state: (formData.state ?? "").trim(),
       };
 
-      if (cepFetched && formData.street) {
-        eventData.location = formData.street;
-        eventData.city = formData.city;
-        eventData.state = formData.state;
+      if ((formData.cep ?? "").trim()) {
+        eventData.zipCode = formData.cep.trim();
+      }
+      if ((formData.neighborhood ?? "").trim()) {
+        eventData.neighborhood = formData.neighborhood.trim();
       }
 
       if (formData.googleMapsLink) {
@@ -459,7 +465,7 @@ export default function InformacoesPage() {
         eventData.regulationUrl = regulationUrl;
       }
 
-      let event;
+      let event: Event;
       if (formData.createdEventId) {
         event = await organizerService.updateEvent(
           formData.createdEventId,
@@ -470,7 +476,9 @@ export default function InformacoesPage() {
         );
       } else {
         event = await organizerService.createEvent(eventData);
-        updateFormData({ createdEventId: event.id });
+        flushSync(() => {
+          updateFormData({ createdEventId: event.id });
+        });
       }
 
       toast.success("Informações salvas com sucesso!");
@@ -502,332 +510,409 @@ export default function InformacoesPage() {
     }
   };
 
+  const eventsListHref = organizerExternalHref(
+    "/organizer/events",
+    appSurface,
+  );
+
   return (
-    <div className="bg-gray-2 flex-1 pb-44 px-5 md:px-[124px] mt-10">
-      <div className="max-w-[1060px] mx-auto flex flex-col gap-[44px]">
-        {/* Title Section */}
-        <div className="flex flex-col gap-[16px]">
-          <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
-            Criar evento
-          </h1>
-          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+    <>
+      <div className="bg-gray-2 flex-1 pb-28 md:pb-44 px-4 md:px-[124px] mt-0 md:mt-10 min-w-0">
+        <div className="md:hidden sticky top-0 z-20 bg-gray-2 border-b border-gray-6 -mx-4 px-4">
+          <div className="flex items-center gap-1 h-[52px]">
+            <Link
+              href={eventsListHref}
+              className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
+              aria-label="Voltar"
+            >
+              <ArrowButton isOpen={false} />
+            </Link>
+            <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+              Criar evento
+            </p>
+          </div>
+        </div>
+
+        <div className="max-w-[1060px] mx-auto flex flex-col gap-9 md:gap-[44px] md:px-5 pt-4 md:pt-0">
+          <div className="hidden md:flex flex-col gap-[16px]">
+            <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+              Criar evento
+            </h1>
+            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+              Comece pelo básico. Defina nome, data, local e as imagens
+              principais. Você poderá ajustar os detalhes depois.
+            </p>
+          </div>
+
+          <p className="md:hidden text-sm text-gray-11 font-family-dm-sans leading-[1.4]">
             Comece pelo básico. Defina nome, data, local e as imagens
             principais. Você poderá ajustar os detalhes depois.
           </p>
-        </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-[44px]">
-          {/* Nome do Evento */}
-          <div className="flex gap-10 w-full items-start">
-            <div className="flex flex-col gap-[12px] w-full">
-              <div className="flex flex-col gap-2">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Nome do evento
-                </label>
-                <Input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Ex: Corrida Pena Nubas 2025"
-                  className={`h-12 ${errors.name ? "border-red-10" : ""}`}
-                  maxLength={200}
-                />
-              </div>
-              {errors.name && (
-                <p className="text-red-10 text-sm">{errors.name}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-[12px]">
-              <div className="flex flex-col w-[300px] gap-2">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Data do evento
-                </label>
-                <DatePicker
-                  value={formData.eventDate}
-                  onChange={(value) =>
-                    handleDateChange("eventDate", value || "")
-                  }
-                  placeholder={getCurrentDatePlaceholder()}
-                  className="w-max"
-                  hideIcon={false}
-                />
-              </div>
-              <div className="flex items-center gap-1">
-                <InfoIcon className="size-5 text-gray-11" />
-                <p className="text-gray-11 text-base font-family-dm-sans flex-1">
-                  Use a data oficial em que o evento começa.
-                </p>
-              </div>
-              {errors.eventDate && (
-                <p className="text-red-10 text-sm">{errors.eventDate}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Inscrição Section */}
-          <div className="flex flex-col gap-[20px]">
-            <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-              Inscrição
-            </h2>
-
-            <div className="flex gap-[72px] items-start">
-              {/* Data de início das inscrições */}
-              <div className="flex flex-col gap-[12px]">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Data de início das inscrições
-                </label>
-                <div className="flex gap-3 items-end">
-                  <DatePicker
-                    value={formData.registrationStartDate}
-                    onChange={(value) =>
-                      handleDateChange("registrationStartDate", value || "")
-                    }
-                    placeholder={getCurrentDatePlaceholder()}
-                    className="w-max"
-                  />
-                  <TimePicker
-                    value={formData.registrationStartTime}
-                    onChange={(value) =>
-                      handleTimeChange("registrationStartTime", value)
-                    }
-                    className="w-max"
+          <form
+            id="create-event-information-form"
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-9 md:gap-[44px]"
+          >
+            <div className="flex flex-col md:flex-row gap-9 md:gap-10 w-full items-stretch md:items-start">
+              <div className="flex flex-col gap-3 w-full min-w-0 md:gap-[12px]">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <label
+                      htmlFor="new-event-name"
+                      className="text-gray-12 text-base font-family-dm-sans"
+                    >
+                      Nome do evento
+                    </label>
+                    <span className="text-sm text-gray-11 font-family-dm-sans shrink-0 tabular-nums">
+                      {formData.name.length}/{EVENT_NAME_MAX_LENGTH}
+                    </span>
+                  </div>
+                  <Input
+                    id="new-event-name"
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Ex: Corrida Pena Nubas 2025"
+                    className={`h-12 ${errors.name ? "border-red-10" : ""}`}
+                    maxLength={EVENT_NAME_MAX_LENGTH}
                   />
                 </div>
-              </div>
-
-              {/* Data de encerramento das inscrições */}
-              <div className="flex flex-col gap-[12px]">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Data de encerramento das inscrições
-                </label>
-                <div className="flex gap-3 items-end">
-                  <DatePicker
-                    value={formData.registrationEndDate}
-                    onChange={(value) =>
-                      handleDateChange("registrationEndDate", value || "")
-                    }
-                    placeholder={getCurrentDatePlaceholder()}
-                    className="w-max"
-                    minDate={getMinDateForRegistrationEndPicker(
-                      formData.registrationStartDate,
-                    )}
-                  />
-                  <TimePicker
-                    value={formData.registrationEndTime}
-                    onChange={(value) =>
-                      handleTimeChange("registrationEndTime", value)
-                    }
-                    className="w-max"
-                  />
-                </div>
-              </div>
-            </div>
-            {errors.registrationPeriod && (
-              <p className="text-red-10 text-sm">{errors.registrationPeriod}</p>
-            )}
-          </div>
-
-          {/* Local do Evento Section */}
-          <div className="flex flex-col gap-[12px]">
-            <div className="flex flex-col gap-[12px]">
-              <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                Local do evento
-              </h2>
-              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                Essas informações serão exibidas na página e ajudam o
-                participante a chegar ao destino.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-5 items-start">
-              {/* CEP */}
-              <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  CEP
-                </label>
-                <Input
-                  type="text"
-                  name="cep"
-                  value={formData.cep}
-                  onChange={handleCEPChange}
-                  placeholder="00000-000"
-                  maxLength={9}
-                  className="h-12"
-                />
-                {loadingCEP && (
-                  <p className="text-gray-11 text-sm">Buscando endereço...</p>
+                {errors.name && (
+                  <p className="text-red-10 text-sm">{errors.name}</p>
                 )}
               </div>
 
-              {/* Campos de endereço - sempre visíveis */}
-              <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Rua
-                </label>
-                <Input
-                  type="text"
-                  name="street"
-                  value={formData.street}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome da rua"
-                  className="h-12"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Bairro
-                </label>
-                <Input
-                  type="text"
-                  name="neighborhood"
-                  value={formData.neighborhood}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome do bairro"
-                  className="h-12"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Cidade
-                </label>
-                <Input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome da cidade"
-                  className="h-12"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 min-w-[365px] flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">
-                  Estado
-                </label>
-                <Input
-                  type="text"
-                  name="state"
-                  value={formData.state}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome do estado"
-                  className="h-12"
-                />
-              </div>
-
-              {/* URL do Google Maps */}
-              <div className="flex flex-col gap-2 w-full">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <label
-                    htmlFor="new-event-google-maps-url"
-                    className="text-gray-12 text-base font-family-dm-sans"
-                  >
-                    URL do google
+              <div className="flex flex-col gap-3 md:gap-[12px] w-full md:w-[300px] shrink-0">
+                <div className="flex flex-col gap-2">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    Data do evento
                   </label>
-                  <GoogleMapsUrlHelpTooltip />
-                </div>
-                <div className="relative">
-                  <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12" />
-                  <Input
-                    id="new-event-google-maps-url"
-                    type="url"
-                    name="googleMapsLink"
-                    value={formData.googleMapsLink}
-                    onChange={handleInputChange}
-                    placeholder="Ex: www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP"
-                    className="h-12 pl-10"
+                  <DatePicker
+                    value={formData.eventDate}
+                    onChange={(value) =>
+                      handleDateChange("eventDate", value || "")
+                    }
+                    placeholder={getCurrentDatePlaceholder()}
+                    className="w-full md:w-max"
+                    hideIcon={false}
                   />
                 </div>
+                <div className="flex items-start gap-2">
+                  <InfoIcon className="size-5 text-gray-11 shrink-0 mt-0.5" />
+                  <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4]">
+                    Use a data oficial em que o evento começa. Modalidades e
+                    horários você configura nas próximas etapas.
+                  </p>
+                </div>
+                {errors.eventDate && (
+                  <p className="text-red-10 text-sm">{errors.eventDate}</p>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* PDF Upload Section */}
-          <div className="flex flex-col items-start justify-center w-full">
-            <div
-              className="border-2 border-dashed border-gray-6 rounded-[12px] p-6 flex gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-7 transition-colors"
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <div className="flex items-center justify-center size-16 shrink-0">
-                <Plus className="size-16 text-primary-11" strokeWidth={1.5} />
-              </div>
-              <div className="flex flex-col gap-4 items-start justify-center flex-1">
-                <div className="flex flex-col gap-2 items-start justify-center w-full">
-                  <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">
-                    Envie o regulamento do evento em PDF para que os
-                    participantes possam visualizar na página do evento.
-                  </p>
-                  <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
-                    Formato recomendado: PDF
-                  </p>
+            <div className="flex flex-col gap-5 md:gap-[20px]">
+              <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                Inscrição
+              </h2>
+
+              <div className="flex flex-col md:flex-row gap-9 md:gap-[72px] items-stretch md:items-start">
+                <div className="flex flex-col gap-3 md:gap-[12px] min-w-0 flex-1">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    Data de início das inscrições
+                  </label>
+                  <div className="flex gap-3 items-end w-full">
+                    <div className="min-w-0 flex-1">
+                      <DatePicker
+                        value={formData.registrationStartDate}
+                        onChange={(value) =>
+                          handleDateChange(
+                            "registrationStartDate",
+                            value || "",
+                          )
+                        }
+                        placeholder={getCurrentDatePlaceholder()}
+                        className="w-full md:w-max"
+                      />
+                    </div>
+                    <div className="w-[112px] shrink-0 md:w-auto">
+                      <TimePicker
+                        value={formData.registrationStartTime}
+                        onChange={(value) =>
+                          handleTimeChange("registrationStartTime", value)
+                        }
+                        className="w-full md:w-max"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-1 items-center justify-center">
-                  <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
-                    Arraste um arquivo PDF para este campo ou clique aqui
-                  </p>
+
+                <div className="flex flex-col gap-3 md:gap-[12px] min-w-0 flex-1">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    Data de encerramento das inscrições
+                  </label>
+                  <div className="flex gap-3 items-end w-full">
+                    <div className="min-w-0 flex-1">
+                      <DatePicker
+                        value={formData.registrationEndDate}
+                        onChange={(value) =>
+                          handleDateChange(
+                            "registrationEndDate",
+                            value || "",
+                          )
+                        }
+                        placeholder={getCurrentDatePlaceholder()}
+                        className="w-full md:w-max"
+                        minDate={getMinDateForRegistrationEndPicker(
+                          formData.registrationStartDate,
+                        )}
+                      />
+                    </div>
+                    <div className="w-[112px] shrink-0 md:w-auto">
+                      <TimePicker
+                        value={formData.registrationEndTime}
+                        onChange={(value) =>
+                          handleTimeChange("registrationEndTime", value)
+                        }
+                        className="w-full md:w-max"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={handlePDFSelect}
-              className="hidden"
-            />
-            {pdfFile && (
-              <div className="mt-2 flex items-center gap-2">
-                <p className="text-gray-11 text-sm">
-                  Arquivo selecionado: {pdfFile.name}
+              {errors.registrationPeriod && (
+                <p className="text-red-10 text-sm">
+                  {errors.registrationPeriod}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPdfFile(null);
-                    setPdfUrl("");
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                  className="text-red-10 text-sm hover:text-red-11"
-                >
-                  Remover
-                </button>
-              </div>
-            )}
-            {(pdfUrl || formData.regulationUrl) && !pdfFile && (
-              <div className="mt-2 flex items-center gap-2">
-                <p className="text-gray-11 text-sm">PDF atual do regulamento</p>
-                <a
-                  href={pdfUrl || formData.regulationUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-11 text-sm hover:underline"
-                >
-                  Ver PDF
-                </a>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-[52px] px-11 text-xl font-bold font-manrope"
-            >
-              {loading ? "Salvando..." : "Próxima etapa"}
-            </Button>
-          </div>
-        </form>
+            <div className="flex flex-col gap-4 md:gap-[12px]">
+              <div className="flex flex-col gap-2 md:gap-[12px]">
+                <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                  Local do evento
+                </h2>
+                <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">
+                  Informe onde o evento será realizado. Essas informações
+                  aparecem na página e ajudam o participante a chegar ao
+                  destino.
+                </p>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:flex-wrap gap-5 items-stretch md:items-start">
+                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    CEP
+                  </label>
+                  <Input
+                    type="text"
+                    name="cep"
+                    value={formData.cep}
+                    onChange={handleCEPChange}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    className="h-12"
+                  />
+                  {loadingCEP && (
+                    <p className="text-gray-11 text-sm">Buscando endereço...</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    Rua
+                  </label>
+                  <Input
+                    type="text"
+                    name="street"
+                    value={formData.street}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome da rua"
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    Bairro
+                  </label>
+                  <Input
+                    type="text"
+                    name="neighborhood"
+                    value={formData.neighborhood}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome do bairro"
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    Cidade
+                  </label>
+                  <Input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome da cidade"
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                  <label className="text-gray-12 text-base font-family-dm-sans">
+                    Estado
+                  </label>
+                  <Input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome do estado"
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <label
+                      htmlFor="new-event-google-maps-url"
+                      className="text-gray-12 text-base font-family-dm-sans"
+                    >
+                      URL do google
+                    </label>
+                    <GoogleMapsUrlHelpTooltip />
+                  </div>
+                  <div className="relative">
+                    <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12 pointer-events-none" />
+                    <Input
+                      id="new-event-google-maps-url"
+                      type="url"
+                      name="googleMapsLink"
+                      value={formData.googleMapsLink}
+                      onChange={handleInputChange}
+                      placeholder="www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP"
+                      className="h-12 pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-stretch justify-center w-full">
+              <div
+                className="border-2 border-dashed border-gray-6 rounded-xl md:rounded-[12px] p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-7 transition-colors min-h-[140px] md:min-h-0"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="md:hidden flex flex-col items-center justify-center gap-2 text-center px-2">
+                  <Plus
+                    className="size-10 text-primary-11"
+                    strokeWidth={1.5}
+                  />
+                  <p className="text-primary-11 text-sm font-bold font-family-dm-sans leading-[1.35]">
+                    Clique e envie o regulamento do evento em PDF.
+                  </p>
+                  <p className="text-gray-11 text-xs font-family-dm-sans">
+                    Opcional · máx. 10MB
+                  </p>
+                </div>
+                <div className="hidden md:flex gap-4 items-center justify-center w-full">
+                  <div className="flex items-center justify-center size-16 shrink-0">
+                    <Plus
+                      className="size-16 text-primary-11"
+                      strokeWidth={1.5}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-4 items-start justify-center flex-1">
+                    <div className="flex flex-col gap-2 items-start justify-center w-full">
+                      <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3] text-start w-full">
+                        Envie o regulamento do evento em PDF para que os
+                        participantes possam visualizar na página do evento.
+                      </p>
+                      <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
+                        Formato recomendado: PDF
+                      </p>
+                    </div>
+                    <div className="flex gap-1 items-center justify-center">
+                      <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
+                        Arraste um arquivo PDF para este campo ou clique aqui
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={handlePDFSelect}
+                className="hidden"
+              />
+              {pdfFile && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <p className="text-gray-11 text-sm">
+                    Arquivo selecionado: {pdfFile.name}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPdfFile(null);
+                      setPdfUrl("");
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    className="text-red-10 text-sm hover:text-red-11"
+                  >
+                    Remover
+                  </button>
+                </div>
+              )}
+              {(pdfUrl || formData.regulationUrl) && !pdfFile && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <p className="text-gray-11 text-sm">
+                    PDF atual do regulamento
+                  </p>
+                  <a
+                    href={pdfUrl || formData.regulationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-11 text-sm hover:underline"
+                  >
+                    Ver PDF
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="hidden md:flex justify-end pt-2">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="h-[52px] px-11 text-xl font-bold font-manrope"
+              >
+                {loading ? "Salvando..." : "Próxima etapa"}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-30 md:hidden border-t border-gray-6 bg-gray-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <Button
+          form="create-event-information-form"
+          type="submit"
+          disabled={loading}
+          className="h-12 w-full text-base font-bold font-manrope"
+        >
+          {loading ? "Salvando..." : "Próxima etapa"}
+        </Button>
+      </div>
+    </>
   );
 }
 

@@ -88,13 +88,13 @@ export function EventCard({ event }: EventCardProps) {
     <>
       <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-4">
         <ImageWithInitialFallback
-          src={event.bannerUrl}
+          src={(event as any).logoUrl}
           alt={event.name}
           name={event.name}
           fallbackId={event.id}
           fill
           sizes="(max-width: 768px) 100vw, 300px"
-          className="size-full"
+          className="size-full border-transparent border-0"
           letterClassName="text-6xl"
         />
       </div>

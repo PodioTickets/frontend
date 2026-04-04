@@ -208,7 +208,7 @@ export default function OrganizerSettingsPage() {
                     : user?.email || "Nome do usuário"}
                   fill
                   sizes="96px"
-                  className="size-full"
+                  className="size-full rounded-full"
                   letterClassName="text-2xl font-semibold"
                 />
               </div>
@@ -295,7 +295,7 @@ export default function OrganizerSettingsPage() {
                           name={organizer.name || "Nome da organização"}
                           fill
                           sizes="40px"
-                          className="size-full"
+                          className="size-full rounded-full"
                           letterClassName="text-base font-semibold"
                         />
                       </div>
@@ -324,7 +324,7 @@ export default function OrganizerSettingsPage() {
                             : user?.email || "Nome do dono"}
                           fill
                           sizes="40px"
-                          className="size-full"
+                          className="size-full rounded-full"
                           letterClassName="text-base font-semibold"
                         />
                       </div>

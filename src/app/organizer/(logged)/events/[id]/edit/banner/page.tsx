@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
+import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { userService, organizerService } from "@/services";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { Button } from "@/components/Button";
@@ -84,8 +87,8 @@ const uploadSvg = (
 );
 
 export default function EditBannerPage() {
-  const router = useRouter();
   const orgNav = useOrganizerNavigate();
+  const appSurface = useOrganizerAppSurface();
   const params = useParams();
   const eventId = params.id as string;
   const { formData, updateFormData, event } = useEditEvent();
@@ -338,10 +341,15 @@ export default function EditBannerPage() {
   const bannerDone = Boolean(formData.bannerUrl) && !selectedBannerFile;
   const cardDone = Boolean(formData.cardImageUrl) && !selectedCardFile;
 
+  const editHref = organizerExternalHref(
+    `/organizer/events/${eventId}/edit`,
+    appSurface,
+  );
+
   const renderBannerUpload = () =>
     bannerPreview ? (
-      <div className="border-2 border-gray-6 border-dashed rounded-xl p-6 flex gap-6 items-center w-full max-w-[710px] mx-auto">
-        <div className="relative rounded-2xl shrink-0 size-[128px] overflow-hidden">
+      <div className="border-2 border-gray-6 border-dashed rounded-xl p-4 md:p-6 flex flex-col gap-6 md:flex-row md:items-center w-full max-w-full md:max-w-[710px] md:mx-auto">
+        <div className="relative rounded-2xl shrink-0 size-[128px] overflow-hidden mx-auto md:mx-0">
           <Image src={bannerPreview} alt="Banner preview" fill className="object-cover" />
         </div>
         <div className="flex flex-1 flex-col gap-6 min-w-0">
@@ -349,14 +357,14 @@ export default function EditBannerPage() {
             <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
               Tamanho recomendado: 880 × 400 px
             </p>
-            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+            <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
               Use uma arte com boa resolução e pouco texto, para ficar legível em diferentes telas.
             </p>
           </div>
           <button
             type="button"
             onClick={() => bannerCropRef.current?.open()}
-            className="border-[1.5px] border-gray-6 rounded-lg h-11 flex gap-2 items-center justify-center px-6 hover:bg-gray-3 transition-colors w-fit"
+            className="border-[1.5px] border-gray-6 rounded-lg h-11 flex gap-2 items-center justify-center px-6 hover:bg-gray-3 transition-colors w-full md:w-fit"
           >
             {uploadSvg}
             <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
@@ -369,7 +377,7 @@ export default function EditBannerPage() {
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        className="border-2 border-dashed border-gray-6 rounded-xl p-6 flex flex-col gap-6 items-center justify-center min-h-[300px] cursor-pointer hover:border-primary-8 transition-colors w-full max-w-[710px] mx-auto"
+        className="border-2 border-dashed border-gray-6 rounded-xl p-6 flex flex-col gap-6 items-center justify-center min-h-[240px] md:min-h-[300px] cursor-pointer hover:border-primary-8 transition-colors w-full max-w-full md:max-w-[710px] md:mx-auto"
         onClick={() => bannerCropRef.current?.open()}
         role="button"
         tabIndex={0}
@@ -395,32 +403,41 @@ export default function EditBannerPage() {
     );
 
   const renderBannerPreviewBlock = () => (
-    <div className="flex flex-col gap-5 items-center w-full">
-      <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">Prévia</h2>
-      <div className="flex gap-8 items-start w-full flex-col xl:flex-row xl:justify-center">
-        <div className="flex flex-col gap-[52px] flex-1 min-w-0 max-w-[625px]">
-          {bannerPreview ? (
-            <div className="relative w-full max-w-[625px] aspect-880/400 rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
-              <Image src={bannerPreview} alt="Banner preview" fill className="object-cover" sizes="625px" />
+    <div className="flex flex-col gap-5 items-stretch w-full">
+      <div className="flex flex-col gap-5 rounded-lg border border-gray-6 bg-gray-1 p-4 md:rounded-none md:border-0 md:bg-transparent md:p-0">
+        <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+          Prévia
+        </h2>
+        <div className="flex gap-8 items-start w-full flex-col xl:flex-row xl:justify-center">
+          <div className="flex flex-col gap-6 md:gap-[52px] flex-1 min-w-0 max-w-[625px] w-full">
+            {bannerPreview ? (
+              <div className="relative w-full aspect-[342/134] md:aspect-880/400 max-w-[625px] rounded-lg md:rounded-2xl overflow-hidden shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
+                <Image
+                  src={bannerPreview}
+                  alt="Banner preview"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width:768px) 100vw, 625px"
+                />
+              </div>
+            ) : (
+              <div className="w-full aspect-[342/134] md:aspect-880/400 max-w-[625px] bg-gray-4 rounded-lg md:rounded-2xl" />
+            )}
+
+            <div className="hidden md:flex flex-col gap-4">
+              <div className="bg-gray-8 h-4 w-full rounded" />
+              <div className="bg-gray-4 h-2 w-full rounded" />
+              <div className="bg-gray-4 h-2 w-[80%] max-w-[501px] rounded" />
+              <div className="bg-gray-4 h-2 w-[60%] max-w-[377px] rounded" />
+              <div className="bg-gray-4 h-2 w-[40%] max-w-[253px] rounded" />
+              <div className="bg-gray-4 h-2 w-[20%] max-w-[129px] rounded" />
+              <div className="bg-gray-4 h-2 w-[10%] max-w-[65px] rounded" />
             </div>
-          ) : (
-            <div className="w-full max-w-[625px] aspect-880/400 bg-gray-4 rounded-2xl" />
-          )}
-
-          <div className="flex flex-col gap-4">
-            <div className="bg-gray-8 h-4 w-full rounded" />
-            <div className="bg-gray-4 h-2 w-full rounded" />
-            <div className="bg-gray-4 h-2 w-[80%] max-w-[501px] rounded" />
-            <div className="bg-gray-4 h-2 w-[60%] max-w-[377px] rounded" />
-            <div className="bg-gray-4 h-2 w-[40%] max-w-[253px] rounded" />
-            <div className="bg-gray-4 h-2 w-[20%] max-w-[129px] rounded" />
-            <div className="bg-gray-4 h-2 w-[10%] max-w-[65px] rounded" />
           </div>
-        </div>
 
-        <div className="w-full max-w-[402px] flex flex-col gap-6 shrink-0 xl:sticky xl:top-4">
-          <div className="bg-gray-2 flex flex-col gap-8 p-6 rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
-            <h3 className="text-gray-12 text-2xl font-extrabold font-manrope leading-[1.1]">
+          <div className="w-full max-w-[402px] flex flex-col gap-6 shrink-0 xl:sticky xl:top-4 mx-auto xl:mx-0">
+            <div className="bg-gray-2 flex flex-col gap-6 md:gap-8 p-4 md:p-6 rounded-lg md:rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+            <h3 className="text-gray-12 text-xl md:text-2xl font-extrabold font-manrope leading-[1.1]">
               {formData.name || "Nome do evento"}
             </h3>
 
@@ -489,13 +506,14 @@ export default function EditBannerPage() {
               Inscrever-se
             </Button>
           </div>
-          <div className="flex flex-col items-center justify-center gap-4">
+          <div className="hidden md:flex flex-col items-center justify-center gap-4">
             <Button variant="outline" disabled className="text-gray-11 border-gray-6">
               <ShareIcon className="size-5" />
               Compartilhar
             </Button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -612,9 +630,28 @@ export default function EditBannerPage() {
   );
 
   return (
-    <div className="pb-20">
-      <div className="w-full flex flex-col gap-9 items-center max-w-[1100px] mx-auto px-4 md:px-8">
-        <div className="flex flex-col gap-4 items-center w-full">
+    <div className="min-w-0 bg-gray-2 pb-28 md:bg-transparent md:pb-20">
+      <div className="md:hidden sticky top-0 z-20 bg-gray-2 border-b border-gray-6">
+        <div className="flex h-[52px] items-center gap-1 px-4">
+          <Link
+            href={editHref}
+            className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={false} />
+          </Link>
+          <h1 className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12 truncate flex-1 min-w-0">
+            Banners do evento
+          </h1>
+        </div>
+      </div>
+
+      <p className="px-4 pt-4 pb-2 text-base text-gray-11 font-family-dm-sans leading-[1.3] md:hidden">
+        Imagens principais do evento para os participantes visualizarem
+      </p>
+
+      <div className="mx-auto flex w-full max-w-[1100px] flex-col items-stretch gap-6 px-0 md:items-center md:gap-9 md:px-8">
+        <div className="hidden md:flex flex-col gap-4 items-center w-full">
           <div className="flex gap-3 items-center flex-wrap justify-center">
             <button
               type="button"
@@ -632,30 +669,30 @@ export default function EditBannerPage() {
           </p>
         </div>
 
-        <div className="w-full max-w-[1059px] flex flex-col gap-6">
+        <div className="flex w-full max-w-[1059px] flex-col gap-6 px-4 md:mx-auto md:px-0">
           {/* Accordion — banner */}
-          <div className="border border-gray-6 rounded-2xl overflow-hidden bg-white">
+          <div className="border border-gray-6 rounded-2xl overflow-hidden bg-gray-1">
             <button
               type="button"
               onClick={() => setExpandedBanner((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-5 text-left border-b border-gray-6 hover:bg-gray-2/40 transition-colors"
+              className="w-full flex flex-col gap-5 border-b border-gray-6 px-4 py-5 text-left hover:bg-gray-2/40 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
-              <div className="flex-1 min-w-0 flex flex-col gap-3">
-                <h2 className="text-gray-12 text-[20px] font-bold font-manrope leading-[1.1]">
+              <div className="flex flex-1 min-w-0 flex-col gap-3">
+                <h2 className="text-gray-12 text-base font-bold font-manrope leading-[1.1] md:text-[20px]">
                   Banner principal do evento
                 </h2>
-                <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
+                <p className="text-gray-11 text-sm font-normal font-family-dm-sans leading-[1.3] md:text-base">
                   Imagem grande no topo da página do evento
                 </p>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-end justify-between gap-3 shrink-0 sm:items-center sm:justify-end">
                 <StatusPill done={bannerDone} />
                 <ArrowButton isOpen={expandedBanner} />
               </div>
             </button>
 
             {expandedBanner ? (
-              <div className="px-4 pb-7 pt-6 flex flex-col gap-11">
+              <div className="flex flex-col gap-8 px-4 pb-8 pt-5 md:gap-11 md:pb-7 md:pt-6">
                 {renderBannerUpload()}
                 {renderBannerPreviewBlock()}
                 <div className="flex justify-end">
@@ -663,7 +700,7 @@ export default function EditBannerPage() {
                     type="button"
                     onClick={() => void handleBannerStepNext()}
                     disabled={uploadingBanner}
-                    className="font-manrope rounded-lg"
+                    className="h-12 px-6 text-base font-bold font-manrope rounded-lg md:h-10 md:px-4 md:text-sm"
                   >
                     {uploadingBanner ? "Enviando..." : "Próximo"}
                   </Button>
@@ -673,28 +710,28 @@ export default function EditBannerPage() {
           </div>
 
           {/* Accordion — imagem de pré-visualização (card de listagem) */}
-          <div className="border border-gray-6 rounded-xl overflow-hidden bg-white">
+          <div className="border border-gray-6 rounded-xl overflow-hidden bg-gray-1">
             <button
               type="button"
               onClick={() => setExpandedCard((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-5 text-left border-b border-gray-6 hover:bg-gray-2/40 transition-colors"
+              className="w-full flex flex-col gap-5 border-b border-gray-6 px-4 py-5 text-left hover:bg-gray-2/40 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-3"
             >
-              <div className="flex-1 min-w-0 flex flex-col gap-3">
-                <h2 className="text-gray-12 text-[20px] font-bold font-manrope leading-[1.1]">
+              <div className="flex flex-1 min-w-0 flex-col gap-3">
+                <h2 className="text-gray-12 text-base font-bold font-manrope leading-[1.1] md:text-[20px]">
                   Imagem de pré-visualização
                 </h2>
-                <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
+                <p className="text-gray-11 text-sm font-normal font-family-dm-sans leading-[1.3] md:text-base">
                   Aparece no card do evento na listagem e compartilhamentos
                 </p>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center justify-between gap-3 shrink-0 sm:justify-end">
                 <StatusPill done={cardDone} />
                 <ArrowButton isOpen={expandedCard} />
               </div>
             </button>
 
             {expandedCard ? (
-              <div className="flex flex-col gap-11 px-4 pb-7 pt-5">
+              <div className="flex flex-col gap-8 px-4 pb-8 pt-5 md:gap-11 md:pb-7 md:pt-5">
                 <div className="flex flex-col gap-6 w-full">
                   {renderCardUpload()}
                   {renderCardListingPreview()}
@@ -704,7 +741,7 @@ export default function EditBannerPage() {
                     type="button"
                     onClick={() => void handleConfirmCardAndNext()}
                     disabled={uploadingCard}
-                    className="font-manrope"
+                    className="h-12 px-6 text-base font-bold font-manrope md:h-10 md:text-sm"
                   >
                     {uploadingCard ? "Enviando..." : "Confirmar e próximo"}
                   </Button>

@@ -309,7 +309,7 @@ export default function OrganizerEventsPage() {
                                   fallbackId={event.id}
                                   fill
                                   sizes="36px"
-                                  className="size-full"
+                                  className="size-full border-transparent border-0"
                                   letterClassName="text-sm font-semibold"
                                 />
                               </div>

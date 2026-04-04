@@ -1073,7 +1073,7 @@ export function InformationStep({
                   fallbackId={event.id}
                   fill
                   sizes="(max-width: 768px) 33vw, 320px"
-                  className="size-full rounded-tr-xl rounded-br-xl"
+                  className="size-full rounded-tr-xl rounded-br-xl border-transparent border-0"
                   letterClassName="text-5xl"
                 />
               </div>

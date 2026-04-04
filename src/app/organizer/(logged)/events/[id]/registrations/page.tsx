@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
@@ -19,7 +19,12 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import type { RegistrationStats } from "@/services/organizer/OrganizerService";
+import type {
+  Registration,
+  RegistrationStats,
+} from "@/services/organizer/OrganizerService";
+import type { Event } from "@/interfaces/event";
+import type { LucideIcon } from "lucide-react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { Dropdown } from "@/components/Dropdown";
 import type { DateRange } from "react-day-picker";
@@ -39,11 +44,53 @@ import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 
+const REG_API_STATUSES = [
+  "PENDING",
+  "CONFIRMED",
+  "CANCELLED",
+  "COMPLETED",
+  "CHARGEBACK",
+  "REFUNDED",
+] as const;
+type RegistrationApiStatus = (typeof REG_API_STATUSES)[number];
+
+function toRegistrationApiStatus(
+  s: string,
+): RegistrationApiStatus | undefined {
+  return (REG_API_STATUSES as readonly string[]).includes(s)
+    ? (s as RegistrationApiStatus)
+    : undefined;
+}
+
+/** Inscrição na listagem (API pode incluir order/payment, ticket agregado e user estendido). */
+type RegistrationListRow = Omit<Registration, "user"> & {
+  user: Registration["user"] & { cpf?: string; avatarUrl?: string };
+  ticketId?: string;
+  createdAt?: string;
+  ticket?: {
+    name?: string;
+    price?: number;
+    category?: { name?: string };
+  };
+  order?: {
+    payment?: {
+      status?: string;
+      metadata?: unknown;
+      refundType?: string;
+    };
+  };
+};
+
 function normalizeRegistrationStats(raw: unknown): RegistrationStats {
   if (!raw || typeof raw !== "object") {
     return { total: 0, paid: 0, cancelled: 0, totalCollected: 0 };
   }
   const r = raw as Record<string, unknown>;
+  const nested = r.weekOverWeek ?? r.week_over_week;
+  const src: Record<string, unknown> =
+    nested && typeof nested === "object"
+      ? { ...r, ...(nested as Record<string, unknown>) }
+      : r;
   const optNum = (v: unknown): number | undefined => {
     if (typeof v === "number" && !Number.isNaN(v)) return v;
     if (typeof v === "string" && v.trim() !== "") {
@@ -53,17 +100,47 @@ function normalizeRegistrationStats(raw: unknown): RegistrationStats {
     return undefined;
   };
   return {
-    total: Number(r.total) || 0,
-    paid: Number(r.paid) || 0,
-    cancelled: Number(r.cancelled) || 0,
-    totalCollected: Number(r.totalCollected ?? r.total_collected) || 0,
-    totalChange: optNum(r.totalChange ?? r.total_change),
-    paidChange: optNum(r.paidChange ?? r.paid_change),
-    cancelledChange: optNum(r.cancelledChange ?? r.cancelled_change),
+    total: Number(src.total) || 0,
+    paid: Number(src.paid) || 0,
+    cancelled: Number(src.cancelled) || 0,
+    totalCollected: Number(src.totalCollected ?? src.total_collected) || 0,
+    totalChange: optNum(src.totalChange ?? src.total_change),
+    paidChange: optNum(src.paidChange ?? src.paid_change),
+    cancelledChange: optNum(src.cancelledChange ?? src.cancelled_change),
     totalCollectedChange: optNum(
-      r.totalCollectedChange ?? r.total_collected_change,
+      src.totalCollectedChange ?? src.total_collected_change,
     ),
   };
+}
+
+/** Mescla totais da listagem com variação semanal do endpoint de stats, se a lista não enviar *Change. */
+function mergeRegistrationStatsWithTrendFallback(
+  listStats: unknown,
+  aggregateStats: RegistrationStats | null,
+): RegistrationStats {
+  const a = normalizeRegistrationStats(listStats);
+  if (!aggregateStats) return a;
+  const b = normalizeRegistrationStats(aggregateStats);
+  return {
+    ...a,
+    totalChange: a.totalChange ?? b.totalChange,
+    paidChange: a.paidChange ?? b.paidChange,
+    cancelledChange: a.cancelledChange ?? b.cancelledChange,
+    totalCollectedChange: a.totalCollectedChange ?? b.totalCollectedChange,
+  };
+}
+
+/**
+ * Valor já em % (ex.: 12,3). Variações entre 0 e 0,5 arredondavam a 0 e sumiam — usa mínimo 1%.
+ * Não trata fração 0–1 (ex.: 0,15 = 15%); nesse caso o backend deve enviar 15 ou o endpoint /stats.
+ */
+function registrationsWeekOverWeekPercent(change: number): number {
+  const n = Number(change);
+  if (!Number.isFinite(n) || Math.abs(n) < 1e-12) return 0;
+  const a = Math.abs(n);
+  const rounded = Math.round(a);
+  if (rounded !== 0) return rounded;
+  return 1;
 }
 
 function RegistrationsWeekTrend({
@@ -86,6 +163,10 @@ function RegistrationsWeekTrend({
       </span>
     );
   }
+  const pct = registrationsWeekOverWeekPercent(change);
+  if (pct === 0) {
+    return null;
+  }
   const n = Number(change);
   const up = n >= 0;
   const iconClass = compact ? "size-3 shrink-0" : "size-4 shrink-0";
@@ -100,7 +181,7 @@ function RegistrationsWeekTrend({
       <span
         className={`font-family-dm-sans font-normal ${textClass} ${up ? "text-primary-11" : "text-red-11"}`}
       >
-        {Math.abs(n).toFixed(2)}%
+        {pct}%
         {compact ? " vs. sem. passada" : " vs. semana passada"}
       </span>
     </div>
@@ -108,7 +189,7 @@ function RegistrationsWeekTrend({
 }
 
 // Função auxiliar para calcular o status final de um registro
-function getFinalStatus(registration: any): string {
+function getFinalStatus(registration: RegistrationListRow): string {
   const paymentStatus = registration.order?.payment?.status;
   const registrationStatus = registration.status;
   const paymentMetadata = registration.order?.payment?.metadata;
@@ -128,10 +209,14 @@ function RegistrationRow({
   onViewPaymentDetails,
   getStatusBadge
 }: {
-  registration: any;
+  registration: RegistrationListRow;
   onViewRegistration: () => void;
   onViewPaymentDetails: () => void;
-  getStatusBadge: (status: string) => { label: string; className: string; icon: any };
+  getStatusBadge: (status: string) => {
+    label: string;
+    className: string;
+    icon: LucideIcon;
+  };
 }) {
   const [imageError, setImageError] = useState(false);
 
@@ -277,15 +362,14 @@ function RegistrationRow({
 }
 
 export default function EventRegistrationsPage() {
-  const router = useRouter();
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [event, setEvent] = useState<any>(null);
-  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [event, setEvent] = useState<Pick<Event, "id" | "name"> | null>(null);
+  const [registrations, setRegistrations] = useState<RegistrationListRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
@@ -323,46 +407,40 @@ export default function EventRegistrationsPage() {
     if (!authChecked) {
       setAuthChecked(true);
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, orgNav, authChecked]);
 
-  useEffect(() => {
-    if (!authChecked || authLoading || !eventId) return;
-    // Debounce search term
-    const timeoutId = setTimeout(() => {
-      loadData();
-    }, searchTerm ? 500 : 0);
-
-    return () => clearTimeout(timeoutId);
-  }, [authChecked, eventId, statusFilter, pagination.page, appliedDateRange, selectedTicketIds, searchTerm]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      let eventData: any = null;
-      let registrationsData: { registrations: any[]; pagination: any } = {
-        registrations: [],
-        pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
-      };
 
       try {
-        const [eventData, registrationsData] = await Promise.all([
+        const [eventData, registrationsData, aggregateStats] = await Promise.all([
           organizerService.getEventById(eventId),
           organizerService.getEventRegistrationsEnhanced(eventId, {
             page: pagination.page,
             limit: pagination.limit,
-            status: statusFilter !== "all" ? statusFilter as any : undefined,
+            status:
+              statusFilter !== "all"
+                ? toRegistrationApiStatus(statusFilter)
+                : undefined,
             search: searchTerm || undefined,
             ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
             startDate: appliedDateRange?.from?.toISOString(),
             endDate: appliedDateRange?.to?.toISOString(),
           }),
+          organizerService.getEventRegistrationStats(eventId).catch(() => null),
         ]);
 
         setEvent(eventData || { id: eventId, name: "Evento de Exemplo" });
-        setRegistrations(registrationsData.registrations);
+        setRegistrations(registrationsData.registrations as RegistrationListRow[]);
         setPagination(registrationsData.pagination);
-        setStats(normalizeRegistrationStats(registrationsData.stats));
-      } catch (apiError) {
+        setStats(
+          mergeRegistrationStatsWithTrendFallback(
+            registrationsData.stats,
+            aggregateStats,
+          ),
+        );
+      } catch {
         // Usar mocks quando API falhar
         const eventData = { id: eventId, name: "Evento de Exemplo" };
         setEvent(eventData);
@@ -388,7 +466,7 @@ export default function EventRegistrationsPage() {
           .reduce((sum, r) => sum + (r.finalAmount || 0), 0);
         setStats({ total, paid, cancelled, totalCollected });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error loading data:", error);
       setEvent({ id: eventId, name: "Evento de Exemplo" });
       setRegistrations(mockRegistrations);
@@ -410,12 +488,40 @@ export default function EventRegistrationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    appliedDateRange?.from,
+    appliedDateRange?.to,
+    eventId,
+    pagination.limit,
+    pagination.page,
+    searchTerm,
+    selectedTicketIds,
+    statusFilter,
+  ]);
+
+  useEffect(() => {
+    if (!authChecked || authLoading || !eventId) return;
+    const timeoutId = setTimeout(() => {
+      void loadData();
+    }, searchTerm ? 500 : 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    appliedDateRange,
+    authChecked,
+    authLoading,
+    eventId,
+    loadData,
+    pagination.page,
+    searchTerm,
+    selectedTicketIds,
+    statusFilter,
+  ]);
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<
       string,
-      { label: string; className: string; icon: any }
+      { label: string; className: string; icon: LucideIcon }
     > = {
       CONFIRMED: {
         label: "Confirmada",
@@ -469,9 +575,10 @@ export default function EventRegistrationsPage() {
     const orderId = reg.id?.toLowerCase() || "";
 
     // Buscar por nome do ticket nas modalidades
-    const ticketNames = reg.modalities
-      ?.map((m: any) => m.modality?.name?.toLowerCase() || "")
-      .join(" ") || "";
+    const ticketNames =
+      reg.modalities
+        ?.map((m) => m.modality?.name?.toLowerCase() || "")
+        .join(" ") || "";
 
     // Extrair números do termo de busca
     const searchNumbers = searchLower.replace(/\D/g, "");
@@ -506,13 +613,13 @@ export default function EventRegistrationsPage() {
       })();
 
     const matchesTickets = selectedTicketIds.length === 0 || (() => {
-      if ((reg as any).ticketId) {
-        return selectedTicketIds.includes((reg as any).ticketId);
+      if (reg.ticketId) {
+        return selectedTicketIds.includes(reg.ticketId);
       }
       if (!reg.modalities || reg.modalities.length === 0) return false;
       const selectedTickets = tickets.filter(t => selectedTicketIds.includes(t.id));
       if (selectedTickets.length === 0) return false;
-      return reg.modalities.some((regMod: any) =>
+      return reg.modalities.some((regMod) =>
         selectedTickets.some(ticket =>
           ticket.name === regMod.modality?.name ||
           ticket.modality === regMod.modality?.name ||
@@ -548,16 +655,6 @@ export default function EventRegistrationsPage() {
       </div>
     );
   }
-
-  const eventTabs = [
-    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-    { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-    { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-    { label: "Notificações", href: `/organizer/events/${eventId}/notifications` },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-2">

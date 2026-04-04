@@ -348,17 +348,7 @@ export default function OrganizationSettingsPage() {
     id: state.id,
     label: state.label,
   }));
-
-  const pixKeyTypeOptions: DropdownOption[] = PIX_KEY_TYPES.map((type) => ({
-    id: type.id,
-    label: type.label,
-  }));
-
   const selectedState = BRAZIL_STATES.find((s) => s.id === formData.state);
-  const selectedPixKeyType = PIX_KEY_TYPES.find(
-    (t) => t.id === formData.pixKeyType
-  );
-
   return (
     <div className="min-h-screen bg-gray-2">
       {/* Desktop: fixed header com offset da sidebar. Mobile: barra com voltar + título (Figma) */}
@@ -388,7 +378,7 @@ export default function OrganizationSettingsPage() {
                 {/* Logo and Organization Info */}
                 <div className="flex gap-3 md:gap-4 items-center relative shrink-0 w-full md:w-auto">
                   {/* Logo - menor no mobile (Figma ~40px) */}
-                  <div className="relative shrink-0 size-10 md:size-24 rounded-full overflow-hidden bg-gray-6">
+                  <div className="relative shrink-0 size-10 md:size-24 rounded-full bg-gray-6">
                     <ImageWithInitialFallback
                       src={
                         organizer.logoUrl?.trim()
@@ -400,7 +390,7 @@ export default function OrganizationSettingsPage() {
                       fallbackId={organizer.id}
                       fill
                       sizes="96px"
-                      className="size-full"
+                      className="size-full rounded-full"
                       imgClassName="object-cover"
                       letterClassName="text-xl md:text-3xl font-medium text-gray-11"
                     />
@@ -443,7 +433,7 @@ export default function OrganizationSettingsPage() {
                         fallbackId={user?.id}
                         fill
                         sizes="40px"
-                        className="size-full"
+                        className="size-full rounded-full"
                         imgClassName="object-cover"
                         letterClassName="text-sm font-medium text-gray-11"
                       />
