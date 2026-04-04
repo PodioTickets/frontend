@@ -92,6 +92,42 @@ const formatProductCardBasePriceLabel = (product: Product): string => {
   return formatPrice(product.basePrice);
 };
 
+/**
+ * Valor em reais a somar no total do pedido (mesma regra de `previewVariationListPriceLabelForProduct`).
+ * Incluso no ingresso: cobra só upgrade (v - base) quando v ≥ base; fora do ingresso: paga v se v < base, senão v (equiv. base + acréscimo).
+ */
+function billableReaisForProductSelection(
+  product: Product,
+  selectedVariation: Product["variations"][number] | null,
+): number {
+  const base = product.basePrice;
+
+  if (!selectedVariation) {
+    if (product.isIncludedInTicket) return 0;
+    return base;
+  }
+
+  const v = selectedVariation.price;
+
+  if (!productAnyVariationHasSpecificPrice(product)) {
+    if (product.isIncludedInTicket) return 0;
+    return base;
+  }
+
+  if (!variationHasMeaningfulSpecificPriceReais(v)) {
+    if (product.isIncludedInTicket) return 0;
+    return base;
+  }
+
+  if (product.isIncludedInTicket) {
+    if (v < base) return 0;
+    return Math.max(0, v - base);
+  }
+
+  if (v < base) return v;
+  return v;
+}
+
 export function SubscriptionStep({
   event,
   onNext,
@@ -462,7 +498,7 @@ export function SubscriptionStep({
     });
   }, [participants, participantsWithTickets, requiredProducts, additionalProducts]);
 
-  // Produto obrigatório com exatamente uma variação: pré-seleciona por participante
+  // Produto obrigatório ou não incluso no ingresso, com uma única variação: pré-seleciona por participante
   useEffect(() => {
     if (loading) return;
 
@@ -478,7 +514,9 @@ export function SubscriptionStep({
         );
 
         for (const product of ticketProducts) {
-          if (!product.isRequired) continue;
+          const needsVariationChoice =
+            product.isRequired || !product.isIncludedInTicket;
+          if (!needsVariationChoice) continue;
           if (product.variations.length !== 1) continue;
 
           const key = getVariationKey(participantIndex, product.id);
@@ -657,11 +695,18 @@ export function SubscriptionStep({
   };
 
   // Obter variação selecionada
-  const getSelectedVariation = (participantIndex: number, product: Product) => {
+  const getSelectedVariation = (
+    participantIndex: number,
+    product: Product,
+  ): Product["variations"][number] | null => {
     const variationKey = getVariationKey(participantIndex, product.id);
     const selectedId = selectedVariations[variationKey];
     if (!selectedId) return null;
-    return product.variations.find((v, i) => (v.id || `${product.id}-${i}`) === selectedId);
+    return (
+      product.variations.find(
+        (v, i) => (v.id || `${product.id}-${i}`) === selectedId,
+      ) ?? null
+    );
   };
 
   // Calcular total de produtos adicionais selecionados por participante
@@ -669,18 +714,9 @@ export function SubscriptionStep({
     // Usar apenas os produtos adicionais do ticket deste participante
     const participantAdditionalProducts = getAdditionalProductsForParticipant(participantIndex);
     return participantAdditionalProducts.reduce((total, product) => {
-      const variationKey = getVariationKey(participantIndex, product.id);
-      const selectedId = selectedVariations[variationKey];
-      if (selectedId) {
-        const selectedVariation = product.variations.find(
-          (v, i) => (v.id || `${product.id}-${i}`) === selectedId
-        );
-        if (selectedVariation) {
-          return total + selectedVariation.price;
-        }
-        return total + product.basePrice;
-      }
-      return total;
+      const selectedVariation = getSelectedVariation(participantIndex, product);
+      if (!selectedVariation) return total;
+      return total + billableReaisForProductSelection(product, selectedVariation);
     }, 0);
   };
 
@@ -689,15 +725,10 @@ export function SubscriptionStep({
     // Usar apenas os produtos obrigatórios do ticket deste participante
     const participantRequiredProducts = getRequiredProductsForParticipant(participantIndex);
     return participantRequiredProducts.reduce((total, product) => {
-      // Se o produto está incluído no ingresso, não cobrar
-      if (product.isIncludedInTicket) {
-        return total;
-      }
       const selectedVariation = getSelectedVariation(participantIndex, product);
-      if (selectedVariation) {
-        return total + selectedVariation.price;
-      }
-      return total + product.basePrice;
+      return (
+        total + billableReaisForProductSelection(product, selectedVariation)
+      );
     }, 0);
   };
 

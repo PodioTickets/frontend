@@ -660,7 +660,7 @@ export function CreateProductModal() {
                               name={productName || "Produto"}
                               fill
                               sizes="120px"
-                              className="size-full"
+                              className="size-full border-transparent border-0"
                               letterClassName="text-4xl font-semibold"
                             />
                           </div>
@@ -1126,7 +1126,7 @@ export function CreateProductModal() {
                             name={productName || "Nome do produto"}
                             fill
                             sizes="100px"
-                            className="size-full"
+                            className="size-full border-transparent border-0"
                             letterClassName="text-2xl font-semibold"
                           />
                         </div>

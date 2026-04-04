@@ -203,7 +203,7 @@ function SortableTicketProductCard({
               fallbackId={product.productId}
               fill
               sizes="100px"
-              className="size-full rounded"
+              className="size-full rounded border-transparent border-0"
               letterClassName="text-base font-semibold font-family-dm-sans"
             />
           </div>
