@@ -35,12 +35,12 @@ export default function EditFlowEventPreviewPage() {
       setLoading(true);
       try {
         const eventData = await organizerService.getEventById(eventId);
-        setEvent(eventData as Record<string, unknown>);
+        setEvent(eventData as unknown as Record<string, unknown>);
 
         try {
           const kitsData = await organizerService.getKits(eventId);
           setKits(
-            (kitsData as Record<string, unknown>[]).filter(
+            (kitsData as unknown as Record<string, unknown>[]).filter(
               (kit) => kit.isActive === true,
             ),
           );

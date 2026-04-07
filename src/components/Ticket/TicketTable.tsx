@@ -11,7 +11,7 @@ import {
   Copy,
   Move,
   Folder,
-  Ticket,
+  Ticket as TicketIcon,
   CircleX,
 } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
@@ -371,9 +371,8 @@ function SortableTicketRow({
       <div
         {...mobileDragListeners}
         {...mobileDragAttributes}
-        className={`flex w-full flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden ${
-          mobileNoDrag ? "" : "touch-none cursor-move active:cursor-grabbing"
-        }`}
+        className={`flex w-full flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden ${mobileNoDrag ? "" : "touch-none cursor-move active:cursor-grabbing"
+          }`}
       >
         <div className="flex w-full items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -532,11 +531,10 @@ export function TicketTable({
                 key={p}
                 type="button"
                 onClick={() => onPageChange(p)}
-                className={`flex size-8 items-center justify-center rounded-lg border ${
-                  currentPage === p
+                className={`flex size-8 items-center justify-center rounded-lg border ${currentPage === p
                     ? "border-[#59E373] bg-[#59E373] text-gray-12"
                     : "border-gray-6 hover:bg-gray-3"
-                }`}
+                  }`}
               >
                 {p}
               </button>
@@ -694,7 +692,7 @@ export function TicketTable({
                     >
                       <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gray-3">
                         {opt.isUncategorizedBucket ? (
-                          <Ticket className="size-5 text-gray-11" strokeWidth={2} />
+                          <TicketIcon className="size-5 text-gray-11" strokeWidth={2} />
                         ) : (
                           <Folder className="size-5 text-gray-11" strokeWidth={2} />
                         )}
