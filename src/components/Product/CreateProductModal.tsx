@@ -1091,9 +1091,10 @@ export function CreateProductModal() {
                               sanitizeVariationTypeLabelInput(e.target.value),
                             )
                           }
-                          placeholder="Ex: Escolha o Tamanho ou Cores"
+                          placeholder={`Ex: "Escolha o tamanho/cor/variação"`}
                           className="h-12 px-3"
                         />
+
                       </div>
 
                       {/* Variations: mobile = cards (Figma); desktop = tabela */}
