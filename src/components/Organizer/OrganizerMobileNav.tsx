@@ -168,14 +168,6 @@ export function OrganizerMobileNav() {
               })}
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 h-12 px-4 rounded-lg border border-[#3A3A3A] bg-white/5 text-white hover:bg-white/10 transition-colors text-left font-family-dm-sans"
-              >
-                <InfoIcon className="size-5 shrink-0" />
-                <span className="text-sm font-medium">Central de ajuda</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   setOpen(false);
                   openAccessAllOrganizationsModal();

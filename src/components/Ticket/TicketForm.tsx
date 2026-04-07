@@ -48,6 +48,7 @@ import { Loading } from "../Loading";
 import { UnsavedTicketChangesModal } from "./UnsavedTicketChangesModal";
 import { DeleteTicketModal } from "./DeleteTicketModal";
 import { TicketAdvancedKitDisplayOptions } from "./TicketAdvancedKitDisplayOptions";
+import { cn } from "@/utils/cn";
 import { useTickets } from "@/hooks/useTickets";
 import { RemoveIcon } from "../Icons/RemoveIcon";
 import { ExcludeIcon } from "../Icons/Organizer/ExcludeIcon";
@@ -185,7 +186,7 @@ function SortableTicketProductCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[287px] ${isDragging ? "z-10 opacity-70 shadow-lg ring-2 ring-primary-8/25" : ""
+      className={`bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-0 md:min-w-[287px] ${isDragging ? "z-10 opacity-70 shadow-lg ring-2 ring-primary-8/25" : ""
         } ${dragDisabled
           ? ""
           : "cursor-grab touch-none active:cursor-grabbing [&_.ticket-product-actions]:cursor-default"
@@ -193,35 +194,33 @@ function SortableTicketProductCard({
       {...(dragDisabled ? {} : attributes)}
       {...(dragDisabled ? {} : listeners)}
     >
-      <div className="border-b border-gray-6 flex gap-3 items-center p-4">
-        <div className="flex gap-3 items-center flex-1 min-w-0">
-          <div className="relative size-[100px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0">
-            <ImageWithInitialFallback
-              src={product.product.image}
-              alt={product.product.name}
-              name={product.product.name}
-              fallbackId={product.productId}
-              fill
-              sizes="100px"
-              className="size-full rounded border-transparent border-0"
-              letterClassName="text-base font-semibold font-family-dm-sans"
-            />
-          </div>
-          <div className="flex flex-col justify-between h-full py-2 gap-2 flex-1 min-w-0">
-            <h3 className="text-gray-12 text-base font-semibold font-family-dm-sans leading-[1.1] truncate">
-              {product.product.name}
-            </h3>
-            <p className="text-gray-11 text-sm font-semibold font-family-dm-sans leading-[1.3]">
-              {product.product.isIncludedInTicket
-                ? "Valor incluso no ingresso"
-                : `R$ ${formatProductPrice(product.product.basePrice)}`}
-            </p>
-          </div>
+      <div className="border-b border-gray-6 flex flex-col gap-3 p-3 md:flex-row md:items-center md:gap-3 md:p-4">
+        <div className="relative mx-auto aspect-square w-full max-h-[132px] max-w-[132px] rounded border border-gray-6 overflow-hidden bg-gray-3 shrink-0 md:mx-0 md:size-[100px] md:max-h-none md:max-w-none md:aspect-auto">
+          <ImageWithInitialFallback
+            src={product.product.image}
+            alt={product.product.name}
+            name={product.product.name}
+            fallbackId={product.productId}
+            fill
+            sizes="(max-width: 768px) 132px, 100px"
+            className="size-full rounded border-transparent border-0"
+            letterClassName="text-base font-semibold font-family-dm-sans"
+          />
+        </div>
+        <div className="flex flex-col justify-center gap-1.5 flex-1 min-w-0 md:justify-between md:py-2 md:gap-2">
+          <h3 className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.1] line-clamp-2 md:text-base md:truncate md:line-clamp-none">
+            {product.product.name}
+          </h3>
+          <p className="text-gray-11 text-xs font-semibold font-family-dm-sans leading-[1.3] md:text-sm">
+            {product.product.isIncludedInTicket
+              ? "Valor incluso no ingresso"
+              : `R$ ${formatProductPrice(product.product.basePrice)}`}
+          </p>
         </div>
       </div>
 
       <div
-        className="ticket-product-actions flex flex-col items-end justify-center p-4"
+        className="ticket-product-actions flex flex-row items-center justify-end gap-2 p-3 md:flex-col md:items-end md:justify-center md:p-4"
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="flex gap-2 items-center">
@@ -469,6 +468,16 @@ function applyTicketDraftForm(
   if (Array.isArray(draft.products)) {
     a.setProducts(draft.products);
   }
+}
+
+/** Dígitos e no máximo um ponto decimal (ex.: 6.1 km). Vírgula vira ponto. */
+function sanitizeDistanceInput(raw: string): string {
+  const normalized = raw.replace(/,/g, ".").replace(/[^\d.]/g, "");
+  const dot = normalized.indexOf(".");
+  if (dot === -1) return normalized;
+  return (
+    normalized.slice(0, dot + 1) + normalized.slice(dot + 1).replace(/\./g, "")
+  );
 }
 
 export function TicketForm({
@@ -1511,7 +1520,7 @@ export function TicketForm({
     modalityTemplates.find((t) => t.id === selectedModality)?.label ||
     "Selecione";
   const selectedGenderLabel =
-    genderOptions.find((g) => g.id === gender)?.label || "Selecione";
+    genderOptions.find((g) => g.id === gender)?.label || "Selecionar";
   const selectedGroupLabel = Array.isArray(ticketCategories)
     ? ticketCategories.find((g) => g.id === selectedGroupId)?.name ||
     (initialGroupId
@@ -1528,17 +1537,18 @@ export function TicketForm({
   }
 
   return (
-    <div className={className}>
+    <div className={cn(className, "max-md:pb-20")}>
       <div className="w-full flex flex-col gap-9">
         {/* Title Section */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 border-gray-6 pb-3 pt-3 max-md:border-b md:gap-3 md:border-0 md:pb-0 -mx-4 px-4">
           <button
+            type="button"
             onClick={handleBack}
-            className="border border-gray-6 rounded-[52px] rotate-180 size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer shrink-0"
+            className="md:border border-gray-6 rotate-180 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer shrink-0 size-8 rounded-lg md:size-9 md:rounded-[52px]"
           >
             <ArrowButton isOpen={false} />
           </button>
-          <h1 className="text-gray-12 text-[28px] font-bold font-family-dm-sans leading-[1.1] min-w-0">
+          <h1 className="text-gray-12 min-w-0 font-manrope text-base font-extrabold leading-[1.1] md:font-dm-sans md:text-[28px] md:font-bold">
             {mode === "edit" ? "Editar ingresso" : "Criação de ingresso"}
           </h1>
         </div>
@@ -1555,7 +1565,8 @@ export function TicketForm({
                 value={ticketName}
                 onChange={(e) => setTicketName(e.target.value)}
                 placeholder="Ex: 5K"
-                maxLength={200}
+                maxLength={120}
+                showCharCount
                 className="h-12"
               />
             </div>
@@ -1606,137 +1617,6 @@ export function TicketForm({
             </div>
           </div>
 
-          <div className="flex gap-4">
-            {/* Modalidades */}
-            <div className="flex flex-col gap-2">
-              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                Modalidades
-              </label>
-              <Dropdown
-                options={modalityOptions}
-                trigger={(isOpen) => (
-                  <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-[250px] hover:bg-gray-3 transition-colors">
-                    <span
-                      className={`text-base font-family-dm-sans ${selectedModality ? "text-gray-12" : "text-gray-11"
-                        }`}
-                    >
-                      {selectedModalityLabel}
-                    </span>
-                    <ArrowButton isOpen={isOpen} />
-                  </button>
-                )}
-                onSelect={(option) => setSelectedModality(option.id || "")}
-              />
-            </div>
-
-            {/* Distância de prova */}
-            <div className="flex flex-col gap-2">
-              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                Distância de prova
-              </label>
-              <div className="border border-gray-6 rounded-lg flex gap-[10px] items-center px-3 py-4 h-12 w-max">
-                <div className="flex flex-1 gap-1 items-center min-w-0">
-                  <Input
-                    type="text"
-                    value={distance}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "");
-                      setDistance(value);
-                    }}
-                    placeholder="10"
-                    className="h-auto border-0 p-0 focus-visible:ring-0 focus-visible:border-0 shadow-none text-base font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:outline-none focus:border-0 rounded-none"
-                  />
-                </div>
-                <div className="relative shrink-0">
-                  <Dropdown
-                    options={[
-                      {
-                        id: "KM",
-                        label: "KM",
-                        onClick: () => setDistanceUnit("KM"),
-                      },
-                      {
-                        id: "M",
-                        label: "M",
-                        onClick: () => setDistanceUnit("M"),
-                      },
-                    ]}
-                    trigger={(isOpen) => (
-                      <div className="border border-gray-7 rounded-lg flex gap-2 items-center px-3 py-2 cursor-pointer hover:bg-gray-3 transition-colors">
-                        <div className="flex gap-1 items-center">
-                          <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                            {distanceUnit}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-center shrink-0">
-                          <ArrowButton isOpen={isOpen} />
-                        </div>
-                      </div>
-                    )}
-                    onSelect={(option) => setDistanceUnit(option.id || "KM")}
-                    position="bottom"
-                    align="end"
-                    className="right-0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {Array.isArray(ticketCategories) && ticketCategories.length > 0 ? (
-              <div className="flex flex-col gap-2 w-full">
-                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                  Categoria
-                </label>
-                <Dropdown
-                  options={groupOptions}
-                  width="w-full"
-                  trigger={(isOpen) => (
-                    <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
-                      <span
-                        className={`text-base font-family-dm-sans ${selectedGroupId || initialGroupId
-                          ? "text-gray-12"
-                          : "text-gray-11"
-                          }`}
-                      >
-                        {selectedGroupId || initialGroupId
-                          ? selectedGroupLabel
-                          : "Sem categoria"}
-                      </span>
-                      <ArrowButton isOpen={isOpen} />
-                    </button>
-                  )}
-                  onSelect={(option) => setSelectedGroupId(option.id || "")}
-                />
-              </div>
-            ) : null}
-
-          </div>
-
-          {/* Gênero */}
-          <div className="flex flex-col gap-2">
-            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-              Gênero
-            </label>
-            <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-              Selecione um gênero para este ingresso ou deixe como “Geral” para
-              todos.
-            </p>
-            <Dropdown
-              options={genderOptions}
-              trigger={(isOpen) => (
-                <button className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-[250px] hover:bg-gray-3 transition-colors">
-                  <span
-                    className={`text-base font-family-dm-sans ${gender ? "text-gray-12" : "text-gray-11"}`}
-                  >
-                    {selectedGenderLabel}
-                  </span>
-                  <ArrowButton isOpen={isOpen} />
-                </button>
-              )}
-              onSelect={(option) => setGender(option.id || "")}
-            />
-          </div>
-
           {/* Restrição de idade */}
           <div className="flex flex-col gap-2">
             <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
@@ -1770,8 +1650,8 @@ export function TicketForm({
               </div>
             </div>
             {hasAgeRestriction && (
-              <div className="flex gap-3 mt-2">
-                <div className="flex flex-col gap-2 w-max">
+              <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start">
+                <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
                   <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
                     Idade mínima
                   </label>
@@ -1782,7 +1662,7 @@ export function TicketForm({
                     className="h-12"
                   />
                 </div>
-                <div className="flex flex-col gap-2 w-max">
+                <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
                   <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
                     Idade máxima
                   </label>
@@ -1795,6 +1675,144 @@ export function TicketForm({
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start">
+            {/* Modalidades */}
+            <div className="flex flex-col gap-2 w-full shrink-0 md:w-auto">
+              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                Modalidades
+              </label>
+              <Dropdown
+                options={modalityOptions}
+                trigger={(isOpen) => (
+                  <button
+                    type="button"
+                    className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full md:w-[250px] hover:bg-gray-3 transition-colors"
+                  >
+                    <span
+                      className={`text-base font-family-dm-sans ${selectedModality ? "text-gray-12" : "text-gray-11"
+                        }`}
+                    >
+                      {selectedModalityLabel}
+                    </span>
+                    <ArrowButton isOpen={isOpen} />
+                  </button>
+                )}
+                onSelect={(option) => setSelectedModality(option.id || "")}
+              />
+            </div>
+
+            {/* Distância de prova */}
+            <div className="flex flex-col gap-2 w-full shrink-0 md:w-auto">
+              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                Distância de prova
+              </label>
+              <div className="border border-gray-6 rounded-lg flex gap-[10px] items-center px-3 py-4 h-12 w-full md:w-max">
+                <div className="flex flex-1 gap-1 items-center min-w-0">
+                  <Input
+                    type="text"
+                    value={distance}
+                    onChange={(e) =>
+                      setDistance(sanitizeDistanceInput(e.target.value))
+                    }
+                    placeholder="10"
+                    className="h-auto border-0 p-0 focus-visible:ring-0 focus-visible:border-0 shadow-none text-base font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:outline-none focus:border-0 rounded-none"
+                  />
+                </div>
+                <div className="relative shrink-0">
+                  <Dropdown
+                    options={[
+                      {
+                        id: "KM",
+                        label: "KM",
+                        onClick: () => setDistanceUnit("KM"),
+                      },
+                      {
+                        id: "M",
+                        label: "M",
+                        onClick: () => setDistanceUnit("M"),
+                      },
+                    ]}
+                    trigger={(isOpen) => (
+                      <div className="border border-gray-6 rounded-lg flex gap-2 items-center px-3 py-2 cursor-pointer hover:bg-gray-3 transition-colors">
+                        <div className="flex gap-1 items-center">
+                          <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                            {distanceUnit}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-center shrink-0">
+                          <ArrowButton isOpen={isOpen} />
+                        </div>
+                      </div>
+                    )}
+                    onSelect={(option) => setDistanceUnit(option.id || "KM")}
+                    position="bottom"
+                    align="end"
+                    className="right-0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {Array.isArray(ticketCategories) && ticketCategories.length > 0 ? (
+              <div className="flex flex-col gap-2 w-full md:flex-1 md:min-w-[200px]">
+                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                  Categoria
+                </label>
+                <Dropdown
+                  options={groupOptions}
+                  width="w-full"
+                  trigger={(isOpen) => (
+                    <button
+                      type="button"
+                      className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors"
+                    >
+                      <span
+                        className={`text-base font-family-dm-sans ${selectedGroupId || initialGroupId
+                          ? "text-gray-12"
+                          : "text-gray-11"
+                          }`}
+                      >
+                        {selectedGroupId || initialGroupId
+                          ? selectedGroupLabel
+                          : "Sem categoria"}
+                      </span>
+                      <ArrowButton isOpen={isOpen} />
+                    </button>
+                  )}
+                  onSelect={(option) => setSelectedGroupId(option.id || "")}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {/* Gênero */}
+          <div className="flex flex-col gap-2">
+            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+              Gênero
+            </label>
+            <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+              Selecione um gênero para este ingresso ou deixe como “Geral” para
+              todos.
+            </p>
+            <Dropdown
+              options={genderOptions}
+              trigger={(isOpen) => (
+                <button
+                  type="button"
+                  className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full md:w-[250px] hover:bg-gray-3 transition-colors"
+                >
+                  <span
+                    className={`text-base font-family-dm-sans ${gender ? "text-gray-12" : "text-gray-11"}`}
+                  >
+                    {selectedGenderLabel}
+                  </span>
+                  <ArrowButton isOpen={isOpen} />
+                </button>
+              )}
+              onSelect={(option) => setGender(option.id || "")}
+            />
           </div>
 
           {/* Lotes do ingresso */}
@@ -1841,7 +1859,7 @@ export function TicketForm({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="flex flex-col gap-2">
                       <label className="text-gray-12 text-sm font-family-dm-sans">
                         Quantidade de vagas
@@ -1948,8 +1966,8 @@ export function TicketForm({
                       </div>
 
                       {batch.startType === "date" && (
-                        <div className="flex gap-10">
-                          <div className="flex flex-col gap-2 w-max">
+                        <div className="flex flex-col gap-6 md:flex-row md:gap-10">
+                          <div className="flex flex-col gap-2 w-full md:w-max">
                             <label className="text-gray-12 text-sm font-family-dm-sans">
                               Data de início
                             </label>
@@ -1979,7 +1997,7 @@ export function TicketForm({
                               />
                             </div>
                           </div>
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-2 w-full md:w-max">
                             <label className="text-gray-12 text-sm font-family-dm-sans">
                               Data de Término
                             </label>
@@ -2063,7 +2081,7 @@ export function TicketForm({
               id="ticket-form-kit-products"
               className="flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-4"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                 <div className="flex flex-col gap-2">
                   <h2 className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.1]">
                     Produtos do Ingresso
@@ -2073,10 +2091,10 @@ export function TicketForm({
                     disponíveis neste ingresso.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:shrink-0">
                   <Button
                     variant="outline"
-                    className="border-gray-6 text-gray-12"
+                    className="border-gray-6 text-gray-12 w-full md:w-auto"
                     onClick={() => {
                       if (!eventId) {
                         toast.error("Evento não encontrado");
@@ -2093,6 +2111,7 @@ export function TicketForm({
                     Adicionar produtos existentes
                   </Button>
                   <Button
+                    className="w-full md:w-auto"
                     onClick={() => {
                       if (!eventId) {
                         toast.error("Evento não encontrado");
@@ -2101,6 +2120,9 @@ export function TicketForm({
                       openCreateProductModal({
                         eventId,
                         ticketBatchesTotalQuantity,
+                        linkedTicketNames: ticketName.trim()
+                          ? [ticketName.trim()]
+                          : [],
                       });
                     }}
                   >
@@ -2131,7 +2153,7 @@ export function TicketForm({
                       items={products.map((p) => p.productId)}
                       strategy={rectSortingStrategy}
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-3  gap-3">
+                      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                         {products.map((product) => (
                           <SortableTicketProductCard
                             key={product.productId}
@@ -2185,32 +2207,39 @@ export function TicketForm({
           )}
         </div>
 
-        {/* Footer Button */}
-        <div className="flex justify-between">
-          {mode === "edit" && ticketId ? (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => setDeleteModalOpen(true)}
-              className="py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
-            >
-              Deletar ingresso
-            </Button>
-          ) : null}
+      </div>
+
+      {/* Footer — barra fixa no mobile (Figma) */}
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-40 flex flex-col gap-3 border-t border-gray-6 bg-gray-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:static md:z-auto md:mt-9 md:flex-row md:items-center md:justify-between md:border-0 md:bg-transparent md:p-0 md:pb-0",
+          mode === "edit" && ticketId ? "" : "md:justify-end",
+        )}
+      >
+        {mode === "edit" && ticketId ? (
           <Button
-            onClick={handleSubmit}
-            disabled={saving || !isDirty}
-            className="font-bold px-11"
+            type="button"
+            variant="destructive"
+            onClick={() => setDeleteModalOpen(true)}
+            className="w-full py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50 md:w-auto"
           >
-            {saving
-              ? mode === "edit"
-                ? "Salvando..."
-                : "Criando..."
-              : mode === "edit"
-                ? "Salvar alterações"
-                : "Criar ingresso"}
+            Deletar ingresso
           </Button>
-        </div>
+        ) : null}
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving || !isDirty}
+          className="w-full font-bold md:w-auto md:self-end md:px-11"
+        >
+          {saving
+            ? mode === "edit"
+              ? "Salvando..."
+              : "Criando..."
+            : mode === "edit"
+              ? "Salvar alterações"
+              : "Criar ingresso"}
+        </Button>
       </div>
 
       <UnsavedTicketChangesModal

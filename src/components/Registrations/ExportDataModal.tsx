@@ -120,7 +120,7 @@ export function ExportDataModal() {
                       key={option.id}
                       type="button"
                       onClick={() => setSelectedFormat(option.id)}
-                      className={`w-full flex flex-col gap-6 p-4 rounded-lg border text-left transition-all cursor-pointer ${isSelected ? "bg-primary-4 border-primary-8" : "bg-gray-1 border-gray-6 hover:border-gray-7"}`}
+                      className={`w-full flex flex-col gap-6 p-4 rounded-lg border text-left transition-all cursor-pointer ${isSelected ? "bg-primary-4 border-primary-8" : "bg-gray-1 border-gray-6 hover:border-gray-6"}`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <Icon className="size-8 shrink-0 text-gray-12" />

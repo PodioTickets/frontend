@@ -12,6 +12,7 @@ import type { Ticket } from "@/hooks/useTickets";
 import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { Loading } from "../Loading";
 
 interface SubscriptionStepProps {
@@ -71,7 +72,14 @@ const productAnyVariationHasSpecificPrice = (product: Product): boolean =>
 const previewVariationListPriceLabelForProduct = (
   product: Product,
   variationPriceReais: number,
+  variationName?: string,
 ): string | undefined => {
+  if (
+    variationName != null &&
+    isSemInteresseVariation({ name: variationName })
+  ) {
+    return undefined;
+  }
   if (!productAnyVariationHasSpecificPrice(product)) {
     return undefined;
   }
@@ -105,6 +113,10 @@ function billableReaisForProductSelection(
   if (!selectedVariation) {
     if (product.isIncludedInTicket) return 0;
     return base;
+  }
+
+  if (isSemInteresseVariation(selectedVariation)) {
+    return 0;
   }
 
   const v = selectedVariation.price;
@@ -690,7 +702,11 @@ export function SubscriptionStep({
     return product.variations.map((variation, index) => ({
       id: variation.id || `${product.id}-${index}`,
       label: variation.name,
-      suffix: previewVariationListPriceLabelForProduct(product, variation.price),
+      suffix: previewVariationListPriceLabelForProduct(
+        product,
+        variation.price,
+        variation.name,
+      ),
     }));
   };
 
@@ -1027,10 +1043,11 @@ export function SubscriptionStep({
                                     ? previewVariationListPriceLabelForProduct(
                                       product,
                                       selected.price,
+                                      selected.name,
                                     )
                                     : undefined;
                                   return (
-                                    <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
+                                    <div className="w-full h-12 px-3 py-4 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
                                       {selected ? (
                                         <>
                                           <p className="text-base text-gray-11 truncate min-w-0">
@@ -1127,10 +1144,11 @@ export function SubscriptionStep({
                                       ? previewVariationListPriceLabelForProduct(
                                         product,
                                         selected.price,
+                                        selected.name,
                                       )
                                       : undefined;
                                     return (
-                                      <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
+                                      <div className="w-full h-12 px-3 py-4 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
                                         {selected ? (
                                           <>
                                             <p className="text-base text-gray-11 truncate min-w-0">
@@ -1349,6 +1367,7 @@ export function SubscriptionStep({
                             ? previewVariationListPriceLabelForProduct(
                               product,
                               selected.price,
+                              selected.name,
                             )
                             : undefined;
                           return (
@@ -1444,6 +1463,7 @@ export function SubscriptionStep({
                               ? previewVariationListPriceLabelForProduct(
                                 product,
                                 selected.price,
+                                selected.name,
                               )
                               : undefined;
                             return (

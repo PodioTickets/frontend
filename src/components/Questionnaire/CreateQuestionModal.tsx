@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
-import { X, Plus, Info } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { organizerService } from "@/services";
 import { CreateQuestionRequest } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
+import { TrashIcon } from "../Icons/TrashIcon";
+import { SelectTicketsModal } from "../Coupon/SelectTicketsModal";
+import { ArrowButton } from "../ArrowButton";
+import { Dropdown } from "../Dropdown";
+import { cn } from "@/utils/cn";
 
 const PENDING_QUESTION_PREFIX = "__pending_question__";
 
@@ -21,10 +26,6 @@ export type QuestionModalLocalPayload =
   | { kind: "create"; questionData: CreateQuestionRequest }
   | { kind: "update"; questionId: string; questionData: CreateQuestionRequest }
   | { kind: "delete"; questionId: string };
-import { TrashIcon } from "../Icons/TrashIcon";
-import { SelectTicketsModal } from "../Coupon/SelectTicketsModal";
-import { ArrowButton } from "../ArrowButton";
-import { Dropdown } from "../Dropdown";
 
 type QuestionType = "text" | "true_false" | "number" | "select" | "multiple_choice";
 
@@ -47,6 +48,18 @@ export function CreateQuestionModal() {
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [showSelectTicketsModal, setShowSelectTicketsModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMdUp, setIsMdUp] = useState(true);
+
+  useLayoutEffect(() => {
+    setIsMdUp(window.matchMedia("(min-width: 768px)").matches);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => setIsMdUp(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const isEditing = data?.questionId !== undefined;
   const eventId = data?.eventId;
@@ -113,7 +126,7 @@ export function CreateQuestionModal() {
     }
 
     if (question.length > 200) {
-      toast.error("A pergunta deve ter no máximo 25 caracteres");
+      toast.error("A pergunta deve ter no máximo 200 caracteres");
       return;
     }
 
@@ -239,6 +252,18 @@ export function CreateQuestionModal() {
   const showTrueFalseSection = type === "true_false";
   const showNumberSection = type === "number";
 
+  const panelMotion = isMdUp
+    ? {
+        initial: { opacity: 0, scale: 0.95, y: 20 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.95, y: 20 },
+      }
+    : {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+      };
+
   return (
     <>
       <AnimatePresence>
@@ -250,60 +275,91 @@ export function CreateQuestionModal() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/90 z-50"
+              className="fixed inset-0 z-50 bg-black/90"
               onClick={closeCreateQuestionModal}
             />
 
             {/* Modal */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              {...panelMotion}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center max-md:items-stretch max-md:justify-stretch md:p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[982px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+              <div
+                className={cn(
+                  "flex w-full max-w-[982px] flex-col overflow-hidden border border-gray-6 bg-gray-1 shadow-2xl pt-16 md:pt-0",
+                  "max-h-[80vh] rounded-xl",
+                  "max-md:h-dvh max-md:max-h-dvh max-md:max-w-none max-md:rounded-none max-md:border-0",
+                )}
+              >
                 {/* Header */}
-                <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                  <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                    {isEditing ? "Editar pergunta" : "Criar pergunta"}
-                  </h2>
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center justify-between border-b border-gray-6",
+                    "max-md:h-[52px] max-md:bg-gray-2 max-md:px-4 md:px-5 md:py-3",
+                  )}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-2 md:contents">
+                    <button
+                      type="button"
+                      onClick={closeCreateQuestionModal}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-[52px] md:border border-gray-6 transition-colors hover:bg-gray-3 md:hidden rotate-180"
+                      aria-label="Fechar"
+                    >
+                      <ArrowButton isOpen={false} />
+                    </button>
+                    <h2
+                      className={cn(
+                        "truncate leading-[1.3] text-gray-12",
+                        "max-md:font-manrope max-md:text-base max-md:font-extrabold",
+                        "md:font-family-dm-sans md:text-[20px] md:font-semibold",
+                      )}
+                    >
+                      <span className="md:hidden">
+                        {isEditing ? "Editar pergunta" : "Criar questionário"}
+                      </span>
+                      <span className="hidden md:inline">
+                        {isEditing ? "Editar pergunta" : "Criar pergunta"}
+                      </span>
+                    </h2>
+                  </div>
                   <button
+                    type="button"
                     onClick={closeCreateQuestionModal}
-                    className="text-gray-11 hover:text-gray-12 transition-colors p-1"
+                    className="hidden p-1 text-gray-11 transition-colors hover:text-gray-12 md:block"
+                    aria-label="Fechar"
                   >
                     <X className="size-6" />
                   </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
-                  <div className="flex flex-col gap-9 p-5">
+                <div className="min-h-0 flex-1 overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
+                  <div className="flex flex-col gap-8 p-4 max-md:gap-8 md:gap-9 md:p-5">
                     {/* Pergunta Input */}
                     <div className="flex flex-col gap-2.5">
                       <div className="flex flex-col gap-2">
-                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                        <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
                           Pergunta
                         </label>
-                        <div className="relative">
-                          <Input
-                            type="text"
-                            value={question}
-                            onChange={(e) => setQuestion(e.target.value)}
-                            placeholder="Digite uma pergunta aos participantes"
-                            maxLength={200}
-                            className="h-12 px-3 pr-24"
-                          />
-                        </div>
+                        <Input
+                          type="text"
+                          value={question}
+                          onChange={(e) => setQuestion(e.target.value)}
+                          placeholder="Digite uma pergunta aos participantes"
+                          maxLength={200}
+                          className="h-12 px-3 pr-24"
+                        />
                       </div>
                     </div>
 
                     {/* Tipo de resposta */}
                     <div className="flex flex-col gap-6">
-                      <div className="flex flex-col gap-2 w-[276px]">
-                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Tipo de resposta
+                      <div className="flex w-full max-w-none flex-col gap-2 md:w-[276px]">
+                        <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                          <span className="md:hidden">Tipo de resposta desejada</span>
+                          <span className="hidden md:inline">Tipo de resposta</span>
                         </label>
                         <Dropdown
                           options={QUESTION_TYPES.map(t => ({
@@ -312,15 +368,15 @@ export function CreateQuestionModal() {
                             onClick: () => setType(t.value)
                           }))}
                           trigger={
-                            <div className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors">
-                              <span className="text-gray-11 text-base font-normal font-family-dm-sans">
+                            <div className="flex h-12 cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 transition-colors hover:bg-gray-3">
+                              <span className="font-family-dm-sans text-base font-normal text-gray-11">
                                 {selectedTypeLabel}
                               </span>
                               <ArrowButton isOpen={false} />
                             </div>
                           }
                           onSelect={(option) => setType(option.id as QuestionType)}
-                          width="w-[276px]"
+                          width="w-full md:w-[276px]"
                         />
                       </div>
 
@@ -463,31 +519,31 @@ export function CreateQuestionModal() {
 
                     {/* Obrigatório/Opcional */}
                     <div className="flex flex-col gap-3">
-                      <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                      <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
                         Participante é obrigado a responder?
                       </label>
-                      <div className="flex gap-2.5">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                      <div className="flex flex-wrap gap-6 max-md:gap-10">
+                        <label className="flex cursor-pointer items-center gap-2">
                           <Radio
                             checked={isRequired}
-                            onChange={(e) => setIsRequired(true)}
+                            onChange={() => setIsRequired(true)}
                             name="required"
                             value="required"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-12">
                             Obrigatório
                           </span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex cursor-pointer items-center gap-2">
                           <Radio
                             checked={!isRequired}
-                            onChange={(e) => setIsRequired(false)}
+                            onChange={() => setIsRequired(false)}
                             name="required"
                             value="optional"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-12">
                             Opcional
                           </span>
                         </label>
@@ -496,11 +552,11 @@ export function CreateQuestionModal() {
 
                     {/* Aplicação aos ingressos */}
                     <div className="flex flex-col gap-3">
-                      <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                      <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
                         Quer aplicar essa pergunta a todos os ingressos?
                       </label>
-                      <div className="flex flex-wrap gap-6">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                      <div className="flex flex-wrap gap-6 max-md:gap-10">
+                        <label className="flex cursor-pointer items-center gap-2">
                           <Radio
                             checked={appliesTo === "all"}
                             onChange={() => {
@@ -510,33 +566,33 @@ export function CreateQuestionModal() {
                             name="apply-question-tickets"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-12">
                             Sim
                           </span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex cursor-pointer items-center gap-2">
                           <Radio
                             checked={appliesTo === "specific"}
                             onChange={() => setAppliesTo("specific")}
                             name="apply-question-tickets"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-12">
                             Não
                           </span>
                         </label>
                       </div>
                       {appliesTo === "specific" && (
-                        <div className="flex flex-col gap-2 w-full max-w-[276px]">
-                          <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                        <div className="flex w-full max-w-none flex-col gap-2 md:max-w-[276px]">
+                          <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
                             Aplicar em quais ingressos?
                           </label>
                           <button
                             type="button"
                             onClick={() => setShowSelectTicketsModal(true)}
-                            className="border border-gray-7 rounded-lg h-12 px-3 flex items-center justify-between cursor-pointer hover:bg-gray-3 transition-colors text-left"
+                            className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 text-left transition-colors hover:bg-gray-3"
                           >
-                            <span className="text-gray-11 text-base font-normal font-family-dm-sans">
+                            <span className="font-family-dm-sans text-base font-normal text-gray-11">
                               {selectedTicketIds.length > 0
                                 ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
                                 : "Selecione os ingressos"}
@@ -550,37 +606,62 @@ export function CreateQuestionModal() {
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-gray-6 flex items-center justify-between gap-3 px-6 py-4 shrink-0">
+                <div
+                  className={cn(
+                    "flex shrink-0 flex-col gap-3 border-t border-gray-6",
+                    "max-md:bg-gray-1 max-md:p-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
+                    "md:flex-row md:items-center md:justify-between md:gap-3 md:px-6 md:py-4",
+                  )}
+                >
                   {isEditing && (
                     <Button
                       variant="destructive"
                       onClick={() => openDeleteQuestionModal({ onConfirm: handleDelete })}
                       disabled={isSubmitting}
+                      className="max-md:h-12 max-md:w-full md:w-auto"
                     >
                       Deletar pergunta
                     </Button>
                   )}
 
-                  <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex items-center gap-3",
+                      "max-md:w-full max-md:gap-2",
+                      !isEditing && "md:ml-auto",
+                    )}
+                  >
                     <Button
                       variant="outline"
                       onClick={closeCreateQuestionModal}
                       disabled={isSubmitting}
-                      className="border-gray-6 text-gray-12 px-4 py-2"
+                      className={cn(
+                        "border-gray-6 px-4 py-2 text-gray-12",
+                        "max-md:h-12 max-md:flex-1",
+                      )}
                     >
-                      Cancelar
+                      <span className="md:hidden">Fechar</span>
+                      <span className="hidden md:inline">Cancelar</span>
                     </Button>
 
                     <Button
                       onClick={handleSave}
                       disabled={isSubmitting || !question.trim()}
-                      className="disabled:bg-opacity-50 disabled:cursor-not-allowed"
+                      className={cn(
+                        "disabled:cursor-not-allowed disabled:bg-opacity-50",
+                        "max-md:h-12 max-md:flex-1",
+                      )}
                     >
-                      {isSubmitting
-                        ? "Salvando..."
-                        : isEditing
-                          ? "Salvar pergunta"
-                          : "Salvar pergunta"}
+                      {isSubmitting ? (
+                        "Salvando..."
+                      ) : (
+                        <>
+                          <span className="md:hidden">
+                            {isEditing ? "Salvar pergunta" : "Confirmar e criar"}
+                          </span>
+                          <span className="hidden md:inline">Salvar pergunta</span>
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

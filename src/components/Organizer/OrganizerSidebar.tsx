@@ -287,12 +287,7 @@ export function OrganizerSidebar() {
                         </div>
                         <div className="flex flex-1 flex-col items-start justify-start min-w-0">
                           <p className="font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] truncate">
-                            Usuário
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-[14px] text-gray-12 leading-[1.3] truncate">
-                            {user?.firstName && user?.lastName
-                              ? `${user.firstName} ${user.lastName}`
-                              : user?.email || "Nome do usuário"}
+                            {user?.firstName}
                           </p>
                         </div>
                       </div>
@@ -387,12 +382,7 @@ export function OrganizerSidebar() {
                           </div>
                           <div className="flex flex-1 flex-col items-start justify-start min-w-0">
                             <p className="font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] truncate">
-                              Nome da organização
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[14px] text-gray-12 leading-[1.3] truncate">
-                              {user?.firstName && user?.lastName
-                                ? `${user.firstName} ${user.lastName}`
-                                : user?.email || "Nome do usuário dentro da organização"}
+                              {organizer?.name || "Nome organização"}
                             </p>
                           </div>
                         </div>
@@ -482,12 +472,6 @@ export function OrganizerSidebar() {
                       Configurações
                     </p>
                   </Link>
-                  <button className="flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors">
-                    <InfoIcon className="size-6 text-gray-12 shrink-0" />
-                    <p className="font-family-dm-sans font-medium text-[14px] text-gray-12 leading-[1.3] text-center whitespace-nowrap">
-                      Central de ajuda
-                    </p>
-                  </button>
                 </motion.div>
               </>
             )}

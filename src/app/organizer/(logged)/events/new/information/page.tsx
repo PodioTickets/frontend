@@ -179,10 +179,14 @@ export default function InformacoesPage() {
 
   const handleDateChange = (name: string, value: string) => {
     if (name === "registrationStartDate") {
+      const hasStart = Boolean(value?.trim());
       updateFormData({
         registrationStartDate: value,
         registrationEndDate: "",
         registrationEndTime: "",
+        registrationStartTime: hasStart
+          ? formData.registrationStartTime?.trim() || "00:00"
+          : "",
       });
       clearRegistrationPeriodErrorIfNeeded(name);
       if (errors[name]) {
@@ -192,11 +196,28 @@ export default function InformacoesPage() {
     }
 
     if (name === "registrationEndDate") {
-      const next = { ...formData, [name]: value };
+      const hasEnd = Boolean(value?.trim());
+      const nextEndTime = hasEnd
+        ? formData.registrationEndTime?.trim() || "00:00"
+        : "";
+      const next = {
+        ...formData,
+        registrationEndDate: value,
+        registrationEndTime: nextEndTime,
+      };
       if (wouldRegistrationEndBeforeStart(next)) {
         toast.error(REGISTRATION_END_BEFORE_START_TOAST);
         return;
       }
+      updateFormData({
+        registrationEndDate: value,
+        registrationEndTime: nextEndTime,
+      });
+      clearRegistrationPeriodErrorIfNeeded(name);
+      if (errors[name]) {
+        setErrors((prev) => ({ ...prev, [name]: "" }));
+      }
+      return;
     }
     updateFormData({ [name]: value });
     clearRegistrationPeriodErrorIfNeeded(name);
@@ -422,15 +443,18 @@ export default function InformacoesPage() {
         }
       }
 
-      const registrationStartDateTime =
-        formData.registrationStartDate && formData.registrationStartTime
-          ? `${formData.registrationStartDate}T${formData.registrationStartTime}:00`
-          : undefined;
+      const rs = formData.registrationStartDate?.trim();
+      const re = formData.registrationEndDate?.trim();
+      const rst = (formData.registrationStartTime?.trim() || "00:00").slice(0, 5);
+      const ret = (formData.registrationEndTime?.trim() || "00:00").slice(0, 5);
 
-      const registrationEndDateTime =
-        formData.registrationEndDate && formData.registrationEndTime
-          ? `${formData.registrationEndDate}T${formData.registrationEndTime}:00`
-          : undefined;
+      const registrationStartDateTime = rs
+        ? `${rs}T${rst}:00`
+        : undefined;
+
+      const registrationEndDateTime = re
+        ? `${re}T${ret}:00`
+        : undefined;
 
       const eventData: any = {
         name: formData.name.trim(),
@@ -554,22 +578,19 @@ export default function InformacoesPage() {
             onSubmit={handleSubmit}
             className="flex flex-col gap-9 md:gap-[44px]"
           >
-            <div className="flex flex-col md:flex-row gap-9 md:gap-10 w-full items-stretch md:items-start">
-              <div className="flex flex-col gap-3 w-full min-w-0 md:gap-[12px]">
+            <div className="flex flex-col md:flex-row gap-9 md:gap-3 w-full items-stretch md:items-start">
+              <div className="flex flex-col gap-3 flex-1 min-w-0">
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-3">
                     <label
-                      htmlFor="new-event-name"
+                      htmlFor="edit-event-name"
                       className="text-gray-12 text-base font-family-dm-sans"
                     >
                       Nome do evento
                     </label>
-                    <span className="text-sm text-gray-11 font-family-dm-sans shrink-0 tabular-nums">
-                      {formData.name.length}/{EVENT_NAME_MAX_LENGTH}
-                    </span>
                   </div>
                   <Input
-                    id="new-event-name"
+                    id="edit-event-name"
                     type="text"
                     name="name"
                     value={formData.name}
@@ -583,8 +604,7 @@ export default function InformacoesPage() {
                   <p className="text-red-10 text-sm">{errors.name}</p>
                 )}
               </div>
-
-              <div className="flex flex-col gap-3 md:gap-[12px] w-full md:w-[300px] shrink-0">
+              <div className="flex flex-col gap-3 w-full md:w-1/2 shrink-0">
                 <div className="flex flex-col gap-2">
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     Data do evento
@@ -618,12 +638,12 @@ export default function InformacoesPage() {
               </h2>
 
               <div className="flex flex-col md:flex-row gap-9 md:gap-[72px] items-stretch md:items-start">
-                <div className="flex flex-col gap-3 md:gap-[12px] min-w-0 flex-1">
+                <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     Data de início das inscrições
                   </label>
                   <div className="flex gap-3 items-end w-full">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 md:flex-none">
                       <DatePicker
                         value={formData.registrationStartDate}
                         onChange={(value) =>
@@ -638,7 +658,11 @@ export default function InformacoesPage() {
                     </div>
                     <div className="w-[112px] shrink-0 md:w-auto">
                       <TimePicker
-                        value={formData.registrationStartTime}
+                        value={
+                          formData.registrationStartDate?.trim()
+                            ? formData.registrationStartTime?.trim() || "00:00"
+                            : formData.registrationStartTime || ""
+                        }
                         onChange={(value) =>
                           handleTimeChange("registrationStartTime", value)
                         }
@@ -648,12 +672,12 @@ export default function InformacoesPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 md:gap-[12px] min-w-0 flex-1">
+                <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     Data de encerramento das inscrições
                   </label>
                   <div className="flex gap-3 items-end w-full">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 md:flex-none">
                       <DatePicker
                         value={formData.registrationEndDate}
                         onChange={(value) =>
@@ -671,7 +695,11 @@ export default function InformacoesPage() {
                     </div>
                     <div className="w-[112px] shrink-0 md:w-auto">
                       <TimePicker
-                        value={formData.registrationEndTime}
+                        value={
+                          formData.registrationEndDate?.trim()
+                            ? formData.registrationEndTime?.trim() || "00:00"
+                            : formData.registrationEndTime || ""
+                        }
                         onChange={(value) =>
                           handleTimeChange("registrationEndTime", value)
                         }
@@ -803,7 +831,7 @@ export default function InformacoesPage() {
 
             <div className="flex flex-col items-stretch justify-center w-full">
               <div
-                className="border-2 border-dashed border-gray-6 rounded-xl md:rounded-[12px] p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-7 transition-colors min-h-[140px] md:min-h-0"
+                className="border-2 border-dashed border-gray-6 rounded-xl md:rounded-[12px] p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center justify-center w-full cursor-pointer hover:border-gray-6 transition-colors min-h-[140px] md:min-h-0"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onClick={() => fileInputRef.current?.click()}

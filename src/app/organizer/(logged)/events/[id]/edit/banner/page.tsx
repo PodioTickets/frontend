@@ -437,83 +437,83 @@ export default function EditBannerPage() {
 
           <div className="w-full max-w-[402px] flex flex-col gap-6 shrink-0 xl:sticky xl:top-4 mx-auto xl:mx-0">
             <div className="bg-gray-2 flex flex-col gap-6 md:gap-8 p-4 md:p-6 rounded-lg md:rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
-            <h3 className="text-gray-12 text-xl md:text-2xl font-extrabold font-manrope leading-[1.1]">
-              {formData.name || "Nome do evento"}
-            </h3>
+              <h3 className="text-gray-12 text-xl md:text-2xl font-extrabold font-manrope leading-[1.1]">
+                {formData.name || "Nome do evento"}
+              </h3>
 
-            <div className="flex flex-col gap-4">
-              {eventLocation && (
-                <div className="flex gap-2 items-center">
-                  <LocationIcon className="size-6 text-gray-12 shrink-0" />
-                  <p className="text-gray-12 font-medium font-family-dm-sans leading-[1.3] flex-1">
-                    {eventLocation}
-                  </p>
-                </div>
-              )}
-
-              {formData.eventDate && (
-                <div className="flex gap-2 items-center">
-                  <CalendarIcon className="size-6 text-gray-12 shrink-0" />
-                  <p className="text-gray-12 font-medium font-family-dm-sans leading-[1.3]">
-                    {formatDate(formData.eventDate)}
-                  </p>
-                </div>
-              )}
-
-              <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 flex flex-col gap-4">
-                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                  Organizador
-                </p>
-                <div className="flex gap-2 items-center">
-                  {orgLogoSrc ? (
-                    <ImageWithInitialFallback
-                      src={orgLogoSrc}
-                      alt={orgName}
-                      name={orgName}
-                      width={40}
-                      height={40}
-                      className="size-10 rounded-full shrink-0 object-cover"
-                      fallbackId="org-logo"
-                    />
-                  ) : null}
-                  <div className="flex flex-col min-w-0">
-                    <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] truncate">
-                      {orgName}
+              <div className="flex flex-col gap-4">
+                {eventLocation && (
+                  <div className="flex gap-2 items-center">
+                    <LocationIcon className="size-6 text-gray-12 shrink-0" />
+                    <p className="text-gray-12 font-medium font-family-dm-sans leading-[1.3] flex-1">
+                      {eventLocation}
                     </p>
-                    {orgShowLegalSubtitle ? (
-                      <p
-                        className="text-gray-11 text-sm font-family-dm-sans leading-[1.3] truncate"
-                        title={orgLegalName ?? undefined}
-                      >
-                        {orgLegalName}
-                      </p>
-                    ) : null}
-                    {orgDocDisplay ? (
-                      <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                        {orgDocDisplay.label}: {orgDocDisplay.formatted}
-                      </p>
-                    ) : null}
                   </div>
-                </div>
-                <Button variant="outline" disabled className="w-full text-gray-12 border-gray-6">
-                  <MessageIcon className="min-w-5 min-h-5" />
-                  Falar com organizador
-                </Button>
-              </div>
-            </div>
+                )}
 
-            <Button className="w-full" disabled>
-              Inscrever-se
-            </Button>
-          </div>
-          <div className="hidden md:flex flex-col items-center justify-center gap-4">
-            <Button variant="outline" disabled className="text-gray-11 border-gray-6">
-              <ShareIcon className="size-5" />
-              Compartilhar
-            </Button>
+                {formData.eventDate && (
+                  <div className="flex gap-2 items-center">
+                    <CalendarIcon className="size-6 text-gray-12 shrink-0" />
+                    <p className="text-gray-12 font-medium font-family-dm-sans leading-[1.3]">
+                      {formatDate(formData.eventDate)}
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 flex flex-col gap-4">
+                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                    Organizador
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    {orgLogoSrc ? (
+                      <ImageWithInitialFallback
+                        src={orgLogoSrc}
+                        alt={orgName}
+                        name={orgName}
+                        width={40}
+                        height={40}
+                        className="size-10 rounded-full shrink-0 object-cover"
+                        fallbackId="org-logo"
+                      />
+                    ) : null}
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] truncate">
+                        {orgName}
+                      </p>
+                      {orgShowLegalSubtitle ? (
+                        <p
+                          className="text-gray-11 text-sm font-family-dm-sans leading-[1.3] truncate"
+                          title={orgLegalName ?? undefined}
+                        >
+                          {orgLegalName}
+                        </p>
+                      ) : null}
+                      {orgDocDisplay ? (
+                        <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                          {orgDocDisplay.label}: {orgDocDisplay.formatted}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <Button variant="outline" disabled className="w-full text-gray-12 border-gray-6">
+                    <MessageIcon className="min-w-5 min-h-5" />
+                    Falar com organizador
+                  </Button>
+                </div>
+              </div>
+
+              <Button className="w-full" disabled>
+                Inscrever-se
+              </Button>
+            </div>
+            <div className="hidden md:flex flex-col items-center justify-center gap-4">
+              <Button variant="outline" disabled className="text-gray-11 border-gray-6">
+                <ShareIcon className="size-5" />
+                Compartilhar
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -631,8 +631,8 @@ export default function EditBannerPage() {
 
   return (
     <div className="min-w-0 bg-gray-2 pb-28 md:bg-transparent md:pb-20">
-      <div className="md:hidden sticky top-0 z-20 bg-gray-2 border-b border-gray-6">
-        <div className="flex h-[52px] items-center gap-1 px-4">
+      <div className="md:hidden sticky top-0 z-20 bg-gray-2 border-b border-gray-6 -mx-4 px-4">
+        <div className="flex h-[52px] items-center gap-1">
           <Link
             href={editHref}
             className="size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors -rotate-180"
@@ -646,11 +646,11 @@ export default function EditBannerPage() {
         </div>
       </div>
 
-      <p className="px-4 pt-4 pb-2 text-base text-gray-11 font-family-dm-sans leading-[1.3] md:hidden">
+      <p className="pt-4 pb-2 text-base text-gray-11 font-family-dm-sans leading-[1.3] md:hidden">
         Imagens principais do evento para os participantes visualizarem
       </p>
 
-      <div className="mx-auto flex w-full max-w-[1100px] flex-col items-stretch gap-6 px-0 md:items-center md:gap-9 md:px-8">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-col items-stretch gap-6 px-0 md:items-center md:gap-9 md:px-0">
         <div className="hidden md:flex flex-col gap-4 items-center w-full">
           <div className="flex gap-3 items-center flex-wrap justify-center">
             <button
@@ -669,7 +669,7 @@ export default function EditBannerPage() {
           </p>
         </div>
 
-        <div className="flex w-full max-w-[1059px] flex-col gap-6 px-4 md:mx-auto md:px-0">
+        <div className="flex w-full max-w-[1059px] flex-col gap-6 md:mx-auto md:px-0">
           {/* Accordion — banner */}
           <div className="border border-gray-6 rounded-2xl overflow-hidden bg-gray-1">
             <button

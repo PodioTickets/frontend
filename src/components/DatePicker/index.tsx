@@ -159,7 +159,7 @@ export function DatePicker({
         <button
           type="button"
           disabled={disabled}
-          className={`border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className || ""
+          className={`border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className || ""
             }`}
         >
           <div

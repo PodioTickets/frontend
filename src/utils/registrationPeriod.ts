@@ -10,7 +10,7 @@ export type RegistrationPeriodFields = {
 };
 
 /**
- * Compara início e fim das inscrições quando ambas as datas existem (horas opcionais: 00:00 / 23:59).
+ * Compara início e fim das inscrições quando ambas as datas existem (horário vazio = 00:00).
  * Usado no onChange (bloquear + toast) e no submit.
  */
 export function wouldRegistrationEndBeforeStart(
@@ -20,7 +20,7 @@ export function wouldRegistrationEndBeforeStart(
   const re = next.registrationEndDate?.trim();
   if (!rs || !re) return false;
   const rst = next.registrationStartTime?.trim() || "00:00";
-  const ret = next.registrationEndTime?.trim() || "23:59";
+  const ret = next.registrationEndTime?.trim() || "00:00";
   const startMs = new Date(`${rs}T${rst}:00`).getTime();
   const endMs = new Date(`${re}T${ret}:59`).getTime();
   if (Number.isNaN(startMs) || Number.isNaN(endMs)) return false;

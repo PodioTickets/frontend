@@ -219,7 +219,7 @@ function CreditCardForm({
           selectedIds={[selectedInstallments]}
           onSelect={(option) => setSelectedInstallments(option.id || "1")}
           trigger={() => (
-            <div className="w-full h-12 px-3 rounded-lg border border-gray-7 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between">
+            <div className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between">
               <p className="text-base text-gray-11 font-family-dm-sans">
                 {installmentOptions.find(
                   (opt: DropdownOption) => opt.id === selectedInstallments
@@ -1507,7 +1507,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           <div
             className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "credit"
               ? "border-blue-8 bg-blue-3"
-              : "border-gray-7 bg-gray-3"
+              : "border-gray-6 bg-gray-3"
               }`}
             onClick={() => setSelectedPaymentMethod("credit")}
           >
@@ -1580,7 +1580,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           <div
             className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "pix"
               ? "border-blue-8 bg-blue-3"
-              : "border-gray-7 bg-gray-3"
+              : "border-gray-6 bg-gray-3"
               }`}
             onClick={() => setSelectedPaymentMethod("pix")}
           >

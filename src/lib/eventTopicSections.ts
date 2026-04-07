@@ -53,6 +53,73 @@ export function topicIdsInUiOrder(
 }
 
 /** Monta a lista do organizador (criar/editar tópicos). Não usa `event.description`. */
+/** Rascunho de tópicos para prévia sem salvar a página (sessionStorage). */
+export type TopicsPreviewDraftV1 = {
+  v: 1;
+  eventId: string;
+  sections: TopicSectionRow[];
+};
+
+const TOPICS_PREVIEW_STORAGE_KEY = "podiotickets.organizerTopicsPreview.v1";
+
+export function writeTopicsPreviewDraft(draft: TopicsPreviewDraftV1): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(TOPICS_PREVIEW_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    /* quota / modo privado */
+  }
+}
+
+export function readTopicsPreviewDraft(
+  eventId: string,
+): TopicsPreviewDraftV1 | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(TOPICS_PREVIEW_STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as TopicsPreviewDraftV1;
+    if (
+      data?.v !== 1 ||
+      data.eventId !== eventId ||
+      !Array.isArray(data.sections)
+    ) {
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function clearTopicsPreviewDraft(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(TOPICS_PREVIEW_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Campos necessários para renderizar blocos de tópico na prévia do organizador. */
+export type TopicPreviewSection = {
+  id: string;
+  title: string;
+  content: string;
+  isDefault: boolean;
+};
+
+export function topicSectionRowsToPreviewSections(
+  rows: TopicSectionRow[],
+): TopicPreviewSection[] {
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    content: r.content,
+    isDefault: !r.allowDelete,
+  }));
+}
+
 export function buildTopicSectionsFromEvent(
   event: Pick<Event, "topics">,
   options?: { onlyEnabled?: boolean }

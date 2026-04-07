@@ -126,7 +126,7 @@ export function EventCard({ event }: EventCardProps) {
                   name={organizer.name}
                   width={20}
                   height={20}
-                  className="rounded-sm shrink-0"
+                  className="hrink-0 rounded-full size-5"
                   imgClassName="object-cover"
                   letterClassName="text-xs"
                 />

@@ -519,8 +519,7 @@ export function RegisterModal() {
   const sexoOptions = [
     { id: "masculino", label: "Masculino" },
     { id: "feminino", label: "Feminino" },
-    { id: "outro", label: "Outro" },
-    { id: "prefiro-nao-dizer", label: "Prefiro não informar" },
+    { id: "outro", label: "Outro" }
   ];
 
   const renderStep1Mobile = () => (
@@ -578,7 +577,7 @@ export function RegisterModal() {
                   setShowNationalityDropdown((v) => !v);
                   if (!showNationalityDropdown) setNationalitySearch("");
                 }}
-                className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer text-left"
+                className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer text-left"
               >
                 <div className="flex gap-1 items-center flex-1 min-w-0">
                   <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
@@ -732,7 +731,7 @@ export function RegisterModal() {
                 width="w-full"
                 className="z-60"
                 trigger={(open: boolean) => (
-                  <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
+                  <div className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span
@@ -830,7 +829,7 @@ export function RegisterModal() {
                   setShowNationalityDropdown((v) => !v);
                   if (!showNationalityDropdown) setNationalitySearch("");
                 }}
-                className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer text-left"
+                className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer text-left"
               >
                 <div className="flex gap-1 items-center flex-1 min-w-0">
                   <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
@@ -982,7 +981,7 @@ export function RegisterModal() {
                 width="w-full"
                 className="z-60"
                 trigger={(open: boolean) => (
-                  <div className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
+                  <div className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer">
                     <div className="flex gap-1 items-center flex-1 min-w-0">
                       <HeartIcon className="w-5 h-5 text-gray-11 shrink-0" />
                       <span

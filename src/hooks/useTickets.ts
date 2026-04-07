@@ -68,6 +68,9 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
       return formattedTickets;
     },
     enabled: enabled && !!eventId,
+    /** Lista precisa refletir criação/edição ao voltar do formulário (defaults globais: refetchOnMount: false, staleTime longo). */
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const tickets = data ?? EMPTY_TICKETS;

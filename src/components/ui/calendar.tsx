@@ -168,7 +168,7 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
         maxHeight={dropdownMaxHeight}
         dataAttribute="calendar-month"
         trigger={() => (
-          <div className="flex items-center justify-between gap-1.5 h-8 min-w-[120px] px-2 rounded-md border border-gray-7 bg-gray-1 text-sm font-medium text-gray-12 cursor-pointer hover:bg-gray-3 transition-colors">
+          <div className="flex items-center justify-between gap-1.5 h-8 min-w-[120px] px-2 rounded-md border border-gray-6 bg-gray-1 text-sm font-medium text-gray-12 cursor-pointer hover:bg-gray-3 transition-colors">
             <span className="truncate">{monthLabel}</span>
             <ChevronDownIcon className="h-3.5 w-3.5 text-gray-11 shrink-0" />
           </div>
@@ -182,7 +182,7 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
         maxHeight={dropdownMaxHeight}
         dataAttribute="calendar-year"
         trigger={() => (
-          <div className="flex items-center justify-between gap-1.5 h-8 min-w-[90px] px-2 rounded-md border border-gray-7 bg-gray-1 text-sm font-medium text-gray-12 cursor-pointer hover:bg-gray-3 transition-colors">
+          <div className="flex items-center justify-between gap-1.5 h-8 min-w-[90px] px-2 rounded-md border border-gray-6 bg-gray-1 text-sm font-medium text-gray-12 cursor-pointer hover:bg-gray-3 transition-colors">
             <span className="truncate">{yearLabel}</span>
             <ChevronDownIcon className="h-3.5 w-3.5 text-gray-11 shrink-0" />
           </div>

@@ -674,7 +674,7 @@ export default function UserProfilePage() {
                   onClick={() =>
                     setShowNationalityDropdown(!showNationalityDropdown)
                   }
-                  className="flex h-12 items-center justify-between rounded-lg border border-gray-7 bg-transparent px-3"
+                  className="flex h-12 items-center justify-between rounded-lg border border-gray-6 bg-transparent px-3"
                 >
                   <div className="flex items-center gap-1 md:gap-2.5">
                     <FlagIcon className="size-5 shrink-0 text-gray-11" />
@@ -814,7 +814,7 @@ export default function UserProfilePage() {
                 <button
                   type="button"
                   onClick={() => setShowGenderDropdown(!showGenderDropdown)}
-                  className="flex h-12 items-center justify-between rounded-lg border border-gray-7 bg-transparent px-3"
+                  className="flex h-12 items-center justify-between rounded-lg border border-gray-6 bg-transparent px-3"
                 >
                   <div className="flex items-center gap-1 md:gap-2.5">
                     <HeartIcon className="size-5 shrink-0 text-gray-11" />

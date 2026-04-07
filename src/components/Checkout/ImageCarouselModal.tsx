@@ -164,7 +164,7 @@ export function ImageCarouselModal({
                       onClick={() => setCurrentIndex(index)}
                       className={`relative size-20 rounded-lg border-2 overflow-hidden shrink-0 transition-all ${index === currentIndex
                           ? "border-primary-11 scale-110"
-                          : "border-gray-6 hover:border-gray-7"
+                          : "border-gray-6 hover:border-gray-6"
                         }`}
                       aria-label={`Ver imagem ${index + 1}`}
                     >

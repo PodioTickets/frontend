@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService, organizerService } from "@/services";
@@ -14,12 +14,15 @@ import { Loading } from "@/components/Loading";
 import { SortableTopicsList } from "@/components/Topic/SortableTopicsList";
 import {
   buildTopicSectionsFromEvent,
+  clearTopicsPreviewDraft,
   DEFAULT_TOPIC_SENTINEL,
   isPendingTopicId,
   newPendingTopicId,
   topicIdsInUiOrder,
+  writeTopicsPreviewDraft,
   type TopicSectionRow,
 } from "@/lib/eventTopicSections";
+import { cn } from "@/utils/cn";
 
 export default function TopicosPage() {
   const router = useRouter();
@@ -32,6 +35,16 @@ export default function TopicosPage() {
   const editingTopicRef = useRef<{ topicId?: string; isEditing: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [committedSectionsJson, setCommittedSectionsJson] = useState<string | null>(
+    null,
+  );
+
+  const isDirty = useMemo(
+    () =>
+      committedSectionsJson !== null &&
+      JSON.stringify(sections) !== committedSectionsJson,
+    [sections, committedSectionsJson],
+  );
 
   useEffect(() => {
     const hasToken = userService.isAuthenticated();
@@ -55,6 +68,7 @@ export default function TopicosPage() {
         const { sections: next, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
         defaultTopicApiIdRef.current = defaultTopicApiId;
         setSections(next);
+        setCommittedSectionsJson(JSON.stringify(next));
       } catch (error: any) {
         console.error("Error loading topics:", error);
         toast.error("Erro ao carregar tópicos");
@@ -93,9 +107,22 @@ export default function TopicosPage() {
       return;
     }
 
+    if (!isDirty) {
+      orgNav.push("/organizer/events/new/questionnaire");
+      return;
+    }
+
     setSaving(true);
     try {
       let working = sections;
+      let prevCommitted: TopicSectionRow[] = [];
+      try {
+        prevCommitted = committedSectionsJson
+          ? (JSON.parse(committedSectionsJson) as TopicSectionRow[])
+          : [];
+      } catch {
+        prevCommitted = [];
+      }
 
       if (defaultRow.id === DEFAULT_TOPIC_SENTINEL) {
         const idx = sections.indexOf(defaultRow);
@@ -126,6 +153,28 @@ export default function TopicosPage() {
         });
       }
 
+      for (const row of working) {
+        if (
+          row.id === DEFAULT_TOPIC_SENTINEL ||
+          isPendingTopicId(row.id) ||
+          !row.allowDelete
+        ) {
+          continue;
+        }
+        const was = prevCommitted.find((r) => r.id === row.id);
+        if (
+          was &&
+          was.title === row.title &&
+          was.content === row.content
+        ) {
+          continue;
+        }
+        await organizerService.updateTopic(formData.createdEventId, row.id, {
+          title: row.title,
+          content: row.content,
+        });
+      }
+
       for (let i = 0; i < working.length; i++) {
         const row = working[i];
         if (!isPendingTopicId(row.id)) continue;
@@ -151,6 +200,8 @@ export default function TopicosPage() {
 
       await persistTopicOrder(working);
 
+      setCommittedSectionsJson(JSON.stringify(working));
+      clearTopicsPreviewDraft();
       toast.success("Tópicos salvos com sucesso!");
       orgNav.push("/organizer/events/new/questionnaire");
     } catch (error: any) {
@@ -228,90 +279,36 @@ export default function TopicosPage() {
       return;
     }
 
-    setSaving(true);
-    try {
-      if (isEditing && topicId === "default") {
-        const defaultRow = sections.find((s) => !s.allowDelete);
-        if (!defaultRow) {
-          toast.error("Tópico obrigatório não encontrado.");
-          return;
-        }
-        const titleToSave =
-          topicData.title?.trim() ||
-          defaultRow.title ||
-          "Detalhes do evento (Obrigatório)";
+    const titleToSave =
+      topicData.title?.trim() ||
+      (topicId === "default"
+        ? sections.find((s) => !s.allowDelete)?.title
+        : undefined) ||
+      "Detalhes do evento (Obrigatório)";
 
-        if (defaultRow.id !== DEFAULT_TOPIC_SENTINEL) {
-          const updated = await organizerService.updateTopic(
-            formData.createdEventId,
-            defaultRow.id,
-            {
-              title: titleToSave,
-              content: topicData.content,
-            }
-          );
-          defaultTopicApiIdRef.current = updated.id;
-          setSections((prev) =>
-            prev.map((s) =>
-              s.id === defaultRow.id
-                ? {
-                    ...s,
-                    title: updated.title?.trim() || titleToSave,
-                    content: updated.content,
-                  }
-                : s
-            )
-          );
-        } else {
-          const idx = sections.findIndex((s) => s.id === DEFAULT_TOPIC_SENTINEL);
-          const created = await organizerService.createTopic(formData.createdEventId, {
-            title: titleToSave,
-            content: topicData.content,
-            isEnabled: true,
-            isDefault: true,
-            order: idx + 1,
-          });
-          defaultTopicApiIdRef.current = created.id;
-          const next = sections.map((s) =>
-            s.id === DEFAULT_TOPIC_SENTINEL
-              ? {
-                  id: created.id,
-                  title: created.title?.trim() || titleToSave,
-                  content: created.content,
-                  allowDelete: false,
-                  variant: "default" as const,
-                }
-              : s
-          );
-          setSections(next);
-        }
-        toast.success("Conteúdo padrão atualizado com sucesso!");
-      } else if (isEditing && topicId) {
-        const updatedTopic = await organizerService.updateTopic(
-          formData.createdEventId,
-          topicId,
-          {
-            title: topicData.title,
-            content: topicData.content,
-          }
-        );
-        setSections((prev) =>
-          prev.map((s) =>
-            s.id === topicId
-              ? { ...s, title: updatedTopic.title, content: updatedTopic.content }
-              : s
-          )
-        );
-        toast.success("Tópico atualizado com sucesso!");
-      }
-
+    if (isEditing && topicId === "default") {
+      setSections((prev) =>
+        prev.map((s) =>
+          !s.allowDelete
+            ? { ...s, title: titleToSave, content: topicData.content }
+            : s
+        )
+      );
+      toast.success("Alterações aplicadas. Salve a página para persistir.");
       editingTopicRef.current = null;
-    } catch (error: any) {
-      console.error("Error saving topic:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Erro ao salvar tópico";
-      toast.error(errorMessage);
-    } finally {
-      setSaving(false);
+      return;
+    }
+
+    if (isEditing && topicId) {
+      setSections((prev) =>
+        prev.map((s) =>
+          s.id === topicId
+            ? { ...s, title: topicData.title, content: topicData.content }
+            : s
+        )
+      );
+      toast.success("Alterações aplicadas. Salve a página para persistir.");
+      editingTopicRef.current = null;
     }
   };
 
@@ -389,52 +386,88 @@ export default function TopicosPage() {
   }
 
   return (
-    <div className="bg-gray-2 flex-1 px-5 pt-[52px]">
-      <div className="w-full max-w-[843px] mx-auto flex flex-col gap-9">
-        <div className="flex gap-3 items-center">
+    <div className="flex-1 bg-gray-2 px-4 pb-40 pt-[52px] md:px-5">
+      <div className="mx-auto flex w-full max-w-[843px] flex-col gap-9 max-md:gap-8">
+        <div className="flex h-[52px] items-center gap-2 border-b border-gray-6 bg-gray-2 max-md:-mx-4 max-md:px-4 md:hidden">
           <button
+            type="button"
             onClick={handleBack}
-            className="border border-gray-6 rounded-[52px] size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180 cursor-pointer"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gray-6 text-gray-12 transition-colors hover:bg-gray-3 rotate-180"
+            aria-label="Voltar"
           >
             <ArrowButton isOpen={false} />
           </button>
-          <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+          <h1 className="min-w-0 font-manrope text-base font-extrabold leading-[1.1] text-gray-12">
+            Tópicos
+          </h1>
+        </div>
+
+        <div className="hidden items-center gap-3 md:flex">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={false} />
+          </button>
+          <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
             Criar tópicos
           </h1>
         </div>
 
-        <div className="flex flex-col items-stretch w-full max-w-full min-w-0">
+        <div className="flex min-w-0 w-full max-w-full flex-col items-stretch md:px-0">
           <SortableTopicsList
             topics={sections}
             onReorder={handleTopicsReorder}
             onEditTopic={handleEditTopic}
           />
 
-          <div className="flex items-center justify-center py-10 w-full">
+          <div className="flex w-full items-center justify-center py-10">
             <Button
               variant="outline"
               onClick={() => handleOpenModal()}
-              className="border-gray-6 text-gray-12 text-lg font-bold px-11 h-12"
+              className="h-12 w-full max-w-full gap-2 border-gray-6 font-manrope text-base font-bold text-gray-12 md:w-auto md:px-11 md:text-lg"
             >
-              <Plus className="size-5 mr-2" />
-              Adicionar tópico
+              <Plus className="size-5 shrink-0" />
+              <span className="md:hidden">Adicione mais um tópico</span>
+              <span className="hidden md:inline">Adicionar tópico</span>
             </Button>
           </div>
 
-          <div className="flex gap-2 items-start justify-end w-full pb-4 mt-10">
+          <div
+            className={cn(
+              "mt-10 flex w-full items-start gap-2 pb-4",
+              "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:mt-0 max-md:flex-col max-md:gap-3 max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
+              "md:justify-end",
+            )}
+          >
             <Button
               variant="outline"
-              onClick={() => orgNav.push("/organizer/events/new/preview-event")}
-              className="border-gray-6 text-gray-12 text-[20px] font-bold px-11 h-[52px]"
+              onClick={() => {
+                const id = formData.createdEventId;
+                if (id) {
+                  writeTopicsPreviewDraft({ v: 1, eventId: id, sections });
+                }
+                orgNav.push("/organizer/events/new/preview-event");
+              }}
+              className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px]"
             >
               Prévia
             </Button>
             <Button
               onClick={handleSave}
               disabled={saving || loading}
-              className="text-[20px] font-bold px-11 h-[52px] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-[52px] w-full font-manrope text-base font-bold max-md:h-12 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto md:px-11 md:text-[20px]"
             >
-              {saving ? "Salvando..." : "Confirmar tópicos"}
+              {saving ? (
+                "Salvando..."
+              ) : (
+                <>
+                  <span className="md:hidden">Confirmar informações</span>
+                  <span className="hidden md:inline">Confirmar tópicos</span>
+                </>
+              )}
             </Button>
           </div>
         </div>

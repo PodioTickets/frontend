@@ -48,7 +48,7 @@ function formatCep(value: string): string {
 }
 
 const selectTriggerClass =
-  "w-full h-12 px-3 rounded-lg border border-gray-7 bg-gray-1 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between gap-2";
+  "w-full h-12 px-3 rounded-lg border border-gray-6 bg-gray-1 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between gap-2";
 
 const inputClass =
   "h-12 px-3 rounded-lg border border-gray-6 bg-gray-1 text-base text-gray-12 font-family-dm-sans placeholder:text-gray-11 w-full focus:outline-none focus:border-primary-10";

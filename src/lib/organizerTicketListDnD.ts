@@ -93,8 +93,36 @@ export type OrganizerTicketDragEndArgs = {
   dragEndPosition: { x: number; y: number } | null;
   categoryElementsCacheRef: MutableRefObject<Map<string, DOMRect>>;
   setTicketOrderDraft: Dispatch<SetStateAction<Record<string, string[]>>>;
+  /** Rascunho atual de ordem (mesmo estado React) — necessário para calcular o patch sem depender do flush do setState. */
+  ticketOrderDraft: Record<string, string[]>;
 };
 
+function buildSameScopeOrderPatch(
+  ticketOrderDraft: Record<string, string[]>,
+  tickets: Ticket[],
+  categories: ModalityGroup[],
+  sourceScope: string | null,
+  activeTicketId: string,
+  overTicketId: string,
+): Record<string, string[]> {
+  const key = ticketOrderDraftKey(sourceScope);
+  const bucket = sortedTicketsInScope(tickets, sourceScope, categories);
+  let base = ticketOrderDraft[key];
+  const bucketIds = new Set(bucket.map((t) => t.id));
+  if (
+    !base ||
+    base.length !== bucket.length ||
+    base.some((id) => !bucketIds.has(id))
+  ) {
+    base = bucket.map((t) => t.id);
+  }
+  const oldIndex = base.indexOf(activeTicketId);
+  const newIndex = base.indexOf(overTicketId);
+  if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return {};
+  return { [key]: arrayMove(base, oldIndex, newIndex) };
+}
+
+/** Retorna patch de ordem por escopo (vazio = nada a persistir em reorder-tickets). */
 export async function applyOrganizerTicketDragEnd({
   event,
   tickets,
@@ -105,13 +133,14 @@ export async function applyOrganizerTicketDragEnd({
   dragEndPosition,
   categoryElementsCacheRef,
   setTicketOrderDraft,
-}: OrganizerTicketDragEndArgs): Promise<void> {
+  ticketOrderDraft,
+}: OrganizerTicketDragEndArgs): Promise<Record<string, string[]>> {
   const { active, over } = event;
   const activeTicketId = parseTicketDragId(active.id as string);
-  if (!activeTicketId) return;
+  if (!activeTicketId) return {};
 
   const ticket = tickets.find((t) => t.id === activeTicketId);
-  if (!ticket) return;
+  if (!ticket) return {};
 
   const ticketsQueryKey = queryKeys.events.tickets(eventId);
 
@@ -119,40 +148,33 @@ export async function applyOrganizerTicketDragEnd({
     if (categoryIdForTicketScope(ticket, categories) !== null) {
       await handleDropTicket(activeTicketId, null);
     }
-    return;
+    return {};
   }
 
   const overId = over.id.toString();
 
   if (overId.startsWith(TICKET_PREFIX)) {
     const overTicketId = parseTicketDragId(overId);
-    if (!overTicketId || overTicketId === activeTicketId) return;
+    if (!overTicketId || overTicketId === activeTicketId) return {};
 
     const overTicket = tickets.find((t) => t.id === overTicketId);
-    if (!overTicket) return;
+    if (!overTicket) return {};
 
     const sourceScope = categoryIdForTicketScope(ticket, categories);
     const targetScope = categoryIdForTicketScope(overTicket, categories);
 
     if (sourceScope === targetScope) {
-      setTicketOrderDraft((prev) => {
-        const key = ticketOrderDraftKey(sourceScope);
-        const bucket = sortedTicketsInScope(tickets, sourceScope, categories);
-        let base = prev[key];
-        const bucketIds = new Set(bucket.map((t) => t.id));
-        if (
-          !base ||
-          base.length !== bucket.length ||
-          base.some((id) => !bucketIds.has(id))
-        ) {
-          base = bucket.map((t) => t.id);
-        }
-        const oldIndex = base.indexOf(activeTicketId);
-        const newIndex = base.indexOf(overTicketId);
-        if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev;
-        return { ...prev, [key]: arrayMove(base, oldIndex, newIndex) };
-      });
-      return;
+      const patch = buildSameScopeOrderPatch(
+        ticketOrderDraft,
+        tickets,
+        categories,
+        sourceScope,
+        activeTicketId,
+        overTicketId,
+      );
+      if (Object.keys(patch).length === 0) return {};
+      setTicketOrderDraft((prev) => ({ ...prev, ...patch }));
+      return patch;
     }
 
     await handleDropTicket(
@@ -163,41 +185,31 @@ export async function applyOrganizerTicketDragEnd({
     const fresh =
       queryClient.getQueryData<Ticket[]>(ticketsQueryKey) ?? [];
 
-    setTicketOrderDraft((prev) => {
-      const targetKey = ticketOrderDraftKey(targetScope);
-      const sourceKey = ticketOrderDraftKey(sourceScope);
-      const targetBucket = sortedTicketsInScope(
-        fresh,
-        targetScope,
-        categories,
-      );
-      const sourceBucket = sortedTicketsInScope(
-        fresh,
-        sourceScope,
-        categories,
-      );
+    const targetKey = ticketOrderDraftKey(targetScope);
+    const sourceKey = ticketOrderDraftKey(sourceScope);
+    const targetBucket = sortedTicketsInScope(fresh, targetScope, categories);
+    const sourceBucket = sortedTicketsInScope(fresh, sourceScope, categories);
 
-      const withoutActiveInTarget = targetBucket.filter(
-        (t) => t.id !== activeTicketId,
-      );
-      const insertAt = Math.max(
-        0,
-        withoutActiveInTarget.findIndex((t) => t.id === overTicketId),
-      );
-      const newTargetIds = [
-        ...withoutActiveInTarget.slice(0, insertAt).map((t) => t.id),
-        activeTicketId,
-        ...withoutActiveInTarget.slice(insertAt).map((t) => t.id),
-      ];
-      const newSourceIds = sourceBucket.map((t) => t.id);
+    const withoutActiveInTarget = targetBucket.filter(
+      (t) => t.id !== activeTicketId,
+    );
+    const insertAt = Math.max(
+      0,
+      withoutActiveInTarget.findIndex((t) => t.id === overTicketId),
+    );
+    const newTargetIds = [
+      ...withoutActiveInTarget.slice(0, insertAt).map((t) => t.id),
+      activeTicketId,
+      ...withoutActiveInTarget.slice(insertAt).map((t) => t.id),
+    ];
+    const newSourceIds = sourceBucket.map((t) => t.id);
 
-      return {
-        ...prev,
-        [targetKey]: newTargetIds,
-        [sourceKey]: newSourceIds,
-      };
-    });
-    return;
+    const patch = {
+      [targetKey]: newTargetIds,
+      [sourceKey]: newSourceIds,
+    };
+    setTicketOrderDraft((prev) => ({ ...prev, ...patch }));
+    return patch;
   }
 
   if (overId.startsWith("category-")) {
@@ -210,13 +222,13 @@ export async function applyOrganizerTicketDragEnd({
         if (categoryIdForTicketScope(ticket, categories) !== null) {
           await handleDropTicket(activeTicketId, null);
         }
-        return;
+        return {};
       }
       if (categoryIdForTicketScope(ticket, categories) !== targetCategoryId) {
         await handleDropTicket(activeTicketId, targetCategoryId);
       }
     }
-    return;
+    return {};
   }
 
   if (dragEndPosition) {
@@ -261,4 +273,6 @@ export async function applyOrganizerTicketDragEnd({
       }
     }
   }
+
+  return {};
 }

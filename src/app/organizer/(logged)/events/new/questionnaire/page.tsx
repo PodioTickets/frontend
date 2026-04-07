@@ -14,6 +14,7 @@ import { Plus, Pencil } from "lucide-react";
 import type { Question } from "@/services/organizer/OrganizerService";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { Loading } from "@/components/Loading";
+import { cn } from "@/utils/cn";
 
 export default function QuestionnairePage() {
   const router = useRouter();
@@ -122,36 +123,60 @@ export default function QuestionnairePage() {
   }
 
   return (
-    <div className="flex-1 pb-[176px] px-5 md:px-[124px] pt-[52px]">
-      <div className="max-w-[1192px] mx-auto flex flex-col gap-9">
-        {/* Title Section */}
+    <div
+      className={cn(
+        "flex-1 px-5 pt-[52px] pb-[176px] md:px-[124px]",
+        "max-md:pb-40",
+      )}
+    >
+      <div className="mx-auto flex max-w-[1192px] flex-col gap-8 md:gap-9">
+        <div
+          className={cn(
+            "flex h-[52px] items-center gap-2 border-b border-gray-6 bg-gray-2",
+            "max-md:-mx-5 max-md:px-5 md:hidden",
+          )}
+        >
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex size-8 shrink-0 items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3 rotate-180"
+          >
+            <ArrowButton isOpen={false} />
+          </button>
+          <h1 className="font-manrope text-base font-extrabold leading-[1.1] text-gray-12">
+            Questionário
+          </h1>
+        </div>
+
+        {/* Title Section — desktop */}
         <div className="flex flex-col gap-4">
-          <div className="flex gap-3 items-center">
+          <div className="hidden gap-3 md:flex md:items-center">
             <button
+              type="button"
               onClick={handleBack}
-              className="border border-gray-6 rounded-[52px] cursor-pointer size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
+              className="flex size-9 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3 rotate-180"
             >
               <ArrowButton isOpen={false} />
             </button>
-            <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+            <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
               Questionário
             </h1>
           </div>
-          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+          <p className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
             Crie perguntas extras para coletar informações dos participantes. Você pode pular esta etapa se desejar
           </p>
         </div>
 
         {/* Questions Section */}
         <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">
               Perguntas
             </h2>
             <Button
               onClick={handleCreateQuestion}
               variant="default"
-              className="text-base font-bold font-manrope leading-[1.1]"
+              className="font-manrope text-base font-bold leading-[1.1] max-md:h-11"
             >
               <Plus className="size-5" />
               Criar pergunta
@@ -160,47 +185,57 @@ export default function QuestionnairePage() {
 
           {/* Questions List */}
           {questions.length === 0 ? (
-            <div className="border border-gray-6 rounded-xl p-12 flex flex-col items-center justify-center gap-4">
-              <p className="text-gray-11 text-base font-family-dm-sans">
+            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-gray-6 p-12 max-md:p-8">
+              <p className="font-family-dm-sans text-base text-gray-11">
                 Nenhuma pergunta criada ainda
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-4 md:gap-y-6">
               {questions.map((question, index) => (
                 <div
                   key={question.id}
-                  className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-6 flex-1 min-w-[519px]"
+                  className="flex min-w-0 flex-1 flex-col gap-5 rounded-xl border border-gray-6 bg-gray-2 p-5 md:min-w-[519px] md:gap-6"
                 >
-                  <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
+                  <p className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-11 md:text-base">
                     Pergunta {index + 1}
                   </p>
 
                   <div className="flex flex-col gap-5">
-                    <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+                    <h3 className="font-manrope text-base font-bold leading-[1.1] text-gray-12 md:text-xl">
                       {question.question}
                     </h3>
 
-                    <div className="flex gap-2 items-center flex-wrap">
+                    <div className="flex flex-wrap items-center gap-2">
                       {question.isRequired ? (
-                        <span className="bg-yellow-3 px-4 py-3 rounded-[32px] text-yellow-12 text-base font-medium font-family-dm-sans leading-[1.3]">
+                        <span
+                          className={cn(
+                            "rounded-[52px] bg-yellow-3 px-4 py-3 font-medium font-family-dm-sans text-yellow-12 leading-[1.3]",
+                            "text-sm md:rounded-[32px] md:text-base",
+                          )}
+                        >
                           Obrigatório
                         </span>
                       ) : (
-                        <span className="bg-gray-4 px-4 py-3 rounded-[32px] text-gray-12 text-base font-medium font-family-dm-sans leading-[1.3]">
+                        <span
+                          className={cn(
+                            "rounded-[52px] bg-gray-4 px-4 py-3 font-medium font-family-dm-sans text-gray-12 leading-[1.3]",
+                            "text-sm md:rounded-[32px] md:text-base",
+                          )}
+                        >
                           Opcional
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between mt-auto">
-                    <div className={`flex gap-2.5 items-center ml-auto`}>
+                  <div className="mt-auto flex items-center justify-end">
+                    <div className="flex items-center gap-2.5">
                       <button
                         type="button"
                         title="Editar"
                         onClick={() => handleEditQuestion(question)}
-                        className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+                        className="flex size-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-gray-6 bg-gray-2 transition-colors hover:bg-gray-3"
                       >
                         <Pencil className="size-5 text-gray-11" />
                       </button>
@@ -212,7 +247,7 @@ export default function QuestionnairePage() {
                             onConfirm: () => handleDeleteQuestion(question.id),
                           })
                         }
-                        className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors cursor-pointer"
+                        className="hidden size-9 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 transition-colors hover:bg-red-3 md:flex"
                       >
                         <TrashIcon className="size-5 text-red-12" />
                       </button>
@@ -225,18 +260,32 @@ export default function QuestionnairePage() {
         </div>
 
         {/* Bottom Actions */}
-        <div className="flex justify-end gap-2">
+        <div
+          className={cn(
+            "flex gap-2",
+            "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:flex-col max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4",
+            "max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
+            "md:justify-end",
+          )}
+        >
           <Button
             onClick={handleSkip}
             variant="outline"
-            className="border-gray-6 text-gray-12 text-lg font-bold px-11 h-[52px]"
+            className={cn(
+              "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12",
+              "max-md:h-12 max-md:w-full max-md:px-4",
+              "max-md:border-yellow-6 max-md:bg-yellow-3 max-md:text-gray-12 max-md:hover:bg-yellow-4",
+            )}
           >
             Pular etapa
           </Button>
           <Button
             onClick={handleConfirmQuestionnaire}
             variant="default"
-            className="text-gray-12 text-lg font-bold px-11 h-[52px]"
+            className={cn(
+              "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12",
+              "max-md:h-12 max-md:w-full max-md:px-4",
+            )}
           >
             Próxima etapa
           </Button>

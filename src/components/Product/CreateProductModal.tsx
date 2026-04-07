@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  Fragment,
+} from "react";
 import { useCreateProductModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
-import { X, Plus, Info } from "lucide-react";
+import { X, Plus, Info, MoreVertical } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { TrashIcon } from "../Icons/TrashIcon";
@@ -21,6 +28,8 @@ import {
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { BookIcon } from "../Icons/BookIcon";
 import { LoadingAnimation } from "@/components/Loading";
+import { cn } from "@/utils/cn";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 
 interface ProductVariation {
   id: string;
@@ -59,6 +68,11 @@ function buyerVariationEditStateFromApiProduct(p: Record<string, unknown> | null
   return { allowed: true, deadlineDays: "30" };
 }
 
+/** Nome do tipo de variação: só letras, números e espaços (sem . , - etc.). */
+function sanitizeVariationTypeLabelInput(value: string): string {
+  return value.replace(/[^\p{L}\p{N}\s]/gu, "");
+}
+
 export function CreateProductModal() {
   const {
     isOpen,
@@ -81,6 +95,10 @@ export function CreateProductModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
+  const [linkedTicketNamesResolved, setLinkedTicketNamesResolved] = useState<
+    string[]
+  >([]);
   /** Edição: carregamento do produto via API ao abrir o modal. */
   const [productFetchStatus, setProductFetchStatus] = useState<
     "idle" | "loading" | "loaded" | "error"
@@ -174,15 +192,16 @@ export function CreateProductModal() {
     [anyVariationHasSpecificPrice, basePrice],
   );
 
-  const productPreviewDropdownOptions = useMemo(
-    () =>
-      variations.map((variation) => ({
+  /** Prévia do comprador: não lista opt-out «sem interesse» (existe só no fluxo interno/checkout). */
+  const productPreviewDropdownOptions = useMemo(() => {
+    return variations
+      .filter((v) => !isSemInteresseVariation({ name: v.name }))
+      .map((variation) => ({
         id: variation.id,
         label: variation.name.trim() || "Variação",
         suffix: previewVariationListPriceLabel(variation.price),
-      })),
-    [variations, previewVariationListPriceLabel],
-  );
+      }));
+  }, [variations, previewVariationListPriceLabel]);
 
   const productFormSnapshot = useMemo(
     () =>
@@ -208,7 +227,6 @@ export function CreateProductModal() {
       basePrice,
       isRequired,
       variationTypeName,
-      buyerCanEditVariation,
       variationChangeDeadlineDays,
       variations,
     ],
@@ -234,7 +252,9 @@ export function CreateProductModal() {
       const req = rec.isRequired ?? rec.is_required;
       setIsRequired(req !== false);
       setVariationTypeName(
-        String(rec.variationType ?? rec.variation_type ?? ""),
+        sanitizeVariationTypeLabelInput(
+          String(rec.variationType ?? rec.variation_type ?? ""),
+        ),
       );
       const rawVars = rec.variations;
       const vars = Array.isArray(rawVars) ? rawVars : [];
@@ -278,10 +298,13 @@ export function CreateProductModal() {
       setFormInitVersion(0);
       setProductFormBaseline(null);
       setProductFetchStatus("idle");
+      setSaveConfirmOpen(false);
+      setLinkedTicketNamesResolved([]);
       return;
     }
 
     setDeleteConfirmOpen(false);
+    setSaveConfirmOpen(false);
 
     if (!isEditing) {
       setProductFetchStatus("idle");
@@ -372,6 +395,54 @@ export function CreateProductModal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, formInitVersion]);
 
+  useEffect(() => {
+    if (!isOpen || !eventId) return;
+
+    let cancelled = false;
+    const productId = data?.productId;
+
+    const namesFromModalProp = (): string[] => {
+      const raw = data?.linkedTicketNames;
+      if (!Array.isArray(raw)) return [];
+      return raw.map((n) => String(n ?? "").trim()).filter(Boolean);
+    };
+
+    (async () => {
+      if (!productId) {
+        if (!cancelled) setLinkedTicketNamesResolved(namesFromModalProp());
+        return;
+      }
+      try {
+        const res = await organizerService.getTickets(eventId, {
+          page: 1,
+          limit: 500,
+        });
+        if (cancelled) return;
+        const tickets = res.tickets || [];
+        const pid = String(productId);
+        const fromApi = tickets
+          .filter(
+            (t: { productIds?: string[] }) =>
+              Array.isArray(t.productIds) &&
+              t.productIds.some((id) => String(id) === pid),
+          )
+          .map((t: { name?: string }) => String(t.name ?? "").trim())
+          .filter(Boolean);
+        if (!cancelled) {
+          setLinkedTicketNamesResolved([
+            ...new Set([...fromApi, ...namesFromModalProp()]),
+          ]);
+        }
+      } catch {
+        if (!cancelled) setLinkedTicketNamesResolved(namesFromModalProp());
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, eventId, data?.productId, data?.linkedTicketNames]);
+
   const handleProductCropped = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -442,34 +513,38 @@ export function CreateProductModal() {
     setBasePrice(formatted === "" ? "0,00" : formatted);
   };
 
-  const handleSave = async () => {
-    if (isProductLoading) return;
+  const validateBeforeSave = (): boolean => {
+    if (isProductLoading) return false;
 
     if (!productName.trim()) {
       toast.error("Digite o nome do produto");
-      return;
+      return false;
     }
 
-    if (productName.length > 25) {
-      toast.error("O nome do produto deve ter no máximo 25 caracteres");
-      return;
+    if (productName.length > 100) {
+      toast.error("O nome do produto deve ter no máximo 100 caracteres");
+      return false;
     }
 
     if (!hasMinVariations) {
       toast.error("Preencha o nome de pelo menos uma variação");
-      return;
+      return false;
     }
 
     if (!eventId) {
       toast.error("Evento não encontrado");
-      return;
+      return false;
     }
 
     if (!isIncludedInTicket && parsePriceReais(basePrice) <= 0) {
       toast.error("Informe um preço maior que zero para o produto.");
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const executeSave = async () => {
     setIsSubmitting(true);
 
     try {
@@ -546,13 +621,20 @@ export function CreateProductModal() {
     }
   };
 
-  const linkedTicketNamesForDelete = useMemo(() => {
-    const raw = data?.linkedTicketNames;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .map((n) => String(n ?? "").trim())
-      .filter(Boolean);
-  }, [data?.linkedTicketNames]);
+  const requestSave = () => {
+    if (!validateBeforeSave()) return;
+    if (linkedTicketNamesResolved.length > 0) {
+      setSaveConfirmOpen(true);
+      return;
+    }
+    void executeSave();
+  };
+
+  const confirmSaveAfterDialog = () => {
+    if (!validateBeforeSave()) return;
+    setSaveConfirmOpen(false);
+    void executeSave();
+  };
 
   const performDeleteProduct = async () => {
     if (!isEditing || !data?.productId || !eventId) return;
@@ -587,23 +669,30 @@ export function CreateProductModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/90 z-50"
+            className="fixed inset-0 z-50 bg-black/60 md:bg-black/90"
             onClick={() => {
-              if (deleteConfirmOpen) return;
+              if (deleteConfirmOpen || saveConfirmOpen) return;
               closeCreateProductModal();
             }}
           />
 
-          {/* Modal */}
+          {/* Modal — animação só com opacity: scale/y no motion aplicam transform e no mobile
+              quebram position:fixed do rodapé + scroll (faixa branca / modal “subindo”). */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 z-50 flex max-md:min-h-0 max-md:items-stretch max-md:p-0 md:items-center md:justify-center md:p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1192px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            <div
+              className={cn(
+                "relative flex min-h-0 w-full flex-col overflow-hidden bg-gray-1 shadow-2xl pt-16 md:pt-0",
+                "max-md:h-dvh max-md:max-h-dvh max-md:rounded-none max-md:border-0",
+                "md:max-h-[80vh] md:max-w-[1192px] md:rounded-xl md:border md:border-gray-6",
+              )}
+            >
               {isProductLoading ? (
                 <div
                   className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-gray-1/90 backdrop-blur-[2px]"
@@ -614,10 +703,51 @@ export function CreateProductModal() {
                 </div>
               ) : null}
               {/* Header */}
-              <div className="border-b border-gray-6 flex items-center justify-between px-4 py-3 shrink-0">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                  {isEditing ? "Editar produto" : "Criação de produto"}
-                </h2>
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-between border-b border-gray-6",
+                  "max-md:h-[52px] max-md:bg-gray-2 max-md:px-4 max-md:py-2",
+                  "md:px-4 md:py-3",
+                )}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-2 md:contents">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (deleteConfirmOpen) {
+                        setDeleteConfirmOpen(false);
+                        return;
+                      }
+                      if (saveConfirmOpen) {
+                        setSaveConfirmOpen(false);
+                        return;
+                      }
+                      closeCreateProductModal();
+                    }}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-lg md:border border-gray-6 text-gray-12 hover:bg-gray-3 md:hidden"
+                    aria-label="Voltar"
+                  >
+                    <ArrowButton isOpen={false} className="rotate-180" />
+                  </button>
+                  <h2
+                    className={cn(
+                      "min-w-0 text-gray-12 leading-[1.1]",
+                      "max-md:font-manrope max-md:text-base max-md:font-extrabold",
+                      "md:text-[20px] md:font-semibold md:font-family-dm-sans md:leading-[1.3]",
+                    )}
+                  >
+                    {isEditing ? (
+                      "Editar produto"
+                    ) : (
+                      <>
+                        <span className="md:hidden">Criar produto</span>
+                        <span className="hidden md:inline">
+                          Criação de produto
+                        </span>
+                      </>
+                    )}
+                  </h2>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -625,9 +755,13 @@ export function CreateProductModal() {
                       setDeleteConfirmOpen(false);
                       return;
                     }
+                    if (saveConfirmOpen) {
+                      setSaveConfirmOpen(false);
+                      return;
+                    }
                     closeCreateProductModal();
                   }}
-                  className="text-gray-11 hover:text-gray-12 transition-colors p-1"
+                  className="hidden p-1 text-gray-11 transition-colors hover:text-gray-12 md:block"
                   aria-label="Fechar"
                 >
                   <X className="size-6" />
@@ -635,25 +769,40 @@ export function CreateProductModal() {
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
-                <div className="flex flex-col gap-5 p-5">
-                  {/* Left Column */}
-                  <div className="flex-1 flex flex-col gap-11">
+              <div className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none] max-md:pb-36 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
+                <div className="flex flex-col gap-5 p-5 max-md:gap-8 max-md:p-4">
+                  {/* Left Column — flex-1 só no md+ evita a coluna “esticar” no mobile e gerar faixa vazia */}
+                  <div className="flex min-h-0 flex-col gap-11 max-md:gap-8 md:flex-1">
                     {/* Image Upload */}
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-col gap-3">
-                        <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                        <h3
+                          className={cn(
+                            "text-gray-12 font-semibold font-manrope leading-[1.1]",
+                            "max-md:text-lg",
+                            "md:text-lg",
+                          )}
+                        >
                           Adicione uma imagem do produto
                         </h3>
-                        <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
+                        <p className="hidden text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11 md:block">
                           Boas fotos ajudam na decisão do participante. Depois de
                           escolher o arquivo, ajuste posição e zoom no recorte —
                           mesmo fluxo do banner e do card do evento.
                         </p>
+                        <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11 md:hidden">
+                          Boas fotos ajudam na decisão do participante
+                        </p>
                       </div>
                       {productImage ? (
-                        <div className="border-2 border-gray-6 border-dashed rounded-xl p-6 flex gap-6 items-center w-full">
-                          <div className="relative rounded-2xl shrink-0 size-[120px] overflow-hidden">
+                        <div
+                          className={cn(
+                            "flex w-full items-center gap-6 rounded-xl border-2 border-dashed border-gray-6",
+                            "max-md:flex-col max-md:items-stretch max-md:p-4",
+                            "md:flex-row md:p-6",
+                          )}
+                        >
+                          <div className="relative size-[120px] shrink-0 overflow-hidden rounded-2xl">
                             <ImageWithInitialFallback
                               src={productImage}
                               alt="Product preview"
@@ -663,34 +812,57 @@ export function CreateProductModal() {
                               className="size-full border-transparent border-0"
                               letterClassName="text-4xl font-semibold"
                             />
+                            <button
+                              type="button"
+                              onClick={() => setProductImage(null)}
+                              className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full border border-gray-6 bg-gray-1 text-gray-11 shadow-sm hover:bg-gray-2 md:hidden"
+                              aria-label="Remover imagem"
+                            >
+                              <X className="size-4" />
+                            </button>
                           </div>
-                          <div className="flex flex-1 flex-col gap-6">
-                            <div className="flex flex-col gap-4">
-                              <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                          <div className="flex flex-1 flex-col gap-4 md:gap-6">
+                            <div className="hidden flex-col gap-4 md:flex">
+                              <p className="text-base font-semibold font-manrope leading-[1.1] text-gray-12">
                                 Arraste uma imagem para este campo ou clique
                                 abaixo
                               </p>
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                              <p className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                                 PNG ou JPG, máximo 10MB
                               </p>
                             </div>
-                            <Button
-                              type="button"
-                              onClick={() => productCropRef.current?.open()}
-                              variant="outline"
-                              className="w-full border-gray-6 text-gray-12"
-                            >
-                              <p className="text-gray-12 text-base font-bold font-family-dm-sans leading-[1.3]">
-                                Trocar imagem
-                              </p>
-                            </Button>
+                            <p className="text-sm font-family-dm-sans leading-[1.3] text-gray-11 md:hidden">
+                              PNG ou JPG, máximo 10MB
+                            </p>
+                            <div className="flex flex-row md:flex-col gap-2 sm:flex-row">
+                              <Button
+                                type="button"
+                                onClick={() => productCropRef.current?.open()}
+                                variant="outline"
+                                className="w-full border-gray-6 text-gray-12 max-md:flex-1 md:w-full"
+                              >
+                                <span className="text-base font-bold font-family-dm-sans leading-[1.3] text-gray-12">
+                                  <span className="md:hidden">Alterar imagem</span>
+                                  <span className="hidden md:inline">
+                                    Trocar imagem
+                                  </span>
+                                </span>
+                              </Button>
+                              <button
+                                type="button"
+                                onClick={() => setProductImage(null)}
+                                className="text-base font-semibold text-gray-11 underline decoration-gray-11 hover:text-gray-12 md:hidden"
+                              >
+                                Limpar imagem
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : (
                         <div
                           onDrop={handleDrop}
                           onDragOver={handleDragOver}
-                          className="border-2 border-dashed border-gray-6 rounded-xl p-6 flex flex-col gap-6 items-center justify-center min-h-[120px] cursor-pointer hover:border-primary-8 transition-colors w-full"
+                          className="flex min-h-[120px] w-full cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-gray-6 p-6 transition-colors hover:border-primary-8 max-md:min-h-[100px] max-md:py-8"
                           onClick={() => productCropRef.current?.open()}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
@@ -701,14 +873,14 @@ export function CreateProductModal() {
                           role="button"
                           tabIndex={0}
                         >
-                          <p className="text-primary-11 text-base font-bold font-family-dm-sans leading-[1.3]">
+                          <p className="hidden text-base font-bold font-family-dm-sans leading-[1.3] text-primary-11 md:block">
                             Arraste uma imagem para este campo ou clique aqui
                           </p>
-                          <div className="flex flex-col gap-4 items-center text-center">
-                            <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                          <div className="flex flex-col items-center gap-3 text-center md:gap-4">
+                            <p className="text-base font-semibold font-manrope leading-[1.1] text-gray-12">
                               Adicionar foto
                             </p>
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                            <p className="text-sm font-family-dm-sans leading-[1.3] text-gray-11 md:text-base">
                               PNG ou JPG, máximo 10MB
                             </p>
                           </div>
@@ -719,15 +891,19 @@ export function CreateProductModal() {
                     {/* Product Name */}
                     <div className="flex flex-col gap-2.5">
                       <div className="flex flex-col gap-2">
-                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Título
+                        <label className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12">
+                          <span className="md:hidden">
+                            Nome descritivo do produto
+                          </span>
+                          <span className="hidden md:inline">Título</span>
                         </label>
                         <Input
                           type="text"
                           value={productName}
                           onChange={(e) => setProductName(e.target.value)}
-                          placeholder="Ex: Camisa Premium"
-                          maxLength={25}
+                          placeholder="Ex: (item extra) Camiseta da Nike"
+                          maxLength={100}
+                          showCharCount
                           className="h-12 px-3"
                         />
                       </div>
@@ -766,7 +942,7 @@ export function CreateProductModal() {
                             name="included"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
                             Sim
                           </span>
                         </div>
@@ -791,13 +967,13 @@ export function CreateProductModal() {
                             name="included"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
                             Não
                           </span>
                         </div>
                       </div>
                       {!isIncludedInTicket && (
-                        <div className="flex flex-col gap-2.5 w-[259px]">
+                        <div className="flex w-full max-w-full flex-col gap-2.5 md:w-[259px]">
                           <div className="flex flex-col gap-2">
                             <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                               Preço
@@ -813,6 +989,16 @@ export function CreateProductModal() {
                               aria-invalid={basePriceInvalidNotIncluded}
                               className={`h-12 px-3 ${basePriceInvalidNotIncluded ? "border-red-8 focus-visible:border-red-8 focus-visible:ring-red-8/30" : ""}`}
                             />
+                            <div className="flex items-start gap-2 md:hidden">
+                              <Info
+                                className="mt-0.5 size-5 shrink-0 text-gray-11"
+                                aria-hidden
+                              />
+                              <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                Você ainda poderá escolher um preço específico nas
+                                variações
+                              </p>
+                            </div>
                             {basePriceInvalidNotIncluded ? (
                               <p className="text-red-11 text-sm font-family-dm-sans leading-[1.3]">
                                 Informe um valor acima de R$ 0,00.
@@ -855,7 +1041,7 @@ export function CreateProductModal() {
                             name="required"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
                             Obrigatório
                           </span>
                         </div>
@@ -866,7 +1052,7 @@ export function CreateProductModal() {
                             name="required"
                             className="size-6"
                           />
-                          <span className="text-gray-12 text-sm font-normal font-family-dm-sans leading-[1.3]">
+                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
                             Opcional
                           </span>
                         </div>
@@ -876,13 +1062,19 @@ export function CreateProductModal() {
                     {/* Variations */}
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-col gap-3">
-                        <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                        <h3 className="text-lg font-semibold font-manrope leading-[1.1] text-gray-12">
                           Variações e estoque
                         </h3>
-                        <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Crie opções como tamanhos e controle estoque por
-                          variação. Você pode reaproveitar um conjunto de
-                          variações para não repetir trabalho.
+                        <p className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                          <span className="md:hidden">
+                            Crie opções como tamanhos e controle estoque por
+                            variação.
+                          </span>
+                          <span className="hidden md:inline">
+                            Crie opções como tamanhos e controle estoque por
+                            variação. Você pode reaproveitar um conjunto de
+                            variações para não repetir trabalho.
+                          </span>
                         </p>
                       </div>
 
@@ -894,27 +1086,37 @@ export function CreateProductModal() {
                         <Input
                           type="text"
                           value={variationTypeName}
-                          onChange={(e) => setVariationTypeName(e.target.value)}
-                          placeholder="Ex: Tamanhos/Cores/Variações"
+                          onChange={(e) =>
+                            setVariationTypeName(
+                              sanitizeVariationTypeLabelInput(e.target.value),
+                            )
+                          }
+                          placeholder="Ex: Escolha o Tamanho ou Cores"
                           className="h-12 px-3"
                         />
                       </div>
 
-                      {/* Variations Table */}
-                      <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg">
-                        {/* Table Header */}
-                        <div className="bg-gray-3 border-b border-gray-6 h-11 flex items-center rounded-t-lg">
+                      {/* Variations: mobile = cards (Figma); desktop = tabela */}
+                      <div
+                        className={cn(
+                          "flex flex-col",
+                          "max-md:gap-3 max-md:border-0 max-md:bg-transparent",
+                          "md:rounded-lg md:border-[1.5px] md:border-gray-6 md:bg-gray-2",
+                        )}
+                      >
+                        {/* Table Header — desktop */}
+                        <div className="hidden h-11 items-center rounded-t-lg border-b border-gray-6 bg-gray-3 md:flex">
                           <div className="flex-1 px-4">
-                            <span className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                            <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               {variationTypeName.trim() || "Variações"}
                             </span>
                           </div>
-                          <div className="w-[188px] px-4 flex items-center justify-center">
-                            <span className="text-gray-12 text-sm font-medium font-inter leading-[1.3] flex items-center gap-1">
+                          <div className="flex w-[188px] items-center justify-center px-4">
+                            <span className="flex items-center gap-1 text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               Preço específico{" "}
                               <Tooltip
                                 content={
-                                  <div className="flex flex-col gap-2 font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left w-full">
+                                  <div className="flex w-full flex-col gap-2 text-left font-family-dm-sans text-sm font-normal leading-[1.4] text-gray-12">
                                     <p>
                                       Defina um preço específico para esta
                                       variação, caso ela tenha um valor diferente
@@ -935,7 +1137,7 @@ export function CreateProductModal() {
                               >
                                 <button
                                   type="button"
-                                  className="inline-flex cursor-help text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
+                                  className="inline-flex cursor-help rounded text-gray-12 hover:text-gray-11 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
                                   aria-label="Informação: preço específico da variação"
                                 >
                                   <BookIcon className="size-5 shrink-0" />
@@ -943,13 +1145,13 @@ export function CreateProductModal() {
                               </Tooltip>
                             </span>
                           </div>
-                          <div className="w-[132px] px-4 flex items-center justify-center">
-                            <span className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                          <div className="flex w-[132px] items-center justify-center px-4">
+                            <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               Estoque
                             </span>
                           </div>
-                          <div className="border-l border-gray-6 h-full flex items-center justify-center px-4 w-[74px]">
-                            <span className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                          <div className="flex h-full w-[74px] items-center justify-center border-l border-gray-6 px-4">
+                            <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               Ações
                             </span>
                           </div>
@@ -957,84 +1159,185 @@ export function CreateProductModal() {
 
                         {/* Variations List */}
                         {variations.map((variation) => (
-                          <div
-                            key={variation.id}
-                            className="border-b border-gray-6 h-[52px] flex items-center"
-                          >
-                            <div className="flex-1 px-4">
-                              <input
-                                type="text"
-                                value={variation.name}
-                                onChange={(e) =>
-                                  handleVariationChange(
-                                    variation.id,
-                                    "name",
-                                    e.target.value,
-                                  )
-                                }
-                                placeholder="Ex: P, M, G"
-                                className="h-auto border-0 bg-transparent px-0 focus:ring-0 text-sm font-medium font-inter text-gray-12 focus:outline-none focus:border-0 w-full"
-                              />
-                            </div>
-                            <div className="w-[188px] px-4 flex items-center justify-center">
-                              {isIncludedInTicket ? (
-                                <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
-                                  Incluso
-                                </span>
-                              ) : (
-                                <div className="flex gap-0.5 items-center text-sm font-semibold font-inter text-gray-12">
-                                  <span>R$</span>
+                          <Fragment key={variation.id}>
+                            {/* Mobile — Figma 3428:160533 */}
+                            <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
+                              <div className="flex w-full items-start justify-between gap-2">
+                                <div className="flex min-w-0 flex-1 flex-col gap-3">
+                                  <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                    Nome da variação
+                                  </p>
                                   <input
                                     type="text"
-                                    inputMode="numeric"
-                                    value={variation.price || "0,00"}
+                                    value={variation.name}
                                     onChange={(e) =>
-                                      handlePriceChange(
+                                      handleVariationChange(
                                         variation.id,
+                                        "name",
                                         e.target.value,
                                       )
                                     }
-                                    className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:border-0"
-                                    placeholder="0,00"
+                                    placeholder="Ex: P, M, G"
+                                    className="w-full border-0 bg-transparent p-0 text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-0 focus:outline-none focus:ring-0"
                                   />
                                 </div>
-                              )}
+                                <Dropdown
+                                  menuInPortal
+                                  align="end"
+                                  position="bottom"
+                                  width="w-52"
+                                  options={[
+                                    {
+                                      id: "remove",
+                                      label: "Remover variação",
+                                      onClick: () =>
+                                        handleRemoveVariation(variation.id),
+                                    },
+                                  ]}
+                                  trigger={(open) => (
+                                    <button
+                                      type="button"
+                                      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
+                                      aria-label="Ações da variação"
+                                      aria-expanded={open}
+                                    >
+                                      <MoreVertical className="size-6" />
+                                    </button>
+                                  )}
+                                />
+                              </div>
+                              <div className="flex w-full items-start justify-between gap-4">
+                                <div className="flex flex-col gap-3">
+                                  <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                    Preço específico
+                                  </p>
+                                  {isIncludedInTicket ? (
+                                    <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                      Incluso
+                                    </p>
+                                  ) : (
+                                    <div className="flex items-baseline gap-0.5 text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                      <span>R$</span>
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={variation.price || "0,00"}
+                                        onChange={(e) =>
+                                          handlePriceChange(
+                                            variation.id,
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="min-w-0 max-w-[140px] border-0 bg-transparent p-0 focus:border-0 focus:outline-none focus:ring-0"
+                                        placeholder="0,00"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-3">
+                                  <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                    Estoque
+                                  </p>
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      value={variation.stock}
+                                      onChange={(e) =>
+                                        handleVariationChange(
+                                          variation.id,
+                                          "stock",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-14 border-0 bg-transparent p-0 text-right text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12 focus:outline-none focus:ring-0"
+                                      placeholder="0"
+                                    />
+                                    <span className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                      Un
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            <div className="w-[132px] px-4 flex items-center justify-center">
-                              <input
-                                type="number"
-                                value={variation.stock}
-                                onChange={(e) =>
-                                  handleVariationChange(
-                                    variation.id,
-                                    "stock",
-                                    e.target.value,
-                                  )
-                                }
-                                className="w-16 border-0 bg-transparent px-0 focus:ring-0 text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:border-0 text-center"
-                                placeholder="0"
-                              />
+
+                            {/* Desktop — linha da tabela */}
+                            <div className="hidden border-b border-gray-6 md:flex md:h-[52px] md:items-center">
+                              <div className="flex flex-1 px-4">
+                                <input
+                                  type="text"
+                                  value={variation.name}
+                                  onChange={(e) =>
+                                    handleVariationChange(
+                                      variation.id,
+                                      "name",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="Ex: P, M, G"
+                                  className="h-auto w-full border-0 bg-transparent px-0 text-sm font-medium font-inter text-gray-12 focus:border-0 focus:outline-none focus:ring-0"
+                                />
+                              </div>
+                              <div className="flex w-[188px] items-center justify-center px-4">
+                                {isIncludedInTicket ? (
+                                  <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
+                                    Incluso
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-0.5 text-sm font-semibold font-inter text-gray-12">
+                                    <span>R$</span>
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={variation.price || "0,00"}
+                                      onChange={(e) =>
+                                        handlePriceChange(
+                                          variation.id,
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-16 border-0 bg-transparent px-0 focus:border-0 focus:outline-none focus:ring-0"
+                                      placeholder="0,00"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex w-[132px] items-center justify-center px-4">
+                                <input
+                                  type="number"
+                                  value={variation.stock}
+                                  onChange={(e) =>
+                                    handleVariationChange(
+                                      variation.id,
+                                      "stock",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-16 border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:ring-0"
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div className="flex w-[74px] items-center justify-center px-4">
+                                <button
+                                  type="button"
+                                  title="Remover variação"
+                                  onClick={() =>
+                                    handleRemoveVariation(variation.id)
+                                  }
+                                  className="flex size-9 items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 transition-colors hover:bg-red-3"
+                                >
+                                  <TrashIcon className="size-5 text-red-12" />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-center px-4 w-[74px]">
-                              <button
-                                type="button"
-                                title="Remover variação"
-                                onClick={() =>
-                                  handleRemoveVariation(variation.id)
-                                }
-                                className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center hover:bg-red-3 transition-colors"
-                              >
-                                <TrashIcon className="size-5 text-red-12" />
-                              </button>
-                            </div>
-                          </div>
+                          </Fragment>
                         ))}
 
                         {/* Add Variation Button */}
-                        <div className="p-4 flex justify-center">
+                        <div className="flex justify-center p-4 max-md:pt-0 md:border-t md:border-gray-6">
                           <button
+                            type="button"
                             onClick={handleAddVariation}
-                            className="flex items-center gap-1 h-11 px-11 text-gray-11 text-base font-semibold font-family-dm-sans hover:text-gray-12 transition-colors"
+                            className="flex h-11 items-center gap-1 px-6 text-base font-semibold font-family-dm-sans text-gray-11 transition-colors hover:text-gray-12 md:px-11"
                           >
                             <Plus className="size-6" />
                             Adicionar variação
@@ -1045,8 +1348,8 @@ export function CreateProductModal() {
                   </div>
 
                   {/* Right Column - Preview */}
-                  <div className="shrink-0 flex flex-col gap-4 sticky top-5">
-                    <div className="flex flex-col gap-5 w-full">
+                  <div className="flex w-full shrink-0 flex-col gap-4 md:sticky md:top-5">
+                    <div className="flex w-full flex-col gap-3 md:gap-5">
                       <div className="flex flex-col gap-3">
                         <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                           Deseja liberar a edição da variação pelo comprador?
@@ -1060,7 +1363,7 @@ export function CreateProductModal() {
                             />
                             <button
                               type="button"
-                              className="text-sm text-gray-12 font-normal font-family-dm-sans leading-[1.3] cursor-pointer select-none bg-transparent border-none p-0 text-left hover:text-gray-12"
+                              className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
                               onClick={() => setBuyerCanEditVariation(true)}
                             >
                               Sim
@@ -1074,7 +1377,7 @@ export function CreateProductModal() {
                             />
                             <button
                               type="button"
-                              className="text-sm text-gray-12 font-normal font-family-dm-sans leading-[1.3] cursor-pointer select-none bg-transparent border-none p-0 text-left hover:text-gray-12"
+                              className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
                               onClick={() => setBuyerCanEditVariation(false)}
                             >
                               Não
@@ -1102,7 +1405,7 @@ export function CreateProductModal() {
                                     .slice(0, 4),
                                 )
                               }
-                              className="h-9 min-w-13 w-10 shrink-0 rounded-lg border border-gray-7 bg-gray-1 px-2 text-center text-base font-normal font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:border-primary-8 focus:outline-none"
+                              className="h-9 min-w-13 w-10 shrink-0 rounded-lg border border-gray-6 bg-gray-1 px-2 text-center text-base font-normal font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:border-primary-8 focus:outline-none"
                               placeholder="30"
                               aria-label="Dias antes do evento para alterar variação"
                             />
@@ -1114,12 +1417,17 @@ export function CreateProductModal() {
                       )}
                     </div>
 
-                    <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+                    <h3 className="text-lg font-bold font-manrope leading-[1.1] text-gray-12 md:text-xl">
                       Prévia
                     </h3>
-                    <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col w-[406px]">
-                      <div className="border-b border-gray-6 flex gap-3 items-center p-4">
-                        <div className="border border-gray-6 rounded size-[100px] shrink-0 overflow-hidden bg-gray-3 relative">
+                    <div className="flex w-full flex-col rounded-xl border border-gray-6 bg-gray-2 md:w-[406px]">
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 p-4",
+                          buyerCanEditVariation && "border-b border-gray-6",
+                        )}
+                      >
+                        <div className="relative size-[100px] shrink-0 overflow-hidden rounded border border-gray-6 bg-gray-3">
                           <ImageWithInitialFallback
                             src={productImage}
                             alt="Product preview"
@@ -1145,59 +1453,82 @@ export function CreateProductModal() {
                           )}
                         </div>
                       </div>
-                      <div className="p-4">
-                        <p className="text-base text-gray-12 mb-2">
-                          Escolha a variação
-                        </p>
-                        <Dropdown
-                          options={productPreviewDropdownOptions}
-                          menuInline
-                          width="w-full"
-                          maxHeight="max-h-[200px]"
-                          selectedIds={variations.map(
-                            (variation) => variation.id,
-                          )}
-                          trigger={(isOpen: boolean) => (
-                            <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between">
-                              <p className="text-base text-gray-11">
-                                Selecione a variação
-                              </p>
-                              <ArrowButton isOpen={isOpen} />
-                            </div>
-                          )}
-                        />
-                      </div>
+                      {buyerCanEditVariation ? (
+                        productPreviewDropdownOptions.length > 0 ? (
+                          <div className="p-4 hidden md:block">
+                            <p className="mb-2 text-base text-gray-12">
+                              <span className="md:hidden">Escolha o tamanho</span>
+                              <span className="hidden md:inline">
+                                Escolha a variação
+                              </span>
+                            </p>
+                            <Dropdown
+                              options={productPreviewDropdownOptions}
+                              menuInline
+                              width="w-full"
+                              maxHeight="max-h-[200px]"
+                              selectedIds={productPreviewDropdownOptions.map(
+                                (o) => o.id,
+                              )}
+                              trigger={(isOpen: boolean) => (
+                                <div className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 py-4 transition-colors hover:border-gray-8">
+                                  <p className="text-base text-gray-11">
+                                    <span className="md:hidden">
+                                      Selecione a opção
+                                    </span>
+                                    <span className="hidden md:inline">
+                                      Selecione a variação
+                                    </span>
+                                  </p>
+                                  <ArrowButton isOpen={isOpen} />
+                                </div>
+                              )}
+                            />
+                          </div>
+                        ) : null
+                      ) : null}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="border-t border-gray-6 flex flex-wrap items-center justify-between gap-3 px-6 py-4 shrink-0">
-                <div className="min-w-0">
-                  {isEditing ? (
+              <div
+                className={cn(
+                  "flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-6",
+                  "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-60 max-md:flex-col max-md:items-stretch max-md:bg-gray-1 max-md:p-4",
+                  "md:px-6 md:py-4",
+                )}
+              >
+                {isEditing ? (
+                  <div className="min-w-0 max-md:w-full">
                     <Button
                       type="button"
                       variant="destructive"
                       onClick={() => setDeleteConfirmOpen(true)}
                       disabled={isSubmitting || isDeleting || isProductLoading}
-                      className="px-4 py-2"
+                      className="px-4 py-2 max-md:w-full"
                     >
                       Deletar produto
                     </Button>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center justify-end gap-3 ml-auto">
+                  </div>
+                ) : null}
+                <div
+                  className={cn(
+                    "ml-auto flex flex-wrap items-center justify-end gap-3",
+                    "max-md:ml-0 max-md:w-full max-md:flex-nowrap max-md:gap-2",
+                  )}
+                >
                   <Button
                     variant="outline"
                     onClick={closeCreateProductModal}
                     disabled={isSubmitting || isDeleting || isProductLoading}
-                    className="border-gray-6 text-gray-11 px-4 py-2"
+                    className="border-gray-6 px-4 py-2 text-gray-11 max-md:min-h-11 max-md:flex-1"
                   >
                     Cancelar
                   </Button>
                   <Button
-                    onClick={handleSave}
+                    onClick={requestSave}
                     disabled={
                       isSubmitting ||
                       isDeleting ||
@@ -1208,6 +1539,7 @@ export function CreateProductModal() {
                       !isProductFormDirty ||
                       basePriceInvalidNotIncluded
                     }
+                    className="max-md:min-h-11 max-md:flex-1"
                   >
                     {isSubmitting
                       ? "Salvando..."
@@ -1277,24 +1609,24 @@ export function CreateProductModal() {
                           ingressos vinculados:
                         </p>
                       </div>
-                      <div className="bg-gray-3 rounded-xl p-4 min-h-0 max-h-[min(40vh,320px)] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
-                        {linkedTicketNamesForDelete.length > 0 ? (
-                          <div className="flex flex-wrap gap-x-6 gap-y-6">
-                            {linkedTicketNamesForDelete.map((name, idx) => (
-                              <div
+                      <div className="max-h-[min(50vh,420px)] min-h-0 overflow-y-auto rounded-xl bg-gray-3 p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
+                        {linkedTicketNamesResolved.length > 0 ? (
+                          <ul className="flex flex-col gap-3">
+                            {linkedTicketNamesResolved.map((name, idx) => (
+                              <li
                                 key={`${name}-${idx}`}
-                                className="flex items-center gap-2 min-w-0 max-w-full"
+                                className="flex items-start gap-2"
                               >
                                 <span
-                                  className="size-1.5 rounded-full bg-red-11 shrink-0"
+                                  className="mt-1.5 size-1.5 shrink-0 rounded-full bg-red-11"
                                   aria-hidden
                                 />
-                                <span className="text-gray-12 text-sm font-medium font-family-dm-sans leading-[1.3] truncate">
+                                <span className="min-w-0 wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
                                   {name}
                                 </span>
-                              </div>
+                              </li>
                             ))}
-                          </div>
+                          </ul>
                         ) : (
                           <p className="text-gray-11 text-sm font-normal font-family-dm-sans leading-[1.3] text-center">
                             Este produto pode estar vinculado a outros ingressos
@@ -1321,6 +1653,112 @@ export function CreateProductModal() {
                         className="border-gray-6 text-gray-12 font-manrope text-base rounded-lg"
                       >
                         Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Confirmação ao salvar — mesma lista de ingressos vinculados */}
+          <AnimatePresence>
+            {saveConfirmOpen && (
+              <>
+                <motion.div
+                  key="save-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)]"
+                  onClick={() => {
+                    if (!isSubmitting) setSaveConfirmOpen(false);
+                  }}
+                />
+                <motion.div
+                  key="save-modal"
+                  initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="pointer-events-none fixed inset-0 z-61 flex items-center justify-center p-4"
+                >
+                  <div
+                    className="pointer-events-auto flex max-h-[min(90vh,720px)] min-h-0 w-full max-w-[652px] flex-col gap-8 rounded-xl bg-gray-1 px-5 pb-5 pt-6 shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="save-product-title"
+                    aria-describedby="save-product-desc"
+                  >
+                    <div className="flex shrink-0 flex-col items-stretch gap-6">
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <h2
+                          id="save-product-title"
+                          className="text-xl font-semibold font-family-dm-sans leading-[1.3] text-gray-12"
+                        >
+                          {isEditing
+                            ? "Salvar alterações no produto?"
+                            : "Criar produto?"}
+                        </h2>
+                        <p
+                          id="save-product-desc"
+                          className="max-w-full text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11"
+                        >
+                          {isEditing ? (
+                            <>
+                              Este produto está vinculado aos seguintes
+                              ingressos. As alterações serão refletidas em todos
+                              eles:
+                            </>
+                          ) : (
+                            <>
+                              O produto será vinculado ao kit destes ingressos:
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="max-h-[min(50vh,420px)] min-h-0 overflow-y-auto rounded-xl bg-gray-3 p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
+                        <ul className="flex flex-col gap-3">
+                          {linkedTicketNamesResolved.map((name, idx) => (
+                            <li
+                              key={`save-${name}-${idx}`}
+                              className="flex items-start gap-2"
+                            >
+                              <span
+                                className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary-9"
+                                aria-hidden
+                              />
+                              <span className="min-w-0 wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
+                                {name}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSaveConfirmOpen(false)}
+                        disabled={isSubmitting}
+                        className="rounded-lg border-gray-6 font-manrope text-base text-gray-12"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={confirmSaveAfterDialog}
+                        disabled={isSubmitting}
+                        className="rounded-lg font-manrope text-base"
+                      >
+                        {isSubmitting
+                          ? "Salvando..."
+                          : isEditing
+                            ? "Salvar alterações"
+                            : "Criar produto"}
                       </Button>
                     </div>
                   </div>

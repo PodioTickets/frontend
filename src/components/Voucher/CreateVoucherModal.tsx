@@ -254,7 +254,7 @@ export function CreateVoucherModal() {
                         <button
                           type="button"
                           onClick={() => setShowSelectTicketsModal(true)}
-                          className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
+                          className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
                         >
                           <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                             {appliesTo === "all"

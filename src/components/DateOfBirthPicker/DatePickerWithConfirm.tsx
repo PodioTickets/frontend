@@ -186,7 +186,7 @@ export function DatePickerWithConfirm({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer ${error ? "border-red-9" : "border-gray-7"
+          className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer ${error ? "border-red-9" : "border-gray-6"
             }`}
         >
           <div className="flex gap-2 items-center flex-1 min-w-0">

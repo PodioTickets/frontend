@@ -10,6 +10,7 @@ import { TicketTable } from "./TicketTable";
 import { DeleteTicketCategoryModal } from "./DeleteTicketCategoryModal";
 import { CategoryDeleteBlockedModal } from "./CategoryDeleteBlockedModal";
 import type { Ticket } from "@/hooks/useTickets";
+import type { TicketMoveCategoryOption } from "./TicketTable";
 
 interface TicketCategoryCardProps {
   category: ModalityGroup;
@@ -28,6 +29,12 @@ interface TicketCategoryCardProps {
   duplicatingTicketId?: string | null;
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
   onDropTicket?: (ticketId: string, categoryId: string) => void;
+  moveCategoryOptions?: TicketMoveCategoryOption[];
+  onMoveTicketToCategory?: (
+    ticketId: string,
+    categoryId: string | null,
+  ) => void | Promise<void>;
+  onDeleteTicket?: (ticketId: string) => void | Promise<void>;
   /** Sobrescreve bordas/raio quando a categoria está dentro de um wrapper (ex.: sortable). */
   className?: string;
   /** Quando true, não renderiza a linha do nome + lápis + lixeira (ex.: header no SortableTicketCategoryItem). */
@@ -49,6 +56,9 @@ export function TicketCategoryCard({
   duplicatingTicketId = null,
   productsMap = {},
   onDropTicket,
+  moveCategoryOptions,
+  onMoveTicketToCategory,
+  onDeleteTicket,
   className: rootClassName,
   hideCategoryTitleRow = false,
 }: TicketCategoryCardProps) {
@@ -110,11 +120,15 @@ export function TicketCategoryCard({
     <div
       ref={setNodeRef}
       data-category-id={category.id}
-      className={`flex flex-col gap-6 bg-gray-3 border border-gray-6 p-5 transition-colors ${isOver ? "border-primary-11" : ""
-        }${rootClassName ? ` ${rootClassName}` : ""}`}
+      className={`flex flex-col transition-colors ${hideCategoryTitleRow
+        ? "gap-3 border-0 bg-transparent p-0 md:gap-6 md:bg-gray-3 md:p-5"
+        : "gap-6 border border-gray-6 bg-gray-3 p-5"
+        } ${isOver ? "border-primary-11" : ""}${rootClassName ? ` ${rootClassName}` : ""}`}
     >
       {/* Category Header */}
-      <div className="flex flex-col gap-3 w-full">
+      <div
+        className={`flex w-full flex-col gap-3 ${hideCategoryTitleRow ? "hidden md:flex" : ""}`}
+      >
         {!hideCategoryTitleRow && (
           <div className="flex items-center justify-between flex-wrap gap-4 w-full">
             <div className="flex min-w-0 flex-1 items-center gap-[10px]">
@@ -229,7 +243,7 @@ export function TicketCategoryCard({
 
       {/* Tickets Content */}
       {tickets.length === 0 ? (
-        <div className="bg-gray-3 border border-gray-6 rounded-xl flex flex-wrap gap-6 items-center justify-center p-5 w-full">
+        <div className="flex w-full flex-wrap items-center justify-center gap-6 rounded-xl border border-gray-6 bg-gray-1 p-5 md:bg-gray-3">
           <div className="flex flex-1 flex-col items-center justify-center min-h-px min-w-px py-0">
             <div className="bg-gray-3 flex flex-col items-start justify-center">
               <div className={`border-2 border-dashed flex gap-4 items-center justify-center overflow-clip p-4 rounded-xl w-full transition-colors ${isOver ? "border-primary-11 bg-primary-2" : "border-gray-6"
@@ -256,6 +270,10 @@ export function TicketCategoryCard({
           onDuplicate={onDuplicateTicket}
           duplicatingTicketId={duplicatingTicketId}
           productsMap={productsMap}
+          ticketScopeCategoryId={category.id}
+          moveCategoryOptions={moveCategoryOptions}
+          onMoveTicketToCategory={onMoveTicketToCategory}
+          onDeleteTicket={onDeleteTicket}
         />
       )}
     </div>

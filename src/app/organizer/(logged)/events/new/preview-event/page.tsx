@@ -11,9 +11,12 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { EventMap } from "@/components/EventMap";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { Download } from "lucide-react";
-import Link from "next/link";
 import { Loading } from "@/components/Loading";
-import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
+import {
+  getEnabledTopicsSorted,
+  readTopicsPreviewDraft,
+  topicSectionRowsToPreviewSections,
+} from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 
 export const dynamic = 'force-dynamic';
@@ -80,7 +83,17 @@ export default function PreviewEventPage() {
     );
   }
 
-  const topicSections = event ? getEnabledTopicsSorted(event) : [];
+  const previewEventId = formData.createdEventId ?? "";
+  const topicsDraft =
+    event && previewEventId
+      ? readTopicsPreviewDraft(previewEventId)
+      : null;
+  const topicSections =
+    topicsDraft && topicsDraft.sections.length > 0
+      ? topicSectionRowsToPreviewSections(topicsDraft.sections)
+      : event
+        ? getEnabledTopicsSorted(event)
+        : [];
 
   return (
     <div className="bg-gray-2 min-h-screen">
@@ -111,7 +124,7 @@ export default function PreviewEventPage() {
                 name={event?.name || "Evento"}
                 fill
                 sizes="(max-width: 900px) 100vw, 843px"
-                className="size-full rounded-2xl"
+                className="size-full rounded-2xl border-transparent border-0"
                 letterClassName="text-7xl font-bold"
               />
             </div>
@@ -133,19 +146,7 @@ export default function PreviewEventPage() {
                         __html: normalizeTopicHtmlAnchorHrefs(section.content),
                       }}
                     />
-                    {section.isDefault ? (
-                      <div className="bg-gray-2 flex flex-col items-center justify-center pt-7 w-full">
-                        <button
-                          type="button"
-                          className="flex gap-2 items-center justify-center rounded-lg"
-                        >
-                          <Download className="size-5 text-gray-11" />
-                          <p className="text-gray-11 text-base font-bold font-manrope leading-[1.1]">
-                            Label
-                          </p>
-                        </button>
-                      </div>
-                    ) : null}
+
                   </div>
                 </div>
               ))}
@@ -172,20 +173,13 @@ export default function PreviewEventPage() {
                             name={kits[0].name}
                             fill
                             sizes="192px"
-                            className="size-full rounded-lg"
+                            className="size-full rounded-lg border-transparent border-0"
                             letterClassName="text-3xl font-semibold"
                           />
                         </div>
                       </div>
                     )}
-                    <div className="bg-gray-2 flex flex-col items-center justify-center pt-7 w-full">
-                      <button className="flex gap-2 items-center justify-center rounded-lg">
-                        <Download className="size-5 text-gray-11" />
-                        <p className="text-gray-11 text-base font-bold font-manrope leading-[1.1]">
-                          Label
-                        </p>
-                      </button>
-                    </div>
+
                   </div>
                 </div>
               )}

@@ -133,10 +133,8 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   const params = useParams();
   const eventId = params.id as string;
   const pathname = usePathname();
-  const pathNoQuery = pathname.split("?")[0].replace(/\/+$/, "");
-  const hideProgressOnMobile =
-    pathNoQuery === `/organizer/events/${eventId}/edit` ||
-    pathNoQuery === `/organizer/events/${eventId}/edit/banner`;
+  /** No mobile a navegação entre passos fica na aba «Editar» (`EventMobileTabs` variant pageHeader). */
+  const hideEditStepperOnMobile = pathname.includes("/edit");
 
   if (loading) {
     return (
@@ -150,9 +148,7 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-gray-2">
       <EventPageHeader eventName={event?.name} />
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
-        <div
-          className={cn(hideProgressOnMobile && "hidden md:block")}
-        >
+        <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
           <EditProgressBar />
         </div>
         {children}

@@ -83,7 +83,7 @@ export function CountrySearchSelect({
           if (!open) setSearch("");
         }}
         className={cn(
-          "border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 w-full bg-gray-1 hover:border-gray-8 transition-colors cursor-pointer text-left",
+          "border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full bg-gray-1 hover:border-gray-8 transition-colors cursor-pointer text-left",
           triggerClassName
         )}
       >

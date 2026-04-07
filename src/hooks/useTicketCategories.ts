@@ -23,11 +23,30 @@ export function useTicketCategories(eventId: string | null, enabled: boolean = t
 
   const categories = data ?? EMPTY_CATEGORIES;
 
-  // Mutation para criar categoria
+  // Mutation para criar categoria (descrição opcional: 2º request após criar, um único toast)
   const createMutation = useMutation({
-    mutationFn: async ({ name }: { name: string }) => {
+    mutationFn: async ({
+      name,
+      description,
+    }: {
+      name: string;
+      description?: string;
+    }) => {
       if (!eventId) throw new Error("Event ID is required");
-      return organizerService.createTicketCategory(eventId, { name });
+      const created = await organizerService.createTicketCategory(eventId, { name });
+      const raw = created as { id?: string; category?: { id?: string } };
+      const id =
+        typeof raw?.id === "string"
+          ? raw.id
+          : typeof raw?.category?.id === "string"
+            ? raw.category.id
+            : undefined;
+      if (description?.trim() && id) {
+        await organizerService.updateTicketCategory(eventId, id, {
+          description: description.trim(),
+        });
+      }
+      return created;
     },
     onSuccess: () => {
       invalidateQueries.events.ticketCategories(eventId!);
@@ -81,7 +100,8 @@ export function useTicketCategories(eventId: string | null, enabled: boolean = t
     categories,
     loading: isLoading,
     error,
-    createCategory: (name: string) => createMutation.mutateAsync({ name }),
+    createCategory: (name: string, opts?: { description?: string }) =>
+      createMutation.mutateAsync({ name, description: opts?.description }),
     updateCategory: (categoryId: string, data: { name?: string; order?: number; description?: string }) =>
       updateMutation.mutateAsync({ categoryId, data }),
     deleteCategory: (categoryId: string) => deleteMutation.mutateAsync(categoryId),

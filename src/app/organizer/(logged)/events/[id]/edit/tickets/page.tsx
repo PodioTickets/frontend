@@ -28,7 +28,14 @@ import { Plus } from "lucide-react";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
-import { TicketTable } from "@/components/Ticket/TicketTable";
+import {
+  TicketCategoryFormDrawer,
+  type TicketCategoryFormPayload,
+} from "@/components/Ticket/TicketCategoryFormDrawer";
+import {
+  TicketTable,
+  type TicketMoveCategoryOption,
+} from "@/components/Ticket/TicketTable";
 import { UncategorizedTicketsDropShell } from "@/components/Ticket/UncategorizedTicketsDropShell";
 import { TicketAdvancedKitDisplayOptions } from "@/components/Ticket/TicketAdvancedKitDisplayOptions";
 import {
@@ -60,6 +67,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { SortableTicketCategoryItem } from "@/components/Ticket/SortableTicketCategoryItem";
+import { MobileGeneralTicketsSection } from "@/components/Ticket/MobileGeneralTicketsSection";
 import {
   categorySortableId,
   organizerTicketCategoriesCollisionDetection,
@@ -72,7 +80,6 @@ import {
   applyOrganizerTicketDragEnd,
   categoryIdForTicketScope,
   persistTicketOrderDrafts,
-  sortedTicketsInScope,
 } from "@/lib/organizerTicketListDnD";
 
 function committedCategoryKeyForTicket(
@@ -114,13 +121,14 @@ export default function EditTicketsPage() {
     useState(false);
   const [categoryOrderIds, setCategoryOrderIds] = useState<string[]>([]);
   const [savingNavigate, setSavingNavigate] = useState(false);
-  /** Ordem dos ingressos alterada por drag; persistida só em «Salvar alterações». */
+  /** Ordem local após drag; em edição o patch é persistido na API logo após o drop. */
   const [ticketOrderDraft, setTicketOrderDraft] = useState<Record<string, string[]>>(
     {},
   );
-  /** Nomes de categoria editados na tela; persistidos só em «Salvar alterações». */
-  const [categoryNameDraft, setCategoryNameDraft] = useState<Record<string, string>>(
-    {},
+  const [categoryFormDrawerOpen, setCategoryFormDrawerOpen] = useState(false);
+  const [categoryFormMode, setCategoryFormMode] = useState<"create" | "edit">("create");
+  const [categoryFormCategoryId, setCategoryFormCategoryId] = useState<string | null>(
+    null,
   );
 
   const committedAssignmentRef = useRef<Record<string, string>>({});
@@ -141,6 +149,7 @@ export default function EditTicketsPage() {
     tickets,
     loading: ticketsLoading,
     loadTickets,
+    deleteTicket,
   } = useTickets(eventId, authChecked);
 
   const loading = categoriesLoading || ticketsLoading;
@@ -206,13 +215,6 @@ export default function EditTicketsPage() {
       .filter(Boolean) as ModalityGroup[];
   }, [categories, categoryOrderIds]);
 
-  const orderedCategoriesDisplay = useMemo(() => {
-    return orderedCategories.map((c) => ({
-      ...c,
-      name: categoryNameDraft[c.id] ?? c.name,
-    }));
-  }, [orderedCategories, categoryNameDraft]);
-
   // Buscar produtos
   const { data: productsData } = useQuery({
     queryKey: queryKeys.events.products(eventId || ""),
@@ -242,9 +244,9 @@ export default function EditTicketsPage() {
     if (!eventId) return;
 
     const handleTicketCreated = () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.events.tickets(eventId),
-      });
+      const qk = queryKeys.events.tickets(eventId);
+      void queryClient.invalidateQueries({ queryKey: qk });
+      void queryClient.refetchQueries({ queryKey: qk });
     };
 
     window.addEventListener("ticketCreated", handleTicketCreated);
@@ -275,7 +277,7 @@ export default function EditTicketsPage() {
 
   // Handlers
   const handleCreateGroup = useCallback(
-    async (nameOverride?: string) => {
+    async (nameOverride?: string, descriptionOverride?: string) => {
       const nameToUse = nameOverride || newGroupName.trim();
 
       if (!nameToUse) {
@@ -284,34 +286,42 @@ export default function EditTicketsPage() {
       }
 
       try {
-        await createCategory(nameToUse);
+        await createCategory(
+          nameToUse,
+          descriptionOverride?.trim()
+            ? { description: descriptionOverride.trim() }
+            : undefined,
+        );
         setNewGroupName("");
         setEditingGroupName("");
         setShowCreateGroupSection(false);
         setEditingGroupId(null);
-      } catch (error) {
-        // Error já foi tratado no hook
+      } catch (e) {
+        throw e;
       }
     },
     [newGroupName, createCategory]
   );
 
   const handleUpdateGroupName = useCallback(
-    (groupId: string, name: string) => {
+    async (groupId: string, name: string) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      setCategoryNameDraft((prev) => {
-        const cat = categories.find((c) => c.id === groupId);
-        if (cat && cat.name === trimmed) {
-          const { [groupId]: _, ...rest } = prev;
-          return rest;
-        }
-        return { ...prev, [groupId]: trimmed };
-      });
-      setEditingGroupId(null);
-      setEditingGroupName("");
+      const cat = categories.find((c) => c.id === groupId);
+      if (cat?.name === trimmed) {
+        setEditingGroupId(null);
+        setEditingGroupName("");
+        return;
+      }
+      try {
+        await updateCategory(groupId, { name: trimmed });
+        setEditingGroupId(null);
+        setEditingGroupName("");
+      } catch {
+        // Erro tratado no hook
+      }
     },
-    [categories],
+    [categories, updateCategory],
   );
 
   const handleUpdateGroupDescription = useCallback(
@@ -325,19 +335,45 @@ export default function EditTicketsPage() {
     [updateCategory]
   );
 
+  const categoryFormInitial = useMemo(() => {
+    if (!categoryFormDrawerOpen) return { name: "", description: "" };
+    if (categoryFormMode === "create") return { name: "", description: "" };
+    const c = categories.find((x) => x.id === categoryFormCategoryId);
+    return {
+      name: c?.name ?? "",
+      description: c?.description ?? "",
+    };
+  }, [
+    categoryFormDrawerOpen,
+    categoryFormMode,
+    categoryFormCategoryId,
+    categories,
+  ]);
+
+  const handleCategoryFormDrawerSubmit = useCallback(
+    async ({ name, description }: TicketCategoryFormPayload) => {
+      if (categoryFormMode === "create") {
+        await handleCreateGroup(name, description);
+        return;
+      }
+      if (!categoryFormCategoryId) return;
+      await updateCategory(categoryFormCategoryId, {
+        name: name.trim(),
+        description: description.trim(),
+      });
+    },
+    [categoryFormMode, categoryFormCategoryId, handleCreateGroup, updateCategory],
+  );
+
   const handleDeleteGroup = useCallback(
     async (groupId: string) => {
       try {
         await deleteCategory(groupId);
-        setCategoryNameDraft((prev) => {
-          const { [groupId]: _, ...rest } = prev;
-          return rest;
-        });
       } catch (error) {
         // Error já foi tratado no hook
       }
     },
-    [deleteCategory]
+    [deleteCategory],
   );
 
   const handleDuplicateTicket = useCallback(
@@ -384,7 +420,6 @@ export default function EditTicketsPage() {
     [eventId, queryClient, categories],
   );
 
-  /** Só cache local; persistência em «Salvar alterações». */
   const handleDropTicket = useCallback(
     async (ticketId: string, categoryId: string | null): Promise<void> => {
       if (!eventId) {
@@ -402,17 +437,50 @@ export default function EditTicketsPage() {
         return;
       }
 
-      queryClient.setQueryData<Ticket[]>(
-        queryKeys.events.tickets(eventId),
-        (prev) => {
-          if (!prev) return prev;
-          return prev.map((t) =>
-            t.id === ticketId
-              ? { ...t, groupId: categoryId || "uncategorized" }
-              : t
-          );
-        },
-      );
+      const qk = queryKeys.events.tickets(eventId);
+      const snapshot = queryClient.getQueryData<Ticket[]>(qk);
+      const nextGroupId =
+        categoryId === null || categoryId === "uncategorized"
+          ? "uncategorized"
+          : categoryId;
+
+      queryClient.setQueryData<Ticket[]>(qk, (prev) => {
+        if (!prev) return prev;
+        return prev.map((t) =>
+          t.id === ticketId ? { ...t, groupId: nextGroupId } : t,
+        );
+      });
+
+      try {
+        await organizerService.updateTicket(eventId, ticketId, {
+          categoryId:
+            categoryId === null || categoryId === "uncategorized"
+              ? null
+              : categoryId,
+        });
+        const list = queryClient.getQueryData<Ticket[]>(qk) ?? [];
+        const updated = list.find((x) => x.id === ticketId) ?? {
+          ...ticket,
+          groupId: nextGroupId,
+        };
+        committedAssignmentRef.current = {
+          ...committedAssignmentRef.current,
+          [ticketId]: committedCategoryKeyForTicket(updated, categories),
+        };
+        setCommittedAssignmentsVersion((v) => v + 1);
+      } catch (error: unknown) {
+        queryClient.setQueryData(qk, snapshot);
+        const msg =
+          error &&
+          typeof error === "object" &&
+          "response" in error &&
+          (error as { response?: { data?: { message?: string } } }).response?.data
+            ?.message;
+        toast.error(
+          typeof msg === "string" ? msg : "Não foi possível mover o ingresso.",
+        );
+        throw error;
+      }
     },
     [eventId, tickets, queryClient, categories],
   );
@@ -473,7 +541,25 @@ export default function EditTicketsPage() {
           const oldIndex = prev.indexOf(sortDragId);
           const newIndex = prev.indexOf(overCatId);
           if (oldIndex < 0 || newIndex < 0) return prev;
-          return arrayMove(prev, oldIndex, newIndex);
+          const next = arrayMove(prev, oldIndex, newIndex);
+          const m = new Map(categories.map((c) => [c.id, c]));
+          const ordered = next
+            .map((id) => m.get(id))
+            .filter(Boolean) as ModalityGroup[];
+          void persistTicketCategoryOrderApi(eventId, ordered)
+            .then(() =>
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.events.ticketCategories(eventId),
+              }),
+            )
+            .catch((e) => {
+              console.error(e);
+              toast.error("Não foi possível salvar a ordem das categorias.");
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.events.ticketCategories(eventId),
+              });
+            });
+          return next;
         });
         return;
       }
@@ -487,7 +573,7 @@ export default function EditTicketsPage() {
       const dragEndPosition = dragEndPositionRef.current;
       void (async () => {
         try {
-          await applyOrganizerTicketDragEnd({
+          const orderPatch = await applyOrganizerTicketDragEnd({
             event,
             tickets,
             categories,
@@ -497,14 +583,47 @@ export default function EditTicketsPage() {
             dragEndPosition,
             categoryElementsCacheRef,
             setTicketOrderDraft,
+            ticketOrderDraft,
           });
+          if (Object.keys(orderPatch).length > 0) {
+            const ticketList =
+              queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
+              tickets;
+            const cats =
+              queryClient.getQueryData<ModalityGroup[]>(
+                queryKeys.events.ticketCategories(eventId),
+              ) ?? categories;
+            await persistTicketOrderDrafts(eventId, ticketList, cats, orderPatch);
+            setTicketOrderDraft({});
+            await queryClient.invalidateQueries({
+              queryKey: queryKeys.events.tickets(eventId),
+            });
+            await queryClient.refetchQueries({
+              queryKey: queryKeys.events.tickets(eventId),
+            });
+            const freshTickets =
+              queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
+              [];
+            const freshCats =
+              queryClient.getQueryData<ModalityGroup[]>(
+                queryKeys.events.ticketCategories(eventId),
+              ) ?? cats;
+            committedAssignmentRef.current = buildCommittedAssignmentsMap(
+              freshTickets,
+              freshCats,
+            );
+            setCommittedAssignmentsVersion((v) => v + 1);
+          }
+        } catch (e) {
+          console.error(e);
+          toast.error("Não foi possível salvar a ordem dos ingressos.");
         } finally {
           setActiveId(null);
           dragEndPositionRef.current = null;
         }
       })();
     },
-    [tickets, handleDropTicket, categories, eventId, queryClient]
+    [tickets, handleDropTicket, categories, eventId, queryClient, ticketOrderDraft],
   );
 
   const handleDragCancel = useCallback(() => {
@@ -571,23 +690,28 @@ export default function EditTicketsPage() {
     ticketOrderDraft,
   ]);
 
-  /** Nova categoria em edição sem nome — bloqueia "Salvar alterações". */
-  const hasIncompleteNewCategoryDraft = useMemo(() => {
-    if (showCreateGroupSection && editingGroupId === "new") {
-      return !newGroupName.trim();
-    }
-    if (hasNoCategories && allTickets.length === 0 && editingGroupId === "new") {
-      return !editingGroupName.trim();
-    }
-    return false;
-  }, [
-    showCreateGroupSection,
-    editingGroupId,
-    newGroupName,
-    editingGroupName,
-    hasNoCategories,
-    allTickets.length,
-  ]);
+  const ticketMoveCategoryOptions = useMemo((): TicketMoveCategoryOption[] => {
+    const uncCount = uncategorizedTickets.length;
+    const rows: TicketMoveCategoryOption[] = orderedCategories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      ticketCount: (ticketsByCategory[c.id] || []).length,
+    }));
+    rows.push({
+      id: "uncategorized-bucket",
+      name: "Sem categoria",
+      ticketCount: uncCount,
+      isUncategorizedBucket: true,
+    });
+    return rows;
+  }, [orderedCategories, ticketsByCategory, uncategorizedTickets]);
+
+  const handleDeleteTicket = useCallback(
+    async (ticketId: string) => {
+      await deleteTicket(ticketId);
+    },
+    [deleteTicket],
+  );
 
   const kitSelectionDisplayKey = useMemo(
     () => JSON.stringify(event?.kitSelectionDisplay ?? null),
@@ -617,34 +741,6 @@ export default function EditTicketsPage() {
     });
   }, [savedKitSelection]);
 
-  const persistedCategoryOrderIds = useMemo(
-    () =>
-      [...categories]
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((c) => c.id),
-    [categories],
-  );
-
-  const categoryOrderDirty = useMemo(() => {
-    if (persistedCategoryOrderIds.length === 0) return false;
-    if (categoryOrderIds.length !== persistedCategoryOrderIds.length) return true;
-    return categoryOrderIds.some(
-      (id, i) => id !== persistedCategoryOrderIds[i],
-    );
-  }, [categoryOrderIds, persistedCategoryOrderIds]);
-
-  const ticketOrderDirty = useMemo(() => {
-    for (const key of Object.keys(ticketOrderDraft)) {
-      const scopeCategoryId = key === "uncategorized" ? null : key;
-      const bucket = sortedTicketsInScope(tickets, scopeCategoryId, categories);
-      const serverIds = bucket.map((t) => t.id);
-      const draftIds = ticketOrderDraft[key];
-      if (!draftIds || draftIds.length !== serverIds.length) return true;
-      if (draftIds.some((id, i) => id !== serverIds[i])) return true;
-    }
-    return false;
-  }, [ticketOrderDraft, tickets, categories]);
-
   const kitSelectionDirty = useMemo(() => {
     const norm = (k: EventKitSelectionDisplay) => ({
       show: k.showKitImagesOnSelection,
@@ -658,36 +754,12 @@ export default function EditTicketsPage() {
     );
   }, [draftKitSelection, savedKitSelection]);
 
-  const categoryNamesDirty = useMemo(
-    () => Object.keys(categoryNameDraft).length > 0,
-    [categoryNameDraft],
-  );
-
-  const ticketAssignmentsDirty = useMemo(() => {
-    void committedAssignmentsVersion;
-    const baseline = committedAssignmentRef.current;
-    for (const t of tickets) {
-      if (committedCategoryKeyForTicket(t, categories) !== baseline[t.id]) {
-        return true;
-      }
-    }
-    for (const id of Object.keys(baseline)) {
-      if (!tickets.some((x) => x.id === id)) return true;
-    }
-    return false;
-  }, [tickets, categories, committedAssignmentsVersion]);
-
-  const hasPendingTicketsPageChanges =
-    categoryNamesDirty ||
-    categoryOrderDirty ||
-    ticketOrderDirty ||
-    kitSelectionDirty ||
-    ticketAssignmentsDirty;
+  /** Só opções de exibição do kit no checkout — o restante (DnD, categorias, mover ingresso) persiste na hora. */
+  const hasPendingTicketsPageChanges = kitSelectionDirty;
 
   const discardLocalChanges = useCallback(async () => {
     if (!eventId) return;
     setTicketOrderDraft({});
-    setCategoryNameDraft({});
     await queryClient.invalidateQueries({
       queryKey: queryKeys.events.tickets(eventId),
     });
@@ -767,36 +839,15 @@ export default function EditTicketsPage() {
   }, []);
 
   const handleSaveChangesNavigate = useCallback(async (): Promise<boolean> => {
-    if (hasIncompleteNewCategoryDraft) {
-      toast.error(
-        "Informe o nome da nova categoria ou cancele a criação antes de salvar as alterações."
-      );
-      return false;
-    }
     if (!eventId) {
       toast.error("Evento não encontrado.");
       return false;
     }
-    if (orderedCategories.length === 0) {
-      toast.error(
-        "Adicione pelo menos uma categoria de ingressos antes de salvar as alterações.",
-      );
-      return false;
+    if (!kitSelectionDirty) {
+      return true;
     }
     setSavingNavigate(true);
     try {
-      const ticketList =
-        queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
-        tickets;
-      const assignmentBaseline = { ...committedAssignmentRef.current };
-      for (const t of ticketList) {
-        const desired = committedCategoryKeyForTicket(t, categories);
-        if (assignmentBaseline[t.id] === desired) continue;
-        await organizerService.updateTicket(eventId, t.id, {
-          categoryId: desired === "uncategorized" ? null : desired,
-        });
-      }
-
       const mergedKitDisplay = {
         ...defaultEventKitSelectionDisplay(),
         ...draftKitSelection,
@@ -810,74 +861,19 @@ export default function EditTicketsPage() {
       await organizerService.updateEvent(
         eventId,
         { kitSelectionDisplay: mergedKitDisplay },
-        { clientPage: `events/${eventId}/tickets` }
+        { clientPage: `events/${eventId}/tickets` },
       );
-      if (Object.keys(categoryNameDraft).length > 0) {
-        await Promise.all(
-          Object.entries(categoryNameDraft).map(([id, name]) =>
-            updateCategory(id, { name }),
-          ),
-        );
-        setCategoryNameDraft({});
-      }
-      await persistTicketCategoryOrderApi(eventId, orderedCategories);
-      const ticketListAfter =
-        queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
-        ticketList;
-      await persistTicketOrderDrafts(
-        eventId,
-        ticketListAfter,
-        categories,
-        ticketOrderDraft,
-      );
-      setTicketOrderDraft({});
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.events.tickets(eventId),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.events.ticketCategories(eventId),
-      });
-      await queryClient.refetchQueries({
-        queryKey: queryKeys.events.tickets(eventId),
-      });
-      await queryClient.refetchQueries({
-        queryKey: queryKeys.events.ticketCategories(eventId),
-      });
       await reloadEvent();
-      const freshTickets =
-        queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ?? [];
-      const freshCats =
-        queryClient.getQueryData<ModalityGroup[]>(
-          queryKeys.events.ticketCategories(eventId),
-        ) ?? [];
-      committedAssignmentRef.current = buildCommittedAssignmentsMap(
-        freshTickets,
-        freshCats,
-      );
-      setCommittedAssignmentsVersion((v) => v + 1);
-      prevTicketsLoadingRef.current = false;
       toast.success("Alterações salvas com sucesso!");
       return true;
     } catch (e) {
       console.error(e);
-      toast.error("Não foi possível salvar as alterações desta página.");
+      toast.error("Não foi possível salvar as opções de exibição do kit.");
       return false;
     } finally {
       setSavingNavigate(false);
     }
-  }, [
-    hasIncompleteNewCategoryDraft,
-    eventId,
-    orderedCategories,
-    queryClient,
-    draftKitSelection,
-    reloadEvent,
-    tickets,
-    categories,
-    ticketOrderDraft,
-    categoryNameDraft,
-    updateCategory,
-  ]);
+  }, [eventId, kitSelectionDirty, draftKitSelection, reloadEvent]);
 
   const handleSaveAndLeave = useCallback(async () => {
     const ok = await handleSaveChangesNavigate();
@@ -916,7 +912,7 @@ export default function EditTicketsPage() {
     }
 
     return {
-      sections: orderedCategoriesDisplay.map((cat) => ({
+      sections: orderedCategories.map((cat) => ({
         id: cat.id,
         name: cat.name,
         tickets: (ticketsByCategoryDisplay[cat.id] || []).map(ticketToRow),
@@ -932,7 +928,7 @@ export default function EditTicketsPage() {
     };
   }, [
     hasNoCategories,
-    orderedCategoriesDisplay,
+    orderedCategories,
     ticketsByCategoryDisplay,
     uncategorizedTicketsDisplay,
     productsMap,
@@ -981,52 +977,94 @@ export default function EditTicketsPage() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="pb-20">
-        <div className="w-full flex flex-col gap-9">
-          {/* Title Section */}
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-3 items-center">
+        <div className="bg-gray-2 pb-32 pt-0 md:bg-transparent md:px-0 md:pb-20 md:pt-0">
+        <div className="flex w-full flex-col gap-5 md:gap-9">
+          <div className="-mx-4 flex h-[52px] items-center border-b border-gray-6 bg-gray-2 px-4 md:hidden">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="flex size-8 cursor-pointer items-center justify-center transition-colors rotate-180 hover:bg-gray-3"
+              aria-label="Voltar"
+            >
+              <ArrowButton isOpen={false} />
+            </button>
+            <h1 className="ml-2 font-manrope text-base font-extrabold leading-[1.1] text-gray-12">
+              Ingressos
+            </h1>
+          </div>
+
+          <div className="flex flex-col gap-5 md:gap-4">
+            <div className="hidden items-center gap-3 md:flex">
               <button
+                type="button"
                 onClick={handleBack}
-                className="border border-gray-6 rounded-[52px] cursor-pointer size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
+                className="flex size-9 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
+                aria-label="Voltar"
               >
                 <ArrowButton isOpen={false} />
               </button>
-              <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+              <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
                 Ingressos
               </h1>
             </div>
-            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-              Crie categorias e ingressos com lotes, valores e regras, incluindo o kit que será definido dentro do ingresso para o participante escolher na inscrição.
+            <p className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-11">
+              Crie categorias e ingressos com lotes, valores e regras. Depois, vincule um kit para o
+              participante configurar durante a inscrição
             </p>
           </div>
 
-          {/* Header with Actions */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+          <div className="flex gap-2 md:hidden">
+            <Button
+              type="button"
+              onClick={() => {
+                setCategoryFormMode("create");
+                setCategoryFormCategoryId(null);
+                setCategoryFormDrawerOpen(true);
+              }}
+              variant="outline"
+              className="h-11 min-h-0 flex-1 gap-1 rounded-lg border-gray-6 px-5 font-family-dm-sans text-sm font-bold text-gray-12"
+            >
+              <Plus className="size-5 shrink-0" />
+              Criar categoria
+            </Button>
+            <Button
+              type="button"
+              onClick={() =>
+                requestNavigate(`/organizer/events/${eventId}/edit/tickets/create`)
+              }
+              variant="default"
+              className="h-11 min-h-0 flex-1 gap-1 rounded-lg px-5 font-family-dm-sans text-sm font-bold"
+            >
+              <Plus className="size-5 shrink-0" />
+              Criar ingresso
+            </Button>
+          </div>
+
+          <div className="hidden items-center justify-between gap-4 md:flex md:flex-wrap">
+            <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">
               Ingressos avulsos
             </h2>
             <div className="flex gap-2">
               <Button
+                type="button"
                 onClick={() => {
                   setShowCreateGroupSection(true);
                   setEditingGroupId("new");
                   setNewGroupName("");
                 }}
                 variant="outline"
-                className="border-gray-6 text-gray-12 text-base font-bold font-manrope"
+                className="border-gray-6 font-manrope text-base font-bold text-gray-12"
               >
                 <Plus className="size-5" />
                 Criar categoria
               </Button>
               <Button
+                type="button"
                 onClick={() =>
-                  requestNavigate(
-                    `/organizer/events/${eventId}/edit/tickets/create`,
-                  )
+                  requestNavigate(`/organizer/events/${eventId}/edit/tickets/create`)
                 }
                 variant="default"
-                className="text-base font-bold font-manrope leading-[1.1]"
+                className="font-manrope text-base font-bold leading-[1.1]"
               >
                 <Plus className="size-5" />
                 Criar ingresso
@@ -1036,24 +1074,30 @@ export default function EditTicketsPage() {
 
           {allTickets.length > 0 && (
             <UncategorizedTicketsDropShell>
-              <div className="overflow-x-auto">
-                <TicketTable
-                  tickets={allTicketsDisplay}
-                  currentPage={1}
-                  totalPages={1}
-                  onPageChange={() => {}}
-                  onEdit={handleEditTicket}
-                  onDuplicate={handleDuplicateTicket}
-                  duplicatingTicketId={duplicatingTicketId}
-                  productsMap={productsMap}
-                />
-              </div>
+              <MobileGeneralTicketsSection ticketCount={allTickets.length}>
+                <div className="overflow-x-auto">
+                  <TicketTable
+                    tickets={allTicketsDisplay}
+                    currentPage={1}
+                    totalPages={1}
+                    onPageChange={() => {}}
+                    onEdit={handleEditTicket}
+                    onDuplicate={handleDuplicateTicket}
+                    duplicatingTicketId={duplicatingTicketId}
+                    productsMap={productsMap}
+                    ticketScopeCategoryId={null}
+                    moveCategoryOptions={ticketMoveCategoryOptions}
+                    onMoveTicketToCategory={handleDropTicket}
+                    onDeleteTicket={handleDeleteTicket}
+                  />
+                </div>
+              </MobileGeneralTicketsSection>
             </UncategorizedTicketsDropShell>
           )}
 
-          {/* Create Category Section */}
+          {/* Create Category Section — desktop; no mobile (drawer) */}
           {showCreateGroupSection && (
-            <div className="flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-5">
+            <div className="hidden gap-6 rounded-xl border border-gray-6 bg-gray-3 p-5 md:flex md:flex-col">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 {editingGroupId === "new" || !editingGroupId ? (
                   <input
@@ -1243,12 +1287,16 @@ export default function EditTicketsPage() {
 
           {/* Categories List */}
           {!hasNoCategories && (
-            <SortableContext
-              items={orderedCategories.map((c) => categorySortableId(c.id))}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col gap-6">
-                {orderedCategoriesDisplay.map((category) => {
+            <>
+              <p className="font-manrope text-base font-extrabold leading-[1.1] text-gray-12 md:hidden">
+                Categorias
+              </p>
+              <SortableContext
+                items={orderedCategories.map((c) => categorySortableId(c.id))}
+                strategy={verticalListSortingStrategy}
+              >
+              <div className="flex flex-col gap-4 md:gap-6">
+                {orderedCategories.map((category) => {
                   const categoryTickets =
                     ticketsByCategoryDisplay[category.id] || [];
 
@@ -1259,7 +1307,13 @@ export default function EditTicketsPage() {
                       category={category}
                       totalTicketsInCategory={categoryTickets.length}
                       onEdit={handleUpdateGroupName}
+                      onEditDescription={handleUpdateGroupDescription}
                       onDelete={handleDeleteGroup}
+                      onMobileEditCategory={(id) => {
+                        setCategoryFormMode("edit");
+                        setCategoryFormCategoryId(id);
+                        setCategoryFormDrawerOpen(true);
+                      }}
                     >
                       <TicketCategoryCard
                         category={category}
@@ -1278,12 +1332,16 @@ export default function EditTicketsPage() {
                         duplicatingTicketId={duplicatingTicketId}
                         productsMap={productsMap}
                         onDropTicket={handleDropTicket}
+                        moveCategoryOptions={ticketMoveCategoryOptions}
+                        onMoveTicketToCategory={handleDropTicket}
+                        onDeleteTicket={handleDeleteTicket}
                       />
                     </SortableTicketCategoryItem>
                   );
                 })}
               </div>
-            </SortableContext>
+              </SortableContext>
+            </>
           )}
 
           <div className="w-full">
@@ -1306,16 +1364,19 @@ export default function EditTicketsPage() {
             />
           </div>
 
-          <div className="flex justify-end">
-            <Button
-              onClick={() => void handleSaveChangesNavigate()}
-              variant="default"
-              disabled={savingNavigate || !hasPendingTicketsPageChanges}
-              className="text-[20px] font-bold px-10 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {savingNavigate ? "Salvando..." : "Salvar alterações"}
-            </Button>
-          </div>
+          {kitSelectionDirty ? (
+            <div className="flex justify-stretch md:justify-end">
+              <Button
+                type="button"
+                onClick={() => void handleSaveChangesNavigate()}
+                variant="default"
+                disabled={savingNavigate}
+                className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-auto md:px-10 md:text-[20px]"
+              >
+                {savingNavigate ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
       <DragOverlay>
@@ -1328,7 +1389,7 @@ export default function EditTicketsPage() {
         ) : activeId && parseCategorySortableId(activeId) ? (
           <div className="max-w-md rounded-xl border border-gray-6 bg-gray-1 p-4 opacity-95 shadow-2xl">
             <p className="text-sm font-semibold text-gray-12">
-              {orderedCategoriesDisplay.find(
+              {orderedCategories.find(
                 (c) => categorySortableId(c.id) === activeId,
               )?.name || "Categoria"}
             </p>
@@ -1338,6 +1399,15 @@ export default function EditTicketsPage() {
       </DragOverlay>
       </DndContext>
 
+      <TicketCategoryFormDrawer
+        open={categoryFormDrawerOpen}
+        onOpenChange={setCategoryFormDrawerOpen}
+        mode={categoryFormMode}
+        initialName={categoryFormInitial.name}
+        initialDescription={categoryFormInitial.description}
+        onSubmit={handleCategoryFormDrawerSubmit}
+      />
+
       <KitImagePositionDrawer
         isOpen={kitImagePositionDrawerOpen}
         onClose={() => setKitImagePositionDrawerOpen(false)}
@@ -1345,7 +1415,7 @@ export default function EditTicketsPage() {
         uncategorized={kitImagePositionDrawerData.uncategorized}
         initialKitSelection={drawerInitialKitSelection}
         onSave={handleKitDrawerSave}
-        saveSuccessMessage="Posição das imagens atualizada. Clique em Salvar alterações para persistir."
+        saveSuccessMessage="Posição das imagens atualizada no rascunho. Use «Salvar alterações» abaixo para gravar no evento."
       />
 
       <UnsavedChangesModal

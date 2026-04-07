@@ -11,6 +11,8 @@ import {
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import { ArrowButton } from "@/components/ArrowButton";
+import { cn } from "@/utils/cn";
 
 type QuillInstance = InstanceType<typeof import("quill").default>;
 
@@ -22,6 +24,64 @@ let topicQuillImageLayoutRegistered = false;
  * e texto ao lado; só força block em parágrafo justificado (largura total).
  * Não zera width — preserva px definidos pelo módulo de resize.
  */
+function isTopicModalNarrowViewport(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 767px)").matches
+  );
+}
+
+/** Ajusta só tamanhos da toolbar/editor do Quill (mobile vs desktop). */
+function applyTopicQuillLayoutSizes(root: HTMLElement | null) {
+  if (!root) return;
+  const narrow = isTopicModalNarrowViewport();
+  const toolbar = root.querySelector(".ql-toolbar") as HTMLElement | null;
+  const editor = root.querySelector(".ql-editor") as HTMLElement | null;
+  const btnH = narrow ? "44px" : "56px";
+  const btnW = narrow ? "44px" : "72px";
+  const toolbarPad = narrow ? "10px 8px 6px 12px" : "20px 20px 0 20px";
+  const editorPad = narrow ? "12px 12px 16px 12px" : "20px 20px 0 20px";
+  const fontPx = narrow ? "15px" : "16px";
+  const svgPx = narrow ? "20px" : "24px";
+  const fmtGap = narrow ? "4px" : "8px";
+
+  if (toolbar) {
+    toolbar.style.padding = toolbarPad;
+    toolbar.style.gap = fmtGap;
+    toolbar.style.justifyContent = narrow ? "flex-start" : "flex-end";
+  }
+  if (editor) {
+    editor.style.padding = editorPad;
+    editor.style.fontSize = fontPx;
+  }
+
+  root
+    .querySelectorAll(".ql-toolbar button, .ql-toolbar .ql-picker-label")
+    .forEach((button) => {
+      const btn = button as HTMLElement;
+      btn.style.minHeight = btnH;
+      btn.style.minWidth = btnW;
+      btn.style.fontSize = fontPx;
+      btn.style.padding = narrow ? "4px 6px" : "3px 10px";
+      btn.querySelectorAll("svg").forEach((svg) => {
+        const el = svg as unknown as HTMLElement;
+        el.style.width = svgPx;
+        el.style.height = svgPx;
+      });
+    });
+
+  root.querySelectorAll(".ql-toolbar .ql-picker").forEach((picker) => {
+    const pick = picker as HTMLElement;
+    pick.style.minHeight = btnH;
+    pick.style.minWidth = btnW;
+  });
+
+  root.querySelectorAll(".ql-toolbar .ql-formats").forEach((format) => {
+    const fmt = format as HTMLElement;
+    fmt.style.gap = fmtGap;
+  });
+}
+
 function applyQuillEditorImageStyles(editor: HTMLElement | null) {
   if (!editor) return;
   const href = typeof window !== "undefined" ? window.location.href : "";
@@ -316,6 +376,7 @@ export function TopicModal() {
           // Apply custom styles to match Figma design
           setTimeout(() => {
             const root = quillRef.current;
+            const narrow = isTopicModalNarrowViewport();
             const toolbar = root?.querySelector(".ql-toolbar") as HTMLElement;
             const container = root?.querySelector(".ql-container") as HTMLElement;
             const editor = root?.querySelector(".ql-editor") as HTMLElement;
@@ -342,10 +403,7 @@ export function TopicModal() {
               };
 
               toolbar.style.backgroundColor = '#fcfcfc';
-              toolbar.style.padding = '20px 20px 0 20px';
               toolbar.style.display = 'flex';
-              toolbar.style.gap = '8px';
-              toolbar.style.justifyContent = 'flex-end';
               toolbar.style.flexWrap = 'wrap';
               toolbar.style.flexShrink = "0";
             }
@@ -353,7 +411,7 @@ export function TopicModal() {
             if (container) {
               container.style.border = "none";
               container.style.flex = "1";
-              container.style.minHeight = "0";
+              container.style.minHeight = narrow ? "120px" : "0";
               container.style.display = "flex";
               container.style.flexDirection = "column";
               container.style.overflow = "hidden";
@@ -362,12 +420,10 @@ export function TopicModal() {
 
             if (editor) {
               editor.style.color = "#646464";
-              editor.style.fontSize = "16px";
               editor.style.fontFamily = "DM Sans, sans-serif";
               editor.style.lineHeight = "1.3";
-              editor.style.padding = "20px 20px 0 20px";
               editor.style.flex = "1";
-              editor.style.minHeight = "0";
+              editor.style.minHeight = narrow ? "min(42vh, 280px)" : "0";
               editor.style.overflowY = "auto";
             }
 
@@ -378,24 +434,18 @@ export function TopicModal() {
             buttons?.forEach((button) => {
               const btn = button as HTMLElement;
               btn.style.backgroundColor = '#f9f9f9';
-              btn.style.padding = '3px 10px';
-              btn.style.minHeight = '56px';
-              btn.style.minWidth = '72px';
               btn.style.display = 'flex';
               btn.style.alignItems = 'center';
               btn.style.justifyContent = 'center';
               btn.style.cursor = 'pointer';
               btn.style.transition = 'all 0.2s ease';
               btn.style.color = '#202020';
-              btn.style.fontSize = '16px';
               btn.style.fontWeight = '600';
               btn.style.margin = '0';
 
               // Style SVG icons inside buttons
               const svgs = btn.querySelectorAll('svg');
               svgs?.forEach((svg) => {
-                svg.style.width = '24px';
-                svg.style.height = '24px';
                 svg.style.color = '#202020';
               });
 
@@ -428,10 +478,7 @@ export function TopicModal() {
               const pick = picker as HTMLElement;
               pick.style.backgroundColor = '#f9f9f9';
               pick.style.border = '1px solid #d9d9d9';
-              pick.style.borderRadius = '12px';
-              pick.style.padding = '3px 10px';
-              pick.style.minHeight = '56px';
-              pick.style.minWidth = '72px';
+              pick.style.borderRadius = narrow ? '8px' : '12px';
               pick.style.margin = '0';
             });
 
@@ -441,7 +488,6 @@ export function TopicModal() {
             );
             separators?.forEach((format) => {
               const fmt = format as HTMLElement;
-              fmt.style.gap = '8px';
               fmt.style.display = 'flex';
               fmt.style.alignItems = 'center';
             });
@@ -484,6 +530,8 @@ export function TopicModal() {
                 el.setAttribute("aria-label", tip);
               }
             });
+
+            applyTopicQuillLayoutSizes(root);
           }, 150);
 
           // Set initial content if provided
@@ -548,6 +596,19 @@ export function TopicModal() {
       quillInstanceRef.current = null;
     }
   }, [isOpen, initialTitle, initialContent, isEditing]);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => applyTopicQuillLayoutSizes(quillRef.current);
+    const onOrientation = () => window.setTimeout(apply, 200);
+    mq.addEventListener("change", apply);
+    window.addEventListener("orientationchange", onOrientation);
+    return () => {
+      mq.removeEventListener("change", apply);
+      window.removeEventListener("orientationchange", onOrientation);
+    };
+  }, [isOpen]);
 
   const handleSave = async () => {
     if (onModalSave) {
@@ -636,77 +697,112 @@ export function TopicModal() {
             className="fixed inset-0 bg-black/90 z-50"
           />
 
-          {/* Modal */}
+          {/* Modal — opacity-only: evita transform + teclado mobile quebrando layout */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex max-md:min-h-0 max-md:items-stretch max-md:justify-center max-md:p-0 md:items-center md:justify-center md:p-4"
           >
-            <div className="bg-gray-1 rounded-xl border border-gray-6 flex max-h-[90vh] w-full min-h-0 max-w-[1098px] flex-col overflow-visible shadow-2xl">
+            <div
+              className={cn(
+                "flex min-h-0 w-full flex-col overflow-visible bg-gray-1 shadow-2xl",
+                "max-md:h-dvh max-md:max-h-dvh max-md:rounded-none max-md:border-0",
+                "md:max-h-[90vh] md:max-w-[1098px] md:rounded-xl md:border md:border-gray-6",
+              )}
+            >
               {/* Header */}
-              <div className="shrink-0 border-b border-gray-6 flex items-center justify-between px-5 py-3">
-                <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                  {isEditing ? "Editar seção" : "Criar seção"}
-                </h2>
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-between border-b border-gray-6",
+                  "max-md:h-[52px] max-md:bg-gray-2 max-md:px-4 max-md:py-2",
+                  "md:px-5 md:py-3",
+                )}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-2 md:contents">
+                  <button
+                    type="button"
+                    onClick={closeTopicModal}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gray-6 text-gray-12 transition-colors hover:bg-gray-3 md:hidden"
+                    aria-label="Voltar"
+                  >
+                    <ArrowButton isOpen={false} className="rotate-180" />
+                  </button>
+                  <h2
+                    className={cn(
+                      "min-w-0 text-gray-12 leading-[1.1]",
+                      "max-md:font-manrope max-md:text-base max-md:font-extrabold",
+                      "md:font-family-dm-sans md:text-[20px] md:font-semibold md:leading-[1.3]",
+                    )}
+                  >
+                    {isEditing ? "Editar seção" : "Criar seção"}
+                  </h2>
+                </div>
                 <button
+                  type="button"
                   onClick={closeTopicModal}
-                  className="text-gray-11 hover:text-gray-12 transition-colors p-1"
+                  className="hidden p-1 text-gray-11 transition-colors hover:text-gray-12 md:block"
+                  aria-label="Fechar"
                 >
                   <X className="size-6" />
                 </button>
               </div>
 
               {/* overflow-visible: tooltip de link do Quill não pode ser cortado pelos ancestrais */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-visible">
-                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-visible p-6">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:overflow-visible">
+                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-visible p-4 md:gap-6 md:p-6">
                   <div className="flex shrink-0 flex-col gap-2">
                     <input
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Digite o título do tópico"
-                      className="w-full text-gray-12 text-2xl font-medium focus:outline-none focus:border-primary-8 transition-colors"
+                      className="w-full border-0 border-b border-transparent bg-transparent text-gray-12 transition-colors placeholder:text-gray-11 focus:border-primary-8 focus:outline-none max-md:text-lg max-md:font-semibold max-md:font-manrope md:text-2xl md:font-medium"
                     />
                   </div>
 
-                  <div className="flex min-h-[240px] min-w-0 flex-1 flex-col">
+                  <div className="flex min-h-[min(42vh,280px)] min-w-0 flex-1 flex-col md:min-h-[240px]">
                     <div
                       ref={quillRef}
-                      className="[&_.ql-tooltip]:z-200 flex min-h-[240px] flex-1 flex-col"
-                      style={{ minHeight: 240 }}
+                      className="[&_.ql-tooltip]:z-200 flex min-h-[inherit] flex-1 flex-col"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="shrink-0 border-t border-gray-6 flex items-center justify-between gap-3 px-6 py-4">
-                <div className="min-w-0">
+              <div
+                className={cn(
+                  "flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-6 px-4 py-4",
+                  "max-md:flex-col max-md:items-stretch max-md:bg-gray-1 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
+                  "md:px-6",
+                )}
+              >
+                <div className="min-w-0 max-md:order-2 max-md:w-full md:order-0">
                   {isEditing && allowDelete ? (
                     <Button
                       type="button"
                       variant="destructive"
                       onClick={() => setDeleteModalOpen(true)}
-                      className="py-0 bg-red-11 text-red-2 font-bold font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
+                      className="flex w-full items-center justify-center rounded-lg bg-red-11 py-2 font-manrope font-bold leading-[1.1] text-red-2 transition-colors duration-200 hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50 md:w-auto"
                     >
                       Deletar tópico
                     </Button>
                   ) : null}
                 </div>
-                <div className="flex items-center justify-end gap-3 shrink-0">
+                <div className="flex w-full shrink-0 flex-col gap-2 max-md:order-1 md:w-auto md:flex-row md:justify-end md:gap-3">
                   <Button
                     variant="outline"
                     onClick={closeTopicModal}
-                    className="border-gray-6 text-gray-12 px-4 py-2"
+                    className="h-11 w-full border-gray-6 text-gray-12 md:h-auto md:w-auto md:px-4 md:py-2"
                   >
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleSave}
                     disabled={!title.trim()}
-                    className="disabled:bg-gray-6 disabled:cursor-not-allowed px-6 py-2"
+                    className="h-11 w-full disabled:cursor-not-allowed disabled:bg-gray-6 md:h-auto md:w-auto md:px-6 md:py-2"
                   >
                     {isEditing ? "Salvar alteração" : "Criar"}
                   </Button>

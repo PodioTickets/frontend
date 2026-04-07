@@ -61,15 +61,32 @@ export function CategoryKitHorizontalCarousel({
     );
   }, [displayItems.length]);
 
-  const visibleIndices = useMemo(() => {
+  /**
+   * Faixa visível com o item preferido (safeCenter) na posição visual central.
+   * Índices fora do array viram espaçadores — evita o principal colado à esquerda.
+   */
+  const slotLayout = useMemo(() => {
     if (displayItems.length === 0) return [];
     const n = displayItems.length;
     const maxSlots = Math.min(MAX_VISIBLE, n);
-    const half = Math.floor(maxSlots / 2);
-    let start = safeCenter - half;
-    if (start < 0) start = 0;
-    if (start + maxSlots > n) start = Math.max(0, n - maxSlots);
-    return Array.from({ length: maxSlots }, (_, i) => start + i);
+    const centerSlot = Math.floor(maxSlots / 2);
+    const slots: Array<
+      | { kind: "item"; dataIndex: number; isCenter: boolean }
+      | { kind: "spacer"; key: string }
+    > = [];
+    for (let i = 0; i < maxSlots; i++) {
+      const dataIndex = safeCenter + (i - centerSlot);
+      if (dataIndex >= 0 && dataIndex < n) {
+        slots.push({
+          kind: "item",
+          dataIndex,
+          isCenter: i === centerSlot,
+        });
+      } else {
+        slots.push({ kind: "spacer", key: `sp-${safeCenter}-${i}` });
+      }
+    }
+    return slots;
   }, [displayItems.length, safeCenter]);
 
   if (displayItems.length === 0) return null;
@@ -116,13 +133,23 @@ export function CategoryKitHorizontalCarousel({
               }
             }}
             className={cn(
-              "flex min-h-[136px] min-w-0 flex-1 items-center justify-start gap-2 overflow-x-auto scroll-smooth py-1 max-sm:snap-x max-sm:snap-mandatory sm:justify-center sm:gap-3 sm:overflow-visible",
+              "flex min-h-[136px] min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto scroll-smooth py-1 max-sm:snap-x max-sm:snap-mandatory sm:gap-3 sm:overflow-visible",
               "outline-none focus-visible:ring-2 focus-visible:ring-primary-8 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-1 rounded-xl"
             )}
           >
-            {visibleIndices.map((idx) => {
-              const item = displayItems[idx];
-              const isCenter = idx === safeCenter;
+            {slotLayout.map((slot) => {
+              if (slot.kind === "spacer") {
+                return (
+                  <div
+                    key={slot.key}
+                    className="shrink-0"
+                    style={{ width: SIDE_PX, height: SIDE_PX }}
+                    aria-hidden
+                  />
+                );
+              }
+              const { dataIndex, isCenter } = slot;
+              const item = displayItems[dataIndex];
               const size = isCenter ? CENTER_PX : SIDE_PX;
               return (
                 <button
@@ -130,12 +157,12 @@ export function CategoryKitHorizontalCarousel({
                   type="button"
                   role="listitem"
                   onClick={() => {
-                    setCenterIdx(idx);
-                    openModal(idx);
+                    setCenterIdx(dataIndex);
+                    openModal(dataIndex);
                   }}
                   className={cn(
                     "relative shrink-0 overflow-hidden rounded-lg border bg-gray-2 transition-all duration-300 ease-out max-sm:snap-center",
-                    "hover:border-gray-7 hover:shadow-md",
+                    "hover:border-gray-6 hover:shadow-md",
                     isCenter
                       ? "z-10 border-primary-8 shadow-[0px_4px_12px_0px_rgba(17,17,17,0.12)] scale-[1.02]"
                       : "border-gray-6 opacity-95 hover:opacity-100 scale-100"

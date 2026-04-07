@@ -19,7 +19,14 @@ import { Plus } from "lucide-react";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
-import { TicketTable } from "@/components/Ticket/TicketTable";
+import {
+  TicketCategoryFormDrawer,
+  type TicketCategoryFormPayload,
+} from "@/components/Ticket/TicketCategoryFormDrawer";
+import {
+  TicketTable,
+  type TicketMoveCategoryOption,
+} from "@/components/Ticket/TicketTable";
 import { UncategorizedTicketsDropShell } from "@/components/Ticket/UncategorizedTicketsDropShell";
 import {
   DndContext,
@@ -38,6 +45,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { SortableTicketCategoryItem } from "@/components/Ticket/SortableTicketCategoryItem";
+import { MobileGeneralTicketsSection } from "@/components/Ticket/MobileGeneralTicketsSection";
 import {
   categorySortableId,
   organizerTicketCategoriesCollisionDetection,
@@ -75,6 +83,11 @@ export default function IngressosPage() {
   const [categoryNameDraft, setCategoryNameDraft] = useState<Record<string, string>>(
     {},
   );
+  const [categoryFormDrawerOpen, setCategoryFormDrawerOpen] = useState(false);
+  const [categoryFormMode, setCategoryFormMode] = useState<"create" | "edit">("create");
+  const [categoryFormCategoryId, setCategoryFormCategoryId] = useState<string | null>(
+    null,
+  );
 
   // Hooks para gerenciar dados
   const {
@@ -89,6 +102,7 @@ export default function IngressosPage() {
     tickets,
     loading: ticketsLoading,
     loadTickets,
+    deleteTicket,
   } = useTickets(formData.createdEventId, authChecked);
 
   const loading = categoriesLoading || ticketsLoading;
@@ -192,9 +206,9 @@ export default function IngressosPage() {
     if (!formData.createdEventId) return;
 
     const handleTicketCreated = () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.events.tickets(formData.createdEventId!),
-      });
+      const qk = queryKeys.events.tickets(formData.createdEventId!);
+      void queryClient.invalidateQueries({ queryKey: qk });
+      void queryClient.refetchQueries({ queryKey: qk });
     };
 
     window.addEventListener("ticketCreated", handleTicketCreated);
@@ -207,23 +221,31 @@ export default function IngressosPage() {
   }, [formData.createdEventId, queryClient]);
 
   // Handlers memoizados
-  const handleCreateGroup = useCallback(async (nameOverride?: string) => {
-    const nameToUse = nameOverride || newGroupName.trim();
+  const handleCreateGroup = useCallback(
+    async (nameOverride?: string, descriptionOverride?: string) => {
+      const nameToUse = nameOverride || newGroupName.trim();
 
-    if (!nameToUse) {
-      toast.error("Nome da categoria é obrigatório");
-      return;
-    }
+      if (!nameToUse) {
+        toast.error("Nome da categoria é obrigatório");
+        return;
+      }
 
-    try {
-      await createCategory(nameToUse);
-      setNewGroupName("");
-      setShowCreateGroupSection(false);
-      setEditingGroupId(null);
-    } catch (error) {
-      // Error já foi tratado no hook
-    }
-  }, [newGroupName, createCategory]);
+      try {
+        await createCategory(
+          nameToUse,
+          descriptionOverride?.trim()
+            ? { description: descriptionOverride.trim() }
+            : undefined,
+        );
+        setNewGroupName("");
+        setShowCreateGroupSection(false);
+        setEditingGroupId(null);
+      } catch (e) {
+        throw e;
+      }
+    },
+    [newGroupName, createCategory],
+  );
 
   const handleUpdateGroupName = useCallback(async (groupId: string, name: string) => {
     try {
@@ -244,6 +266,50 @@ export default function IngressosPage() {
       }
     },
     [updateCategory]
+  );
+
+  const categoryFormInitial = useMemo(() => {
+    if (!categoryFormDrawerOpen) return { name: "", description: "" };
+    if (categoryFormMode === "create") return { name: "", description: "" };
+    const c = categories.find((x) => x.id === categoryFormCategoryId);
+    const name =
+      categoryFormCategoryId != null
+        ? (categoryNameDraft[categoryFormCategoryId] ?? c?.name ?? "")
+        : "";
+    return {
+      name,
+      description: c?.description ?? "",
+    };
+  }, [
+    categoryFormDrawerOpen,
+    categoryFormMode,
+    categoryFormCategoryId,
+    categories,
+    categoryNameDraft,
+  ]);
+
+  const handleCategoryFormDrawerSubmit = useCallback(
+    async ({ name, description }: TicketCategoryFormPayload) => {
+      if (categoryFormMode === "create") {
+        await handleCreateGroup(name, description);
+        return;
+      }
+      if (!categoryFormCategoryId) return;
+      await updateCategory(categoryFormCategoryId, {
+        name: name.trim(),
+        description: description.trim(),
+      });
+      setCategoryNameDraft((prev) => {
+        const { [categoryFormCategoryId]: _, ...rest } = prev;
+        return rest;
+      });
+    },
+    [
+      categoryFormMode,
+      categoryFormCategoryId,
+      handleCreateGroup,
+      updateCategory,
+    ],
   );
 
   const handleDeleteGroup = useCallback(
@@ -345,6 +411,7 @@ export default function IngressosPage() {
       }
       console.error("Error moving ticket:", error);
       toast.error(error.response?.data?.message || "Erro ao mover ingresso");
+      throw error;
     }
   }, [formData.createdEventId, tickets, queryClient, categories]);
 
@@ -436,13 +503,21 @@ export default function IngressosPage() {
           dragEndPosition,
           categoryElementsCacheRef,
           setTicketOrderDraft,
+          ticketOrderDraft,
         });
       } finally {
         setActiveId(null);
         dragEndPositionRef.current = null;
       }
     })();
-  }, [tickets, handleDropTicket, categories, formData.createdEventId, queryClient]);
+  }, [
+    tickets,
+    handleDropTicket,
+    categories,
+    formData.createdEventId,
+    queryClient,
+    ticketOrderDraft,
+  ]);
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
@@ -510,6 +585,29 @@ export default function IngressosPage() {
     uncategorizedTicketsDisplay,
     ticketOrderDraft,
   ]);
+
+  const ticketMoveCategoryOptions = useMemo((): TicketMoveCategoryOption[] => {
+    const uncCount = uncategorizedTickets.length;
+    const rows: TicketMoveCategoryOption[] = orderedCategories.map((c) => ({
+      id: c.id,
+      name: categoryNameDraft[c.id] ?? c.name,
+      ticketCount: (ticketsByCategory[c.id] || []).length,
+    }));
+    rows.push({
+      id: "uncategorized-bucket",
+      name: "Sem categoria",
+      ticketCount: uncCount,
+      isUncategorizedBucket: true,
+    });
+    return rows;
+  }, [orderedCategories, categoryNameDraft, ticketsByCategory, uncategorizedTickets]);
+
+  const handleDeleteTicket = useCallback(
+    async (ticketId: string) => {
+      await deleteTicket(ticketId);
+    },
+    [deleteTicket],
+  );
 
   const handleConfirmIngressos = useCallback(async () => {
     const eventId = formData.createdEventId;
@@ -584,48 +682,90 @@ export default function IngressosPage() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex-1 px-5 md:px-[124px] pt-[52px]">
-        <div className="max-w-[1192px] mx-auto flex flex-col gap-9">
-          {/* Title Section */}
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-3 items-center">
+        <div className="flex-1 bg-gray-2 px-4 pb-32 pt-0 md:bg-transparent md:px-5 md:pb-0 md:pt-[52px] lg:px-[124px]">
+        <div className="mx-auto flex max-w-[1192px] flex-col gap-5 md:gap-9">
+          <div className="-mx-4 flex h-[52px] items-center border-b border-gray-6 bg-gray-2 px-4 md:hidden">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
+              aria-label="Voltar"
+            >
+              <ArrowButton isOpen={false} />
+            </button>
+            <h1 className="ml-2 font-manrope text-base font-extrabold leading-[1.1] text-gray-12">
+              Ingressos
+            </h1>
+          </div>
+
+          <div className="flex flex-col gap-5 md:gap-4">
+            <div className="hidden items-center gap-3 md:flex">
               <button
+                type="button"
                 onClick={handleBack}
-                className="border border-gray-6 rounded-[52px] cursor-pointer size-9 flex items-center justify-center hover:bg-gray-3 transition-colors rotate-180"
+                className="flex size-9 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
+                aria-label="Voltar"
               >
                 <ArrowButton isOpen={false} />
               </button>
-              <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
+              <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
                 Ingressos
               </h1>
             </div>
-            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-              Crie categorias e ingressos com lotes, valores e regras, incluindo o kit que será definido dentro do ingresso para o participante escolher na inscrição.
+            <p className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-11">
+              Crie categorias e ingressos com lotes, valores e regras. Depois, vincule um kit para o
+              participante configurar durante a inscrição
             </p>
           </div>
 
-          {/* Header with Actions */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h2 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+          <div className="flex gap-2 md:hidden">
+            <Button
+              type="button"
+              onClick={() => {
+                setCategoryFormMode("create");
+                setCategoryFormCategoryId(null);
+                setCategoryFormDrawerOpen(true);
+              }}
+              variant="outline"
+              className="h-11 min-h-0 flex-1 gap-1 rounded-lg border-gray-6 px-5 font-family-dm-sans text-sm font-bold text-gray-12"
+            >
+              <Plus className="size-5 shrink-0" />
+              Criar categoria
+            </Button>
+            <Button
+              type="button"
+              onClick={() => orgNav.push("/organizer/events/new/tickets/create")}
+              variant="default"
+              className="h-11 min-h-0 flex-1 gap-1 rounded-lg px-5 font-family-dm-sans text-sm font-bold"
+            >
+              <Plus className="size-5 shrink-0" />
+              Criar ingresso
+            </Button>
+          </div>
+
+          <div className="hidden items-center justify-between gap-4 md:flex md:flex-wrap">
+            <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">
               Ingressos avulsos
             </h2>
             <div className="flex gap-2">
               <Button
+                type="button"
                 onClick={() => {
                   setShowCreateGroupSection(true);
                   setEditingGroupId("new");
                   setNewGroupName("");
                 }}
                 variant="outline"
-                className="border-gray-6 text-gray-12 text-base font-bold font-manrope"
+                className="border-gray-6 font-manrope text-base font-bold text-gray-12"
               >
                 <Plus className="size-5" />
                 Criar categoria
               </Button>
               <Button
+                type="button"
                 onClick={() => orgNav.push("/organizer/events/new/tickets/create")}
                 variant="default"
-                className="text-base font-bold font-manrope leading-[1.1]"
+                className="font-manrope text-base font-bold leading-[1.1]"
               >
                 <Plus className="size-5" />
                 Criar ingresso
@@ -635,24 +775,30 @@ export default function IngressosPage() {
 
           {allTickets.length > 0 && (
             <UncategorizedTicketsDropShell>
-              <div className="overflow-x-auto">
-                <TicketTable
-                  tickets={allTicketsDisplay}
-                  currentPage={1}
-                  totalPages={1}
-                  onPageChange={() => {}}
-                  onEdit={handleEditTicket}
-                  onDuplicate={handleDuplicateTicket}
-                  duplicatingTicketId={duplicatingTicketId}
-                  productsMap={productsMap}
-                />
-              </div>
+              <MobileGeneralTicketsSection ticketCount={allTickets.length}>
+                <div className="overflow-x-auto">
+                  <TicketTable
+                    tickets={allTicketsDisplay}
+                    currentPage={1}
+                    totalPages={1}
+                    onPageChange={() => {}}
+                    onEdit={handleEditTicket}
+                    onDuplicate={handleDuplicateTicket}
+                    duplicatingTicketId={duplicatingTicketId}
+                    productsMap={productsMap}
+                    ticketScopeCategoryId={null}
+                    moveCategoryOptions={ticketMoveCategoryOptions}
+                    onMoveTicketToCategory={handleDropTicket}
+                    onDeleteTicket={handleDeleteTicket}
+                  />
+                </div>
+              </MobileGeneralTicketsSection>
             </UncategorizedTicketsDropShell>
           )}
 
-          {/* Create Category Section */}
+          {/* Create Category Section — desktop; no mobile (drawer) */}
           {showCreateGroupSection && (
-            <div className="flex flex-col gap-6 bg-gray-3 border border-gray-6 rounded-xl p-5">
+            <div className="hidden gap-6 rounded-xl border border-gray-6 bg-gray-3 p-5 md:flex md:flex-col">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 {editingGroupId === "new" || !editingGroupId ? (
                   <input
@@ -812,11 +958,15 @@ export default function IngressosPage() {
 
           {/* Categories List */}
           {!hasNoCategories && (
-            <SortableContext
-              items={orderedCategories.map((c) => categorySortableId(c.id))}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col gap-6">
+            <>
+              <p className="font-manrope text-base font-extrabold leading-[1.1] text-gray-12 md:hidden">
+                Categorias
+              </p>
+              <SortableContext
+                items={orderedCategories.map((c) => categorySortableId(c.id))}
+                strategy={verticalListSortingStrategy}
+              >
+              <div className="flex flex-col gap-4 md:gap-6">
                 {orderedCategoriesDisplay.map((category) => {
                   const categoryTickets =
                     ticketsByCategoryDisplay[category.id] || [];
@@ -828,7 +978,13 @@ export default function IngressosPage() {
                       category={category}
                       totalTicketsInCategory={categoryTickets.length}
                       onEdit={handleUpdateGroupName}
+                      onEditDescription={handleUpdateGroupDescription}
                       onDelete={handleDeleteGroup}
+                      onMobileEditCategory={(id) => {
+                        setCategoryFormMode("edit");
+                        setCategoryFormCategoryId(id);
+                        setCategoryFormDrawerOpen(true);
+                      }}
                     >
                       <TicketCategoryCard
                         category={category}
@@ -847,20 +1003,25 @@ export default function IngressosPage() {
                         duplicatingTicketId={duplicatingTicketId}
                         productsMap={productsMap}
                         onDropTicket={handleDropTicket}
+                        moveCategoryOptions={ticketMoveCategoryOptions}
+                        onMoveTicketToCategory={handleDropTicket}
+                        onDeleteTicket={handleDeleteTicket}
                       />
                     </SortableTicketCategoryItem>
                   );
                 })}
               </div>
-            </SortableContext>
+              </SortableContext>
+            </>
           )}
 
-          <div className="flex justify-end">
+          <div className="flex justify-stretch md:justify-end">
             <Button
+              type="button"
               onClick={() => void handleConfirmIngressos()}
               variant="default"
               disabled={savingConfirm}
-              className="text-[20px] font-bold px-10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 md:h-auto md:w-auto md:px-10 md:text-[20px]"
             >
               {savingConfirm ? "Salvando..." : "Confirmar ingressos"}
             </Button>
@@ -886,6 +1047,15 @@ export default function IngressosPage() {
         ) : null}
       </DragOverlay>
       </DndContext>
+
+      <TicketCategoryFormDrawer
+        open={categoryFormDrawerOpen}
+        onOpenChange={setCategoryFormDrawerOpen}
+        mode={categoryFormMode}
+        initialName={categoryFormInitial.name}
+        initialDescription={categoryFormInitial.description}
+        onSubmit={handleCategoryFormDrawerSubmit}
+      />
     </>
   );
 }
