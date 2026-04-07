@@ -19,6 +19,7 @@ import {
   DEFAULT_TOPIC_SENTINEL,
   isPendingTopicId,
   newPendingTopicId,
+  readTopicsPreviewDraft,
   topicIdsInUiOrder,
   writeTopicsPreviewDraft,
   type TopicSectionRow,
@@ -58,10 +59,22 @@ export default function EditTopicsPage() {
       setLoading(true);
       try {
         const event = await organizerService.getEventById(eventId);
-        const { sections: next, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
-        defaultTopicApiIdRef.current = defaultTopicApiId;
-        setSections(next);
-        setCommittedSectionsJson(JSON.stringify(next));
+        const { sections: fromApi, defaultTopicApiId } =
+          buildTopicSectionsFromEvent(event);
+        const draft = readTopicsPreviewDraft(eventId);
+
+        if (draft && draft.sections.length > 0) {
+          const defaultRow = draft.sections.find((s) => !s.allowDelete);
+          defaultTopicApiIdRef.current =
+            defaultRow && defaultRow.id !== DEFAULT_TOPIC_SENTINEL
+              ? defaultRow.id
+              : null;
+          setSections(draft.sections);
+        } else {
+          defaultTopicApiIdRef.current = defaultTopicApiId;
+          setSections(fromApi);
+        }
+        setCommittedSectionsJson(JSON.stringify(fromApi));
       } catch (error: any) {
         console.error("Error loading topics:", error);
         toast.error("Erro ao carregar tópicos");

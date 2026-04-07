@@ -29,6 +29,18 @@ export default function EditFlowEventPreviewPage() {
   const [kits, setKits] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
+    const hasToken = userService.isAuthenticated();
+    if (!hasToken) {
+      orgNav.push("/organizer/login");
+      return;
+    }
+    const timer = setTimeout(() => {
+      setAuthChecked(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [orgNav]);
+
+  useEffect(() => {
     const loadEventData = async () => {
       if (!authChecked || !eventId) return;
 
