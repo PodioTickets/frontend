@@ -832,7 +832,6 @@ export default function UserProfilePage() {
                       "Masculino",
                       "Feminino",
                       "Outro",
-                      "Prefiro não informar",
                     ].map((gender) => (
                       <button
                         key={gender}

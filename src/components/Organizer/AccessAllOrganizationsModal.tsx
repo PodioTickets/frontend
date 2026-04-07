@@ -42,13 +42,13 @@ export function AccessAllOrganizationsModal() {
       setLoading(true);
       // Primeiro, adicionar a conta do usuário
       const accounts: OrganizationAccount[] = [];
-      
+
       if (user) {
         accounts.push({
           id: user.id,
           type: "user",
-          name: user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
+          name: user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
             : user.email || "Nome do usuário",
           subtitle: "Usuário",
           avatarUrl: user.avatarUrl,
@@ -64,7 +64,7 @@ export function AccessAllOrganizationsModal() {
           // Buscar membros da organização para encontrar o papel do usuário
           const members = await organizerService.getOrganizationMembers();
           const userMember = members.find((m: OrganizationMember) => m.userId === user?.id);
-          
+
           accounts.push({
             id: currentOrg.id,
             type: "organization",
@@ -100,11 +100,6 @@ export function AccessAllOrganizationsModal() {
       // Se for usuário, apenas fecha o modal
       closeAccessAllOrganizationsModal();
     }
-  };
-
-  const handleCreateOrganization = () => {
-    closeAccessAllOrganizationsModal();
-    orgNav.push("/organizer/create");
   };
 
   return (
@@ -203,22 +198,6 @@ export function AccessAllOrganizationsModal() {
                         Nenhuma organização encontrada
                       </div>
                     )}
-                  </div>
-
-                  {/* Create Organization Button */}
-                  <div className="border border-gray-6 flex flex-col items-start justify-center rounded-lg p-3 w-full">
-                    <button
-                      onClick={handleCreateOrganization}
-                      className="border border-gray-6 flex gap-[10px] h-[52px] items-center justify-center px-3 py-4 rounded-lg w-full hover:bg-gray-3 transition-colors cursor-pointer"
-                    >
-                      <div className="flex flex-1 gap-2 items-center min-w-0">
-                        <Building2 className="size-6 text-gray-12 shrink-0" />
-                        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                          Criar nova organização
-                        </p>
-                      </div>
-                      <ChevronRight className="size-6 text-gray-12 shrink-0" />
-                    </button>
                   </div>
                 </div>
               </div>

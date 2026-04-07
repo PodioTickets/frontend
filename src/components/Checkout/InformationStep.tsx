@@ -772,7 +772,6 @@ export function InformationStep({
     { id: "masculino", label: "Masculino" },
     { id: "feminino", label: "Feminino" },
     { id: "outro", label: "Outro" },
-    { id: "prefiro-nao-dizer", label: "Prefiro não dizer" },
   ];
 
   // Helper to get gender display value (handles both old IDs and new labels)
