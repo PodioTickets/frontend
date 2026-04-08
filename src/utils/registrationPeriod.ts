@@ -2,6 +2,49 @@
 export const REGISTRATION_END_BEFORE_START_TOAST =
   "A data de encerramento das inscrições não pode ser anterior à data de início.";
 
+export const DATE_NOT_BEFORE_TODAY_TOAST =
+  "Não é permitido selecionar uma data anterior a hoje.";
+
+/** Início do dia atual (horário local) para `minDate` em pickers que não permitem datas passadas. */
+export function getTodayStartLocal(): Date {
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+}
+
+/** `YYYY-MM-DD` → início do dia no fuso local, ou null se inválido. */
+export function parseIsoDateToLocalDayStart(ymd: string): Date | null {
+  const s = ymd?.trim();
+  if (!s) return null;
+  const parts = s.split("-");
+  if (parts.length !== 3) return null;
+  const y = Number(parts[0]);
+  const m = Number(parts[1]) - 1;
+  const d = Number(parts[2]);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) {
+    return null;
+  }
+  const dt = new Date(y, m, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m || dt.getDate() !== d) {
+    return null;
+  }
+  return dt;
+}
+
+/** Compara só o dia civil local: `true` se `ymd` for anterior ao dia de `boundaryDayStart`. */
+export function isIsoDateStrictlyBefore(
+  ymd: string,
+  boundaryDayStart: Date,
+): boolean {
+  const parsed = parseIsoDateToLocalDayStart(ymd);
+  if (!parsed) return false;
+  const b = new Date(
+    boundaryDayStart.getFullYear(),
+    boundaryDayStart.getMonth(),
+    boundaryDayStart.getDate(),
+  );
+  return parsed < b;
+}
+
 export type RegistrationPeriodFields = {
   registrationStartDate: string;
   registrationStartTime: string;

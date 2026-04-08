@@ -472,6 +472,9 @@ export function TicketCard({
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}
           ticketName={ticket.name}
+          preferredProductId={
+            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]
+          }
         />
       )}
     </>

@@ -468,7 +468,7 @@ export function CreateCouponModal() {
                           {couponType === "QUANTITY" && (
                             <div className="flex flex-col gap-3">
                               <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                                Cupom por quantidade (automático)
+                                Cupom automático por idade
                               </h3>
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos
@@ -479,7 +479,7 @@ export function CreateCouponModal() {
                           {couponType === "AGE" && (
                             <div className="flex flex-col gap-3">
                               <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                                Cupom por idade (automático)
+                                Cupom automático por quantidade
                               </h3>
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Desconto automático para participantes dentro de uma faixa de idade na data do evento

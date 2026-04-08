@@ -85,7 +85,6 @@ export function CreateProductModal() {
   const [productImage, setProductImage] = useState<string | null>(null);
   const [isIncludedInTicket, setIsIncludedInTicket] = useState(true);
   const [basePrice, setBasePrice] = useState("");
-  const [isRequired, setIsRequired] = useState(true);
   const [variationTypeName, setVariationTypeName] = useState("");
   const [variations, setVariations] = useState<ProductVariation[]>([]);
   /** Padrão Figma: «Não» — liberar edição da variação pelo comprador */
@@ -210,7 +209,6 @@ export function CreateProductModal() {
         productImage,
         isIncludedInTicket,
         basePrice,
-        isRequired,
         variationTypeName: variationTypeName.trim(),
         buyerCanEditVariation,
         variationChangeDeadlineDays,
@@ -225,7 +223,6 @@ export function CreateProductModal() {
       productImage,
       isIncludedInTicket,
       basePrice,
-      isRequired,
       variationTypeName,
       variationChangeDeadlineDays,
       variations,
@@ -249,8 +246,6 @@ export function CreateProductModal() {
           (rec.basePrice ?? rec.base_price) as number | string | undefined,
         ),
       );
-      const req = rec.isRequired ?? rec.is_required;
-      setIsRequired(req !== false);
       setVariationTypeName(
         sanitizeVariationTypeLabelInput(
           String(rec.variationType ?? rec.variation_type ?? ""),
@@ -312,7 +307,6 @@ export function CreateProductModal() {
       setProductImage(null);
       setIsIncludedInTicket(true);
       setBasePrice("");
-      setIsRequired(true);
       setVariationTypeName("");
       const t = Date.now();
       setVariations([
@@ -566,7 +560,7 @@ export function CreateProductModal() {
         image: productImage,
         isIncludedInTicket,
         basePrice: Math.round(basePriceReais * 100),
-        isRequired,
+        isRequired: isIncludedInTicket,
         variationType: variationTypeName.trim() || undefined,
         variations: variations
           .filter((v) => v.name.trim())
@@ -1009,56 +1003,6 @@ export function CreateProductModal() {
                       )}
                     </div>
 
-                    {/* Is Required */}
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-1">
-                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Este produto é obrigatório ou opcional?
-                        </label>
-                        <Tooltip
-                          content={
-                            <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
-                              Se for obrigatório, o participante deverá
-                              selecioná-lo para concluir a inscrição.
-                            </p>
-                          }
-                          position="topRight"
-                        >
-                          <button
-                            type="button"
-                            className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
-                            aria-label="Informação: produto obrigatório ou opcional"
-                          >
-                            <BookIcon className="size-5 shrink-0" />
-                          </button>
-                        </Tooltip>
-                      </div>
-                      <div className="flex gap-2.5">
-                        <div className="flex items-center gap-2">
-                          <Radio
-                            checked={isRequired}
-                            onChange={() => setIsRequired(true)}
-                            name="required"
-                            className="size-6"
-                          />
-                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
-                            Obrigatório
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Radio
-                            checked={!isRequired}
-                            onChange={() => setIsRequired(false)}
-                            name="required"
-                            className="size-6"
-                          />
-                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
-                            Opcional
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Variations */}
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-col gap-3">
@@ -1454,39 +1398,33 @@ export function CreateProductModal() {
                           )}
                         </div>
                       </div>
-                      {buyerCanEditVariation ? (
-                        productPreviewDropdownOptions.length > 0 ? (
-                          <div className="p-4 hidden md:block">
-                            <p className="mb-2 text-base text-gray-12">
-                              <span className="md:hidden">Escolha o tamanho</span>
-                              <span className="hidden md:inline">
-                                Escolha a variação
-                              </span>
-                            </p>
-                            <Dropdown
-                              options={productPreviewDropdownOptions}
-                              menuInline
-                              width="w-full"
-                              maxHeight="max-h-[200px]"
-                              selectedIds={productPreviewDropdownOptions.map(
-                                (o) => o.id,
-                              )}
-                              trigger={(isOpen: boolean) => (
-                                <div className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 py-4 transition-colors hover:border-gray-8">
-                                  <p className="text-base text-gray-11">
-                                    <span className="md:hidden">
-                                      Selecione a opção
-                                    </span>
-                                    <span className="hidden md:inline">
-                                      Selecione a variação
-                                    </span>
-                                  </p>
-                                  <ArrowButton isOpen={isOpen} />
-                                </div>
-                              )}
-                            />
-                          </div>
-                        ) : null
+                      {productPreviewDropdownOptions.length > 0 ? (
+                        <div className="p-4 hidden md:block">
+                          <p className="mb-2 text-base text-gray-12">
+                            <span className="md:hidden">Escolha o tamanho</span>
+                            <span className="hidden md:inline">
+                              Escolha a variação {variationTypeName.trim() || "Variações"}
+                            </span>
+                          </p>
+                          <Dropdown
+                            options={productPreviewDropdownOptions}
+                            menuInPortal
+                            position="bottom"
+                            align="start"
+                            width="w-full"
+                            maxHeight="max-h-[200px]"
+                            trigger={(isOpen: boolean) => (
+                              <div className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 py-4 transition-colors hover:border-gray-8">
+                                <p className="text-base text-gray-11">
+                                  <span className="">
+                                    Selecione a variação
+                                  </span>
+                                </p>
+                                <ArrowButton isOpen={isOpen} />
+                              </div>
+                            )}
+                          />
+                        </div>
                       ) : null}
                     </div>
                   </div>

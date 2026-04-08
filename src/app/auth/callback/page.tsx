@@ -79,6 +79,11 @@ function CallbackContent() {
                 "Login realizado com sucesso! Complete seu cadastro para continuar."
               );
               openRegisterModal({ completeProfile: true });
+              const returnTo =
+                typeof window !== "undefined"
+                  ? sessionStorage.getItem("redirectAfterLogin")
+                  : null;
+              router.replace(returnTo && returnTo.length > 0 ? returnTo : "/");
               return;
             }
 
@@ -96,7 +101,7 @@ function CallbackContent() {
             }
 
             setTimeout(() => {
-              router.push(redirectPath);
+              router.replace(redirectPath);
             }, 500);
             return;
           } catch (validateError) {
@@ -130,13 +135,15 @@ function CallbackContent() {
 
             // Verifica se o perfil está completo
             if (!isProfileComplete(updatedUser)) {
-              // Se não estiver completo, abre o modal de registro para completar cadastro
               toast.success(
                 "Login realizado com sucesso! Complete seu cadastro para continuar."
               );
-              // Abre o modal sem redirecionar - o modal pode aparecer em qualquer página
               openRegisterModal({ completeProfile: true });
-              // Não redireciona, mantém o usuário na página atual
+              const returnTo =
+                typeof window !== "undefined"
+                  ? sessionStorage.getItem("redirectAfterLogin")
+                  : null;
+              router.replace(returnTo && returnTo.length > 0 ? returnTo : "/");
               return;
             }
 
@@ -154,7 +161,7 @@ function CallbackContent() {
             }
 
             setTimeout(() => {
-              router.push(redirectPath);
+              router.replace(redirectPath);
             }, 500);
           } catch (profileError) {
             console.error("Erro ao buscar perfil:", profileError);

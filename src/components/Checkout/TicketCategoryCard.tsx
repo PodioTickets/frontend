@@ -310,6 +310,9 @@ const TicketItemMobile = memo(({
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}
           ticketName={ticket.name}
+          preferredProductId={
+            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]
+          }
         />
       )}
     </div>
@@ -564,6 +567,9 @@ const TicketItemDesktop = memo(({
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}
           ticketName={ticket.name}
+          preferredProductId={
+            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]
+          }
         />
       )}
     </div>
@@ -696,7 +702,14 @@ export function TicketCategoryCard({
                 </p>
               ) : null}
               {showCategoryLevelKit && categoryCarouselItems.length > 0 ? (
-                <CategoryKitHorizontalCarousel items={categoryCarouselItems} />
+                <CategoryKitHorizontalCarousel
+                  items={categoryCarouselItems}
+                  primaryProductId={
+                    kitSelectionDisplay.primaryKitProductByCategoryId[
+                      categoryId
+                    ]
+                  }
+                />
               ) : null}
               <div className="flex flex-col gap-3">
                 {validTickets.map((ticket) => (
@@ -773,7 +786,14 @@ export function TicketCategoryCard({
                 </p>
               ) : null}
               {showCategoryLevelKit && categoryCarouselItems.length > 0 ? (
-                <CategoryKitHorizontalCarousel items={categoryCarouselItems} />
+                <CategoryKitHorizontalCarousel
+                  items={categoryCarouselItems}
+                  primaryProductId={
+                    kitSelectionDisplay.primaryKitProductByCategoryId[
+                      categoryId
+                    ]
+                  }
+                />
               ) : null}
               <div className="flex flex-col gap-3">
                 {validTickets.map((ticket) => (

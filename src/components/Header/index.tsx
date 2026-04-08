@@ -329,16 +329,13 @@ export function Header() {
             >
               {/* Header */}
               <div className="bg-[#191919] border-b-2 border-[#3a3a3a] flex items-center justify-between p-4 h-[64px] shrink-0">
-                <Link href="/" className="h-5 w-[117px] shrink-0 block relative">
-                  <ImageWithInitialFallback
+                <Link href="/" className="h-5 w-[120px] shrink-0 block relative">
+                  <Image
                     src="/images/logo_horizontal.png"
                     alt="PodioTicket"
-                    name="Pódio"
-                    fill
-                    sizes="120px"
-                    className="size-full"
-                    imgClassName="object-contain object-left"
-                    letterClassName="text-sm font-bold text-[#EEE]"
+                    width={120}
+                    height={120}
+                    className="size-full object-contain object-left"
                   />
                 </Link>
                 <button
@@ -491,156 +488,6 @@ export function Header() {
                     </Link>
                   </div>
 
-                  {/* Information Blocks */}
-                  <div className="flex flex-col gap-3 mb-6">
-                    {/* Participantes */}
-                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
-                      <h4 className="text-white font-bold text-sm mb-3">
-                        Participantes
-                      </h4>
-                      <ul className="flex flex-col gap-2">
-                        <li>
-                          <button
-                            onClick={() => openModal("login")}
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
-                          >
-                            Login
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            onClick={() => openModal("register")}
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
-                          >
-                            Cadastre-se
-                          </button>
-                        </li>
-                        <li>
-                          <Link
-                            href="/help"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Central de ajuda
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/terms"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Termos de compra
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Organizadores */}
-                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
-                      <h4 className="text-white font-bold text-sm mb-3">
-                        Organizadores
-                      </h4>
-                      <ul className="flex flex-col gap-2">
-                        <li>
-                          <Link
-                            href="/organizer/create"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Solicite um orçamento
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/organizer"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Painel do Organizador
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/organizer/support"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Suporte
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Empresa */}
-                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
-                      <h4 className="text-white font-bold text-sm mb-3">
-                        Empresa
-                      </h4>
-                      <ul className="flex flex-col gap-2">
-                        <li>
-                          <Link
-                            href="/about"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Sobre nós
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/careers"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Trabalhe conosco
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/privacy"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Política de privacidade
-                          </Link>
-                        </li>
-                        <li>
-                          <Link
-                            href="/terms"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Termos de uso
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Grupos esportivos */}
-                    <div className="bg-[#191919] border border-[#3A3A3A] rounded-lg p-4">
-                      <h4 className="text-white font-bold text-sm mb-3">
-                        Grupos esportivos
-                      </h4>
-                      <ul className="flex flex-col gap-2">
-                        <li>
-                          <button
-                            onClick={() => openModal("login")}
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
-                          >
-                            Login
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            onClick={() => openModal("register")}
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm text-left"
-                          >
-                            Cadastre-se
-                          </button>
-                        </li>
-                        <li>
-                          <Link
-                            href="/help"
-                            className="text-[#B4B4B4] hover:text-white transition-colors text-sm"
-                          >
-                            Central de Ajuda
-                          </Link>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
                 </div>
               </div>
             </motion.div>

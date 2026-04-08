@@ -1,22 +1,33 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { Loading } from "@/components/Loading";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
+import {
+  DEFAULT_CREATE_EVENT_WIZARD_PATH,
+  loadLastCreateEventWizardPath,
+} from "@/lib/createEventWizardPersistence";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function CreateEventRedirectPage() {
-  const router = useRouter();
   const orgNav = useOrganizerNavigate();
   const { clearFormData } = useCreateEvent();
 
   useEffect(() => {
-    clearFormData();
-    orgNav.replace("/organizer/events/new/information");
-  }, [router, clearFormData]);
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("reset") === "1") {
+      clearFormData();
+      orgNav.replace(DEFAULT_CREATE_EVENT_WIZARD_PATH);
+      return;
+    }
+
+    const last = loadLastCreateEventWizardPath();
+    orgNav.replace(last);
+  }, [clearFormData, orgNav]);
 
   return <Loading />;
 }

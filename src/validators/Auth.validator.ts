@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidCPF } from "@/utils/cpf";
 
 export const loginSchema = z.object({
   email: z
@@ -13,17 +14,6 @@ export const loginSchema = z.object({
 
 export const forgotPasswordStep1Schema = loginSchema.pick({ email: true });
 
-// Helper function to validate CPF format
-const validateCPFFormat = (cpf: string): boolean => {
-  const numbers = cpf.replace(/\D/g, "");
-  if (numbers.length !== 11) return false;
-
-  // Check if all digits are the same (invalid CPF)
-  if (/^(\d)\1{10}$/.test(numbers)) return false;
-
-  return true;
-};
-
 // Step 1: Personal Information
 export const registerStep1Schema = z.object({
   nome: z
@@ -35,13 +25,13 @@ export const registerStep1Schema = z.object({
     .string()
     .min(1, "CPF é obrigatório")
     .refine(
-      (cpf) => {
-        const numbers = cpf.replace(/\D/g, "");
-        return numbers.length === 11;
-      },
-      { message: "CPF deve ter 11 dígitos" }
+      (cpf) => cpf.replace(/\D/g, "").length === 11,
+      { message: "CPF deve ter 11 dígitos" },
     )
-    .refine((cpf) => validateCPFFormat(cpf), { message: "CPF inválido" }),
+    .refine((cpf) => isValidCPF(cpf), {
+      message:
+        "CPF inválido, os dígitos verificadores estão incorretos",
+    }),
   dataNascimento: z
     .date({ message: "Data de nascimento é obrigatória" })
     .refine(

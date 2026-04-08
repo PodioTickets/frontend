@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,14 +19,22 @@ import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 import { Loading } from "@/components/Loading";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
 import {
+  DATE_NOT_BEFORE_TODAY_TOAST,
   getMinDateForRegistrationEndPicker,
+  getTodayStartLocal,
+  isIsoDateStrictlyBefore,
   REGISTRATION_END_BEFORE_START_TOAST,
   wouldRegistrationEndBeforeStart,
 } from "@/utils/registrationPeriod";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
-import type { Event } from "@/interfaces/event";
+import {
+  saveRegulationPdfDraft,
+  clearRegulationPdfDraft,
+  loadRegulationPdfDraft,
+} from "@/lib/createEventWizardPersistence";
+import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
 
 const EVENT_NAME_MAX_LENGTH = 100;
 
@@ -52,7 +59,13 @@ export default function InformacoesPage() {
   const [uploadingPDF, setUploadingPDF] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [hasLocalRegulationDraft, setHasLocalRegulationDraft] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setHasLocalRegulationDraft(!!loadRegulationPdfDraft());
+  }, [pdfFile, formData.regulationUrl, formData.createdEventId]);
 
   // Função para obter a data atual formatada como DD/MM/YYYY
   const getCurrentDatePlaceholder = () => {
@@ -178,7 +191,16 @@ export default function InformacoesPage() {
   };
 
   const handleDateChange = (name: string, value: string) => {
+    const todayStart = getTodayStartLocal();
+
     if (name === "registrationStartDate") {
+      if (
+        value?.trim() &&
+        isIsoDateStrictlyBefore(value, todayStart)
+      ) {
+        toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
+        return;
+      }
       const hasStart = Boolean(value?.trim());
       updateFormData({
         registrationStartDate: value,
@@ -196,6 +218,13 @@ export default function InformacoesPage() {
     }
 
     if (name === "registrationEndDate") {
+      if (
+        value?.trim() &&
+        isIsoDateStrictlyBefore(value, todayStart)
+      ) {
+        toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
+        return;
+      }
       const hasEnd = Boolean(value?.trim());
       const nextEndTime = hasEnd
         ? formData.registrationEndTime?.trim() || "00:00"
@@ -217,6 +246,14 @@ export default function InformacoesPage() {
       if (errors[name]) {
         setErrors((prev) => ({ ...prev, [name]: "" }));
       }
+      return;
+    }
+    if (
+      name === "eventDate" &&
+      value?.trim() &&
+      isIsoDateStrictlyBefore(value, todayStart)
+    ) {
+      toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
       return;
     }
     updateFormData({ [name]: value });
@@ -418,6 +455,14 @@ export default function InformacoesPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const readFileAsDataURL = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Falha ao ler o arquivo"));
+      reader.readAsDataURL(file);
+    });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -427,85 +472,51 @@ export default function InformacoesPage() {
 
     setLoading(true);
     try {
-      // Upload do PDF se houver arquivo selecionado
-      let regulationUrl: string | null = formData.regulationUrl || null;
-      if (pdfFile && !pdfUrl) {
-        try {
-          const uploadedUrl = await uploadPDF();
-          if (uploadedUrl) {
-            regulationUrl = uploadedUrl;
-            updateFormData({ regulationUrl: uploadedUrl });
-          }
-        } catch (error: any) {
-          toast.error(error?.message || "Erro ao fazer upload do PDF");
-          setLoading(false);
-          return;
-        }
-      }
-
-      const rs = formData.registrationStartDate?.trim();
-      const re = formData.registrationEndDate?.trim();
-      const rst = (formData.registrationStartTime?.trim() || "00:00").slice(0, 5);
-      const ret = (formData.registrationEndTime?.trim() || "00:00").slice(0, 5);
-
-      const registrationStartDateTime = rs
-        ? `${rs}T${rst}:00`
-        : undefined;
-
-      const registrationEndDateTime = re
-        ? `${re}T${ret}:00`
-        : undefined;
-
-      const eventData: any = {
-        name: formData.name.trim(),
-        eventDate: formData.eventDate,
-        country: "BR",
-        // API exige strings em create (CreateEventDto); não depender só de busca de CEP.
-        location: (formData.street ?? "").trim(),
-        city: (formData.city ?? "").trim(),
-        state: (formData.state ?? "").trim(),
-      };
-
-      if ((formData.cep ?? "").trim()) {
-        eventData.zipCode = formData.cep.trim();
-      }
-      if ((formData.neighborhood ?? "").trim()) {
-        eventData.neighborhood = formData.neighborhood.trim();
-      }
-
-      if (formData.googleMapsLink) {
-        eventData.googleMapsLink = formData.googleMapsLink;
-      }
-
-      if (registrationStartDateTime) {
-        eventData.registrationStartDate = registrationStartDateTime;
-      }
-
-      if (registrationEndDateTime) {
-        eventData.registrationEndDate = registrationEndDateTime;
-      }
-
-      if (regulationUrl && typeof regulationUrl === "string") {
-        eventData.regulationUrl = regulationUrl;
-      }
-
-      let event: Event;
       if (formData.createdEventId) {
-        event = await organizerService.updateEvent(
+        let regulationUrl: string | null = formData.regulationUrl || null;
+        if (pdfFile && !pdfUrl) {
+          try {
+            const uploadedUrl = await uploadPDF();
+            if (uploadedUrl) {
+              regulationUrl = uploadedUrl;
+              updateFormData({ regulationUrl: uploadedUrl });
+            }
+          } catch (error: any) {
+            toast.error(error?.message || "Erro ao fazer upload do PDF");
+            setLoading(false);
+            return;
+          }
+        }
+        const regForBody =
+          regulationUrl?.trim() && !regulationUrl.startsWith("data:")
+            ? regulationUrl.trim()
+            : null;
+        const eventData = buildCreateEventBodyFromForm(formData, regForBody);
+        await organizerService.updateEvent(
           formData.createdEventId,
-          eventData,
+          // Mesmo shape da página (zipCode, neighborhood, registration*, etc.)
+          eventData as never,
           {
             clientPage: organizerNewEventClientPage("information"),
           },
         );
-      } else {
-        event = await organizerService.createEvent(eventData);
-        flushSync(() => {
-          updateFormData({ createdEventId: event.id });
-        });
+        toast.success("Informações salvas com sucesso!");
+        orgNav.push("/organizer/events/new/banner");
+        return;
       }
 
-      toast.success("Informações salvas com sucesso!");
+      if (pdfFile) {
+        const dataUrl = await readFileAsDataURL(pdfFile);
+        saveRegulationPdfDraft({
+          v: 1,
+          dataUrl,
+          fileName: pdfFile.name,
+        });
+        updateFormData({ regulationUrl: "" });
+        setHasLocalRegulationDraft(true);
+      }
+
+      toast.success("Rascunho salvo. Continue para o banner.");
       orgNav.push("/organizer/events/new/banner");
     } catch (error: any) {
       console.error("Error saving event:", error);
@@ -617,6 +628,7 @@ export default function InformacoesPage() {
                     placeholder={getCurrentDatePlaceholder()}
                     className="w-full md:w-max"
                     hideIcon={false}
+                    minDate={getTodayStartLocal()}
                   />
                 </div>
                 <div className="flex items-start gap-2">
@@ -654,6 +666,7 @@ export default function InformacoesPage() {
                         }
                         placeholder={getCurrentDatePlaceholder()}
                         className="w-full md:w-max"
+                        minDate={getTodayStartLocal()}
                       />
                     </div>
                     <div className="w-[112px] shrink-0 md:w-auto">
@@ -890,6 +903,10 @@ export default function InformacoesPage() {
                     onClick={() => {
                       setPdfFile(null);
                       setPdfUrl("");
+                      if (!formData.createdEventId) {
+                        clearRegulationPdfDraft();
+                        setHasLocalRegulationDraft(false);
+                      }
                       if (fileInputRef.current) {
                         fileInputRef.current.value = "";
                       }
@@ -900,19 +917,31 @@ export default function InformacoesPage() {
                   </button>
                 </div>
               )}
-              {(pdfUrl || formData.regulationUrl) && !pdfFile && (
+              {!pdfFile &&
+                (pdfUrl ||
+                  (formData.regulationUrl &&
+                    !formData.regulationUrl.startsWith("data:")) ||
+                  hasLocalRegulationDraft) && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <p className="text-gray-11 text-sm">
                     PDF atual do regulamento
                   </p>
-                  <a
-                    href={pdfUrl || formData.regulationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary-11 text-sm hover:underline"
-                  >
-                    Ver PDF
-                  </a>
+                  {pdfUrl ||
+                  (formData.regulationUrl &&
+                    !formData.regulationUrl.startsWith("data:")) ? (
+                    <a
+                      href={pdfUrl || formData.regulationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-11 text-sm hover:underline"
+                    >
+                      Ver PDF
+                    </a>
+                  ) : (
+                    <span className="text-gray-11 text-sm">
+                      Guardado no rascunho (será enviado ao concluir o banner)
+                    </span>
+                  )}
                 </div>
               )}
             </div>

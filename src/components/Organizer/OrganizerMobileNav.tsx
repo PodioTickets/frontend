@@ -92,15 +92,12 @@ export function OrganizerMobileNav() {
             {/* Header: apenas botão fechar */}
             <div className="flex flex-row items-center justify-between shrink-0 px-4 pt-4 pb-2 bg-[#191919]">
               <span className="relative h-6 w-[120px] shrink-0 block">
-                <ImageWithInitialFallback
-                  src="/images/logo_horizontal.png"
+                <Image
+                  src="/images/logo_organizers_mobile.png"
                   alt="PódioTicket"
-                  name="Pódio"
-                  fill
-                  sizes="120px"
-                  className="size-full"
-                  imgClassName="object-contain object-left"
-                  letterClassName="text-xs font-bold text-white"
+                  width={110}
+                  height={24}
+                  className="size-full object-contain object-left"
                 />
               </span>
               <DrawerClose asChild>

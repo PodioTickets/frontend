@@ -24,6 +24,7 @@ import { HeartIcon } from "@/components/Icons/HeartIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useChangeEmailModal, useChangePasswordModal } from "@/stores/modalStore";
 import { CPFIcon } from "@/components/Icons/CPFIcon";
+import { getCpfValidationMessage } from "@/utils/cpf";
 import { getAvatarUrl } from "@/utils/avatar";
 import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
 
@@ -401,6 +402,14 @@ export default function UserProfilePage() {
 
   const handleSavePersonalData = async () => {
     if (!user) return;
+
+    if (formData.documentNumber?.trim()) {
+      const cpfError = getCpfValidationMessage(formData.documentNumber);
+      if (cpfError) {
+        toast.error(cpfError);
+        return;
+      }
+    }
 
     try {
       // Prepara os dados para atualização

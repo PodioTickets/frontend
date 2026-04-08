@@ -65,13 +65,10 @@ export function resolveCheckoutModalityIconSrc(
   let t = src?.trim();
   if (!t) return undefined;
   t = normalizeProtocolRelative(t);
-  console.log("t", t);
   if (t.startsWith("data:")) return t;
   if (t.startsWith("http://") || t.startsWith("https://")) {
-    console.log("rehostLoopbackAssetUrl", rehostLoopbackAssetUrl(t));
     return rehostLoopbackAssetUrl(t);
   }
-  console.log("t2", t);
   if (t.startsWith("/")) {
     for (const p of SAME_ORIGIN_PUBLIC_PREFIXES) {
       if (t.startsWith(p)) return t;
@@ -79,9 +76,7 @@ export function resolveCheckoutModalityIconSrc(
     const base = getConfiguredApiBase();
     return `${base}${t}`;
   }
-  console.log("t3", t);
   const base = getConfiguredApiBase();
-  console.log("base", base);
   return `${base}/${t}`;
 }
 

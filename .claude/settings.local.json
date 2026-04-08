@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx skills:*)",
+      "Bash(npx -y skills add https://github.com/anthropics/skills --skill frontend-design --yes --global)",
+      "Bash(npx -y skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max --yes --global)",
+      "Bash(node -e \" const Quill = require\\('./node_modules/.pnpm/quill@2.0.3/node_modules/quill/dist/quill.js'\\); const Video = Quill.import\\('formats/video'\\); console.log\\('Video blot:', Video?.blotName, Video?.tagName, Video?.className\\); \")",
+      "Bash(node -e ':*)"
+    ]
+  }
+}

@@ -42,7 +42,6 @@ export default function UserTicketsPage() {
   const filteredTickets = useMemo(() => {
     let filtered = [...tickets];
 
-    // Filter by search term (status filter is already applied in the API via useMyTickets)
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
       filtered = filtered.filter(

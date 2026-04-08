@@ -34,18 +34,34 @@ export const getCardBrand = (cardNumber: string): string => {
 };
 
 export const validateExpiry = (expiry: string): boolean => {
-  const [month, year] = expiry.split('/');
-  if (!month || !year) return false;
-  
-  const expiryMonth = parseInt(month);
-  const expiryYear = 2000 + parseInt(year);
-  
-  if (expiryMonth < 1 || expiryMonth > 12) return false;
-  
-  const expiryDate = new Date(expiryYear, expiryMonth - 1);
-  const now = new Date();
-  
-  return expiryDate > now;
+  const normalized = expiry.replace(/\s/g, "");
+  const [monthStr, yearStr] = normalized.split("/");
+  if (!monthStr || !yearStr) return false;
+
+  const expiryMonth = parseInt(monthStr, 10);
+  const yearDigits = yearStr.replace(/\D/g, "");
+  if (!Number.isFinite(expiryMonth) || yearDigits.length < 2) return false;
+
+  const expiryYear =
+    yearDigits.length >= 4
+      ? parseInt(yearDigits.slice(0, 4), 10)
+      : 2000 + parseInt(yearDigits.slice(-2), 10);
+
+  if (expiryMonth < 1 || expiryMonth > 12 || !Number.isFinite(expiryYear)) {
+    return false;
+  }
+
+  // Válido até o fim do mês de expiração (não só o dia 1).
+  const endOfExpiryMonth = new Date(
+    expiryYear,
+    expiryMonth,
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
+  return endOfExpiryMonth.getTime() >= Date.now();
 };
 
 export const validateCVV = (cvv: string): boolean => {

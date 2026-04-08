@@ -281,63 +281,7 @@ export default function OrganizerSettingsPage() {
                   </div>
                 </div>
 
-                {/* Organizer Container */}
-                <div className="bg-gray-2 border border-gray-6 flex gap-[16px] items-center px-[20px] py-[12px] relative rounded-[12px] shrink-0">
-                  <div className="flex flex-col gap-[12px] items-start relative shrink-0">
-                    <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-[16px] text-gray-11">
-                      Organização
-                    </p>
-                    <div className="flex gap-2 items-center relative shrink-0">
-                      <div className="relative shrink-0 size-[40px] rounded-full overflow-hidden">
-                        <ImageWithInitialFallback
-                          src={organizer?.avatarUrl ? getAvatarUrl(organizer?.avatarUrl) : null}
-                          alt="Organization"
-                          name={organizer.name || "Nome da organização"}
-                          fill
-                          sizes="40px"
-                          className="size-full rounded-full"
-                          letterClassName="text-base font-semibold"
-                        />
-                      </div>
-                      <div className="flex flex-col items-start justify-center leading-[1.3] relative shrink-0">
-                        <p className="font-family-dm-sans font-semibold relative shrink-0 text-[18px] text-gray-12">
-                          {organizer.name || "Nome da organização"}
-                        </p>
-                        <p className="font-family-dm-sans font-normal relative shrink-0 text-[14px] text-gray-11">
-                          CNPJ: {organizer.document ? maskCNPJ(organizer.document.replace(/\D/g, "")) : "00.000.000/0000-00"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-6 h-full shrink-0 w-px" />
-                  <div className="flex flex-col gap-[12px] items-start relative shrink-0">
-                    <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-[16px] text-gray-11">
-                      Dono da organização
-                    </p>
-                    <div className="flex gap-2 items-center relative shrink-0">
-                      <div className="relative shrink-0 size-[40px] rounded-full overflow-hidden">
-                        <ImageWithInitialFallback
-                          src={user?.avatarUrl ? getAvatarUrl(user?.avatarUrl) : null}
-                          alt="Owner"
-                          name={user?.firstName && user?.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user?.email || "Nome do dono"}
-                          fill
-                          sizes="40px"
-                          className="size-full rounded-full"
-                          letterClassName="text-base font-semibold"
-                        />
-                      </div>
-                      <div className="flex flex-col items-start justify-center relative shrink-0">
-                        <p className="font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-[18px] text-gray-12">
-                          {user?.firstName && user?.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user?.email || "Nome do dono"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+             
               </div>
 
               {/* Save Button */}

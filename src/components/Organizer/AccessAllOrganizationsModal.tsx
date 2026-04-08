@@ -27,7 +27,6 @@ export function AccessAllOrganizationsModal() {
   const { isOpen, closeAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
   const { user } = useAuth();
   const router = useRouter();
-  const orgNav = useOrganizerNavigate();
   const [organizations, setOrganizations] = useState<OrganizationAccount[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -57,8 +56,6 @@ export function AccessAllOrganizationsModal() {
 
       // Buscar organizações do usuário
       try {
-        // TODO: Implementar endpoint para buscar todas as organizações do usuário
-        // Por enquanto, vamos tentar buscar a organização atual
         const currentOrg = await organizerService.getOrganization();
         if (currentOrg) {
           // Buscar membros da organização para encontrar o papel do usuário

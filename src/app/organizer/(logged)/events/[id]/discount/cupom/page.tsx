@@ -334,13 +334,6 @@ export default function CouponsPage() {
                                   <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                                     {coupon.code}
                                   </span>
-                                  <button
-                                    onClick={() => handleCopyCode(coupon.code)}
-                                    className="size-5 flex items-center justify-center hover:bg-gray-3 rounded-lg transition-colors cursor-pointer"
-                                    title="Copiar código"
-                                  >
-                                    <CopyIcon className="size-4 text-gray-11" />
-                                  </button>
                                 </div>
                               </td>
                               <td className="py-4 px-5 text-center">
@@ -355,7 +348,7 @@ export default function CouponsPage() {
                               </td>
                               <td className="py-4 px-5 text-center">
                                 <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
-                                  {formatDate(coupon.expiryDate)}
+                                  {coupon.expiryDate ? formatDate(coupon.expiryDate) : "Sem data de expiração"}
                                 </span>
                               </td>
                               <td className="py-4 px-5 text-center">
@@ -417,7 +410,7 @@ export default function CouponsPage() {
                                 </button>
                               </div>
                               <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                                Validade: {formatDate(coupon.expiryDate)}
+                                Validade: {coupon.expiryDate ? formatDate(coupon.expiryDate) : "Sem data de expiração"}
                               </p>
                             </div>
                             <span

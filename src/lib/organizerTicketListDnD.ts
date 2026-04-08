@@ -6,6 +6,7 @@ import type { Ticket } from "@/hooks/useTickets";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
+import { CATEGORY_DROP_ID_PREFIX } from "@/lib/ticketCategoryOrder";
 
 const TICKET_PREFIX = "ticket-";
 
@@ -97,6 +98,12 @@ export type OrganizerTicketDragEndArgs = {
   ticketOrderDraft: Record<string, string[]>;
 };
 
+export type OrganizerTicketDragEndResult = {
+  orderPatch: Record<string, string[]>;
+  /** `handleDropTicket` foi executado (mudou categoria ou avulso). */
+  ticketCategoryChanged: boolean;
+};
+
 function buildSameScopeOrderPatch(
   ticketOrderDraft: Record<string, string[]>,
   tickets: Ticket[],
@@ -122,7 +129,7 @@ function buildSameScopeOrderPatch(
   return { [key]: arrayMove(base, oldIndex, newIndex) };
 }
 
-/** Retorna patch de ordem por escopo (vazio = nada a persistir em reorder-tickets). */
+/** Retorna patch de ordem por escopo e se houve mudança de categoria via API. */
 export async function applyOrganizerTicketDragEnd({
   event,
   tickets,
@@ -134,31 +141,40 @@ export async function applyOrganizerTicketDragEnd({
   categoryElementsCacheRef,
   setTicketOrderDraft,
   ticketOrderDraft,
-}: OrganizerTicketDragEndArgs): Promise<Record<string, string[]>> {
+}: OrganizerTicketDragEndArgs): Promise<OrganizerTicketDragEndResult> {
   const { active, over } = event;
   const activeTicketId = parseTicketDragId(active.id as string);
-  if (!activeTicketId) return {};
+  if (!activeTicketId) {
+    return { orderPatch: {}, ticketCategoryChanged: false };
+  }
 
   const ticket = tickets.find((t) => t.id === activeTicketId);
-  if (!ticket) return {};
+  if (!ticket) {
+    return { orderPatch: {}, ticketCategoryChanged: false };
+  }
 
   const ticketsQueryKey = queryKeys.events.tickets(eventId);
 
   if (!over) {
     if (categoryIdForTicketScope(ticket, categories) !== null) {
       await handleDropTicket(activeTicketId, null);
+      return { orderPatch: {}, ticketCategoryChanged: true };
     }
-    return {};
+    return { orderPatch: {}, ticketCategoryChanged: false };
   }
 
   const overId = over.id.toString();
 
   if (overId.startsWith(TICKET_PREFIX)) {
     const overTicketId = parseTicketDragId(overId);
-    if (!overTicketId || overTicketId === activeTicketId) return {};
+    if (!overTicketId || overTicketId === activeTicketId) {
+      return { orderPatch: {}, ticketCategoryChanged: false };
+    }
 
     const overTicket = tickets.find((t) => t.id === overTicketId);
-    if (!overTicket) return {};
+    if (!overTicket) {
+      return { orderPatch: {}, ticketCategoryChanged: false };
+    }
 
     const sourceScope = categoryIdForTicketScope(ticket, categories);
     const targetScope = categoryIdForTicketScope(overTicket, categories);
@@ -172,9 +188,11 @@ export async function applyOrganizerTicketDragEnd({
         activeTicketId,
         overTicketId,
       );
-      if (Object.keys(patch).length === 0) return {};
+      if (Object.keys(patch).length === 0) {
+        return { orderPatch: {}, ticketCategoryChanged: false };
+      }
       setTicketOrderDraft((prev) => ({ ...prev, ...patch }));
-      return patch;
+      return { orderPatch: patch, ticketCategoryChanged: false };
     }
 
     await handleDropTicket(
@@ -209,28 +227,33 @@ export async function applyOrganizerTicketDragEnd({
       [sourceKey]: newSourceIds,
     };
     setTicketOrderDraft((prev) => ({ ...prev, ...patch }));
-    return patch;
+    return { orderPatch: patch, ticketCategoryChanged: true };
   }
 
-  if (overId.startsWith("category-")) {
+  if (overId.startsWith(CATEGORY_DROP_ID_PREFIX)) {
+    const fromSuffix = overId.slice(CATEGORY_DROP_ID_PREFIX.length);
     const overData = over.data.current as
       | { type?: string; categoryId?: string }
       | undefined;
-    if (overData?.type === "category" && overData.categoryId) {
-      const targetCategoryId = overData.categoryId;
-      if (targetCategoryId === "uncategorized") {
-        if (categoryIdForTicketScope(ticket, categories) !== null) {
-          await handleDropTicket(activeTicketId, null);
-        }
-        return {};
-      }
-      if (categoryIdForTicketScope(ticket, categories) !== targetCategoryId) {
-        await handleDropTicket(activeTicketId, targetCategoryId);
-      }
+    const targetCategoryId = overData?.categoryId || fromSuffix;
+    if (!targetCategoryId) {
+      return { orderPatch: {}, ticketCategoryChanged: false };
     }
-    return {};
+    if (targetCategoryId === "uncategorized") {
+      if (categoryIdForTicketScope(ticket, categories) !== null) {
+        await handleDropTicket(activeTicketId, null);
+        return { orderPatch: {}, ticketCategoryChanged: true };
+      }
+      return { orderPatch: {}, ticketCategoryChanged: false };
+    }
+    if (categoryIdForTicketScope(ticket, categories) !== targetCategoryId) {
+      await handleDropTicket(activeTicketId, targetCategoryId);
+      return { orderPatch: {}, ticketCategoryChanged: true };
+    }
+    return { orderPatch: {}, ticketCategoryChanged: false };
   }
 
+  let hitTestCategoryChanged = false;
   if (dragEndPosition) {
     const allCategoryElements = document.querySelectorAll("[data-category-id]");
 
@@ -265,14 +288,16 @@ export async function applyOrganizerTicketDragEnd({
         if (catId !== "uncategorized") {
           if (categoryIdForTicketScope(ticket, categories) !== catId) {
             await handleDropTicket(activeTicketId, catId);
+            hitTestCategoryChanged = true;
           }
         } else if (categoryIdForTicketScope(ticket, categories) !== null) {
           await handleDropTicket(activeTicketId, null);
+          hitTestCategoryChanged = true;
         }
         break;
       }
     }
   }
 
-  return {};
+  return { orderPatch: {}, ticketCategoryChanged: hitTestCategoryChanged };
 }

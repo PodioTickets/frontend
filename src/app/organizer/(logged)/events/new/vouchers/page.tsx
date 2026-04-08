@@ -329,13 +329,6 @@ export default function VouchersPage() {
         <div className="flex justify-end gap-2">
           <Button
             onClick={handleSkip}
-            variant="outline"
-            className="border-gray-6 text-gray-12 text-lg font-bold px-11 h-[52px]"
-          >
-            Pular etapa e publicar
-          </Button>
-          <Button
-            onClick={handleSkip}
             variant="default"
             className="text-gray-12 text-lg font-bold px-11 h-[52px]"
           >

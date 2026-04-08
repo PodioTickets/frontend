@@ -268,6 +268,172 @@ input[type="number"] {
   margin-right: 0;
 }
 
+/*
+ * Vídeos embeds (YouTube/Vimeo/etc.) inseridos via Quill Video blot.
+ * Sem estas regras, o iframe fica com tamanho 0 e o embed não aparece.
+ *
+ * IMPORTANTE: não usar `display: block` + `margin: … auto` no estado padrão — isso
+ * centraliza o iframe quando ele tem largura fixa (resize) e ignora o alinhamento
+ * do parágrafo (.ql-align-left/center/right). Imagens usam inline-block + text-align;
+ * vídeos sem data-layout seguem o mesmo modelo para alinhar e permitir texto na mesma linha.
+ */
+.topic-rich-html iframe,
+.topic-rich-html iframe.ql-video,
+.ql-editor iframe.ql-video {
+  max-width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: #000;
+  box-sizing: border-box;
+}
+
+.topic-rich-html iframe:not([data-layout]),
+.ql-editor iframe.ql-video:not([data-layout]) {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0.75rem 0;
+}
+
+/*
+ * Sem tamanho explícito: largura total 16:9 (comportamento padrão).
+ * `.ql-editor iframe.ql-video[...]` bate especificidade (0,3,1) > Quill Snow (0,3,0).
+ */
+.topic-rich-html iframe:not([width]):not([data-layout]),
+.ql-editor iframe.ql-video:not([width]):not([data-layout]) {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 220px;
+}
+
+/* Justificar = bloco em largura total (igual imagens em .ql-align-justify) */
+.topic-rich-html .ql-align-justify iframe:not([data-layout]),
+.ql-editor .ql-align-justify iframe.ql-video:not([data-layout]) {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/*
+ * Barra do quill-resize-module (left/center/right/full) grava classes na LINHA (<p>).
+ * resize.css só entra no modal — duplicamos aqui para .topic-rich-html na página do evento.
+ */
+.topic-rich-html p.ql-resize-style-left,
+.ql-editor p.ql-resize-style-left {
+  float: left;
+  margin: 0 1em 1em 0;
+  max-width: 100%;
+}
+
+.topic-rich-html p.ql-resize-style-right,
+.ql-editor p.ql-resize-style-right {
+  float: right;
+  margin: 0 0 1em 1em;
+  max-width: 100%;
+}
+
+.topic-rich-html p.ql-resize-style-center,
+.ql-editor p.ql-resize-style-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  float: none;
+}
+
+.topic-rich-html p.ql-resize-style-full,
+.ql-editor p.ql-resize-style-full {
+  width: 100% !important;
+  float: none;
+  max-width: 100%;
+}
+
+.topic-rich-html p.ql-resize-style-full > iframe,
+.ql-editor p.ql-resize-style-full > iframe.ql-video {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Fallback quando o HTML não tem estilos inline no iframe */
+.topic-rich-html p.ql-align-center iframe.ql-video:not([data-layout]),
+.ql-editor p.ql-align-center iframe.ql-video:not([data-layout]) {
+  display: block;
+  margin: 0.75rem auto;
+  max-width: 100%;
+}
+
+.topic-rich-html p.ql-align-right iframe.ql-video:not([data-layout]),
+.ql-editor p.ql-align-right iframe.ql-video:not([data-layout]) {
+  display: block;
+  margin: 0.75rem 0 0.75rem auto;
+  max-width: 100%;
+}
+
+/*
+ * Layout flutuante para vídeos (igual imagens).
+ * No editor (.ql-editor), o Quill Snow CSS tem `.ql-video.ql-align-center { margin: 0 auto }`
+ * com especificidade (0,3,0). Para vencer, usamos `.ql-editor iframe.ql-video[data-layout]`
+ * que tem especificidade (0,3,1) — maior. No event page (.topic-rich-html) não há conflito.
+ */
+.topic-rich-html iframe[data-layout="left"],
+.ql-editor iframe.ql-video[data-layout="left"] {
+  float: left;
+  display: block;
+  width: 48%;
+  max-width: 48%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 120px;
+  margin: 0 1rem 0.75rem 0;
+  box-sizing: border-box;
+}
+
+.topic-rich-html iframe[data-layout="right"],
+.ql-editor iframe.ql-video[data-layout="right"] {
+  float: right;
+  display: block;
+  width: 48%;
+  max-width: 48%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 120px;
+  margin: 0 0 0.75rem 1rem;
+  box-sizing: border-box;
+}
+
+.topic-rich-html iframe[data-layout="inline-half"],
+.ql-editor iframe.ql-video[data-layout="inline-half"] {
+  float: left;
+  display: block;
+  width: calc(50% - 0.5rem);
+  max-width: calc(50% - 0.5rem);
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 120px;
+  margin: 0 0.5rem 0.5rem 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .topic-rich-html iframe[data-layout="left"],
+  .topic-rich-html iframe[data-layout="right"],
+  .topic-rich-html iframe[data-layout="inline-half"],
+  .ql-editor iframe.ql-video[data-layout="left"],
+  .ql-editor iframe.ql-video[data-layout="right"],
+  .ql-editor iframe.ql-video[data-layout="inline-half"] {
+    float: none;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 180px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
 /* Links no conteúdo dos tópicos (HTML do Quill na página do evento e afins) */
 .topic-rich-html a {
   color: var(--blue-11);
@@ -277,7 +443,7 @@ input[type="number"] {
   color: var(--blue-10);
 }
 
-/* Tópicos (HTML do Quill): imagem + texto ou duas imagens lado a lado */
+/* Tópicos (HTML do Quill): clearfix para elementos flutuantes (imagens e vídeos) */
 .topic-rich-html::after,
 .ql-editor::after {
   content: "";

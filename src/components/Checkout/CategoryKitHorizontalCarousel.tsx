@@ -3,12 +3,16 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { ImageCarouselItem } from "@/utils/ticketProductVisuals";
+import {
+  orderCarouselItemsWithPreferredInCenter,
+  type ImageCarouselItem,
+} from "@/utils/ticketProductVisuals";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { cn } from "@/utils/cn";
 
 type CategoryKitHorizontalCarouselProps = {
   items: ImageCarouselItem[];
+  primaryProductId?: string | null;
 };
 
 type ItemWithImage = ImageCarouselItem & { src: string };
@@ -22,9 +26,9 @@ const SIDE_PX = 88;
 const CENTER_PX = 128;
 const MAX_VISIBLE = 5;
 
-/** Faixa horizontal ON_CATEGORIES: só produtos com URL de imagem; navegação e foco acessíveis. */
 export function CategoryKitHorizontalCarousel({
   items,
+  primaryProductId,
 }: CategoryKitHorizontalCarouselProps) {
   const [centerIdx, setCenterIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,35 +43,46 @@ export function CategoryKitHorizontalCarousel({
     [displayItems]
   );
 
+  const preferredIndex = useMemo(() => {
+    if (primaryProductId) {
+      const i = displayItems.findIndex((x) => x.id === primaryProductId);
+      if (i >= 0) return i;
+    }
+    return 0;
+  }, [displayItems, primaryProductId]);
+
+  /** Ordem de exibição: produto principal no índice central (ex.: 2º de 3). */
+  const orderedItems = useMemo(
+    () =>
+      orderCarouselItemsWithPreferredInCenter(displayItems, preferredIndex),
+    [displayItems, preferredIndex]
+  );
+
   useEffect(() => {
-    if (displayItems.length === 0) return;
-    setCenterIdx((i) => Math.min(i, displayItems.length - 1));
-  }, [displayKey, displayItems.length]);
+    if (orderedItems.length === 0) return;
+    setCenterIdx(Math.floor(orderedItems.length / 2));
+  }, [displayKey, orderedItems.length]);
 
   const safeCenter = useMemo(() => {
-    if (displayItems.length === 0) return 0;
-    return Math.min(centerIdx, displayItems.length - 1);
-  }, [centerIdx, displayItems.length]);
+    if (orderedItems.length === 0) return 0;
+    return Math.min(centerIdx, orderedItems.length - 1);
+  }, [centerIdx, orderedItems.length]);
 
   const goPrev = useCallback(() => {
-    if (displayItems.length === 0) return;
-    setCenterIdx((i) => (i === 0 ? displayItems.length - 1 : i - 1));
-  }, [displayItems.length]);
+    if (orderedItems.length === 0) return;
+    setCenterIdx((i) => (i === 0 ? orderedItems.length - 1 : i - 1));
+  }, [orderedItems.length]);
 
   const goNext = useCallback(() => {
-    if (displayItems.length === 0) return;
+    if (orderedItems.length === 0) return;
     setCenterIdx((i) =>
-      i === displayItems.length - 1 ? 0 : i + 1
+      i === orderedItems.length - 1 ? 0 : i + 1
     );
-  }, [displayItems.length]);
+  }, [orderedItems.length]);
 
-  /**
-   * Faixa visível com o item preferido (safeCenter) na posição visual central.
-   * Índices fora do array viram espaçadores — evita o principal colado à esquerda.
-   */
   const slotLayout = useMemo(() => {
-    if (displayItems.length === 0) return [];
-    const n = displayItems.length;
+    if (orderedItems.length === 0) return [];
+    const n = orderedItems.length;
     const maxSlots = Math.min(MAX_VISIBLE, n);
     const centerSlot = Math.floor(maxSlots / 2);
     const slots: Array<
@@ -87,13 +102,17 @@ export function CategoryKitHorizontalCarousel({
       }
     }
     return slots;
-  }, [displayItems.length, safeCenter]);
+  }, [orderedItems.length, safeCenter]);
 
-  if (displayItems.length === 0) return null;
+  if (orderedItems.length === 0) return null;
 
-  const single = displayItems.length === 1;
-  const openModal = (idx: number) => {
-    setModalIdx(idx);
+  const single = orderedItems.length === 1;
+  const openModal = (orderedIndex: number) => {
+    const id = orderedItems[orderedIndex]?.id;
+    const sourceIdx = id
+      ? displayItems.findIndex((x) => x.id === id)
+      : orderedIndex;
+    setModalIdx(sourceIdx >= 0 ? sourceIdx : 0);
     setModalOpen(true);
   };
 
@@ -149,7 +168,7 @@ export function CategoryKitHorizontalCarousel({
                 );
               }
               const { dataIndex, isCenter } = slot;
-              const item = displayItems[dataIndex];
+              const item = orderedItems[dataIndex];
               const size = isCenter ? CENTER_PX : SIDE_PX;
               return (
                 <button
@@ -194,9 +213,9 @@ export function CategoryKitHorizontalCarousel({
           </button>
         </div>
 
-        {!single && displayItems.length <= 12 ? (
+        {!single && orderedItems.length <= 12 ? (
           <div className="flex flex-wrap justify-center gap-1.5 px-2">
-            {displayItems.map((item, i) => (
+            {orderedItems.map((item, i) => (
               <button
                 key={item.id}
                 type="button"
@@ -213,7 +232,7 @@ export function CategoryKitHorizontalCarousel({
           </div>
         ) : !single ? (
           <p className="text-center text-xs text-gray-11 font-family-dm-sans">
-            {safeCenter + 1} de {displayItems.length}
+            {safeCenter + 1} de {orderedItems.length}
           </p>
         ) : null}
       </div>
@@ -224,6 +243,7 @@ export function CategoryKitHorizontalCarousel({
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         ticketName="Kit"
+        preferredProductId={primaryProductId}
       />
     </>
   );

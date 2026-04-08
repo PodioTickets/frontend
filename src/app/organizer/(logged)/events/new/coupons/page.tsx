@@ -287,13 +287,6 @@ export default function CouponsPage() {
                               <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                                 {coupon.code}
                               </span>
-                              <button
-                                onClick={() => handleCopyCode(coupon.code)}
-                                className="size-5 flex items-center justify-center hover:bg-gray-3 rounded-lg transition-colors cursor-pointer"
-                                title="Copiar código"
-                              >
-                                <CopyIcon className="size-4 text-gray-11" />
-                              </button>
                             </div>
                           </td>
                           <td className="py-4 px-5 text-center">
@@ -308,7 +301,7 @@ export default function CouponsPage() {
                           </td>
                           <td className="py-4 px-5 text-center">
                             <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
-                              {formatDate(coupon.expiryDate)}
+                              {coupon.expiryDate ? formatDate(coupon.expiryDate) : "Sem data de expiração"}
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
@@ -388,13 +381,6 @@ export default function CouponsPage() {
 
         {/* Bottom Actions */}
         <div className="flex justify-end gap-2">
-          <Button
-            onClick={handleSkip}
-            variant="outline"
-            className="border-gray-6 text-gray-12 text-lg font-bold px-11 h-[52px]"
-          >
-            Pular etapa e publicar
-          </Button>
           <Button
             onClick={handleConfirm}
             variant="default"

@@ -7,7 +7,14 @@ import { DeleteTopicModal } from "@/components/Topic/DeleteTopicModal";
 import {
   applyTopicImageLayoutToSelectedImage,
   registerTopicQuillImageLayout,
+  registerTopicQuillVideoLayout,
 } from "@/components/Topic/registerTopicQuillImageLayout";
+import { extractVideoEmbedUrl } from "@/lib/extractVideoEmbedUrl";
+import {
+  maybeDownscaleImageFileForUpload,
+  replaceDataUrlImagesInContainer,
+  uploadOrganizerImage,
+} from "@/lib/uploadOrganizerImage";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -18,6 +25,7 @@ type QuillInstance = InstanceType<typeof import("quill").default>;
 
 let quillResizeModuleRegistered = false;
 let topicQuillImageLayoutRegistered = false;
+let topicQuillVideoLayoutRegistered = false;
 
 /**
  * Fluxo tipo quill-image-resize: inline-block permite várias imagens na mesma linha
@@ -82,7 +90,11 @@ function applyTopicQuillLayoutSizes(root: HTMLElement | null) {
   });
 }
 
-function applyQuillEditorImageStyles(editor: HTMLElement | null) {
+/**
+ * Imagens + vídeos: estilos inline para vencer o Quill Snow (carrega depois do globals)
+ * e permitir alinhar à esquerda / texto ao lado no iframe (inline-block quando não é center/right).
+ */
+function applyQuillEditorMediaStyles(editor: HTMLElement | null) {
   if (!editor) return;
   const href = typeof window !== "undefined" ? window.location.href : "";
   const allImages = editor.querySelectorAll("img");
@@ -114,6 +126,61 @@ function applyQuillEditorImageStyles(editor: HTMLElement | null) {
     if (legacyPct) {
       img.style.width = `${legacyPct}%`;
     }
+  });
+
+  editor.querySelectorAll("iframe.ql-video").forEach((node) => {
+    const iframe = node as HTMLIFrameElement;
+    if (iframe.getAttribute("data-layout")) {
+      iframe.style.display = "";
+      iframe.style.margin = "";
+      iframe.style.verticalAlign = "";
+      iframe.style.width = "";
+      iframe.style.maxWidth = "";
+      iframe.style.height = "auto";
+      return;
+    }
+
+    const parent = iframe.parentElement;
+    const inJustify =
+      parent?.tagName === "P" &&
+      parent.classList.contains("ql-align-justify");
+
+    if (inJustify) {
+      iframe.style.display = "block";
+      iframe.style.width = "100%";
+      iframe.style.maxWidth = "100%";
+      iframe.style.margin = "0.75rem 0";
+      iframe.style.verticalAlign = "top";
+      return;
+    }
+
+    const parentIsP = parent?.tagName === "P";
+    const isCenter =
+      iframe.classList.contains("ql-align-center") ||
+      (!!parentIsP && parent!.classList.contains("ql-align-center"));
+    const isRight =
+      iframe.classList.contains("ql-align-right") ||
+      (!!parentIsP && parent!.classList.contains("ql-align-right"));
+
+    if (isCenter) {
+      iframe.style.display = "block";
+      iframe.style.margin = "0.75rem auto";
+      iframe.style.verticalAlign = "top";
+      iframe.style.maxWidth = "100%";
+      return;
+    }
+    if (isRight) {
+      iframe.style.display = "block";
+      iframe.style.margin = "0.75rem 0 0.75rem auto";
+      iframe.style.verticalAlign = "top";
+      iframe.style.maxWidth = "100%";
+      return;
+    }
+
+    iframe.style.display = "inline-block";
+    iframe.style.verticalAlign = "top";
+    iframe.style.margin = "0.75rem 0";
+    iframe.style.maxWidth = "100%";
   });
 }
 
@@ -165,6 +232,10 @@ export function TopicModal() {
           registerTopicQuillImageLayout(Quill);
           topicQuillImageLayoutRegistered = true;
         }
+        if (!topicQuillVideoLayoutRegistered) {
+          registerTopicQuillVideoLayout(Quill);
+          topicQuillVideoLayoutRegistered = true;
+        }
 
         // Clean up previous instance if exists
         if (quillInstanceRef.current) {
@@ -194,10 +265,20 @@ export function TopicModal() {
                     attribute: ["width"],
                     limit: { minWidth: 48, maxWidth: 2000 },
                   },
+                  video: {
+                    attribute: ["width", "height"],
+                    limit: { minWidth: 160, maxWidth: 1200, ratio: 0.5625 },
+                  },
                 },
                 onChangeSize: () => {
                   const q = quillInstanceRef.current;
                   if (q) setContent(q.root.innerHTML);
+                  setTimeout(() => {
+                    const ed = quillRef.current?.querySelector(
+                      ".ql-editor",
+                    ) as HTMLElement | null;
+                    applyQuillEditorMediaStyles(ed);
+                  }, 0);
                 },
               },
               toolbar: {
@@ -265,47 +346,85 @@ export function TopicModal() {
                       );
                     }
                   },
+                  video: function () {
+                    // Aceita URL (YouTube/Vimeo/etc) OU código <iframe ...> completo;
+                    // normaliza para a URL de embed esperada pelo Video blot do Quill.
+                    const raw = window.prompt(
+                      "Cole a URL do YouTube/Vimeo ou o código completo do embed (<iframe ...>):",
+                    );
+                    if (!raw) return;
+                    const embedUrl = extractVideoEmbedUrl(raw);
+                    if (!embedUrl) {
+                      toast.error(
+                        "URL ou código de embed inválido. Cole um link do YouTube/Vimeo ou o <iframe> completo.",
+                      );
+                      return;
+                    }
+                    const range = quill.getSelection(true);
+                    const index = range ? range.index : quill.getLength();
+                    quill.insertEmbed(index, "video", embedUrl, "user");
+                    quill.setSelection(index + 1, 0);
+                    setTimeout(() => {
+                      const ed = quillRef.current?.querySelector(
+                        ".ql-editor",
+                      ) as HTMLElement | null;
+                      applyQuillEditorMediaStyles(ed);
+                    }, 100);
+                  },
                   image: function () {
-                    const input = document.createElement('input');
-                    input.setAttribute('type', 'file');
-                    input.setAttribute('accept', 'image/*');
+                    const input = document.createElement("input");
+                    input.setAttribute("type", "file");
+                    input.setAttribute("accept", "image/*");
                     input.click();
 
                     input.onchange = () => {
                       const file = input.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                          const url = e.target?.result as string;
-                          const range = quill.getSelection(true);
-                          if (range) {
-                            // Insert image
-                            quill.insertEmbed(range.index, 'image', url, 'user');
+                      if (!file) return;
 
-                            // After insertion, apply center alignment using Quill's API
-                            setTimeout(() => {
-                              // Get the line containing the image
-                              const [line, offset] = quill.getLine(range.index);
-                              if (line) {
-                                // Apply center alignment to the line
-                                quill.formatLine(range.index, 1, 'align', 'center');
+                      void (async () => {
+                        const range = quill.getSelection(true);
+                        if (!range) {
+                          toast.error(
+                            "Posicione o cursor no texto antes de inserir a imagem.",
+                          );
+                          return;
+                        }
 
-                                // Select the line so user can change alignment
-                                quill.setSelection(line.offset(), 0);
+                        const tid = toast.loading("Enviando imagem…");
+                        try {
+                          const prepared =
+                            await maybeDownscaleImageFileForUpload(file);
+                          const url = await uploadOrganizerImage(prepared);
+                          quill.insertEmbed(range.index, "image", url, "user");
 
-                                // Style the image to respect alignment
-                                setTimeout(() => {
-                                  const ed = quillRef.current?.querySelector(
-                                    ".ql-editor",
-                                  ) as HTMLElement | null;
-                                  applyQuillEditorImageStyles(ed);
-                                }, 150);
-                              }
-                            }, 100);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }
+                          setTimeout(() => {
+                            const [line] = quill.getLine(range.index);
+                            if (line) {
+                              quill.formatLine(
+                                range.index,
+                                1,
+                                "align",
+                                "center",
+                              );
+                              quill.setSelection(line.offset(), 0);
+                              setTimeout(() => {
+                                const ed = quillRef.current?.querySelector(
+                                  ".ql-editor",
+                                ) as HTMLElement | null;
+                                applyQuillEditorMediaStyles(ed);
+                              }, 150);
+                            }
+                          }, 100);
+                        } catch (err: unknown) {
+                          const msg =
+                            err instanceof Error
+                              ? err.message
+                              : "Erro ao enviar imagem";
+                          toast.error(msg);
+                        } finally {
+                          toast.dismiss(tid);
+                        }
+                      })();
                     };
                   }
                 }
@@ -320,7 +439,10 @@ export function TopicModal() {
               'align',
               'blockquote', 'code-block',
               'link', 'image', 'video',
-              'layout'
+              'layout',
+              /* quill-resize-module — sem isso o Quill remove ql-resize-style-* da linha ao editar */
+              'resize-inline',
+              'resize-block',
             ]
           });
 
@@ -332,11 +454,11 @@ export function TopicModal() {
             if (r?.activeEle) r.hide?.();
           };
 
-          const styleImages = () => {
+          const styleMedia = () => {
             const editor = quillRef.current?.querySelector(
               ".ql-editor",
             ) as HTMLElement | null;
-            applyQuillEditorImageStyles(editor);
+            applyQuillEditorMediaStyles(editor);
           };
 
 
@@ -346,7 +468,7 @@ export function TopicModal() {
             setContent(html);
             // Update image alignment after content changes
             setTimeout(() => {
-              styleImages();
+              styleMedia();
             }, 100);
           });
 
@@ -355,7 +477,7 @@ export function TopicModal() {
               hideQuillResizer();
             }
             setTimeout(() => {
-              styleImages();
+              styleMedia();
             }, 50);
           });
 
@@ -363,14 +485,14 @@ export function TopicModal() {
           quill.on('editor-change', (eventName: string) => {
             if (eventName === 'format-change' || eventName === 'text-change') {
               setTimeout(() => {
-                styleImages();
+                styleMedia();
               }, 50);
             }
           });
 
           // Initial styling of images
           setTimeout(() => {
-            styleImages();
+            styleMedia();
           }, 200);
 
           // Apply custom styles to match Figma design
@@ -540,7 +662,7 @@ export function TopicModal() {
             setContent(initialContent);
             // Style images for initial content
             setTimeout(() => {
-              styleImages();
+              styleMedia();
             }, 300);
           } else {
             setContent("");
@@ -577,7 +699,7 @@ export function TopicModal() {
             const editor = quillRef.current?.querySelector(
               ".ql-editor",
             ) as HTMLElement | null;
-            applyQuillEditorImageStyles(editor);
+            applyQuillEditorMediaStyles(editor);
           }, 200);
         }
       }
@@ -619,42 +741,21 @@ export function TopicModal() {
         if (quillInstanceRef.current) {
           htmlToSave = quillInstanceRef.current.root.innerHTML;
 
-          // Process HTML to ensure images have inline styles for alignment
-          // This ensures images render correctly even outside Quill editor
-          const tempDiv = document.createElement('div');
+          const tempDiv = document.createElement("div");
           tempDiv.innerHTML = htmlToSave;
-
-          const allImages = tempDiv.querySelectorAll('img');
-          allImages.forEach((imgElement) => {
-            const img = imgElement as HTMLImageElement;
-            if (img.getAttribute("data-layout")) {
-              img.style.height = "auto";
-              return;
+          const hadDataUrls = tempDiv.querySelector('img[src^="data:"]') != null;
+          if (hadDataUrls) {
+            const uploadToast = toast.loading(
+              "Otimizando imagens (upload)…",
+            );
+            try {
+              await replaceDataUrlImagesInContainer(tempDiv);
+            } finally {
+              toast.dismiss(uploadToast);
             }
-            const parent = img.parentElement;
+          }
+          applyQuillEditorMediaStyles(tempDiv);
 
-            if (parent && parent.tagName === "P") {
-              img.style.maxWidth = "100%";
-              img.style.height = "auto";
-              img.style.verticalAlign = "top";
-              if (parent.classList.contains("ql-align-justify")) {
-                img.style.display = "block";
-                img.style.width = "100%";
-                img.style.marginLeft = "0";
-                img.style.marginRight = "0";
-              } else {
-                img.style.display = "inline-block";
-                img.style.marginLeft = "";
-                img.style.marginRight = "";
-                const legacyPct = img.dataset.topicImgWidth;
-                if (legacyPct) {
-                  img.style.width = `${legacyPct}%`;
-                }
-              }
-            }
-          });
-
-          // Get the processed HTML with inline styles
           htmlToSave = tempDiv.innerHTML;
         }
 

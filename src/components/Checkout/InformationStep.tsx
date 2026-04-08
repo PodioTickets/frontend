@@ -27,6 +27,7 @@ import { userService } from "@/services";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Loading } from "../Loading";
+import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -311,6 +312,8 @@ export function InformationStep({
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
       quantity: number;
+      /** Nome da categoria (ingressos em grupo); vazio para avulsos. */
+      categoryName: string;
       raceName: string;
       distance: string;
       price: number;
@@ -325,6 +328,7 @@ export function InformationStep({
           const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
           grouped.push({
             quantity,
+            categoryName: category.name,
             raceName: ticket.name,
             distance,
             price: getTicketPrice(ticket),
@@ -341,6 +345,7 @@ export function InformationStep({
         const distance = ticket.distance ? `${ticket.distance}${ticket.distanceUnit || "K"}` : "";
         grouped.push({
           quantity,
+          categoryName: "",
           raceName: ticket.name,
           distance,
           price: getTicketPrice(ticket),
@@ -453,6 +458,12 @@ export function InformationStep({
         // Não precisa fazer nada, já está vinculado
         // Apenas fecha o participante
       } else if (!selectedLinkedUserIds[index] && !savedParticipantIds[index]) {
+        if (cleanCPF.length === 11 && !isValidCPF(participant.cpf || "")) {
+          toast.error(
+            "CPF inválido: os dígitos verificadores não conferem com o número.",
+          );
+          return;
+        }
         // Se não está vinculado, criar/vincular usuário
         try {
           // Separar nome em firstName e lastName
@@ -610,10 +621,14 @@ export function InformationStep({
     const nameParts = name ? name.split(/\s+/).filter(Boolean) : [];
     const hasFullName = nameParts.length >= 2;
 
+    const cpfOk =
+      !!cpf &&
+      getCpfValidationMessage(cpf) === null;
+
     const basicFieldsComplete = !!(
       name &&
       hasFullName &&
-      cpf &&
+      cpfOk &&
       email &&
       birthDate &&
       phone &&
@@ -663,11 +678,9 @@ export function InformationStep({
       errors.email = "Informe um email válido";
     }
 
-    const cpfNumbers = (cpf || "").replace(/\D/g, "");
-    if (!cpf) {
-      errors.cpf = "CPF é obrigatório";
-    } else if (cpfNumbers.length !== 11) {
-      errors.cpf = "CPF deve ter 11 dígitos";
+    const cpfMsg = getCpfValidationMessage(cpf);
+    if (cpfMsg) {
+      errors.cpf = cpfMsg;
     }
 
     if (!birthDate) {
@@ -1090,15 +1103,21 @@ export function InformationStep({
               </div>
 
               <div className="w-2/5 shrink-0 flex flex-col justify-center px-4 py-6">
-                <div className="flex flex-col gap-5 pb-6">
+                <div className="flex flex-col gap-2 pb-6">
                   {groupedTickets.slice(0, 3).map((ticket, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between text-base text-gray-12"
                     >
-                      <p className="font-semibold">
-                        ({ticket.quantity}x) {ticket.distance ? `${ticket.distance} ` : ""}{ticket.raceName}:
-                      </p>
+                      <div className="flex flex-col">
+                        <p className="text-gray-11 text-xs truncate"> {ticket.categoryName ? (
+                          ticket.categoryName
+                        ) : "Ingresso Avulso"}</p>
+                        <p className="font-semibold text-gray-12 text-base truncate">
+                          ({ticket.quantity}x){" "}
+                          {ticket.distance ? `${ticket.distance} ` : ""}
+                        </p>
+                      </div>
                       <p className="font-bold">
                         {formatPrice(ticket.total)}
                       </p>
@@ -1719,7 +1738,12 @@ export function InformationStep({
             </p>
             {groupedTickets.map((ticket, index) => (
               <p key={index} className="text-sm">
-                ({ticket.quantity}x) {ticket.raceName}:{" "}
+                ({ticket.quantity}x){" "}
+                {ticket.categoryName ? (
+                  <span className="text-gray-11">{ticket.categoryName} · </span>
+                ) : null}
+                {ticket.distance ? `${ticket.distance} ` : ""}
+                {ticket.raceName}:{" "}
                 <span className="font-semibold">
                   {formatPrice(ticket.total)}
                 </span>
@@ -1814,7 +1838,12 @@ export function InformationStep({
                         className="flex items-center justify-between text-base text-gray-12 pb-4 border-b border-gray-6 last:border-b-0 last:pb-0"
                       >
                         <p className="font-semibold">
-                          ({ticket.quantity}x) {ticket.distance ? `${ticket.distance} ` : ""}{ticket.raceName}:
+                          ({ticket.quantity}x){" "}
+                          {ticket.categoryName ? (
+                            <span className="text-gray-11">{ticket.categoryName} · </span>
+                          ) : null}
+                          {ticket.distance ? `${ticket.distance} ` : ""}
+                          {ticket.raceName}:
                         </p>
                         <p className="font-bold">
                           {formatPrice(ticket.total)}

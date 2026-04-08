@@ -1,7 +1,7 @@
 "use client";
 
 import { CreateEventProvider } from "@/contexts/CreateEventContext";
-import { ReactNode, Suspense } from "react";
+import { ReactNode, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { Loading } from "@/components/Loading";
 import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
@@ -13,6 +13,7 @@ import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
 import { QuestionIcon } from "@/components/Icons/QuestionIcon";
 import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
+import { saveLastCreateEventWizardPath } from "@/lib/createEventWizardPersistence";
 
 export const dynamic = 'force-dynamic';
 
@@ -288,6 +289,13 @@ function ProgressBar() {
 
 function CreateEventLayoutInner({ children }: { children: ReactNode }) {
   const pathname = useOrganizerPathname();
+
+  useEffect(() => {
+    if (!pathname.startsWith("/organizer/events/new/")) return;
+    if (pathname === "/organizer/events/new") return;
+    saveLastCreateEventWizardPath(pathname);
+  }, [pathname]);
+
   const isInformationOrBanner =
     pathname.startsWith("/organizer/events/new/information") ||
     pathname.startsWith("/organizer/events/new/banner");

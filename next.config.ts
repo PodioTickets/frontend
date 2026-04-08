@@ -44,7 +44,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com",
       `img-src 'self' data: https: blob: ${apiConnectOrigin} https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
       "font-src 'self' data: https://fonts.gstatic.com https://*.google.com",
-      "frame-src 'self' https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com",
+      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com",
       `connect-src 'self' ${apiConnectOrigin} wss: ws: https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com`,
       "object-src 'none'",
       "base-uri 'self'",

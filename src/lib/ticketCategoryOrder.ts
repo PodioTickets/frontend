@@ -1,5 +1,6 @@
 import {
   closestCorners,
+  pointerWithin,
   type CollisionDetection,
   type Over,
 } from "@dnd-kit/core";
@@ -11,6 +12,7 @@ export const CATEGORY_SORTABLE_ID_PREFIX = "cat-sort-";
 /** Mesmo prefixo que `TicketCategoryCard` usa em `useDroppable`. */
 export const CATEGORY_DROP_ID_PREFIX = "category-";
 
+/** Mesmo prefixo que `ticketDragId` em organizerTicketListDnD. */
 const TICKET_DRAG_PREFIX = "ticket-";
 
 export function categorySortableId(categoryId: string) {
@@ -41,6 +43,16 @@ export const organizerTicketCategoriesCollisionDetection: CollisionDetection = (
       );
     });
     return closestCorners({ ...args, droppableContainers: filtered });
+  }
+  /** Ingresso: priorizar área `category-*` sob o ponteiro (evita “colar” no ticket errado e falha ao soltar em avulsos). */
+  if (activeId.startsWith(TICKET_DRAG_PREFIX)) {
+    const pointerHits = pointerWithin(args);
+    const categoryHits = pointerHits.filter((c) =>
+      String(c.id).startsWith(CATEGORY_DROP_ID_PREFIX),
+    );
+    if (categoryHits.length > 0) {
+      return categoryHits;
+    }
   }
   return closestCorners(args);
 };

@@ -25,6 +25,7 @@ import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { Loading } from "@/components/Loading";
+import { ensureCreateEventSyncedFromDraft } from "@/lib/createEventDraftSync";
 
 function readStoredCreatedEventId(): string | null {
   if (typeof window === "undefined") return null;
@@ -110,6 +111,7 @@ export default function BannerPage() {
   const [cardPreview, setCardPreview] = useState<string>("");
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingCard, setUploadingCard] = useState(false);
+  const [syncingEvent, setSyncingEvent] = useState(false);
   const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
   const [selectedCardFile, setSelectedCardFile] = useState<File | null>(null);
   const bannerCropRef = useRef<ImageUploadWithCropRef>(null);
@@ -142,12 +144,6 @@ export default function BannerPage() {
     }
   }, [authChecked, formData.createdEventId, updateFormData]);
 
-  useEffect(() => {
-    if (!authChecked) return;
-    if (formData.createdEventId) return;
-    if (readStoredCreatedEventId()) return;
-    orgNav.push("/organizer/events/new/information");
-  }, [authChecked, formData.createdEventId, orgNav]);
 
   const uploadImageFile = useCallback(async (file: File): Promise<string> => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
@@ -248,6 +244,13 @@ export default function BannerPage() {
     return `${day}/${month}/${year}`;
   };
 
+  useEffect(() => {
+    const b = formData.bannerUrl?.trim();
+    if (b) setBannerPreview(b);
+    const c = formData.cardImageUrl?.trim();
+    if (c) setCardPreview(c);
+  }, [formData.bannerUrl, formData.cardImageUrl]);
+
   const applyCroppedBanner = useCallback((file: File) => {
     setSelectedBannerFile(file);
     const reader = new FileReader();
@@ -274,8 +277,26 @@ export default function BannerPage() {
 
     const draftId = formData.createdEventId;
     if (!draftId) {
-      toast.error("Salve as informações do evento antes de enviar o banner.");
-      return false;
+      setUploadingBanner(true);
+      try {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Falha ao ler a imagem"));
+          reader.readAsDataURL(selectedBannerFile);
+        });
+        updateFormData({ bannerUrl: dataUrl });
+        toast.success("Banner salvo no rascunho.");
+        setSelectedBannerFile(null);
+        return true;
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : "Erro ao processar o banner";
+        toast.error(message);
+        return false;
+      } finally {
+        setUploadingBanner(false);
+      }
     }
 
     setUploadingBanner(true);
@@ -310,8 +331,26 @@ export default function BannerPage() {
 
     const draftId = formData.createdEventId;
     if (!draftId) {
-      toast.error("Salve as informações do evento antes de enviar a imagem.");
-      return false;
+      setUploadingCard(true);
+      try {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Falha ao ler a imagem"));
+          reader.readAsDataURL(selectedCardFile);
+        });
+        updateFormData({ cardImageUrl: dataUrl });
+        toast.success("Imagem salva no rascunho.");
+        setSelectedCardFile(null);
+        return true;
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : "Erro ao processar a imagem";
+        toast.error(message);
+        return false;
+      } finally {
+        setUploadingCard(false);
+      }
     }
 
     setUploadingCard(true);
@@ -366,16 +405,32 @@ export default function BannerPage() {
   const handleConfirmCardAndNext = async () => {
     if (selectedCardFile) {
       const ok = await handleCardUpload();
-      if (ok) {
-        orgNav.push("/organizer/events/new/tickets");
+      if (!ok) return;
+    }
+    if (!formData.cardImageUrl?.trim()) {
+      toast.error("Selecione e envie a imagem de pré-visualização.");
+      return;
+    }
+
+    if (!formData.createdEventId) {
+      setSyncingEvent(true);
+      try {
+        await ensureCreateEventSyncedFromDraft({ formData, updateFormData });
+        toast.success("Evento criado. Continue com os ingressos.");
+      } catch (error: unknown) {
+        console.error("Error syncing draft event:", error);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Erro ao criar o evento. Tente novamente.";
+        toast.error(message);
+        return;
+      } finally {
+        setSyncingEvent(false);
       }
-      return;
     }
-    if (formData.cardImageUrl) {
-      orgNav.push("/organizer/events/new/tickets");
-      return;
-    }
-    toast.error("Selecione e envie a imagem de pré-visualização.");
+
+    orgNav.push("/organizer/events/new/tickets");
   };
 
   const eventLocation =
@@ -413,19 +468,17 @@ export default function BannerPage() {
     );
   }
 
-  if (!formData.createdEventId) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loading />
-      </div>
-    );
-  }
-
   const renderBannerUpload = () =>
     bannerPreview ? (
       <div className="border-2 border-gray-6 border-dashed rounded-xl p-4 md:p-6 flex flex-col gap-6 md:flex-row md:items-center w-full max-w-full md:max-w-[710px] md:mx-auto">
         <div className="relative rounded-2xl shrink-0 size-[128px] overflow-hidden mx-auto md:mx-0">
-          <Image src={bannerPreview} alt="Banner preview" fill className="object-cover" />
+          <Image
+            src={bannerPreview}
+            alt="Banner preview"
+            fill
+            className="object-cover"
+            unoptimized={bannerPreview.startsWith("data:")}
+          />
         </div>
         <div className="flex flex-1 flex-col gap-6 min-w-0">
           <div className="flex flex-col gap-4">
@@ -493,6 +546,7 @@ export default function BannerPage() {
                   fill
                   className="object-cover"
                   sizes="(max-width:768px) 100vw, 625px"
+                  unoptimized={bannerPreview.startsWith("data:")}
                 />
               </div>
             ) : (
@@ -597,7 +651,13 @@ export default function BannerPage() {
     cardPreview ? (
       <div className="border-2 border-gray-6 border-dashed rounded-xl p-6 flex gap-6 items-center w-full">
         <div className="relative rounded-xl shrink-0 size-[128px] overflow-hidden bg-gray-4">
-          <Image src={cardPreview} alt="Pré-visualização" fill className="object-cover" />
+          <Image
+            src={cardPreview}
+            alt="Pré-visualização"
+            fill
+            className="object-cover"
+            unoptimized={cardPreview.startsWith("data:")}
+          />
         </div>
         <div className="flex flex-1 flex-col gap-6 items-start justify-center min-w-0">
           <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] w-full">
@@ -644,7 +704,14 @@ export default function BannerPage() {
       <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] overflow-hidden flex flex-col w-full">
         <div className="relative w-full aspect-square bg-gray-4">
           {cardPreview ? (
-            <Image src={cardPreview} alt="" fill className="object-cover rounded-t-lg" sizes="300px" />
+            <Image
+              src={cardPreview}
+              alt=""
+              fill
+              className="object-cover rounded-t-lg"
+              sizes="300px"
+              unoptimized={cardPreview.startsWith("data:")}
+            />
           ) : null}
         </div>
         <div className="border-b border-gray-6 flex flex-col gap-3 pt-4 pb-3 px-3">
@@ -706,7 +773,7 @@ export default function BannerPage() {
 
   return (
     <div className="min-w-0 bg-gray-2 pb-28 md:bg-transparent md:pb-20">
-      <div className="md:hidden sticky top-0 z-20 bg-gray-2 border-b border-gray-6">
+      <div className="md:hidden sticky top-0 z-20 bg-gray-2 border-b border-gray-6 -mx-4 px-4">
         <div className="flex h-[52px] items-center gap-1 px-4">
           <Link
             href={backHref}
@@ -725,7 +792,7 @@ export default function BannerPage() {
         Imagens principais do evento para os participantes visualizarem
       </p>
 
-      <div className="mx-auto flex w-full max-w-[1100px] flex-col items-stretch gap-6 px-0 md:items-center md:gap-9 md:px-8">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-col items-stretch gap-6 px-0 md:items-center md:gap-9 md:px-8 md:mt-10">
         <div className="hidden md:flex flex-col gap-4 items-center w-full">
           <div className="flex gap-3 items-center flex-wrap justify-center">
             <button
@@ -815,10 +882,12 @@ export default function BannerPage() {
                   <Button
                     type="button"
                     onClick={() => void handleConfirmCardAndNext()}
-                    disabled={uploadingCard}
+                    disabled={uploadingCard || syncingEvent}
                     className="h-12 px-6 text-base font-bold font-manrope md:h-10 md:text-sm"
                   >
-                    {uploadingCard ? "Enviando..." : "Confirmar e próximo"}
+                    {uploadingCard || syncingEvent
+                      ? "Salvando..."
+                      : "Confirmar e próximo"}
                   </Button>
                 </div>
               </div>

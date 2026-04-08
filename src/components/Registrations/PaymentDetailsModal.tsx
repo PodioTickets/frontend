@@ -615,7 +615,7 @@ export function PaymentDetailsModal() {
                               Telefone de emergência
                             </p>
                             <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {formatPhone(buyerData?.reservePhone || null) || "Opcional"}
+                              {formatPhone(buyerData?.reservePhone || null) || "—"}
                             </p>
                           </div>
                         </div>

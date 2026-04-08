@@ -468,6 +468,11 @@ export default function EditTicketsPage() {
           [ticketId]: committedCategoryKeyForTicket(updated, categories),
         };
         setCommittedAssignmentsVersion((v) => v + 1);
+        toast.success(
+          categoryId
+            ? "Ingresso movido para a categoria."
+            : "Ingresso movido para avulsos.",
+        );
       } catch (error: unknown) {
         queryClient.setQueryData(qk, snapshot);
         const msg =
@@ -547,11 +552,12 @@ export default function EditTicketsPage() {
             .map((id) => m.get(id))
             .filter(Boolean) as ModalityGroup[];
           void persistTicketCategoryOrderApi(eventId, ordered)
-            .then(() =>
-              queryClient.invalidateQueries({
+            .then(() => {
+              toast.success("Ordem das categorias atualizada.");
+              return queryClient.invalidateQueries({
                 queryKey: queryKeys.events.ticketCategories(eventId),
-              }),
-            )
+              });
+            })
             .catch((e) => {
               console.error(e);
               toast.error("Não foi possível salvar a ordem das categorias.");
@@ -573,18 +579,19 @@ export default function EditTicketsPage() {
       const dragEndPosition = dragEndPositionRef.current;
       void (async () => {
         try {
-          const orderPatch = await applyOrganizerTicketDragEnd({
-            event,
-            tickets,
-            categories,
-            eventId,
-            queryClient,
-            handleDropTicket,
-            dragEndPosition,
-            categoryElementsCacheRef,
-            setTicketOrderDraft,
-            ticketOrderDraft,
-          });
+          const { orderPatch, ticketCategoryChanged } =
+            await applyOrganizerTicketDragEnd({
+              event,
+              tickets,
+              categories,
+              eventId,
+              queryClient,
+              handleDropTicket,
+              dragEndPosition,
+              categoryElementsCacheRef,
+              setTicketOrderDraft,
+              ticketOrderDraft,
+            });
           if (Object.keys(orderPatch).length > 0) {
             const ticketList =
               queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
@@ -613,6 +620,9 @@ export default function EditTicketsPage() {
               freshCats,
             );
             setCommittedAssignmentsVersion((v) => v + 1);
+            if (!ticketCategoryChanged) {
+              toast.success("Ordem dos ingressos atualizada.");
+            }
           }
         } catch (e) {
           console.error(e);
@@ -1072,7 +1082,7 @@ export default function EditTicketsPage() {
             </div>
           </div>
 
-          {allTickets.length > 0 && (
+          {(hasNoCategories ? allTickets.length > 0 : true) && (
             <UncategorizedTicketsDropShell>
               <MobileGeneralTicketsSection ticketCount={allTickets.length}>
                 <div className="overflow-x-auto">

@@ -34,6 +34,7 @@ import { Loading } from "../Loading";
 import { useCheckout as useCheckoutPayment } from "@/hooks/useCheckoutPayment";
 import { usePaymentStatusPolling } from "@/hooks/usePaymentStatus";
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
+import { isValidCPF } from "@/utils/cpf";
 import type { CheckoutRequest, PixPayment } from "@/interfaces/checkout";
 import toast from "react-hot-toast";
 import { apiClient } from "@/services";
@@ -1070,6 +1071,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         if (!participant || !participant.name || !participant.cpf || !participant.email) {
           throw new Error(`Dados incompletos do participante ${participantIndex + 1}`);
         }
+        if (!isValidCPF(participant.cpf)) {
+          throw new Error(`CPF inválido para o participante ${participantIndex + 1}`);
+        }
 
         // Preparar objeto do participante
         const participantData: CheckoutRequest['participants'][0] = {
@@ -1502,175 +1506,175 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         {/* Payment Methods + cupom (só após endereço confirmado) */}
         {billingAddressConfirmed ? (
           <>
-        <div className="pb-6 flex flex-col gap-3">
-          {/* Credit Card Option */}
-          <div
-            className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "credit"
-              ? "border-blue-8 bg-blue-3"
-              : "border-gray-6 bg-gray-3"
-              }`}
-            onClick={() => setSelectedPaymentMethod("credit")}
-          >
-            <div className="flex items-center justify-between cursor-pointer">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "credit"
-                    ? "bg-primary-11 border-primary-11"
-                    : "bg-transparent border-gray-6"
-                    }`}
-                ></div>
-                <span className="text-base font-semibold text-primary-12 font-manrope">
-                  Cartão de crédito
-                </span>
-              </div>
-              <div className="flex gap-1 items-center">
-                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                  <VisaIcon />
-                </div>
-                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                  <EloIcon />
-                </div>
-                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                  <Image
-                    src="/images/american_express.png"
-                    alt="American Express"
-                    width={24}
-                    height={24}
-                  />
-                </div>
-                <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                  <MasterCardIcon />
-                </div>
-              </div>
-            </div>
-
-            {selectedPaymentMethod === "credit" && (
-              <div className="mt-4">
-                <CreditCardForm
-                  installmentOptions={installmentOptions}
-                  selectedInstallments={selectedInstallments}
-                  setSelectedInstallments={setSelectedInstallments}
-                  onSuccess={onSuccess}
-                  cardName={cardName}
-                  setCardName={setCardName}
-                  cardNumber={cardNumber}
-                  setCardNumber={setCardNumber}
-                  cardExpiry={cardExpiry}
-                  setCardExpiry={setCardExpiry}
-                  cardCVV={cardCVV}
-                  setCardCVV={setCardCVV}
-                  isMobile={true}
-                />
-                <Button
-                  onClick={handleProcessCreditCardCheckout}
-                  disabled={
-                    checkoutLoading ||
-                    !isCreditCardFormValid ||
-                    !billingAddressConfirmed
-                  }
-                  className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* PIX Option */}
-          <div
-            className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "pix"
-              ? "border-blue-8 bg-blue-3"
-              : "border-gray-6 bg-gray-3"
-              }`}
-            onClick={() => setSelectedPaymentMethod("pix")}
-          >
-            <div className="flex items-center justify-between cursor-pointer">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "pix"
-                    ? "bg-primary-11 border-primary-11"
-                    : "bg-transparent border-gray-6"
-                    }`}
-                ></div>
-                <span className="text-base font-semibold text-gray-12 font-manrope">
-                  PIX
-                </span>
-                <div className="bg-primary-6 text-primary-12 rounded-xl px-2 py-1">
-                  <span className="text-sm font-semibold font-plus-jakarta-sans">
-                    5% OFF
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {selectedPaymentMethod === "pix" && (
-              <div className="mt-4 flex flex-col gap-4">
-                <PixForm
-                  onSuccess={onSuccess}
-                  pixValue={pixValue}
-                  isMobile={true}
-                  onProcessCheckout={handleProcessPixCheckout}
-                  loading={checkoutLoading}
-                  submitDisabled={!billingAddressConfirmed}
-                />
-                <Button
-                  onClick={handleProcessPixCheckout}
-                  disabled={checkoutLoading || !billingAddressConfirmed}
-                  className="w-full bg-gray-12 text-gray-1 font-bold font-manrope"
-                >
-                  {checkoutLoading ? 'Processando...' : 'Gerar QR CODE'}
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Coupon Section */}
-        <div className="pt-6 border-t border-gray-8">
-          <div className="flex flex-col gap-3">
-            <Input
-              type="text"
-              placeholder="Código de cupom (opcional)"
-              value={couponCode}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "").substring(0, 6);
-                setCouponCode(value);
-                setCouponError(null);
-                if (isCouponApplied) {
-                  setIsCouponApplied(false);
-                  setCouponDiscount(0);
-                }
-              }}
-              maxLength={6}
-              inputMode="numeric"
-              className={
-                couponError
-                  ? "border-red-6"
-                  : isCouponApplied
-                    ? "border-primary-8 bg-primary-3"
-                    : ""
-              }
-            />
-            {couponError && (
-              <p className="text-base font-medium text-red-11 font-family-dm-sans">
-                {couponError}
-              </p>
-            )}
-            {isCouponApplied && (
-              <p className="text-base font-medium text-primary-11 font-family-dm-sans">
-                Cupom aplicado com sucesso!
-              </p>
-            )}
-            {!isCouponApplied && (
-              <Button
-                onClick={handleApplyCoupon}
-                className="w-full bg-primary-11 text-primary-2 font-bold font-manrope"
+            <div className="pb-6 flex flex-col gap-3">
+              {/* Credit Card Option */}
+              <div
+                className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "credit"
+                  ? "border-blue-8 bg-blue-3"
+                  : "border-gray-6 bg-gray-3"
+                  }`}
+                onClick={() => setSelectedPaymentMethod("credit")}
               >
-                Aplicar cupom
-              </Button>
-            )}
-          </div>
-        </div>
+                <div className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "credit"
+                        ? "bg-primary-11 border-primary-11"
+                        : "bg-transparent border-gray-6"
+                        }`}
+                    ></div>
+                    <span className="text-base font-semibold text-primary-12 font-manrope">
+                      Cartão de crédito
+                    </span>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                      <VisaIcon />
+                    </div>
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                      <EloIcon />
+                    </div>
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                      <Image
+                        src="/images/american_express.png"
+                        alt="American Express"
+                        width={24}
+                        height={24}
+                      />
+                    </div>
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                      <MasterCardIcon />
+                    </div>
+                  </div>
+                </div>
+
+                {selectedPaymentMethod === "credit" && (
+                  <div className="mt-4">
+                    <CreditCardForm
+                      installmentOptions={installmentOptions}
+                      selectedInstallments={selectedInstallments}
+                      setSelectedInstallments={setSelectedInstallments}
+                      onSuccess={onSuccess}
+                      cardName={cardName}
+                      setCardName={setCardName}
+                      cardNumber={cardNumber}
+                      setCardNumber={setCardNumber}
+                      cardExpiry={cardExpiry}
+                      setCardExpiry={setCardExpiry}
+                      cardCVV={cardCVV}
+                      setCardCVV={setCardCVV}
+                      isMobile={true}
+                    />
+                    <Button
+                      onClick={handleProcessCreditCardCheckout}
+                      disabled={
+                        checkoutLoading ||
+                        !isCreditCardFormValid ||
+                        !billingAddressConfirmed
+                      }
+                      className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* PIX Option */}
+              <div
+                className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "pix"
+                  ? "border-blue-8 bg-blue-3"
+                  : "border-gray-6 bg-gray-3"
+                  }`}
+                onClick={() => setSelectedPaymentMethod("pix")}
+              >
+                <div className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "pix"
+                        ? "bg-primary-11 border-primary-11"
+                        : "bg-transparent border-gray-6"
+                        }`}
+                    ></div>
+                    <span className="text-base font-semibold text-gray-12 font-manrope">
+                      PIX
+                    </span>
+                    <div className="bg-primary-6 text-primary-12 rounded-xl px-2 py-1">
+                      <span className="text-sm font-semibold font-plus-jakarta-sans">
+                        5% OFF
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedPaymentMethod === "pix" && (
+                  <div className="mt-4 flex flex-col gap-4">
+                    <PixForm
+                      onSuccess={onSuccess}
+                      pixValue={pixValue}
+                      isMobile={true}
+                      onProcessCheckout={handleProcessPixCheckout}
+                      loading={checkoutLoading}
+                      submitDisabled={!billingAddressConfirmed}
+                    />
+                    <Button
+                      onClick={handleProcessPixCheckout}
+                      disabled={checkoutLoading || !billingAddressConfirmed}
+                      className="w-full bg-gray-12 text-gray-1 font-bold font-manrope"
+                    >
+                      {checkoutLoading ? 'Processando...' : 'Gerar QR CODE'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Coupon Section */}
+            <div className="pt-6 border-t border-gray-8">
+              <div className="flex flex-col gap-3">
+                <Input
+                  type="text"
+                  placeholder="Código de cupom (opcional)"
+                  value={couponCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "").substring(0, 6);
+                    setCouponCode(value);
+                    setCouponError(null);
+                    if (isCouponApplied) {
+                      setIsCouponApplied(false);
+                      setCouponDiscount(0);
+                    }
+                  }}
+                  maxLength={6}
+                  inputMode="numeric"
+                  className={
+                    couponError
+                      ? "border-red-6"
+                      : isCouponApplied
+                        ? "border-primary-8 bg-primary-3"
+                        : ""
+                  }
+                />
+                {couponError && (
+                  <p className="text-base font-medium text-red-11 font-family-dm-sans">
+                    {couponError}
+                  </p>
+                )}
+                {isCouponApplied && (
+                  <p className="text-base font-medium text-primary-11 font-family-dm-sans">
+                    Cupom aplicado com sucesso!
+                  </p>
+                )}
+                {!isCouponApplied && (
+                  <Button
+                    onClick={handleApplyCoupon}
+                    className="w-full bg-primary-11 text-primary-2 font-bold font-manrope"
+                  >
+                    Aplicar cupom
+                  </Button>
+                )}
+              </div>
+            </div>
           </>
         ) : null}
       </div>
@@ -1808,71 +1812,71 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
             {/* Métodos de Pagamento */}
             {billingAddressConfirmed ? (
-            <div className="space-y-6">
-              {paymentOptions.map((option) => {
-                const isNotSelected = selectedPaymentMethod !== option.id;
+              <div className="space-y-6">
+                {paymentOptions.map((option) => {
+                  const isNotSelected = selectedPaymentMethod !== option.id;
 
-                if (isNotSelected) {
+                  if (isNotSelected) {
+                    return (
+                      <PaymentMethodOption
+                        key={option.id}
+                        option={option}
+                        isSelected={false}
+                        onSelect={() => setSelectedPaymentMethod(option.id)}
+                      />
+                    );
+                  }
+
                   return (
-                    <PaymentMethodOption
-                      key={option.id}
-                      option={option}
-                      isSelected={false}
-                      onSelect={() => setSelectedPaymentMethod(option.id)}
-                    />
-                  );
-                }
+                    <div key={option.id}>
+                      <PaymentMethodOption
+                        option={option}
+                        isSelected={true}
+                        onSelect={() => setSelectedPaymentMethod(option.id)}
+                      />
 
-                return (
-                  <div key={option.id}>
-                    <PaymentMethodOption
-                      option={option}
-                      isSelected={true}
-                      onSelect={() => setSelectedPaymentMethod(option.id)}
-                    />
-
-                    <div className="mt-4">
-                      {option.id === "credit" && (
-                        <>
-                          <CreditCardForm
-                            installmentOptions={installmentOptions}
-                            selectedInstallments={selectedInstallments}
-                            setSelectedInstallments={setSelectedInstallments}
+                      <div className="mt-4">
+                        {option.id === "credit" && (
+                          <>
+                            <CreditCardForm
+                              installmentOptions={installmentOptions}
+                              selectedInstallments={selectedInstallments}
+                              setSelectedInstallments={setSelectedInstallments}
+                              onSuccess={onSuccess}
+                              cardName={cardName}
+                              setCardName={setCardName}
+                              cardNumber={cardNumber}
+                              setCardNumber={setCardNumber}
+                              cardExpiry={cardExpiry}
+                              setCardExpiry={setCardExpiry}
+                              cardCVV={cardCVV}
+                              setCardCVV={setCardCVV}
+                              isMobile={false}
+                            />
+                            <Button
+                              onClick={handleProcessCreditCardCheckout}
+                              disabled={checkoutLoading || !isCreditCardFormValid}
+                              className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
+                            </Button>
+                          </>
+                        )}
+                        {option.id === "pix" && (
+                          <PixForm
                             onSuccess={onSuccess}
-                            cardName={cardName}
-                            setCardName={setCardName}
-                            cardNumber={cardNumber}
-                            setCardNumber={setCardNumber}
-                            cardExpiry={cardExpiry}
-                            setCardExpiry={setCardExpiry}
-                            cardCVV={cardCVV}
-                            setCardCVV={setCardCVV}
+                            pixValue={pixValue}
                             isMobile={false}
+                            onProcessCheckout={handleProcessPixCheckout}
+                            loading={checkoutLoading}
+                            submitDisabled={!billingAddressConfirmed}
                           />
-                          <Button
-                            onClick={handleProcessCreditCardCheckout}
-                            disabled={checkoutLoading || !isCreditCardFormValid}
-                            className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
-                          </Button>
-                        </>
-                      )}
-                      {option.id === "pix" && (
-                        <PixForm
-                          onSuccess={onSuccess}
-                          pixValue={pixValue}
-                          isMobile={false}
-                          onProcessCheckout={handleProcessPixCheckout}
-                          loading={checkoutLoading}
-                          submitDisabled={!billingAddressConfirmed}
-                        />
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
             ) : null}
           </div>
         </div>

@@ -21,7 +21,6 @@ import {
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { CPFIcon } from "../Icons/CPFIcon";
 import { HeartIcon } from "../Icons/HeartIcon";
 import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
@@ -35,7 +34,6 @@ export function RegisterModal() {
   const { openLoginModal } = useLoginModal();
   const { register, isLoading: authLoading, user, refetchUser } = useAuth();
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Verifica se é para completar cadastro
@@ -322,18 +320,11 @@ export function RegisterModal() {
         setCurrentStep(3);
         toast.success("Cadastro finalizado com sucesso!");
 
-        // Fecha o modal após um delay
         setTimeout(() => {
           closeRegisterModal();
-          // Redireciona para a URL salva antes do login ou para home
-          const redirectPath =
-            typeof window !== "undefined"
-              ? sessionStorage.getItem("redirectAfterLogin") || "/"
-              : "/";
           if (typeof window !== "undefined") {
             sessionStorage.removeItem("redirectAfterLogin");
           }
-          router.push(redirectPath);
         }, 1500);
       } else {
         // Prepara os dados para o registro conforme EmailRegisterDto
@@ -419,12 +410,7 @@ export function RegisterModal() {
     });
     setErrors({});
     setCurrentStep(1);
-    // Fechar modal primeiro
     closeRegisterModal();
-    // Redirecionar após um pequeno delay para garantir que o modal feche
-    setTimeout(() => {
-      router.push("/");
-    }, 100);
   };
 
   // Mask functions

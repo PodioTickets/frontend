@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import {
   DayPicker,
+  type Matcher,
   type MonthCaptionProps,
   type DayButtonProps,
   useDayPicker,
@@ -201,19 +202,24 @@ function Calendar({
   disablePastDates = true,
   ...props
 }: CalendarProps) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayStart = (() => {
+    const t = new Date();
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  })();
 
-  const defaultIsDateDisabled = (date: Date) => {
-    const dateToCheck = new Date(date);
-    dateToCheck.setHours(0, 0, 0, 0);
-    return dateToCheck < today;
-  };
+  /** `before` é exclusivo no react-day-picker: o dia de `todayStart` continua selecionável. */
+  const pastMatcher: Matcher = { before: todayStart };
 
-  const isDateDisabled =
-    disablePastDates === false
-      ? customDisabled
-      : customDisabled || defaultIsDateDisabled;
+  const disabledProp: Matcher | Matcher[] | undefined = (() => {
+    if (disablePastDates === false) {
+      return customDisabled;
+    }
+    if (customDisabled == null) {
+      return pastMatcher;
+    }
+    const extra = Array.isArray(customDisabled) ? customDisabled : [customDisabled];
+    return [pastMatcher, ...extra];
+  })();
 
   // Components configuration
   const components = {
@@ -233,7 +239,7 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      disabled={isDateDisabled}
+      disabled={disabledProp}
       captionLayout={captionLayout}
       className={cn("", className)}
       formatters={

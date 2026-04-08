@@ -6,6 +6,7 @@ import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
+import { ensureCreateEventSyncedFromDraft } from "@/lib/createEventDraftSync";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
@@ -19,7 +20,7 @@ import { cn } from "@/utils/cn";
 export default function QuestionnairePage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
-  const { formData } = useCreateEvent();
+  const { formData, updateFormData } = useCreateEvent();
   const { openCreateQuestionModal, setOnModalSave } = useCreateQuestionModal();
   const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [authChecked, setAuthChecked] = useState(false);
@@ -106,12 +107,29 @@ export default function QuestionnairePage() {
     }
   };
 
-  const handleSkip = () => {
+  const goToCouponsAfterSync = async () => {
+    if (!formData.createdEventId) {
+      try {
+        await ensureCreateEventSyncedFromDraft({ formData, updateFormData });
+      } catch (error: unknown) {
+        console.error("Error syncing event before cupons:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível sincronizar o evento. Conclua informações e banner.",
+        );
+        return;
+      }
+    }
     orgNav.push("/organizer/events/new/coupons");
   };
 
+  const handleSkip = () => {
+    void goToCouponsAfterSync();
+  };
+
   const handleConfirmQuestionnaire = () => {
-    orgNav.push("/organizer/events/new/coupons");
+    void goToCouponsAfterSync();
   };
 
   if (!authChecked || loading) {
@@ -268,17 +286,6 @@ export default function QuestionnairePage() {
             "md:justify-end",
           )}
         >
-          <Button
-            onClick={handleSkip}
-            variant="outline"
-            className={cn(
-              "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12",
-              "max-md:h-12 max-md:w-full max-md:px-4",
-              "max-md:border-yellow-6 max-md:bg-yellow-3 max-md:text-gray-12 max-md:hover:bg-yellow-4",
-            )}
-          >
-            Pular etapa
-          </Button>
           <Button
             onClick={handleConfirmQuestionnaire}
             variant="default"

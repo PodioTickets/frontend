@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { clearAllCreateEventClientStorage } from "@/lib/createEventWizardPersistence";
 
-interface CreateEventFormData {
+export interface CreateEventFormData {
   name: string;
   eventDate: string;
   registrationStartDate: string;
@@ -96,9 +97,7 @@ export function CreateEventProvider({
 
   const clearFormData = () => {
     setFormData(initialFormData);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem("createEventFormData");
-    }
+    clearAllCreateEventClientStorage();
   };
 
   return (

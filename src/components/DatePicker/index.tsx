@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { Matcher } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -142,8 +143,55 @@ export function DatePicker({
     }
   }, [value]);
 
+  const rangeMatchers = React.useMemo((): Matcher | Matcher[] | undefined => {
+    const list: Matcher[] = [];
+    if (minDate) {
+      const d = new Date(minDate);
+      d.setHours(0, 0, 0, 0);
+      list.push({ before: d });
+    }
+    if (maxDate) {
+      const d = new Date(maxDate);
+      d.setHours(23, 59, 59, 999);
+      list.push({ after: d });
+    }
+    if (list.length === 0) return undefined;
+    return list.length === 1 ? list[0] : list;
+  }, [minDate, maxDate]);
+
+  /** Sempre deixar `disablePastDates` no Calendar (default true): o Calendar soma `{ before: hoje }` aos matchers de min/max. */
+  const startOfLocalDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const isSelectionAllowed = (d: Date): boolean => {
+    const day = startOfLocalDay(d);
+    const today = startOfLocalDay(new Date());
+    if (day < today) return false;
+    if (minDate) {
+      const min = startOfLocalDay(new Date(minDate));
+      if (day < min) return false;
+    }
+    if (maxDate) {
+      const max = startOfLocalDay(new Date(maxDate));
+      if (day > max) return false;
+    }
+    return true;
+  };
+
+  const confirmDisabled = !tempDate || !isSelectionAllowed(tempDate);
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && value) {
+      const parsed = parseValueToDate(value);
+      if (parsed && !isSelectionAllowed(parsed)) {
+        setTempDate(undefined);
+      }
+    }
+  };
+
   const handleConfirm = () => {
-    if (tempDate) {
+    if (tempDate && isSelectionAllowed(tempDate)) {
       const year = tempDate.getFullYear();
       const month = String(tempDate.getMonth() + 1).padStart(2, "0");
       const day = String(tempDate.getDate()).padStart(2, "0");
@@ -154,7 +202,7 @@ export function DatePicker({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -190,36 +238,20 @@ export function DatePicker({
             toYear={new Date().getFullYear() + 10}
             selected={tempDate}
             onSelect={(date: Date | undefined) => {
-              setTempDate(date);
+              if (date && isSelectionAllowed(date)) {
+                setTempDate(date);
+              } else if (!date) {
+                setTempDate(undefined);
+              }
             }}
-            disabled={
-              minDate || maxDate
-                ? (date: Date) => {
-                  if (minDate) {
-                    const min = new Date(minDate);
-                    min.setHours(0, 0, 0, 0);
-                    const checkDate = new Date(date);
-                    checkDate.setHours(0, 0, 0, 0);
-                    if (checkDate < min) return true;
-                  }
-                  if (maxDate) {
-                    const max = new Date(maxDate);
-                    max.setHours(23, 59, 59, 999);
-                    const checkDate = new Date(date);
-                    checkDate.setHours(0, 0, 0, 0);
-                    if (checkDate > max) return true;
-                  }
-                  return false;
-                }
-                : () => false
-            }
+            disabled={rangeMatchers}
             className="rounded-md border-0 bg-transparent w-full"
           />
           <div className="flex items-center justify-end">
             <Button
               type="button"
               onClick={handleConfirm}
-              disabled={!tempDate}
+              disabled={confirmDisabled}
               className="w-1/2 h-8 text-xs"
             >
               Confirmar

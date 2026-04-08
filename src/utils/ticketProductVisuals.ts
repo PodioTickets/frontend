@@ -23,6 +23,28 @@ export function orderCarouselItemsWithPrimary(
   return [primary, ...next];
 }
 
+/**
+ * Reordena para o item preferido ficar no índice central (`Math.floor(n/2)`),
+ * mantendo a ordem relativa dos demais em volta (útil para miniaturas centralizadas no modal).
+ */
+export function orderCarouselItemsWithPreferredInCenter<T extends { id: string }>(
+  items: T[],
+  preferredIndex = 0,
+): T[] {
+  const n = items.length;
+  if (n <= 1) return items;
+  const p = Math.min(Math.max(preferredIndex, 0), n - 1);
+  const center = Math.floor(n / 2);
+  const preferred = items[p];
+  const after = items.slice(p + 1);
+  const before = items.slice(0, p);
+  const cycle = [...after, ...before];
+  const leftCount = center;
+  const left = cycle.slice(0, leftCount);
+  const right = cycle.slice(leftCount);
+  return [...left, preferred, ...right];
+}
+
 export function getTicketProductCarouselItems(
   ticket: Pick<Ticket, "products">,
   productsMap: Record<

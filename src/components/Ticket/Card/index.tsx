@@ -5,6 +5,8 @@ import { MapPin, Calendar, Clock, Navigation } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { useRouter } from "next/navigation";
+import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
+import { modalitiesColumns } from "@/constants";
 
 export interface Ticket {
   id: string;
@@ -75,6 +77,9 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     router.push(`/user/tickets/${ticket.id}`);
   };
 
+  const modalityIconSrc =
+    modalitiesColumns[0].find(item => item.label === ticket.modality.name)?.icon;
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("pt-BR", {
@@ -140,12 +145,12 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           {/* Modality */}
           <div className="flex gap-1 items-center w-full">
             <ImageWithInitialFallback
-              src={ticket.modality?.icon || "/icons-3d/Icon3D-corrida-de-rua.webp"}
+              src={modalityIconSrc}
               alt={ticket.modality.name}
               name={ticket.modality.name}
               width={20}
               height={20}
-              className="shrink-0 size-6 bg-transparent"
+              className="shrink-0 size-6 bg-transparent border-transparent border-0 object-contain"
               imgClassName="object-contain"
               letterClassName="text-[10px]"
             />

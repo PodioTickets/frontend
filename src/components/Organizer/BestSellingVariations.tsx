@@ -118,7 +118,7 @@ export function BestSellingVariations({
     <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden flex flex-col w-full h-full">
       <div className="px-4 py-3 md:py-5 border-b border-gray-6 shrink-0">
         <p className="font-family-dm-sans font-normal text-base md:text-[16px] md:leading-[1.3] text-gray-11">
-          Variações mais vendidas de cada produto
+          Produtos mais vendidos
         </p>
       </div>
       <div className="flex-1 min-h-0 flex flex-col">

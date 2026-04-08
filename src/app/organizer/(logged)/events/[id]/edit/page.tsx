@@ -20,7 +20,10 @@ import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 
 const EVENT_NAME_MAX_LENGTH = 100;
 import {
+  DATE_NOT_BEFORE_TODAY_TOAST,
   getMinDateForRegistrationEndPicker,
+  getTodayStartLocal,
+  isIsoDateStrictlyBefore,
   REGISTRATION_END_BEFORE_START_TOAST,
   wouldRegistrationEndBeforeStart,
 } from "@/utils/registrationPeriod";
@@ -147,7 +150,16 @@ export default function EditInformationPage() {
   };
 
   const handleDateChange = (name: string, value: string) => {
+    const todayStart = getTodayStartLocal();
+
     if (name === "registrationStartDate") {
+      if (
+        value?.trim() &&
+        isIsoDateStrictlyBefore(value, todayStart)
+      ) {
+        toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
+        return;
+      }
       const hasStart = Boolean(value?.trim());
       updateFormData({
         registrationStartDate: value,
@@ -165,6 +177,13 @@ export default function EditInformationPage() {
     }
 
     if (name === "registrationEndDate") {
+      if (
+        value?.trim() &&
+        isIsoDateStrictlyBefore(value, todayStart)
+      ) {
+        toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
+        return;
+      }
       const hasEnd = Boolean(value?.trim());
       const nextEndTime = hasEnd
         ? formData.registrationEndTime?.trim() || "00:00"
@@ -186,6 +205,14 @@ export default function EditInformationPage() {
       if (errors[name]) {
         setErrors((prev) => ({ ...prev, [name]: "" }));
       }
+      return;
+    }
+    if (
+      name === "eventDate" &&
+      value?.trim() &&
+      isIsoDateStrictlyBefore(value, todayStart)
+    ) {
+      toast.error(DATE_NOT_BEFORE_TODAY_TOAST);
       return;
     }
     updateFormData({ [name]: value });
@@ -491,6 +518,7 @@ export default function EditInformationPage() {
                     placeholder={getCurrentDatePlaceholder()}
                     className="w-full md:w-max"
                     hideIcon={false}
+                    minDate={getTodayStartLocal()}
                   />
                 </div>
                 <div className="flex items-start gap-2">
@@ -528,6 +556,7 @@ export default function EditInformationPage() {
                         }
                         placeholder={getCurrentDatePlaceholder()}
                         className="w-full md:w-max"
+                        minDate={getTodayStartLocal()}
                       />
                     </div>
                     <div className="w-[112px] shrink-0 md:w-auto">

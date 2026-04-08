@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { clearAllCreateEventClientStorage } from "@/lib/createEventWizardPersistence";
 
 export function PublishEventModal() {
   const { isOpen, closePublishEventModal, data } = usePublishEventModal();
@@ -26,7 +27,8 @@ export function PublishEventModal() {
       await organizerService.publishEvent(eventId);
       toast.success("Evento publicado com sucesso!");
       closePublishEventModal();
-      
+      clearAllCreateEventClientStorage();
+
       // Redirecionar para a página de eventos após publicar
       orgNav.push("/organizer/events");
     } catch (error: any) {
