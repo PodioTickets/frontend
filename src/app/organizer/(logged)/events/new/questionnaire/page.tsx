@@ -299,7 +299,7 @@ export default function QuestionnairePage() {
               "max-md:h-12 max-md:w-full max-md:px-4 sm:text-base",
             )}
           >
-            Preview
+            Prévia
           </Button>
           <Button
             type="button"

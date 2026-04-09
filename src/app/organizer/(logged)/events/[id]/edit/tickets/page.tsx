@@ -950,10 +950,10 @@ export default function EditTicketsPage() {
       uncategorized:
         uncategorizedTicketsDisplay.length > 0
           ? {
-              id: "uncategorized",
-              name: "",
-              tickets: uncategorizedTicketsDisplay.map(ticketToRow),
-            }
+            id: "uncategorized",
+            name: "",
+            tickets: uncategorizedTicketsDisplay.map(ticketToRow),
+          }
           : null,
     };
   }, [
@@ -1008,84 +1008,53 @@ export default function EditTicketsPage() {
         onDragCancel={handleDragCancel}
       >
         <div className="bg-gray-2 pb-32 pt-0 md:bg-transparent md:px-0 md:pb-20 md:pt-0">
-        <div className="flex w-full flex-col gap-5 md:gap-9">
-          <div className="-mx-4 flex h-[52px] items-center border-b border-gray-6 bg-gray-2 px-4 md:hidden">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex size-8 cursor-pointer items-center justify-center transition-colors rotate-180 hover:bg-gray-3"
-              aria-label="Voltar"
-            >
-              <ArrowButton isOpen={false} />
-            </button>
-            <h1 className="ml-2 font-manrope text-base font-extrabold leading-[1.1] text-gray-12">
-              Ingressos
-            </h1>
-          </div>
-
-          <div className="flex flex-col gap-5 md:gap-4">
-            <div className="hidden items-center gap-3 md:flex">
+          <div className="flex w-full flex-col gap-5 md:gap-9">
+            <div className="-mx-4 flex h-[52px] items-center border-b border-gray-6 bg-gray-2 px-4 md:hidden">
               <button
                 type="button"
                 onClick={handleBack}
-                className="flex size-9 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
+                className="flex size-8 cursor-pointer items-center justify-center transition-colors rotate-180 hover:bg-gray-3"
                 aria-label="Voltar"
               >
                 <ArrowButton isOpen={false} />
               </button>
-              <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
+              <h1 className="ml-2 font-manrope text-base font-extrabold leading-[1.1] text-gray-12">
                 Ingressos
               </h1>
             </div>
-            <p className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-11">
-              Crie categorias e ingressos com lotes, valores e regras. Depois, vincule um kit para o
-              participante configurar durante a inscrição
-            </p>
-          </div>
 
-          <div className="flex gap-2 md:hidden">
-            <Button
-              type="button"
-              onClick={() => {
-                setCategoryFormMode("create");
-                setCategoryFormCategoryId(null);
-                setCategoryFormDrawerOpen(true);
-              }}
-              variant="outline"
-              className="h-11 min-h-0 flex-1 gap-1 rounded-lg border-gray-6 px-5 font-family-dm-sans text-sm font-bold text-gray-12"
-            >
-              <Plus className="size-5 shrink-0" />
-              Criar categoria
-            </Button>
-            <Button
-              type="button"
-              onClick={() =>
-                requestNavigate(`/organizer/events/${eventId}/edit/tickets/create`)
-              }
-              variant="default"
-              className="h-11 min-h-0 flex-1 gap-1 rounded-lg px-5 font-family-dm-sans text-sm font-bold"
-            >
-              <Plus className="size-5 shrink-0" />
-              Criar ingresso
-            </Button>
-          </div>
+            <div className="flex flex-col gap-5 md:gap-4">
+              <div className="hidden items-center gap-3 md:flex">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex size-9 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
+                  aria-label="Voltar"
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+                <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
+                  Ingressos
+                </h1>
+              </div>
+              <p className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-11">
+                Crie categorias e ingressos com lotes, valores e regras. Depois, vincule um kit para o
+                participante configurar durante a inscrição
+              </p>
+            </div>
 
-          <div className="hidden items-center justify-between gap-4 md:flex md:flex-wrap">
-            <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">
-              Ingressos avulsos
-            </h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 md:hidden">
               <Button
                 type="button"
                 onClick={() => {
-                  setShowCreateGroupSection(true);
-                  setEditingGroupId("new");
-                  setNewGroupName("");
+                  setCategoryFormMode("create");
+                  setCategoryFormCategoryId(null);
+                  setCategoryFormDrawerOpen(true);
                 }}
                 variant="outline"
-                className="border-gray-6 font-manrope text-base font-bold text-gray-12"
+                className="h-11 min-h-0 flex-1 gap-1 rounded-lg border-gray-6 px-5 font-family-dm-sans text-sm font-bold text-gray-12"
               >
-                <Plus className="size-5" />
+                <Plus className="size-5 shrink-0" />
                 Criar categoria
               </Button>
               <Button
@@ -1094,180 +1063,108 @@ export default function EditTicketsPage() {
                   requestNavigate(`/organizer/events/${eventId}/edit/tickets/create`)
                 }
                 variant="default"
-                className="font-manrope text-base font-bold leading-[1.1]"
+                className="h-11 min-h-0 flex-1 gap-1 rounded-lg px-5 font-family-dm-sans text-sm font-bold"
               >
-                <Plus className="size-5" />
+                <Plus className="size-5 shrink-0" />
                 Criar ingresso
               </Button>
             </div>
-          </div>
 
-          {(hasNoCategories ? allTickets.length > 0 : true) && (
-            <UncategorizedTicketsDropShell>
-              <MobileGeneralTicketsSection ticketCount={allTickets.length}>
-                <div className="overflow-x-auto">
-                  <TicketTable
-                    tickets={allTicketsDisplay}
-                    currentPage={1}
-                    totalPages={1}
-                    onPageChange={() => {}}
-                    onEdit={handleEditTicket}
-                    onDuplicate={handleDuplicateTicket}
-                    duplicatingTicketId={duplicatingTicketId}
-                    productsMap={productsMap}
-                    ticketScopeCategoryId={null}
-                    moveCategoryOptions={ticketMoveCategoryOptions}
-                    onMoveTicketToCategory={handleDropTicket}
-                    onDeleteTicket={handleDeleteTicket}
-                  />
-                </div>
-              </MobileGeneralTicketsSection>
-            </UncategorizedTicketsDropShell>
-          )}
-
-          {/* Create Category Section — desktop; no mobile (drawer) */}
-          {showCreateGroupSection && (
-            <div className="hidden gap-6 rounded-xl border border-gray-6 bg-gray-3 p-5 md:flex md:flex-col">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                {editingGroupId === "new" || !editingGroupId ? (
-                  <input
-                    type="text"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    onBlur={(e) => {
-                      const next =
-                        e.relatedTarget instanceof HTMLElement
-                          ? e.relatedTarget.closest("[data-category-draft-toolbar]")
-                          : null;
-                      if (next) return;
-                      const value = newGroupName.trim();
-                      if (value) void handleCreateGroup(value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const value = (e.target as HTMLInputElement).value.trim();
-                        if (value) {
-                          void handleCreateGroup(value);
-                        } else {
-                          toast.error("Nome da categoria é obrigatório");
-                        }
-                      } else if (e.key === "Escape") {
-                        setShowCreateGroupSection(false);
-                        setEditingGroupId(null);
-                        setNewGroupName("");
-                        setEditingGroupName("");
-                      }
-                    }}
-                    className="text-gray-12 text-2xl font-bold font-manrope bg-transparent focus:outline-none flex-1"
-                    placeholder="Adicione um nome a esta categoria..."
-                    autoFocus
-                  />
-                ) : (
-                  <h3 className="text-gray-12 text-2xl font-bold font-manrope">
-                    Adicione um nome a esta categoria...
-                  </h3>
-                )}
-                <div
-                  className="flex gap-[10px] items-center"
-                  data-category-draft-toolbar
+            <div className="hidden items-center justify-between gap-4 md:flex md:flex-wrap">
+              <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">
+                Ingressos avulsos
+              </h2>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateGroupSection(true);
+                    setEditingGroupId("new");
+                    setNewGroupName("");
+                  }}
+                  variant="outline"
+                  className="border-gray-6 font-manrope text-base font-bold text-gray-12"
                 >
-                  <button
-                    type="button"
-                    title="Editar"
-                    onClick={() => {
-                      setEditingGroupId("new");
-                      setNewGroupName("");
-                    }}
-                    className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-                  >
-                    <PencilIcon className="size-5 text-gray-11" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Deletar"
-                    onClick={() => {
-                      setShowCreateGroupSection(false);
-                      setEditingGroupId(null);
-                      setNewGroupName("");
-                    }}
-                    className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-                  >
-                    <TrashIcon className="size-5 text-red-12" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Empty Table */}
-              <div className="border border-gray-6 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-2 border-b border-gray-6">
-                      <tr>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Nome do ingresso
-                        </th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Preço
-                        </th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Modalidade/Distância
-                        </th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Produtos relacionados
-                        </th>
-                        <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>{/* Empty state - no rows */}</tbody>
-                  </table>
-                </div>
+                  <Plus className="size-5" />
+                  Criar categoria
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() =>
+                    requestNavigate(`/organizer/events/${eventId}/edit/tickets/create`)
+                  }
+                  variant="default"
+                  className="font-manrope text-base font-bold leading-[1.1]"
+                >
+                  <Plus className="size-5" />
+                  Criar ingresso
+                </Button>
               </div>
             </div>
-          )}
 
-          {/* Empty Card */}
-          {hasNoCategories && allTickets.length === 0 && (
-            <div className="flex flex-col gap-11 items-end">
-              <div className="border border-gray-6 rounded-xl p-5 w-full flex flex-col gap-6">
+            {(hasNoCategories ? allTickets.length > 0 : true) && (
+              <UncategorizedTicketsDropShell>
+                <MobileGeneralTicketsSection ticketCount={allTickets.length}>
+                  <div className="overflow-x-auto">
+                    <TicketTable
+                      tickets={allTicketsDisplay}
+                      currentPage={1}
+                      totalPages={1}
+                      onPageChange={() => { }}
+                      onEdit={handleEditTicket}
+                      onDuplicate={handleDuplicateTicket}
+                      duplicatingTicketId={duplicatingTicketId}
+                      productsMap={productsMap}
+                      ticketScopeCategoryId={null}
+                      moveCategoryOptions={ticketMoveCategoryOptions}
+                      onMoveTicketToCategory={handleDropTicket}
+                      onDeleteTicket={handleDeleteTicket}
+                    />
+                  </div>
+                </MobileGeneralTicketsSection>
+              </UncategorizedTicketsDropShell>
+            )}
+
+            {/* Create Category Section — desktop; no mobile (drawer) */}
+            {showCreateGroupSection && (
+              <div className="hidden gap-6 rounded-xl border border-gray-6 bg-gray-3 p-5 md:flex md:flex-col">
                 <div className="flex items-center justify-between flex-wrap gap-4">
-                  {editingGroupId === "new" ? (
+                  {editingGroupId === "new" || !editingGroupId ? (
                     <input
                       type="text"
-                      value={editingGroupName}
-                      onChange={(e) => setEditingGroupName(e.target.value)}
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
                       onBlur={(e) => {
                         const next =
                           e.relatedTarget instanceof HTMLElement
                             ? e.relatedTarget.closest("[data-category-draft-toolbar]")
                             : null;
                         if (next) return;
-                        const value = editingGroupName.trim();
-                        if (value) {
-                          void handleCreateGroup(value);
-                        } else {
-                          setEditingGroupId(null);
-                          setEditingGroupName("");
-                        }
+                        const value = newGroupName.trim();
+                        if (value) void handleCreateGroup(value);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          if (editingGroupName.trim()) {
-                            void handleCreateGroup(editingGroupName.trim());
+                          e.preventDefault();
+                          const value = (e.target as HTMLInputElement).value.trim();
+                          if (value) {
+                            void handleCreateGroup(value);
+                          } else {
+                            toast.error("Nome da categoria é obrigatório");
                           }
                         } else if (e.key === "Escape") {
+                          setShowCreateGroupSection(false);
                           setEditingGroupId(null);
+                          setNewGroupName("");
                           setEditingGroupName("");
                         }
                       }}
-                      className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 flex-1"
+                      className="text-gray-12 text-2xl font-bold font-manrope bg-transparent focus:outline-none flex-1"
                       placeholder="Adicione um nome a esta categoria..."
                       autoFocus
                     />
                   ) : (
-                    <h3 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
+                    <h3 className="text-gray-12 text-2xl font-bold font-manrope">
                       Adicione um nome a esta categoria...
                     </h3>
                   )}
@@ -1280,161 +1177,264 @@ export default function EditTicketsPage() {
                       title="Editar"
                       onClick={() => {
                         setEditingGroupId("new");
-                        setEditingGroupName("");
+                        setNewGroupName("");
                       }}
-                      className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center"
+                      className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
                     >
                       <PencilIcon className="size-5 text-gray-11" />
                     </button>
                     <button
                       type="button"
-                      disabled
-                      title="Deletar categoria"
-                      className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center opacity-50 cursor-not-allowed"
+                      title="Deletar"
+                      onClick={() => {
+                        setShowCreateGroupSection(false);
+                        setEditingGroupId(null);
+                        setNewGroupName("");
+                      }}
+                      className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
                     >
-                      <PencilIcon className="size-5 text-red-12" />
+                      <TrashIcon className="size-5 text-red-12" />
                     </button>
                   </div>
                 </div>
 
-                {/* Empty State */}
-                <div className="flex flex-col gap-8 items-center justify-center py-11 px-0">
-                  <div className="relative h-[64px] w-[111px]">
-                    <Image
-                      src="/icons-3d/Icon3D-Busca-sem-resultado.webp"
-                      alt="Empty"
-                      fill
-                      className="object-contain"
-                    />
+                {/* Empty Table */}
+                <div className="border border-gray-6 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-2 border-b border-gray-6">
+                        <tr>
+                          <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Nome do ingresso
+                          </th>
+                          <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Preço
+                          </th>
+                          <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Modalidade/Distância
+                          </th>
+                          <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Produtos relacionados
+                          </th>
+                          <th className="text-left py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Ações
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>{/* Empty state - no rows */}</tbody>
+                    </table>
                   </div>
-                  <p className="text-gray-12 text-xl font-semibold font-manrope leading-[1.1]">
-                    Nenhum ingresso criado ainda....
-                  </p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Categories List */}
-          {!hasNoCategories && (
-            <>
-              <p className="font-manrope text-base font-extrabold leading-[1.1] text-gray-12 md:hidden">
-                Categorias
-              </p>
-              <SortableContext
-                items={orderedCategories.map((c) => categorySortableId(c.id))}
-                strategy={verticalListSortingStrategy}
-              >
-              <div className="flex flex-col gap-4 md:gap-6">
-                {orderedCategories.map((category) => {
-                  const categoryTickets =
-                    ticketsByCategoryDisplay[category.id] || [];
-
-                  return (
-                    <SortableTicketCategoryItem
-                      key={category.id}
-                      categoryId={category.id}
-                      category={category}
-                      totalTicketsInCategory={categoryTickets.length}
-                      onEdit={handleUpdateGroupName}
-                      onEditDescription={handleUpdateGroupDescription}
-                      onDelete={handleDeleteGroup}
-                      onMobileEditCategory={(id) => {
-                        setCategoryFormMode("edit");
-                        setCategoryFormCategoryId(id);
-                        setCategoryFormDrawerOpen(true);
-                      }}
-                    >
-                      <TicketCategoryCard
-                        category={category}
-                        className="rounded-none border-0 shadow-none"
-                        hideCategoryTitleRow
-                        tickets={categoryTickets}
-                        totalTicketsInCategory={categoryTickets.length}
-                        currentPage={1}
-                        totalPages={1}
-                        onEdit={handleUpdateGroupName}
-                        onEditDescription={handleUpdateGroupDescription}
-                        onDelete={handleDeleteGroup}
-                        onEditTicket={handleEditTicket}
-                        onPageChange={() => {}}
-                        onDuplicateTicket={handleDuplicateTicket}
-                        duplicatingTicketId={duplicatingTicketId}
-                        productsMap={productsMap}
-                        onDropTicket={handleDropTicket}
-                        moveCategoryOptions={ticketMoveCategoryOptions}
-                        onMoveTicketToCategory={handleDropTicket}
-                        onDeleteTicket={handleDeleteTicket}
+            {/* Empty Card */}
+            {hasNoCategories && allTickets.length === 0 && (
+              <div className="flex flex-col gap-11 items-end">
+                <div className="border border-gray-6 rounded-xl p-5 w-full flex flex-col gap-6">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    {editingGroupId === "new" ? (
+                      <input
+                        type="text"
+                        value={editingGroupName}
+                        onChange={(e) => setEditingGroupName(e.target.value)}
+                        onBlur={(e) => {
+                          const next =
+                            e.relatedTarget instanceof HTMLElement
+                              ? e.relatedTarget.closest("[data-category-draft-toolbar]")
+                              : null;
+                          if (next) return;
+                          const value = editingGroupName.trim();
+                          if (value) {
+                            void handleCreateGroup(value);
+                          } else {
+                            setEditingGroupId(null);
+                            setEditingGroupName("");
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            if (editingGroupName.trim()) {
+                              void handleCreateGroup(editingGroupName.trim());
+                            }
+                          } else if (e.key === "Escape") {
+                            setEditingGroupId(null);
+                            setEditingGroupName("");
+                          }
+                        }}
+                        className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 flex-1"
+                        placeholder="Adicione um nome a esta categoria..."
+                        autoFocus
                       />
-                    </SortableTicketCategoryItem>
-                  );
-                })}
+                    ) : (
+                      <h3 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
+                        Adicione um nome a esta categoria...
+                      </h3>
+                    )}
+                    <div
+                      className="flex gap-[10px] items-center"
+                      data-category-draft-toolbar
+                    >
+                      <button
+                        type="button"
+                        title="Editar"
+                        onClick={() => {
+                          setEditingGroupId("new");
+                          setEditingGroupName("");
+                        }}
+                        className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center"
+                      >
+                        <PencilIcon className="size-5 text-gray-11" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        title="Deletar categoria"
+                        className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center opacity-50 cursor-not-allowed"
+                      >
+                        <PencilIcon className="size-5 text-red-12" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Empty State */}
+                  <div className="flex flex-col gap-8 items-center justify-center py-11 px-0">
+                    <div className="relative h-[64px] w-[111px]">
+                      <Image
+                        src="/icons-3d/Icon3D-Busca-sem-resultado.webp"
+                        alt="Empty"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    <p className="text-gray-12 text-xl font-semibold font-manrope leading-[1.1]">
+                      Nenhum ingresso criado ainda....
+                    </p>
+                  </div>
+                </div>
               </div>
-              </SortableContext>
-            </>
-          )}
+            )}
 
-          <div className="w-full">
-            <TicketAdvancedKitDisplayOptions
-              showKitImagesOnSelection={draftKitSelection.showKitImagesOnSelection}
-              onShowKitImagesOnSelectionChange={handleDraftShowKitImagesChange}
-              kitImagesLayout={draftKitSelection.kitImagesLayout}
-              onOpenKitImagePositionDrawer={() => {
-                const hasKit = tickets.some(
-                  (t) => (t.products?.length ?? 0) > 0
-                );
-                if (!hasKit) {
-                  toast.error(
-                    "Adicione produtos (kit) a um ingresso para editar as imagens."
+            {/* Categories List */}
+            {!hasNoCategories && (
+              <>
+                <p className="font-manrope text-base font-extrabold leading-[1.1] text-gray-12 md:hidden">
+                  Categorias
+                </p>
+                <SortableContext
+                  items={orderedCategories.map((c) => categorySortableId(c.id))}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex flex-col gap-4 md:gap-6">
+                    {orderedCategories.map((category) => {
+                      const categoryTickets =
+                        ticketsByCategoryDisplay[category.id] || [];
+
+                      return (
+                        <SortableTicketCategoryItem
+                          key={category.id}
+                          categoryId={category.id}
+                          category={category}
+                          totalTicketsInCategory={categoryTickets.length}
+                          onEdit={handleUpdateGroupName}
+                          onEditDescription={handleUpdateGroupDescription}
+                          onDelete={handleDeleteGroup}
+                          onMobileEditCategory={(id) => {
+                            setCategoryFormMode("edit");
+                            setCategoryFormCategoryId(id);
+                            setCategoryFormDrawerOpen(true);
+                          }}
+                        >
+                          <TicketCategoryCard
+                            category={category}
+                            className="rounded-none border-0 shadow-none"
+                            hideCategoryTitleRow
+                            tickets={categoryTickets}
+                            totalTicketsInCategory={categoryTickets.length}
+                            currentPage={1}
+                            totalPages={1}
+                            onEdit={handleUpdateGroupName}
+                            onEditDescription={handleUpdateGroupDescription}
+                            onDelete={handleDeleteGroup}
+                            onEditTicket={handleEditTicket}
+                            onPageChange={() => { }}
+                            onDuplicateTicket={handleDuplicateTicket}
+                            duplicatingTicketId={duplicatingTicketId}
+                            productsMap={productsMap}
+                            onDropTicket={handleDropTicket}
+                            moveCategoryOptions={ticketMoveCategoryOptions}
+                            onMoveTicketToCategory={handleDropTicket}
+                            onDeleteTicket={handleDeleteTicket}
+                          />
+                        </SortableTicketCategoryItem>
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </>
+            )}
+
+            <div className="w-full">
+              <TicketAdvancedKitDisplayOptions
+                showKitImagesOnSelection={draftKitSelection.showKitImagesOnSelection}
+                onShowKitImagesOnSelectionChange={handleDraftShowKitImagesChange}
+                kitImagesLayout={draftKitSelection.kitImagesLayout}
+                onOpenKitImagePositionDrawer={() => {
+                  const hasKit = tickets.some(
+                    (t) => (t.products?.length ?? 0) > 0
                   );
-                  return;
-                }
-                setKitImagePositionDrawerOpen(true);
-              }}
-            />
-          </div>
+                  if (!hasKit) {
+                    toast.error(
+                      "Adicione produtos (kit) a um ingresso para editar as imagens."
+                    );
+                    return;
+                  }
+                  setKitImagePositionDrawerOpen(true);
+                }}
+              />
+            </div>
 
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleOpenTicketsCheckoutPreview}
-              className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
-            >
-              Preview
-            </Button>
-            {kitSelectionDirty ? (
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
               <Button
                 type="button"
-                onClick={() => void handleSaveChangesNavigate()}
-                variant="default"
-                disabled={savingNavigate}
-                className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:px-10 sm:text-[20px]"
+                variant="outline"
+                onClick={handleOpenTicketsCheckoutPreview}
+                className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
               >
-                {savingNavigate ? "Salvando..." : "Salvar alterações"}
+                Prévia
               </Button>
-            ) : null}
+              {kitSelectionDirty ? (
+                <Button
+                  type="button"
+                  onClick={() => void handleSaveChangesNavigate()}
+                  variant="default"
+                  disabled={savingNavigate}
+                  className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:px-10 sm:text-[20px]"
+                >
+                  {savingNavigate ? "Salvando..." : "Salvar alterações"}
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
-      <DragOverlay>
-        {activeId && activeId.startsWith("ticket-") ? (
-          <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 opacity-90 shadow-lg">
-            <p className="text-sm font-semibold text-gray-12">
-              {tickets.find((t) => `ticket-${t.id}` === activeId)?.name || "Ingresso"}
-            </p>
-          </div>
-        ) : activeId && parseCategorySortableId(activeId) ? (
-          <div className="max-w-md rounded-xl border border-gray-6 bg-gray-1 p-4 opacity-95 shadow-2xl">
-            <p className="text-sm font-semibold text-gray-12">
-              {orderedCategories.find(
-                (c) => categorySortableId(c.id) === activeId,
-              )?.name || "Categoria"}
-            </p>
-            <p className="mt-1 text-xs text-gray-11">Alterar ordem</p>
-          </div>
-        ) : null}
-      </DragOverlay>
+        <DragOverlay>
+          {activeId && activeId.startsWith("ticket-") ? (
+            <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 opacity-90 shadow-lg">
+              <p className="text-sm font-semibold text-gray-12">
+                {tickets.find((t) => `ticket-${t.id}` === activeId)?.name || "Ingresso"}
+              </p>
+            </div>
+          ) : activeId && parseCategorySortableId(activeId) ? (
+            <div className="max-w-md rounded-xl border border-gray-6 bg-gray-1 p-4 opacity-95 shadow-2xl">
+              <p className="text-sm font-semibold text-gray-12">
+                {orderedCategories.find(
+                  (c) => categorySortableId(c.id) === activeId,
+                )?.name || "Categoria"}
+              </p>
+              <p className="mt-1 text-xs text-gray-11">Alterar ordem</p>
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       <TicketCategoryFormDrawer
