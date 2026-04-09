@@ -18,8 +18,13 @@ import {
   topicSectionRowsToPreviewSections,
 } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
+import type { Event } from "@/interfaces/event";
+import {
+  EventPublicInfoCardDesktop,
+  EventPublicInfoCardMobile,
+} from "@/components/Event/EventPublicInfoCard";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function PreviewEventPage() {
   const router = useRouter();
@@ -95,6 +100,8 @@ export default function PreviewEventPage() {
         ? getEnabledTopicsSorted(event)
         : [];
 
+  const eventTyped = (event ?? null) as Event | null;
+
   return (
     <div className="bg-gray-2 min-h-screen">
 
@@ -102,7 +109,7 @@ export default function PreviewEventPage() {
       <div className="max-w-[1440px] mx-auto px-5 md:px-[124px] py-[52px] pb-[176px]">
         <div className="flex flex-col gap-9 items-center">
           {/* Title Section */}
-          <div className="flex gap-3 items-center w-full max-w-[843px]">
+          <div className="flex w-full max-w-[1280px] items-center gap-3 px-0 lg:px-8">
             <button
               onClick={handleBack}
               className="border border-gray-6 rounded-[52px] rotate-180 size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
@@ -115,22 +122,37 @@ export default function PreviewEventPage() {
           </div>
 
           {/* Content */}
-          <div className="flex flex-col gap-[52px] items-start w-full max-w-[843px]">
-            {/* Banner Image */}
-            <div className="h-[404px] relative rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] w-full overflow-hidden">
-              <ImageWithInitialFallback
-                src={event?.bannerUrl}
-                alt={event?.name || "Event banner"}
-                name={event?.name || "Evento"}
-                fill
-                sizes="(max-width: 900px) 100vw, 843px"
-                className="size-full rounded-2xl border-transparent border-0"
-                letterClassName="text-7xl font-bold"
-              />
+          <div className="flex w-full max-w-[1280px] flex-col items-start gap-[52px] px-0 lg:px-8">
+            <div className="flex w-full flex-col gap-8 md:flex-row md:items-start">
+              <div className="w-full min-w-0 md:flex-1">
+                <div className="relative h-[404px] w-full overflow-hidden rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] md:h-[400px]">
+                  <ImageWithInitialFallback
+                    src={event?.bannerUrl}
+                    alt={event?.name || "Event banner"}
+                    name={event?.name || "Evento"}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 66vw"
+                    className="size-full rounded-2xl border-transparent border-0"
+                    letterClassName="text-7xl font-bold"
+                  />
+                </div>
+              </div>
+              {eventTyped && (
+                <div className="hidden w-full shrink-0 md:block md:w-1/4">
+                  <EventPublicInfoCardDesktop
+                    event={eventTyped}
+                    isPreview
+                  />
+                </div>
+              )}
             </div>
+            {eventTyped && (
+              <div className="w-full md:hidden">
+                <EventPublicInfoCardMobile event={eventTyped} isPreview />
+              </div>
+            )}
 
-            {/* Info Sections */}
-            <div className="flex flex-col items-start rounded-xl w-full">
+            <div className="flex w-3/4 flex-col items-start rounded-xl -mt-20">
               {topicSections.map((section, index) => (
                 <div
                   key={section.id}
@@ -206,7 +228,7 @@ export default function PreviewEventPage() {
           </div>
 
           {/* Action Button */}
-          <div className="flex flex-col items-end justify-center w-full max-w-[843px]">
+          <div className="flex w-full max-w-[1280px] flex-col items-end justify-center px-0 lg:px-8">
             <Button
               variant="outline"
               onClick={handleBack}

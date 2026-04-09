@@ -35,6 +35,11 @@ interface InformationStepProps {
   event: Event;
   onNext: () => void;
   onBack: () => void;
+  /**
+   * Quando definido (inclui array vazio), ignora GET de perguntas e usa esta lista
+   * (ex.: rascunho do organizador com perguntas ainda não salvas na API).
+   */
+  previewQuestions?: Question[];
 }
 
 interface ParticipantWithTicket {
@@ -48,6 +53,7 @@ export function InformationStep({
   event,
   onNext,
   onBack,
+  previewQuestions,
 }: InformationStepProps) {
   const {
     raceQuantities,
@@ -803,8 +809,11 @@ export function InformationStep({
     return gender;
   };
 
+  const previewQuestionList = previewQuestions;
+  const usePreviewQuestionList = previewQuestionList !== undefined;
+
   // Buscar perguntas do evento via API - já vem no formato correto com isRequired, order, etc.
-  const { data: questions = [], isLoading: isLoadingQuestions } = useQuery<Question[]>({
+  const { data: questionsFromApi = [] } = useQuery<Question[]>({
     queryKey: queryKeys.events.questions(eventId || ""),
     queryFn: async () => {
       if (!eventId) return [];
@@ -816,14 +825,20 @@ export function InformationStep({
         return [];
       }
     },
-    enabled: !!eventId,
+    enabled: !!eventId && !usePreviewQuestionList,
   });
+
+  const questionsSource = usePreviewQuestionList
+    ? previewQuestionList
+    : questionsFromApi;
 
   // Ordenar perguntas por ordem
   const sortedQuestions = useMemo(() => {
-    if (!questions || questions.length === 0) return [];
-    return [...questions].sort((a, b) => (a.order || 0) - (b.order || 0));
-  }, [questions]);
+    if (!questionsSource || questionsSource.length === 0) return [];
+    return [...questionsSource].sort(
+      (a, b) => (a.order || 0) - (b.order || 0),
+    );
+  }, [questionsSource]);
 
 
   const updateQuestionAnswer = (

@@ -35,7 +35,11 @@ import { useCheckout as useCheckoutPayment } from "@/hooks/useCheckoutPayment";
 import { usePaymentStatusPolling } from "@/hooks/usePaymentStatus";
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
-import type { CheckoutRequest, PixPayment } from "@/interfaces/checkout";
+import type {
+  CheckoutBillingAddressRequest,
+  CheckoutRequest,
+  PixPayment,
+} from "@/interfaces/checkout";
 import toast from "react-hot-toast";
 import { apiClient } from "@/services";
 
@@ -1046,9 +1050,55 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return undefined;
   };
 
+  const buildBillingAddressPayload = (): CheckoutBillingAddressRequest | null => {
+    if (!billingAddressConfirmed) {
+      toast.error("Confirme o endereço de cobrança antes de pagar.");
+      return null;
+    }
+    const a = billingAddress;
+    const country = a.country?.trim() || "Brasil";
+    const cepDigits = a.cep.replace(/\D/g, "");
+    if (!country) {
+      toast.error("Selecione o país no endereço de cobrança.");
+      return null;
+    }
+    if (country === "Brasil") {
+      if (cepDigits.length !== 8) {
+        toast.error("Informe um CEP válido (8 dígitos) no endereço de cobrança.");
+        return null;
+      }
+    } else if (!a.cep.trim()) {
+      toast.error("Informe o CEP ou código postal no endereço de cobrança.");
+      return null;
+    }
+    if (!a.stateUf?.trim()) {
+      toast.error("Selecione o estado no endereço de cobrança.");
+      return null;
+    }
+    if (!a.street.trim() || !a.number.trim() || !a.neighborhood.trim() || !a.city.trim()) {
+      toast.error("Preencha rua, número, bairro e cidade no endereço de cobrança.");
+      return null;
+    }
+    const postalCode =
+      country === "Brasil" ? cepDigits : a.cep.trim().replace(/\s+/g, " ");
+    return {
+      country,
+      postalCode,
+      stateUf: a.stateUf.trim().toUpperCase(),
+      street: a.street.trim(),
+      number: a.number.trim(),
+      complement: a.complement?.trim() || undefined,
+      neighborhood: a.neighborhood.trim(),
+      city: a.city.trim(),
+    };
+  };
+
   // Preparar dados do checkout
   const prepareCheckoutData = (): CheckoutRequest | null => {
     if (!eventId) return null;
+
+    const billingAddressPayload = buildBillingAddressPayload();
+    if (!billingAddressPayload) return null;
 
     // Agrupar tickets por ticketId para criar a lista de tickets
     const ticketMap = new Map<string, number>();
@@ -1185,6 +1235,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           : {},
       tickets: checkoutTickets,
       participants: checkoutParticipants,
+      billingAddress: billingAddressPayload,
       couponCode: isCouponApplied && couponCode ? couponCode : undefined,
       voucherCode: undefined, // TODO: Implementar quando estiver disponível
       serviceFee: serviceFeeInCents,

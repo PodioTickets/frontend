@@ -45,12 +45,36 @@ export interface CheckoutPayment {
   card?: CheckoutCard;
 }
 
+/**
+ * Endereço de cobrança confirmado na etapa de pagamento (POST /api/v1/checkout/process).
+ * Ver `docs/checkout-billing-address-api.md` para o contrato esperado no backend.
+ */
+export interface CheckoutBillingAddressRequest {
+  /** País em português, alinhado ao seletor do checkout (ex.: "Brasil"). */
+  country: string;
+  /**
+   * CEP ou código postal.
+   * Brasil: apenas 8 dígitos (sem hífen).
+   * Exterior: texto livre normalizado (trim), como informado pelo usuário.
+   */
+  postalCode: string;
+  /** Sigla da UF em maiúsculas (ex.: SP, RJ), conforme confirmado no formulário. */
+  stateUf: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+}
+
 export interface CheckoutRequest {
   eventId: string;
   paymentMethod: PaymentMethod;
   payment: CheckoutPayment;
   tickets: CheckoutTicket[];
   participants: CheckoutParticipant[];
+  /** Obrigatório: endereço confirmado na UI antes de enviar o checkout. */
+  billingAddress: CheckoutBillingAddressRequest;
   couponCode?: string;
   voucherCode?: string;
   serviceFee?: number; // Em centavos

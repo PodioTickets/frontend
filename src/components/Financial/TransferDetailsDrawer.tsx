@@ -7,9 +7,10 @@ import {
   DrawerContent,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import { X, Eye, ChevronLeft, ChevronRight, ArrowLeft, Ticket, Building2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ArrowLeft, Ticket, Building2 } from "lucide-react";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
+import { TicketIcon } from "../Icons/TicketIcon";
 
 interface TransferDetailsDrawerProps {
   isOpen: boolean;
@@ -457,7 +458,7 @@ export function TransferDetailsDrawer({
                       {/* Ações */}
                       <div className="flex h-full items-center justify-end px-4 py-3 w-[74px]">
                         <button className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer">
-                          <Eye className="size-6 text-gray-11" />
+                          <TicketIcon className="size-4 text-gray-11" />
                         </button>
                       </div>
                     </div>

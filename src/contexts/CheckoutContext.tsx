@@ -300,6 +300,75 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
   return <CheckoutProviderContent>{children}</CheckoutProviderContent>;
 }
 
+/** Checkout isolado para pré-visualização (sem localStorage do fluxo real). */
+export function CheckoutPreviewProvider({ children }: { children: ReactNode }) {
+  const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>(
+    {},
+  );
+  const [participants, setParticipants] = useState<ParticipantFormData[]>([
+    { ...DEFAULT_PARTICIPANT },
+  ]);
+
+  const updateRaceQuantity = useCallback((raceId: string, quantity: number) => {
+    const newQuantity = Math.max(0, quantity);
+    setRaceQuantities((prev) => ({ ...prev, [raceId]: newQuantity }));
+  }, []);
+
+  const updateParticipant = useCallback(
+    (index: number, data: Partial<ParticipantFormData>) => {
+      setParticipants((prev) => {
+        const updated = [...prev];
+        if (!updated[index]) {
+          updated[index] = { ...DEFAULT_PARTICIPANT };
+        }
+        updated[index] = { ...updated[index], ...data };
+        return updated;
+      });
+    },
+    [],
+  );
+
+  const addParticipant = useCallback(() => {
+    setParticipants((prev) => [...prev, { ...DEFAULT_PARTICIPANT }]);
+  }, []);
+
+  const removeParticipant = useCallback((index: number) => {
+    setParticipants((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const resetCheckout = useCallback(() => {
+    setRaceQuantities({});
+    setParticipants([{ ...DEFAULT_PARTICIPANT }]);
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      raceQuantities,
+      participants,
+      updateRaceQuantity,
+      updateParticipant,
+      addParticipant,
+      removeParticipant,
+      resetCheckout,
+    }),
+    [
+      raceQuantities,
+      participants,
+      updateRaceQuantity,
+      updateParticipant,
+      addParticipant,
+      removeParticipant,
+      resetCheckout,
+    ],
+  );
+
+  return (
+    <CheckoutContext.Provider value={contextValue}>
+      {children}
+    </CheckoutContext.Provider>
+  );
+}
+
 export function useCheckout() {
   const context = useContext(CheckoutContext);
   if (context === undefined) {

@@ -739,6 +739,18 @@ export interface PendingRelease {
   registrationsCount: number;
 }
 
+/** Endereço de cobrança retornado com os detalhes do pagamento (checkout). */
+export interface PaymentDetailsBillingAddress {
+  country: string;
+  postalCode: string;
+  stateUf: string;
+  street: string;
+  number: string;
+  complement?: string | null;
+  neighborhood: string;
+  city: string;
+}
+
 export interface PaymentDetails {
   buyer: {
     id: string;
@@ -752,6 +764,7 @@ export interface PaymentDetails {
     reservePhone?: string | null;
     gender?: string | null;
   };
+  billingAddress?: PaymentDetailsBillingAddress | null;
   payment: {
     id: string;
     method: string;

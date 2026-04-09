@@ -38,6 +38,20 @@ interface ProductVariation {
   stock: string;
 }
 
+type LinkedTicketListItem = { name: string; categoryLabel: string };
+
+function categoryLabelFromTicket(t: Record<string, unknown>): string {
+  const nested = t.category as { name?: string } | undefined;
+  const fromNested =
+    typeof nested?.name === "string" ? nested.name.trim() : "";
+  if (fromNested) return fromNested;
+  const snake = t.category_name;
+  if (typeof snake === "string" && snake.trim()) return snake.trim();
+  const cid = t.categoryId ?? t.category_id;
+  if (cid == null || cid === "") return "Sem categoria";
+  return "Sem categoria";
+}
+
 /** Lê campos da API (camelCase ou snake_case) para o formulário de edição. */
 function buyerVariationEditStateFromApiProduct(p: Record<string, unknown> | null | undefined): {
   allowed: boolean;
@@ -95,8 +109,8 @@ export function CreateProductModal() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
-  const [linkedTicketNamesResolved, setLinkedTicketNamesResolved] = useState<
-    string[]
+  const [linkedTicketsResolved, setLinkedTicketsResolved] = useState<
+    LinkedTicketListItem[]
   >([]);
   /** Edição: carregamento do produto via API ao abrir o modal. */
   const [productFetchStatus, setProductFetchStatus] = useState<
@@ -107,6 +121,8 @@ export function CreateProductModal() {
     null,
   );
   const productCropRef = useRef<ImageUploadWithCropRef>(null);
+  /** Variação «Sem interesse» criada pelo backend: não exibimos ao organizador, mas reenviamos no PATCH se o produto continuar fora do ingresso. */
+  const organizerHiddenSemInteresseRef = useRef<ProductVariation | null>(null);
 
   const isEditing = data?.productId !== undefined;
   const eventId = data?.eventId;
@@ -253,10 +269,21 @@ export function CreateProductModal() {
       );
       const rawVars = rec.variations;
       const vars = Array.isArray(rawVars) ? rawVars : [];
-      setVariations(
-        vars.length > 0
-          ? vars.map((v: unknown, i: number) => {
-            const row = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+      organizerHiddenSemInteresseRef.current = null;
+      if (vars.length === 0) {
+        setVariations([
+          {
+            id: `${Date.now()}-a`,
+            name: "Padrão",
+            price: "",
+            stock: emptyVariationsStockFallback,
+          },
+        ]);
+      } else {
+        const mapped: ProductVariation[] = vars.map(
+          (v: unknown, i: number) => {
+            const row =
+              v && typeof v === "object" ? (v as Record<string, unknown>) : {};
             return {
               id: String(row.id ?? `v-${Date.now()}-${i}`),
               name: String(row.name ?? row.variation_name ?? ""),
@@ -270,16 +297,28 @@ export function CreateProductModal() {
                     ? String(row.quantity)
                     : "",
             };
-          })
-          : [
-            {
-              id: `${Date.now()}-a`,
-              name: "Padrão",
-              price: "",
-              stock: emptyVariationsStockFallback,
-            },
-          ],
-      );
+          },
+        );
+        const hidden =
+          mapped.find((row) => isSemInteresseVariation({ name: row.name })) ??
+          null;
+        organizerHiddenSemInteresseRef.current = hidden;
+        const visible = mapped.filter(
+          (row) => !isSemInteresseVariation({ name: row.name }),
+        );
+        setVariations(
+          visible.length > 0
+            ? visible
+            : [
+                {
+                  id: `${Date.now()}-a`,
+                  name: "Padrão",
+                  price: "",
+                  stock: emptyVariationsStockFallback,
+                },
+              ],
+        );
+      }
       const buyerEdit = buyerVariationEditStateFromApiProduct(rec);
       setBuyerCanEditVariation(buyerEdit.allowed);
       setVariationChangeDeadlineDays(buyerEdit.deadlineDays);
@@ -294,7 +333,8 @@ export function CreateProductModal() {
       setProductFormBaseline(null);
       setProductFetchStatus("idle");
       setSaveConfirmOpen(false);
-      setLinkedTicketNamesResolved([]);
+      setLinkedTicketsResolved([]);
+      organizerHiddenSemInteresseRef.current = null;
       return;
     }
 
@@ -308,6 +348,7 @@ export function CreateProductModal() {
       setIsIncludedInTicket(true);
       setBasePrice("");
       setVariationTypeName("");
+      organizerHiddenSemInteresseRef.current = null;
       const t = Date.now();
       setVariations([
         {
@@ -395,15 +436,54 @@ export function CreateProductModal() {
     let cancelled = false;
     const productId = data?.productId;
 
-    const namesFromModalProp = (): string[] => {
+    const itemsFromModalProp = (): LinkedTicketListItem[] => {
+      const lt = data?.linkedTickets;
+      if (Array.isArray(lt) && lt.length > 0) {
+        return lt
+          .map((x: { name?: unknown; categoryName?: unknown; category?: unknown }) => {
+            const name = String(x?.name ?? "").trim();
+            const catRaw = x?.categoryName ?? x?.category;
+            const categoryLabel =
+              typeof catRaw === "string" && catRaw.trim()
+                ? catRaw.trim()
+                : "—";
+            return { name, categoryLabel };
+          })
+          .filter((x) => x.name);
+      }
       const raw = data?.linkedTicketNames;
       if (!Array.isArray(raw)) return [];
-      return raw.map((n) => String(n ?? "").trim()).filter(Boolean);
+      return raw
+        .map((n) => ({
+          name: String(n ?? "").trim(),
+          categoryLabel: "—",
+        }))
+        .filter((x) => x.name);
+    };
+
+    const mergeByTicketName = (
+      fromApi: LinkedTicketListItem[],
+      fromModal: LinkedTicketListItem[],
+    ): LinkedTicketListItem[] => {
+      const seen = new Set<string>();
+      const out: LinkedTicketListItem[] = [];
+      for (const item of fromApi) {
+        if (seen.has(item.name)) continue;
+        seen.add(item.name);
+        out.push(item);
+      }
+      for (const item of fromModal) {
+        if (seen.has(item.name)) continue;
+        seen.add(item.name);
+        out.push(item);
+      }
+      return out;
     };
 
     (async () => {
+      const modalItems = itemsFromModalProp();
       if (!productId) {
-        if (!cancelled) setLinkedTicketNamesResolved(namesFromModalProp());
+        if (!cancelled) setLinkedTicketsResolved(modalItems);
         return;
       }
       try {
@@ -420,22 +500,29 @@ export function CreateProductModal() {
               Array.isArray(t.productIds) &&
               t.productIds.some((id) => String(id) === pid),
           )
-          .map((t: { name?: string }) => String(t.name ?? "").trim())
-          .filter(Boolean);
+          .map((t: Record<string, unknown>) => ({
+            name: String(t.name ?? "").trim(),
+            categoryLabel: categoryLabelFromTicket(t),
+          }))
+          .filter((x) => x.name);
         if (!cancelled) {
-          setLinkedTicketNamesResolved([
-            ...new Set([...fromApi, ...namesFromModalProp()]),
-          ]);
+          setLinkedTicketsResolved(mergeByTicketName(fromApi, modalItems));
         }
       } catch {
-        if (!cancelled) setLinkedTicketNamesResolved(namesFromModalProp());
+        if (!cancelled) setLinkedTicketsResolved(modalItems);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [isOpen, eventId, data?.productId, data?.linkedTicketNames]);
+  }, [
+    isOpen,
+    eventId,
+    data?.productId,
+    data?.linkedTicketNames,
+    data?.linkedTickets,
+  ]);
 
   const handleProductCropped = useCallback((file: File) => {
     const reader = new FileReader();
@@ -562,17 +649,34 @@ export function CreateProductModal() {
         basePrice: Math.round(basePriceReais * 100),
         isRequired: isIncludedInTicket,
         variationType: variationTypeName.trim() || undefined,
-        variations: variations
-          .filter((v) => v.name.trim())
-          .map((v) => {
+        variations: (() => {
+          const fromForm = variations
+            .filter((v) => v.name.trim())
+            .filter((v) => !isSemInteresseVariation({ name: v.name }))
+            .map((v) => {
+              const priceReais =
+                parseFloat(String(v.price || "0").replace(",", ".")) || 0;
+              return {
+                name: v.name.trim(),
+                price: Math.round(priceReais * 100),
+                stock: parseInt(v.stock, 10) || 0,
+              };
+            });
+          const hidden = organizerHiddenSemInteresseRef.current;
+          if (!isIncludedInTicket && hidden) {
             const priceReais =
-              parseFloat(String(v.price || "0").replace(",", ".")) || 0;
-            return {
-              name: v.name.trim(),
-              price: Math.round(priceReais * 100),
-              stock: parseInt(v.stock) || 0,
-            };
-          }),
+              parseFloat(String(hidden.price || "0").replace(",", ".")) || 0;
+            return [
+              ...fromForm,
+              {
+                name: hidden.name.trim(),
+                price: Math.round(priceReais * 100),
+                stock: parseInt(hidden.stock, 10) || 0,
+              },
+            ];
+          }
+          return fromForm;
+        })(),
         buyerVariationEditAllowed: buyerCanEditVariation,
         variationEditDeadlineDays: buyerCanEditVariation ? deadlineDays : 0,
       };
@@ -617,7 +721,7 @@ export function CreateProductModal() {
 
   const requestSave = () => {
     if (!validateBeforeSave()) return;
-    if (linkedTicketNamesResolved.length > 0) {
+    if (linkedTicketsResolved.length > 0) {
       setSaveConfirmOpen(true);
       return;
     }
@@ -1549,20 +1653,27 @@ export function CreateProductModal() {
                         </p>
                       </div>
                       <div className="max-h-[min(50vh,420px)] min-h-0 overflow-y-auto rounded-xl bg-gray-3 p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
-                        {linkedTicketNamesResolved.length > 0 ? (
+                        {linkedTicketsResolved.length > 0 ? (
                           <ul className="flex flex-col gap-3">
-                            {linkedTicketNamesResolved.map((name, idx) => (
+                            {linkedTicketsResolved.map((row, idx) => (
                               <li
-                                key={`${name}-${idx}`}
-                                className="flex items-start gap-2"
+                                key={`${row.name}-${idx}`}
+                                className="flex items-center gap-2"
                               >
                                 <span
                                   className="mt-1.5 size-1.5 shrink-0 rounded-full bg-red-11"
                                   aria-hidden
                                 />
-                                <span className="min-w-0 wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
-                                  {name}
-                                </span>
+                                <div className="min-w-0 flex-1">
+                                  {row.categoryLabel !== "—" ? (
+                                    <span className="block text-xs font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                      {row.categoryLabel}
+                                    </span>
+                                  ) : null}
+                                  <span className="wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
+                                    {row.name}
+                                  </span>
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -1660,18 +1771,26 @@ export function CreateProductModal() {
                       </div>
                       <div className="max-h-[min(50vh,420px)] min-h-0 overflow-y-auto rounded-xl bg-gray-3 p-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
                         <ul className="flex flex-col gap-3">
-                          {linkedTicketNamesResolved.map((name, idx) => (
+                          {linkedTicketsResolved.map((row, idx) => (
                             <li
-                              key={`save-${name}-${idx}`}
-                              className="flex items-start gap-2"
+                              key={`save-${row.name}-${idx}`}
+                              className="flex items-center gap-2"
                             >
                               <span
                                 className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary-9"
                                 aria-hidden
                               />
-                              <span className="min-w-0 wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
-                                {name}
-                              </span>
+                              <div className="min-w-0 flex-1">
+                                {row.categoryLabel !== "—" ? (
+                                  <span className="block text-xs font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                    {row.categoryLabel}
+                                  </span>
+                                ) : null}
+                                <span className="wrap-break-word text-sm font-medium font-family-dm-sans leading-[1.3] text-gray-12">
+                                  {row.name}
+                                </span>
+
+                              </div>
                             </li>
                           ))}
                         </ul>

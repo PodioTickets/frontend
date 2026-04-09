@@ -4,7 +4,13 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
-import { useRef, useState, useEffect, useLayoutEffect } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { createPortal } from "react-dom";
 
 export interface EventTabItem {
@@ -106,6 +112,10 @@ export function EventMobileTabs({
   const [editarOpen, setEditarOpen] = useState(false);
   const descontoTriggerRef = useRef<HTMLDivElement>(null);
   const editarTriggerRef = useRef<HTMLDivElement>(null);
+  /** `pageHeader`: no desktop «Editar» é Link; o trigger mobile fica oculto — precisamos deste ref para o scroll. */
+  const editarLinkRef = useRef<HTMLAnchorElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const tabLinkRefs = useRef<Map<string, HTMLElement>>(new Map());
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
   const isDiscountActive = activeHref.includes("/discount");
@@ -113,16 +123,104 @@ export function EventMobileTabs({
   const discountOptions = getDiscountOptions(eventId, onLinkClick);
   const editStepOptions = getEditStepOptions(eventId, onLinkClick);
 
+  const setTabLinkRef = useCallback((href: string, el: HTMLElement | null) => {
+    if (el) tabLinkRefs.current.set(href, el);
+    else tabLinkRefs.current.delete(href);
+  }, []);
+
+  const isLinkTabActive = useCallback(
+    (tab: EventTabItem) =>
+      activeHref === tab.href ||
+      (activeHref.startsWith(tab.href) &&
+        (activeHref.length === tab.href.length ||
+          activeHref[tab.href.length] === "/")),
+    [activeHref],
+  );
+
+  const tabsKey = tabs.map((t) => t.href).join("|");
+
+  /** Alinha a aba ativa à esquerda da faixa horizontal e reposiciona o menu (portal) após o scroll. */
+  const scrollActiveTabIntoStart = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    const isDesktop =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(min-width: 768px)").matches;
+
+    const updateMenuAnchor = () => {
+      if (editarOpen) {
+        const menuEl =
+          variant === "pageHeader" && isDesktop && editarLinkRef.current
+            ? editarLinkRef.current
+            : editarTriggerRef.current;
+        if (menuEl) {
+          const rect = menuEl.getBoundingClientRect();
+          setMenuPosition({ top: rect.bottom + 4, left: rect.left });
+        }
+      } else if (descontoOpen && descontoTriggerRef.current) {
+        const rect = descontoTriggerRef.current.getBoundingClientRect();
+        setMenuPosition({ top: rect.bottom + 4, left: rect.left });
+      }
+    };
+
+    const container = scrollContainerRef.current;
+    let el: HTMLElement | null = null;
+
+    if (editarOpen || isEditActive) {
+      if (variant === "pageHeader" && isDesktop && editarLinkRef.current) {
+        el = editarLinkRef.current;
+      } else {
+        el = editarTriggerRef.current;
+      }
+    } else if (descontoOpen || isDiscountActive) {
+      el = descontoTriggerRef.current;
+    } else {
+      for (const tab of tabs) {
+        if (tab.href.includes("/discount")) continue;
+        if (tab.label === "Editar") continue;
+        if (isLinkTabActive(tab)) {
+          el = tabLinkRefs.current.get(tab.href) ?? null;
+          break;
+        }
+      }
+    }
+
+    const run = () => {
+      const c = scrollContainerRef.current;
+      if (c && el) {
+        const cRect = c.getBoundingClientRect();
+        const eRect = el.getBoundingClientRect();
+        const nextLeft = c.scrollLeft + (eRect.left - cRect.left);
+        c.scrollTo({ left: Math.max(0, nextLeft), behavior: "auto" });
+      }
+      if (editarOpen || descontoOpen) {
+        updateMenuAnchor();
+      }
+    };
+
+    run();
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  }, [
+    tabsKey,
+    tabs,
+    editarOpen,
+    descontoOpen,
+    isDiscountActive,
+    isEditActive,
+    isLinkTabActive,
+    variant,
+  ]);
+
   useLayoutEffect(() => {
-    const ref = editarOpen
-      ? editarTriggerRef
-      : descontoOpen
-        ? descontoTriggerRef
-        : null;
-    if (!ref?.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    setMenuPosition({ top: rect.bottom + 4, left: rect.left });
-  }, [editarOpen, descontoOpen]);
+    scrollActiveTabIntoStart();
+  }, [
+    activeHref,
+    editarOpen,
+    descontoOpen,
+    tabsKey,
+    variant,
+    scrollActiveTabIntoStart,
+  ]);
 
   useEffect(() => {
     if (!descontoOpen && !editarOpen) return;
@@ -144,8 +242,8 @@ export function EventMobileTabs({
   const isPageHeader = variant === "pageHeader";
 
   const scrollClass = isPageHeader
-    ? "-mx-4 overflow-x-auto px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden"
-    : "overflow-x-auto border-b border-gray-6 [&::-webkit-scrollbar]:hidden";
+    ? "w-full min-w-0  overflow-x-auto px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden"
+    : "w-full min-w-0 overflow-x-auto border-b border-gray-6 [&::-webkit-scrollbar]:hidden";
 
   const rowClass = isPageHeader
     ? "flex min-w-max flex-nowrap items-center gap-6"
@@ -153,29 +251,25 @@ export function EventMobileTabs({
 
   const linkTabClass = (active: boolean) =>
     isPageHeader
-      ? `shrink-0 border-b-2 pb-3 px-1 text-sm transition-colors ${
-          active
-            ? "border-primary-10 font-manrope font-bold text-primary-10"
-            : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"
-        }`
-      : `-mb-px shrink-0 border-b-2 px-4 py-3 text-base transition-colors ${
-          active
-            ? "border-primary-11 font-manrope font-bold text-primary-11"
-            : "border-transparent font-family-dm-sans font-normal text-gray-11"
-        }`;
+      ? `shrink-0 border-b-2 pb-3 px-1 text-sm transition-colors ${active
+        ? "border-primary-10 font-manrope font-bold text-primary-10"
+        : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"
+      }`
+      : `-mb-px shrink-0 border-b-2 px-4 py-3 text-base transition-colors ${active
+        ? "border-primary-11 font-manrope font-bold text-primary-11"
+        : "border-transparent font-family-dm-sans font-normal text-gray-11"
+      }`;
 
   const menuTriggerClass = (active: boolean) =>
     isPageHeader
-      ? `flex cursor-pointer items-center gap-1 border-b-2 pb-3 px-1 text-sm transition-colors ${
-          active
-            ? "border-primary-10 font-manrope font-bold text-primary-10"
-            : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"
-        }`
-      : `-mb-px flex w-full shrink-0 cursor-pointer items-center gap-1 border-b-2 px-4 py-3 text-base transition-colors ${
-          active
-            ? "border-primary-11 font-manrope font-bold text-primary-11"
-            : "border-transparent font-family-dm-sans font-normal text-gray-11"
-        }`;
+      ? `flex cursor-pointer items-center gap-1 border-b-2 pb-3 px-1 text-sm transition-colors ${active
+        ? "border-primary-10 font-manrope font-bold text-primary-10"
+        : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"
+      }`
+      : `-mb-px flex w-full shrink-0 cursor-pointer items-center gap-1 border-b-2 px-4 py-3 text-base transition-colors ${active
+        ? "border-primary-11 font-manrope font-bold text-primary-11"
+        : "border-transparent font-family-dm-sans font-normal text-gray-11"
+      }`;
 
   const descontoPortal =
     typeof document !== "undefined" &&
@@ -232,6 +326,7 @@ export function EventMobileTabs({
   return (
     <>
       <div
+        ref={scrollContainerRef}
         className={scrollClass}
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
@@ -262,6 +357,7 @@ export function EventMobileTabs({
                 return (
                   <Fragment key={tab.href}>
                     <Link
+                      ref={editarLinkRef}
                       href={navHref(tab.href)}
                       className={`${linkTabClass(isEditActive)} hidden md:block`}
                     >
@@ -307,6 +403,7 @@ export function EventMobileTabs({
             return (
               <Link
                 key={tab.href}
+                ref={(node) => setTabLinkRef(tab.href, node)}
                 href={navHref(tab.href)}
                 onClick={onLinkClick}
                 className={linkTabClass(isActive)}

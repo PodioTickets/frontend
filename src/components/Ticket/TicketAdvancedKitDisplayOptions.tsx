@@ -71,7 +71,7 @@ export function TicketAdvancedKitDisplayOptions({
           "md:border-b-0 md:px-0 md:py-0 md:gap-2",
         )}
       >
-        <span className="min-w-0 flex-1 font-family-dm-sans text-sm font-medium leading-[1.3] text-primary-11 md:text-base">
+        <span className="min-w-0 max-md:flex-1 font-family-dm-sans text-sm font-medium leading-[1.3] text-primary-11 md:text-base">
           Ver opções avançadas de visualização do ingresso
         </span>
         <ArrowButton
@@ -85,7 +85,7 @@ export function TicketAdvancedKitDisplayOptions({
           <div
             className={cn(
               "flex flex-col gap-4 px-4 pb-6 pt-4",
-              "md:px-0 md:pb-0 md:pt-0 md:gap-3",
+              "md:px-0 md:pb-0 md:gap-3",
             )}
           >
             <div className="flex w-full items-center gap-3">

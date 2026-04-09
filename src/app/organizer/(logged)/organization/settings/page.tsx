@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
@@ -17,6 +17,12 @@ import type { Organization } from "@/services/organizer/OrganizerService";
 import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
+import {
+  ImageUploadWithCrop,
+  type ImageUploadWithCropRef,
+} from "@/components/ImageUploadWithCrop";
+import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
 
 const BRAZIL_STATES = [
   { id: "AC", label: "Acre" },
@@ -59,12 +65,12 @@ const PIX_KEY_TYPES = [
 export default function OrganizationSettingsPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [organizer, setOrganizer] = useState<Organization | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoCropRef = useRef<ImageUploadWithCropRef>(null);
 
   const [formData, setFormData] = useState({
     // Detalhes da organização
@@ -99,17 +105,17 @@ export default function OrganizationSettingsPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    loadOrganization();
-  }, []);
-
-  const loadOrganization = async () => {
+  const loadOrganization = useCallback(async () => {
+    const uid = user?.id;
+    if (!uid) return;
     try {
       setLoading(true);
       const org = await organizerService.getOrganization();
 
-      // Log para debug - verificar o que está sendo retornado
-      console.log("Organization data received:", org);
+      if (!isCurrentUserOrganizationOwner(org, uid)) {
+        orgNav.replace("/organizer/events");
+        return;
+      }
 
       setOrganizer(org);
       setFormData({
@@ -149,7 +155,12 @@ export default function OrganizationSettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, orgNav]);
+
+  useEffect(() => {
+    if (authLoading || !user?.id) return;
+    void loadOrganization();
+  }, [authLoading, user?.id, loadOrganization]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -159,29 +170,11 @@ export default function OrganizationSettingsPage() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Formato inválido. Use JPG ou PNG.");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo de 2MB.");
-      return;
-    }
-
+  const uploadOrganizationLogo = async (file: File) => {
     setUploadingImage(true);
     try {
-      // Passo 1: Fazer upload da imagem
       const imageUrl = await organizerService.uploadImage(file);
-
-      // Passo 2: Atualizar o logo da organização
       await organizerService.updateOrganizationLogo(imageUrl);
-
       toast.success("Imagem atualizada com sucesso!");
       loadOrganization();
     } catch (error: any) {
@@ -191,10 +184,6 @@ export default function OrganizationSettingsPage() {
       toast.error(errorMessage);
     } finally {
       setUploadingImage(false);
-      // Limpar o input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
@@ -332,7 +321,7 @@ export default function OrganizationSettingsPage() {
     toast("Funcionalidade em desenvolvimento", { icon: "ℹ️" });
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
         <Loading />
@@ -361,7 +350,7 @@ export default function OrganizationSettingsPage() {
           >
             <ArrowButton isOpen={false} />
           </Link>
-          <p className="font-manrope font-extrabold leading-[1.1] text-gray-12 text-base md:text-2xl truncate">
+          <p className="font-manrope font-extrabold text-gray-12 text-base md:text-2xl truncate">
             Configurações da organização
           </p>
         </div>
@@ -440,9 +429,7 @@ export default function OrganizationSettingsPage() {
                     </div>
                     <div className="flex flex-col items-start justify-center relative shrink-0">
                       <p className="font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-lg text-gray-12">
-                        {user?.firstName && user?.lastName
-                          ? `${user.firstName} ${user.lastName}`
-                          : user?.email || "Nome do dono"}
+                        {user?.firstName} {user?.lastName}
                       </p>
                     </div>
                   </div>
@@ -452,19 +439,11 @@ export default function OrganizationSettingsPage() {
               {/* Second Row: Support text + Buttons (mobile: full width, Figma) */}
               <div className="flex flex-col gap-3 md:gap-4 w-full">
                 <p className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-11">
-                  Suportamos imagens em PNGs, JPEGs até 2MB
+                  Suportamos imagens em PNGs, JPEGs até 10MB
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={uploadingImage}
-                  />
                   <Button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => logoCropRef.current?.open()}
                     disabled={uploadingImage}
                     size="default"
                     className="w-full sm:w-auto px-6 py-3 h-11 font-manrope font-bold text-base"
@@ -874,6 +853,19 @@ export default function OrganizationSettingsPage() {
               {saving ? "Salvando..." : "Salvar alteração"}
             </Button>
           </div>
+
+          <ImageUploadWithCrop
+            ref={logoCropRef}
+            spec={EVENT_IMAGE_SPECS.organizationLogo}
+            outputBaseName="organization-logo"
+            cropShape="round"
+            maxFileSizeMb={10}
+            accept="image/jpeg,image/jpg,image/png"
+            modalTitle="Ajustar logo da organização"
+            onCropped={(file) => void uploadOrganizationLogo(file)}
+            onInvalidFile={(msg) => toast.error(msg)}
+            onCropFailed={(msg) => toast.error(msg)}
+          />
         </div>
       </div>
     </div>

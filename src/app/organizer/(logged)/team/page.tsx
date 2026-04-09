@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { LoadingAnimation } from "@/components/Loading";
@@ -11,6 +13,7 @@ import { CollaboratorDrawer } from "@/components/Organizer/TeamMemberModals";
 import { SystemAuditLogTab } from "@/components/Organizer/SystemAuditLogTab";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { cn } from "@/utils/cn";
+import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -116,6 +119,8 @@ function TeamPaginationBar({
 }
 
 export default function OrganizerTeamPage() {
+  const orgNav = useOrganizerNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [search, setSearch] = useState("");
@@ -124,22 +129,33 @@ export default function OrganizerTeamPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editMember, setEditMember] = useState<OrganizationMember | null>(null);
 
-  const loadMembers = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!opts?.silent) setLoading(true);
-    try {
-      const list = await organizerService.getOrganizationMembers();
-      setMembers(list);
-    } catch (e: any) {
-      console.error(e);
-      toast.error("Erro ao carregar equipe.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadMembers = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const uid = user?.id;
+      if (!uid) return;
+      if (!opts?.silent) setLoading(true);
+      try {
+        const org = await organizerService.getOrganization();
+        if (!isCurrentUserOrganizationOwner(org, uid)) {
+          orgNav.replace("/organizer/events");
+          return;
+        }
+        const list = await organizerService.getOrganizationMembers();
+        setMembers(list);
+      } catch (e: any) {
+        console.error(e);
+        toast.error("Erro ao carregar equipe.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.id, orgNav],
+  );
 
   useEffect(() => {
-    loadMembers();
-  }, [loadMembers]);
+    if (authLoading || !user?.id) return;
+    void loadMembers();
+  }, [authLoading, user?.id, loadMembers]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -167,7 +183,7 @@ export default function OrganizerTeamPage() {
     setPage((p) => Math.min(p, totalPages));
   }, [totalPages]);
 
-  if (loading && members.length === 0) {
+  if (authLoading || (loading && members.length === 0)) {
     return (
       <div className="min-h-screen bg-gray-2 flex items-center justify-center">
         <LoadingAnimation />

@@ -50,6 +50,7 @@ import {
   parseEventKitSelectionDisplay,
   type EventKitSelectionDisplay,
 } from "@/lib/eventKitSelectionDisplay";
+import { writeTicketsCheckoutPreviewDraft } from "@/lib/ticketsCheckoutPreviewDraft";
 import {
   DndContext,
   KeyboardSensor,
@@ -892,6 +893,25 @@ export default function EditTicketsPage() {
     }
   }, [handleSaveChangesNavigate, beginNavigationAfterSave]);
 
+  const handleOpenTicketsCheckoutPreview = useCallback(() => {
+    if (!eventId) return;
+    writeTicketsCheckoutPreviewDraft({
+      v: 1,
+      eventId,
+      kitSelectionDisplay: {
+        ...defaultEventKitSelectionDisplay(),
+        ...draftKitSelection,
+        primaryKitProductByTicketId: {
+          ...draftKitSelection.primaryKitProductByTicketId,
+        },
+        primaryKitProductByCategoryId: {
+          ...draftKitSelection.primaryKitProductByCategoryId,
+        },
+      },
+    });
+    orgNav.push(`/organizer/events/${eventId}/edit/tickets/preview`);
+  }, [eventId, draftKitSelection, orgNav]);
+
   const handleEditTicket = useCallback(
     (ticketId: string) => {
       requestNavigate(`/organizer/events/${eventId}/edit/tickets/${ticketId}`);
@@ -1374,19 +1394,27 @@ export default function EditTicketsPage() {
             />
           </div>
 
-          {kitSelectionDirty ? (
-            <div className="flex justify-stretch md:justify-end">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleOpenTicketsCheckoutPreview}
+              className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
+            >
+              Pré-visualizar checkout
+            </Button>
+            {kitSelectionDirty ? (
               <Button
                 type="button"
                 onClick={() => void handleSaveChangesNavigate()}
                 variant="default"
                 disabled={savingNavigate}
-                className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-auto md:px-10 md:text-[20px]"
+                className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:px-10 sm:text-[20px]"
               >
                 {savingNavigate ? "Salvando..." : "Salvar alterações"}
               </Button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
       <DragOverlay>

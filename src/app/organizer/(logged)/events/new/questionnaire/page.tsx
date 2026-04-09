@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { userService } from "@/services";
@@ -9,18 +9,20 @@ import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { ensureCreateEventSyncedFromDraft } from "@/lib/createEventDraftSync";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
+import { useCreateQuestionModal, useDeleteQuestionModal, usePublishEventModal } from "@/stores/modalStore";
 import toast from "react-hot-toast";
 import { Plus, Pencil } from "lucide-react";
 import type { Question } from "@/services/organizer/OrganizerService";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { Loading } from "@/components/Loading";
 import { cn } from "@/utils/cn";
+import { writeQuestionnairePreviewDraft } from "@/lib/questionnairePreviewDraft";
 
 export default function QuestionnairePage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
   const { formData, updateFormData } = useCreateEvent();
+  const { openPublishEventModal } = usePublishEventModal();
   const { openCreateQuestionModal, setOnModalSave } = useCreateQuestionModal();
   const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [authChecked, setAuthChecked] = useState(false);
@@ -107,30 +109,33 @@ export default function QuestionnairePage() {
     }
   };
 
-  const goToCouponsAfterSync = async () => {
+  const goRascunhoSync = async () => {
+    await ensureCreateEventSyncedFromDraft({ formData, updateFormData });
+    toast.success("Evento salvo como rascunho com sucesso!");
+  };
+
+  const goPublicarEvento = () => {
     if (!formData.createdEventId) {
-      try {
-        await ensureCreateEventSyncedFromDraft({ formData, updateFormData });
-      } catch (error: unknown) {
-        console.error("Error syncing event before cupons:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Não foi possível sincronizar o evento. Conclua informações e banner.",
-        );
-        return;
-      }
+      toast.error("Evento não encontrado");
+      return;
     }
-    orgNav.push("/organizer/events/new/coupons");
+    openPublishEventModal({
+      eventId: formData.createdEventId,
+    });
   };
 
-  const handleSkip = () => {
-    void goToCouponsAfterSync();
-  };
-
-  const handleConfirmQuestionnaire = () => {
-    void goToCouponsAfterSync();
-  };
+  const handleOpenQuestionnairePreview = useCallback(() => {
+    if (!formData.createdEventId) {
+      toast.error("Evento não encontrado");
+      return;
+    }
+    writeQuestionnairePreviewDraft({
+      v: 1,
+      eventId: formData.createdEventId,
+      questions: [...questions],
+    });
+    orgNav.push("/organizer/events/new/questionnaire/preview");
+  }, [formData.createdEventId, questions, orgNav]);
 
   if (!authChecked || loading) {
     return (
@@ -280,21 +285,43 @@ export default function QuestionnairePage() {
         {/* Bottom Actions */}
         <div
           className={cn(
-            "flex gap-2",
-            "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:flex-col max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4",
+            "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-2",
+            "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4",
             "max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
-            "md:justify-end",
           )}
         >
           <Button
-            onClick={handleConfirmQuestionnaire}
+            type="button"
+            onClick={handleOpenQuestionnairePreview}
+            variant="outline"
+            className={cn(
+              "h-[52px] border-gray-6 px-11 font-manrope text-lg font-bold text-gray-12",
+              "max-md:h-12 max-md:w-full max-md:px-4 sm:text-base",
+            )}
+          >
+            Pré-visualizar checkout
+          </Button>
+          <Button
+            type="button"
+            onClick={goRascunhoSync}
+            variant="default"
+            className={cn(
+              "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 bg-yellow-3 border border-yellow-6 hover:bg-yellow-4 hover:border-yellow-6 active:bg-yellow-5 active:border-yellow-6",
+              "max-md:h-12 max-md:w-full max-md:px-4",
+            )}
+          >
+            Salvar rascunho
+          </Button>
+          <Button
+            type="button"
+            onClick={goPublicarEvento}
             variant="default"
             className={cn(
               "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12",
               "max-md:h-12 max-md:w-full max-md:px-4",
             )}
           >
-            Próxima etapa
+            Públicar evento
           </Button>
         </div>
       </div>

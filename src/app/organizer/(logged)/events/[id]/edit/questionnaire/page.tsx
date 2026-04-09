@@ -16,6 +16,7 @@ import type { QuestionModalLocalPayload } from "@/components/Questionnaire/Creat
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { Loading } from "@/components/Loading";
 import { cn } from "@/utils/cn";
+import { writeQuestionnairePreviewDraft } from "@/lib/questionnairePreviewDraft";
 
 const PENDING_QUESTION_PREFIX = "__pending_question__";
 
@@ -242,6 +243,16 @@ export default function EditQuestionnairePage() {
     }
   };
 
+  const handleOpenQuestionnairePreview = useCallback(() => {
+    if (!eventId) return;
+    writeQuestionnairePreviewDraft({
+      v: 1,
+      eventId,
+      questions: [...questions],
+    });
+    orgNav.push(`/organizer/events/${eventId}/edit/questionnaire/preview`);
+  }, [eventId, questions, orgNav]);
+
   if (!authChecked || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -384,12 +395,24 @@ export default function EditQuestionnairePage() {
         {/* Bottom Actions */}
         <div
           className={cn(
-            "flex justify-end gap-2",
+            "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-2",
             "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4",
             "max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
           )}
         >
           <Button
+            type="button"
+            onClick={handleOpenQuestionnairePreview}
+            variant="outline"
+            className={cn(
+              "h-[52px] border-gray-6 px-11 font-manrope text-lg font-bold text-gray-12",
+              "max-md:h-12 max-md:w-full max-md:px-4 sm:text-base",
+            )}
+          >
+            Pré-visualizar checkout
+          </Button>
+          <Button
+            type="button"
             onClick={() => void handleSaveChanges()}
             disabled={saving || loading}
             variant="default"

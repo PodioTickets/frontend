@@ -212,6 +212,7 @@ export function DatePickerWithConfirm({
             onMonthChange={handleMonthChange}
             fromYear={1900}
             toYear={new Date().getFullYear()}
+            disablePastDates={false}
             selected={tempDate}
             onSelect={(date: Date | undefined) => {
               setTempDate(date);
@@ -220,9 +221,11 @@ export function DatePickerWithConfirm({
               }
             }}
             disabled={(date: Date) => {
-              const today = new Date();
-              today.setHours(23, 59, 59, 999);
-              return date > today;
+              const startOfDay = (d: Date) =>
+                new Date(d.getFullYear(), d.getMonth(), d.getDate());
+              const day = startOfDay(date);
+              const today = startOfDay(new Date());
+              return day > today;
             }}
             className="rounded-md border-0 bg-transparent w-full"
           />

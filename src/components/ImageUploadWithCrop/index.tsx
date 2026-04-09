@@ -41,6 +41,8 @@ export type ImageUploadWithCropProps = {
   accept?: string;
   modalTitle?: string;
   className?: string;
+  /** `round` = máscara circular (perfil / logo). */
+  cropShape?: "rect" | "round";
   /** Validação de arquivo (tipo/tamanho) antes de abrir o corte. */
   onInvalidFile?: (message: string) => void;
   /** Falha ao gerar o recorte (canvas / blob). */
@@ -71,6 +73,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
       accept = DEFAULT_ACCEPT,
       modalTitle = "Ajustar e encaixar imagem",
       className,
+      cropShape = "rect",
       onInvalidFile,
       onCropFailed,
     },
@@ -265,6 +268,7 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
                   crop={crop}
                   zoom={zoom}
                   aspect={spec.aspect}
+                  cropShape={cropShape}
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={onCropComplete}

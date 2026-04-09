@@ -181,6 +181,31 @@ export function PaymentDetailsModal() {
     reservePhone: buyer?.reservePhone || registrationUser?.reservePhone,
   };
 
+  const formatBillingCep = (code?: string | null) => {
+    if (!code) return "";
+    const d = String(code).replace(/\D/g, "");
+    if (d.length === 8) return `${d.slice(0, 5)}-${d.slice(5)}`;
+    return String(code).trim();
+  };
+
+  const billingAddress = paymentDetails?.billingAddress ?? null;
+
+  const billingAddressMobileRows = billingAddress
+    ? [
+        { label: "País", value: billingAddress.country || "—" },
+        { label: "CEP", value: formatBillingCep(billingAddress.postalCode) || "—" },
+        { label: "Estado", value: billingAddress.stateUf || "—" },
+        { label: "Cidade", value: billingAddress.city || "—" },
+        { label: "Bairro", value: billingAddress.neighborhood || "—" },
+        { label: "Número", value: billingAddress.number || "—" },
+        { label: "Logradouro", value: billingAddress.street || "—" },
+        {
+          label: "Complemento",
+          value: billingAddress.complement?.trim() || "—",
+        },
+      ]
+    : [];
+
   const paymentDetailsWithRegistrations = paymentDetails as PaymentDetails & { registrations?: Array<{ id: string; name: string; email: string; ticket?: { id: string; name: string } | null; ticketCategory?: { id: string; name: string } | null }> };
 
   const participants = paymentDetailsWithRegistrations?.registrations && Array.isArray(paymentDetailsWithRegistrations.registrations) && paymentDetailsWithRegistrations.registrations.length > 0
@@ -391,6 +416,26 @@ export function PaymentDetailsModal() {
                         <p className="font-family-dm-sans font-medium text-base text-gray-12">{value}</p>
                       </div>
                     ))}
+                  </div>
+                  <div className="flex flex-col gap-0">
+                    <h3 className="font-manrope font-bold text-lg text-gray-12 py-2">
+                      Endereço de cobrança
+                    </h3>
+                    {billingAddressMobileRows.length > 0 ? (
+                      billingAddressMobileRows.map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="flex flex-col gap-1 py-4 border-b border-gray-6 last:border-b-0"
+                        >
+                          <p className="font-family-dm-sans font-normal text-base text-gray-12">{label}</p>
+                          <p className="font-family-dm-sans font-medium text-base text-gray-12">{value}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="font-family-dm-sans text-base text-gray-11 py-3">
+                        Sem endereço de cobrança registrado neste pedido.
+                      </p>
+                    )}
                   </div>
                   {/* Payment method card */}
                   <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
@@ -619,6 +664,84 @@ export function PaymentDetailsModal() {
                             </p>
                           </div>
                         </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <h3 className="font-manrope font-bold text-[18px] leading-[1.1] text-gray-12">
+                          Endereço de cobrança
+                        </h3>
+                        {billingAddress ? (
+                          <div className="grid grid-cols-3">
+                            <div className="flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                País
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {billingAddress.country || "—"}
+                              </p>
+                            </div>
+                            <div className="flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                CEP
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {formatBillingCep(billingAddress.postalCode) || "—"}
+                              </p>
+                            </div>
+                            <div className="flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Estado
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {billingAddress.stateUf || "—"}
+                              </p>
+                            </div>
+                            <div className="flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Cidade
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {billingAddress.city || "—"}
+                              </p>
+                            </div>
+                            <div className="flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Bairro
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {billingAddress.neighborhood || "—"}
+                              </p>
+                            </div>
+                            <div className="flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Número
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {billingAddress.number || "—"}
+                              </p>
+                            </div>
+                            <div className="col-span-2 flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Logradouro
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {billingAddress.street || "—"}
+                              </p>
+                            </div>
+                            <div className="flex flex-col py-2">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Complemento
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {billingAddress.complement?.trim() || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
+                            Sem endereço de cobrança registrado neste pedido.
+                          </p>
+                        )}
                       </div>
 
                       {/* Payment Information */}

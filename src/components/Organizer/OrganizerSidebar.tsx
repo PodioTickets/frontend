@@ -21,6 +21,12 @@ import { ConfigIcon } from "../Icons/ConfigIcon";
 import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
 import Image from "next/image";
+import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
+
+const OWNER_ONLY_NAV_HREFS = new Set([
+  "/organizer/organization/settings",
+  "/organizer/team",
+]);
 
 export function OrganizerSidebar() {
   const organizerPath = useOrganizerPathname();
@@ -69,6 +75,11 @@ export function OrganizerSidebar() {
     },
   ];
 
+  const isOrgOwner = isCurrentUserOrganizationOwner(organizer, user?.id);
+  const visibleNavItems = navItems.filter(
+    (item) => !OWNER_ONLY_NAV_HREFS.has(item.href) || isOrgOwner,
+  );
+
   const navHref = (internal: string) =>
     organizerExternalHref(internal, appSurface);
 
@@ -97,7 +108,7 @@ export function OrganizerSidebar() {
 
         {/* Navigation */}
         <nav className="flex flex-col gap-1 w-full">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
 

@@ -2120,8 +2120,13 @@ export function TicketForm({
                       openCreateProductModal({
                         eventId,
                         ticketBatchesTotalQuantity,
-                        linkedTicketNames: ticketName.trim()
-                          ? [ticketName.trim()]
+                        linkedTickets: ticketName.trim()
+                          ? [
+                              {
+                                name: ticketName.trim(),
+                                categoryName: selectedGroupLabel,
+                              },
+                            ]
                           : [],
                       });
                     }}
@@ -2169,8 +2174,13 @@ export function TicketForm({
                                 productId: product.productId,
                                 product: product.product,
                                 ticketBatchesTotalQuantity,
-                                linkedTicketNames: ticketName.trim()
-                                  ? [ticketName.trim()]
+                                linkedTickets: ticketName.trim()
+                                  ? [
+                                      {
+                                        name: ticketName.trim(),
+                                        categoryName: selectedGroupLabel,
+                                      },
+                                    ]
                                   : [],
                               });
                             }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useCreateCouponModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -42,6 +42,12 @@ export function CreateCouponModal() {
 
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
   const advancedPanelRef = useRef<HTMLDivElement>(null);
+
+  const minSelectableExpiryDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [isOpen]);
 
   // Campos específicos por tipo de cupom
   const [minQuantity, setMinQuantity] = useState(""); // Para QUANTITY
@@ -682,113 +688,56 @@ export function CreateCouponModal() {
                             </div>
                           </div>
 
-                          {/* Aplicar em ingressos - para DISCOUNT */}
-                          {couponType === "DISCOUNT" && (
-                            <div className="flex flex-col gap-4">
-                              <div className="flex flex-col gap-3">
-                                <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                                  Aplicar em ingressos
-                                </h3>
-                                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  Deseja aplicar em todos os ingressos?
-                                </p>
-                              </div>
-                              <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <Checkbox
-                                    checked={appliesTo === "all"}
-                                    onCheckedChange={(checked) => {
-                                      if (checked) setAppliesTo("all");
-                                    }}
-                                  />
-                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                    Sim
-                                  </span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <Checkbox
-                                    checked={appliesTo === "specific"}
-                                    onCheckedChange={(checked) => {
-                                      if (checked) setAppliesTo("specific");
-                                    }}
-                                  />
-                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                    Ingressos específicos
-                                  </span>
-                                </label>
-                              </div>
-                              {appliesTo === "specific" && (
-                                <div className="flex flex-col gap-2 w-[276px]">
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowSelectTicketsModal(true)}
-                                    className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
-                                  >
-                                    <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                      {selectedTicketIds.length > 0
-                                        ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
-                                        : "Selecione os ingressos"}
-                                    </span>
-                                    <ChevronDown className="size-6 text-gray-11" />
-                                  </button>
-                                </div>
-                              )}
+                          <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
+                              <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                Aplicar em ingressos
+                              </h3>
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                Deseja aplicar em todos os ingressos?
+                              </p>
                             </div>
-                          )}
-
-                          {/* Aplicar em ingressos - para QUANTITY */}
-                          {couponType === "QUANTITY" && (
-                            <div className="flex flex-col gap-2 w-[276px]">
-                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Aplicar em quais ingressos?
+                            <div className="flex gap-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={appliesTo === "all"}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) setAppliesTo("all");
+                                  }}
+                                />
+                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                  Sim
+                                </span>
                               </label>
-                              <Dropdown
-                                trigger={
-                                  <div className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
-                                    <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                      {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
-                                    </span>
-                                    <ChevronDown className="size-6 text-gray-11" />
-                                  </div>
-                                }
-                                options={[
-                                  { id: "all", label: "Todos os ingressos" },
-                                  // TODO: Adicionar ingressos específicos quando disponível
-                                ]}
-                                onSelect={(option) => {
-                                  setAppliesTo(option.id === "all" ? "all" : "specific");
-                                }}
-                                width="w-[276px]"
-                              />
-                            </div>
-                          )}
-
-                          {/* Aplicar em ingressos - para AGE */}
-                          {couponType === "AGE" && (
-                            <div className="flex flex-col gap-2 w-[276px]">
-                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Aplicar em quais ingressos?
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={appliesTo === "specific"}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) setAppliesTo("specific");
+                                  }}
+                                />
+                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                  Ingressos específicos
+                                </span>
                               </label>
-                              <Dropdown
-                                trigger={
-                                  <div className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors">
-                                    <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                      {appliesTo === "all" ? "Todos os ingressos" : appliesTo}
-                                    </span>
-                                    <ChevronDown className="size-6 text-gray-11" />
-                                  </div>
-                                }
-                                options={[
-                                  { id: "all", label: "Todos os ingressos" },
-                                  // TODO: Adicionar ingressos específicos quando disponível
-                                ]}
-                                onSelect={(option) => {
-                                  setAppliesTo(option.id === "all" ? "all" : "specific");
-                                }}
-                                width="w-[276px]"
-                              />
                             </div>
-                          )}
+                            {appliesTo === "specific" && (
+                              <div className="flex flex-col gap-2 w-[276px]">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSelectTicketsModal(true)}
+                                  className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
+                                >
+                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
+                                    {selectedTicketIds.length > 0
+                                      ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
+                                      : "Selecione os ingressos"}
+                                  </span>
+                                  <ArrowButton isOpen={false} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
 
                           {/* Conteúdo avançado */}
                           <div className="flex flex-col gap-5">
@@ -875,6 +824,7 @@ export function CreateCouponModal() {
                                         <DatePicker
                                           value={expiryDate || undefined}
                                           onChange={setExpiryDate}
+                                          minDate={minSelectableExpiryDate}
                                           placeholder="00/00/2026"
                                           className="w-auto"
                                         />

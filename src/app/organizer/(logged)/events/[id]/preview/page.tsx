@@ -16,6 +16,10 @@ import {
 } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import type { Event } from "@/interfaces/event";
+import {
+  EventPublicInfoCardDesktop,
+  EventPublicInfoCardMobile,
+} from "@/components/Event/EventPublicInfoCard";
 
 export const dynamic = "force-dynamic";
 
@@ -93,12 +97,13 @@ export default function EditFlowEventPreviewPage() {
   const bannerUrl = event?.bannerUrl as string | undefined;
   const city = event?.city as string | undefined;
   const state = event?.state as string | undefined;
+  const eventTyped = event as Event | null;
 
   return (
     <div className="min-h-screen bg-gray-2">
       <div className="mx-auto max-w-[1440px] px-5 py-[52px] pb-[176px] md:px-[124px]">
         <div className="flex flex-col items-center gap-9">
-          <div className="flex w-full max-w-[843px] items-center gap-3">
+          <div className="flex w-full max-w-[1280px] items-center gap-3 px-0 lg:px-8">
             <button
               type="button"
               onClick={handleBack}
@@ -111,20 +116,37 @@ export default function EditFlowEventPreviewPage() {
             </h1>
           </div>
 
-          <div className="flex w-full max-w-[843px] flex-col items-start gap-[52px]">
-            <div className="relative h-[404px] w-full overflow-hidden rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)]">
-              <ImageWithInitialFallback
-                src={bannerUrl}
-                alt={eventName}
-                name={eventName}
-                fill
-                sizes="(max-width: 900px) 100vw, 843px"
-                className="size-full rounded-2xl border-transparent border-0"
-                letterClassName="text-7xl font-bold"
-              />
+          <div className="flex w-full max-w-[1280px] flex-col items-start gap-[52px] px-0 lg:px-8">
+            <div className="flex w-full flex-col gap-8 md:flex-row md:items-start">
+              <div className="w-full min-w-0 md:flex-1">
+                <div className="relative h-[404px] w-full overflow-hidden rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] md:h-[400px]">
+                  <ImageWithInitialFallback
+                    src={bannerUrl}
+                    alt={eventName}
+                    name={eventName}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 66vw"
+                    className="size-full rounded-2xl border-transparent border-0"
+                    letterClassName="text-7xl font-bold"
+                  />
+                </div>
+              </div>
+              {eventTyped && (
+                <div className="hidden w-full shrink-0 md:block md:w-1/4">
+                  <EventPublicInfoCardDesktop
+                    event={eventTyped}
+                    isPreview
+                  />
+                </div>
+              )}
             </div>
+            {eventTyped && (
+              <div className="w-full md:hidden">
+                <EventPublicInfoCardMobile event={eventTyped} isPreview />
+              </div>
+            )}
 
-            <div className="flex w-full flex-col items-start rounded-xl">
+            <div className="flex w-3/4 flex-col items-start rounded-xl -mt-20">
               {topicSections.map((section, index) => (
                 <div
                   key={section.id}
@@ -202,7 +224,7 @@ export default function EditFlowEventPreviewPage() {
             </div>
           </div>
 
-          <div className="flex w-full max-w-[843px] flex-col items-end justify-center">
+          <div className="flex w-full max-w-[1280px] flex-col items-end justify-center px-0 lg:px-8">
             <Button
               variant="outline"
               onClick={handleBack}

@@ -491,3 +491,65 @@ input[type="number"] {
     margin-right: 0;
   }
 }
+
+/*
+ * Tipografia Quill na página do evento: quill.snow.css só carrega no TopicModal
+ * (.ql-editor). O HTML salvo usa classes ql-size-* / ql-font-* e <h1>–<h6> sem
+ * esse ancestral — sem estas regras o tamanho não aparece no público.
+ * Espelho de .ql-snow .ql-editor (Quill 2.0.x).
+ */
+.topic-rich-html .ql-font-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.topic-rich-html .ql-font-monospace {
+  font-family: Monaco, "Courier New", monospace;
+}
+
+.topic-rich-html .ql-size-small {
+  font-size: 0.75em;
+}
+
+.topic-rich-html .ql-size-large {
+  font-size: 1.5em;
+}
+
+.topic-rich-html .ql-size-huge {
+  font-size: 2.5em;
+}
+
+.topic-rich-html h1 {
+  font-size: 2em;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.topic-rich-html h2 {
+  font-size: 1.5em;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.topic-rich-html h3 {
+  font-size: 1.17em;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.topic-rich-html h4 {
+  font-size: 1em;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.topic-rich-html h5 {
+  font-size: 0.83em;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.topic-rich-html h6 {
+  font-size: 0.67em;
+  line-height: 1.4;
+  font-weight: 600;
+}

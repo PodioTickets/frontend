@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
@@ -19,6 +19,12 @@ import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
 import Image from "next/image";
+import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
+
+const OWNER_ONLY_NAV_HREFS = new Set([
+  "/organizer/organization/settings",
+  "/organizer/team",
+]);
 
 const navItems = [
   { label: "Eventos", href: "/organizer/events", icon: TicketIcon },
@@ -42,6 +48,8 @@ export function OrganizerMobileNav() {
   const [open, setOpen] = useState(false);
   const [organizer, setOrganizer] = useState<any>(null);
   const { openAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
+  const navItemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+  const navScrollRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     setOpen(false);
@@ -65,6 +73,48 @@ export function OrganizerMobileNav() {
     organizerExternalHref(internal, appSurface);
 
   const isActive = (href: string) => organizerPath.startsWith(href);
+
+  const isOrgOwner = isCurrentUserOrganizationOwner(organizer, user?.id);
+  const visibleNavItems = useMemo(
+    () =>
+      navItems.filter(
+        (item) => !OWNER_ONLY_NAV_HREFS.has(item.href) || isOrgOwner,
+      ),
+    [isOrgOwner],
+  );
+
+  const setNavItemRef = useCallback((href: string, el: HTMLAnchorElement | null) => {
+    if (el) navItemRefs.current.set(href, el);
+    else navItemRefs.current.delete(href);
+  }, []);
+
+  /** Ao abrir o drawer, rola a lista para o item da rota atual ficar no topo (sem mudar a ordem). */
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    let innerRaf = 0;
+    const outerRaf = requestAnimationFrame(() => {
+      innerRaf = requestAnimationFrame(() => {
+        if (cancelled) return;
+        const activeItem = visibleNavItems.find((item) =>
+          organizerPath.startsWith(item.href),
+        );
+        if (!activeItem) return;
+        const el = navItemRefs.current.get(activeItem.href);
+        const container = navScrollRef.current;
+        if (!el || !container) return;
+        const cRect = container.getBoundingClientRect();
+        const eRect = el.getBoundingClientRect();
+        const delta = eRect.top - cRect.top + container.scrollTop;
+        container.scrollTo({ top: Math.max(0, delta), behavior: "auto" });
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(outerRaf);
+      cancelAnimationFrame(innerRaf);
+    };
+  }, [open, organizerPath, visibleNavItems]);
 
   return (
     <>
@@ -147,13 +197,17 @@ export function OrganizerMobileNav() {
               </p>
             </div>
             {/* Lista de navegação – fundo escuro, botões arredondados com borda */}
-            <div className="flex-1 overflow-y-auto bg-linear-to-b from-[#191919] to-[#222222] px-4 py-4 flex flex-col gap-2">
-              {navItems.map((item) => {
+            <div
+              ref={navScrollRef}
+              className="flex-1 overflow-y-auto bg-linear-to-b from-[#191919] to-[#222222] px-4 py-4 flex flex-col gap-2 min-h-0"
+            >
+              {visibleNavItems.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
+                    ref={(el) => setNavItemRef(item.href, el)}
                     href={navHref(item.href)}
                     onClick={() => setOpen(false)}
                     className={`flex items-center gap-3 h-12 px-4 rounded-lg border border-[#3A3A3A] bg-white/5 transition-colors ${active ? "bg-[#25482D] border-[#25482D] text-[#C2F0C2]" : "text-white hover:bg-white/10 font-family-dm-sans"}`}

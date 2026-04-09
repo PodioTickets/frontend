@@ -16,6 +16,11 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import {
+  ImageUploadWithCrop,
+  type ImageUploadWithCropRef,
+} from "@/components/ImageUploadWithCrop";
+import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 
 export default function OrganizerSettingsPage() {
   const router = useRouter();
@@ -28,7 +33,7 @@ export default function OrganizerSettingsPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [organizer, setOrganizer] = useState<any>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
   const [formData, setFormData] = useState({
     name: "",
   });
@@ -81,26 +86,11 @@ export default function OrganizerSettingsPage() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Formato inválido. Use JPG ou PNG.");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo de 2MB.");
-      return;
-    }
-
+  const uploadProfileAvatar = async (file: File) => {
     setUploadingImage(true);
     try {
-      const result = await userService.uploadAvatar(file);
+      await userService.uploadAvatar(file);
       toast.success("Imagem atualizada com sucesso!");
-      // Recarregar dados do usuário
       window.location.reload();
     } catch (error: any) {
       console.error("Error uploading image:", error);
@@ -214,16 +204,8 @@ export default function OrganizerSettingsPage() {
               </div>
               <div className="flex flex-1 flex-col gap-[16px] items-start justify-center">
                 <div className="flex gap-[17px] items-center relative shrink-0">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={uploadingImage}
-                  />
                   <Button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => avatarCropRef.current?.open()}
                     disabled={uploadingImage}
                   >
                     <Plus className="size-6" />
@@ -281,7 +263,7 @@ export default function OrganizerSettingsPage() {
                   </div>
                 </div>
 
-             
+
               </div>
 
               {/* Save Button */}
@@ -376,6 +358,19 @@ export default function OrganizerSettingsPage() {
               </button>
             </div>
           </div>
+
+          <ImageUploadWithCrop
+            ref={avatarCropRef}
+            spec={EVENT_IMAGE_SPECS.organizationLogo}
+            outputBaseName="profile-avatar"
+            cropShape="round"
+            maxFileSizeMb={10}
+            accept="image/jpeg,image/jpg,image/png"
+            modalTitle="Ajustar foto de perfil"
+            onCropped={(file) => void uploadProfileAvatar(file)}
+            onInvalidFile={(msg) => toast.error(msg)}
+            onCropFailed={(msg) => toast.error(msg)}
+          />
         </div>
       </div>
     </div>

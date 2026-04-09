@@ -706,7 +706,7 @@ export function TicketCategoryCard({
                   items={categoryCarouselItems}
                   primaryProductId={
                     kitSelectionDisplay.primaryKitProductByCategoryId[
-                      categoryId
+                    categoryId
                     ]
                   }
                 />
@@ -739,7 +739,7 @@ export function TicketCategoryCard({
             onClick={handleToggle}
           >
             <div className="flex flex-1 items-center gap-3 min-w-0">
-              {showCategoryLevelKit && headerThumbItem ? (
+              {showCategoryLevelKit && headerThumbItem && !isExpanded ? (
                 <div className="size-20 shrink-0 rounded-lg border border-gray-6 overflow-hidden relative bg-gray-2">
                   <ImageWithInitialFallback
                     src={headerThumbItem.src}
@@ -790,7 +790,7 @@ export function TicketCategoryCard({
                   items={categoryCarouselItems}
                   primaryProductId={
                     kitSelectionDisplay.primaryKitProductByCategoryId[
-                      categoryId
+                    categoryId
                     ]
                   }
                 />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCreateVoucherModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -34,6 +34,12 @@ export function CreateVoucherModal() {
 
   const isEditing = data?.voucherId !== undefined;
   const eventId = data?.eventId;
+
+  const minSelectableExpiryDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [isOpen]);
 
   // Initialize form when modal opens
   useEffect(() => {
@@ -335,6 +341,7 @@ export function CreateVoucherModal() {
                                     <DatePicker
                                       value={expiryDate || undefined}
                                       onChange={setExpiryDate}
+                                      minDate={minSelectableExpiryDate}
                                       placeholder="00/00/2026"
                                       className="w-auto"
                                     />

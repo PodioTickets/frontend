@@ -16,6 +16,12 @@ export const EVENT_IMAGE_SPECS = {
     outputWidth: 600,
     outputHeight: 600,
   },
+  /** Logo da organização (recorte circular na UI; arquivo quadrado para exibir com `rounded-full`). */
+  organizationLogo: {
+    aspect: 1,
+    outputWidth: 400,
+    outputHeight: 400,
+  },
 } as const;
 
 export type EventImageSpec = (typeof EVENT_IMAGE_SPECS)[keyof typeof EVENT_IMAGE_SPECS];

@@ -16,6 +16,7 @@ import {
   Shield,
   ChevronDown,
   Plus,
+  Search,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Checkbox } from "@/components/CheckBox";
@@ -27,6 +28,22 @@ import { CPFIcon } from "@/components/Icons/CPFIcon";
 import { getCpfValidationMessage } from "@/utils/cpf";
 import { getAvatarUrl } from "@/utils/avatar";
 import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
+import {
+  ImageUploadWithCrop,
+  type ImageUploadWithCropRef,
+} from "@/components/ImageUploadWithCrop";
+import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { COUNTRIES_PT_BR } from "@/data/countries";
+
+/** Alinha valores antigos da API («Brasileira», etc.) ao nome do país da lista de cadastro. */
+function mapStoredCountryToPickerValue(raw: string | null | undefined): string {
+  const t = (raw ?? "").trim();
+  if (!t) return "Brasil";
+  const lower = t.toLowerCase();
+  if (lower === "brasileira" || lower === "brazil") return "Brasil";
+  if (COUNTRIES_PT_BR.includes(t)) return t;
+  return t;
+}
 
 // Função para converter gênero do backend para a tela
 const formatGenderFromBackend = (
@@ -118,8 +135,9 @@ export default function UserProfilePage() {
   const { user, refetchUser } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
   const { openChangePasswordModal } = useChangePasswordModal();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
   // Redirecionar para home se não estiver logado
@@ -171,8 +189,9 @@ export default function UserProfilePage() {
       lastName: (user as any)?.lastName ?? "",
       documentNumber: maskCPFForInit((user as any)?.documentNumber || ""),
       dateOfBirth: (user as any)?.dateOfBirth ?? "",
-      nationality:
-        (user as any)?.nationality || (user as any)?.country || "Brasileira",
+      nationality: mapStoredCountryToPickerValue(
+        (user as any)?.nationality || (user as any)?.country,
+      ),
       phone: maskPhoneForInit((user as any)?.phone || ""),
       emergencyPhone: maskPhoneForInit((user as any)?.emergencyPhone || ""),
       gender:
@@ -187,28 +206,38 @@ export default function UserProfilePage() {
 
   const [formData, setFormData] = useState(initialFormData);
 
-  // Garantir que o gênero formatado seja sempre usado
-  // Usa o valor do user diretamente se disponível, senão usa o formData
-  const displayGender = useMemo(() => {
-    const userGender = (user as any)?.gender;
-    const userSex = (user as any)?.sex;
-    const formDataGender = formData.gender;
+  /** Valores persistidos (espelho do `user`) para habilitar «Salvar» só com alteração real. */
+  const profileBaseline = useMemo(() => {
+    if (!user) return null;
+    const u = user as any;
+    return {
+      firstName: u.firstName ?? "",
+      lastName: u.lastName ?? "",
+      documentNumber: maskCPFForInit(u.documentNumber || ""),
+      dateOfBirth: u.dateOfBirth ?? "",
+      nationality: mapStoredCountryToPickerValue(u.nationality || u.country),
+      phone: maskPhoneForInit(u.phone || ""),
+      emergencyPhone: maskPhoneForInit(u.emergencyPhone || ""),
+      gender:
+        formatGenderFromBackend(u.gender || u.sex) || "",
+    };
+  }, [user]);
 
-    console.log("🔍 displayGender useMemo:", {
-      userGender,
-      userSex,
-      formDataGender,
-      user: user ? "existe" : "não existe",
-    });
-
-    const genderValue = userGender || userSex || formDataGender;
-    console.log("🔍 genderValue escolhido:", genderValue);
-
-    const formatted = formatGenderFromBackend(genderValue);
-    console.log("🔍 formatted result:", formatted);
-
-    return formatted;
-  }, [formData.gender, user]);
+  const isProfileDirty = useMemo(() => {
+    if (!profileBaseline) return false;
+    const d = (s: string) => (s || "").replace(/\D/g, "");
+    const b = profileBaseline;
+    const f = formData;
+    if ((f.firstName || "").trim() !== (b.firstName || "").trim()) return true;
+    if ((f.lastName || "").trim() !== (b.lastName || "").trim()) return true;
+    if (d(f.documentNumber) !== d(b.documentNumber)) return true;
+    if ((f.dateOfBirth || "") !== (b.dateOfBirth || "")) return true;
+    if ((f.nationality || "") !== (b.nationality || "")) return true;
+    if (d(f.phone) !== d(b.phone)) return true;
+    if (d(f.emergencyPhone) !== d(b.emergencyPhone)) return true;
+    if ((f.gender || "") !== (b.gender || "")) return true;
+    return false;
+  }, [formData, profileBaseline]);
 
   // Update formData when user data is loaded
   useEffect(() => {
@@ -226,10 +255,9 @@ export default function UserProfilePage() {
           ? maskCPFForInit(rawDocumentNumber)
           : prev.documentNumber,
         dateOfBirth: (user as any)?.dateOfBirth ?? prev.dateOfBirth,
-        nationality:
-          (user as any)?.nationality ||
-          (user as any)?.country ||
-          prev.nationality,
+        nationality: mapStoredCountryToPickerValue(
+          (user as any)?.nationality || (user as any)?.country,
+        ),
         phone: rawPhone ? maskPhoneForInit(rawPhone) : prev.phone,
         emergencyPhone: rawEmergencyPhone
           ? maskPhoneForInit(rawEmergencyPhone)
@@ -261,8 +289,49 @@ export default function UserProfilePage() {
   }, [user]);
 
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
+  const [nationalitySearch, setNationalitySearch] = useState("");
+  const nationalityDropdownRef = useRef<HTMLDivElement>(null);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  const nationalityOptions = useMemo(
+    () =>
+      COUNTRIES_PT_BR.map((name) => ({
+        id: name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, "")
+          .replace(/\s+/g, "-"),
+        label: name,
+      })),
+    [],
+  );
+
+  const normalizeNationalitySearch = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "");
+
+  const filteredNationalityOptions = useMemo(() => {
+    if (!nationalitySearch.trim()) return nationalityOptions;
+    const q = normalizeNationalitySearch(nationalitySearch);
+    return nationalityOptions.filter((opt) =>
+      normalizeNationalitySearch(opt.label).includes(q),
+    );
+  }, [nationalityOptions, nationalitySearch]);
+
+  useEffect(() => {
+    if (!showNationalityDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const el = nationalityDropdownRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setShowNationalityDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNationalityDropdown]);
 
   const handleToggle2FA = () => {
     const newValue = !twoFactorEnabled;
@@ -274,30 +343,11 @@ export default function UserProfilePage() {
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/jpg", "image/png"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Formato inválido. Use apenas PNG ou JPEG.");
-      return;
-    }
-
-    // Validate file size (10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (file.size > maxSize) {
-      toast.error("Arquivo muito grande. Tamanho máximo: 10MB.");
-      return;
-    }
-
+  const uploadUserAvatar = async (file: File) => {
     setIsUploadingAvatar(true);
     try {
-      const response = await userService.uploadAvatar(file);
+      await userService.uploadAvatar(file);
       toast.success("Foto de perfil atualizada com sucesso!");
-
-      // Refresh user data to get updated avatar URL
       await refetchUser();
     } catch (error: any) {
       console.error("Error uploading avatar:", error);
@@ -306,10 +356,6 @@ export default function UserProfilePage() {
       );
     } finally {
       setIsUploadingAvatar(false);
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
@@ -401,7 +447,7 @@ export default function UserProfilePage() {
   };
 
   const handleSavePersonalData = async () => {
-    if (!user) return;
+    if (!user || !isProfileDirty) return;
 
     if (formData.documentNumber?.trim()) {
       const cpfError = getCpfValidationMessage(formData.documentNumber);
@@ -411,6 +457,7 @@ export default function UserProfilePage() {
       }
     }
 
+    setIsSavingProfile(true);
     try {
       // Prepara os dados para atualização
       const updateData: any = {};
@@ -461,6 +508,8 @@ export default function UserProfilePage() {
       toast.error(
         error?.message || "Erro ao atualizar dados. Tente novamente."
       );
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -509,20 +558,12 @@ export default function UserProfilePage() {
                 />
               </div>
               <div className="flex flex-col gap-4 items-start justify-center w-full md:flex-1 md:items-start">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                  disabled={isUploadingAvatar}
-                />
                 {/* Mobile: Column layout */}
                 <div className="flex flex-col gap-3 items-start w-full md:hidden">
                   <Button
                     variant="default"
                     className="w-full h-11 gap-2 px-5 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => avatarCropRef.current?.open()}
                     disabled={isUploadingAvatar}
                   >
                     <Plus className="size-5" />
@@ -542,7 +583,7 @@ export default function UserProfilePage() {
                   <Button
                     variant="default"
                     className="h-10 gap-2 px-5"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => avatarCropRef.current?.open()}
                     disabled={isUploadingAvatar}
                   >
                     <Plus className="size-5" />
@@ -673,58 +714,80 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              {/* Nationality */}
+              {/* Nationality — mesma lista + busca do cadastro (RegisterModal) */}
               <div className="relative flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Nacionalidade
                 </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowNationalityDropdown(!showNationalityDropdown)
-                  }
-                  className="flex h-12 items-center justify-between rounded-lg border border-gray-6 bg-transparent px-3"
-                >
-                  <div className="flex items-center gap-1 md:gap-2.5">
-                    <FlagIcon className="size-5 shrink-0 text-gray-11" />
-                    <span className="text-base text-gray-11 font-family-dm-sans">
-                      {formData.nationality || "Selecione"}
-                    </span>
-                  </div>
-                  <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
-                    <ArrowButton isOpen={showNationalityDropdown} />
-                  </div>
-                </button>
-                {showNationalityDropdown && (
-                  <div className="absolute top-[76px] z-10 w-full rounded-lg border border-gray-6 bg-gray-1 shadow-[0px_2px_4px_0px_rgba(0,0,0,0.25)]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          nationality: "Brasileira",
-                        }));
-                        setShowNationalityDropdown(false);
-                      }}
-                      className="flex w-full items-center gap-2 border-b border-gray-4 px-3 py-4 text-left text-base text-gray-12 hover:bg-gray-2"
-                    >
-                      Brasileira
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          nationality: "Outra",
-                        }));
-                        setShowNationalityDropdown(false);
-                      }}
-                      className="flex w-full items-center gap-2 border-b border-gray-4 px-3 py-4 text-left text-base text-gray-12 hover:bg-gray-2"
-                    >
-                      Outra
-                    </button>
-                  </div>
-                )}
+                <div className="w-full relative" ref={nationalityDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNationalityDropdown((prev) => {
+                        const next = !prev;
+                        if (next) setNationalitySearch("");
+                        return next;
+                      });
+                    }}
+                    className="flex h-12 w-full items-center justify-between rounded-lg border border-gray-6 bg-transparent px-3 transition-colors hover:bg-gray-3"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-1 md:gap-2.5">
+                      <FlagIcon className="size-5 shrink-0 text-gray-11" />
+                      <span
+                        className={`truncate font-family-dm-sans text-base leading-[1.3] ${formData.nationality ? "text-gray-12" : "text-gray-11"}`}
+                      >
+                        {formData.nationality || "Selecione"}
+                      </span>
+                    </div>
+                    <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
+                      <ArrowButton isOpen={showNationalityDropdown} />
+                    </div>
+                  </button>
+                  {showNationalityDropdown && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-gray-6 bg-gray-1 shadow-lg">
+                      <div className="border-b border-gray-6 p-2">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-11" />
+                          <input
+                            type="text"
+                            placeholder="Pesquisar país"
+                            value={nationalitySearch}
+                            onChange={(e) =>
+                              setNationalitySearch(e.target.value)
+                            }
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="h-9 w-full rounded-md border border-gray-6 bg-gray-2 pl-8 pr-3 font-family-dm-sans text-sm text-gray-12 placeholder:text-gray-10 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-8"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar]:w-2">
+                        {filteredNationalityOptions.length === 0 ? (
+                          <div className="px-3 py-4 text-center font-family-dm-sans text-sm text-gray-11">
+                            Nenhum país encontrado
+                          </div>
+                        ) : (
+                          filteredNationalityOptions.map((option) => (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  nationality: option.label,
+                                }));
+                                setShowNationalityDropdown(false);
+                                setNationalitySearch("");
+                              }}
+                              className="w-full px-3 py-2.5 text-left font-family-dm-sans text-sm text-gray-12 transition-colors hover:bg-gray-3"
+                            >
+                              {option.label}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Phone */}
@@ -828,7 +891,7 @@ export default function UserProfilePage() {
                   <div className="flex items-center gap-1 md:gap-2.5">
                     <HeartIcon className="size-5 shrink-0 text-gray-11" />
                     <span className="text-base text-gray-11 font-family-dm-sans">
-                      {displayGender || "Selecione"}
+                      {formData.gender || "Selecione"}
                     </span>
                   </div>
                   <div className="flex-none -scale-y-100 shrink-0 md:scale-y-100">
@@ -871,8 +934,11 @@ export default function UserProfilePage() {
                 variant="default"
                 className="w-full h-11 gap-2 px-5 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope"
                 onClick={handleSavePersonalData}
+                disabled={
+                  !isProfileDirty || !user || isSavingProfile
+                }
               >
-                Salvar alterações
+                {isSavingProfile ? "Salvando..." : "Salvar alterações"}
               </Button>
             </div>
             {/* Desktop: Right aligned button */}
@@ -881,8 +947,11 @@ export default function UserProfilePage() {
                 variant="default"
                 className="h-12 gap-2 px-5"
                 onClick={handleSavePersonalData}
+                disabled={
+                  !isProfileDirty || !user || isSavingProfile
+                }
               >
-                Salvar alterações
+                {isSavingProfile ? "Salvando..." : "Salvar alterações"}
               </Button>
             </div>
           </div>
@@ -1032,6 +1101,19 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
+
+        <ImageUploadWithCrop
+          ref={avatarCropRef}
+          spec={EVENT_IMAGE_SPECS.organizationLogo}
+          outputBaseName="user-avatar"
+          cropShape="round"
+          maxFileSizeMb={10}
+          accept="image/jpeg,image/jpg,image/png"
+          modalTitle="Ajustar foto de perfil"
+          onCropped={(file) => void uploadUserAvatar(file)}
+          onInvalidFile={(msg) => toast.error(msg)}
+          onCropFailed={(msg) => toast.error(msg)}
+        />
       </div>
     </div>
   );
