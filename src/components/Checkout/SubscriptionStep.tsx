@@ -28,6 +28,8 @@ interface Product {
   basePrice: number;
   isRequired: boolean;
   isIncludedInTicket: boolean;
+  /** Ex.: "Tamanho", "Cor" — mesmo campo do CreateProductModal / API. */
+  variationType?: string | null;
   variations: Array<{
     id?: string;
     name: string;
@@ -99,6 +101,10 @@ const formatProductCardBasePriceLabel = (product: Product): string => {
   if (product.isIncludedInTicket) return "Incluso no ingresso";
   return formatPrice(product.basePrice);
 };
+
+/** Alinhado ao CreateProductModal: "Escolha a variação - {tipo}" ou "Variações". */
+const variationSectionTitle = (product: Product) =>
+  `Escolha a variação - ${(product.variationType ?? "").trim() || "Variações"}`;
 
 /**
  * Valor em reais a somar no total do pedido (mesma regra de `previewVariationListPriceLabelForProduct`).
@@ -239,6 +245,12 @@ export function SubscriptionStep({
       basePrice: productPriceFromApiToReais(product.basePrice),
       isRequired: product.isRequired || false,
       isIncludedInTicket: product.isIncludedInTicket || false,
+      variationType:
+        typeof product.variationType === "string" && product.variationType.trim()
+          ? product.variationType.trim()
+          : typeof product.variation_type === "string" && product.variation_type.trim()
+            ? product.variation_type.trim()
+            : null,
       variations: (product.variations || []).map((v: any) => ({
         id: v.id,
         name: v.name,
@@ -1012,7 +1024,7 @@ export function SubscriptionStep({
                             </div>
                             <div className="p-4">
                               <p className="text-base text-gray-12 mb-2">
-                                Escolha a variação
+                                {variationSectionTitle(product)}
                               </p>
                               <Dropdown
                                 options={getVariationOptions(product)}
@@ -1113,7 +1125,7 @@ export function SubscriptionStep({
                               </div>
                               <div className="p-4">
                                 <p className="text-base text-gray-12 mb-2">
-                                  Escolha a variação
+                                  {variationSectionTitle(product)}
                                 </p>
                                 <Dropdown
                                   options={getVariationOptions(product)}
@@ -1340,7 +1352,7 @@ export function SubscriptionStep({
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
-                      <p className="text-sm text-gray-12">Escolha a variação</p>
+                      <p className="text-sm text-gray-12">{variationSectionTitle(product)}</p>
                       <Dropdown
                         options={getVariationOptions(product)}
                         dataAttribute={`variation-${product.id}`}
@@ -1436,7 +1448,7 @@ export function SubscriptionStep({
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 border-t border-gray-6 pt-3">
-                        <p className="text-sm text-gray-12">Escolha a variação</p>
+                        <p className="text-sm text-gray-12">{variationSectionTitle(product)}</p>
                         <Dropdown
                           options={getVariationOptions(product)}
                           dataAttribute={`variation-${product.id}`}

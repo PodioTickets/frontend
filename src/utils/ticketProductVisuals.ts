@@ -53,7 +53,6 @@ export function getTicketProductCarouselItems(
   >,
   options?: {
     primaryProductId?: string | null;
-    /** Ex.: checkout/ingressos — não exibir produtos do kit sem imagem. */
     omitItemsWithoutImage?: boolean;
   },
 ): ImageCarouselItem[] {

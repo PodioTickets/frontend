@@ -18,7 +18,6 @@ interface TicketCardProps {
   event: Event;
   productsMap: Record<string, { id: string; name: string; image: string | null }>;
   kitSelectionDisplay?: EventKitSelectionDisplay;
-  /** Checkout ingressos: ocultar produtos do kit sem URL de imagem. */
   omitKitProductsWithoutImage?: boolean;
 }
 
