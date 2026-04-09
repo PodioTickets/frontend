@@ -409,7 +409,7 @@ export default function EditQuestionnairePage() {
               "max-md:h-12 max-md:w-full max-md:px-4 sm:text-base",
             )}
           >
-            Pré-visualizar checkout
+            Preview
           </Button>
           <Button
             type="button"

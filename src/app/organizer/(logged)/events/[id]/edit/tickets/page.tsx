@@ -1401,7 +1401,7 @@ export default function EditTicketsPage() {
               onClick={handleOpenTicketsCheckoutPreview}
               className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
             >
-              Pré-visualizar checkout
+              Preview
             </Button>
             {kitSelectionDirty ? (
               <Button
