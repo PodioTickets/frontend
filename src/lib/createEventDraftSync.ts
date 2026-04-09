@@ -39,8 +39,8 @@ async function uploadPdfFileToApi(file: File): Promise<string> {
   if (!response.ok) {
     throw new Error(
       (result.message as string) ||
-        ((result.error as { message?: string })?.message as string) ||
-        "Erro ao fazer upload do PDF",
+      ((result.error as { message?: string })?.message as string) ||
+      "Erro ao fazer upload do PDF",
     );
   }
 
@@ -134,7 +134,7 @@ export async function ensureCreateEventSyncedFromDraft(options: {
   );
 
   const event = await organizerService.createEvent(
-    eventData as Parameters<typeof organizerService.createEvent>[0],
+    eventData as unknown as Parameters<typeof organizerService.createEvent>[0],
   );
   const id = event.id;
   updateFormData({ createdEventId: id });
