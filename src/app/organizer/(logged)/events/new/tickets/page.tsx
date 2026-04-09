@@ -783,7 +783,7 @@ export default function IngressosPage() {
               </Button>
             </div>
 
-            <div className="hidden items-center justify-between gap-4 md:flex md:flex-wrap">
+            <div className="hidden items-end justify-between gap-4 md:flex md:flex-wrap">
               <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">
                 Ingressos avulsos
               </h2>
