@@ -310,13 +310,13 @@ export function CreateProductModal() {
           visible.length > 0
             ? visible
             : [
-                {
-                  id: `${Date.now()}-a`,
-                  name: "Padrão",
-                  price: "",
-                  stock: emptyVariationsStockFallback,
-                },
-              ],
+              {
+                id: `${Date.now()}-a`,
+                name: "Padrão",
+                price: "",
+                stock: emptyVariationsStockFallback,
+              },
+            ],
         );
       }
       const buyerEdit = buyerVariationEditStateFromApiProduct(rec);
@@ -1139,7 +1139,7 @@ export function CreateProductModal() {
                               sanitizeVariationTypeLabelInput(e.target.value),
                             )
                           }
-                          placeholder={`Ex: "Escolha o tamanho/cor/variação"`}
+                          placeholder={`Ex: "Tamanho/cor/variação"`}
                           className="h-12 px-3"
                         />
 
@@ -1505,10 +1505,7 @@ export function CreateProductModal() {
                       {productPreviewDropdownOptions.length > 0 ? (
                         <div className="p-4 hidden md:block">
                           <p className="mb-2 text-base text-gray-12">
-                            <span className="md:hidden">Escolha o tamanho</span>
-                            <span className="hidden md:inline">
-                              Escolha a variação {variationTypeName.trim() || "Variações"}
-                            </span>
+                            Escolha a variação - {variationTypeName.trim() || "Variações"}
                           </p>
                           <Dropdown
                             options={productPreviewDropdownOptions}
