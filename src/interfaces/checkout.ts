@@ -77,7 +77,6 @@ export interface CheckoutRequest {
   billingAddress: CheckoutBillingAddressRequest;
   couponCode?: string;
   voucherCode?: string;
-  serviceFee?: number; // Em centavos
 }
 
 // Response Types

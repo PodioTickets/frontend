@@ -1238,9 +1238,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       return null;
     }
 
-    // Converter serviceFee para centavos (se estiver em reais)
-    const serviceFeeInCents = Math.round(serviceFee * 100);
-
     return {
       eventId,
       paymentMethod: selectedPaymentMethod === 'credit' ? 'CREDIT_CARD' : 'PIX',
@@ -1261,7 +1258,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       billingAddress: billingAddressPayload,
       couponCode: isCouponApplied && couponCode ? couponCode : undefined,
       voucherCode: undefined, // TODO: Implementar quando estiver disponível
-      serviceFee: serviceFeeInCents,
     };
   };
 
