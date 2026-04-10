@@ -552,28 +552,25 @@ export default function EventDashboardPage() {
     );
   }, [lotsNearDepletionList, lotsNearDepletionSliceStart]);
 
-  // Variações mais vendidas: da API topProductVariations (flatten: um item por variação)
+  // Um item por produto (soma de todas as variações)
   const bestSellingVariations = useMemo((): BestSellingVariationItem[] => {
     const top = dashboardData.topProductVariations ?? [];
-    const list: BestSellingVariationItem[] = [];
-    top.forEach((product) => {
-      (product.variations ?? []).forEach((v, vIdx) => {
-        const item: BestSellingVariationItem = {
-          id: v.variationId ?? `${product.productId}-${vIdx}`,
-          productId: product.productId,
-          productName: product.productName,
-          variationId: v.variationId ?? undefined,
-          variationName: v.variationName,
-          quantity: v.quantitySold,
-          totalCents: undefined,
-          percentage: v.percentage,
-          remainingStock: v.remainingStock,
-          totalStock: v.totalStock,
-        };
-        list.push(item);
-      });
+    return top.map((product) => {
+      const variations = product.variations ?? [];
+      const totalQty = variations.reduce((s, v) => s + (v.quantitySold ?? 0), 0);
+      const totalStock = variations.reduce((s, v) => s + (v.totalStock ?? 0), 0);
+      const remainingStock = variations.reduce((s, v) => s + (v.remainingStock ?? 0), 0);
+      return {
+        id: product.productId,
+        productId: product.productId,
+        productName: product.productName,
+        variationName: "",
+        quantity: totalQty,
+        totalCents: product.totalSoldAmount,
+        remainingStock: totalStock > 0 ? remainingStock : undefined,
+        totalStock: totalStock > 0 ? totalStock : undefined,
+      };
     });
-    return list;
   }, [dashboardData.topProductVariations]);
 
   const uniqueProductNames = useMemo(

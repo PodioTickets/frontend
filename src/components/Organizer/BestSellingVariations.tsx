@@ -115,7 +115,6 @@ export function BestSellingVariations({
     setCurrentPage((p) => Math.min(Math.max(1, p), totalPages));
   }, [totalPages]);
 
-  console.log(items);
   return (
     <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden flex flex-col w-full h-full">
       <div className="px-4 py-3 md:py-5 border-b border-gray-6 shrink-0">
