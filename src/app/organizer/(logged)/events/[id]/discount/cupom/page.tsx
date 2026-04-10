@@ -336,7 +336,7 @@ export default function CouponsPage() {
                                     {coupon.couponType === "AGE" ? "Cupom automático por idade" : coupon.couponType === "QUANTITY" ? `Cupom automático por quantidade` : coupon.code}
                                   </span>
                                   {coupon.couponType === "DISCOUNT" && (
-                                    <CopyIcon onClick={() => handleCopyCode(coupon.code)} className="size-4 text-gray-11" />
+                                    <CopyIcon onClick={() => handleCopyCode(coupon.code)} className="size-4 text-gray-11 cursor-pointer" />
                                   )}
                                 </div>
                               </td>
@@ -408,8 +408,9 @@ export default function CouponsPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleCopyCode(coupon.code)}
-                                  className="size-6 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+                                  className="size-6 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors shrink-0 cursor-pointer"
                                   aria-label="Copiar código"
+                                  title="Copiar código"
                                 >
                                   <CopyIcon className="size-4 text-gray-11" />
                                 </button>
