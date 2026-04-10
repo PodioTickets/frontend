@@ -10,8 +10,6 @@ import { FlagIcon } from "@/components/Icons/FlagIcon";
 import {
   Plus,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -237,7 +235,7 @@ export default function OrganizerEventsPage() {
               Meus eventos
             </h1>
           </div>
-          <Link href="/organizer/events/new">
+          <Link href="/organizer/events/new?reset=1">
             <Button className="">
               Criar evento
             </Button>
@@ -254,7 +252,7 @@ export default function OrganizerEventsPage() {
                 : "Você ainda não criou nenhum evento"}
             </p>
             {!searchTerm && (
-              <Link href="/organizer/events/new">
+              <Link href="/organizer/events/new?reset=1">
                 <Button>
                   <Plus className="size-4 mr-2" />
                   Criar Primeiro Evento
@@ -293,6 +291,7 @@ export default function OrganizerEventsPage() {
                     {filteredEvents.map((event) => {
                       const statusBadge = getStatusBadge(event);
                       const registrations = getEventRegistrations(event);
+                      const isCreationDraft = event.status === "DRAFT";
 
                       return (
                         <tr
@@ -336,107 +335,118 @@ export default function OrganizerEventsPage() {
                             </span>
                           </td>
                           <td className="py-4 px-5 text-center">
-                            <div className="flex items-center gap-1 justify-center">
-                              <Link
-                                href={`/organizer/events/${event.id}/dashboard`}
-                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Dashboard"
-                              >
-                                <DashboardIcon className="size-4 text-gray-11" />
-                              </Link>
-                              <Link
-                                href={`/organizer/events/${event.id}/edit`}
-                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Editar"
-                              >
-                                <PencilIcon className="size-4 text-gray-11" />
-                              </Link>
-                              <Link
-                                href={`/organizer/events/${event.id}/financial`}
-                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Ver financeiro"
-                              >
-                                <MoneyIcon className="size-5 text-gray-11" />
-                              </Link>
-
-                              <Link
-                                href={`/organizer/events/${event.id}/registrations`}
-                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title="Ver inscritos"
-                              >
-                                <UsersIcon className="size-5 text-gray-11" />
-                              </Link>
-
-                              <Popover
-                                open={menuOpenForId === event.id}
-                                onOpenChange={(open) =>
-                                  setMenuOpenForId(open ? event.id : null)
-                                }
-                              >
-                                <PopoverTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                    title="Mais opções"
-                                    aria-label="Mais opções"
-                                  >
-                                    <ThreePointsIcon className="size-5 text-gray-11" />
-                                  </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  align="end"
-                                  sideOffset={6}
-                                  className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg"
+                            {isCreationDraft ? (
+                              <div className="flex items-center gap-1 justify-center">
+                                <Link
+                                  href={`/organizer/events/new?resume=${event.id}`}
+                                  className="px-3 py-1.5 rounded-lg bg-primary-3 border border-primary-7 hover:bg-primary-4 text-primary-11 text-sm font-semibold font-family-dm-sans transition-colors whitespace-nowrap"
                                 >
-                                  <div className="flex flex-col gap-0.5">
-                                    <Link
-                                      href={`/organizer/events/${event.id}/discount/cupom`}
-                                      onClick={() => setMenuOpenForId(null)}
-                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                    >
-                                      Cupom
-                                    </Link>
-                                    <Link
-                                      href={`/organizer/events/${event.id}/discount/voucher`}
-                                      onClick={() => setMenuOpenForId(null)}
-                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                    >
-                                      Voucher
-                                    </Link>
-                                    <Link
-                                      href={`/organizer/events/${event.id}/ads`}
-                                      onClick={() => setMenuOpenForId(null)}
-                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                    >
-                                      ADS
-                                    </Link>
+                                  Continuar criação
+                                </Link>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 justify-center">
+                                <Link
+                                  href={`/organizer/events/${event.id}/dashboard`}
+                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                  title="Dashboard"
+                                >
+                                  <DashboardIcon className="size-4 text-gray-11" />
+                                </Link>
+                                <Link
+                                  href={`/organizer/events/${event.id}/edit`}
+                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                  title="Editar"
+                                >
+                                  <PencilIcon className="size-4 text-gray-11" />
+                                </Link>
+                                <Link
+                                  href={`/organizer/events/${event.id}/financial`}
+                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                  title="Ver financeiro"
+                                >
+                                  <MoneyIcon className="size-5 text-gray-11" />
+                                </Link>
+
+                                <Link
+                                  href={`/organizer/events/${event.id}/registrations`}
+                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                  title="Ver inscritos"
+                                >
+                                  <UsersIcon className="size-5 text-gray-11" />
+                                </Link>
+
+                                <Popover
+                                  open={menuOpenForId === event.id}
+                                  onOpenChange={(open) =>
+                                    setMenuOpenForId(open ? event.id : null)
+                                  }
+                                >
+                                  <PopoverTrigger asChild>
                                     <button
                                       type="button"
-                                      disabled={
-                                        suspendingId === event.id ||
-                                        (isEventSuspended(event)
-                                          ? event.status !== "SUSPENDED"
-                                          : event.status !== "PUBLISHED")
-                                      }
-                                      onClick={() =>
-                                        isEventSuspended(event)
-                                          ? openResumeModal(event)
-                                          : openSuspendModal(event)
-                                      }
-                                      className={cn(
-                                        "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
-                                        "hover:bg-gray-3 text-gray-12",
-                                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                                      )}
+                                      className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                      title="Mais opções"
+                                      aria-label="Mais opções"
                                     >
-                                      {isEventSuspended(event)
-                                        ? "Reativar evento"
-                                        : "Suspender evento"}
+                                      <ThreePointsIcon className="size-5 text-gray-11" />
                                     </button>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    align="end"
+                                    sideOffset={6}
+                                    className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg"
+                                  >
+                                    <div className="flex flex-col gap-0.5">
+                                      <Link
+                                        href={`/organizer/events/${event.id}/discount/cupom`}
+                                        onClick={() => setMenuOpenForId(null)}
+                                        className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                      >
+                                        Cupom
+                                      </Link>
+                                      <Link
+                                        href={`/organizer/events/${event.id}/discount/voucher`}
+                                        onClick={() => setMenuOpenForId(null)}
+                                        className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                      >
+                                        Voucher
+                                      </Link>
+                                      <Link
+                                        href={`/organizer/events/${event.id}/ads`}
+                                        onClick={() => setMenuOpenForId(null)}
+                                        className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                      >
+                                        ADS
+                                      </Link>
+                                      <button
+                                        type="button"
+                                        disabled={
+                                          suspendingId === event.id ||
+                                          (isEventSuspended(event)
+                                            ? event.status !== "SUSPENDED"
+                                            : event.status !== "PUBLISHED")
+                                        }
+                                        onClick={() =>
+                                          isEventSuspended(event)
+                                            ? openResumeModal(event)
+                                            : openSuspendModal(event)
+                                        }
+                                        className={cn(
+                                          "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
+                                          "hover:bg-gray-3 text-gray-12",
+                                          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                        )}
+                                      >
+                                        {isEventSuspended(event)
+                                          ? "Reativar evento"
+                                          : "Suspender evento"}
+                                      </button>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -509,6 +519,7 @@ export default function OrganizerEventsPage() {
           onConfirm={handleResumeConfirm}
           loading={suspendingId === resumeModalEvent?.id}
         />
+
       </div>
     </div>
   );

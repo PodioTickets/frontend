@@ -99,6 +99,37 @@ export function clearCreateEventWizardPersistenceExtras(): void {
   clearRegulationPdfDraft();
 }
 
+export interface CreationDraftInfo {
+  /** Há dados locais de criação em andamento (name ou createdEventId). */
+  hasLocalData: boolean;
+  /** ID do evento já criado no servidor, ou null se ainda não foi criado. */
+  createdEventId: string | null;
+  /** Última etapa visitada (para retomar de onde parou). */
+  lastPath: string;
+}
+
+/** Lê o estado do rascunho de criação do localStorage sem montar nenhum contexto React. */
+export function getCreationDraftInfo(): CreationDraftInfo {
+  if (typeof window === "undefined") {
+    return { hasLocalData: false, createdEventId: null, lastPath: DEFAULT_CREATE_EVENT_WIZARD_PATH };
+  }
+  try {
+    const raw = localStorage.getItem("createEventFormData");
+    if (raw) {
+      const data = JSON.parse(raw);
+      const hasLocalData = !!(data?.name || data?.createdEventId);
+      return {
+        hasLocalData,
+        createdEventId: data?.createdEventId || null,
+        lastPath: loadLastCreateEventWizardPath(),
+      };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { hasLocalData: false, createdEventId: null, lastPath: DEFAULT_CREATE_EVENT_WIZARD_PATH };
+}
+
 /** Remove rascunho do fluxo "novo evento" (form + última rota + PDF em rascunho). */
 export function clearAllCreateEventClientStorage(): void {
   if (typeof window === "undefined") return;

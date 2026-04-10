@@ -109,13 +109,13 @@ export default function EditQuestionnairePage() {
             prev.map((q) =>
               q.id === payload.questionId
                 ? {
-                    ...q,
-                    question: payload.questionData.question,
-                    type: payload.questionData.type,
-                    options: payload.questionData.options,
-                    isRequired: payload.questionData.isRequired ?? true,
-                    appliesTo: payload.questionData.appliesTo ?? "all",
-                  }
+                  ...q,
+                  question: payload.questionData.question,
+                  type: payload.questionData.type,
+                  options: payload.questionData.options,
+                  isRequired: payload.questionData.isRequired ?? true,
+                  appliesTo: payload.questionData.appliesTo ?? "all",
+                }
                 : q
             )
           );
@@ -400,17 +400,6 @@ export default function EditQuestionnairePage() {
             "max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
           )}
         >
-          <Button
-            type="button"
-            onClick={handleOpenQuestionnairePreview}
-            variant="outline"
-            className={cn(
-              "h-[52px] border-gray-6 px-11 font-manrope text-lg font-bold text-gray-12",
-              "max-md:h-12 max-md:w-full max-md:px-4 sm:text-base",
-            )}
-          >
-            Prévia
-          </Button>
           <Button
             type="button"
             onClick={() => void handleSaveChanges()}

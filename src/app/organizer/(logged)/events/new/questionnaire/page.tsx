@@ -292,17 +292,6 @@ export default function QuestionnairePage() {
         >
           <Button
             type="button"
-            onClick={handleOpenQuestionnairePreview}
-            variant="outline"
-            className={cn(
-              "h-[52px] border-gray-6 px-11 font-manrope text-lg font-bold text-gray-12",
-              "max-md:h-12 max-md:w-full max-md:px-4 sm:text-base",
-            )}
-          >
-            Prévia
-          </Button>
-          <Button
-            type="button"
             onClick={goRascunhoSync}
             variant="default"
             className={cn(

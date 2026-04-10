@@ -29,7 +29,7 @@ export function Radio({ className, ...props }: RadioProps) {
       <input
         type="radio"
         {...props}
-        className="sr-only"
+        className="absolute opacity-0 w-px h-px top-0 left-0 pointer-events-none"
       />
     </label>
   );

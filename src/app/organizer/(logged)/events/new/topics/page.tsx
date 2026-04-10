@@ -137,12 +137,12 @@ export default function TopicosPage() {
         working = sections.map((s) =>
           s.id === DEFAULT_TOPIC_SENTINEL
             ? {
-                id: created.id,
-                title: created.title?.trim() || defaultRow.title,
-                content: created.content,
-                allowDelete: false,
-                variant: "default" as const,
-              }
+              id: created.id,
+              title: created.title?.trim() || defaultRow.title,
+              content: created.content,
+              allowDelete: false,
+              variant: "default" as const,
+            }
             : s
         );
         setSections(working);
@@ -187,12 +187,12 @@ export default function TopicosPage() {
         working = working.map((s) =>
           s.id === row.id
             ? {
-                id: created.id,
-                title: created.title?.trim() || row.title,
-                content: created.content,
-                allowDelete: true,
-                variant: "topic" as const,
-              }
+              id: created.id,
+              title: created.title?.trim() || row.title,
+              content: created.content,
+              allowDelete: true,
+              variant: "topic" as const,
+            }
             : s
         );
       }
@@ -449,7 +449,7 @@ export default function TopicosPage() {
                 if (id) {
                   writeTopicsPreviewDraft({ v: 1, eventId: id, sections });
                 }
-                orgNav.push("/organizer/events/new/preview-event");
+                orgNav.push("/organizer/events/new/topics/preview");
               }}
               className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px]"
             >

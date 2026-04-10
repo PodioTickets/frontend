@@ -25,7 +25,7 @@ import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 export default function OrganizerSettingsPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, refetchUser } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -39,7 +39,8 @@ export default function OrganizerSettingsPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const hasChanges = formData.name !== (organizer?.name ?? "");
+  const userFullName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
+  const hasChanges = formData.name !== userFullName;
 
   useEffect(() => {
     if (authLoading) return;
@@ -65,9 +66,8 @@ export default function OrganizerSettingsPage() {
       setLoading(true);
       const org = await organizerService.getOrganization();
       setOrganizer(org);
-      setFormData({
-        name: org.name || "",
-      });
+      const currentName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim();
+      setFormData({ name: currentName });
     } catch (error: any) {
       console.error("Error loading organization:", error);
       if (error.response?.status === 404) {
@@ -113,18 +113,6 @@ export default function OrganizerSettingsPage() {
     }
   };
 
-  const maskCNPJ = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 5)
-      return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
-    if (numbers.length <= 8)
-      return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`;
-    if (numbers.length <= 12)
-      return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`;
-    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -136,12 +124,14 @@ export default function OrganizerSettingsPage() {
 
     setSaving(true);
     try {
-      await organizerService.updateOrganization({
-        name: formData.name,
-      });
+      if (!user?.id) throw new Error("Usuário não encontrado");
+      const parts = formData.name.trim().split(/\s+/);
+      const firstName = parts[0] ?? "";
+      const lastName = parts.slice(1).join(" ") || "";
+      await userService.updateUser(user.id, { firstName, lastName });
+      await refetchUser();
 
       toast.success("Configurações atualizadas com sucesso!");
-      loadOrganizer();
     } catch (error: any) {
       console.error("Error updating organization:", error);
       const errorMessage =
