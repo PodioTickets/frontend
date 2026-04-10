@@ -9,6 +9,8 @@ import { useMemo } from "react";
 export function useEventSearch(params: SearchEventsParams = {}) {
   const { page = 1, limit = 20 } = params;
 
+  const modalitiesKey = params.modalities?.join(",") ?? "";
+
   const queryKey = useMemo(
     () => [
       "events-search",
@@ -20,6 +22,7 @@ export function useEventSearch(params: SearchEventsParams = {}) {
         startDate: params.startDate,
         endDate: params.endDate,
         includePast: params.includePast,
+        modalities: modalitiesKey,
         page,
         limit,
       },
@@ -32,6 +35,7 @@ export function useEventSearch(params: SearchEventsParams = {}) {
       params.startDate,
       params.endDate,
       params.includePast,
+      modalitiesKey,
       page,
       limit,
     ]

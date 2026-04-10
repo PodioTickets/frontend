@@ -98,7 +98,16 @@ export function RegisterModal() {
         dataNascimento: birthDate,
         telefone: (user as any)?.phone || "",
         telefoneEmergencia: (user as any)?.emergencyPhone || "",
-        sexo: (user as any)?.gender || (user as any)?.sex || "",
+        sexo: (() => {
+          const raw = (user as any)?.gender || (user as any)?.sex || "";
+          const map: Record<string, string> = {
+            MALE: "Masculino",
+            FEMALE: "Feminino",
+            OTHER: "Outro",
+            PREFER_NOT_TO_SAY: "Prefiro não informar",
+          };
+          return map[raw.toUpperCase().trim()] ?? raw;
+        })(),
         email: user.email || "",
         senha: "",
         confirmarSenha: "",

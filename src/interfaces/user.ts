@@ -13,6 +13,7 @@ export interface User {
   city: string;
   avatarUrl: string;
   password: string;
+  hasPassword?: boolean;
   createdAt: string;
   updatedAt: string;
 }

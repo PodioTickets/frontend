@@ -15,6 +15,7 @@ export interface SearchEventsParams {
   startDate?: string;
   endDate?: string;
   includePast?: boolean;
+  modalities?: string[];
   page?: number;
   limit?: number;
 }
@@ -70,6 +71,7 @@ export class EventService {
       startDate,
       endDate,
       includePast,
+      modalities,
       page = 1,
       limit = 20,
     } = params || {};
@@ -83,6 +85,7 @@ export class EventService {
         startDate,
         endDate,
         includePast: includePast !== undefined ? String(includePast) : undefined,
+        modalities: modalities && modalities.length > 0 ? modalities.join(",") : undefined,
         page,
         limit,
       },

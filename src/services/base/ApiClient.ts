@@ -73,7 +73,8 @@ export class ApiClient {
         const isAuthRoute =
           originalRequest.url?.includes("/auth/login") ||
           originalRequest.url?.includes("/auth/register") ||
-          originalRequest.url?.includes("/auth/refresh");
+          originalRequest.url?.includes("/auth/refresh") ||
+          originalRequest.url?.includes("/auth/change-password");
 
         if (
           error.response?.status === 401 &&

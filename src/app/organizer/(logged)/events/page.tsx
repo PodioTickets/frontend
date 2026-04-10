@@ -336,14 +336,11 @@ export default function OrganizerEventsPage() {
                           </td>
                           <td className="py-4 px-5 text-center">
                             {isCreationDraft ? (
-                              <div className="flex items-center gap-1 justify-center">
-                                <Link
-                                  href={`/organizer/events/new?resume=${event.id}`}
-                                  className="px-3 py-1.5 rounded-lg bg-primary-3 border border-primary-7 hover:bg-primary-4 text-primary-11 text-sm font-semibold font-family-dm-sans transition-colors whitespace-nowrap"
-                                >
-                                  Continuar criação
-                                </Link>
-                              </div>
+                              <Link
+                                href={`/organizer/events/new?resume=${event.id}`}
+                              >
+                                <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10"> Continuar criação</Button>
+                              </Link>
                             ) : (
                               <div className="flex items-center gap-1 justify-center">
                                 <Link

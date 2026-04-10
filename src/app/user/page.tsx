@@ -49,33 +49,24 @@ function mapStoredCountryToPickerValue(raw: string | null | undefined): string {
 const formatGenderFromBackend = (
   backendGender: string | null | undefined
 ): string => {
-  console.log("🔍 formatGenderFromBackend chamado com:", backendGender);
-
   if (!backendGender || backendGender.trim() === "") {
-    console.log("❌ Valor vazio, retornando string vazia");
     return "";
   }
 
   const genderUpper = backendGender.toUpperCase().trim();
-  console.log("🔍 genderUpper:", genderUpper);
 
   switch (genderUpper) {
     case "MALE":
-      console.log("✅ Convertendo MALE para Masculino");
       return "Masculino";
     case "FEMALE":
-      console.log("✅ Convertendo FEMALE para Feminino");
       return "Feminino";
     case "OTHER":
-      console.log("✅ Convertendo OTHER para Outro");
       return "Outro";
     case "PREFER_NOT_TO_SAY":
-      console.log("✅ Convertendo PREFER_NOT_TO_SAY para Prefiro não informar");
       return "Prefiro não informar";
     default:
       // Se já estiver no formato da tela, retorna como está
       const genderLower = backendGender.toLowerCase().trim();
-      console.log("⚠️ Valor não reconhecido no switch, tentando lowercase:", genderLower);
       if (genderLower === "masculino") return "Masculino";
       if (genderLower === "feminino") return "Feminino";
       if (genderLower === "outro") return "Outro";
@@ -87,8 +78,6 @@ const formatGenderFromBackend = (
       ) {
         return "Prefiro não informar";
       }
-      // Se não reconhecer, retorna o valor original (pode ser um valor não mapeado)
-      console.log("❌ Valor não reconhecido, retornando original:", backendGender);
       return backendGender;
   }
 };
@@ -270,16 +259,8 @@ export default function UserProfilePage() {
           const userSex = (user as any)?.sex;
           const genderValue = userGender || userSex;
 
-          console.log("🔍 useEffect atualizando gender:", {
-            userGender,
-            userSex,
-            genderValue,
-            prevGender: prev.gender,
-          });
-
           if (genderValue) {
             const formatted = formatGenderFromBackend(genderValue);
-            console.log("🔍 gender formatado no useEffect:", formatted);
             return formatted;
           }
           return prev.gender;
@@ -368,8 +349,16 @@ export default function UserProfilePage() {
   };
 
   const handleRemoveAvatar = async () => {
-    // TODO: Implement remove avatar endpoint if available
-    toast.error("Funcionalidade de remover avatar ainda não implementada.");
+    setIsUploadingAvatar(true);
+    try {
+      await userService.removeAvatar();
+      await refetchUser();
+      toast.success("Imagem removida com sucesso!");
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao remover imagem.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   // Mask functions
@@ -508,13 +497,9 @@ export default function UserProfilePage() {
         updateData.country = formData.nationality;
       }
 
-      if (formData.phone) {
-        updateData.phone = formData.phone.replace(/\D/g, "");
-      }
+      updateData.phone = formData.phone.replace(/\D/g, "") || null;
 
-      if (formData.emergencyPhone) {
-        updateData.emergencyPhone = formData.emergencyPhone.replace(/\D/g, "");
-      }
+      updateData.emergencyPhone = formData.emergencyPhone.replace(/\D/g, "") || null;
 
       if (formData.gender) {
         // Converter do formato da tela para o formato do backend

@@ -396,14 +396,6 @@ export function ParticipantSummaryModal({
                       {getGenderLabel(participant.gender) || "Não informado"}
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 py-4 col-span-2">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                      Telefone de emergência
-                    </p>
-                    <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {formatPhone(participant.emergencyPhone) || "Opcional"}
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -432,7 +424,7 @@ export function ParticipantSummaryModal({
                               fallbackId={currentProduct.id}
                               fill
                               sizes="136px"
-                              className="size-full"
+                              className="size-full border-0"
                               letterClassName="text-3xl"
                             />
                           ) : null}
@@ -472,7 +464,7 @@ export function ParticipantSummaryModal({
                                       fallbackId={item.id}
                                       fill
                                       sizes="36px"
-                                      className="size-full"
+                                      className="size-full border-0"
                                       letterClassName="text-sm"
                                     />
                                   </button>
@@ -500,7 +492,7 @@ export function ParticipantSummaryModal({
                         name={eventTitle}
                         fill
                         sizes="136px"
-                        className="size-full"
+                        className="size-full border-0"
                         letterClassName="text-3xl"
                       />
                     </div>
@@ -582,7 +574,7 @@ export function ParticipantSummaryModal({
                             fallbackId={product.id}
                             fill
                             sizes="100px"
-                            className="size-full"
+                            className="size-full border-0"
                             letterClassName="text-2xl"
                           />
                         </div>
@@ -649,7 +641,7 @@ export function ParticipantSummaryModal({
                             fallbackId={product.id}
                             fill
                             sizes="100px"
-                            className="size-full"
+                            className="size-full border-0"
                             letterClassName="text-2xl"
                           />
                         </div>

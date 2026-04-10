@@ -109,6 +109,7 @@ function MobileAdvancedSearch() {
     city: effectiveLocation.city || undefined,
     startDate,
     endDate,
+    modalities: modalities.length > 0 ? modalities : undefined,
     page: currentPage,
     limit: 20,
   });
@@ -122,45 +123,8 @@ function MobileAdvancedSearch() {
     searchQuery,
     effectiveLocation.state,
     effectiveLocation.city,
+    searchParams.get("modalities"),
   ]);
-
-  // Filtrar eventos por modalidades e preço (filtros que não estão na API)
-  const filteredEvents = useMemo(() => {
-    let filtered = [...events];
-
-    // Filtrar por modalidades apenas se houver modalidades selecionadas
-    if (modalities.length > 0) {
-      filtered = filtered.filter((event) => {
-        // Verificar se o evento tem alguma modalidade que corresponde às selecionadas
-        if (!event.modalities || event.modalities.length === 0) return false;
-
-        // Mapear os IDs das modalidades selecionadas para códigos de template
-        // Assumindo que os IDs das modalidades correspondem aos códigos dos templates
-        return event.modalities.some((modality) => {
-          const templateCode = modality.template?.code || modality.templateId;
-          return modalities.some((selectedId) => {
-            // Tentar fazer match por código ou ID
-            return selectedId === templateCode || selectedId === modality.id;
-          });
-        });
-      });
-    }
-
-    // Filtrar por preço apenas se houver filtro de preço aplicado
-    const hasPriceFilter =
-      (priceMin && parseInt(priceMin) > 0) ||
-      (priceMax && parseInt(priceMax) < 10000);
-    if (hasPriceFilter) {
-      filtered = filtered.filter((event) => {
-        const eventPrice = event.price || 0;
-        const min = priceMin ? parseInt(priceMin) : 0;
-        const max = priceMax ? parseInt(priceMax) : 10000;
-        return eventPrice >= min && eventPrice <= max;
-      });
-    }
-
-    return filtered;
-  }, [events, modalities, priceMin, priceMax]);
 
   const hasFilters = useMemo(() => {
     return !!(
@@ -297,8 +261,8 @@ function MobileAdvancedSearch() {
               {isLoading
                 ? "Carregando..."
                 : hasFilters
-                ? `Resultados (${filteredEvents.length})`
-                : `Todos os eventos (${filteredEvents.length})`}
+                ? `Resultados (${pagination.total})`
+                : `Todos os eventos (${pagination.total})`}
             </h2>
           </div>
           {/* Local Filter */}
@@ -467,11 +431,11 @@ function MobileAdvancedSearch() {
 
         {/* Events Results */}
         <div className="px-4 pb-8">
-          {isLoading && filteredEvents.length === 0 ? (
+          {isLoading && events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <p className="text-lg text-gray-11 mb-4">Carregando eventos...</p>
             </div>
-          ) : filteredEvents.length === 0 ? (
+          ) : events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <p className="text-lg text-gray-11 mb-4">
                 Nenhum evento encontrado
@@ -485,7 +449,7 @@ function MobileAdvancedSearch() {
           ) : (
             <>
               <div className="grid grid-cols-1 gap-4">
-                {filteredEvents.map((event) => (
+                {events.map((event) => (
                   <EventCard key={event.id} event={event} />
                 ))}
               </div>
@@ -568,6 +532,7 @@ function SearchContent() {
     startDate,
     endDate,
     includePast: includePast || undefined,
+    modalities: modalities.length > 0 ? modalities : undefined,
     page: currentPage,
     limit: 20,
   });
@@ -583,6 +548,7 @@ function SearchContent() {
     dateFrom,
     dateTo,
     includePast,
+    searchParams.get("modalities"),
   ]);
 
   const initialDateRange = useMemo(() => {
@@ -601,23 +567,9 @@ function SearchContent() {
     return [min, max] as [number, number];
   }, [priceMin, priceMax]);
 
-  // Filtrar eventos por modalidades, preço, status e ordenar
+  // Filtrar por status e ordenar (modalidades e preço são filtrados na API)
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
-
-    // Filtrar por modalidades
-    if (modalities.length > 0) {
-      filtered = filtered.filter((event) => {
-        if (!event.modalities || event.modalities.length === 0) return false;
-        return event.modalities.some((modality: any) => {
-          const templateCode = modality.template?.code || modality.templateId;
-          return modalities.some(
-            (selectedId) =>
-              selectedId === templateCode || selectedId === modality.id
-          );
-        });
-      });
-    }
 
     // Filtrar por preço
     const hasPriceFilter =
@@ -663,7 +615,7 @@ function SearchContent() {
           return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
       }
     });
-  }, [events, modalities, priceMin, priceMax, statusFilter, orderBy]);
+  }, [events, priceMin, priceMax, statusFilter, orderBy]);
 
   const hasFilters = useMemo(() => {
     return !!(

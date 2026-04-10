@@ -414,11 +414,11 @@ export function CreateCouponModal() {
               className="fixed inset-0 flex items-center justify-center z-50 p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
+              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
                 {/* Header */}
                 <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
                   <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                  {isEditing ? "Editar cupom" : "Criar cupom"}
+                    {isEditing ? "Editar cupom" : "Criar cupom"}
                   </h2>
                   <button
                     onClick={closeCreateCouponModal}
@@ -644,30 +644,6 @@ export function CreateCouponModal() {
                             </div>
                           )}
 
-                          {/* Código do cupom - para QUANTITY */}
-                          {couponType === "QUANTITY" && (
-                            <div className="flex flex-col gap-2.5">
-                              <div className="flex flex-col gap-2">
-                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Nome do cupom
-                                </label>
-                                <Input
-                                  type="text"
-                                  placeholder="Ex: PODIO10"
-                                  value={code}
-                                  onChange={(e) => {
-                                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                                    if (val.length > 30) {
-                                      return;
-                                    }
-                                    setCode(val);
-                                  }}
-                                  maxLength={30}
-                                  className="h-12"
-                                />
-                              </div>
-                            </div>
-                          )}
 
 
 

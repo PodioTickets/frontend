@@ -1572,19 +1572,7 @@ export function SubscriptionStep({
                                 <span className="text-sm font-bold text-gray-12">
                                   {participant.name.charAt(0).toUpperCase()}
                                 </span>
-                              ) : (
-                                <ImageWithInitialFallback
-                                  src={event.bannerUrl}
-                                  alt={event.name}
-                                  name={event.name}
-                                  fallbackId={event.id}
-                                  fill
-                                  sizes="48px"
-                                  className="size-full border-transparent border-0"
-                                  imgClassName="object-cover"
-                                  letterClassName="text-lg font-bold"
-                                />
-                              )}
+                              ) : null}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-12 truncate">
@@ -1614,8 +1602,20 @@ export function SubscriptionStep({
                         {/* Itens do participante */}
                         <div className="flex flex-col gap-2 border-y border-gray-6 py-4 mb-3">
                           <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
-                            {ticket.name}
-                            <span className="text-gray-12 font-bold">
+                            <span className="flex flex-col gap-0.5">
+                              {(ticket.groupId && categories.find(c => c.id === ticket.groupId)?.name) ? (
+                                <span className="text-xs font-normal text-gray-11">
+                                  {categories.find(c => c.id === ticket.groupId)?.name}
+                                </span>
+                              ) : (
+                                <span className="text-xs font-normal text-gray-11">
+                                  Ingresso Avulso
+                                </span>
+                              )
+                              }
+                              {ticket.name}
+                            </span>
+                            <span className="text-gray-12 font-bold shrink-0">
                               {formatPrice(ticketPrice)}
                             </span>
                           </p>

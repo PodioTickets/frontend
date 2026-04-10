@@ -23,6 +23,7 @@ interface PaymentSuccessStepProps {
   participantsData?: Array<{
     participantIndex: number;
     ticketName: string;
+    categoryName?: string;
     ticketPrice: number;
     qrCode?: string | {
       registrationId?: string;
@@ -418,6 +419,11 @@ export function PaymentSuccessStep({
                               <p className="font-bold text-lg leading-[1.1] font-manrope">
                                 {participantData.ticketName}
                               </p>
+                              {participantData.categoryName && (
+                                <p className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
+                                  {participantData.categoryName}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-4 items-start w-full">
@@ -578,19 +584,6 @@ export function PaymentSuccessStep({
                                     />
                                   </div>
                                 ))}
-                                <div className="flex flex-col items-start rounded-lg w-full">
-                                  <label className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                                    Telefone de emergência
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={
-                                      participant.emergencyPhone || "Opcional"
-                                    }
-                                    readOnly
-                                    className="w-full font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
-                                  />
-                                </div>
                               </div>
                             </div>
                           ) : (
@@ -880,6 +873,11 @@ export function PaymentSuccessStep({
                             <h3 className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
                               {participantData.ticketName}
                             </h3>
+                            {participantData.categoryName && (
+                              <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
+                                {participantData.categoryName}
+                              </p>
+                            )}
                             <div className="flex gap-[32px] items-start">
                               <div className="flex gap-[8px] items-center">
                                 <DistanceIcon className="size-6 text-gray-12" />
@@ -1063,19 +1061,6 @@ export function PaymentSuccessStep({
                                     />
                                   </div>
                                 ))}
-                                <div className="flex flex-col gap-2 items-start rounded-[8px] col-span-2">
-                                  <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                                    Telefone de emergência
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={
-                                      participant.emergencyPhone || "Opcional"
-                                    }
-                                    readOnly
-                                    className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
-                                  />
-                                </div>
                               </div>
                             </div>
                           ) : (

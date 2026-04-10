@@ -23,6 +23,7 @@ interface GroupedTicket {
 interface ParticipantData {
   participantIndex: number;
   ticketName: string;
+  categoryName?: string;
   ticketPrice: number;
   additionalProducts?: Array<{
     name: string;
@@ -247,7 +248,6 @@ export function OrderSummary({
           {/* Lista de Participantes */}
           <div className="flex flex-col gap-4 items-start w-full pb-4">
             {participantsData.map((participantData, index) => {
-              const isExpanded = expandedParticipants[index] ?? false;
               const additionalProductsTotal = participantData.additionalProducts?.reduce(
                 (sum, p) => sum + p.price * p.quantity,
                 0
@@ -267,9 +267,19 @@ export function OrderSummary({
                           Participante {participantData.participantIndex + 1}
                         </p>
                       </div>
-                      <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
+                      <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
+                        {participantData.categoryName ? (
+                          <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                            {participantData.categoryName}
+                          </p>
+                        ) : (
+                          <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                            Ingresso Avulso
+                          </p>
+                        )}
                         {participantData.ticketName}
                       </p>
+
                       <div className="flex items-end justify-between w-full text-gray-12">
                         <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
                           Valor do ingresso:

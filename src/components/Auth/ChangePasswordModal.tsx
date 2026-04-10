@@ -35,8 +35,10 @@ export function ChangePasswordModal() {
 
     if (!newPassword) {
       newErrors.newPassword = "Nova senha é obrigatória";
-    } else if (newPassword.length < 6) {
-      newErrors.newPassword = "A senha deve ter no mínimo 6 caracteres";
+    } else if (newPassword.length < 8) {
+      newErrors.newPassword = "A senha deve ter no mínimo 8 caracteres";
+    } else if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      newErrors.newPassword = "A senha deve conter letra maiúscula, minúscula e número";
     }
 
     if (!confirmPassword) {
@@ -57,23 +59,24 @@ export function ChangePasswordModal() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement API call to change password
-      // await userService.changePassword({
-      //   currentPassword,
-      //   newPassword,
-      // });
-
-      // Simulate API call for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await userService.changePassword({
+        ...(hasPassword && { currentPassword }),
+        newPassword,
+      });
 
       toast.success("Senha alterada com sucesso!");
       closeChangePasswordModal();
       resetForm();
+      await refetchUser();
     } catch (error: any) {
       console.error("Error changing password:", error);
-      toast.error(
-        error?.message || "Erro ao alterar senha. Verifique os dados e tente novamente."
-      );
+      const message: string = error?.message || "Erro ao alterar senha. Verifique os dados e tente novamente.";
+
+      if (message.toLowerCase().includes("senha atual")) {
+        setErrors((prev) => ({ ...prev, currentPassword: message }));
+      } else {
+        toast.error(message);
+      }
     } finally {
       setIsSubmitting(false);
     }

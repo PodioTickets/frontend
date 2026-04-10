@@ -809,10 +809,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   };
 
   // Generate participants data for the list
+  const categoryNameMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories]
+  );
+
   const participantsData = useMemo(() => {
     const data: Array<{
       participantIndex: number;
       ticketName: string;
+      categoryName?: string;
       ticketPrice: number;
       additionalProducts?: Array<{
         name: string;
@@ -841,6 +847,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         data.push({
           participantIndex,
           ticketName: ticket.name,
+          categoryName: ticket.groupId ? categoryNameMap.get(ticket.groupId) : undefined,
           ticketPrice: getTicketPrice(ticket),
           participant: {
             name: participant.name || "",

@@ -8,7 +8,7 @@ import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { OrganizerSidebar } from "@/components/Organizer/OrganizerSidebar";
-import { useChangeEmailModal } from "@/stores/modalStore";
+import { useChangeEmailModal, useChangePasswordModal } from "@/stores/modalStore";
 import { Download, Mail, Lock, ShieldCheck, User, ArrowRight, Plus } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -27,6 +27,7 @@ export default function OrganizerSettingsPage() {
   const orgNav = useOrganizerNavigate();
   const { isAuthenticated, isLoading: authLoading, user, refetchUser } = useAuth();
   const { openChangeEmailModal } = useChangeEmailModal();
+  const { openChangePasswordModal } = useChangePasswordModal();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -103,13 +104,16 @@ export default function OrganizerSettingsPage() {
   };
 
   const handleRemoveImage = async () => {
+    setUploadingImage(true);
     try {
-      // TODO: Implementar remoção de imagem
+      await userService.removeAvatar();
+      await refetchUser();
       toast.success("Imagem removida com sucesso!");
-      window.location.reload();
     } catch (error: any) {
       console.error("Error removing image:", error);
-      toast.error("Erro ao remover imagem");
+      toast.error(error?.message || "Erro ao remover imagem.");
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -145,8 +149,7 @@ export default function OrganizerSettingsPage() {
   };
 
   const handleChangePassword = () => {
-    // TODO: Implementar modal de alteração de senha
-    toast("Funcionalidade em desenvolvimento", { icon: "ℹ️" });
+    openChangePasswordModal();
   };
 
   if (loading) {

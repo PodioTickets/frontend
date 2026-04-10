@@ -523,6 +523,28 @@ export class UserService {
     }
   }
 
+  async changePassword(data: {
+    currentPassword?: string;
+    newPassword: string;
+  }): Promise<{ success: boolean; message?: string }> {
+    try {
+      const payload: Record<string, string> = { newPassword: data.newPassword };
+      if (data.currentPassword) payload.currentPassword = data.currentPassword;
+      const response = await this.apiClient.post("/api/v1/auth/change-password", payload);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async removeAvatar(): Promise<void> {
+    try {
+      await this.apiClient.delete("/api/v1/user/avatar");
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
     try {
       const formData = new FormData();
