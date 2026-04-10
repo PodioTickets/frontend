@@ -165,11 +165,9 @@ export function PaymentDetailsModal() {
   const buyer = paymentDetails?.buyer || registration?.user;
   const registrationUser = registration?.user;
 
-  // Combinar dados: usar buyer como base, mas preencher campos faltantes com user da registration
   const buyerData = {
     ...buyer,
     ...registrationUser,
-    // Manter dados do buyer quando disponíveis
     firstName: buyer?.firstName || registrationUser?.firstName,
     lastName: buyer?.lastName || registrationUser?.lastName,
     fullName: buyer?.fullName || registrationUser?.fullName,
@@ -179,6 +177,7 @@ export function PaymentDetailsModal() {
     dateOfBirth: buyer?.dateOfBirth || registrationUser?.dateOfBirth,
     gender: buyer?.gender || registrationUser?.gender,
     reservePhone: buyer?.reservePhone || registrationUser?.reservePhone,
+
   };
 
   const formatBillingCep = (code?: string | null) => {
@@ -192,18 +191,18 @@ export function PaymentDetailsModal() {
 
   const billingAddressMobileRows = billingAddress
     ? [
-        { label: "País", value: billingAddress.country || "—" },
-        { label: "CEP", value: formatBillingCep(billingAddress.postalCode) || "—" },
-        { label: "Estado", value: billingAddress.stateUf || "—" },
-        { label: "Cidade", value: billingAddress.city || "—" },
-        { label: "Bairro", value: billingAddress.neighborhood || "—" },
-        { label: "Número", value: billingAddress.number || "—" },
-        { label: "Logradouro", value: billingAddress.street || "—" },
-        {
-          label: "Complemento",
-          value: billingAddress.complement?.trim() || "—",
-        },
-      ]
+      { label: "País", value: billingAddress.country || "—" },
+      { label: "CEP", value: formatBillingCep(billingAddress.postalCode) || "—" },
+      { label: "Estado", value: billingAddress.stateUf || "—" },
+      { label: "Cidade", value: billingAddress.city || "—" },
+      { label: "Bairro", value: billingAddress.neighborhood || "—" },
+      { label: "Número", value: billingAddress.number || "—" },
+      { label: "Logradouro", value: billingAddress.street || "—" },
+      {
+        label: "Complemento",
+        value: billingAddress.complement?.trim() || "—",
+      },
+    ]
     : [];
 
   const paymentDetailsWithRegistrations = paymentDetails as PaymentDetails & { registrations?: Array<{ id: string; name: string; email: string; ticket?: { id: string; name: string } | null; ticketCategory?: { id: string; name: string } | null }> };
@@ -655,14 +654,6 @@ export function PaymentDetailsModal() {
                                     : buyerData?.gender || "—"}
                             </p>
                           </div>
-                          <div className="flex flex-col py-2">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              Telefone de emergência
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {formatPhone(buyerData?.reservePhone || null) || "—"}
-                            </p>
-                          </div>
                         </div>
                       </div>
 
@@ -969,6 +960,8 @@ export function PaymentDetailsModal() {
                                 <button
                                   type="button"
                                   aria-label="Informações do participante"
+                                  title="Informações do participante"
+                                  name="view-participant-details"
                                   onClick={() => goToParticipantDetails(participant.viewRegistrationId)}
                                   className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                                 >

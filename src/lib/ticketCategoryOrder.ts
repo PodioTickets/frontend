@@ -44,15 +44,31 @@ export const organizerTicketCategoriesCollisionDetection: CollisionDetection = (
     });
     return closestCorners({ ...args, droppableContainers: filtered });
   }
-  /** Ingresso: priorizar área `category-*` sob o ponteiro (evita “colar” no ticket errado e falha ao soltar em avulsos). */
+  /** Ingresso: priorizar área `category-*` sob o ponteiro apenas quando é uma categoria diferente da de origem. */
   if (activeId.startsWith(TICKET_DRAG_PREFIX)) {
+    const activeData = args.active.data.current as
+      | { type?: string; ticket?: { groupId?: string } }
+      | undefined;
+    const activeGroupId = activeData?.ticket?.groupId;
+    const activeCategoryDropId =
+      activeGroupId && activeGroupId !== 'uncategorized'
+        ? `${CATEGORY_DROP_ID_PREFIX}${activeGroupId}`
+        : `${CATEGORY_DROP_ID_PREFIX}uncategorized`;
+
     const pointerHits = pointerWithin(args);
     const categoryHits = pointerHits.filter((c) =>
       String(c.id).startsWith(CATEGORY_DROP_ID_PREFIX),
     );
-    if (categoryHits.length > 0) {
-      return categoryHits;
+
+    // Se o ponteiro está sobre uma categoria DIFERENTE da de origem → mover entre categorias
+    const crossCategoryHits = categoryHits.filter(
+      (c) => String(c.id) !== activeCategoryDropId,
+    );
+    if (crossCategoryHits.length > 0) {
+      return crossCategoryHits;
     }
+
+    // Mesma categoria (ou avulsos) → usa closestCorners para detectar o ticket alvo e reordenar
   }
   return closestCorners(args);
 };

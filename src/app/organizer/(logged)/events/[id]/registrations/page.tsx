@@ -346,12 +346,18 @@ function RegistrationRow({
       <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
         <button
           onClick={onViewPaymentDetails}
+          name="view-payment-details"
+          aria-label="Ver pedido"
+          title="Ver pedido"
           className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
         >
           <FileText className="size-4 text-gray-11" />
         </button>
         <button
           onClick={onViewRegistration}
+          name="view-registration"
+          aria-label="Ver ingresso"
+          title="Ver ingresso"
           className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
         >
           <TicketIcon className="size-4 text-gray-11" />
@@ -945,6 +951,9 @@ export default function EventRegistrationsPage() {
           {/* Ticket Filter */}
           <button
             onClick={() => setIsTicketModalOpen(true)}
+            name="select-tickets"
+            aria-label="Selecionar ingressos"
+            title="Selecionar ingressos"
             className="flex items-center gap-2 px-4 py-3 rounded-lg border border-gray-6 bg-gray-1 text-gray-12 hover:bg-gray-3 transition-colors cursor-pointer min-w-[140px]"
           >
             <TicketIcon className="size-4 shrink-0" />

@@ -180,7 +180,7 @@ export function UserAutocomplete({
         placeholder={placeholder}
         disabled={disabled}
         className={cn(
-          "w-full px-4 py-3 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors",
+          "w-full px-4 py-3 rounded-lg border border-gray-6 bg-gray-2 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}
       />

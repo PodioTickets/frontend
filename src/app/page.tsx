@@ -1,10 +1,13 @@
+import { Suspense } from "react";
 import { HomeFilters } from "@/components/HomeFilters";
 import { EventCarousel } from "@/components/EventCarousel";
 
 export default function Home() {
   return (
     <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12 md:mb-44">
-      <HomeFilters />
+      <Suspense fallback={null}>
+        <HomeFilters />
+      </Suspense>
 
       {/* Hero Banner */}
       <div className="w-full mt-6 md:mt-14">

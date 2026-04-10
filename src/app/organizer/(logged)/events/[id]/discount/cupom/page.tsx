@@ -22,6 +22,7 @@ import { Loading } from "@/components/Loading";
 interface Coupon {
   id: string;
   code: string;
+  couponType: "AGE" | "QUANTITY" | "DISCOUNT";
   type: "PERCENTAGE" | "FIXED";
   value: number;
   expiryDate: string;
@@ -332,8 +333,11 @@ export default function CouponsPage() {
                               <td className="py-4 px-5">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
-                                    {coupon.code}
+                                    {coupon.couponType === "AGE" ? "Cupom automático por idade" : coupon.couponType === "QUANTITY" ? `Cupom automático por quantidade` : coupon.code}
                                   </span>
+                                  {coupon.couponType === "DISCOUNT" && (
+                                    <CopyIcon onClick={() => handleCopyCode(coupon.code)} className="size-4 text-gray-11" />
+                                  )}
                                 </div>
                               </td>
                               <td className="py-4 px-5 text-center">
@@ -388,6 +392,7 @@ export default function CouponsPage() {
                 <div className="md:hidden flex flex-col gap-3">
                   {coupons.map((coupon) => {
                     const statusBadge = getStatusBadge(coupon.status);
+                    console.log(coupon);
                     return (
                       <div
                         key={coupon.id}
@@ -398,7 +403,7 @@ export default function CouponsPage() {
                             <div className="flex flex-col gap-3 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-manrope font-semibold text-base leading-[1.1] text-gray-12 truncate">
-                                  {coupon.code}
+                                  {coupon.couponType === "AGE" ? "Cupom automático por idade" : coupon.couponType === "QUANTITY" ? `Cupom automático por quantidade` : coupon.code}
                                 </span>
                                 <button
                                   type="button"

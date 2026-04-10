@@ -131,7 +131,7 @@ export function TicketAdvancedKitDisplayOptions({
                   className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12"
                   onClick={() => setShowKitImages(false)}
                 >
-                  Não?
+                  Não
                 </button>
               </div>
             </div>

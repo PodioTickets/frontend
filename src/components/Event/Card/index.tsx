@@ -94,7 +94,7 @@ export function EventCard({ event }: EventCardProps) {
           fallbackId={event.id}
           fill
           sizes="(max-width: 768px) 100vw, 300px"
-          className="size-full border-transparent border-0"
+          className="size-full border-transparent border-0 aspect-square"
           letterClassName="text-6xl"
         />
       </div>

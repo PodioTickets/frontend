@@ -10,7 +10,7 @@ import { SearchIcon } from "lucide-react";
 import { DateRangePicker } from "../DateRangePicker";
 import { PriceRangeSlider } from "../PriceRangeSlider";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 import Link from "next/link";
 import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
@@ -74,6 +74,7 @@ export function HomeFilters({
   initialPriceRange = [0, 10000],
 }: HomeFiltersProps = {}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { facets, isLoading: facetsLoading } = useEventLocationFacets();
 
   const [selectedModalities, setSelectedModalities] =
@@ -211,39 +212,35 @@ export function HomeFilters({
   const handleSearch = useCallback(() => {
     const params = new URLSearchParams();
 
-    if (selectedStateApi) {
-      params.set("state", selectedStateApi);
-    }
-    if (selectedCityApi) {
-      params.set("city", selectedCityApi);
-    }
+    // Preservar parâmetros que não são gerenciados por este componente (q, status, orderBy)
+    const q = searchParams.get("q");
+    if (q) params.set("q", q);
+    const status = searchParams.get("status");
+    if (status) params.set("status", status);
+    const orderBy = searchParams.get("orderBy");
+    if (orderBy) params.set("orderBy", orderBy);
+
+    if (selectedStateApi) params.set("state", selectedStateApi);
+    if (selectedCityApi) params.set("city", selectedCityApi);
 
     if (selectedModalities.length > 0) {
       params.set("modalities", selectedModalities.join(","));
     }
 
     if (selectedDateRange?.from) {
-      params.set(
-        "dateFrom",
-        selectedDateRange.from.toISOString().split("T")[0]
-      );
+      params.set("dateFrom", selectedDateRange.from.toISOString().split("T")[0]);
     }
-
     if (selectedDateRange?.to) {
       params.set("dateTo", selectedDateRange.to.toISOString().split("T")[0]);
     }
 
-    if (priceRange[0] > 0) {
-      params.set("priceMin", priceRange[0].toString());
-    }
-
-    if (priceRange[1] < 10000) {
-      params.set("priceMax", priceRange[1].toString());
-    }
+    if (priceRange[0] > 0) params.set("priceMin", priceRange[0].toString());
+    if (priceRange[1] < 10000) params.set("priceMax", priceRange[1].toString());
 
     const queryString = params.toString();
     router.push(`/search${queryString ? `?${queryString}` : ""}`);
   }, [
+    searchParams,
     selectedStateApi,
     selectedCityApi,
     selectedModalities,

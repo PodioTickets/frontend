@@ -765,6 +765,14 @@ export function SubscriptionStep({
     return getRequiredProductsTotal(participantIndex) + getAdditionalProductsTotal(participantIndex);
   };
 
+  const formatDate = (date: string) => {
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(date));
+  };
+
   // Calcular total geral de produtos de todos os participantes
   const totalProductsPrice = useMemo(() => {
     return participantsWithTickets.reduce((total, { participantIndex }) => {
@@ -836,7 +844,7 @@ export function SubscriptionStep({
                       : undefined
                   }
                 >
-                    <div className="flex items-center gap-2 p-2 border border-gray-6 rounded-xl">
+                  <div className="flex items-center gap-2 p-2 border border-gray-6 rounded-xl">
                     <div className="w-10 h-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
                       {participant?.name ? (
                         <span className="text-sm font-bold text-gray-12">
@@ -1515,9 +1523,33 @@ export function SubscriptionStep({
         {/* Coluna direita - Participantes e resumo */}
         <div className="w-1/3 shrink-0">
           <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
-            <div className="p-4">
-              <h1 className="text-lg font-bold mb-4">Participantes</h1>
+            <div className="h-44 w-full relative shrink-0">
+              <ImageWithInitialFallback
+                src={event.bannerUrl}
+                alt={event.name}
+                name={event.name}
+                fallbackId={event.id}
+                fill
+                sizes="100%"
+                className="size-full border-transparent border-0 object-cover"
+                letterClassName="text-5xl"
+              />
+            </div>
 
+            <div className="flex flex-col justify-center px-4 py-4 border-r border-gray-6 flex-1 min-w-0">
+              <div className="flex flex-col gap-2">
+                <p className="text-base text-gray-11">Seu pedido:</p>
+                <h1 className="text-xl font-bold text-gray-12 leading-tight">
+                  {event.name}
+                </h1>
+                <p className="text-base font-medium text-gray-12">
+                  Do dia {formatDate(event.eventDate)}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 pt-2">
+              <h1 className="text-lg font-bold mb-4">Participantes</h1>
               {/* Lista de participantes */}
               <div className="flex flex-col gap-4">
                 {participantsWithTickets.map(

@@ -187,11 +187,11 @@ export function CreateVoucherModal() {
               className="fixed inset-0 flex items-center justify-center z-50 p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl">
+              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
                 {/* Header */}
                 <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
                   <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                    Criar voucher
+                    {isEditing ? "Editar voucher" : "Criar voucher"}
                   </h2>
                   <button
                     onClick={closeCreateVoucherModal}
@@ -215,15 +215,10 @@ export function CreateVoucherModal() {
                             type="text"
                             placeholder="Ex: Corrida paranense"
                             value={name}
+                            maxLength={30}
                             onChange={(e) => setName(e.target.value)}
                             className="h-12"
                           />
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <InfoIcon className="size-5 text-gray-11 shrink-0" />
-                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                            Limite de X caracteres
-                          </p>
                         </div>
                       </div>
 
@@ -479,7 +474,7 @@ export function CreateVoucherModal() {
                     className="h-11 px-5"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Salvando..." : "Criar vouchers"}
+                    {isSubmitting ? "Salvando..." : isEditing ? "Editar voucher" : "Criar voucher"}
                   </Button>
                 </div>
               </div>

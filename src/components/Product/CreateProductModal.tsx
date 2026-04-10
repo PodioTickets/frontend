@@ -101,7 +101,7 @@ export function CreateProductModal() {
   const [basePrice, setBasePrice] = useState("");
   const [variationTypeName, setVariationTypeName] = useState("");
   const [variations, setVariations] = useState<ProductVariation[]>([]);
-  /** Padrão Figma: «Não» — liberar edição da variação pelo comprador */
+  const [isRequired, setIsRequired] = useState(true);
   const [buyerCanEditVariation, setBuyerCanEditVariation] = useState(false);
   const [variationChangeDeadlineDays, setVariationChangeDeadlineDays] =
     useState("30");
@@ -262,6 +262,7 @@ export function CreateProductModal() {
           (rec.basePrice ?? rec.base_price) as number | string | undefined,
         ),
       );
+      setIsRequired(rec.isRequired !== false);
       setVariationTypeName(
         sanitizeVariationTypeLabelInput(
           String(rec.variationType ?? rec.variation_type ?? ""),
@@ -346,6 +347,7 @@ export function CreateProductModal() {
       setProductName("");
       setProductImage(null);
       setIsIncludedInTicket(true);
+      setIsRequired(true);
       setBasePrice("");
       setVariationTypeName("");
       organizerHiddenSemInteresseRef.current = null;
@@ -647,7 +649,7 @@ export function CreateProductModal() {
         image: productImage,
         isIncludedInTicket,
         basePrice: Math.round(basePriceReais * 100),
-        isRequired: isIncludedInTicket,
+        isRequired: isIncludedInTicket ? isRequired : false,
         variationType: variationTypeName.trim() || undefined,
         variations: (() => {
           const fromForm = variations
@@ -773,9 +775,6 @@ export function CreateProductModal() {
               closeCreateProductModal();
             }}
           />
-
-          {/* Modal — animação só com opacity: scale/y no motion aplicam transform e no mobile
-              quebram position:fixed do rodapé + scroll (faixa branca / modal “subindo”). */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1049,6 +1048,7 @@ export function CreateProductModal() {
                             checked={!isIncludedInTicket}
                             onChange={() => {
                               setIsIncludedInTicket(false);
+                              setIsRequired(false);
                               setBasePrice((p) =>
                                 (p ?? "").trim() === "" ? "0,00" : p,
                               );
@@ -1106,6 +1106,58 @@ export function CreateProductModal() {
                         </div>
                       )}
                     </div>
+
+                    {/* Is Required */}
+                    {isIncludedInTicket && (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-1">
+                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                          Este produto é obrigatório ou opcional?
+                        </label>
+                        <Tooltip
+                          content={
+                            <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
+                              Se for obrigatório, o participante deverá
+                              selecioná-lo para concluir a inscrição.
+                            </p>
+                          }
+                          position="topRight"
+                        >
+                          <button
+                            type="button"
+                            className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
+                            aria-label="Informação: produto obrigatório ou opcional"
+                          >
+                            <BookIcon className="size-5 shrink-0" />
+                          </button>
+                        </Tooltip>
+                      </div>
+                      <div className="flex gap-2.5">
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            checked={isRequired}
+                            onChange={() => setIsRequired(true)}
+                            name="required"
+                            className="size-6"
+                          />
+                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
+                            Obrigatório
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Radio
+                            checked={!isRequired}
+                            onChange={() => setIsRequired(false)}
+                            name="required"
+                            className="size-6"
+                          />
+                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
+                            Opcional
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    )}
 
                     {/* Variations */}
                     <div className="flex flex-col gap-3">

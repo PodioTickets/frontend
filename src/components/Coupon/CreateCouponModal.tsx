@@ -57,6 +57,49 @@ export function CreateCouponModal() {
   const isEditing = data?.couponId !== undefined;
   const eventId = data?.eventId;
 
+  const hasChanges = useMemo(() => {
+    if (!isEditing) {
+      return !!(couponType || code || value || note);
+    }
+    const c = data?.coupon;
+    if (!c) return false;
+    const originalType: DiscountType = c.type || "PERCENTAGE";
+    let originalValue = "";
+    if (c.value != null) {
+      originalValue = originalType === "PERCENTAGE"
+        ? `${c.value}%`
+        : `R$ ${Number(c.value).toFixed(2).replace(".", ",")}`;
+    }
+    const originalAppliesTo = (c.appliesTo === "all" || !c.appliesTo) ? "all" : "specific";
+    const originalTicketIds = Array.isArray(c.appliesTo)
+      ? c.appliesTo.map((t: any) => (typeof t === "string" ? t : t.id)).sort()
+      : [];
+
+    return (
+      couponType !== (c.couponType || "DISCOUNT") ||
+      code !== (c.code || "") ||
+      note !== (c.note || "") ||
+      discountType !== originalType ||
+      value !== originalValue ||
+      appliesTo !== originalAppliesTo ||
+      JSON.stringify([...selectedTicketIds].sort()) !== JSON.stringify(originalTicketIds) ||
+      expiryDate !== (c.expiryDate || null) ||
+      expiryEnabled !== !!c.expiryDate ||
+      minCartValue !== (c.minCartValue?.toString() || "") ||
+      minCartEnabled !== !!c.minCartValue ||
+      cpfListStatus !== (c.cpfListStatus || "DISABLED") ||
+      JSON.stringify(cpfList) !== JSON.stringify(c.cpfList || []) ||
+      minQuantity !== (c.minQuantity?.toString() || "") ||
+      ageRule !== (c.ageRule || "MIN") ||
+      ageValue !== (c.ageValue?.toString() || "")
+    );
+  }, [
+    isEditing, data, couponType, code, note, discountType, value,
+    appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
+    minCartValue, minCartEnabled, cpfListStatus, cpfList,
+    minQuantity, ageRule, ageValue,
+  ]);
+
   // Initialize form when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -66,8 +109,18 @@ export function CreateCouponModal() {
         setCouponType(c.couponType || "DISCOUNT");
         setCode(c.code || "");
         setNote(c.note || "");
-        setDiscountType(c.type || "PERCENTAGE");
-        setValue(c.value?.toString() || "");
+        const type: DiscountType = c.type || "PERCENTAGE";
+        setDiscountType(type);
+        if (c.value != null) {
+          if (type === "PERCENTAGE") {
+            setValue(`${c.value}%`);
+          } else {
+            const formatted = Number(c.value).toFixed(2).replace(".", ",");
+            setValue(`R$ ${formatted}`);
+          }
+        } else {
+          setValue("");
+        }
 
         // Handle appliesTo - pode ser "all" ou array de objetos com ingressos
         if (c.appliesTo === "all" || !c.appliesTo) {
@@ -117,10 +170,6 @@ export function CreateCouponModal() {
     }
   }, [isOpen, isEditing, data]);
 
-  // Reset valor quando o tipo de desconto mudar
-  useEffect(() => {
-    setValue("");
-  }, [discountType]);
 
   useEffect(() => {
     if (!showAdvanced) return;
@@ -369,7 +418,7 @@ export function CreateCouponModal() {
                 {/* Header */}
                 <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
                   <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                    Criar cupom
+                  {isEditing ? "Editar cupom" : "Criar cupom"}
                   </h2>
                   <button
                     onClick={closeCreateCouponModal}
@@ -449,11 +498,6 @@ export function CreateCouponModal() {
                             </span>
                           </button>
                         </div>
-                        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                          {couponType === "DISCOUNT" && "O participante digita um código no pagamento"}
-                          {couponType === "QUANTITY" && "Aplica ao comprar uma quantidade mínima de ingressos"}
-                          {couponType === "AGE" && "Aplica conforme a idade do participante na data do evento"}
-                        </p>
                       </div>
 
                       {/* Renderizar inputs apenas após selecionar um tipo */}
@@ -474,7 +518,7 @@ export function CreateCouponModal() {
                           {couponType === "QUANTITY" && (
                             <div className="flex flex-col gap-3">
                               <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                                Cupom automático por idade
+                                Cupom por quantidade (automático)
                               </h3>
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos
@@ -485,7 +529,7 @@ export function CreateCouponModal() {
                           {couponType === "AGE" && (
                             <div className="flex flex-col gap-3">
                               <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                                Cupom automático por quantidade
+                                Cupom por idade (automático)
                               </h3>
                               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                 Desconto automático para participantes dentro de uma faixa de idade na data do evento
@@ -641,7 +685,7 @@ export function CreateCouponModal() {
                               <label className="flex items-center gap-2">
                                 <Radio
                                   checked={discountType === "PERCENTAGE"}
-                                  onChange={() => setDiscountType("PERCENTAGE")}
+                                  onChange={() => { setDiscountType("PERCENTAGE"); setValue(""); }}
                                 />
                                 <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                   Percentual (%)
@@ -650,7 +694,7 @@ export function CreateCouponModal() {
                               <label className="flex items-center gap-2">
                                 <Radio
                                   checked={discountType === "FIXED"}
-                                  onChange={() => setDiscountType("FIXED")}
+                                  onChange={() => { setDiscountType("FIXED"); setValue(""); }}
                                 />
                                 <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
                                   Valor fixo (R$)
@@ -1018,9 +1062,9 @@ export function CreateCouponModal() {
                     onClick={handleSave}
                     variant="default"
                     className="h-11 px-5"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !hasChanges}
                   >
-                    {isSubmitting ? "Salvando..." : "Criar cupom"}
+                    {isSubmitting ? "Salvando..." : isEditing ? "Editar cupom" : "Criar cupom"}
                   </Button>
                 </div>
               </div>

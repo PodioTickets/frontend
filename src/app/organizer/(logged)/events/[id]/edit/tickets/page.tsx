@@ -246,7 +246,6 @@ export default function EditTicketsPage() {
 
     const handleTicketCreated = () => {
       const qk = queryKeys.events.tickets(eventId);
-      void queryClient.invalidateQueries({ queryKey: qk });
       void queryClient.refetchQueries({ queryKey: qk });
     };
 
@@ -387,10 +386,6 @@ export default function EditTicketsPage() {
       setDuplicatingTicketId(ticketId);
       try {
         await organizerService.duplicateTicket(eventId, ticketId);
-
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.events.tickets(eventId),
-        });
 
         await queryClient.refetchQueries({
           queryKey: queryKeys.events.tickets(eventId),
@@ -603,9 +598,6 @@ export default function EditTicketsPage() {
               ) ?? categories;
             await persistTicketOrderDrafts(eventId, ticketList, cats, orderPatch);
             setTicketOrderDraft({});
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.events.tickets(eventId),
-            });
             await queryClient.refetchQueries({
               queryKey: queryKeys.events.tickets(eventId),
             });
@@ -771,12 +763,6 @@ export default function EditTicketsPage() {
   const discardLocalChanges = useCallback(async () => {
     if (!eventId) return;
     setTicketOrderDraft({});
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.events.tickets(eventId),
-    });
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.events.ticketCategories(eventId),
-    });
     await queryClient.refetchQueries({
       queryKey: queryKeys.events.tickets(eventId),
     });

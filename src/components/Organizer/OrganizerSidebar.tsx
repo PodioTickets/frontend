@@ -8,15 +8,15 @@ import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { useAuth } from "@/hooks/useAuth";
-import { Home, TrendingUp, Ticket, Settings, FileText, LogOut, ChevronDown, Medal, Sun, HelpCircle, Building2 } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { ArrowButton } from "../ArrowButton";
 import { LogOutIcon } from "../Icons/LogOutIcon";
 import { organizerService } from "@/services";
+import type { UserOrganization } from "@/services/organizer/OrganizerService";
 import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
-import { InfoIcon } from "../Icons/InfoIcon";
 import { ConfigIcon } from "../Icons/ConfigIcon";
 import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
@@ -35,8 +35,9 @@ export function OrganizerSidebar() {
   const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
+  const [isOrgMenuOpen, setIsOrgMenuOpen] = useState<string | false>(false);
   const [organizer, setOrganizer] = useState<any>(null);
+  const [myOrganizations, setMyOrganizations] = useState<UserOrganization[]>([]);
   const { openAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
 
   const handleLogout = async () => {
@@ -47,10 +48,13 @@ export function OrganizerSidebar() {
   useEffect(() => {
     const loadOrganizer = async () => {
       try {
-        const org = await organizerService.getOrganization();
-        setOrganizer(org);
+        const [org, orgs] = await Promise.allSettled([
+          organizerService.getOrganization(),
+          organizerService.getMyOrganizations(),
+        ]);
+        if (org.status === "fulfilled") setOrganizer(org.value);
+        if (orgs.status === "fulfilled") setMyOrganizations(orgs.value);
       } catch (error: any) {
-        // Organization might not exist yet, that's okay
         console.error("Error loading organization:", error);
       }
     };
@@ -75,7 +79,9 @@ export function OrganizerSidebar() {
     },
   ];
 
-  const isOrgOwner = isCurrentUserOrganizationOwner(organizer, user?.id);
+  const isOrgOwner =
+    myOrganizations.some((o) => o.role === "OWNER") ||
+    isCurrentUserOrganizationOwner(organizer, user?.id);
   const visibleNavItems = navItems.filter(
     (item) => !OWNER_ONLY_NAV_HREFS.has(item.href) || isOrgOwner,
   );
@@ -266,26 +272,20 @@ export function OrganizerSidebar() {
                 >
 
 
-                  {/* Organization Entry */}
-                  {organizer && (
-                    <div className="relative w-full">
+                  {/* Organizations List */}
+                  {myOrganizations.map((org) => (
+                    <div key={org.id} className="relative w-full">
                       <button
-                        onClick={() => setIsOrgMenuOpen(!isOrgMenuOpen)}
+                        onClick={() => setIsOrgMenuOpen(isOrgMenuOpen === org.id ? false : org.id)}
                         className="border-b border-gray-6 flex items-center justify-between p-[12px] relative shrink-0 w-full hover:bg-gray-3 transition-colors"
                       >
                         <div className="flex flex-1 gap-[8px] items-center min-w-0">
                           <div className="relative shrink-0 size-[36px] rounded-full overflow-hidden bg-gray-6">
                             <ImageWithInitialFallback
-                              src={(() => {
-                                const url =
-                                  organizer?.logoUrl || organizer?.avatarUrl;
-                                return url?.trim()
-                                  ? getAvatarUrl(url)
-                                  : null;
-                              })()}
-                              alt={organizer.name || "Organização"}
-                              name={organizer.name || "Organização"}
-                              fallbackId={organizer.id}
+                              src={org.logoUrl?.trim() ? getAvatarUrl(org.logoUrl) : null}
+                              alt={org.name}
+                              name={org.name}
+                              fallbackId={org.id}
                               fill
                               sizes="36px"
                               className="size-full rounded-full"
@@ -295,72 +295,16 @@ export function OrganizerSidebar() {
                           </div>
                           <div className="flex flex-1 flex-col items-start justify-start min-w-0">
                             <p className="font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] truncate">
-                              {organizer?.name || "Nome organização"}
+                              {org.name}
+                            </p>
+                            <p className="font-family-dm-sans font-normal text-[12px] text-gray-10 leading-[1.3] truncate">
+                              {org.role === "OWNER" ? "Proprietário" : org.role === "ADMIN" ? "Administrador" : "Membro"}
                             </p>
                           </div>
                         </div>
                       </button>
-
-                      {/* Organization Dropdown Menu */}
-                      <AnimatePresence>
-                        {isOrgMenuOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -5 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute bg-gray-3 top-0 left-full -ml-px flex flex-col gap-[4px] items-start overflow-hidden rounded-[8px] w-[140px] z-50"
-                          >
-                            <button className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-[123.5px] hover:bg-gray-4 transition-colors">
-                              <Medal className="size-[24px] text-gray-11 shrink-0" />
-                              <p className="flex-1 font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] whitespace-pre-wrap">
-                                Upgrade to Pro
-                              </p>
-                            </button>
-                            <div className="bg-gray-6 h-px shrink-0 w-[140px]" />
-                            <div className="flex flex-col items-start relative shrink-0 w-[140px]">
-                              <Link
-                                href={navHref("/organizer/settings")}
-                                className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-full hover:bg-gray-4 transition-colors"
-                                onClick={() => {
-                                  setIsProfileOpen(false);
-                                  setIsOrgMenuOpen(false);
-                                }}
-                              >
-                                <Settings className="size-[24px] text-gray-11 shrink-0" />
-                                <p className="flex-1 font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] whitespace-pre-wrap">
-                                  Configurações
-                                </p>
-                              </Link>
-                              <Link
-                                href={navHref("/organizer/documentation")}
-                                className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-full hover:bg-gray-4 transition-colors"
-                                onClick={() => {
-                                  setIsProfileOpen(false);
-                                  setIsOrgMenuOpen(false);
-                                }}
-                              >
-                                <FileText className="size-[24px] text-gray-11 shrink-0" />
-                                <p className="flex-1 font-family-dm-sans font-normal text-[14px] text-gray-11 leading-[1.3] whitespace-pre-wrap">
-                                  Documentação
-                                </p>
-                              </Link>
-                            </div>
-                            <div className="bg-gray-6 h-px shrink-0 w-[140px]" />
-                            <button
-                              onClick={handleLogout}
-                              className="flex gap-[4px] items-center px-[8px] py-[12px] relative shrink-0 w-[123.5px] hover:bg-gray-4 transition-colors"
-                            >
-                              <LogOutIcon className="size-[24px] text-red-11 shrink-0" />
-                              <p className="flex-1 font-family-dm-sans font-normal text-[14px] text-red-11 leading-[1.3] whitespace-pre-wrap">
-                                Sair
-                              </p>
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
                     </div>
-                  )}
+                  ))}
 
                   {/* Bottom Options */}
                   <button

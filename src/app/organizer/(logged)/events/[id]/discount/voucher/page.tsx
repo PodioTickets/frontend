@@ -67,7 +67,7 @@ export default function VouchersPage() {
   // Carregar dados do evento
   useEffect(() => {
     if (!authChecked || !eventId) return;
-    
+
     const loadEvent = async () => {
       try {
         const eventData = await organizerService.getEventById(eventId);
@@ -213,7 +213,6 @@ export default function VouchersPage() {
             </p>
           </div>
 
-          {/* Mobile: Title + Criar voucher (Figma) */}
           <div className="md:hidden flex flex-col gap-3 px-0">
             <h1 className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
               Voucher

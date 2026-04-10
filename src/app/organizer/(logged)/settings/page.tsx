@@ -39,6 +39,8 @@ export default function OrganizerSettingsPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const hasChanges = formData.name !== (organizer?.name ?? "");
+
   useEffect(() => {
     if (authLoading) return;
 
@@ -269,7 +271,7 @@ export default function OrganizerSettingsPage() {
               {/* Save Button */}
               <Button
                 onClick={handleSubmit}
-                disabled={saving}
+                disabled={saving || !hasChanges}
               >
                 {saving ? "Salvando..." : "Salvar alterações"}
               </Button>

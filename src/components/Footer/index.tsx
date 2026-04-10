@@ -20,6 +20,8 @@ export function Footer() {
     return null;
   }
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] border-t border-gray-6 px-4 py-6 md:p-20 md:pt-[52px]">
       {/* Mobile Layout */}
@@ -227,7 +229,7 @@ export function Footer() {
 
         {/* Copyright Mobile */}
         <p className="text-white text-xs text-center">
-          © 2025 - Todos os direitos reservados para PódioTicket
+          © {currentYear} - Todos os direitos reservados para PódioTicket
         </p>
       </div>
 
@@ -294,7 +296,7 @@ export function Footer() {
         </div>
 
         <p className="text-[#B4B4B4] text-sm mt-10">
-          © 2025 - Todos os direitos reservados para PódioTicket
+          © {currentYear} - Todos os direitos reservados para PódioTicket
         </p>
       </div>
     </footer>

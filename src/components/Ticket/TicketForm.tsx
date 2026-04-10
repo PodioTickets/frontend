@@ -1426,6 +1426,9 @@ export function TicketForm({
       await queryClient.invalidateQueries({
         queryKey: queryKeys.events.tickets(eventId),
       });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.events.products(eventId),
+      });
       await queryClient.refetchQueries({
         queryKey: queryKeys.events.tickets(eventId),
       });

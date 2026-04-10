@@ -479,7 +479,7 @@ export default function EditTopicsPage() {
               variant="outline"
               onClick={() => {
                 writeTopicsPreviewDraft({ v: 1, eventId, sections });
-                orgNav.push(`/organizer/events/${eventId}/preview`);
+                orgNav.push(`/organizer/events/${eventId}/edit/topics/preview`);
               }}
               className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px]"
             >

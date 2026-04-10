@@ -80,6 +80,16 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+type AddressErrors = {
+  country?: string;
+  cep?: string;
+  stateUf?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+};
+
 export function CheckoutAddressSection({
   onConfirmedChange,
   values,
@@ -87,6 +97,7 @@ export function CheckoutAddressSection({
   className,
 }: CheckoutAddressSectionProps) {
   const [loadingCep, setLoadingCep] = useState(false);
+  const [errors, setErrors] = useState<AddressErrors>({});
   const cepLookupSeq = useRef(0);
 
   const stateOptions = useMemo(
@@ -101,11 +112,21 @@ export function CheckoutAddressSection({
     onConfirmedChange(false);
   }, [onConfirmedChange]);
 
+  const clearError = useCallback((field: keyof AddressErrors) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
   const handleCepChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
       const formatted = formatCep(e.target.value);
       onChange({ cep: formatted });
+      clearError("cep");
       invalidateConfirm();
 
       if (raw.length !== 8) {
@@ -156,39 +177,41 @@ export function CheckoutAddressSection({
     values.country !== "Brasil" || cepDigits.length === 8;
 
   const handleConfirm = () => {
+    const newErrors: AddressErrors = {};
+
     if (!values.country?.trim()) {
-      toast.error("Selecione o país.");
-      return;
+      newErrors.country = "Selecione o país.";
     }
     if (values.country === "Brasil") {
       if (cepDigits.length !== 8) {
-        toast.error("Informe um CEP válido.");
-        return;
+        newErrors.cep = "Informe um CEP válido.";
       }
     } else if (!values.cep.trim()) {
-      toast.error("Informe o CEP ou código postal.");
-      return;
+      newErrors.cep = "Informe o CEP ou código postal.";
     }
     if (!values.stateUf) {
-      toast.error("Selecione o estado.");
-      return;
+      newErrors.stateUf = "Selecione o estado.";
     }
     if (!values.street.trim()) {
-      toast.error("Informe a rua.");
-      return;
+      newErrors.street = "Informe a rua.";
     }
     if (!values.number.trim()) {
-      toast.error("Informe o número.");
-      return;
+      newErrors.number = "Informe o número.";
     }
     if (!values.neighborhood.trim()) {
-      toast.error("Informe o bairro.");
-      return;
+      newErrors.neighborhood = "Informe o bairro.";
     }
     if (!values.city.trim()) {
-      toast.error("Informe a cidade.");
+      newErrors.city = "Informe a cidade.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
+
+    setErrors({});
     onConfirmedChange(true);
     toast.success("Endereço confirmado.");
   };
@@ -213,9 +236,11 @@ export function CheckoutAddressSection({
               value={values.country}
               onChange={(country) => {
                 onChange({ country });
+                clearError("country");
                 invalidateConfirm();
               }}
             />
+            {errors.country && <p className="text-sm text-red-11">{errors.country}</p>}
           </div>
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
             <FieldLabel>CEP</FieldLabel>
@@ -226,14 +251,16 @@ export function CheckoutAddressSection({
               placeholder="00000-000"
               value={values.cep}
               onChange={handleCepChange}
+              aria-invalid={!!errors.cep}
               className={inputClass}
             />
             {loadingCep ? (
               <p className="text-sm text-gray-11 font-family-dm-sans">
                 Buscando endereço...
               </p>
-            ) : null}
-            {values.country === "Brasil" && cepDigits.length > 0 && cepDigits.length < 8 ? (
+            ) : errors.cep ? (
+              <p className="text-sm text-red-11">{errors.cep}</p>
+            ) : values.country === "Brasil" && cepDigits.length > 0 && cepDigits.length < 8 ? (
               <p className="text-sm text-gray-11 font-family-dm-sans">
                 Preencha o CEP com 8 dígitos para liberar o restante do endereço.
               </p>
@@ -262,6 +289,7 @@ export function CheckoutAddressSection({
               selectedIds={values.stateUf ? [values.stateUf] : []}
               onSelect={(opt) => {
                 onChange({ stateUf: opt.id || "" });
+                clearError("stateUf");
                 invalidateConfirm();
               }}
               width="w-full"
@@ -269,7 +297,7 @@ export function CheckoutAddressSection({
               trigger={(isOpen) => (
                 <button
                   type="button"
-                  className={selectTriggerClass}
+                  className={cn(selectTriggerClass, errors.stateUf && "border-red-11")}
                   aria-label="Selecionar estado"
                 >
                   <span
@@ -285,6 +313,7 @@ export function CheckoutAddressSection({
                 </button>
               )}
             />
+            {errors.stateUf && <p className="text-sm text-red-11">{errors.stateUf}</p>}
           </div>
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
             <FieldLabel>Rua</FieldLabel>
@@ -295,10 +324,13 @@ export function CheckoutAddressSection({
               value={values.street}
               onChange={(e) => {
                 onChange({ street: e.target.value });
+                clearError("street");
                 invalidateConfirm();
               }}
+              aria-invalid={!!errors.street}
               className={inputClass}
             />
+            {errors.street && <p className="text-sm text-red-11">{errors.street}</p>}
           </div>
         </div>
 
@@ -313,10 +345,13 @@ export function CheckoutAddressSection({
               value={values.number}
               onChange={(e) => {
                 onChange({ number: e.target.value });
+                clearError("number");
                 invalidateConfirm();
               }}
+              aria-invalid={!!errors.number}
               className={inputClass}
             />
+            {errors.number && <p className="text-sm text-red-11">{errors.number}</p>}
           </div>
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
             <FieldLabel>Complemento (opcional)</FieldLabel>
@@ -344,10 +379,13 @@ export function CheckoutAddressSection({
               value={values.neighborhood}
               onChange={(e) => {
                 onChange({ neighborhood: e.target.value });
+                clearError("neighborhood");
                 invalidateConfirm();
               }}
+              aria-invalid={!!errors.neighborhood}
               className={inputClass}
             />
+            {errors.neighborhood && <p className="text-sm text-red-11">{errors.neighborhood}</p>}
           </div>
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
             <FieldLabel>Cidade</FieldLabel>
@@ -358,10 +396,13 @@ export function CheckoutAddressSection({
               value={values.city}
               onChange={(e) => {
                 onChange({ city: e.target.value });
+                clearError("city");
                 invalidateConfirm();
               }}
+              aria-invalid={!!errors.city}
               className={inputClass}
             />
+            {errors.city && <p className="text-sm text-red-11">{errors.city}</p>}
           </div>
         </div>
             </div>

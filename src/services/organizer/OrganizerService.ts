@@ -118,6 +118,21 @@ export interface Organization {
   events?: Event[];
 }
 
+export interface UserOrganization {
+  id: string;
+  name: string;
+  description?: string;
+  logoUrl?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  state?: string;
+  role: "OWNER" | "ADMIN" | "MEMBER" | string;
+  joinedAt: string;
+  membersCount?: number;
+  eventsCount?: number;
+}
+
 export interface CreateOrganizationMemberRequest {
   userId?: string; // Usar usuário existente
   // OU criar novo usuário:
@@ -1025,6 +1040,13 @@ export class OrganizerService {
   }
 
   // Novos métodos de Organization
+  async getMyOrganizations(): Promise<UserOrganization[]> {
+    const { data: response } = await this.apiClient.get<{
+      data: { organizations: UserOrganization[] };
+    }>("/api/v1/organizers/me/organizations");
+    return response.data.organizations;
+  }
+
   async getOrganization(): Promise<Organization> {
     const { data: response } = await this.apiClient.get<{ data: { organization: Organization } }>(
       "/api/v1/organizations/me"

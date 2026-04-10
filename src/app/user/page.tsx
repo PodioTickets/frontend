@@ -205,6 +205,9 @@ export default function UserProfilePage() {
   );
 
   const [formData, setFormData] = useState(initialFormData);
+  const [fullNameInput, setFullNameInput] = useState(
+    () => [initialFormData.firstName, initialFormData.lastName].filter(Boolean).join(" ")
+  );
 
   /** Valores persistidos (espelho do `user`) para habilitar «Salvar» só com alteração real. */
   const profileBaseline = useMemo(() => {
@@ -285,8 +288,13 @@ export default function UserProfilePage() {
         currentPassword: prev.currentPassword,
         newPassword: prev.newPassword,
       }));
+      const fn = (user as any)?.firstName ?? "";
+      const ln = (user as any)?.lastName ?? "";
+      setFullNameInput([fn, ln].filter(Boolean).join(" "));
     }
   }, [user]);
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
   const [nationalitySearch, setNationalitySearch] = useState("");
@@ -444,18 +452,32 @@ export default function UserProfilePage() {
       ...prev,
       [name]: processedValue,
     }));
+
+    if (formErrors[name]) {
+      setFormErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleSavePersonalData = async () => {
     if (!user || !isProfileDirty) return;
 
+    const errors: Record<string, string> = {};
+
+    if (!formData.firstName?.trim()) {
+      errors.firstName = "Nome é obrigatório";
+    }
+
     if (formData.documentNumber?.trim()) {
       const cpfError = getCpfValidationMessage(formData.documentNumber);
-      if (cpfError) {
-        toast.error(cpfError);
-        return;
-      }
+      if (cpfError) errors.documentNumber = cpfError;
     }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors({});
 
     setIsSavingProfile(true);
     try {
@@ -624,24 +646,23 @@ export default function UserProfilePage() {
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Nome
                 </label>
-                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
+                <div className={cn("flex h-12 items-center gap-1 rounded-lg border bg-transparent px-3 md:gap-2.5", formErrors.firstName ? "border-red-500" : "border-gray-6")}>
                   <User className="size-5 shrink-0 text-gray-11" />
                   {/* Mobile Input */}
                   <Input
                     type="text"
                     name="firstName"
-                    value={
-                      `${formData.firstName || ""} ${formData.lastName || ""
-                        }`.trim() || ""
-                    }
+                    value={fullNameInput}
                     onChange={(e) => {
-                      const fullName = e.target.value;
-                      const parts = fullName.split(" ");
+                      const raw = e.target.value;
+                      setFullNameInput(raw);
+                      const parts = raw.trim().split(/\s+/);
                       setFormData((prev) => ({
                         ...prev,
                         firstName: parts[0] || "",
                         lastName: parts.slice(1).join(" ") || "",
                       }));
+                      if (formErrors.firstName) setFormErrors((prev) => ({ ...prev, firstName: "" }));
                     }}
                     placeholder="Seu nome"
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
@@ -650,23 +671,25 @@ export default function UserProfilePage() {
                   <Input
                     type="text"
                     name="firstName"
-                    value={
-                      `${formData.firstName || ""} ${formData.lastName || ""
-                        }`.trim() || ""
-                    }
+                    value={fullNameInput}
                     onChange={(e) => {
-                      const fullName = e.target.value;
-                      const parts = fullName.split(" ");
+                      const raw = e.target.value;
+                      setFullNameInput(raw);
+                      const parts = raw.trim().split(/\s+/);
                       setFormData((prev) => ({
                         ...prev,
                         firstName: parts[0] || "",
                         lastName: parts.slice(1).join(" ") || "",
                       }));
+                      if (formErrors.firstName) setFormErrors((prev) => ({ ...prev, firstName: "" }));
                     }}
                     placeholder="Nome completo"
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
+                {formErrors.firstName && (
+                  <p className="text-xs text-red-500">{formErrors.firstName}</p>
+                )}
               </div>
 
               {/* Date of Birth */}
@@ -820,42 +843,11 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              {/* Emergency Phone */}
-              <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
-                <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  Telefone de emergência{" "}
-                  <span className="text-gray-11">(Opcional)</span>
-                </label>
-                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
-                  <Phone className="size-5 shrink-0 text-gray-11" />
-                  {/* Mobile Input */}
-                  <Input
-                    type="tel"
-                    name="emergencyPhone"
-                    value={formData.emergencyPhone}
-                    onChange={handleInputChange}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
-                    className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
-                  />
-                  {/* Desktop Input */}
-                  <Input
-                    type="tel"
-                    name="emergencyPhone"
-                    value={formData.emergencyPhone}
-                    onChange={handleInputChange}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
-                    className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                  />
-                </div>
-              </div>
-
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   CPF
                 </label>
-                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
+                <div className={cn("flex h-12 items-center gap-1 rounded-lg border bg-transparent px-3 md:gap-2.5", formErrors.documentNumber ? "border-red-500" : "border-gray-6")}>
                   <CPFIcon className="size-5 shrink-0 text-gray-11" />
                   {/* Mobile Input */}
                   <Input
@@ -876,6 +868,9 @@ export default function UserProfilePage() {
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
+                {formErrors.documentNumber && (
+                  <p className="text-xs text-red-500">{formErrors.documentNumber}</p>
+                )}
               </div>
 
               {/* Gender */}

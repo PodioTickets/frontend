@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
 import {
   orderCarouselItemsWithPreferredInCenter,
   type ImageCarouselItem,
@@ -22,25 +23,13 @@ function hasUsableProductImage(item: ImageCarouselItem): item is ItemWithImage {
   return typeof s === "string" && s.trim().length > 0;
 }
 
-const SIDE_PX = 88;
-const CENTER_PX = 128;
-const MAX_VISIBLE = 5;
-
 export function CategoryKitHorizontalCarousel({
   items,
   primaryProductId,
 }: CategoryKitHorizontalCarouselProps) {
-  const [centerIdx, setCenterIdx] = useState(0);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalIdx, setModalIdx] = useState(0);
   const displayItems = useMemo(
     () => items.filter(hasUsableProductImage),
     [items]
-  );
-
-  const displayKey = useMemo(
-    () => displayItems.map((i) => i.id).join(","),
-    [displayItems]
   );
 
   const preferredIndex = useMemo(() => {
@@ -51,70 +40,59 @@ export function CategoryKitHorizontalCarousel({
     return 0;
   }, [displayItems, primaryProductId]);
 
-  /** Ordem de exibição: produto principal no índice central (ex.: 2º de 3). */
+  // Reordena para o primário ficar no índice central (Math.floor(n/2))
   const orderedItems = useMemo(
-    () =>
-      orderCarouselItemsWithPreferredInCenter(displayItems, preferredIndex),
+    () => orderCarouselItemsWithPreferredInCenter(displayItems, preferredIndex),
     [displayItems, preferredIndex]
   );
 
+  const n = orderedItems.length;
+  const startIndex = Math.floor(n / 2);
+
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "center",
+    loop: false,
+    startIndex,
+    containScroll: false,
+  });
+
+  const [selectedIndex, setSelectedIndex] = useState(startIndex);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalIdx, setModalIdx] = useState(0);
+
   useEffect(() => {
-    if (orderedItems.length === 0) return;
-    setCenterIdx(Math.floor(orderedItems.length / 2));
-  }, [displayKey, orderedItems.length]);
+    if (!emblaApi) return;
+    const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap());
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    onSelect();
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi]);
 
-  const safeCenter = useMemo(() => {
-    if (orderedItems.length === 0) return 0;
-    return Math.min(centerIdx, orderedItems.length - 1);
-  }, [centerIdx, orderedItems.length]);
+  useEffect(() => {
+    emblaApi?.reInit({ startIndex });
+    setSelectedIndex(startIndex);
+  }, [emblaApi, startIndex]);
 
-  const goPrev = useCallback(() => {
-    if (orderedItems.length === 0) return;
-    setCenterIdx((i) => (i === 0 ? orderedItems.length - 1 : i - 1));
-  }, [orderedItems.length]);
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
-  const goNext = useCallback(() => {
-    if (orderedItems.length === 0) return;
-    setCenterIdx((i) =>
-      i === orderedItems.length - 1 ? 0 : i + 1
-    );
-  }, [orderedItems.length]);
+  const openModal = useCallback(
+    (orderedIndex: number) => {
+      const id = orderedItems[orderedIndex]?.id;
+      const sourceIdx = id ? displayItems.findIndex((x) => x.id === id) : 0;
+      setModalIdx(sourceIdx >= 0 ? sourceIdx : 0);
+      setModalOpen(true);
+    },
+    [orderedItems, displayItems]
+  );
 
-  const slotLayout = useMemo(() => {
-    if (orderedItems.length === 0) return [];
-    const n = orderedItems.length;
-    const maxSlots = Math.min(MAX_VISIBLE, n);
-    const centerSlot = Math.floor(maxSlots / 2);
-    const slots: Array<
-      | { kind: "item"; dataIndex: number; isCenter: boolean }
-      | { kind: "spacer"; key: string }
-    > = [];
-    for (let i = 0; i < maxSlots; i++) {
-      const dataIndex = safeCenter + (i - centerSlot);
-      if (dataIndex >= 0 && dataIndex < n) {
-        slots.push({
-          kind: "item",
-          dataIndex,
-          isCenter: i === centerSlot,
-        });
-      } else {
-        slots.push({ kind: "spacer", key: `sp-${safeCenter}-${i}` });
-      }
-    }
-    return slots;
-  }, [orderedItems.length, safeCenter]);
+  if (n === 0) return null;
 
-  if (orderedItems.length === 0) return null;
-
-  const single = orderedItems.length === 1;
-  const openModal = (orderedIndex: number) => {
-    const id = orderedItems[orderedIndex]?.id;
-    const sourceIdx = id
-      ? displayItems.findIndex((x) => x.id === id)
-      : orderedIndex;
-    setModalIdx(sourceIdx >= 0 ? sourceIdx : 0);
-    setModalOpen(true);
-  };
+  const single = n === 1;
 
   const navButtonClass =
     "flex size-10 shrink-0 items-center justify-center text-gray-12 transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 focus-visible:ring-offset-2";
@@ -127,10 +105,10 @@ export function CategoryKitHorizontalCarousel({
         aria-roledescription="carrossel"
         aria-label="Imagens dos produtos do kit"
       >
-        <div className="flex w-full items-center justify-center gap-2 sm:gap-3">
+        <div className="flex w-full items-center justify-center gap-2">
           <button
             type="button"
-            onClick={goPrev}
+            onClick={scrollPrev}
             disabled={single}
             className={navButtonClass}
             aria-label="Imagem anterior"
@@ -138,73 +116,48 @@ export function CategoryKitHorizontalCarousel({
             <ChevronLeft className="size-5 shrink-0" aria-hidden />
           </button>
 
-          <div
-            role="list"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowLeft") {
-                e.preventDefault();
-                goPrev();
-              }
-              if (e.key === "ArrowRight") {
-                e.preventDefault();
-                goNext();
-              }
-            }}
-            className={cn(
-              "flex min-h-[136px] min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto scroll-smooth py-1 max-sm:snap-x max-sm:snap-mandatory sm:gap-3 sm:overflow-visible",
-              "outline-none focus-visible:ring-2 focus-visible:ring-primary-8 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-1 rounded-xl"
-            )}
-          >
-            {slotLayout.map((slot) => {
-              if (slot.kind === "spacer") {
+          <div ref={emblaRef} className="min-w-0 flex-1 overflow-hidden py-3">
+            <div className="flex items-center gap-2">
+              {orderedItems.map((item, index) => {
+                const isCenter = index === selectedIndex;
                 return (
-                  <div
-                    key={slot.key}
-                    className="shrink-0"
-                    style={{ width: SIDE_PX, height: SIDE_PX }}
-                    aria-hidden
-                  />
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      if (isCenter) {
+                        openModal(index);
+                      } else {
+                        emblaApi?.scrollTo(index);
+                      }
+                    }}
+                    className={cn(
+                      "relative shrink-0 overflow-hidden rounded-lg border bg-gray-2 transition-all duration-300 ease-out",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8",
+                      isCenter
+                        ? "z-10 border-primary-8 scale-110"
+                        : "border-gray-5 opacity-60 scale-90 hover:opacity-80 hover:border-gray-7"
+                    )}
+                    style={{ width: 112, height: 112 }}
+                    aria-label={`${item.name}.${isCenter ? " Selecionada. Ver em tamanho maior." : ""}`}
+                    aria-current={isCenter ? "true" : undefined}
+                  >
+                    <Image
+                      src={item.src}
+                      alt={item.name}
+                      fill
+                      sizes="112px"
+                      className="object-cover"
+                    />
+                  </button>
                 );
-              }
-              const { dataIndex, isCenter } = slot;
-              const item = orderedItems[dataIndex];
-              const size = isCenter ? CENTER_PX : SIDE_PX;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="listitem"
-                  onClick={() => {
-                    setCenterIdx(dataIndex);
-                    openModal(dataIndex);
-                  }}
-                  className={cn(
-                    "relative shrink-0 overflow-hidden rounded-lg border bg-gray-2 transition-all duration-300 ease-out max-sm:snap-center",
-                    "hover:border-gray-6 hover:shadow-md",
-                    isCenter
-                      ? "z-10 border-primary-8 shadow-[0px_4px_12px_0px_rgba(17,17,17,0.12)] scale-[1.02]"
-                      : "border-gray-6 opacity-95 hover:opacity-100 scale-100"
-                  )}
-                  style={{ width: size, height: size }}
-                  aria-label={`${item.name}. ${isCenter ? "Selecionada." : ""} Ver em tamanho maior.`}
-                  aria-current={isCenter ? "true" : undefined}
-                >
-                  <Image
-                    src={item.src}
-                    alt={item.name}
-                    fill
-                    sizes={`${size}px`}
-                    className="object-cover"
-                  />
-                </button>
-              );
-            })}
+              })}
+            </div>
           </div>
 
           <button
             type="button"
-            onClick={goNext}
+            onClick={scrollNext}
             disabled={single}
             className={navButtonClass}
             aria-label="Próxima imagem"
@@ -213,16 +166,16 @@ export function CategoryKitHorizontalCarousel({
           </button>
         </div>
 
-        {!single && orderedItems.length <= 12 ? (
+        {!single && n <= 12 ? (
           <div className="flex flex-wrap justify-center gap-1.5 px-2">
             {orderedItems.map((item, i) => (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setCenterIdx(i)}
+                onClick={() => emblaApi?.scrollTo(i)}
                 className={cn(
                   "h-1.5 rounded-full transition-all duration-300",
-                  i === safeCenter
+                  i === selectedIndex
                     ? "w-6 bg-primary-10"
                     : "w-1.5 bg-gray-6 hover:bg-gray-8"
                 )}
@@ -231,8 +184,8 @@ export function CategoryKitHorizontalCarousel({
             ))}
           </div>
         ) : !single ? (
-          <p className="text-center text-xs text-gray-11 font-family-dm-sans">
-            {safeCenter + 1} de {orderedItems.length}
+          <p className="text-center text-xs text-gray-11">
+            {selectedIndex + 1} de {n}
           </p>
         ) : null}
       </div>

@@ -55,6 +55,7 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
     const grouped: Array<{
       quantity: number;
       ticketName: string;
+      categoryName: string;
       distance: string;
       price: number;
       total: number;
@@ -69,6 +70,7 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
           grouped.push({
             quantity,
             ticketName: ticket.name,
+            categoryName: category.name,
             distance,
             price: getTicketPrice(ticket),
             total: getTicketPrice(ticket) * quantity,
@@ -85,6 +87,7 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
         grouped.push({
           quantity,
           ticketName: ticket.name,
+          categoryName: "",
           distance,
           price: getTicketPrice(ticket),
           total: getTicketPrice(ticket) * quantity,
@@ -218,7 +221,13 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
                   key={index}
                   className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full"
                 >
-                  ({ticket.quantity}x) {ticket.distance ? `${ticket.distance} ` : ""}{ticket.ticketName}:{" "}
+                  <p className="flex items-center gap-1">
+                    ({ticket.quantity}x){" "}
+                    <p className="flex flex-col items-start">
+                      <span className="text-gray-11 text-xs truncate"> {ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
+                      <span className="text-gray-12 text-sm truncate">{ticket.ticketName}:{" "}</span>
+                    </p>
+                  </p>
                   <span className="text-gray-12">
                     {formatPrice(ticket.total)}
                   </span>

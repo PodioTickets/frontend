@@ -239,30 +239,17 @@ function MobileAdvancedSearch() {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (selectedStateApi) {
-      params.set("state", selectedStateApi);
-    }
-    if (selectedCityApi) {
-      params.set("city", selectedCityApi);
-    }
-    if (selectedModalities.length > 0) {
-      params.set("modalities", selectedModalities.join(","));
-    }
-    if (selectedDateRange?.from) {
-      params.set(
-        "dateFrom",
-        selectedDateRange.from.toISOString().split("T")[0]
-      );
-    }
-    if (selectedDateRange?.to) {
-      params.set("dateTo", selectedDateRange.to.toISOString().split("T")[0]);
-    }
-    if (priceRange[0] > 0) {
-      params.set("priceMin", priceRange[0].toString());
-    }
-    if (priceRange[1] < 10000) {
-      params.set("priceMax", priceRange[1].toString());
-    }
+    // Preservar busca textual se existir
+    const q = searchParams.get("q");
+    if (q) params.set("q", q);
+
+    if (selectedStateApi) params.set("state", selectedStateApi);
+    if (selectedCityApi) params.set("city", selectedCityApi);
+    if (selectedModalities.length > 0) params.set("modalities", selectedModalities.join(","));
+    if (selectedDateRange?.from) params.set("dateFrom", selectedDateRange.from.toISOString().split("T")[0]);
+    if (selectedDateRange?.to) params.set("dateTo", selectedDateRange.to.toISOString().split("T")[0]);
+    if (priceRange[0] > 0) params.set("priceMin", priceRange[0].toString());
+    if (priceRange[1] < 10000) params.set("priceMax", priceRange[1].toString());
     router.push(`/search?${params.toString()}`);
   };
 
@@ -379,7 +366,7 @@ function MobileAdvancedSearch() {
                 <DateRangePicker
                   onSelect={setSelectedDateRange}
                   value={selectedDateRange}
-                  className="[&_*]:!text-sm"
+                  className="**:text-sm!"
                 />
               </div>
             )}
@@ -614,16 +601,42 @@ function SearchContent() {
     return [min, max] as [number, number];
   }, [priceMin, priceMax]);
 
-  // Filtrar eventos por status e ordenar (filtros que não estão na API)
+  // Filtrar eventos por modalidades, preço, status e ordenar
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
 
-    // Filtrar por status (se necessário, pois a API pode não suportar)
+    // Filtrar por modalidades
+    if (modalities.length > 0) {
+      filtered = filtered.filter((event) => {
+        if (!event.modalities || event.modalities.length === 0) return false;
+        return event.modalities.some((modality: any) => {
+          const templateCode = modality.template?.code || modality.templateId;
+          return modalities.some(
+            (selectedId) =>
+              selectedId === templateCode || selectedId === modality.id
+          );
+        });
+      });
+    }
+
+    // Filtrar por preço
+    const hasPriceFilter =
+      (priceMin && parseInt(priceMin) > 0) ||
+      (priceMax && parseInt(priceMax) < 10000);
+    if (hasPriceFilter) {
+      filtered = filtered.filter((event) => {
+        const eventPrice = (event as any).price || 0;
+        const min = priceMin ? parseInt(priceMin) : 0;
+        const max = priceMax ? parseInt(priceMax) : 10000;
+        return eventPrice >= min && eventPrice <= max;
+      });
+    }
+
+    // Filtrar por status
     if (statusFilter) {
-      // Mapear status do filtro para status da API
       const statusMap: Record<string, string> = {
         "inscricoes-abertas": "PUBLISHED",
-        "inscricoes-encerradas": "PUBLISHED", // Pode precisar de lógica adicional
+        "inscricoes-encerradas": "PUBLISHED",
         "evento-encerrado": "COMPLETED",
       };
       const apiStatus = statusMap[statusFilter];
@@ -632,33 +645,25 @@ function SearchContent() {
       }
     }
 
-    // Ordenar eventos (se a API não suportar ordenação)
-    const sortedEvents = [...filtered].sort((a, b) => {
+    // Ordenar
+    return [...filtered].sort((a, b) => {
       switch (orderBy) {
         case "date-asc":
           if (!a.eventDate || !b.eventDate) return 0;
-          return (
-            new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
-          );
+          return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
         case "date-desc":
           if (!a.eventDate || !b.eventDate) return 0;
-          return (
-            new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()
-          );
+          return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
         case "name-asc":
           return a.name.localeCompare(b.name, "pt-BR");
         case "name-desc":
           return b.name.localeCompare(a.name, "pt-BR");
         default:
           if (!a.eventDate || !b.eventDate) return 0;
-          return (
-            new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
-          );
+          return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
       }
     });
-    console.log(sortedEvents);
-    return sortedEvents;
-  }, [events, statusFilter, orderBy]);
+  }, [events, modalities, priceMin, priceMax, statusFilter, orderBy]);
 
   const hasFilters = useMemo(() => {
     return !!(

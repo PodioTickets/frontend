@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowButton } from "../ArrowButton";
 
 const ITEMS_PER_PAGE = 4;
 
@@ -114,6 +115,7 @@ export function BestSellingVariations({
     setCurrentPage((p) => Math.min(Math.max(1, p), totalPages));
   }, [totalPages]);
 
+  console.log(items);
   return (
     <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden flex flex-col w-full h-full">
       <div className="px-4 py-3 md:py-5 border-b border-gray-6 shrink-0">
@@ -132,30 +134,6 @@ export function BestSellingVariations({
           <>
             {displayItems.map((item, index) => {
               const key = item.id ?? `${sliceStart + index}-${item.productId}-${item.variationName}`;
-              const total =
-                item.totalStock != null && item.totalStock > 0
-                  ? item.totalStock
-                  : null;
-              const qtySold = item.quantity ?? 0;
-              const remaining =
-                item.remainingStock != null
-                  ? item.remainingStock
-                  : total != null
-                    ? Math.max(0, total - qtySold)
-                    : null;
-              const sold =
-                total != null && remaining != null
-                  ? Math.max(0, total - remaining)
-                  : qtySold;
-              const hasStockBar = total != null && total > 0;
-              const percentage =
-                hasStockBar && total > 0 ? (sold / total) * 100 : 0;
-              const status =
-                hasStockBar && remaining != null
-                  ? stockStatusFromRemaining(remaining, total)
-                  : "Normal";
-              const statusColor = getStatusColor(status);
-
               return (
                 <div
                   key={key}
@@ -170,60 +148,15 @@ export function BestSellingVariations({
                     }
                   }}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-2 md:mb-4">
-                    <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2 py-2">
+                    <div className="flex items-center gap-2">
+                      <p className="px-2 flex items-center justify-center bg-gray-4 rounded text-gray-12 font-semibold text-sm">{currentPage === 1 ? index + 1 : (sliceStart + index + 1)} <span className="text-xl">º</span></p>
                       <p className="font-family-dm-sans font-semibold text-sm md:text-[16px] md:leading-[1.2] text-gray-12 truncate">
-                        {item.variationName?.trim() || "Sem variação"}
-                      </p>
-                      <p className="font-family-dm-sans font-normal text-xs md:text-[14px] text-gray-11 truncate mt-0.5">
                         {item.productName}
                       </p>
                     </div>
-                    <span
-                      className={`shrink-0 px-2 py-0.5 md:py-1 rounded text-xs md:text-[14px] font-family-dm-sans text-gray-1 ${statusColor}`}
-                    >
-                      {status}
-                    </span>
+                    <ArrowButton isOpen={false} />
                   </div>
-                  {hasStockBar ? (
-                    <>
-                      <div className="mb-2">
-                        <div className="relative h-2 md:h-3 bg-gray-6 rounded-full overflow-hidden">
-                          <div
-                            className={`absolute left-0 top-0 h-full rounded-full ${statusColor}`}
-                            style={{ width: `${Math.min(100, percentage)}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-sm md:text-[14px] text-gray-11">
-                        <div>
-                          <span className="font-family-dm-sans font-normal leading-[1.3]">
-                            Restantes:{" "}
-                          </span>
-                          <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12">
-                            {(remaining ?? 0).toLocaleString("pt-BR")}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="font-family-dm-sans font-normal leading-[1.3]">
-                            Total:{" "}
-                          </span>
-                          <span className="font-family-dm-sans font-semibold leading-[1.3] text-gray-12">
-                            {total.toLocaleString("pt-BR")}
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-between text-sm md:text-[14px] text-gray-11">
-                      <span>
-                        Vendidos:{" "}
-                        <span className="font-semibold text-gray-12">
-                          {(item.quantity ?? 0).toLocaleString("pt-BR")}
-                        </span>
-                      </span>
-                    </div>
-                  )}
                 </div>
               );
             })}

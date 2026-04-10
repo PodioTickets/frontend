@@ -37,17 +37,17 @@ export function ViewRegistrationModal() {
 
   const showBackToPaymentDetails = Boolean(
     data?.returnToPaymentDetails &&
-      data?.paymentDetailsModalData?.registrationId
+    data?.paymentDetailsModalData?.registrationId
   );
 
   const handleBackToPaymentDetails = useCallback(() => {
     const snapshot = useModalStore.getState().data;
     const payload = snapshot?.paymentDetailsModalData as
       | {
-          registrationId?: string;
-          eventId?: string;
-          eventName?: string;
-        }
+        registrationId?: string;
+        eventId?: string;
+        eventName?: string;
+      }
       | undefined;
     closeViewRegistrationModal();
     if (payload?.registrationId) {
@@ -155,6 +155,18 @@ export function ViewRegistrationModal() {
     return null;
   }
 
+  const formatPhone = (phone?: string | null) => {
+    if (!phone) return "—";
+    const numbers = phone.replace(/\D/g, "");
+    if (numbers.length === 11) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3, 7)}-${numbers.slice(7)}`;
+    }
+    if (numbers.length === 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    }
+    return phone;
+  };
+
   const ticketName = currentRegistration?.ticket?.name || currentRegistration?.modalities?.[0]?.modality?.name || "—";
   const categoryName = currentRegistration?.ticket?.category?.name || currentRegistration?.modalities?.[0]?.modality?.category?.name || "—";
   const user = currentRegistration?.user || currentRegistration?.buyer;
@@ -188,7 +200,7 @@ export function ViewRegistrationModal() {
     : "—";
   const participantGender = getGenderLabel(user?.gender);
   const participantPhone = user?.phone || null;
-  const emergencyPhone = user?.reservePhone || user?.reserve_phone || null;
+  const emergencyPhone = currentRegistration.emergencyContact.name + " - " + formatPhone(currentRegistration.emergencyContact.phone.toString());
 
   // Obter distância do ticket
   const ticketDistance = currentRegistration?.ticket?.distance
@@ -276,17 +288,7 @@ export function ViewRegistrationModal() {
       : mappedIncludedProducts;
 
   // Formatar telefone
-  const formatPhone = (phone?: string | null) => {
-    if (!phone) return "—";
-    const numbers = phone.replace(/\D/g, "");
-    if (numbers.length === 11) {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3, 7)}-${numbers.slice(7)}`;
-    }
-    if (numbers.length === 10) {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
-    }
-    return phone;
-  };
+
 
   return (
     <>
@@ -433,7 +435,7 @@ export function ViewRegistrationModal() {
                       { label: "CPF", value: formatCPF(participantCPFRaw) || "—" },
                       { label: "Data de nascimento", value: participantBirthDate },
                       { label: "Telefone", value: formatPhone(participantPhone) || "—" },
-                      { label: "Telefone de emergência", value: formatPhone(emergencyPhone) || "Opcional" },
+                      { label: "Telefone de emergência", value: emergencyPhone || "—" },
                       { label: "Sexo", value: participantGender || "—" },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex flex-col gap-1 py-4 first:pt-0">
@@ -696,14 +698,15 @@ export function ViewRegistrationModal() {
                             {participantGender || "—"}
                           </p>
                         </div>
-                        <div className="flex flex-col py-4">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Telefone de emergência
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {formatPhone(emergencyPhone) || "Opcional"}
-                          </p>
-                        </div>
+
+                      </div>
+                      <div className="flex flex-col py-4">
+                        <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                          Telefone de emergência
+                        </p>
+                        <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                          {emergencyPhone || "—"}
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -101,22 +101,34 @@ export default function EditFlowEventPreviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <div className="mx-auto max-w-[1440px] px-5 py-[52px] pb-[176px] md:px-[124px]">
-        <div className="flex flex-col items-center gap-9">
-          <div className="flex w-full max-w-[1280px] items-center gap-3 px-0 lg:px-8">
-            <button
+      <div className="mx-auto max-w-7xl px-5 py-[52px] pb-[176px]">
+        <div className="flex flex-col items-center gap-9 w-full">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-14 w-full">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
+              >
+                <ArrowButton isOpen={false} />
+              </button>
+              <div>
+                <h1 className="font-manrope text-xl font-bold text-gray-12 md:text-2xl">
+                  Pré-visualização — tópicos
+                </h1>
+              </div>
+            </div>
+            <Button
               type="button"
+              variant="outline"
+              className="h-11 shrink-0 border-gray-6 font-manrope font-semibold text-gray-12"
               onClick={handleBack}
-              className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
             >
-              <ArrowButton isOpen={false} />
-            </button>
-            <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
-              Prévia do evento
-            </h1>
+              Voltar para edição
+            </Button>
           </div>
 
-          <div className="flex w-full max-w-[1280px] flex-col items-start gap-[52px] px-0 lg:px-8">
+          <div className="flex w-full max-w-[1280px] flex-col items-start gap-[52px] px-0 lg:px-0">
             <div className="flex w-full flex-col gap-8 md:flex-row md:items-start">
               <div className="w-full min-w-0 md:flex-1">
                 <div className="relative h-[404px] w-full overflow-hidden rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] md:h-[400px]">
@@ -132,7 +144,7 @@ export default function EditFlowEventPreviewPage() {
                 </div>
               </div>
               {eventTyped && (
-                <div className="hidden w-full shrink-0 md:block md:w-1/4">
+                <div className="hidden w-full shrink-0 md:block md:w-[25%]">
                   <EventPublicInfoCardDesktop
                     event={eventTyped}
                     isPreview

@@ -8,7 +8,7 @@ import type { AuthError } from "@/services/user/UserService";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Dropdown } from "@/components/Dropdown";
-import { Mail, Lock, User, Phone, Search } from "lucide-react";
+import { Mail, Lock, User, Phone, Search, Eye, EyeOff } from "lucide-react";
 import { ArrowButton } from "../ArrowButton";
 import { FlagIcon } from "../Icons/FlagIcon";
 import { SuccessIcon } from "../Icons/SuccessIcon";
@@ -56,6 +56,8 @@ export function RegisterModal() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
   const [nationalitySearch, setNationalitySearch] = useState("");
   const nationalityDropdownRef = useRef<HTMLDivElement>(null);
@@ -1065,14 +1067,21 @@ export function RegisterModal() {
             <div className="relative w-full">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Digite uma senha"
                 value={formData.senha}
                 onChange={(e) => handleInputChange("senha", e.target.value)}
-                className={`pl-10 h-12 ${errors.senha ? "border-red-9 focus-visible:border-red-9" : ""
-                  }`}
+                className={`pl-10 pr-10 h-12 ${errors.senha ? "border-red-9 focus-visible:border-red-9" : ""}`}
                 aria-invalid={!!errors.senha}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+              </button>
             </div>
             {errors.senha && (
               <p className="text-sm text-red-9 font-family-dm-sans">{errors.senha}</p>
@@ -1087,18 +1096,21 @@ export function RegisterModal() {
             <div className="relative w-full">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="Digite novamente"
                 value={formData.confirmarSenha}
-                onChange={(e) =>
-                  handleInputChange("confirmarSenha", e.target.value)
-                }
-                className={`pl-10 h-12 ${errors.confirmarSenha
-                  ? "border-red-9 focus-visible:border-red-9"
-                  : ""
-                  }`}
+                onChange={(e) => handleInputChange("confirmarSenha", e.target.value)}
+                className={`pl-10 pr-10 h-12 ${errors.confirmarSenha ? "border-red-9 focus-visible:border-red-9" : ""}`}
                 aria-invalid={!!errors.confirmarSenha}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+              </button>
             </div>
             {errors.confirmarSenha && (
               <p className="text-sm text-red-9 font-family-dm-sans">
@@ -1175,16 +1187,21 @@ export function RegisterModal() {
                 <div className="relative w-full">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                   <Input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Digite uma senha"
                     value={formData.senha}
                     onChange={(e) => handleInputChange("senha", e.target.value)}
-                    className={`pl-10 h-12 ${errors.senha
-                      ? "border-red-9 focus-visible:border-red-9"
-                      : ""
-                      }`}
+                    className={`pl-10 pr-10 h-12 ${errors.senha ? "border-red-9 focus-visible:border-red-9" : ""}`}
                     aria-invalid={!!errors.senha}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  </button>
                 </div>
                 {errors.senha && (
                   <p className="text-sm text-red-9 font-family-dm-sans">
@@ -1201,18 +1218,21 @@ export function RegisterModal() {
                 <div className="relative w-full">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                   <Input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="Digite novamente"
                     value={formData.confirmarSenha}
-                    onChange={(e) =>
-                      handleInputChange("confirmarSenha", e.target.value)
-                    }
-                    className={`pl-10 h-12 ${errors.confirmarSenha
-                      ? "border-red-9 focus-visible:border-red-9"
-                      : ""
-                      }`}
+                    onChange={(e) => handleInputChange("confirmarSenha", e.target.value)}
+                    className={`pl-10 pr-10 h-12 ${errors.confirmarSenha ? "border-red-9 focus-visible:border-red-9" : ""}`}
                     aria-invalid={!!errors.confirmarSenha}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                    aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  </button>
                 </div>
                 {errors.confirmarSenha && (
                   <p className="text-sm text-red-9 font-family-dm-sans">

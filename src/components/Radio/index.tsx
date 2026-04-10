@@ -9,7 +9,7 @@ interface RadioProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "
 
 export function Radio({ className, ...props }: RadioProps) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer">
+    <label className="relative flex items-center gap-2 cursor-pointer">
       <div
         className={cn(
           "size-6 rounded-md border flex items-center justify-center transition-all duration-200 ease-in-out shrink-0 shadow-xs",

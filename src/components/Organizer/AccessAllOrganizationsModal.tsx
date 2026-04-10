@@ -4,30 +4,19 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
-import { useAuth } from "@/hooks/useAuth";
 import { organizerService } from "@/services";
 import { getAvatarUrl } from "@/utils/avatar";
 import { RemoveIcon } from "../Icons/RemoveIcon";
 import { ArrowButton } from "../ArrowButton";
-import { Building2, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
-import type { OrganizationMember } from "@/services/organizer/OrganizerService";
-
-interface OrganizationAccount {
-  id: string;
-  type: "user" | "organization";
-  name: string;
-  subtitle: string;
-  avatarUrl?: string;
-  organizationId?: string;
-}
+import type { UserOrganization } from "@/services/organizer/OrganizerService";
+import { useAuth } from "@/hooks/useAuth";
 
 export function AccessAllOrganizationsModal() {
   const { isOpen, closeAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
   const { user } = useAuth();
   const router = useRouter();
-  const [organizations, setOrganizations] = useState<OrganizationAccount[]>([]);
+  const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -39,64 +28,18 @@ export function AccessAllOrganizationsModal() {
   const loadOrganizations = async () => {
     try {
       setLoading(true);
-      // Primeiro, adicionar a conta do usuário
-      const accounts: OrganizationAccount[] = [];
-
-      if (user) {
-        accounts.push({
-          id: user.id,
-          type: "user",
-          name: user.firstName && user.lastName
-            ? `${user.firstName} ${user.lastName}`
-            : user.email || "Nome do usuário",
-          subtitle: "Usuário",
-          avatarUrl: user.avatarUrl,
-        });
-      }
-
-      // Buscar organizações do usuário
-      try {
-        const currentOrg = await organizerService.getOrganization();
-        if (currentOrg) {
-          // Buscar membros da organização para encontrar o papel do usuário
-          const members = await organizerService.getOrganizationMembers();
-          const userMember = members.find((m: OrganizationMember) => m.userId === user?.id);
-
-          accounts.push({
-            id: currentOrg.id,
-            type: "organization",
-            name: userMember?.user?.firstName && userMember?.user?.lastName
-              ? `${userMember.user.firstName} ${userMember.user.lastName}`
-              : user?.email || "Nome do usuário dentro da organização",
-            subtitle: currentOrg.name,
-            avatarUrl: currentOrg.logoUrl,
-            organizationId: currentOrg.id,
-          });
-        }
-      } catch (error) {
-        // Se não conseguir buscar, continua sem adicionar organizações
-        console.error("Error loading organizations:", error);
-      }
-
-      setOrganizations(accounts);
+      const orgs = await organizerService.getMyOrganizations();
+      setOrganizations(orgs);
     } catch (error) {
-      console.error("Error loading accounts:", error);
+      console.error("Error loading organizations:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectAccount = (account: OrganizationAccount) => {
-    if (account.type === "organization" && account.organizationId) {
-      // TODO: Implementar lógica para trocar de organização
-      // Por enquanto, apenas fecha o modal
-      closeAccessAllOrganizationsModal();
-      // Recarregar a página para atualizar o contexto
-      router.refresh();
-    } else {
-      // Se for usuário, apenas fecha o modal
-      closeAccessAllOrganizationsModal();
-    }
+  const handleSelectOrganization = (org: UserOrganization) => {
+    closeAccessAllOrganizationsModal();
+    router.refresh();
   };
 
   return (
@@ -154,14 +97,14 @@ export function AccessAllOrganizationsModal() {
                       organizations.map((org) => (
                         <button
                           key={org.id}
-                          onClick={() => handleSelectAccount(org)}
+                          onClick={() => handleSelectOrganization(org)}
                           className="border-b border-gray-6 last:border-b-0 flex items-center justify-between px-4 py-3 w-full hover:bg-gray-3 transition-colors cursor-pointer"
                         >
                           <div className="flex flex-1 gap-2 items-center min-w-0">
                             <div className="relative shrink-0 size-9 rounded-full overflow-hidden bg-gray-6">
-                              {org.avatarUrl ? (
+                              {org.logoUrl ? (
                                 <Image
-                                  src={getAvatarUrl(org.avatarUrl)}
+                                  src={getAvatarUrl(org.logoUrl)}
                                   alt={org.name}
                                   fill
                                   className="object-cover"
@@ -174,12 +117,13 @@ export function AccessAllOrganizationsModal() {
                                 </div>
                               )}
                             </div>
-                            <div className="flex flex-1 flex-col gap-2 items-start justify-center min-w-0 text-ellipsis whitespace-nowrap">
-                              <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 overflow-hidden w-full">
-                                {org.subtitle}
-                              </p>
-                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12 overflow-hidden w-full">
+                            <div className="flex flex-1 flex-col gap-1 items-start justify-center min-w-0">
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12 truncate w-full">
                                 {org.name}
+                              </p>
+                              <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 truncate w-full">
+                                {org.role === "OWNER" ? "Proprietário" : org.role === "ADMIN" ? "Administrador" : "Membro"}
+                                {org.city && org.state ? ` · ${org.city}, ${org.state}` : ""}
                               </p>
                             </div>
                             <div className="flex items-center relative shrink-0">

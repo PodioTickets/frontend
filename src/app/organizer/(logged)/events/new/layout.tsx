@@ -31,12 +31,6 @@ function ConditionalProgressBar() {
 
 function ProgressBar() {
   const pathname = useOrganizerPathname();
-  const appSurface = useOrganizerAppSurface();
-
-  const href = (internalPath: string) =>
-    organizerExternalHref(internalPath, appSurface);
-
-  /** 0 = Informações … 4 = Questionário (igual ordem do fluxo de edição). */
   const resolveStepIndex = (): number => {
     if (pathname.startsWith("/organizer/events/new/information")) return 0;
     if (pathname.startsWith("/organizer/events/new/banner")) return 1;
@@ -67,7 +61,7 @@ function ProgressBar() {
   };
 
   const stepLinkClass =
-    "flex flex-col gap-[12px] items-center relative z-10 cursor-pointer";
+    "flex flex-col gap-[12px] items-center relative z-10";
 
   return (
     <div className="border-b border-gray-6 bg-gray-2">
@@ -84,8 +78,7 @@ function ProgressBar() {
           {(() => {
             const status = getStepStatus(1);
             return (
-              <Link
-                href={href("/organizer/events/new/information")}
+              <div
                 className={stepLinkClass}
               >
                 <div
@@ -117,15 +110,14 @@ function ProgressBar() {
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
                   Informações
                 </p>
-              </Link>
+              </div>
             );
           })()}
 
           {(() => {
             const status = getStepStatus(2);
             return (
-              <Link
-                href={href("/organizer/events/new/banner")}
+              <div
                 className={stepLinkClass}
               >
                 <div
@@ -157,15 +149,14 @@ function ProgressBar() {
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
                   Banner
                 </p>
-              </Link>
+              </div>
             );
           })()}
 
           {(() => {
             const status = getStepStatus(3);
             return (
-              <Link
-                href={href("/organizer/events/new/tickets")}
+              <div
                 className={stepLinkClass}
               >
                 <div
@@ -197,15 +188,14 @@ function ProgressBar() {
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
                   Ingressos
                 </p>
-              </Link>
+              </div>
             );
           })()}
 
           {(() => {
             const status = getStepStatus(4);
             return (
-              <Link
-                href={href("/organizer/events/new/topics")}
+              <div
                 className={stepLinkClass}
               >
                 <div
@@ -237,15 +227,14 @@ function ProgressBar() {
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
                   Tópicos
                 </p>
-              </Link>
+              </div>
             );
           })()}
 
           {(() => {
             const status = getStepStatus(5);
             return (
-              <Link
-                href={href("/organizer/events/new/questionnaire")}
+              <div
                 className={stepLinkClass}
               >
                 <div
@@ -277,7 +266,7 @@ function ProgressBar() {
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
                   Questionário
                 </p>
-              </Link>
+              </div>
             );
           })()}
 

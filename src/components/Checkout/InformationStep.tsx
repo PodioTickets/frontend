@@ -22,10 +22,7 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { UserAutocomplete } from "../UserAutocomplete";
 import type { LinkedUser } from "@/hooks/useLinkedUsers";
-import { useLinkedUsers } from "@/hooks/useLinkedUsers";
-import { userService } from "@/services";
 import toast from "react-hot-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { Loading } from "../Loading";
 import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,6 +37,11 @@ interface InformationStepProps {
    * (ex.: rascunho do organizador com perguntas ainda não salvas na API).
    */
   previewQuestions?: Question[];
+  /**
+   * Quando true, oculta o cabeçalho e os campos básicos (nome, email, CPF…),
+   * exibindo apenas as perguntas do organizador.
+   */
+  previewMode?: boolean;
 }
 
 interface ParticipantWithTicket {
@@ -54,6 +56,7 @@ export function InformationStep({
   onNext,
   onBack,
   previewQuestions,
+  previewMode = false,
 }: InformationStepProps) {
   const {
     raceQuantities,
@@ -71,8 +74,6 @@ export function InformationStep({
 
   const loading = ticketsLoading || categoriesLoading;
   const { openDeleteParticipantModal } = useDeleteParticipantModal();
-  const { linkedUsers } = useLinkedUsers();
-  const { user: currentUser } = useAuth();
   const [expandedParticipants, setExpandedParticipants] = useState<
     Record<number, boolean>
   >({
@@ -124,20 +125,19 @@ export function InformationStep({
     });
   }, [participants]);
 
-  // Estado para rastrear quais participantes foram selecionados da lista de usuários vinculados
-  // Isso evita tentar salvar novamente usuários que já estão vinculados
+  // Estado para rastrear quais participantes foram auto-preenchidos via seleção de usuário vinculado
   const [selectedLinkedUserIds, setSelectedLinkedUserIds] = useState<
     Record<number, string>
-  >({});
-
-  // Estado para rastrear quais participantes já foram salvos
-  const [savedParticipantIds, setSavedParticipantIds] = useState<
-    Record<number, boolean>
   >({});
 
   // Estado para rastrear quais participantes foram salvos clicando em "Salvar e próximo"
   const [savedParticipants, setSavedParticipants] = useState<
     Record<number, boolean>
+  >({});
+
+  // Snapshot dos dados do participante no momento em que foi salvo — usado para detectar mudanças
+  const [savedSnapshots, setSavedSnapshots] = useState<
+    Record<number, { participant: Record<string, string>; questionAnswers: Record<string, string | string[]> }>
   >({});
 
   // Erros de validação por participante e campo (ex: { 0: { name: "Informe nome e sobrenome", email: "Campo obrigatório" } })
@@ -372,7 +372,7 @@ export function InformationStep({
     }).format(price);
   };
 
-  const toggleParticipant = async (index: number) => {
+  const toggleParticipant = (index: number) => {
     // Garantir que o participante existe (fallback caso o useEffect não tenha executado)
     // O updateParticipant já cria o participante se não existir, mas vamos garantir
     let participant = participants[index];
@@ -407,134 +407,11 @@ export function InformationStep({
     // Verificar se está tentando fechar (participante já está expandido)
     const isCurrentlyExpanded = expandedParticipants[index];
 
-    // Se está abrindo o participante para edição, remover do estado de salvos
-    if (!isCurrentlyExpanded) {
-      setSavedParticipants((prev) => {
-        const updated = { ...prev };
-        delete updated[index];
-        return updated;
-      });
-    }
-
-    // Se está tentando fechar E o participante está completo, tentar salvar
     if (isCurrentlyExpanded && isParticipantComplete(index)) {
-      // Limpar CPF (remover formatação) para comparação
       const cleanCPF = (participant.cpf || "").replace(/\D/g, "");
-      const participantEmail = (participant.email || "").trim().toLowerCase();
-
-      // Verificar se o participante já está na lista de usuários vinculados
-      const isAlreadyLinked = linkedUsers.some((linkedUser) => {
-        const linkedUserCPF = (linkedUser.documentNumber || "").replace(/\D/g, "");
-        const linkedUserEmail = (linkedUser.email || "").trim().toLowerCase();
-
-        // Comparar por CPF ou email
-        return (
-          (cleanCPF && linkedUserCPF && cleanCPF === linkedUserCPF) ||
-          (participantEmail && linkedUserEmail && participantEmail === linkedUserEmail)
-        );
-      });
-
-      // Verificar se é o próprio usuário atual
-      const isCurrentUser = currentUser && (
-        (cleanCPF && currentUser.documentNumber && cleanCPF === currentUser.documentNumber.replace(/\D/g, "")) ||
-        (participantEmail && currentUser.email && participantEmail === currentUser.email.trim().toLowerCase())
-      );
-
-      // Se já está vinculado ou é o próprio usuário, não tentar vincular novamente
-      if (isAlreadyLinked || isCurrentUser) {
-        // Marcar como já vinculado para evitar tentativas futuras
-        if (isAlreadyLinked) {
-          const linkedUser = linkedUsers.find((linkedUser) => {
-            const linkedUserCPF = (linkedUser.documentNumber || "").replace(/\D/g, "");
-            const linkedUserEmail = (linkedUser.email || "").trim().toLowerCase();
-            return (
-              (cleanCPF && linkedUserCPF && cleanCPF === linkedUserCPF) ||
-              (participantEmail && linkedUserEmail && participantEmail === linkedUserEmail)
-            );
-          });
-
-          if (linkedUser) {
-            setSelectedLinkedUserIds((prev) => ({
-              ...prev,
-              [index]: linkedUser.id,
-            }));
-          }
-        }
-
-        // Não precisa fazer nada, já está vinculado
-        // Apenas fecha o participante
-      } else if (!selectedLinkedUserIds[index] && !savedParticipantIds[index]) {
-        if (cleanCPF.length === 11 && !isValidCPF(participant.cpf || "")) {
-          toast.error(
-            "CPF inválido: os dígitos verificadores não conferem com o número.",
-          );
-          return;
-        }
-        // Se não está vinculado, criar/vincular usuário
-        try {
-          // Separar nome em firstName e lastName
-          const nameParts = (participant.name || "").trim().split(" ");
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
-
-          // Normalizar gênero para o formato esperado pelo backend (minúsculas)
-          // O dropdown usa labels como "Masculino", "Feminino", etc., mas o backend espera minúsculas
-          let normalizedGender = (participant.gender || "").trim();
-          const genderLower = normalizedGender.toLowerCase();
-
-          // Mapear valores possíveis para os formatos esperados pelo backend
-          if (genderLower === "masculino") {
-            normalizedGender = "masculino";
-          } else if (genderLower === "feminino") {
-            normalizedGender = "feminino";
-          } else if (genderLower === "outro") {
-            normalizedGender = "outro";
-          } else if (genderLower === "prefiro não dizer" || genderLower === "prefiro-nao-dizer" || genderLower === "prefiro-nao-informar") {
-            normalizedGender = "prefiro-nao-dizer";
-          } else {
-            // Se não for um dos valores esperados, usar o valor em minúsculas
-            normalizedGender = genderLower || "";
-          }
-
-          const response = await userService.createOrLinkUser({
-            firstName,
-            lastName,
-            email: participant.email || "",
-            documentNumber: cleanCPF,
-            phone: (participant.phone || "").replace(/\D/g, ""),
-            dateOfBirth: participant.birthDate || "",
-            gender: normalizedGender,
-          });
-
-          if (response.success && response.data) {
-            // Marcar como salvo
-            setSavedParticipantIds((prev) => ({
-              ...prev,
-              [index]: true,
-            }));
-
-            // Se foi criado ou vinculado, marcar também como selecionado para evitar duplicação
-            if (response.data.wasCreated || response.data.wasLinked) {
-              setSelectedLinkedUserIds((prev) => ({
-                ...prev,
-                [index]: response.data!.id,
-              }));
-            }
-
-            toast.success(
-              response.data.wasCreated
-                ? "Usuário criado e vinculado com sucesso!"
-                : "Usuário vinculado com sucesso!"
-            );
-          } else {
-            toast.error(response.error || "Erro ao salvar usuário");
-            return; // Não fecha o participante se houver erro
-          }
-        } catch (error) {
-          console.error("Erro ao salvar usuário:", error);
-          toast.error("Erro ao salvar usuário. Tente novamente.");
-          return; // Não fecha o participante se houver erro
-        }
+      if (cleanCPF.length === 11 && !isValidCPF(participant.cpf || "")) {
+        toast.error("CPF inválido: os dígitos verificadores não conferem com o número.");
+        return;
       }
     }
 
@@ -610,6 +487,31 @@ export function InformationStep({
     }
     return null;
   };
+
+  // Mapa reativo: participantIndex → isDirty (recalculado sempre que participants/questionAnswers/snapshots mudarem)
+  const participantDirtyMap = useMemo(() => {
+    const map: Record<number, boolean> = {};
+    Object.keys(savedSnapshots).forEach((key) => {
+      const index = Number(key);
+      const snapshot = savedSnapshots[index];
+      if (!snapshot) {
+        map[index] = true;
+        return;
+      }
+      const p = participants[index];
+      const sp = snapshot.participant;
+      const fieldsDirty =
+        (p?.name || "") !== sp.name ||
+        (p?.cpf || "") !== sp.cpf ||
+        (p?.email || "") !== sp.email ||
+        (p?.birthDate || "") !== sp.birthDate ||
+        (p?.phone || "") !== sp.phone ||
+        (p?.gender || "") !== sp.gender;
+      const currentQA = questionAnswers[index] || {};
+      map[index] = fieldsDirty || JSON.stringify(currentQA) !== JSON.stringify(snapshot.questionAnswers);
+    });
+    return map;
+  }, [savedSnapshots, participants, questionAnswers]);
 
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];
@@ -1074,21 +976,23 @@ export function InformationStep({
       <div className="w-full flex items-start gap-11 pb-24 md:pb-0">
         {/* Coluna esquerda - Formulários */}
         <div className="flex-1 flex flex-col gap-2 md:gap-6">
-          <div className="w-full ">
-            <div className="hidden md:flex items-center gap-2 text-2xl font-bold">
-              <button
-                className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6"
-                onClick={onBack}
-              >
-                <ArrowButton isOpen={false} />
-              </button>
-              <p className="text-2xl font-bold">Informações básicas</p>
+          {!previewMode && (
+            <div className="w-full">
+              <div className="hidden md:flex items-center gap-2 text-2xl font-bold">
+                <button
+                  className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6"
+                  onClick={onBack}
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+                <p className="text-2xl font-bold">Informações básicas</p>
+              </div>
+              <p className="text-sm text-gray-11 md:mt-4">
+                Para quem serão os ingressos? Preencha os dados principais de cada
+                participante.
+              </p>
             </div>
-            <p className="text-sm text-gray-11 md:mt-4">
-              Para quem serão os ingressos? Preencha os dados principais de cada
-              participante.
-            </p>
-          </div>
+          )}
 
           <div className="w-full">
             <div className="hidden md:flex gap-2 items-stretch rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
@@ -1130,7 +1034,7 @@ export function InformationStep({
                         ) : "Ingresso Avulso"}</p>
                         <p className="font-semibold text-gray-12 text-base truncate">
                           ({ticket.quantity}x){" "}
-                          {ticket.distance ? `${ticket.distance} ` : ""}
+                          {ticket.raceName ? `${ticket.raceName} ` : ""}
                         </p>
                       </div>
                       <p className="font-bold">
@@ -1367,6 +1271,7 @@ export function InformationStep({
                             </label>
                             <UserAutocomplete
                               value={participant.name}
+                              disabled={previewMode}
                               onChange={(value) => {
                                 clearParticipantFieldError(participantIndex, "name");
                                 updateParticipant(participantIndex, { name: value });
@@ -1437,10 +1342,11 @@ export function InformationStep({
                               type="email"
                               name="email"
                               value={participant.email}
+                              disabled={previewMode}
                               onChange={(e) =>
                                 handleInputChange(participantIndex, e)
                               }
-                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.email ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                               placeholder="Digite seu email"
                             />
                             {fieldErrors[participantIndex]?.email && (
@@ -1455,6 +1361,7 @@ export function InformationStep({
                               type="text"
                               name="cpf"
                               value={participant.cpf}
+                              disabled={previewMode}
                               onChange={(e) =>
                                 handleCPFChange(
                                   participantIndex,
@@ -1462,7 +1369,7 @@ export function InformationStep({
                                 )
                               }
                               maxLength={14}
-                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors ${fieldErrors[participantIndex]?.cpf ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.cpf ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                               placeholder="000.000.000-00"
                             />
                             {fieldErrors[participantIndex]?.cpf && (
@@ -1473,17 +1380,19 @@ export function InformationStep({
                             <label className="text-sm font-medium text-gray-12">
                               Data de nascimento
                             </label>
-                            <DatePickerWithConfirm
-                              value={participant.birthDate || null}
-                              onChange={(date) => {
-                                clearParticipantFieldError(participantIndex, "birthDate");
-                                const birthDate = date
-                                  ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-                                  : "";
-                                updateParticipant(participantIndex, { birthDate });
-                              }}
-                              error={!!fieldErrors[participantIndex]?.birthDate}
-                            />
+                            <div className={previewMode ? "opacity-50 pointer-events-none" : ""}>
+                              <DatePickerWithConfirm
+                                value={participant.birthDate || null}
+                                onChange={(date) => {
+                                  clearParticipantFieldError(participantIndex, "birthDate");
+                                  const birthDate = date
+                                    ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+                                    : "";
+                                  updateParticipant(participantIndex, { birthDate });
+                                }}
+                                error={!!fieldErrors[participantIndex]?.birthDate}
+                              />
+                            </div>
                             {fieldErrors[participantIndex]?.birthDate && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].birthDate}</p>
                             )}
@@ -1496,6 +1405,7 @@ export function InformationStep({
                               type="tel"
                               name="phone"
                               value={participant.phone}
+                              disabled={previewMode}
                               onChange={(e) =>
                                 handlePhoneChange(
                                   participantIndex,
@@ -1504,7 +1414,7 @@ export function InformationStep({
                                 )
                               }
                               maxLength={15}
-                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
+                              className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
                               placeholder="(00) 99999-9999"
                             />
                             {fieldErrors[participantIndex]?.phone && (
@@ -1515,7 +1425,7 @@ export function InformationStep({
                             <label className="text-sm font-medium text-gray-12">
                               Sexo
                             </label>
-                            <div className="w-full">
+                            <div className={`w-full ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
                               <Dropdown
                                 width="w-full"
                                 className="z-60"
@@ -1547,7 +1457,7 @@ export function InformationStep({
                         </div>
 
                         {/* Seção de Contato de Emergência */}
-                        <div className="flex flex-col gap-3 mt-4 w-full">
+                        <div className={`flex flex-col gap-3 mt-4 w-full ${previewMode ? "opacity-50 pointer-events-none" : ""}`}>
                           <p className="text-base font-normal text-gray-12 font-family-dm-sans leading-[1.3]">
                             Deseja adicionar um número de emergência ?
                           </p>
@@ -1688,9 +1598,25 @@ export function InformationStep({
                                 delete next[participantIndex];
                                 return next;
                               });
+                              const p = participants[participantIndex];
+                              setSavedSnapshots((prev) => ({
+                                ...prev,
+                                [participantIndex]: {
+                                  participant: {
+                                    name: p?.name || "",
+                                    cpf: p?.cpf || "",
+                                    email: p?.email || "",
+                                    birthDate: p?.birthDate || "",
+                                    phone: p?.phone || "",
+                                    gender: p?.gender || "",
+                                  },
+                                  questionAnswers: { ...(questionAnswers[participantIndex] || {}) },
+                                },
+                              }));
                               setSavedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
                               toggleParticipant(participantIndex);
                             }}
+                            disabled={savedParticipants[participantIndex] && !participantDirtyMap[participantIndex] || previewMode}
                             variant="default"
                             className="font-bold"
                           >
@@ -1733,6 +1659,7 @@ export function InformationStep({
                 }
                 onNext();
               }}
+              disabled={previewMode}
               variant="default"
               className="w-1/4 font-bold"
             >

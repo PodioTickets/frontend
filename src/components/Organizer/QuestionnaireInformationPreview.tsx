@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import {
   CheckoutPreviewProvider,
@@ -13,6 +13,7 @@ import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
 import { useTickets } from "@/hooks/useTickets";
+import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 
 function SeedFirstTicketQuantity({ eventId }: { eventId: string }) {
   const { tickets, loading } = useTickets(eventId, !!eventId);
@@ -54,6 +55,10 @@ export function QuestionnaireInformationPreview({
   onBack: () => void;
 }) {
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+  const orgNav = useOrganizerNavigate();
+  const handleBack = useCallback(() => {
+    orgNav.push(`/organizer/events/${eventId}/edit/questionnaire`);
+  }, [orgNav, eventId]);
 
   if (ticketsLoading) {
     return (
@@ -81,10 +86,36 @@ export function QuestionnaireInformationPreview({
   return (
     <CheckoutPreviewProvider>
       <SeedFirstTicketQuantity eventId={eventId} />
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-14 w-full">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
+          >
+            <ArrowButton isOpen={false} />
+          </button>
+          <div>
+            <h1 className="font-manrope text-xl font-bold text-gray-12 md:text-2xl">
+              Pré-visualização — questionário
+            </h1>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 shrink-0 border-gray-6 font-manrope font-semibold text-gray-12"
+          onClick={handleBack}
+        >
+          Voltar para edição
+        </Button>
+      </div>
+
       <div className="pb-8 pt-4">
         <InformationStep
           event={event}
           previewQuestions={previewQuestions}
+          previewMode
           onBack={onBack}
           onNext={() =>
             toast("Pré-visualização — continuar só no fluxo real de checkout.")

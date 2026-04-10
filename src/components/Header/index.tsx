@@ -167,19 +167,6 @@ export function Header() {
               >
                 Calendário de eventos
               </Link>
-              <Dropdown
-                options={modalitiesColumns.flat()}
-                dataAttribute="modalities"
-                width="w-48"
-                maxHeight="max-h-[430px]"
-                className="top-14"
-                trigger={(isOpen) => (
-                  <h1 className="flex items-center h-full gap-2 hover:text-primary-7 transition-all duration-200 cursor-pointer">
-                    Modalidades
-                    <ArrowButton isOpen={isOpen} />
-                  </h1>
-                )}
-              />
             </div>
           </div>
           <div className="flex w-full max-w-[560px] px-4 md:px-0">

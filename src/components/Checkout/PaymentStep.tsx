@@ -59,6 +59,13 @@ interface PaymentOption {
   icons?: React.ReactNode;
 }
 
+type CardErrors = {
+  cardName?: string;
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCVV?: string;
+};
+
 function CreditCardForm({
   installmentOptions,
   selectedInstallments,
@@ -73,6 +80,7 @@ function CreditCardForm({
   cardCVV,
   setCardCVV,
   isMobile = false,
+  errors,
 }: {
   installmentOptions: DropdownOption[];
   selectedInstallments: string;
@@ -87,6 +95,7 @@ function CreditCardForm({
   cardCVV?: string;
   setCardCVV?: (value: string) => void;
   isMobile?: boolean;
+  errors?: CardErrors;
 }) {
   const formatCardNumber = (value: string) => {
     const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
@@ -143,8 +152,10 @@ function CreditCardForm({
             onChange={(e) => setCardName && setCardName(e.target.value)}
             className="bg-gray-2"
             placeholder="Ex: João Ribeiro"
+            aria-invalid={!!errors?.cardName}
           />
         </div>
+        {errors?.cardName && <p className="text-sm text-red-11">{errors.cardName}</p>}
       </div>
 
       <div className="flex flex-col gap-2 w-full">
@@ -159,8 +170,10 @@ function CreditCardForm({
             className="bg-gray-2"
             maxLength={19}
             placeholder="Ex: 5400 7975 6026 4737"
+            aria-invalid={!!errors?.cardNumber}
           />
         </div>
+        {errors?.cardNumber && <p className="text-sm text-red-11">{errors.cardNumber}</p>}
       </div>
 
       <div
@@ -180,7 +193,9 @@ function CreditCardForm({
             className="bg-gray-2"
             maxLength={5}
             placeholder="MM/AA"
+            aria-invalid={!!errors?.cardExpiry}
           />
+          {errors?.cardExpiry && <p className="text-sm text-red-11">{errors.cardExpiry}</p>}
         </div>
         <div
           className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}
@@ -209,8 +224,10 @@ function CreditCardForm({
               maxLength={cvvMaxLength}
               className="bg-gray-2"
               placeholder={isAmex ? "4 dígitos" : "3 dígitos"}
+              aria-invalid={!!errors?.cardCVV}
             />
           </div>
+          {errors?.cardCVV && <p className="text-sm text-red-11">{errors.cardCVV}</p>}
         </div>
       </div>
 
@@ -531,6 +548,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVV, setCardCVV] = useState("");
+  const [cardErrors, setCardErrors] = useState<CardErrors>({});
+
+  const handleSetCardName = (v: string) => { setCardName(v); setCardErrors((p) => { const n = { ...p }; delete n.cardName; return n; }); };
+  const handleSetCardNumber = (v: string) => { setCardNumber(v); setCardErrors((p) => { const n = { ...p }; delete n.cardNumber; return n; }); };
+  const handleSetCardExpiry = (v: string) => { setCardExpiry(v); setCardErrors((p) => { const n = { ...p }; delete n.cardExpiry; return n; }); };
+  const handleSetCardCVV = (v: string) => { setCardCVV(v); setCardErrors((p) => { const n = { ...p }; delete n.cardCVV; return n; }); };
 
   // Coupon states
   const [couponCode, setCouponCode] = useState("");
@@ -942,8 +965,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     {
       id: "pix",
       name: "PIX",
-      description: "5% OFF",
-      badge: "5% OFF",
+      description: "",
+      badge: "",
     },
   ];
 
@@ -1344,50 +1367,37 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
-  // Validar se o formulário do cartão de crédito está completo e válido
-  const isCreditCardFormValid = useMemo(() => {
-    if (!cardName?.trim() || !cardNumber || !cardExpiry || !cardCVV) {
-      return false;
-    }
-
-    // Validar formato dos campos
-    if (!validateCardNumber(cardNumber)) {
-      return false;
-    }
-
-    if (!validateExpiry(cardExpiry)) {
-      return false;
-    }
-
-    if (!validateCVV(cardCVV)) {
-      return false;
-    }
-
-    return true;
-  }, [cardName, cardNumber, cardExpiry, cardCVV]);
-
   // Processar checkout Cartão de Crédito
   const handleProcessCreditCardCheckout = async () => {
     // Validar dados do cartão
-    if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
-      toast.error('Por favor, preencha todos os campos do cartão');
+    const newCardErrors: CardErrors = {};
+
+    if (!cardName?.trim()) {
+      newCardErrors.cardName = 'Informe o nome impresso no cartão.';
+    }
+    if (!cardNumber) {
+      newCardErrors.cardNumber = 'Informe o número do cartão.';
+    } else if (!validateCardNumber(cardNumber)) {
+      newCardErrors.cardNumber = 'Número do cartão inválido.';
+    }
+    if (!cardExpiry) {
+      newCardErrors.cardExpiry = 'Informe a data de validade.';
+    } else if (!validateExpiry(cardExpiry)) {
+      newCardErrors.cardExpiry = 'Cartão expirado ou data inválida.';
+    }
+    if (!cardCVV) {
+      newCardErrors.cardCVV = 'Informe o CVV.';
+    } else if (!validateCVV(cardCVV)) {
+      newCardErrors.cardCVV = 'CVV inválido.';
+    }
+
+    if (Object.keys(newCardErrors).length > 0) {
+      setCardErrors(newCardErrors);
+      toast.error('Por favor, corrija os campos do cartão.');
       return;
     }
 
-    if (!validateCardNumber(cardNumber)) {
-      toast.error('Número do cartão inválido');
-      return;
-    }
-
-    if (!validateExpiry(cardExpiry)) {
-      toast.error('Cartão expirado ou data inválida');
-      return;
-    }
-
-    if (!validateCVV(cardCVV)) {
-      toast.error('CVV inválido');
-      return;
-    }
+    setCardErrors({});
 
     try {
       const checkoutData = prepareCheckoutData();
@@ -1607,22 +1617,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       setSelectedInstallments={setSelectedInstallments}
                       onSuccess={onSuccess}
                       cardName={cardName}
-                      setCardName={setCardName}
+                      setCardName={handleSetCardName}
                       cardNumber={cardNumber}
-                      setCardNumber={setCardNumber}
+                      setCardNumber={handleSetCardNumber}
                       cardExpiry={cardExpiry}
-                      setCardExpiry={setCardExpiry}
+                      setCardExpiry={handleSetCardExpiry}
                       cardCVV={cardCVV}
-                      setCardCVV={setCardCVV}
+                      setCardCVV={handleSetCardCVV}
                       isMobile={true}
+                      errors={cardErrors}
                     />
                     <Button
                       onClick={handleProcessCreditCardCheckout}
-                      disabled={
-                        checkoutLoading ||
-                        !isCreditCardFormValid ||
-                        !billingAddressConfirmed
-                      }
+                      disabled={checkoutLoading || !billingAddressConfirmed}
                       className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
@@ -1650,11 +1657,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     <span className="text-base font-semibold text-gray-12 font-manrope">
                       PIX
                     </span>
-                    <div className="bg-primary-6 text-primary-12 rounded-xl px-2 py-1">
-                      <span className="text-sm font-semibold font-plus-jakarta-sans">
-                        5% OFF
-                      </span>
-                    </div>
                   </div>
                 </div>
 
@@ -1811,8 +1813,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               disabled={
                 totalParticipants === 0 ||
                 checkoutLoading ||
-                !billingAddressConfirmed ||
-                (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
+                !billingAddressConfirmed
               }
               className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1895,18 +1896,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               setSelectedInstallments={setSelectedInstallments}
                               onSuccess={onSuccess}
                               cardName={cardName}
-                              setCardName={setCardName}
+                              setCardName={handleSetCardName}
                               cardNumber={cardNumber}
-                              setCardNumber={setCardNumber}
+                              setCardNumber={handleSetCardNumber}
                               cardExpiry={cardExpiry}
-                              setCardExpiry={setCardExpiry}
+                              setCardExpiry={handleSetCardExpiry}
                               cardCVV={cardCVV}
-                              setCardCVV={setCardCVV}
+                              setCardCVV={handleSetCardCVV}
                               isMobile={false}
+                              errors={cardErrors}
                             />
                             <Button
                               onClick={handleProcessCreditCardCheckout}
-                              disabled={checkoutLoading || !isCreditCardFormValid}
+                              disabled={checkoutLoading}
                               className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
@@ -2285,8 +2287,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     disabled={
                       totalParticipants === 0 ||
                       checkoutLoading ||
-                      !billingAddressConfirmed ||
-                      (selectedPaymentMethod === "credit" && !isCreditCardFormValid)
+                      !billingAddressConfirmed
                     }
                     className="bg-primary-11 text-primary-2 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                   >

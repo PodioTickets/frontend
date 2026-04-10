@@ -63,7 +63,7 @@ export default function EditTicketsCheckoutPreviewPage() {
 
   return (
     <div className="pb-24 pt-6">
-      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-14">
         <div className="flex items-center gap-3">
           <button
             type="button"
