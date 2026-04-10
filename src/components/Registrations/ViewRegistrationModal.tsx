@@ -200,7 +200,9 @@ export function ViewRegistrationModal() {
     : "—";
   const participantGender = getGenderLabel(user?.gender);
   const participantPhone = user?.phone || null;
-  const emergencyPhone = currentRegistration.emergencyContact.name + " - " + formatPhone(currentRegistration.emergencyContact.phone.toString());
+  const emergencyPhone = currentRegistration.emergencyContact?.name
+    ? currentRegistration.emergencyContact.name + " - " + formatPhone((currentRegistration.emergencyContact.phone ?? "").toString())
+    : null;
 
   // Obter distância do ticket
   const ticketDistance = currentRegistration?.ticket?.distance
