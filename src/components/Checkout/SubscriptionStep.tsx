@@ -19,6 +19,7 @@ interface SubscriptionStepProps {
   event: Event;
   onNext: () => void;
   onBack: () => void;
+  isSubmitting?: boolean;
 }
 
 interface Product {
@@ -150,6 +151,7 @@ export function SubscriptionStep({
   event,
   onNext,
   onBack,
+  isSubmitting = false,
 }: SubscriptionStepProps) {
   const { raceQuantities, participants, updateParticipant } = useCheckout();
   const eventId = event?.id;
@@ -1685,7 +1687,9 @@ export function SubscriptionStep({
               <Button
                 onClick={onNext}
                 className="w-full mt-8 font-bold"
+                isLoading={isSubmitting}
                 disabled={
+                  isSubmitting ||
                   totalParticipants === 0 ||
                   !participantsWithTickets.every(({ participantIndex }) =>
                     isParticipantComplete(participantIndex)

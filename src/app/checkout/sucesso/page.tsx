@@ -7,28 +7,19 @@ import { useEvent } from "@/hooks/useEvent";
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
-import type { CheckoutResponse } from "@/interfaces/checkout";
-import { useQuery } from "@tanstack/react-query";
-import { organizerService } from "@/services";
-import { queryKeys } from "@/services/cache/QueryClient";
+import type { OrderResponse } from "@/interfaces/order";
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CREDIT_CARD: "Cartão de crédito",
+  PIX: "Pix",
+};
 
 function CheckoutSucessoContent() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { resetCheckout } = useCheckout();
-  const [checkoutResponse, setCheckoutResponse] = useState<CheckoutResponse | null>(null);
-
-  // Buscar produtos do evento para obter imagens
-  const { data: productsData } = useQuery({
-    queryKey: queryKeys.events.products(eventId || ""),
-    queryFn: async () => {
-      if (!eventId) return { products: [] };
-      return organizerService.getProducts(eventId);
-    },
-    enabled: !!eventId,
-    staleTime: 5 * 60 * 1000,
-  });
+  const [order, setOrder] = useState<OrderResponse | null>(null);
 
   // Buscar dados do checkout do localStorage
   useEffect(() => {
@@ -38,7 +29,8 @@ function CheckoutSucessoContent() {
       const stored = localStorage.getItem(`checkout_success_${eventId}`);
       if (stored) {
         const data = JSON.parse(stored);
-        setCheckoutResponse(data.checkoutResponse);
+        // saveOrderForSuccess salva { order, timestamp }
+        setOrder(data.order ?? null);
       }
     } catch (error) {
       console.error('Erro ao buscar dados do checkout:', error);
@@ -50,124 +42,62 @@ function CheckoutSucessoContent() {
     resetCheckout();
   }, [resetCheckout]);
 
-  // Preparar dados para o PaymentSuccessStep
+  // Preparar dados para o PaymentSuccessStep a partir do OrderResponse
   const successData = useMemo(() => {
-    if (!checkoutResponse) return null;
+    if (!order) return null;
 
-    // Preparar dados dos participantes com seus tickets e produtos
-    // Expandir tickets (um ticket pode ter quantity > 1)
-    const expandedTickets: Array<{ ticket: typeof checkoutResponse.tickets[0]; participantIndex: number }> = [];
-    checkoutResponse.tickets.forEach((ticket) => {
+    // Expandir tickets por quantidade para mapear 1:1 com registrations
+    const expandedTickets: Array<{ batchName: string; unitPrice: number }> = [];
+    for (const ticket of order.tickets) {
       for (let i = 0; i < ticket.quantity; i++) {
         expandedTickets.push({
-          ticket,
-          participantIndex: expandedTickets.length,
+          batchName: ticket.batchName ?? "Ingresso",
+          unitPrice: ticket.unitPrice,
         });
       }
-    });
+    }
 
-    const participantsData = checkoutResponse.participantsDetails.map((participant, index) => {
-      // Encontrar o ticket correspondente a este participante
-      const ticketInfo = expandedTickets[index];
-      const ticket = ticketInfo?.ticket || checkoutResponse.tickets[0];
+    const registrations = order.registrations ?? [];
 
-      // Buscar o registro correspondente para obter o QR Code
-      const registration = checkoutResponse.registrations[index];
-
-      // Processar QR Code - vem como string JSON que será usada para gerar o QR Code
-      // O QR Code será gerado a partir da string JSON completa
-      let qrCodeData: string | undefined = undefined;
-      if (registration?.qrCode) {
-        // Passar a string JSON diretamente para o componente de QR Code
-        qrCodeData = registration.qrCode;
-      }
-
-      // Produtos adicionais do participante (não incluídos no ticket)
-      // IMPORTANTE: Usar apenas os produtos deste participante específico (participant.products)
-      const participantProducts = participant.products || [];
-      const additionalProducts = participantProducts.length > 0
-        ? participantProducts.map(p => {
-          // Buscar o produto na lista geral apenas para obter detalhes (nome, variação, imagem)
-          // A busca deve corresponder exatamente ao productId e variationId deste participante
-          const productItem = checkoutResponse.products.items.find(item => {
-            // Verificar correspondência exata: productId deve ser igual
-            // E se houver variationId, ele também deve corresponder
-            const productIdMatch = item.id === p.productId;
-            const variationIdMatch = p.variationId
-              ? (item.variationId === p.variationId)
-              : (!item.variationId); // Se não tem variationId no participante, o item também não deve ter
-
-            return productIdMatch && variationIdMatch;
-          });
-
-          // Retornar apenas os produtos deste participante específico
-          return {
-            name: productItem?.name || 'Produto',
-            price: productItem ? (productItem.unitPrice || 0) / 100 : 0, // Converter de centavos
-            quantity: p.quantity,
-            variationName: productItem?.variationName || null,
-            image: (productItem as any)?.image || null,
-          };
-        })
-        : undefined;
-
-      // Produtos incluídos no ticket (para exibição)
-      const includedProducts = participant.includedProducts || registration?.participant?.includedProducts || [];
-
-      // Mapear produtos incluídos com informações completas (imagem, variação, preço)
-      const mappedIncludedProducts = includedProducts.map(ip => {
-        // Buscar o produto na lista geral para obter variação e preço
-        const productItem = checkoutResponse.products.items.find(item =>
-          item.id === ip.productId
-        );
-
-        // Buscar o produto completo do evento para obter a imagem
-        const eventProduct = productsData?.products?.find((p: any) => p.id === ip.productId);
-
-        // Se o produto tem variação, buscar o nome da variação
-        let variationName = productItem?.variationName || null;
-        if (!variationName && eventProduct && productItem?.variationId) {
-          const variation = eventProduct.variations?.find((v: any) =>
-            (v.id || `${eventProduct.id}-${eventProduct.variations?.indexOf(v)}`) === productItem.variationId
-          );
-          variationName = variation?.name || null;
-        }
-
-        return {
-          name: ip.productName,
-          price: productItem ? (productItem.unitPrice || 0) / 100 : (ip.basePrice || 0) / 100, // Converter de centavos
-          quantity: 1,
-          variationName: variationName,
-          variationType: eventProduct?.variationType || null,
-          image: eventProduct?.image || null,
-          isIncluded: true,
-        };
-      });
-
+    const participantsData = expandedTickets.map((ticket, index) => {
+      const registration = registrations[index];
       return {
         participantIndex: index,
-        ticketName: ticket?.name || 'Ingresso',
-        ticketPrice: (ticket?.price || 0) / 100, // Converter de centavos para reais
-        qrCode: qrCodeData, // QR Code como objeto ou string
-        additionalProducts: additionalProducts,
-        includedProducts: mappedIncludedProducts,
+        ticketName: ticket.batchName,
+        ticketPrice: ticket.unitPrice / 100,
+        qrCode: registration?.qrCode,
       };
     });
 
+    const participantsInfo = registrations
+      .filter((r) => r.participant)
+      .map((r) => ({
+        id: r.participant!.id,
+        name: r.participant!.name,
+        email: r.participant!.email,
+        cpf: "",
+        phone: "",
+        birthDate: "",
+        gender: null as null,
+      }));
+
+    const paymentMethodLabel =
+      order.payment?.method
+        ? (PAYMENT_METHOD_LABELS[order.payment.method] ?? order.payment.method)
+        : undefined;
+
     return {
-      orderNumber: checkoutResponse.payment?.transactionId || checkoutResponse.orderNumber, // Usar transactionId como número do pedido
-      paymentMethod: checkoutResponse.paymentMethod,
-      totalPaid: (checkoutResponse.pricing.total || 0) / 100, // Converter de centavos para reais
+      orderNumber: order.payment?.transactionId ?? order.orderId,
+      paymentMethod: paymentMethodLabel,
+      totalPaid: (order.pricing.total ?? 0) / 100,
       participantsData,
-      participantsInfo: checkoutResponse.participantsDetails,
-      subtotal: (checkoutResponse.pricing.subtotal || 0) / 100, // Converter de centavos
-      additionalProductsTotal: (checkoutResponse.products.subtotal || 0) / 100, // Converter de centavos
-      serviceFee: (checkoutResponse.pricing.serviceFee || 0) / 100, // Converter de centavos
-      couponDiscount: (checkoutResponse.pricing.couponDiscount || 0) / 100, // Converter de centavos
-      voucherDiscount: (checkoutResponse.pricing.voucherDiscount || 0) / 100, // Converter de centavos
-      date: checkoutResponse.date,
+      participantsInfo,
+      serviceFee: (order.pricing.serviceFee ?? 0) / 100,
+      couponDiscount: (order.pricing.couponDiscount ?? 0) / 100,
+      voucherDiscount: (order.pricing.voucherDiscount ?? 0) / 100,
+      date: order.payment?.paidAt ?? order.reservedAt,
     };
-  }, [checkoutResponse, productsData]);
+  }, [order]);
 
   if (!eventId) {
     return (

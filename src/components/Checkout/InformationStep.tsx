@@ -32,6 +32,7 @@ interface InformationStepProps {
   event: Event;
   onNext: () => void;
   onBack: () => void;
+  isSubmitting?: boolean;
   /**
    * Quando definido (inclui array vazio), ignora GET de perguntas e usa esta lista
    * (ex.: rascunho do organizador com perguntas ainda não salvas na API).
@@ -55,6 +56,7 @@ export function InformationStep({
   event,
   onNext,
   onBack,
+  isSubmitting = false,
   previewQuestions,
   previewMode = false,
 }: InformationStepProps) {
@@ -1659,7 +1661,8 @@ export function InformationStep({
                 }
                 onNext();
               }}
-              disabled={previewMode}
+              disabled={previewMode || isSubmitting}
+              isLoading={isSubmitting}
               variant="default"
               className="w-1/4 font-bold"
             >
@@ -1730,6 +1733,8 @@ export function InformationStep({
               }
               onNext();
             }}
+            isLoading={isSubmitting}
+            disabled={isSubmitting}
           >
             Confirmar dados
           </Button>

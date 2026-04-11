@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { OrderSummary } from "./OrderSummary";
 import { ParticipantSummaryModal } from "./ParticipantSummaryModal";
 import {
@@ -31,17 +31,21 @@ import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { Loading } from "../Loading";
-import { useCheckout as useCheckoutPayment } from "@/hooks/useCheckoutPayment";
-import { usePaymentStatusPolling } from "@/hooks/usePaymentStatus";
+import {
+  useCheckoutReservation,
+  generateIdempotencyKey,
+} from "@/hooks/useCheckoutReservation";
+import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
+import {
+  OrderApiError,
+  type OrderPixInfo,
+  type OrderResponse,
+  type PatchBillingAddressRequest,
+  type PayOrderRequest,
+} from "@/interfaces/order";
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
-import type {
-  CheckoutBillingAddressRequest,
-  CheckoutRequest,
-  PixPayment,
-} from "@/interfaces/checkout";
 import toast from "react-hot-toast";
-import { apiClient } from "@/services";
 
 interface PaymentStepProps {
   event: Event;
@@ -260,29 +264,59 @@ function PixModal({
   isOpen,
   onClose,
   pixData,
-  registrationId,
+  orderId,
   onPaymentConfirmed,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  pixData: PixPayment | null;
-  registrationId: string | null;
+  pixData: OrderPixInfo | null;
+  orderId: string | null;
   onPaymentConfirmed?: () => void;
 }) {
   const [timeLeft, setTimeLeft] = useState(30 * 60);
-  const expirationDate = pixData ? new Date(pixData.expirationDate) : null;
+  const expirationDate = pixData ? new Date(pixData.expiresAt) : null;
+  const [status, setStatus] = useState<"PENDING" | "PAID" | "CANCELLED" | null>(
+    null,
+  );
+  const { getPaymentStatus } = useCheckoutReservation();
 
-  // Polling de status do pagamento
-  const { status } = usePaymentStatusPolling(registrationId, (newStatus) => {
-    if (newStatus === 'PAID') {
-      toast.success('Pagamento confirmado!');
-      if (onPaymentConfirmed) {
-        onPaymentConfirmed();
+  // Polling de status do pagamento via novo endpoint.
+  useEffect(() => {
+    if (!isOpen || !orderId) return;
+    let stopped = false;
+
+    const tick = async () => {
+      try {
+        const res = await getPaymentStatus(orderId);
+        if (stopped) return;
+        setStatus(res.status);
+        if (res.status === "PAID") {
+          toast.success("Pagamento confirmado!");
+          onPaymentConfirmed?.();
+          stopped = true;
+        } else if (res.status === "CANCELLED") {
+          toast.error("Pagamento não foi confirmado.");
+          stopped = true;
+        }
+      } catch {
+        /* swallow polling errors */
       }
-    } else if (newStatus === 'FAILED') {
-      toast.error('Pagamento não foi confirmado.');
-    }
-  });
+    };
+
+    void tick();
+    const interval = setInterval(() => {
+      if (stopped) {
+        clearInterval(interval);
+        return;
+      }
+      void tick();
+    }, 5000);
+
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, [isOpen, orderId, getPaymentStatus, onPaymentConfirmed]);
 
   useEffect(() => {
     if (!isOpen || !expirationDate) return;
@@ -433,9 +467,10 @@ function PixForm({
         <Button
           onClick={onProcessCheckout}
           disabled={loading || submitDisabled}
+          isLoading={loading}
           className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Processando...' : 'Finalizar compra'}
+          Finalizar compra
         </Button>
       )}
     </div>
@@ -563,18 +598,34 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   // PIX states
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
-  const [pixData, setPixData] = useState<PixPayment | null>(null);
-  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [pixData, setPixData] = useState<OrderPixInfo | null>(null);
   const [pixLoading, setPixLoading] = useState(false);
 
   const [billingAddress, setBillingAddress] = useState<CheckoutBillingAddress>(
     () => initialBillingAddress()
   );
   const [billingAddressConfirmed, setBillingAddressConfirmed] = useState(false);
+  const [billingAddressSaving, setBillingAddressSaving] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const checkoutLoadingRef = useRef(false);
 
   const { participants, raceQuantities } = useCheckout();
   const eventId = event?.id;
-  const { processCheckout, loading: checkoutLoading } = useCheckoutPayment();
+  const { orderId, syncFromOrder, clearTimer } = useCheckoutTimer();
+  const {
+    patchBillingAddress,
+    payOrder,
+  } = useCheckoutReservation();
+
+  /**
+   * Idempotency key pro POST /pay. Gerada UMA vez quando o usuário monta
+   * a step de pagamento, e reutilizada em qualquer retry até um pagamento
+   * bem-sucedido (aí regenera pra próxima tentativa).
+   */
+  const idempotencyKeyRef = useRef<string>(generateIdempotencyKey());
+  const regenerateIdempotencyKey = () => {
+    idempotencyKeyRef.current = generateIdempotencyKey();
+  };
 
   // Buscar tickets e categorias do servidor
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
@@ -1057,34 +1108,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
-  // Mapear gender do formulário para o formato da API
-  const mapGenderToAPI = (gender: string): 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | undefined => {
-    if (!gender) return undefined;
-
-    const genderLower = gender.toLowerCase().trim();
-
-    if (genderLower === 'masculino' || genderLower === 'male' || genderLower === 'm') {
-      return 'MALE';
-    }
-    if (genderLower === 'feminino' || genderLower === 'female' || genderLower === 'f') {
-      return 'FEMALE';
-    }
-    if (genderLower === 'outro' || genderLower === 'other' || genderLower === 'o') {
-      return 'OTHER';
-    }
-    if (genderLower === 'prefiro não dizer' || genderLower === 'prefer_not_to_say' || genderLower === 'prefiro-nao-dizer') {
-      return 'PREFER_NOT_TO_SAY';
-    }
-
-    // Se não corresponder a nenhum, retorna undefined
-    return undefined;
-  };
-
-  const buildBillingAddressPayload = (): CheckoutBillingAddressRequest | null => {
-    if (!billingAddressConfirmed) {
-      toast.error("Confirme o endereço de cobrança antes de pagar.");
-      return null;
-    }
+  const buildBillingAddressPayload = (): PatchBillingAddressRequest["billingAddress"] | null => {
     const a = billingAddress;
     const country = a.country?.trim() || "Brasil";
     const cepDigits = a.cep.replace(/\D/g, "");
@@ -1123,304 +1147,211 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     };
   };
 
-  // Preparar dados do checkout
-  const prepareCheckoutData = (): CheckoutRequest | null => {
-    if (!eventId) return null;
-
-    const billingAddressPayload = buildBillingAddressPayload();
-    if (!billingAddressPayload) return null;
-
-    // Agrupar tickets por ticketId para criar a lista de tickets
-    const ticketMap = new Map<string, number>();
-    participantsWithTickets.forEach(({ ticketId }) => {
-      const current = ticketMap.get(ticketId) || 0;
-      ticketMap.set(ticketId, current + 1);
-    });
-
-    const checkoutTickets: CheckoutRequest['tickets'] = Array.from(ticketMap.entries()).map(
-      ([ticketId, quantity]) => ({
-        ticketId,
-        quantity,
-      })
-    );
-
-    // Preparar participantes - um para cada ticket
-    const checkoutParticipants: CheckoutRequest['participants'] = participantsWithTickets.map(
-      ({ participantIndex }) => {
-        const participant = participants[participantIndex];
-        if (!participant || !participant.name || !participant.cpf || !participant.email) {
-          throw new Error(`Dados incompletos do participante ${participantIndex + 1}`);
-        }
-        if (!isValidCPF(participant.cpf)) {
-          throw new Error(`CPF inválido para o participante ${participantIndex + 1}`);
-        }
-
-        // Preparar objeto do participante
-        const participantData: CheckoutRequest['participants'][0] = {
-          name: participant.name,
-          cpf: participant.cpf.replace(/\D/g, ''),
-          email: participant.email,
-          birthDate: participant.birthDate,
-          phone: participant.phone?.replace(/\D/g, '') || '',
-        };
-
-        // Adicionar gender apenas se mapeado corretamente
-        const mappedGender = mapGenderToAPI(participant.gender || '');
-        if (mappedGender) {
-          participantData.gender = mappedGender;
-        }
-
-        // Adicionar campos opcionais apenas se tiverem valor
-        if (participant.emergencyContactName?.trim()) {
-          participantData.emergencyContactName = participant.emergencyContactName.trim();
-        }
-        if (participant.emergencyPhone?.trim()) {
-          participantData.emergencyPhone = participant.emergencyPhone.replace(/\D/g, '');
-        }
-        if (participant.hasEmergencyContact) {
-          participantData.hasEmergencyContact = participant.hasEmergencyContact;
-        }
-
-        // Adicionar questionAnswers se existirem
-        if (participant.questionAnswers && Object.keys(participant.questionAnswers).length > 0) {
-          participantData.questionAnswers = Object.entries(participant.questionAnswers).map(
-            ([questionId, answer]) => ({
-              questionId,
-              answer: Array.isArray(answer)
-                ? JSON.stringify(answer)
-                : (answer as string | boolean | number),
-            })
-          );
-        }
-
-        // Adicionar produtos selecionados se existirem
-        if (participant.productVariations && productsData?.products) {
-          const selectedProducts: Array<{
-            productId: string;
-            variationId?: string;
-            quantity: number;
-          }> = [];
-
-          // Iterar sobre as variações selecionadas do participante
-          Object.entries(participant.productVariations).forEach(([savedProductId, variationId]) => {
-            // Verificar se o produto existe na lista de produtos do evento
-            // Suporta tanto ID completo quanto ID parcial (para compatibilidade com dados antigos)
-            const product = productsData.products.find((p: any) =>
-              p.id === savedProductId ||
-              p.id.startsWith(savedProductId) ||
-              savedProductId.startsWith(p.id)
-            );
-
-            // Se o produto existe e tem uma variação selecionada (não null, undefined ou string vazia)
-            if (product && variationId !== null && variationId !== undefined && variationId !== '') {
-              selectedProducts.push({
-                productId: product.id, // Usar o ID completo do produto
-                variationId: variationId,
-                quantity: 1, // Por enquanto sempre 1, pode ser ajustado se houver quantidade no futuro
-              });
-            }
-          });
-
-          // Adicionar produtos apenas se houver algum selecionado
-          if (selectedProducts.length > 0) {
-            participantData.products = selectedProducts;
-          }
-        }
-
-        return participantData;
-      }
-    );
-
-    if (checkoutTickets.length === 0 || checkoutParticipants.length === 0) {
-      toast.error('Por favor, preencha todos os dados dos participantes');
-      return null;
+  // Persiste a resposta do /pay pra a página de sucesso consumir.
+  const saveOrderForSuccess = (order: OrderResponse) => {
+    if (typeof window === "undefined" || !eventId) return;
+    try {
+      localStorage.setItem(
+        `checkout_success_${eventId}`,
+        JSON.stringify({ order, timestamp: Date.now() }),
+      );
+    } catch {
+      /* storage indisponível — ignora */
     }
-
-    // Validar que todos os participantes têm dados obrigatórios
-    const invalidParticipants = checkoutParticipants.filter(
-      (p) => !p.name || !p.cpf || !p.email || !p.birthDate || !p.phone
-    );
-    if (invalidParticipants.length > 0) {
-      toast.error('Por favor, preencha todos os dados obrigatórios dos participantes');
-      return null;
-    }
-
-    return {
-      eventId,
-      paymentMethod: selectedPaymentMethod === 'credit' ? 'CREDIT_CARD' : 'PIX',
-      payment:
-        selectedPaymentMethod === 'credit'
-          ? {
-            card: {
-              name: cardName.toUpperCase().trim(),
-              number: cardNumber.replace(/\D/g, ''),
-              expiry: cardExpiry.replace(/\s/g, ''), // Remove espaços se houver
-              cvv: cardCVV,
-              installments: parseInt(selectedInstallments) || 1,
-            },
-          }
-          : {},
-      tickets: checkoutTickets,
-      participants: checkoutParticipants,
-      billingAddress: billingAddressPayload,
-      couponCode: isCouponApplied && couponCode ? couponCode : undefined,
-      voucherCode: undefined, // TODO: Implementar quando estiver disponível
-    };
   };
 
-  // Salvar dados do checkout para a página de sucesso
-  const saveCheckoutDataForSuccess = (result: any) => {
-    if (typeof window === 'undefined' || !eventId) return;
-
-    const successData = {
-      checkoutResponse: result,
-      timestamp: Date.now(),
-    };
-
-    localStorage.setItem(`checkout_success_${eventId}`, JSON.stringify(successData));
+  const handlePayError = (err: unknown) => {
+    if (err instanceof OrderApiError) {
+      if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {
+        toast.error("Sua reserva expirou.");
+        clearTimer();
+        return;
+      }
+      if (err.code === "PAYMENT_REFUSED") {
+        toast.error("Pagamento recusado. Verifique os dados e tente novamente.");
+        regenerateIdempotencyKey();
+        return;
+      }
+      if (err.code === "BILLING_ADDRESS_REQUIRED") {
+        toast.error("Confirme o endereço de cobrança antes de pagar.");
+        return;
+      }
+      if (err.code === "PARTICIPANTS_REQUIRED") {
+        toast.error("Preencha os dados dos participantes antes de pagar.");
+        return;
+      }
+      if (err.code === "IDEMPOTENCY_KEY_MISMATCH") {
+        regenerateIdempotencyKey();
+        toast.error("Tente novamente.");
+        return;
+      }
+      toast.error(err.message || "Erro ao processar pagamento.");
+      return;
+    }
+    toast.error("Erro ao processar pagamento.");
   };
 
-  // Função auxiliar para buscar dados do PIX
-  const fetchPixDataFromAPI = async (registrationId: string): Promise<PixPayment | null> => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
-    const token = apiClient.getAccessToken();
-
-    if (!token) {
-      throw new Error('Você precisa estar autenticado');
+  /**
+   * Wrapper de onConfirmedChange: antes de marcar o endereço como confirmado
+   * localmente, dispara PATCH /orders/{id}/billing-address. Só confirma na UI
+   * quando o servidor aceita.
+   */
+  const handleBillingAddressConfirmedChange = async (confirmed: boolean) => {
+    if (!confirmed) {
+      setBillingAddressConfirmed(false);
+      return;
     }
-
-    // Tentar buscar os dados do PIX com retry (até 5 tentativas, 2s entre cada)
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/v1/payments/registration/${registrationId}/summary`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-
-          // Verificar se há dados do PIX no metadata
-          if (data.payment?.metadata?.pix) {
-            const pixMetadata = data.payment.metadata.pix;
-
-            if (pixMetadata.qrCode && pixMetadata.qrCodeBase64) {
-              return {
-                qrCode: pixMetadata.qrCode,
-                qrCodeBase64: pixMetadata.qrCodeBase64,
-                expirationDate: pixMetadata.expiresAt || new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-              };
-            }
-          }
+    if (!orderId) {
+      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      return;
+    }
+    const payload = buildBillingAddressPayload();
+    if (!payload) return;
+    setBillingAddressSaving(true);
+    try {
+      const updated = await patchBillingAddress(orderId, {
+        billingAddress: payload,
+      });
+      syncFromOrder(updated);
+      setBillingAddressConfirmed(true);
+    } catch (err) {
+      if (err instanceof OrderApiError) {
+        if (
+          err.code === "ORDER_NOT_PENDING" ||
+          err.code === "ORDER_NOT_FOUND"
+        ) {
+          toast.error("Sua reserva expirou.");
+          clearTimer();
+        } else {
+          toast.error(err.message || "Erro ao salvar endereço.");
         }
-      } catch (err) {
-        console.error('Erro ao buscar dados do PIX:', err);
+      } else {
+        toast.error("Erro ao salvar endereço.");
       }
-
-      // Aguardar antes de tentar novamente (exceto na última tentativa)
-      if (attempt < 4) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+    } finally {
+      setBillingAddressSaving(false);
     }
-
-    return null;
   };
 
   // Processar checkout PIX
   const handleProcessPixCheckout = async () => {
+    if (checkoutLoadingRef.current) return;
+    if (!orderId) {
+      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      return;
+    }
+    if (!billingAddressConfirmed) {
+      toast.error("Confirme o endereço de cobrança antes de pagar.");
+      return;
+    }
+    checkoutLoadingRef.current = true;
+    setPixLoading(true);
+    setCheckoutLoading(true);
     try {
-      const checkoutData = prepareCheckoutData();
-      if (!checkoutData) return;
+      const payload: PayOrderRequest = {
+        method: "PIX",
+        couponCode: isCouponApplied && couponCode ? couponCode : undefined,
+      };
+      const result = await payOrder(
+        orderId,
+        payload,
+        idempotencyKeyRef.current,
+      );
+      // Timer estende +30min automaticamente — o server devolve o novo expiresAt.
+      syncFromOrder(result);
+      saveOrderForSuccess(result);
 
-      setPixLoading(true);
-      const result = await processCheckout(checkoutData);
-
-      // Salvar dados para a página de sucesso
-      saveCheckoutDataForSuccess(result);
-
-      const registrationId = result.registrations[0]?.id || null;
-      setRegistrationId(registrationId);
-
-      // Verificar se os dados do PIX vieram na resposta
-      let pixData: PixPayment | null = result.payment.pix || null;
-
-      // Se não vieram, tentar buscar do endpoint de summary
-      if (!pixData && registrationId) {
-        const loadingToast = toast.loading('Gerando QR Code PIX...', { id: 'pix-loading' });
-
-        pixData = await fetchPixDataFromAPI(registrationId);
-
-        toast.dismiss('pix-loading');
-      }
-
-      if (pixData) {
-        setPixData(pixData);
+      const pix = result.payment?.pix ?? null;
+      if (pix) {
+        setPixData(pix);
         setIsPixModalOpen(true);
       } else {
-        toast.error('Erro ao gerar QR Code PIX. Aguarde alguns instantes e tente novamente.');
+        toast.error("Erro ao gerar QR Code PIX. Tente novamente.");
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao processar checkout PIX');
+    } catch (err) {
+      handlePayError(err);
     } finally {
+      checkoutLoadingRef.current = false;
       setPixLoading(false);
+      setCheckoutLoading(false);
     }
   };
 
   // Processar checkout Cartão de Crédito
   const handleProcessCreditCardCheckout = async () => {
+    if (checkoutLoadingRef.current) return;
     // Validar dados do cartão
     const newCardErrors: CardErrors = {};
 
     if (!cardName?.trim()) {
-      newCardErrors.cardName = 'Informe o nome impresso no cartão.';
+      newCardErrors.cardName = "Informe o nome impresso no cartão.";
     }
     if (!cardNumber) {
-      newCardErrors.cardNumber = 'Informe o número do cartão.';
+      newCardErrors.cardNumber = "Informe o número do cartão.";
     } else if (!validateCardNumber(cardNumber)) {
-      newCardErrors.cardNumber = 'Número do cartão inválido.';
+      newCardErrors.cardNumber = "Número do cartão inválido.";
     }
     if (!cardExpiry) {
-      newCardErrors.cardExpiry = 'Informe a data de validade.';
+      newCardErrors.cardExpiry = "Informe a data de validade.";
     } else if (!validateExpiry(cardExpiry)) {
-      newCardErrors.cardExpiry = 'Cartão expirado ou data inválida.';
+      newCardErrors.cardExpiry = "Cartão expirado ou data inválida.";
     }
     if (!cardCVV) {
-      newCardErrors.cardCVV = 'Informe o CVV.';
+      newCardErrors.cardCVV = "Informe o CVV.";
     } else if (!validateCVV(cardCVV)) {
-      newCardErrors.cardCVV = 'CVV inválido.';
+      newCardErrors.cardCVV = "CVV inválido.";
     }
 
     if (Object.keys(newCardErrors).length > 0) {
       setCardErrors(newCardErrors);
-      toast.error('Por favor, corrija os campos do cartão.');
+      toast.error("Por favor, corrija os campos do cartão.");
+      return;
+    }
+    setCardErrors({});
+
+    if (!orderId) {
+      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      return;
+    }
+    if (!billingAddressConfirmed) {
+      toast.error("Confirme o endereço de cobrança antes de pagar.");
       return;
     }
 
-    setCardErrors({});
-
+    checkoutLoadingRef.current = true;
+    setCheckoutLoading(true);
     try {
-      const checkoutData = prepareCheckoutData();
-      if (!checkoutData) return;
+      const payload: PayOrderRequest = {
+        method: "CREDIT_CARD",
+        card: {
+          name: cardName.toUpperCase().trim(),
+          number: cardNumber.replace(/\D/g, ""),
+          expiry: cardExpiry.replace(/\s/g, ""),
+          cvv: cardCVV,
+          installments: parseInt(selectedInstallments) || 1,
+        },
+        couponCode: isCouponApplied && couponCode ? couponCode : undefined,
+      };
+      const result = await payOrder(
+        orderId,
+        payload,
+        idempotencyKeyRef.current,
+      );
 
-      const result = await processCheckout(checkoutData);
-
-      if (result.payment.status === 'approved') {
-        // Salvar dados para a página de sucesso
-        saveCheckoutDataForSuccess(result);
-
-        toast.success('Pagamento aprovado!');
-        if (onSuccess) {
-          onSuccess();
-        }
+      if (result.status === "PAID") {
+        saveOrderForSuccess(result);
+        clearTimer();
+        toast.success("Pagamento aprovado!");
+        onSuccess?.();
       } else {
-        toast.error('Pagamento não aprovado. Tente novamente.');
+        toast.error("Pagamento não aprovado. Tente novamente.");
+        regenerateIdempotencyKey();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao processar pagamento');
+    } catch (err) {
+      handlePayError(err);
+    } finally {
+      checkoutLoadingRef.current = false;
+      setCheckoutLoading(false);
     }
   };
 
@@ -1556,7 +1487,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             onChange={(patch) =>
               setBillingAddress((prev) => ({ ...prev, ...patch }))
             }
-            onConfirmedChange={setBillingAddressConfirmed}
+            onConfirmedChange={handleBillingAddressConfirmedChange}
             className="mb-6"
           />
         ) : (
@@ -1633,9 +1564,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     <Button
                       onClick={handleProcessCreditCardCheckout}
                       disabled={checkoutLoading || !billingAddressConfirmed}
+                      isLoading={checkoutLoading}
                       className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
+                      Finalizar compra
                     </Button>
                   </div>
                 )}
@@ -1676,9 +1608,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     <Button
                       onClick={handleProcessPixCheckout}
                       disabled={checkoutLoading || !billingAddressConfirmed}
+                      isLoading={checkoutLoading}
                       className="w-full bg-gray-12 text-gray-1 font-bold font-manrope"
                     >
-                      {checkoutLoading ? 'Processando...' : 'Gerar QR CODE'}
+                      Gerar QR CODE
                     </Button>
                   </div>
                 )}
@@ -1818,9 +1751,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 checkoutLoading ||
                 !billingAddressConfirmed
               }
+              isLoading={checkoutLoading}
               className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
+              Finalizar compra
             </Button>
           </div>
         </div>
@@ -1856,7 +1790,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 onChange={(patch) =>
                   setBillingAddress((prev) => ({ ...prev, ...patch }))
                 }
-                onConfirmedChange={setBillingAddressConfirmed}
+                onConfirmedChange={handleBillingAddressConfirmedChange}
               />
             ) : (
               <BillingAddressConfirmedSummary
@@ -1912,9 +1846,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                             <Button
                               onClick={handleProcessCreditCardCheckout}
                               disabled={checkoutLoading}
+                              isLoading={checkoutLoading}
                               className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
+                              Finalizar compra
                             </Button>
                           </>
                         )}
@@ -2292,9 +2227,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       checkoutLoading ||
                       !billingAddressConfirmed
                     }
+                    isLoading={checkoutLoading}
                     className="bg-primary-11 text-primary-2 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {checkoutLoading ? 'Processando...' : 'Finalizar compra'}
+                    Finalizar compra
                   </Button>
                 </div>
               </div>
@@ -2308,7 +2244,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         isOpen={isPixModalOpen}
         onClose={() => setIsPixModalOpen(false)}
         pixData={pixData}
-        registrationId={registrationId}
+        orderId={orderId}
         onPaymentConfirmed={() => {
           setIsPixModalOpen(false);
           if (onSuccess) {

@@ -20,9 +20,10 @@ import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 interface ModalitiesStepProps {
   event: Event;
   onNext: () => void;
+  isSubmitting?: boolean;
 }
 
-export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
+export function ModalitiesStep({ event, onNext, isSubmitting = false }: ModalitiesStepProps) {
   const { raceQuantities } = useCheckout();
   const eventId = event?.id;
 
@@ -301,7 +302,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
                 <span className="font-bold">{formatPrice(totalPrice)}</span>
               </p>
             </div>
-            <Button onClick={onNext} disabled={totalParticipants === 0}>
+            <Button onClick={onNext} disabled={totalParticipants === 0} isLoading={isSubmitting}>
               Selecionar
             </Button>
           </div>
@@ -374,6 +375,7 @@ export function ModalitiesStep({ event, onNext }: ModalitiesStepProps) {
             <EventInfo
               event={event}
               onNext={onNext}
+              isSubmitting={isSubmitting}
               tickets={tickets}
               categorizedTickets={categorizedTickets}
               uncategorizedTickets={uncategorizedTickets}

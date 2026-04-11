@@ -6,6 +6,7 @@ import { ArrowButton } from "../ArrowButton";
 import { Fragment } from "react/jsx-runtime";
 import { ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { CheckoutTimer } from "./CheckoutTimer";
 
 export interface CheckoutHeaderProps {
   activeStep: number;
@@ -54,27 +55,33 @@ export default function CheckoutHeader({
             </button>
           )}
           <h1 className="text-base font-bold text-gray-12">{currentStepLabel}</h1>
+          <div className="absolute right-4">
+            <CheckoutTimer />
+          </div>
         </div>
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:flex w-full items-center justify-center gap-4 py-11 border-b border-gray-6">
-        {checkoutHeaderOptions.map((option, index) => (
-          <Fragment key={option.id}>
-            {index > 0 && <ArrowButton isOpen={false} />}
-            <button
-              key={option.id}
-              className={cn(
-                "flex items-center gap-2 rounded-4xl px-4 py-2 transition-all duration-200 ease-in-out",
-                activeStep >= option.id
-                  ? "text-primary-2 bg-primary-11"
-                  : "text-gray-11 bg-gray-5"
-              )}
-            >
-              <span>{option.label}</span>
-            </button>
-          </Fragment>
-        ))}
+      <div className="hidden md:flex w-full items-center justify-between max-w-7xl mx-auto gap-4 py-11 border-b border-gray-6">
+        <div className="flex items-center gap-4">
+          {checkoutHeaderOptions.map((option, index) => (
+            <Fragment key={option.id}>
+              {index > 0 && <ArrowButton isOpen={false} />}
+              <button
+                key={option.id}
+                className={cn(
+                  "flex items-center gap-2 rounded-4xl px-4 py-2 transition-all duration-200 ease-in-out",
+                  activeStep >= option.id
+                    ? "text-primary-2 bg-primary-11"
+                    : "text-gray-11 bg-gray-5"
+                )}
+              >
+                <span>{option.label}</span>
+              </button>
+            </Fragment>
+          ))}
+        </div>
+        <CheckoutTimer className="ml-2" />
       </div>
     </>
   );

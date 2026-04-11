@@ -334,12 +334,12 @@ export default function OrganizerEventsPage() {
                               R$ {(event.totalSales / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </td>
-                          <td className="py-4 px-5 text-center">
+                          <td className="py-4 px-5 text-center max-w-[130px]">
                             {isCreationDraft ? (
                               <Link
                                 href={`/organizer/events/new?resume=${event.id}`}
                               >
-                                <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10"> Continuar criação</Button>
+                                <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
                               </Link>
                             ) : (
                               <div className="flex items-center gap-1 justify-center">

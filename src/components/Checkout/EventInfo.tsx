@@ -17,12 +17,13 @@ import { getAvatarUrl } from "@/utils/avatar";
 interface EventInfoProps {
   event: Event;
   onNext: () => void;
+  isSubmitting?: boolean;
   tickets?: Ticket[];
   categorizedTickets?: Array<{ id: string; name: string; tickets: Ticket[] }>;
   uncategorizedTickets?: Ticket[];
 }
 
-export function EventInfo({ event, onNext, tickets = [], categorizedTickets = [], uncategorizedTickets = [] }: EventInfoProps) {
+export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [] }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
 
   const formatDate = (date: string) => {
@@ -260,6 +261,7 @@ export function EventInfo({ event, onNext, tickets = [], categorizedTickets = []
           onClick={onNext}
           className="w-full mt-8 font-bold"
           disabled={totalParticipants === 0}
+          isLoading={isSubmitting}
         >
           Proximo
         </Button>

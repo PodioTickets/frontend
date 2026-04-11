@@ -1,0 +1,203 @@
+/**
+ * Tipos do fluxo de reserva de checkout.
+ *
+ * Contrato documentado em `docs/checkout-reservation-flow.md`.
+ * Todos os valores monetários são inteiros em centavos.
+ */
+
+export type OrderStatus = "PENDING" | "PAID" | "CANCELLED";
+
+export type OrderCancelledReason =
+  | "EXPIRED"
+  | "PAYMENT_REFUSED"
+  | "PAYMENT_RECONCILIATION_FAILED"
+  | "USER_CANCELLED";
+
+export type OrderPaymentMethod = "CREDIT_CARD" | "PIX";
+
+export type OrderPaymentStatus = "pending" | "approved" | "refused";
+
+export interface OrderTicket {
+  ticketId: string;
+  batchId: string;
+  batchName?: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface OrderPricing {
+  subtotal: number;
+  serviceFee: number;
+  couponDiscount?: number;
+  voucherDiscount?: number;
+  total: number;
+  currency: "BRL";
+}
+
+export interface OrderPixInfo {
+  qrCode: string;
+  qrCodeBase64: string;
+  expiresAt: string;
+}
+
+export interface OrderPaymentInfo {
+  method: OrderPaymentMethod;
+  status: OrderPaymentStatus;
+  transactionId?: string;
+  installments?: number;
+  installmentValue?: number;
+  pix?: OrderPixInfo;
+  paidAt?: string;
+}
+
+export interface OrderRegistration {
+  id: string;
+  qrCode?: string;
+  participant?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+/**
+ * Resposta padrão de qualquer endpoint que retorna estado do pedido.
+ * `serverTime` é obrigatório — usado pra drift correction do timer.
+ */
+export interface OrderResponse {
+  orderId: string;
+  status: OrderStatus;
+  eventId: string;
+  reservedAt: string;
+  expiresAt: string;
+  serverTime: string;
+  tickets: OrderTicket[];
+  pricing: OrderPricing;
+  payment?: OrderPaymentInfo;
+  registrations?: OrderRegistration[];
+  cancelledAt?: string;
+  cancelledReason?: OrderCancelledReason;
+}
+
+// ---- Request bodies ----
+
+export interface ReserveOrderRequest {
+  eventId: string;
+  tickets: Array<{
+    ticketId: string;
+    /** Opcional — se omitido, o backend infere o lote ativo pelo `ticketId`. */
+    batchId?: string;
+    quantity: number;
+  }>;
+}
+
+export interface PatchParticipantsRequest {
+  participants: Array<{
+    name: string;
+    cpf: string;
+    email: string;
+    birthDate: string;
+    phone: string;
+    gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
+    emergencyContactName?: string;
+    emergencyPhone?: string;
+    hasEmergencyContact?: boolean;
+    questionAnswers?: Array<{
+      questionId: string;
+      answer: string | boolean | number;
+    }>;
+  }>;
+}
+
+export interface PatchProductsRequest {
+  products: Array<{
+    productId: string;
+    variationId?: string;
+    quantity: number;
+  }>;
+}
+
+export interface PatchBillingAddressRequest {
+  billingAddress: {
+    country: string;
+    postalCode: string;
+    stateUf: string;
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+  };
+}
+
+export interface PayOrderCardRequest {
+  method: "CREDIT_CARD";
+  card: {
+    name: string;
+    number: string;
+    expiry: string;
+    cvv: string;
+    installments: number;
+  };
+  couponCode?: string;
+  voucherCode?: string;
+}
+
+export interface PayOrderPixRequest {
+  method: "PIX";
+  couponCode?: string;
+  voucherCode?: string;
+}
+
+export type PayOrderRequest = PayOrderCardRequest | PayOrderPixRequest;
+
+export interface OrderPaymentStatusResponse {
+  orderId: string;
+  status: OrderStatus;
+  payment: {
+    method: OrderPaymentMethod;
+    status: OrderPaymentStatus;
+    paidAt?: string;
+  };
+}
+
+// ---- Error codes que o backend pode retornar ----
+
+export type OrderErrorCode =
+  | "INVALID_PAYLOAD"
+  | "UNAUTHORIZED"
+  | "ORDER_NOT_FOUND"
+  | "ORDER_NOT_PENDING"
+  | "EVENT_NOT_FOUND"
+  | "BATCH_NOT_FOUND"
+  | "BATCH_SOLD_OUT"
+  | "BATCH_NOT_ACTIVE"
+  | "QUANTITY_EXCEEDED"
+  | "TOO_MANY_PENDING_ORDERS"
+  | "RATE_LIMIT_EXCEEDED"
+  | "BILLING_ADDRESS_REQUIRED"
+  | "PARTICIPANTS_REQUIRED"
+  | "PAYMENT_REFUSED"
+  | "IDEMPOTENCY_KEY_MISMATCH"
+  | "VALIDATION_ERROR";
+
+export interface OrderErrorResponse {
+  statusCode: number;
+  code: OrderErrorCode;
+  message: string;
+  fields?: Array<{ path: string; message: string }>;
+}
+
+export class OrderApiError extends Error {
+  statusCode: number;
+  code: OrderErrorCode;
+  fields?: Array<{ path: string; message: string }>;
+
+  constructor(response: OrderErrorResponse) {
+    super(response.message);
+    this.name = "OrderApiError";
+    this.statusCode = response.statusCode;
+    this.code = response.code;
+    this.fields = response.fields;
+  }
+}

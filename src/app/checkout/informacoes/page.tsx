@@ -5,18 +5,110 @@ import { InformationStep } from "@/components/Checkout/InformationStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { Suspense } from "react";
+import { Suspense, useState, useRef } from "react";
 import { Loading } from "@/components/Loading";
+import { useCheckout } from "@/contexts/CheckoutContext";
+import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
+import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import { OrderApiError } from "@/interfaces/order";
+import toast from "react-hot-toast";
+
+function mapGender(value?: string) {
+  if (!value) return undefined;
+  const v = value.toLowerCase();
+  if (v.startsWith("m")) return "MALE" as const;
+  if (v.startsWith("f")) return "FEMALE" as const;
+  if (v.includes("prefere") || v.includes("prefer")) return "PREFER_NOT_TO_SAY" as const;
+  return "OTHER" as const;
+}
 
 function CheckoutInformacoesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
+  const { participants } = useCheckout();
+  const { orderId, syncFromOrder } = useCheckoutTimer();
+  const { patchParticipants } = useCheckoutReservation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
-  const handleNext = () => {
-    if (eventId) {
+  const handleNext = async () => {
+    if (!eventId || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    if (!orderId) {
+      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      router.push(`/checkout/ingressos?eventId=${eventId}`);
+      return;
+    }
+
+    const payload = {
+      participants: participants.map((p) => {
+        const mapped: {
+          name: string;
+          cpf: string;
+          email: string;
+          birthDate: string;
+          phone: string;
+          gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
+          emergencyContactName?: string;
+          emergencyPhone?: string;
+          hasEmergencyContact?: boolean;
+          questionAnswers?: Array<{
+            questionId: string;
+            answer: string | boolean | number;
+          }>;
+        } = {
+          name: p.name,
+          cpf: p.cpf.replace(/\D/g, ""),
+          email: p.email,
+          birthDate: p.birthDate,
+          phone: p.phone?.replace(/\D/g, "") || "",
+        };
+        const gender = mapGender(p.gender);
+        if (gender) mapped.gender = gender;
+        if (p.emergencyContactName?.trim())
+          mapped.emergencyContactName = p.emergencyContactName.trim();
+        if (p.emergencyPhone?.trim())
+          mapped.emergencyPhone = p.emergencyPhone.replace(/\D/g, "");
+        if (p.hasEmergencyContact) mapped.hasEmergencyContact = true;
+        if (p.questionAnswers && Object.keys(p.questionAnswers).length > 0) {
+          mapped.questionAnswers = Object.entries(p.questionAnswers).map(
+            ([questionId, answer]) => ({
+              questionId,
+              answer: Array.isArray(answer)
+                ? JSON.stringify(answer)
+                : (answer as string | boolean | number),
+            }),
+          );
+        }
+        return mapped;
+      }),
+    };
+
+    setIsSubmitting(true);
+    try {
+      const updated = await patchParticipants(orderId, payload);
+      syncFromOrder(updated);
       router.push(`/checkout/produtos?eventId=${eventId}`);
+    } catch (err) {
+      if (err instanceof OrderApiError) {
+        if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {
+          toast.error("Sua reserva expirou.");
+          router.push(`/checkout/ingressos?eventId=${eventId}`);
+          return;
+        }
+        if (err.code === "VALIDATION_ERROR" && err.fields?.length) {
+          toast.error(err.fields[0].message);
+          return;
+        }
+        toast.error(err.message || "Erro ao salvar informações.");
+      } else {
+        toast.error("Erro ao salvar informações.");
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -72,6 +164,7 @@ function CheckoutInformacoesContent() {
           event={event}
           onNext={handleNext}
           onBack={handleBack}
+          isSubmitting={isSubmitting}
         />
       </div>
     </div>
@@ -85,4 +178,3 @@ export default function CheckoutInformacoesPage() {
     </Suspense>
   );
 }
-

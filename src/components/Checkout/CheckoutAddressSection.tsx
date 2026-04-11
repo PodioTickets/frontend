@@ -335,7 +335,7 @@ export function CheckoutAddressSection({
         </div>
 
         {/* Número + Complemento */}
-        <div className="flex flex-wrap gap-x-3 gap-y-4 w-full items-end">
+        <div className="flex flex-wrap gap-x-3 gap-y-4 w-full items-start">
           <div className="flex flex-col gap-2 w-full sm:w-[136px] shrink-0">
             <FieldLabel>Número</FieldLabel>
             <Input
