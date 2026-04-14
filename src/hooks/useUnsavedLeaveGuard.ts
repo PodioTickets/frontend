@@ -69,8 +69,13 @@ export function useUnsavedLeaveGuard(
       return;
     }
     if (!guardPushedRef.current) {
+      const savedScrollY = window.scrollY;
       window.history.pushState({ unsavedPageGuard: true }, "", window.location.href);
       guardPushedRef.current = true;
+      // Next.js App Router intercepts pushState and resets scroll; restore it.
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: savedScrollY, behavior: "instant" as ScrollBehavior });
+      });
     }
   }, [isDirty]);
 

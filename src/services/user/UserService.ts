@@ -607,6 +607,15 @@ export class UserService {
     }
   }
 
+  async getOrderDetails(orderId: string): Promise<any> {
+    try {
+      const response = await this.apiClient.get(`/api/v1/orders/${orderId}/details`);
+      return response.data.data || response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   async getLinkedUsers(): Promise<{
     users: Array<{
       id: string;

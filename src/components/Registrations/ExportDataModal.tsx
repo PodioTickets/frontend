@@ -11,6 +11,7 @@ import { TxtIcon } from "../Icons/TxtIcon";
 import { PDFIcon } from "../Icons/PDFIcon";
 import { ArrowButton } from "../ArrowButton";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 type ExportFormat = "txt" | "excel" | "pdf";
 
@@ -41,7 +42,8 @@ export function ExportDataModal() {
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
-  const eventTabs = eventId ? getEventTabs(eventId) : [];
+  const { hasPermission } = useOrganizerPermissions();
+  const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
   const handleExport = () => {
     console.log("Exportando como:", selectedFormat);

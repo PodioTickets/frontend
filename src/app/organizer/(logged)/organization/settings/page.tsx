@@ -12,7 +12,7 @@ import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
-import { Plus, ChevronLeft } from "lucide-react";
+import { Plus, ChevronLeft, MapPinIcon, MessageCircleIcon, Phone } from "lucide-react";
 import type { Organization } from "@/services/organizer/OrganizerService";
 import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -23,6 +23,8 @@ import {
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
+import { HotelsIcon } from "@/components/Icons/Organizer/HotelsIcon";
+import { FinanceIcon } from "@/components/Icons/Organizer/FinanceIcon";
 
 const BRAZIL_STATES = [
   { id: "AC", label: "Acre" },
@@ -110,7 +112,7 @@ export default function OrganizationSettingsPage() {
     if (!uid) return;
     try {
       setLoading(true);
-      const org = await organizerService.getOrganization();
+      const { organization: org } = await organizerService.getOrganization();
 
       if (!isCurrentUserOrganizationOwner(org, uid)) {
         orgNav.replace("/organizer/events");
@@ -467,8 +469,8 @@ export default function OrganizationSettingsPage() {
           {/* Detalhes da organização */}
           <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
-                Detalhes da organização
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
+                <HotelsIcon className="size-6 text-gray-12" /> Detalhes da organização
               </p>
             </div>
 
@@ -545,7 +547,8 @@ export default function OrganizationSettingsPage() {
           {/* Endereço */}
           <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
+                <MapPinIcon className="size-6 text-gray-12" />
                 Endereço
               </p>
             </div>
@@ -661,7 +664,8 @@ export default function OrganizationSettingsPage() {
           {/* Contatos da organização */}
           <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
+                <Phone className="size-5 text-gray-12" />
                 Contatos da organização
               </p>
             </div>
@@ -753,7 +757,8 @@ export default function OrganizationSettingsPage() {
           {/* Chave PIX */}
           <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
             <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12">
+              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
+                <FinanceIcon className="size-6 text-gray-12" />
                 Chave PIX
               </p>
             </div>

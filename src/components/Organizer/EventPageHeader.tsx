@@ -7,6 +7,7 @@ import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { ArrowButton } from "../ArrowButton";
 import { EventMobileTabs, getEventTabs } from "./EventMobileTabs";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 interface EventPageHeaderProps {
   eventName?: string;
@@ -19,7 +20,8 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
   const eventId = params.id as string;
   const navHref = (internal: string) =>
     organizerExternalHref(internal, appSurface);
-  const tabs = getEventTabs(eventId);
+  const { hasPermission } = useOrganizerPermissions();
+  const tabs = getEventTabs(eventId, hasPermission);
 
   return (
     <div className="bg-gray-1 border-b border-gray-6 md:mb-6 pt-6">

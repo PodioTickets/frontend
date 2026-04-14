@@ -20,9 +20,9 @@ function CheckoutPagamentoContent() {
     }
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = (orderId: string) => {
     if (eventId) {
-      router.push(`/checkout/sucesso?eventId=${eventId}`);
+      router.push(`/checkout/sucesso?eventId=${eventId}&orderId=${orderId}`);
     }
   };
 

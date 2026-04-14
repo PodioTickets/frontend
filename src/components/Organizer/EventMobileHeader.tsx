@@ -5,6 +5,7 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import { EventMobileTabs, getEventTabs } from "./EventMobileTabs";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 interface EventMobileHeaderProps {
   eventId: string;
@@ -25,7 +26,8 @@ export function EventMobileHeader({
   backLinkClassName = "-rotate-180",
 }: EventMobileHeaderProps) {
   const appSurface = useOrganizerAppSurface();
-  const tabs = getEventTabs(eventId);
+  const { hasPermission } = useOrganizerPermissions();
+  const tabs = getEventTabs(eventId, hasPermission);
 
   return (
     <div className="md:hidden bg-gray-1 border-b border-gray-6">

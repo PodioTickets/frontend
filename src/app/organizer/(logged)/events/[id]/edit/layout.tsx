@@ -13,6 +13,7 @@ import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
+import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 
 function EditProgressBar() {
   const pathname = usePathname();
@@ -130,6 +131,7 @@ function EditProgressBar() {
 
 function EditLayoutContent({ children }: { children: ReactNode }) {
   const { event, loading } = useEditEvent();
+  useEventPermissionGuard("edit_event");
   const params = useParams();
   const eventId = params.id as string;
   const pathname = usePathname();

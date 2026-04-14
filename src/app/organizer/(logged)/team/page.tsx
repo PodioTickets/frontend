@@ -135,7 +135,7 @@ export default function OrganizerTeamPage() {
       if (!uid) return;
       if (!opts?.silent) setLoading(true);
       try {
-        const org = await organizerService.getOrganization();
+        const { organization: org } = await organizerService.getOrganization();
         if (!isCurrentUserOrganizationOwner(org, uid)) {
           orgNav.replace("/organizer/events");
           return;

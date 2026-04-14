@@ -51,8 +51,8 @@ export function CreateCouponModal() {
 
   // Campos específicos por tipo de cupom
   const [minQuantity, setMinQuantity] = useState(""); // Para QUANTITY
-  const [ageRule, setAgeRule] = useState<"MIN" | "MAX">("MIN"); // Para AGE
-  const [ageValue, setAgeValue] = useState(""); // Para AGE
+  const [minAge, setMinAge] = useState(""); // Para AGE
+  const [maxAge, setMaxAge] = useState(""); // Para AGE
 
   const isEditing = data?.couponId !== undefined;
   const eventId = data?.eventId;
@@ -90,14 +90,14 @@ export function CreateCouponModal() {
       cpfListStatus !== (c.cpfListStatus || "DISABLED") ||
       JSON.stringify(cpfList) !== JSON.stringify(c.cpfList || []) ||
       minQuantity !== (c.minQuantity?.toString() || "") ||
-      ageRule !== (c.ageRule || "MIN") ||
-      ageValue !== (c.ageValue?.toString() || "")
+      minAge !== (c.minAge?.toString() || "") ||
+      maxAge !== (c.maxAge?.toString() || "")
     );
   }, [
     isEditing, data, couponType, code, note, discountType, value,
     appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
     minCartValue, minCartEnabled, cpfListStatus, cpfList,
-    minQuantity, ageRule, ageValue,
+    minQuantity, minAge, maxAge,
   ]);
 
   // Initialize form when modal opens
@@ -145,8 +145,8 @@ export function CreateCouponModal() {
         setCpfListStatus(c.cpfListStatus || "DISABLED");
         setCpfList(c.cpfList || []);
         setMinQuantity(c.minQuantity?.toString() || "");
-        setAgeRule(c.ageRule || "MIN");
-        setAgeValue(c.ageValue?.toString() || "");
+        setMinAge(c.minAge?.toString() || "");
+        setMaxAge(c.maxAge?.toString() || "");
       } else {
         // Create mode - reset form
         setCouponType(null);
@@ -164,8 +164,8 @@ export function CreateCouponModal() {
         setCpfListStatus("DISABLED");
         setCpfList([]);
         setMinQuantity("");
-        setAgeRule("MIN");
-        setAgeValue("");
+        setMinAge("");
+        setMaxAge("");
       }
     }
   }, [isOpen, isEditing, data]);
@@ -322,8 +322,12 @@ export function CreateCouponModal() {
     }
 
     if (couponType === "AGE") {
-      if (!ageValue.trim()) {
-        toast.error("Digite a idade");
+      if (!minAge.trim() && !maxAge.trim()) {
+        toast.error("Digite ao menos uma idade (mínima ou máxima)");
+        return;
+      }
+      if (minAge && maxAge && parseInt(minAge) >= parseInt(maxAge)) {
+        toast.error("A idade mínima deve ser menor que a máxima");
         return;
       }
     }
@@ -347,8 +351,8 @@ export function CreateCouponModal() {
         cpfList: cpfListStatus === "ENABLED" ? cpfList : undefined,
         // Campos específicos por tipo
         minQuantity: couponType === "QUANTITY" ? parseInt(minQuantity) : undefined,
-        ageRule: couponType === "AGE" ? ageRule : undefined,
-        ageValue: couponType === "AGE" ? ageValue : undefined,
+        minAge: couponType === "AGE" && minAge ? parseInt(minAge) : undefined,
+        maxAge: couponType === "AGE" && maxAge ? parseInt(maxAge) : undefined,
       };
 
       // Código é obrigatório apenas para DISCOUNT, opcional para outros tipos
@@ -450,8 +454,8 @@ export function CreateCouponModal() {
                             onClick={() => {
                               setCouponType("DISCOUNT");
                               setMinQuantity("");
-                              setAgeValue("");
-                              setAgeRule("MIN");
+                              setMinAge("");
+                              setMaxAge("");
                             }}
                             className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "DISCOUNT"
                               ? "bg-primary-4 border-primary-8"
@@ -467,8 +471,8 @@ export function CreateCouponModal() {
                           <button
                             onClick={() => {
                               setCouponType("QUANTITY");
-                              setAgeValue("");
-                              setAgeRule("MIN");
+                              setMinAge("");
+                              setMaxAge("");
                             }}
                             className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "QUANTITY"
                               ? "bg-primary-4 border-primary-8"
@@ -569,51 +573,34 @@ export function CreateCouponModal() {
                                   Regra de idade
                                 </h3>
                                 <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                  Aplica para participantes com idade a partir de X
+                                  O cupom será aplicado automaticamente para participantes dentro da faixa de idade definida. Preencha ao menos um campo.
                                 </p>
                               </div>
                               <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <Checkbox
-                                    checked={ageRule === "MIN"}
-                                    onCheckedChange={(checked) => {
-                                      if (checked) setAgeRule("MIN");
-                                    }}
-                                  />
-                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                  <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                     Idade mínima
-                                  </span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <Checkbox
-                                    checked={ageRule === "MAX"}
-                                    onCheckedChange={(checked) => {
-                                      if (checked) setAgeRule("MAX");
-                                    }}
+                                  </label>
+                                  <Input
+                                    type="text"
+                                    placeholder="Ex: 18"
+                                    value={minAge}
+                                    onChange={(e) => setMinAge(e.target.value.replace(/[^0-9]/g, ""))}
+                                    className="h-12"
                                   />
-                                  <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
+                                </div>
+                                <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                  <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                     Idade máxima
-                                  </span>
-                                </label>
-                              </div>
-                              <div className="flex flex-col gap-2 w-[132px]">
-                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Nome do cupom
-                                </label>
-                                <Input
-                                  type="text"
-                                  placeholder="Ex: 9 anos"
-                                  value={ageValue}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val.length > 30) {
-                                      return;
-                                    }
-                                    setAgeValue(val);
-                                  }}
-                                  maxLength={30}
-                                  className="h-12"
-                                />
+                                  </label>
+                                  <Input
+                                    type="text"
+                                    placeholder="Ex: 65"
+                                    value={maxAge}
+                                    onChange={(e) => setMaxAge(e.target.value.replace(/[^0-9]/g, ""))}
+                                    className="h-12"
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}

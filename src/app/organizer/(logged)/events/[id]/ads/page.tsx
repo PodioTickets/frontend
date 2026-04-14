@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
 import type { EventTracking, EventTrackingPatch } from "@/services";
@@ -73,6 +74,7 @@ export default function AdsPage() {
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
+  useEventPermissionGuard("pixel");
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

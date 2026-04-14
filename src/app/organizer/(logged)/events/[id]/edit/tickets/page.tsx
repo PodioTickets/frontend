@@ -1384,8 +1384,9 @@ export default function EditTicketsPage() {
               <Button
                 type="button"
                 variant="outline"
+                disabled={tickets.length === 0}
                 onClick={handleOpenTicketsCheckoutPreview}
-                className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base"
+                className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Prévia
               </Button>

@@ -17,6 +17,7 @@ import { CardIcon } from '../Icons/CardIcon';
 import { ArrowButton } from '../ArrowButton';
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 export function PaymentDetailsModal() {
   const { isOpen, closePaymentDetailsModal, data } = usePaymentDetailsModal();
@@ -333,7 +334,8 @@ export function PaymentDetailsModal() {
     return "bg-primary-11 text-primary-1";
   };
 
-  const eventTabs = eventId ? getEventTabs(eventId) : [];
+  const { hasPermission } = useOrganizerPermissions();
+  const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
   return (
     <AnimatePresence>

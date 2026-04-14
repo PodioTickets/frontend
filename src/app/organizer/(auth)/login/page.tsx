@@ -15,6 +15,20 @@ import toast from "react-hot-toast";
 import { HotelsIcon } from "@/components/Icons/Organizer/HotelsIcon";
 import { publicSiteHref } from "@/lib/organizerHostNavigation";
 
+function translateLoginError(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("invalid credentials") || m.includes("invalid email or password") || m.includes("unauthorized")) {
+    return "E-mail ou senha incorretos.";
+  }
+  if (m.includes("user not found") || m.includes("account not found")) {
+    return "Conta não encontrada.";
+  }
+  if (m.includes("too many requests") || m.includes("rate limit")) {
+    return "Muitas tentativas. Aguarde um momento e tente novamente.";
+  }
+  return msg || "Erro ao fazer login. Tente novamente.";
+}
+
 export default function OrganizerLoginPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
@@ -72,11 +86,8 @@ export default function OrganizerLoginPage() {
         }
       } else {
         // Erro da API ou do contexto
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Erro ao fazer login. Tente novamente.";
-        toast.error(errorMessage);
+        const raw = error instanceof Error ? error.message : "";
+        toast.error(translateLoginError(raw));
       }
     } finally {
       setIsSubmitting(false);

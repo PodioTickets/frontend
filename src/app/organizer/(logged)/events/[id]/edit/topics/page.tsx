@@ -477,11 +477,12 @@ export default function EditTopicsPage() {
           >
             <Button
               variant="outline"
+              disabled={sections.length === 0}
               onClick={() => {
                 writeTopicsPreviewDraft({ v: 1, eventId, sections });
                 orgNav.push(`/organizer/events/${eventId}/edit/topics/preview`);
               }}
-              className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px]"
+              className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Prévia
             </Button>

@@ -3,16 +3,14 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { ArrowLeft, ChevronDown, Download } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Button } from "../Button";
 import { SuccessIcon } from "../Icons/SuccessIcon";
 import { useRouter } from "next/navigation";
-import { useCheckout } from "@/contexts/CheckoutContext";
 import type { Event } from "@/interfaces/event";
 import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
 import { LocationIcon } from "../Icons/LocationIcon";
-import { DistanceIcon } from "../Icons/DistanceIcon";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 
 interface PaymentSuccessStepProps {
@@ -54,6 +52,8 @@ interface PaymentSuccessStepProps {
     phone: string;
     birthDate: string;
     gender: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | null;
+    emergencyContactName?: string;
+    emergencyPhone?: string;
   }>;
   serviceFee?: number;
   couponDiscount?: number;
@@ -63,9 +63,9 @@ interface PaymentSuccessStepProps {
 
 export function PaymentSuccessStep({
   event,
-  orderNumber = "PT-2025-0348",
-  paymentMethod = "Cartão de crédito",
-  totalPaid = 456.27,
+  orderNumber,
+  paymentMethod,
+  totalPaid = 0,
   participantsData = [],
   participantsInfo = [],
   serviceFee: propServiceFee,
@@ -74,23 +74,19 @@ export function PaymentSuccessStep({
   date: paymentDate,
 }: PaymentSuccessStepProps) {
   const router = useRouter();
-  const { participants: contextParticipants } = useCheckout();
 
-  // Usar participantsInfo se fornecido, senão usar do contexto
-  const participants = participantsInfo.length > 0
-    ? participantsInfo.map(p => ({
-      name: p.name,
-      cpf: p.cpf,
-      email: p.email,
-      birthDate: p.birthDate,
-      phone: p.phone,
-      gender: p.gender || '',
-      emergencyPhone: '',
-      emergencyContactName: '',
-    }))
-    : contextParticipants;
+  const participants = participantsInfo.map(p => ({
+    name: p.name,
+    cpf: p.cpf,
+    email: p.email,
+    birthDate: p.birthDate,
+    phone: p.phone,
+    gender: p.gender || '',
+    emergencyContactName: p.emergencyContactName || '',
+    emergencyPhone: p.emergencyPhone || '',
+  }));
 
-  const [activeTab, setActiveTab] = useState<"info" | "products">("info");
+  const [activeTabs, setActiveTabs] = useState<Record<number, "info" | "products">>({});
   const [expandedParticipants, setExpandedParticipants] = useState<
     Record<number, boolean>
   >({
@@ -129,8 +125,31 @@ export function PaymentSuccessStep({
     return `${cleaned.slice(0, 2)}.***.***-${cleaned.slice(9)}`;
   };
 
+  const formatCPF = (cpf: string) => {
+    if (!cpf) return "";
+    const cleaned = cpf.replace(/\D/g, "");
+    if (cleaned.length !== 11) return cpf;
+    return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;
+  };
+
+  const formatPhone = (phone: string) => {
+    if (!phone) return "";
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
+
   const getGenderLabel = (gender: string) => {
     const labels: Record<string, string> = {
+      MALE: "Masculino",
+      FEMALE: "Feminino",
+      OTHER: "Outro",
+      PREFER_NOT_TO_SAY: "Prefiro não informar",
       male: "Masculino",
       female: "Feminino",
       other: "Outro",
@@ -160,28 +179,7 @@ export function PaymentSuccessStep({
     }));
   };
 
-  // Mock data if no participants
-  const displayParticipants =
-    participantsData.length > 0
-      ? participantsData
-      : [
-        {
-          participantIndex: 0,
-          ticketName: "Kit inscrição - 3K Caminhada",
-          ticketPrice: 438.34,
-          qrCode: "/images/qr-code-placeholder.png",
-          additionalProducts: [
-            { name: "Camiseta Regata", price: 29.9, quantity: 1 },
-            { name: "Viseira", price: 29.9, quantity: 1 },
-          ],
-        },
-        {
-          participantIndex: 1,
-          ticketName: "Kit inscrição - 3K Caminhada",
-          ticketPrice: 438.34,
-          qrCode: "/images/qr-code-placeholder.png",
-        },
-      ];
+  const displayParticipants = participantsData;
 
   return (
     <>
@@ -374,14 +372,8 @@ export function PaymentSuccessStep({
               {/* Participant Cards */}
               <div className="flex flex-col gap-5 items-start w-full">
                 {displayParticipants.map((participantData, index) => {
-                  const participant = participants[
-                    participantData.participantIndex
-                  ] || {
-                    name: "Lucas",
-                    cpf: "11812345685",
-                    birthDate: "2004-03-03",
-                    gender: "male",
-                  };
+                  const participant = participants[participantData.participantIndex] || {};
+                  console.log(participant);
                   const isExpanded = expandedParticipants[index] || false;
 
                   return (
@@ -427,12 +419,6 @@ export function PaymentSuccessStep({
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-4 items-start w-full">
-                            <div className="flex gap-2 items-center">
-                              <DistanceIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                0.3 Km
-                              </span>
-                            </div>
                             <div className="flex gap-2 items-center">
                               <CalendarIcon className="size-6 text-gray-12" />
                               <span className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
@@ -509,9 +495,9 @@ export function PaymentSuccessStep({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveTab("info");
+                                setActiveTabs(prev => ({ ...prev, [index]: "info" }));
                               }}
-                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${activeTab === "info"
+                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${(activeTabs[index] ?? "info") === "info"
                                 ? "bg-primary-11 text-primary-2"
                                 : "bg-gray-5 text-gray-11"
                                 }`}
@@ -521,9 +507,9 @@ export function PaymentSuccessStep({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveTab("products");
+                                setActiveTabs(prev => ({ ...prev, [index]: "products" }));
                               }}
-                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${activeTab === "products"
+                              className={`px-4 py-3 rounded-[32px] font-semibold text-base leading-[1.1] font-manrope ${(activeTabs[index] ?? "info") === "products"
                                 ? "bg-primary-11 text-primary-2"
                                 : "bg-gray-5 text-gray-11"
                                 }`}
@@ -533,7 +519,7 @@ export function PaymentSuccessStep({
                           </div>
 
                           {/* Tab Content */}
-                          {activeTab === "info" ? (
+                          {(activeTabs[index] ?? "info") === "info" ? (
                             <div className="flex flex-wrap gap-5 items-start overflow-hidden pb-6 pt-8 px-4 w-full">
                               <p className="font-bold text-lg leading-[1.1] text-gray-12 font-manrope w-full">
                                 Informações do participante
@@ -550,7 +536,7 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "CPF",
-                                    value: participant.cpf || "",
+                                    value: formatCPF(participant.cpf || ""),
                                   },
                                   {
                                     label: "Data de nascimento",
@@ -560,13 +546,19 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "Telefone",
-                                    value: participant.phone || "",
+                                    value: formatPhone(participant.phone || ""),
                                   },
                                   {
                                     label: "Sexo",
                                     value: participant.gender
                                       ? getGenderLabel(participant.gender)
                                       : "",
+                                  },
+                                  {
+                                    label: "Contato de emergência",
+                                    value: participant.emergencyContactName && participant.emergencyPhone
+                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone)}`
+                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "") || "",
                                   },
                                 ].map((field, idx) => (
                                   <div
@@ -593,35 +585,33 @@ export function PaymentSuccessStep({
                               </p>
                               {/* Produtos incluídos no ticket */}
                               {participantData.includedProducts && participantData.includedProducts.length > 0 && (
-                                <div className="flex flex-col gap-4 items-start w-full">
+                                <div className="flex flex-col gap-3 items-start w-full">
+                                  <p className="font-semibold text-sm text-gray-11 font-family-dm-sans">Incluídos no ingresso</p>
                                   {participantData.includedProducts.map((product, idx) => (
                                     <div
                                       key={`included-${idx}`}
                                       className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
                                     >
                                       <div className="flex flex-1 gap-3 items-center w-full">
-                                        {/* Imagem do produto */}
                                         <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
                                           <ImageWithInitialFallback
                                             src={(product as any).image}
                                             alt={product.name}
                                             name={product.name}
-                                            fallbackId={String(idx)}
+                                            fallbackId={`inc-${idx}`}
                                             fill
                                             sizes="100px"
                                             className="size-full rounded-lg"
                                             letterClassName="text-2xl font-semibold"
                                           />
                                         </div>
-                                        {/* Nome e informações do produto */}
                                         <div className="flex flex-1 flex-col gap-6 items-start justify-center min-w-0">
                                           <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                             {product.name}
                                           </p>
-                                          {/* Preço e Tamanho/Variação */}
                                           <div className="flex items-center justify-between w-full">
                                             <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                              {formatCurrency(product.price)}
+                                              {product.price > 0 ? formatCurrency(product.price) : "Incluso"}
                                             </p>
                                             {product.variationName && (
                                               <div className="flex gap-1 items-center justify-end min-w-[147px]">
@@ -640,11 +630,34 @@ export function PaymentSuccessStep({
                                   ))}
                                 </div>
                               )}
-                              {(!participantData.includedProducts || participantData.includedProducts.length === 0) && (
-                                <p className="text-sm text-gray-11">
-                                  Nenhum produto para este participante.
-                                </p>
+                              {/* Produtos adicionais */}
+                              {participantData.additionalProducts && participantData.additionalProducts.length > 0 && (
+                                <div className="flex flex-col gap-3 items-start w-full">
+                                  <p className="font-semibold text-sm text-gray-11 font-family-dm-sans">Adicionais</p>
+                                  {participantData.additionalProducts.map((product, idx) => (
+                                    <div
+                                      key={`add-${idx}`}
+                                      className="border border-gray-6 flex items-center justify-between p-4 rounded-xl w-full"
+                                    >
+                                      <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                        {product.name}
+                                        {product.quantity > 1 && (
+                                          <span className="text-gray-11 font-normal"> x{product.quantity}</span>
+                                        )}
+                                      </p>
+                                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                        {formatCurrency(product.price * product.quantity)}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
                               )}
+                              {(!participantData.includedProducts || participantData.includedProducts.length === 0) &&
+                                (!participantData.additionalProducts || participantData.additionalProducts.length === 0) && (
+                                  <p className="text-sm text-gray-11">
+                                    Nenhum produto para este participante.
+                                  </p>
+                                )}
                             </div>
                           )}
                         </>
@@ -844,14 +857,7 @@ export function PaymentSuccessStep({
               {/* Participant Cards */}
               <div className="flex flex-col gap-[20px] items-center w-full">
                 {displayParticipants.map((participantData, index) => {
-                  const participant = participants[
-                    participantData.participantIndex
-                  ] || {
-                    name: "Lucas",
-                    cpf: "11812345685",
-                    birthDate: "2004-03-03",
-                    gender: "male",
-                  };
+                  const participant = participants[participantData.participantIndex] || {};
                   const isExpanded = expandedParticipants[index] || false;
 
                   return (
@@ -879,12 +885,6 @@ export function PaymentSuccessStep({
                               </p>
                             )}
                             <div className="flex gap-[32px] items-start">
-                              <div className="flex gap-[8px] items-center">
-                                <DistanceIcon className="size-6 text-gray-12" />
-                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                                  0.3 Km
-                                </span>
-                              </div>
                               <div className="flex gap-[8px] items-center">
                                 <CalendarIcon className="size-6 text-gray-12" />
                                 <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-family-dm-sans">
@@ -965,6 +965,7 @@ export function PaymentSuccessStep({
                                       {maskCPF(participant.cpf)}
                                     </span>
                                   )}
+
                                 </div>
                               </div>
                             </div>
@@ -986,9 +987,9 @@ export function PaymentSuccessStep({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveTab("info");
+                                setActiveTabs(prev => ({ ...prev, [index]: "info" }));
                               }}
-                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${activeTab === "info"
+                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${(activeTabs[index] ?? "info") === "info"
                                 ? "bg-primary-11 text-primary-2"
                                 : "bg-gray-5 text-gray-11"
                                 }`}
@@ -998,9 +999,9 @@ export function PaymentSuccessStep({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveTab("products");
+                                setActiveTabs(prev => ({ ...prev, [index]: "products" }));
                               }}
-                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${activeTab === "products"
+                              className={`px-[16px] py-[12px] rounded-[32px] font-semibold text-[16px] leading-[1.1] font-manrope ${(activeTabs[index] ?? "info") === "products"
                                 ? "bg-primary-11 text-primary-2"
                                 : "bg-gray-5 text-gray-11"
                                 }`}
@@ -1010,7 +1011,7 @@ export function PaymentSuccessStep({
                           </div>
 
                           {/* Tab Content */}
-                          {activeTab === "info" ? (
+                          {(activeTabs[index] ?? "info") === "info" ? (
                             <div className="flex flex-wrap gap-[20px_12px] items-start overflow-hidden pb-[24px] pt-[32px] px-[16px] w-full">
                               <p className="font-bold text-[20px] leading-[1.1] text-gray-12 font-manrope w-full">
                                 Informações do participante
@@ -1027,7 +1028,7 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "CPF",
-                                    value: participant.cpf || "",
+                                    value: formatCPF(participant.cpf || ""),
                                   },
                                   {
                                     label: "Data de nascimento",
@@ -1037,13 +1038,19 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "Telefone",
-                                    value: participant.phone || "",
+                                    value: formatPhone(participant.phone || ""),
                                   },
                                   {
                                     label: "Sexo",
                                     value: participant.gender
                                       ? getGenderLabel(participant.gender)
                                       : "",
+                                  },
+                                  {
+                                    label: "Contato de emergência",
+                                    value: participant.emergencyContactName && participant.emergencyPhone
+                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone)}`
+                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "") || "",
                                   },
                                 ].map((field, idx) => (
                                   <div
@@ -1070,40 +1077,38 @@ export function PaymentSuccessStep({
                               </p>
                               {/* Produtos incluídos no ticket */}
                               {participantData.includedProducts && participantData.includedProducts.length > 0 && (
-                                <div className="flex flex-col gap-4 items-start w-full">
+                                <div className="flex flex-col gap-3 items-start w-full">
+                                  <p className="font-semibold text-sm text-gray-11 font-family-dm-sans">Incluídos no ingresso</p>
                                   {participantData.includedProducts.map((product, idx) => (
                                     <div
                                       key={`included-${idx}`}
                                       className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
                                     >
                                       <div className="flex flex-1 gap-3 items-center w-full">
-                                        {/* Imagem do produto */}
                                         <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
                                           <ImageWithInitialFallback
                                             src={(product as any).image}
                                             alt={product.name}
                                             name={product.name}
-                                            fallbackId={String(idx)}
+                                            fallbackId={`inc-${idx}`}
                                             fill
                                             sizes="100px"
-                                            className="size-full rounded-lg"
+                                            className="size-full rounded-lg border-0"
                                             letterClassName="text-2xl font-semibold"
                                           />
                                         </div>
-                                        {/* Nome e informações do produto */}
                                         <div className="flex flex-1 flex-col gap-6 items-start justify-center min-w-0">
                                           <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                                             {product.name}
                                           </p>
-                                          {/* Preço e Tamanho/Variação */}
                                           <div className="flex items-center justify-between w-full">
                                             <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                              {formatCurrency(product.price)}
+                                              {product.price > 0 ? formatCurrency(product.price) : "Incluso"}
                                             </p>
                                             {product.variationName && (
                                               <div className="flex gap-1 items-center justify-end min-w-[147px]">
                                                 <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                                  {product.variationType || "Tamanho"}:
+                                                  {product.variationType || "Variação"}:
                                                 </p>
                                                 <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
                                                   {product.variationName}
@@ -1117,11 +1122,34 @@ export function PaymentSuccessStep({
                                   ))}
                                 </div>
                               )}
-                              {(!participantData.includedProducts || participantData.includedProducts.length === 0) && (
-                                <p className="text-sm text-gray-11">
-                                  Nenhum produto para este participante.
-                                </p>
+                              {/* Produtos adicionais */}
+                              {participantData.additionalProducts && participantData.additionalProducts.length > 0 && (
+                                <div className="flex flex-col gap-3 items-start w-full">
+                                  <p className="font-semibold text-sm text-gray-11 font-family-dm-sans">Adicionais</p>
+                                  {participantData.additionalProducts.map((product, idx) => (
+                                    <div
+                                      key={`add-${idx}`}
+                                      className="border border-gray-6 flex items-center justify-between p-4 rounded-xl w-full"
+                                    >
+                                      <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                        {product.name}
+                                        {product.quantity > 1 && (
+                                          <span className="text-gray-11 font-normal"> x{product.quantity}</span>
+                                        )}
+                                      </p>
+                                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                        {formatCurrency(product.price * product.quantity)}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
                               )}
+                              {(!participantData.includedProducts || participantData.includedProducts.length === 0) &&
+                                (!participantData.additionalProducts || participantData.additionalProducts.length === 0) && (
+                                  <p className="text-sm text-gray-11">
+                                    Nenhum produto para este participante.
+                                  </p>
+                                )}
                             </div>
                           )}
                         </>

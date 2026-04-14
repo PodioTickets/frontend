@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { userService } from "@/services";
@@ -19,6 +20,7 @@ export default function EventNotificationsPage() {
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
+  useEventPermissionGuard("notify");
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<{ name?: string } | null>(null);

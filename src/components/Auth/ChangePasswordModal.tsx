@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useChangePasswordModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
-import { X, Lock } from "lucide-react";
+import { X, Lock, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/Input";
@@ -20,6 +20,9 @@ export function ChangePasswordModal() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{
     currentPassword?: string;
     newPassword?: string;
@@ -87,6 +90,9 @@ export function ChangePasswordModal() {
     setNewPassword("");
     setConfirmPassword("");
     setErrors({});
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleClose = () => {
@@ -152,7 +158,7 @@ export function ChangePasswordModal() {
                       <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
                         <Lock className="w-6 h-6 text-gray-11 shrink-0" />
                         <Input
-                          type="password"
+                          type={showCurrentPassword ? "text" : "password"}
                           value={currentPassword}
                           onChange={(e) => {
                             setCurrentPassword(e.target.value);
@@ -163,6 +169,14 @@ export function ChangePasswordModal() {
                           placeholder="Digite sua senha atual"
                           className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword((v) => !v)}
+                          className="shrink-0 text-gray-11 hover:text-gray-12 transition-colors cursor-pointer"
+                          tabIndex={-1}
+                        >
+                          {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
                       </div>
                       {errors.currentPassword && (
                         <p className="text-sm text-red-9 font-family-dm-sans">
@@ -180,7 +194,7 @@ export function ChangePasswordModal() {
                     <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
                       <Lock className="w-6 h-6 text-gray-11 shrink-0" />
                       <Input
-                        type="password"
+                        type={showNewPassword ? "text" : "password"}
                         value={newPassword}
                         onChange={(e) => {
                           setNewPassword(e.target.value);
@@ -195,6 +209,14 @@ export function ChangePasswordModal() {
                         placeholder="Digite uma nova senha"
                         className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword((v) => !v)}
+                        className="shrink-0 text-gray-11 hover:text-gray-12 transition-colors cursor-pointer"
+                        tabIndex={-1}
+                      >
+                        {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
                     </div>
                     {errors.newPassword && (
                       <p className="text-sm text-red-9 font-family-dm-sans">
@@ -211,7 +233,7 @@ export function ChangePasswordModal() {
                     <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
                       <Lock className="w-6 h-6 text-gray-11 shrink-0" />
                       <Input
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => {
                           setConfirmPassword(e.target.value);
@@ -222,6 +244,14 @@ export function ChangePasswordModal() {
                         placeholder="Digite sua senha novamente"
                         className="flex-1 border-0 p-0 h-auto bg-transparent text-base font-normal text-gray-11 placeholder:text-gray-11 outline-none focus-visible:ring-0 shadow-none"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        className="shrink-0 text-gray-11 hover:text-gray-12 transition-colors cursor-pointer"
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
                     </div>
                     {errors.confirmPassword && (
                       <p className="text-sm text-red-9 font-family-dm-sans">

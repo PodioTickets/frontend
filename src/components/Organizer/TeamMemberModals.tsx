@@ -74,6 +74,12 @@ const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
     description:
       "Permite enviar notificações ou comunicados para todos os inscritos do evento.",
   },
+  {
+    id: "create_event",
+    title: "Criar Evento",
+    description:
+      "Permite criar novos eventos na organização.",
+  },
 ];
 
 const DEFAULT_PERMISSIONS: Record<string, boolean> = {
@@ -112,7 +118,6 @@ function permissionsToArray(p: Record<string, boolean>): string[] {
   return PERMISSION_ROWS.map((r) => r.id).filter((id) => p[id]);
 }
 
-/** Create: omit eventIds = todos os eventos. Settings: [] = limpar whitelist (todos). */
 function buildEventIdsForCreate(
   events: Event[],
   eventSelection: Record<string, boolean>
@@ -123,13 +128,20 @@ function buildEventIdsForCreate(
   return selected;
 }
 
+/**
+ * null   → não envia o campo (sem restrição, todos os eventos)
+ * []     → restringe a nenhum evento
+ * [ids]  → restringe a esses eventos
+ */
 function buildEventIdsForSettings(
   events: Event[],
   eventSelection: Record<string, boolean>
-): string[] {
-  if (events.length === 0) return [];
+): string[] | null {
+  if (events.length === 0) return null;
   const selected = events.filter((e) => eventSelection[e.id]).map((e) => e.id);
-  if (selected.length === 0 || selected.length === events.length) return [];
+  // Todos selecionados: sem restrição (não envia whitelist)
+  if (selected.length === events.length) return null;
+  // Subset ou nenhum: envia exatamente o que foi escolhido
   return selected;
 }
 
@@ -250,7 +262,7 @@ export function CollaboratorDrawer({
     {}
   );
   const [detailLoading, setDetailLoading] = useState(false);
-  const [whitelistFromApi, setWhitelistFromApi] = useState<string[]>([]);
+  const [whitelistFromApi, setWhitelistFromApi] = useState<string[] | null>(null);
   const [eventSearch, setEventSearch] = useState("");
   const [eventsListPage, setEventsListPage] = useState(1);
 
@@ -263,7 +275,7 @@ export function CollaboratorDrawer({
     setConfirmPassword("");
     setPermissions({ ...DEFAULT_PERMISSIONS });
     setEventSelection({});
-    setWhitelistFromApi([]);
+    setWhitelistFromApi(null);
     setEventSearch("");
     setEventsListPage(1);
   }, []);
@@ -293,7 +305,7 @@ export function CollaboratorDrawer({
 
   useEffect(() => {
     if (!open || mode !== "edit" || !member) {
-      if (!open) setWhitelistFromApi([]);
+      if (!open) setWhitelistFromApi(null);
       return;
     }
     let cancelled = false;
@@ -311,7 +323,7 @@ export function CollaboratorDrawer({
         setPassword("");
         setConfirmPassword("");
         setPermissions(permissionsFromArray(detail.permissions));
-        setWhitelistFromApi(detail.eventIds ?? []);
+        setWhitelistFromApi(detail.eventIds);
       } catch (err: any) {
         if (cancelled) return;
         toast.error(
@@ -324,7 +336,7 @@ export function CollaboratorDrawer({
         );
         setEmail(member.user.email || "");
         setPermissions(permissionsFromArray(member.permissions));
-        setWhitelistFromApi(member.eventIds ?? []);
+        setWhitelistFromApi(member.eventIds ?? null);
       } finally {
         if (!cancelled) setDetailLoading(false);
       }
@@ -340,10 +352,12 @@ export function CollaboratorDrawer({
       setEventSelection({});
       return;
     }
-    const restrict = whitelistFromApi.length > 0;
+    // null = sem restrição (todos marcados); [] = nenhum; [ids] = só esses
+    const whitelist = whitelistFromApi;
+    const restrict = whitelist !== null;
     const sel: Record<string, boolean> = {};
     for (const ev of events) {
-      sel[ev.id] = !restrict || whitelistFromApi.includes(ev.id);
+      sel[ev.id] = !restrict || whitelist!.includes(ev.id);
     }
     setEventSelection(sel);
   }, [open, mode, events, whitelistFromApi, detailLoading]);
@@ -495,10 +509,11 @@ export function CollaboratorDrawer({
     }
     setSaving(true);
     try {
+      const eventIds = buildEventIdsForSettings(events, eventSelection);
       await organizerService.updateOrganizationMemberSettings(member.userId, {
         role: "EMPLOYEE",
         permissions: permissionsToArray(permissions),
-        eventIds: buildEventIdsForSettings(events, eventSelection),
+        ...(eventIds !== null ? { eventIds } : {}),
         clientPage: organizerMemberSettingsClientPage(member.userId),
       });
       toast.success("Colaborador atualizado.");
@@ -885,6 +900,16 @@ export function CollaboratorDrawer({
         {/* Footer — mobile: remover acima + Cancelar | Adicionar/Salvar; desktop: ordem original */}
         <div className="shrink-0 border-t border-gray-6 bg-gray-1 md:bg-gray-2">
           <div className="flex flex-row flex-wrap items-stretch gap-2 px-4 py-3 pb-0 md:pb-3 md:justify-end">
+            {mode === "edit" && !isOwnerMember && (
+              <Button
+                variant="destructive"
+                onClick={handleRemove}
+                disabled={saving || removing}
+                className="hidden h-11 font-manrope font-bold text-base md:inline-flex"
+              >
+                {removing ? "Deletando…" : "Deletar"}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -894,16 +919,7 @@ export function CollaboratorDrawer({
             >
               Cancelar
             </Button>
-            {mode === "edit" && !isOwnerMember && (
-              <Button
-                variant="destructive"
-                onClick={handleRemove}
-                disabled={saving || removing}
-                className="hidden h-11 font-manrope font-bold text-base md:inline-flex"
-              >
-                {removing ? "Removendo…" : "Remover da organização"}
-              </Button>
-            )}
+
             <Button
               type="button"
               onClick={mode === "create" ? handleCreate : handleEditSave}
@@ -938,7 +954,7 @@ export function CollaboratorDrawer({
                 disabled={saving || removing}
                 className="h-11 w-full rounded-lg font-manrope font-bold text-base"
               >
-                {removing ? "Removendo…" : "Remover da organização"}
+                {removing ? "Deletando…" : "Deletar da organização"}
               </Button>
             </div>
           )}

@@ -149,14 +149,23 @@ export default function TicketDetailsPage() {
         avatarUrl: user.avatarUrl || "",
         qrCode: registration.qrCode || "",
         ticket: ticket,
+        emergencyContact: registration.emergencyContact || null,
         questionAnswers: (registration.questionAnswers || []).reduce((acc: any, qa: any) => {
           if (qa.question) {
             acc[qa.question.id || qa.question.question] = qa.answer;
           }
           return acc;
         }, {}),
-        // Usar produtos do registration com a estrutura correta
-        products: registrationProducts,
+        // Produtos incluídos no ingresso (ticket.products com selectedVariation)
+        includedProducts: (ticket.products ?? []).map((p: any) => ({
+          product: { name: p.name, image: p.image ?? null, variationType: p.variationType ?? null },
+          variation: p.selectedVariation ?? null,
+          quantity: 1,
+          unitPrice: 0,
+          isIncluded: true,
+        })),
+        // Produtos adicionais comprados separadamente
+        additionalProducts: registrationProducts,
       };
     });
   }, [registration]);
@@ -438,13 +447,13 @@ export default function TicketDetailsPage() {
                                   {getGenderLabel(participant.gender) || "-"}
                                 </p>
                               </div>
-                              {participant.emergencyPhone && (
+                              {participant.emergencyContact && (
                                 <div className="flex flex-col py-4">
                                   <label className="text-base text-gray-12 font-family-dm-sans">
-                                    Telefone de emergência
+                                    Contato de emergência
                                   </label>
                                   <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                    {participant.emergencyPhone ? formatPhone(participant.emergencyPhone) : "-"}
+                                    {participant.emergencyContact.name ? participant.emergencyContact.name : "-"} - {participant.emergencyContact.phone ? formatPhone(participant.emergencyContact.phone) : "-"}
                                   </p>
                                 </div>
                               )}
@@ -478,56 +487,115 @@ export default function TicketDetailsPage() {
                       )}
 
                       {tab === "products" && (
-                        <div>
-                          {participant.products && participant.products.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {participant.products.map((item: any, productIndex: number) => {
-                                const productData = item.product || {};
-                                const variationData = item.variation || {};
-                                const price = item.totalPrice ?? item.unitPrice ?? 0;
-                                const isIncluded = price === 0;
-
-                                return (
-                                  <div
-                                    key={item.id || productIndex}
-                                    className="bg-gray-2 border border-gray-6 rounded-xl"
-                                  >
-                                    <div className="flex gap-3 p-4">
-                                      {productData.image && (
-                                        <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
-                                          <Image
-                                            src={productData.image}
-                                            alt={productData.name || "Produto"}
-                                            width={100}
-                                            height={100}
-                                            className="w-full h-full object-cover"
-                                          />
+                        <div className="flex flex-col gap-6">
+                          {/* Produtos incluídos no ingresso */}
+                          {participant.includedProducts && participant.includedProducts.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                              <p className="text-sm font-semibold text-gray-11 font-family-dm-sans">Incluídos no ingresso</p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {participant.includedProducts.map((item: any, productIndex: number) => {
+                                  const productData = item.product || {};
+                                  const variationData = item.variation || null;
+                                  return (
+                                    <div
+                                      key={`inc-${productIndex}`}
+                                      className="bg-gray-2 border border-gray-6 rounded-xl"
+                                    >
+                                      <div className="flex gap-3 p-4">
+                                        {productData.image && (
+                                          <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
+                                            <Image
+                                              src={productData.image}
+                                              alt={productData.name || "Produto"}
+                                              width={100}
+                                              height={100}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="flex flex-col justify-between flex-1 min-w-0">
+                                          <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
+                                            {productData.name || "Produto"}
+                                          </p>
+                                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                                            Incluso no ingresso
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {variationData && (
+                                        <div className="border-t border-gray-6 p-4">
+                                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                                            <span className="font-normal">{productData.variationType || "Variação"}:</span>{" "}
+                                            {variationData.name}
+                                          </p>
                                         </div>
                                       )}
-                                      <div className="flex flex-col justify-between flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
-                                          {productData.name || "Produto"}
-                                        </p>
-                                        <p className="text-base font-semibold text-gray-12 font-manrope">
-                                          {isIncluded ? "Incluso no ingresso" : formatPrice(price)}
-                                        </p>
-                                      </div>
                                     </div>
-
-                                    <div className="border-t border-gray-6 p-4">
-                                      <p className="text-base font-semibold text-gray-12 font-manrope">
-                                        <span className="font-normal"> {productData.variationType || "Tamanho"}:</span> {variationData.name || "N/A"}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                             </div>
-                          ) : (
-                            <p className="text-base text-gray-11 font-family-dm-sans">
-                              Nenhum produto adicional
-                            </p>
                           )}
+
+                          {/* Produtos adicionais */}
+                          {participant.additionalProducts && participant.additionalProducts.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                              <p className="text-sm font-semibold text-gray-11 font-family-dm-sans">Adicionais</p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {participant.additionalProducts.map((item: any, productIndex: number) => {
+                                  const productData = item.product || {};
+                                  const variationData = item.variation || null;
+                                  const price = (item.totalPrice ?? item.unitPrice ?? 0) / 100;
+                                  return (
+                                    <div
+                                      key={item.id || `add-${productIndex}`}
+                                      className="bg-gray-2 border border-gray-6 rounded-xl"
+                                    >
+                                      <div className="flex gap-3 p-4">
+                                        {productData.image && (
+                                          <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
+                                            <Image
+                                              src={productData.image}
+                                              alt={productData.name || "Produto"}
+                                              width={100}
+                                              height={100}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="flex flex-col justify-between flex-1 min-w-0">
+                                          <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
+                                            {productData.name || "Produto"}
+                                            {item.quantity > 1 && (
+                                              <span className="text-gray-11 font-normal"> x{item.quantity}</span>
+                                            )}
+                                          </p>
+                                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                                            {formatPrice(price * (item.quantity ?? 1))}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {variationData && (
+                                        <div className="border-t border-gray-6 p-4">
+                                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                                            <span className="font-normal">{productData.variationType || "Variação"}:</span>{" "}
+                                            {variationData.name}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {(!participant.includedProducts || participant.includedProducts.length === 0) &&
+                            (!participant.additionalProducts || participant.additionalProducts.length === 0) && (
+                              <p className="text-base text-gray-11 font-family-dm-sans">
+                                Nenhum produto para este participante.
+                              </p>
+                            )}
                         </div>
                       )}
                     </div>

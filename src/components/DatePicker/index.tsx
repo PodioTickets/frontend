@@ -69,6 +69,7 @@ interface DatePickerProps {
   minDate?: Date;
   maxDate?: Date;
   hideIcon?: boolean;
+  error?: boolean;
 }
 
 export function DatePicker({
@@ -80,6 +81,7 @@ export function DatePicker({
   minDate,
   maxDate,
   hideIcon = false,
+  error = false,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -207,7 +209,7 @@ export function DatePicker({
         <button
           type="button"
           disabled={disabled}
-          className={`border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className || ""
+          className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${error ? "border-red-10" : "border-gray-6"} ${className || ""
             }`}
         >
           <div

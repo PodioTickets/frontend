@@ -403,7 +403,7 @@ export default function EditQuestionnairePage() {
           <Button
             type="button"
             onClick={() => void handleSaveChanges()}
-            disabled={saving || loading}
+            disabled={saving || loading || !isDirty}
             variant="default"
             className={cn(
               "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50",

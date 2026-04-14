@@ -18,16 +18,24 @@ export interface EventTabItem {
   href: string;
 }
 
-export function getEventTabs(eventId: string): EventTabItem[] {
-  return [
-    { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard` },
-    { label: "Inscrições", href: `/organizer/events/${eventId}/registrations` },
-    { label: "Financeiro", href: `/organizer/events/${eventId}/financial` },
-    { label: "Editar", href: `/organizer/events/${eventId}/edit` },
-    { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom` },
-    { label: "Ads", href: `/organizer/events/${eventId}/ads` },
-    { label: "Notificação", href: `/organizer/events/${eventId}/notifications` },
-  ];
+const EVENT_TABS_DEF = (eventId: string) => [
+  { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard`, permission: "dashboard" },
+  { label: "Inscrições", href: `/organizer/events/${eventId}/registrations`, permission: null },
+  { label: "Financeiro", href: `/organizer/events/${eventId}/financial`, permission: "financial" },
+  { label: "Editar", href: `/organizer/events/${eventId}/edit`, permission: "edit_event" },
+  { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom`, permission: "coupons" },
+  { label: "Ads", href: `/organizer/events/${eventId}/ads`, permission: "pixel" },
+  { label: "Notificação", href: `/organizer/events/${eventId}/notifications`, permission: "notify" },
+];
+
+export function getEventTabs(
+  eventId: string,
+  hasPermission?: (key: string) => boolean,
+): EventTabItem[] {
+  const can = hasPermission ?? (() => true);
+  return EVENT_TABS_DEF(eventId)
+    .filter((t) => t.permission === null || can(t.permission))
+    .map(({ label, href }) => ({ label, href }));
 }
 
 export function getDiscountOptions(eventId: string, onLinkClick?: () => void) {

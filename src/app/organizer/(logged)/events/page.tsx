@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { Button } from "@/components/Button";
 import { FlagIcon } from "@/components/Icons/FlagIcon";
 import {
@@ -39,6 +40,9 @@ export default function OrganizerEventsPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasPermission } = useOrganizerPermissions();
+  const canCreateEvent = hasPermission("create_event");
+  const canViewDashboard = hasPermission("dashboard");
   const [authChecked, setAuthChecked] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -235,11 +239,13 @@ export default function OrganizerEventsPage() {
               Meus eventos
             </h1>
           </div>
-          <Link href="/organizer/events/new?reset=1">
-            <Button className="">
-              Criar evento
-            </Button>
-          </Link>
+          {canCreateEvent && (
+            <Link href="/organizer/events/new?reset=1">
+              <Button className="">
+                Criar evento
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Events Table */}
@@ -251,7 +257,7 @@ export default function OrganizerEventsPage() {
                 ? "Nenhum evento encontrado com essa busca"
                 : "Você ainda não criou nenhum evento"}
             </p>
-            {!searchTerm && (
+            {!searchTerm && canCreateEvent && (
               <Link href="/organizer/events/new?reset=1">
                 <Button>
                   <Plus className="size-4 mr-2" />
@@ -336,13 +342,16 @@ export default function OrganizerEventsPage() {
                           </td>
                           <td className="py-4 px-5 text-center max-w-[130px]">
                             {isCreationDraft ? (
-                              <Link
-                                href={`/organizer/events/new?resume=${event.id}`}
-                              >
-                                <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
-                              </Link>
+                              canCreateEvent ? (
+                                <Link
+                                  href={`/organizer/events/new?resume=${event.id}`}
+                                >
+                                  <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
+                                </Link>
+                              ) : null
                             ) : (
                               <div className="flex items-center gap-1 justify-center">
+                                {canViewDashboard && (
                                 <Link
                                   href={`/organizer/events/${event.id}/dashboard`}
                                   className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
@@ -350,6 +359,7 @@ export default function OrganizerEventsPage() {
                                 >
                                   <DashboardIcon className="size-4 text-gray-11" />
                                 </Link>
+                                )}
                                 <Link
                                   href={`/organizer/events/${event.id}/edit`}
                                   className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"

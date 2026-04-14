@@ -96,7 +96,8 @@ export function CreateProductModal() {
     onModalProductDelete,
   } = useCreateProductModal();
   const [productName, setProductName] = useState("");
-  const [productImage, setProductImage] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [primaryImageIndex, setPrimaryImageIndex] = useState(0);
   const [isIncludedInTicket, setIsIncludedInTicket] = useState(true);
   const [basePrice, setBasePrice] = useState("");
   const [variationTypeName, setVariationTypeName] = useState("");
@@ -121,6 +122,8 @@ export function CreateProductModal() {
     null,
   );
   const productCropRef = useRef<ImageUploadWithCropRef>(null);
+  /** null = adicionar nova foto; number = substituir foto naquele índice */
+  const cropTargetIndexRef = useRef<number | null>(null);
   /** Variação «Sem interesse» criada pelo backend: não exibimos ao organizador, mas reenviamos no PATCH se o produto continuar fora do ingresso. */
   const organizerHiddenSemInteresseRef = useRef<ProductVariation | null>(null);
 
@@ -222,7 +225,8 @@ export function CreateProductModal() {
     () =>
       JSON.stringify({
         productName: productName.trim(),
-        productImage,
+        productImages,
+        primaryImageIndex,
         isIncludedInTicket,
         isRequired,
         basePrice,
@@ -237,7 +241,8 @@ export function CreateProductModal() {
       }),
     [
       productName,
-      productImage,
+      productImages,
+      primaryImageIndex,
       isIncludedInTicket,
       isRequired,
       basePrice,
@@ -255,8 +260,11 @@ export function CreateProductModal() {
     (p: unknown, emptyVariationsStockFallback: string) => {
       const rec = p && typeof p === "object" ? (p as Record<string, unknown>) : {};
       setProductName(String(rec.name ?? ""));
-      const img = rec.image ?? rec.image_url ?? rec.imageUrl;
-      setProductImage(typeof img === "string" ? img : null);
+      const imgs = Array.isArray(rec.images) ? rec.images.filter((i: unknown) => typeof i === "string") : [];
+      const singleImg = rec.image ?? rec.image_url ?? rec.imageUrl;
+      const loadedImages = imgs.length > 0 ? imgs : (typeof singleImg === "string" && singleImg ? [singleImg] : []);
+      setProductImages(loadedImages);
+      setPrimaryImageIndex(typeof rec.primaryImageIndex === "number" ? rec.primaryImageIndex : 0);
       const included =
         rec.isIncludedInTicket ?? rec.is_included_in_ticket;
       setIsIncludedInTicket(included !== false);
@@ -348,7 +356,8 @@ export function CreateProductModal() {
     if (!isEditing) {
       setProductFetchStatus("idle");
       setProductName("");
-      setProductImage(null);
+      setProductImages([]);
+      setPrimaryImageIndex(0);
       setIsIncludedInTicket(true);
       setIsRequired(true);
       setBasePrice("");
@@ -532,7 +541,24 @@ export function CreateProductModal() {
   const handleProductCropped = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      setProductImage(reader.result as string);
+      const dataUrl = reader.result as string;
+      const targetIndex = cropTargetIndexRef.current;
+      setProductImages(prev => {
+        if (targetIndex !== null && targetIndex < prev.length) {
+          const updated = [...prev];
+          updated[targetIndex] = dataUrl;
+          return updated;
+        }
+        return [...prev, dataUrl];
+      });
+      if (targetIndex === null) {
+        // Nova foto: tornar primária se for a primeira
+        setProductImages(prev => {
+          if (prev.length === 1) setPrimaryImageIndex(0);
+          return prev;
+        });
+      }
+      cropTargetIndexRef.current = null;
     };
     reader.readAsDataURL(file);
   }, []);
@@ -541,6 +567,7 @@ export function CreateProductModal() {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
+      cropTargetIndexRef.current = null;
       productCropRef.current?.openWithFile(file);
     }
   };
@@ -647,9 +674,12 @@ export function CreateProductModal() {
           ? 30
           : Math.max(0, Number.isFinite(daysParsed) ? daysParsed : 30)
         : 0;
+      const primaryImage = productImages[primaryImageIndex] ?? productImages[0] ?? null;
       const baseProductPayload = {
         name: productName.trim(),
-        image: productImage,
+        image: primaryImage,
+        images: productImages.length > 0 ? productImages : undefined,
+        primaryImageIndex: productImages.length > 1 ? primaryImageIndex : undefined,
         isIncludedInTicket,
         basePrice: Math.round(basePriceReais * 100),
         isRequired: isIncludedInTicket ? isRequired : false,
@@ -871,121 +901,106 @@ export function CreateProductModal() {
               {/* Content */}
               <div className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none] max-md:pb-36 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
                 <div className="flex flex-col gap-5 p-5 max-md:gap-8 max-md:p-4">
-                  {/* Left Column — flex-1 só no md+ evita a coluna “esticar” no mobile e gerar faixa vazia */}
                   <div className="flex min-h-0 flex-col gap-11 max-md:gap-8 md:flex-1">
-                    {/* Image Upload */}
-                    <div className="flex flex-col gap-3">
-                      <div className="flex flex-col gap-3">
-                        <h3
-                          className={cn(
-                            "text-gray-12 font-semibold font-manrope leading-[1.1]",
-                            "max-md:text-lg",
-                            "md:text-lg",
-                          )}
-                        >
-                          Adicione uma imagem do produto
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-gray-12 font-semibold font-manrope leading-[1.1] text-lg">
+                          Adicione imagens do produto
                         </h3>
-                        <p className="hidden text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11 md:block">
-                          Boas fotos ajudam na decisão do participante. Depois de
-                          escolher o arquivo, ajuste posição e zoom no recorte —
-                          mesmo fluxo do banner e do card do evento.
-                        </p>
-                        <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11 md:hidden">
+                        <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
                           Boas fotos ajudam na decisão do participante
                         </p>
                       </div>
-                      {productImage ? (
-                        <div
-                          className={cn(
-                            "flex w-full items-center gap-6 rounded-xl border-2 border-dashed border-gray-6",
-                            "max-md:flex-col max-md:items-stretch max-md:p-4",
-                            "md:flex-row md:p-6",
-                          )}
-                        >
-                          <div className="relative size-[120px] shrink-0 overflow-hidden rounded-2xl">
-                            <ImageWithInitialFallback
-                              src={productImage}
-                              alt="Product preview"
-                              name={productName || "Produto"}
-                              fill
-                              sizes="120px"
-                              className="size-full border-transparent border-0"
-                              letterClassName="text-4xl font-semibold"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setProductImage(null)}
-                              className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full border border-gray-6 bg-gray-1 text-gray-11 shadow-sm hover:bg-gray-2 md:hidden"
-                              aria-label="Remover imagem"
-                            >
-                              <X className="size-4" />
-                            </button>
-                          </div>
-                          <div className="flex flex-1 flex-col gap-4 md:gap-6">
-                            <div className="hidden flex-col gap-4 md:flex">
-                              <p className="text-base font-semibold font-manrope leading-[1.1] text-gray-12">
-                                Arraste uma imagem para este campo ou clique
-                                abaixo
-                              </p>
-                              <p className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                PNG ou JPG, máximo 10MB
-                              </p>
-                            </div>
-                            <p className="text-sm font-family-dm-sans leading-[1.3] text-gray-11 md:hidden">
-                              PNG ou JPG, máximo 10MB
-                            </p>
-                            <div className="flex flex-row md:flex-col gap-2 sm:flex-row">
-                              <Button
-                                type="button"
-                                onClick={() => productCropRef.current?.open()}
-                                variant="outline"
-                                className="w-full border-gray-6 text-gray-12 max-md:flex-1 md:w-full"
-                              >
-                                <span className="text-base font-bold font-family-dm-sans leading-[1.3] text-gray-12">
-                                  <span className="md:hidden">Alterar imagem</span>
-                                  <span className="hidden md:inline">
-                                    Trocar imagem
-                                  </span>
-                                </span>
-                              </Button>
+                      <div className="flex flex-col gap-3 p-4 border-2 rounded-xl border-dashed border-gray-6 w-max">
+                        <div className="flex flex-wrap gap-3 ">
+                          {productImages.map((img, idx) => (
+                            <div key={idx} className="relative">
                               <button
                                 type="button"
-                                onClick={() => setProductImage(null)}
-                                className="text-base font-semibold text-gray-11 underline decoration-gray-11 hover:text-gray-12 md:hidden"
+                                onClick={() => setPrimaryImageIndex(idx)}
+                                className={cn(
+                                  "relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 transition-colors",
+                                  idx === primaryImageIndex
+                                    ? "border-primary-8"
+                                    : "border-gray-6 hover:border-gray-9"
+                                )}
+                                aria-label={idx === primaryImageIndex ? "Imagem principal" : "Definir como principal"}
                               >
-                                Limpar imagem
+                                <ImageWithInitialFallback
+                                  src={img}
+                                  alt={`Foto ${idx + 1}`}
+                                  name={productName || "Produto"}
+                                  fill
+                                  sizes="100px"
+                                  className="size-full object-cover border-0 border-transparent"
+                                  letterClassName="text-2xl font-semibold"
+                                />
+                                {idx === primaryImageIndex && (
+                                  <div className="absolute bottom-0 left-0 right-0 bg-primary-4 text-center flex items-center justify-center py-1">
+                                    <span className="text-[10px] font-semibold text-primary-11 font-manrope leading-none">
+                                      Imagem principal
+                                    </span>
+                                  </div>
+                                )}
                               </button>
+                              {/* Botões sobrepostos */}
+                              <div className="absolute -right-1.5 -top-1.5 flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setProductImages(prev => {
+                                      const updated = prev.filter((_, i) => i !== idx);
+                                      setPrimaryImageIndex(pi => {
+                                        if (pi >= updated.length) return Math.max(0, updated.length - 1);
+                                        if (pi > idx) return pi - 1;
+                                        return pi;
+                                      });
+                                      return updated;
+                                    });
+                                  }}
+                                  className="flex size-6 items-center justify-center rounded border border-gray-6 bg-gray-1 text-gray-11 shadow-sm hover:bg-red-50 hover:text-red-500 hover:border-red-200"
+                                  aria-label="Remover foto"
+                                  title="Remover foto"
+                                >
+                                  <X className="size-3" />
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          ))}
+
+                          {/* Slot de adicionar foto */}
+                          {productImages.length < 5 && (
+                            <div
+                              onDrop={handleDrop}
+                              onDragOver={handleDragOver}
+                              className="flex size-[100px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border border-gray-6 transition-colors hover:border-primary-8"
+                              onClick={() => {
+                                cropTargetIndexRef.current = null;
+                                productCropRef.current?.open();
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  cropTargetIndexRef.current = null;
+                                  productCropRef.current?.open();
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              aria-label="Adicionar foto"
+                            >
+                              <Plus className="size-8 text-gray-12" />
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div
-                          onDrop={handleDrop}
-                          onDragOver={handleDragOver}
-                          className="flex min-h-[120px] w-full cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-gray-6 p-6 transition-colors hover:border-primary-8 max-md:min-h-[100px] max-md:py-8"
-                          onClick={() => productCropRef.current?.open()}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              productCropRef.current?.open();
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <p className="hidden text-base font-bold font-family-dm-sans leading-[1.3] text-primary-11 md:block">
-                            Arraste uma imagem para este campo ou clique aqui
-                          </p>
-                          <div className="flex flex-col items-center gap-3 text-center md:gap-4">
-                            <p className="text-base font-semibold font-manrope leading-[1.1] text-gray-12">
-                              Adicionar foto
-                            </p>
-                            <p className="text-sm font-family-dm-sans leading-[1.3] text-gray-11 md:text-base">
-                              PNG ou JPG, máximo 10MB
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                        <h1 className="font-bold text-primary-11 font-family-dm-sans">
+                          Arraste uma imagem para este campo ou clique aqui
+                        </h1>
+                        <p className="font-family-dm-sans text-gray-11">
+                          Pode adicionar até 5 fotos do seu produto <br />
+                          PNG ou JPG, máximo 10MB cada
+                        </p>
+                      </div>
                     </div>
 
                     {/* Product Name */}
@@ -1112,54 +1127,54 @@ export function CreateProductModal() {
 
                     {/* Is Required */}
                     {isIncludedInTicket && (
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-1">
-                        <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Este produto é obrigatório ou opcional?
-                        </label>
-                        <Tooltip
-                          content={
-                            <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
-                              Se for obrigatório, o participante deverá
-                              selecioná-lo para concluir a inscrição.
-                            </p>
-                          }
-                          position="topRight"
-                        >
-                          <button
-                            type="button"
-                            className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
-                            aria-label="Informação: produto obrigatório ou opcional"
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-1">
+                          <label className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                            Este produto é obrigatório ou opcional?
+                          </label>
+                          <Tooltip
+                            content={
+                              <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
+                                Se for obrigatório, o participante deverá
+                                selecioná-lo para concluir a inscrição.
+                              </p>
+                            }
+                            position="topRight"
                           >
-                            <BookIcon className="size-5 shrink-0" />
-                          </button>
-                        </Tooltip>
-                      </div>
-                      <div className="flex gap-2.5">
-                        <div className="flex items-center gap-2">
-                          <Radio
-                            checked={isRequired}
-                            onChange={() => setIsRequired(true)}
-                            name="required"
-                            className="size-6"
-                          />
-                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
-                            Obrigatório
-                          </span>
+                            <button
+                              type="button"
+                              className="inline-flex cursor-help text-gray-11 hover:text-gray-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 rounded"
+                              aria-label="Informação: produto obrigatório ou opcional"
+                            >
+                              <BookIcon className="size-5 shrink-0" />
+                            </button>
+                          </Tooltip>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Radio
-                            checked={!isRequired}
-                            onChange={() => setIsRequired(false)}
-                            name="required"
-                            className="size-6"
-                          />
-                          <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
-                            Opcional
-                          </span>
+                        <div className="flex gap-2.5">
+                          <div className="flex items-center gap-2">
+                            <Radio
+                              checked={isRequired}
+                              onChange={() => setIsRequired(true)}
+                              name="required"
+                              className="size-6"
+                            />
+                            <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
+                              Obrigatório
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Radio
+                              checked={!isRequired}
+                              onChange={() => setIsRequired(false)}
+                              name="required"
+                              className="size-6"
+                            />
+                            <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 md:text-sm">
+                              Opcional
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
                     )}
 
                     {/* Variations */}
@@ -1533,7 +1548,7 @@ export function CreateProductModal() {
                       >
                         <div className="relative size-[100px] shrink-0 overflow-hidden rounded border border-gray-6 bg-gray-3">
                           <ImageWithInitialFallback
-                            src={productImage}
+                            src={productImages[primaryImageIndex] ?? productImages[0] ?? null}
                             alt="Product preview"
                             name={productName || "Nome do produto"}
                             fill

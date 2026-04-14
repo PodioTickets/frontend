@@ -30,11 +30,11 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
 import {
-  saveRegulationPdfDraft,
   clearRegulationPdfDraft,
   loadRegulationPdfDraft,
 } from "@/lib/createEventWizardPersistence";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 const EVENT_NAME_MAX_LENGTH = 100;
 
@@ -53,6 +53,7 @@ export default function InformacoesPage() {
   const appSurface = useOrganizerAppSurface();
   const { isAuthenticated, user } = useAuth();
   const { formData, updateFormData, errors, setErrors } = useCreateEvent();
+  const { hasPermission, loading: permissionsLoading } = useOrganizerPermissions();
   const [loading, setLoading] = useState(false);
   const [loadingCEP, setLoadingCEP] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -98,12 +99,17 @@ export default function InformacoesPage() {
     }
   }, [authChecked, isAuthenticated, orgNav]);
 
-  if (!authChecked) {
+  if (!authChecked || permissionsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loading />
       </div>
     );
+  }
+
+  if (!hasPermission("create_event")) {
+    orgNav.replace("/organizer/events");
+    return null;
   }
 
   // Formatar CEP
@@ -154,7 +160,7 @@ export default function InformacoesPage() {
       return;
     }
     updateFormData({ [name]: value });
-    if (errors[name]) {
+    if (errors[name as string]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
@@ -442,26 +448,47 @@ export default function InformacoesPage() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+
     if (!formData.name.trim()) {
       newErrors.name = "Nome do evento é obrigatório";
     }
     if (!formData.eventDate) {
       newErrors.eventDate = "Data do evento é obrigatória";
     }
+
+    // Datas de inscrição são obrigatórias (horários são opcionais)
+    if (!formData.registrationStartDate?.trim()) {
+      newErrors.registrationStartDate = "Data de início das inscrições é obrigatória";
+    }
+    if (!formData.registrationEndDate?.trim()) {
+      newErrors.registrationEndDate = "Data de encerramento das inscrições é obrigatória";
+    }
     if (wouldRegistrationEndBeforeStart(formData)) {
       newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
     }
+
+    // CEP obrigatório
+    const cepDigitsValidation = (formData.cep ?? "").replace(/\D/g, "");
+    if (!cepDigitsValidation) {
+      newErrors.cep = "CEP é obrigatório";
+    } else if (cepDigitsValidation.length !== 8) {
+      newErrors.cep = "CEP inválido";
+    } else {
+      // CEP preenchido: campos de endereço obrigatórios
+      if (!formData.street?.trim()) {
+        newErrors.street = "Rua é obrigatória";
+      }
+      if (!formData.city?.trim()) {
+        newErrors.city = "Cidade é obrigatória";
+      }
+      if (!formData.state?.trim()) {
+        newErrors.state = "Estado é obrigatório";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-  const readFileAsDataURL = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Falha ao ler o arquivo"));
-      reader.readAsDataURL(file);
-    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,18 +532,37 @@ export default function InformacoesPage() {
         return;
       }
 
+      // Cria o evento no servidor como rascunho já na página de informações
+      const regForBody =
+        formData.regulationUrl?.trim() && !formData.regulationUrl.startsWith("data:")
+          ? formData.regulationUrl.trim()
+          : null;
+      const eventBody = buildCreateEventBodyFromForm(formData, regForBody);
+      const createdEvent = await organizerService.createEvent(eventBody as never);
+      const newEventId = createdEvent.id;
+      updateFormData({ createdEventId: newEventId });
+
+      // Faz upload do PDF se houver arquivo selecionado
       if (pdfFile) {
-        const dataUrl = await readFileAsDataURL(pdfFile);
-        saveRegulationPdfDraft({
-          v: 1,
-          dataUrl,
-          fileName: pdfFile.name,
-        });
-        updateFormData({ regulationUrl: "" });
-        setHasLocalRegulationDraft(true);
+        try {
+          const uploadedUrl = await uploadPDF();
+          if (uploadedUrl) {
+            updateFormData({ regulationUrl: uploadedUrl });
+            await organizerService.updateEvent(
+              newEventId,
+              { regulationUrl: uploadedUrl } as never,
+              { clientPage: organizerNewEventClientPage("information") },
+            );
+          }
+        } catch {
+          // Não bloqueia a navegação se o upload do PDF falhar
+        }
       }
 
-      toast.success("Rascunho salvo. Continue para o banner.");
+      // Limpa rascunho local do PDF se existir
+      clearRegulationPdfDraft();
+
+      toast.success("Rascunho salvo!");
       orgNav.push("/organizer/events/new/banner");
     } catch (error: any) {
       console.error("Error saving event:", error);
@@ -549,6 +595,9 @@ export default function InformacoesPage() {
     "/organizer/events",
     appSurface,
   );
+
+  const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
+  const showAddressFields = cepDigits.length === 8;
 
   return (
     <>
@@ -666,6 +715,7 @@ export default function InformacoesPage() {
                         }
                         placeholder={getCurrentDatePlaceholder()}
                         className="w-full md:w-max"
+                        error={!!errors.registrationStartDate}
                         minDate={getTodayStartLocal()}
                       />
                     </div>
@@ -683,6 +733,9 @@ export default function InformacoesPage() {
                       />
                     </div>
                   </div>
+                  {errors.registrationStartDate && (
+                    <p className="text-red-10 text-sm">{errors.registrationStartDate}</p>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-3 md:gap-[12px] min-w-0">
@@ -701,6 +754,7 @@ export default function InformacoesPage() {
                         }
                         placeholder={getCurrentDatePlaceholder()}
                         className="w-full md:w-max"
+                        error={!!errors.registrationEndDate}
                         minDate={getMinDateForRegistrationEndPicker(
                           formData.registrationStartDate,
                         )}
@@ -720,6 +774,9 @@ export default function InformacoesPage() {
                       />
                     </div>
                   </div>
+                  {errors.registrationEndDate && (
+                    <p className="text-red-10 text-sm">{errors.registrationEndDate}</p>
+                  )}
                 </div>
               </div>
               {errors.registrationPeriod && (
@@ -741,8 +798,8 @@ export default function InformacoesPage() {
                 </p>
               </div>
 
-              <div className="flex flex-col md:flex-row md:flex-wrap gap-5 items-stretch md:items-start">
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+              <div className="gap-2 w-full grid grid-cols-1 md:grid-cols-2 md:pr-3">
+                <div className="flex flex-col gap-2 w-full">
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     CEP
                   </label>
@@ -753,90 +810,114 @@ export default function InformacoesPage() {
                     onChange={handleCEPChange}
                     placeholder="00000-000"
                     maxLength={9}
-                    className="h-12"
+                    className={`h-12 ${errors.cep ? "border-red-10" : ""}`}
                   />
                   {loadingCEP && (
                     <p className="text-gray-11 text-sm">Buscando endereço...</p>
                   )}
+                  {errors.cep && (
+                    <p className="text-red-10 text-sm">{errors.cep}</p>
+                  )}
                 </div>
+              </div>
 
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">
-                    Rua
-                  </label>
-                  <Input
-                    type="text"
-                    name="street"
-                    value={formData.street}
-                    onChange={handleInputChange}
-                    placeholder="Digite o nome da rua"
-                    className="h-12"
-                  />
-                </div>
+              <div
+                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${showAddressFields ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+              >
+                <div
+                  className={`overflow-hidden transition-opacity duration-300 ${showAddressFields ? "opacity-100" : "opacity-0"
+                    }`}
+                >
+                  <div className="flex flex-col md:flex-row md:flex-wrap gap-5 items-stretch md:items-start pt-1">
+                    <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                      <label className="text-gray-12 text-base font-family-dm-sans">
+                        Rua
+                      </label>
+                      <Input
+                        type="text"
+                        name="street"
+                        value={formData.street}
+                        onChange={handleInputChange}
+                        placeholder="Digite o nome da rua"
+                        className={`h-12 ${errors.street ? "border-red-10" : ""}`}
+                      />
+                      {errors.street && (
+                        <p className="text-red-10 text-sm">{errors.street}</p>
+                      )}
+                    </div>
 
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">
-                    Bairro
-                  </label>
-                  <Input
-                    type="text"
-                    name="neighborhood"
-                    value={formData.neighborhood}
-                    onChange={handleInputChange}
-                    placeholder="Digite o nome do bairro"
-                    className="h-12"
-                  />
-                </div>
+                    <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                      <label className="text-gray-12 text-base font-family-dm-sans">
+                        Bairro
+                      </label>
+                      <Input
+                        type="text"
+                        name="neighborhood"
+                        value={formData.neighborhood}
+                        onChange={handleInputChange}
+                        placeholder="Digite o nome do bairro"
+                        className="h-12"
+                      />
+                    </div>
 
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">
-                    Cidade
-                  </label>
-                  <Input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="Digite o nome da cidade"
-                    className="h-12"
-                  />
-                </div>
+                    <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                      <label className="text-gray-12 text-base font-family-dm-sans">
+                        Cidade
+                      </label>
+                      <Input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        placeholder="Digite o nome da cidade"
+                        className={`h-12 ${errors.city ? "border-red-10" : ""}`}
+                      />
+                      {errors.city && (
+                        <p className="text-red-10 text-sm">{errors.city}</p>
+                      )}
+                    </div>
 
-                <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                  <label className="text-gray-12 text-base font-family-dm-sans">
-                    Estado
-                  </label>
-                  <Input
-                    type="text"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    placeholder="Digite o nome do estado"
-                    className="h-12"
-                  />
-                </div>
+                    <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                      <label className="text-gray-12 text-base font-family-dm-sans">
+                        Estado
+                      </label>
+                      <Input
+                        type="text"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        placeholder="Digite o nome do estado"
+                        className={`h-12 ${errors.state ? "border-red-10" : ""}`}
+                      />
+                      {errors.state && (
+                        <p className="text-red-10 text-sm">{errors.state}</p>
+                      )}
+                    </div>
 
-                <div className="flex flex-col gap-2 w-full">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <label
-                      htmlFor="new-event-google-maps-url"
-                      className="text-gray-12 text-base font-family-dm-sans"
-                    >
-                      URL do google
-                    </label>
-                    <GoogleMapsUrlHelpTooltip />
-                  </div>
-                  <div className="relative">
-                    <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12 pointer-events-none" />
-                    <Input
-                      id="new-event-google-maps-url"
-                      type="url"
-                      name="googleMapsLink"
-                      value={formData.googleMapsLink}
-                      onChange={handleInputChange}
-                      placeholder="www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP"
-                      className="h-12 pl-10"
-                    />
+                    <div className="flex flex-col gap-2 w-full">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <label
+                          htmlFor="new-event-google-maps-url"
+                          className="text-gray-12 text-base font-family-dm-sans"
+                        >
+                          URL do google
+                        </label>
+                        <GoogleMapsUrlHelpTooltip />
+                      </div>
+                      <div className="relative">
+                        <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12 pointer-events-none" />
+                        <Input
+                          id="new-event-google-maps-url"
+                          type="url"
+                          name="googleMapsLink"
+                          value={formData.googleMapsLink}
+                          onChange={handleInputChange}
+                          placeholder="www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP"
+                          className="h-12 pl-10"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -922,28 +1003,28 @@ export default function InformacoesPage() {
                   (formData.regulationUrl &&
                     !formData.regulationUrl.startsWith("data:")) ||
                   hasLocalRegulationDraft) && (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <p className="text-gray-11 text-sm">
-                    PDF atual do regulamento
-                  </p>
-                  {pdfUrl ||
-                  (formData.regulationUrl &&
-                    !formData.regulationUrl.startsWith("data:")) ? (
-                    <a
-                      href={pdfUrl || formData.regulationUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-11 text-sm hover:underline"
-                    >
-                      Ver PDF
-                    </a>
-                  ) : (
-                    <span className="text-gray-11 text-sm">
-                      Guardado no rascunho (será enviado ao concluir o banner)
-                    </span>
-                  )}
-                </div>
-              )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <p className="text-gray-11 text-sm">
+                      PDF atual do regulamento
+                    </p>
+                    {pdfUrl ||
+                      (formData.regulationUrl &&
+                        !formData.regulationUrl.startsWith("data:")) ? (
+                      <a
+                        href={pdfUrl || formData.regulationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-11 text-sm hover:underline"
+                      >
+                        Ver PDF
+                      </a>
+                    ) : (
+                      <span className="text-gray-11 text-sm">
+                        Guardado no rascunho (será enviado ao concluir o banner)
+                      </span>
+                    )}
+                  </div>
+                )}
             </div>
 
             <div className="hidden md:flex justify-end pt-2">

@@ -448,7 +448,7 @@ export default function UserProfilePage() {
   };
 
   const handleSavePersonalData = async () => {
-    if (!user || !isProfileDirty) return;
+    if (!user) return;
 
     const errors: Record<string, string> = {};
 
@@ -456,7 +456,13 @@ export default function UserProfilePage() {
       errors.firstName = "Nome é obrigatório";
     }
 
-    if (formData.documentNumber?.trim()) {
+    if (!formData.phone?.trim()) {
+      errors.phone = "Telefone é obrigatório";
+    }
+
+    if (!formData.documentNumber?.trim()) {
+      errors.documentNumber = "CPF é obrigatório";
+    } else {
       const cpfError = getCpfValidationMessage(formData.documentNumber);
       if (cpfError) errors.documentNumber = cpfError;
     }
@@ -465,6 +471,8 @@ export default function UserProfilePage() {
       setFormErrors(errors);
       return;
     }
+
+    if (!isProfileDirty) return;
 
     setFormErrors({});
 
@@ -803,7 +811,7 @@ export default function UserProfilePage() {
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
                   Telefone
                 </label>
-                <div className="flex h-12 items-center gap-1 rounded-lg border border-gray-6 bg-transparent px-3 md:gap-2.5">
+                <div className={cn("flex h-12 items-center gap-1 rounded-lg border bg-transparent px-3 md:gap-2.5", formErrors.phone ? "border-red-500" : "border-gray-6")}>
                   <Phone className="size-5 shrink-0 text-gray-11" />
                   {/* Mobile Input */}
                   <Input
@@ -826,6 +834,9 @@ export default function UserProfilePage() {
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
+                {formErrors.phone && (
+                  <p className="text-xs text-red-500">{formErrors.phone}</p>
+                )}
               </div>
 
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">

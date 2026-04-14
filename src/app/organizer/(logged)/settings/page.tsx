@@ -65,7 +65,7 @@ export default function OrganizerSettingsPage() {
   const loadOrganizer = async () => {
     try {
       setLoading(true);
-      const org = await organizerService.getOrganization();
+      const { organization: org } = await organizerService.getOrganization();
       setOrganizer(org);
       const currentName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim();
       setFormData({ name: currentName });

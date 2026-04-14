@@ -14,12 +14,13 @@ import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { LogOutIcon } from "../Icons/LogOutIcon";
-import { organizerService } from "@/services";
+
 import { PlusCircleIcon } from "../Icons/PlusCircleIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
 import Image from "next/image";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 const OWNER_ONLY_NAV_HREFS = new Set([
   "/organizer/organization/settings",
@@ -46,8 +47,8 @@ export function OrganizerMobileNav() {
   const orgNav = useOrganizerNavigate();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const [organizer, setOrganizer] = useState<any>(null);
   const { openAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
+  const { organization: organizer, isOwner } = useOrganizerPermissions();
   const navItemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
   const navScrollRef = useRef<HTMLDivElement>(null);
 
@@ -57,24 +58,12 @@ export function OrganizerMobileNav() {
     orgNav.push("/organizer/login");
   };
 
-  useEffect(() => {
-    const loadOrganizer = async () => {
-      try {
-        const org = await organizerService.getOrganization();
-        setOrganizer(org);
-      } catch {
-        // ignore
-      }
-    };
-    loadOrganizer();
-  }, []);
-
   const navHref = (internal: string) =>
     organizerExternalHref(internal, appSurface);
 
   const isActive = (href: string) => organizerPath.startsWith(href);
 
-  const isOrgOwner = isCurrentUserOrganizationOwner(organizer, user?.id);
+  const isOrgOwner = isOwner || isCurrentUserOrganizationOwner(organizer, user?.id);
   const visibleNavItems = useMemo(
     () =>
       navItems.filter(

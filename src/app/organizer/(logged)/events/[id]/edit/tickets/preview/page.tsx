@@ -25,6 +25,10 @@ export default function EditTicketsCheckoutPreviewPage() {
   const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     if (!event) {
       setPreviewEvent(null);
       return;

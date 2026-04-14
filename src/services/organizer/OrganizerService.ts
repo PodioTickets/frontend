@@ -167,8 +167,18 @@ export interface UpdateOrganizationMemberSettingsRequest {
 export interface OrganizationMemberDetailResponse {
   member: OrganizationMember;
   permissions: string[];
-  eventIds: string[];
+  /** null = sem restrição (acesso a todos); [] = restrito a nenhum; [ids] = whitelist */
+  eventIds: string[] | null;
   lastLoginAt?: string | null;
+}
+
+export interface OrganizationMeResponse {
+  organization: Organization;
+  /** Dados do membro logado. null = OWNER (sem restrições). */
+  member: {
+    role: "OWNER" | "EMPLOYEE";
+    permissions: string[];
+  } | null;
 }
 
 export interface OrganizationAuditLogItem {
@@ -326,7 +336,7 @@ function normalizeMemberDetailResponse(
   return {
     member: normalizeOrganizationMember(d.member as any),
     permissions: d.permissions ?? [],
-    eventIds: d.eventIds ?? [],
+    eventIds: d.eventIds ?? null,
     lastLoginAt: d.lastLoginAt ?? null,
   };
 }
@@ -1002,7 +1012,7 @@ export class OrganizerService {
    */
   async getOrganizer(): Promise<Organizer> {
     // Usa o novo endpoint /organizations/me
-    const org = await this.getOrganization();
+    const { organization: org } = await this.getOrganization();
     // Retorna no formato antigo para compatibilidade
     return {
       id: org.id,
@@ -1047,11 +1057,14 @@ export class OrganizerService {
     return response.data.organizations;
   }
 
-  async getOrganization(): Promise<Organization> {
-    const { data: response } = await this.apiClient.get<{ data: { organization: Organization } }>(
-      "/api/v1/organizations/me"
-    );
-    return response.data.organization;
+  async getOrganization(): Promise<OrganizationMeResponse> {
+    const { data: response } = await this.apiClient.get<{
+      data: { organization: Organization; member?: { role: "OWNER" | "EMPLOYEE"; permissions: string[] } | null };
+    }>("/api/v1/organizations/me");
+    return {
+      organization: response.data.organization,
+      member: response.data.member ?? null,
+    };
   }
 
   async updateOrganization(

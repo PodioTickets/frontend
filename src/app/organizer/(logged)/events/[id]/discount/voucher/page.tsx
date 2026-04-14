@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { userService } from "@/services";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
@@ -37,6 +38,7 @@ export default function VouchersPage() {
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
+  useEventPermissionGuard("coupons");
   const { openCreateVoucherModal, setOnModalSave } = useCreateVoucherModal();
   const { openDeleteVoucherModal } = useDeleteVoucherModal();
   const { openViewVoucherModal } = useViewVoucherModal();

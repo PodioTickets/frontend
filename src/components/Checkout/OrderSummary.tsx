@@ -126,8 +126,8 @@ export function OrderSummary({
     return labels[gender] || gender;
   };
 
-  // Calcular subtotal dos produtos opcionais
-  const productsSubtotal = items.reduce((sum, item) => sum + item.price, 0);
+  // Calcular subtotal dos produtos opcionais (price vem em centavos da API)
+  const productsSubtotal = items.reduce((sum, item) => sum + item.price / 100, 0);
 
   // Calcular subtotal dos ingressos
   const ticketsSubtotal = groupedTickets.reduce((sum, ticket) => sum + ticket.total, 0);
@@ -249,7 +249,7 @@ export function OrderSummary({
           <div className="flex flex-col gap-4 items-start w-full pb-4">
             {participantsData.map((participantData, index) => {
               const additionalProductsTotal = participantData.additionalProducts?.reduce(
-                (sum, p) => sum + p.price * p.quantity,
+                (sum, p) => sum + (p.price / 100) * p.quantity,
                 0
               ) || 0;
 

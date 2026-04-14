@@ -1,6 +1,6 @@
 export function HotelsIcon({ className }: { className?: string }) {
   return (
-    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <path d="M36.8337 45.5V8.66667C36.8337 7.47067 35.863 6.5 34.667 6.5H17.3337C16.1377 6.5 15.167 7.47067 15.167 8.66667V45.5" stroke="#202020" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M15.1663 19.5H6.49967C5.30367 19.5 4.33301 20.4707 4.33301 21.6667V45.5" stroke="#202020" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M47.6663 45.5V21.6667C47.6663 20.4707 46.6957 19.5 45.4997 19.5H36.833" stroke="#202020" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />

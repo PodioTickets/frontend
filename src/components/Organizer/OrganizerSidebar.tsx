@@ -22,6 +22,7 @@ import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { useAccessAllOrganizationsModal } from "@/stores/modalStore";
 import Image from "next/image";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 const OWNER_ONLY_NAV_HREFS = new Set([
   "/organizer/organization/settings",
@@ -36,9 +37,9 @@ export function OrganizerSidebar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState<string | false>(false);
-  const [organizer, setOrganizer] = useState<any>(null);
   const [myOrganizations, setMyOrganizations] = useState<UserOrganization[]>([]);
   const { openAccessAllOrganizationsModal } = useAccessAllOrganizationsModal();
+  const { organization: organizer, isOwner, hasPermission } = useOrganizerPermissions();
 
   const handleLogout = async () => {
     await logout();
@@ -46,19 +47,9 @@ export function OrganizerSidebar() {
   };
 
   useEffect(() => {
-    const loadOrganizer = async () => {
-      try {
-        const [org, orgs] = await Promise.allSettled([
-          organizerService.getOrganization(),
-          organizerService.getMyOrganizations(),
-        ]);
-        if (org.status === "fulfilled") setOrganizer(org.value);
-        if (orgs.status === "fulfilled") setMyOrganizations(orgs.value);
-      } catch (error: any) {
-        console.error("Error loading organization:", error);
-      }
-    };
-    loadOrganizer();
+    organizerService.getMyOrganizations()
+      .then(setMyOrganizations)
+      .catch(() => {});
   }, []);
 
   const navItems = [
@@ -80,6 +71,7 @@ export function OrganizerSidebar() {
   ];
 
   const isOrgOwner =
+    isOwner ||
     myOrganizations.some((o) => o.role === "OWNER") ||
     isCurrentUserOrganizationOwner(organizer, user?.id);
   const visibleNavItems = navItems.filter(

@@ -17,6 +17,7 @@ import { Loading } from "../Loading";
 import { DistanceIcon } from "../Icons/DistanceIcon";
 import { ArrowButton } from "../ArrowButton";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();
@@ -33,7 +34,8 @@ export function ViewRegistrationModal() {
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
-  const eventTabs = eventId ? getEventTabs(eventId) : [];
+  const { hasPermission } = useOrganizerPermissions();
+  const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
   const showBackToPaymentDetails = Boolean(
     data?.returnToPaymentDetails &&
@@ -251,12 +253,8 @@ export function ViewRegistrationModal() {
 
   // Mapear includedProducts para o formato esperado
   const mappedIncludedProducts = includedProducts.map((product: any) => {
-    // Encontrar a variação selecionada se houver
-    const selectedVariation = product.selectedVariation
-      ? product.variations?.find((v: any) => v.id === product.selectedVariation)
-      : product.variations && product.variations.length > 0
-        ? product.variations[0]
-        : null;
+    // selectedVariation já é o objeto { id, name, price }, não um ID
+    const selectedVariation = product.selectedVariation ?? null;
 
     return {
       id: product.id,
@@ -264,7 +262,7 @@ export function ViewRegistrationModal() {
       productImage: product.image || "/banners/card_placeholder.png",
       variationType: product.variationType || null,
       variationName: selectedVariation?.name || null,
-      price: selectedVariation?.price || product.basePrice || 0,
+      price: product.basePrice || 0,
       isIncluded: true
     };
   });

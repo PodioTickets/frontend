@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
+import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
@@ -39,6 +40,7 @@ export default function EventFinancialPage() {
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
+  useEventPermissionGuard("financial");
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);

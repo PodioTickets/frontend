@@ -50,7 +50,7 @@ import toast from "react-hot-toast";
 interface PaymentStepProps {
   event: Event;
   onBack: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (orderId: string) => void;
 }
 
 type PaymentMethod = "credit" | "pix" | "boleto";
@@ -89,7 +89,7 @@ function CreditCardForm({
   installmentOptions: DropdownOption[];
   selectedInstallments: string;
   setSelectedInstallments: (value: string) => void;
-  onSuccess?: () => void;
+  onSuccess?: (orderId: string) => void;
   cardName?: string;
   setCardName?: (value: string) => void;
   cardNumber?: string;
@@ -429,7 +429,7 @@ function PixForm({
   loading = false,
   submitDisabled = false,
 }: {
-  onSuccess?: () => void;
+  onSuccess?: (orderId: string) => void;
   pixValue?: number;
   isMobile?: boolean;
   onProcessCheckout?: () => void;
@@ -1043,7 +1043,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const serviceFee = event.serviceFee || 0;
   const additionalProductsTotal = orderItems.reduce(
-    (sum, item) => sum + item.price,
+    (sum, item) => sum + item.price / 100,
     0
   );
   const subtotalValue = totalPrice + serviceFee + additionalProductsTotal;
@@ -1342,7 +1342,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         saveOrderForSuccess(result);
         clearTimer();
         toast.success("Pagamento aprovado!");
-        onSuccess?.();
+        onSuccess?.(result.orderId);
       } else {
         toast.error("Pagamento não aprovado. Tente novamente.");
         regenerateIdempotencyKey();
@@ -1710,7 +1710,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   Produtos adicionais:
                 </p>
                 <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  {additionalProductsCount}
+                  {additionalProductsTotal}
                 </p>
               </div>
             )}
@@ -2136,7 +2136,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               getTicketPrice(ticket) +
                               (additionalProducts?.reduce(
                                 (sum, item) =>
-                                  sum + item.price * item.quantity,
+                                  sum + (item.price / 100) * item.quantity,
                                 0
                               ) || 0)
                             )}
@@ -2247,8 +2247,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         orderId={orderId}
         onPaymentConfirmed={() => {
           setIsPixModalOpen(false);
-          if (onSuccess) {
-            onSuccess();
+          if (onSuccess && orderId) {
+            onSuccess(orderId);
           }
         }}
       />
