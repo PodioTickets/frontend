@@ -503,6 +503,7 @@ export function TicketForm({
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [formBaseline, setFormBaseline] = useState<string | null>(null);
   const [ticketHydrateNonce, setTicketHydrateNonce] = useState(0);
@@ -645,6 +646,44 @@ export function TicketForm({
 
   const isDirty =
     formBaseline !== null && currentFormSnapshot !== formBaseline;
+
+  const canSave = useMemo(() => {
+    if (!ticketName.trim()) return false;
+    if (!selectedModality) return false;
+    if (!distance.trim()) return false;
+    if (batches.length === 0) return false;
+    for (const b of batches) {
+      if (!String(b.quantity).trim()) return false;
+      if (!b.price.trim()) return false;
+    }
+    return true;
+  }, [ticketName, selectedModality, distance, batches]);
+
+  const validateAndShowErrors = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!ticketName.trim()) errors.ticketName = "Nome é obrigatório";
+    if (!selectedModality) errors.selectedModality = "Selecione uma modalidade";
+    if (!distance.trim()) errors.distance = "Distância é obrigatória";
+    if (batches.length === 0) {
+      errors.batches = "Pelo menos um lote é obrigatório";
+    } else {
+      batches.forEach((b) => {
+        if (!String(b.quantity).trim()) errors[`batch_quantity_${b.id}`] = "Quantidade é obrigatória";
+        if (!b.price.trim()) errors[`batch_price_${b.id}`] = "Preço é obrigatório";
+      });
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const clearFieldError = (field: string) => {
+    setFormErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Refs for product management
   const productsRef = useRef(products);
@@ -1250,6 +1289,12 @@ export function TicketForm({
       return;
     }
     setBatches(batches.filter((b) => b.id !== batchId));
+    setFormErrors((prev) => {
+      const next = { ...prev };
+      delete next[`batch_quantity_${batchId}`];
+      delete next[`batch_price_${batchId}`];
+      return next;
+    });
   };
 
   const handleBatchChange = (
@@ -1316,21 +1361,7 @@ export function TicketForm({
   };
 
   const handleSubmit = async (): Promise<boolean> => {
-    // Validation
-    if (!ticketName.trim()) {
-      toast.error("Nome do ingresso é obrigatório");
-      return false;
-    }
-
-    if (!selectedModality) {
-      toast.error("Selecione uma modalidade");
-      return false;
-    }
-
-    if (!batches[0]?.quantity || !batches[0]?.price) {
-      toast.error("Lote 1 deve ter quantidade e preço preenchidos");
-      return false;
-    }
+    if (!validateAndShowErrors()) return false;
 
     const invalidBatch = batches.find((b) => {
       const sold = b.quantitySold ?? 0;
@@ -1566,12 +1597,21 @@ export function TicketForm({
               </label>
               <Input
                 value={ticketName}
-                onChange={(e) => setTicketName(e.target.value)}
+                onChange={(e) => {
+                  setTicketName(e.target.value);
+                  if (e.target.value.trim()) clearFieldError("ticketName");
+                }}
+                onBlur={() => {
+                  if (!ticketName.trim()) setFormErrors((p) => ({ ...p, ticketName: "Nome é obrigatório" }));
+                }}
                 placeholder="Ex: 5K"
                 maxLength={120}
                 showCharCount
-                className="h-12"
+                className={`h-12 ${formErrors.ticketName ? "border-red-8 focus-visible:ring-red-8" : ""}`}
               />
+              {formErrors.ticketName && (
+                <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.ticketName}</p>
+              )}
             </div>
 
             <div className="w-full">
@@ -1691,7 +1731,7 @@ export function TicketForm({
                 trigger={(isOpen) => (
                   <button
                     type="button"
-                    className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full md:w-[250px] hover:bg-gray-3 transition-colors"
+                    className={`border rounded-lg h-12 flex items-center justify-between px-3 w-full md:w-[250px] hover:bg-gray-3 transition-colors ${formErrors.selectedModality ? "border-red-8" : "border-gray-6"}`}
                   >
                     <span
                       className={`text-base font-family-dm-sans ${selectedModality ? "text-gray-12" : "text-gray-11"
@@ -1702,8 +1742,14 @@ export function TicketForm({
                     <ArrowButton isOpen={isOpen} />
                   </button>
                 )}
-                onSelect={(option) => setSelectedModality(option.id || "")}
+                onSelect={(option) => {
+                  setSelectedModality(option.id || "");
+                  if (option.id) clearFieldError("selectedModality");
+                }}
               />
+              {formErrors.selectedModality && (
+                <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.selectedModality}</p>
+              )}
             </div>
 
             {/* Distância de prova */}
@@ -1711,14 +1757,18 @@ export function TicketForm({
               <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
                 Distância de prova
               </label>
-              <div className="border border-gray-6 rounded-lg flex gap-[10px] items-center px-3 py-4 h-12 w-full md:w-max">
+              <div className={`border rounded-lg flex gap-[10px] items-center px-3 py-4 h-12 w-full md:w-max ${formErrors.distance ? "border-red-8" : "border-gray-6"}`}>
                 <div className="flex flex-1 gap-1 items-center min-w-0">
                   <Input
                     type="text"
                     value={distance}
-                    onChange={(e) =>
-                      setDistance(sanitizeDistanceInput(e.target.value))
-                    }
+                    onChange={(e) => {
+                      setDistance(sanitizeDistanceInput(e.target.value));
+                      if (e.target.value.trim()) clearFieldError("distance");
+                    }}
+                    onBlur={() => {
+                      if (!distance.trim()) setFormErrors((p) => ({ ...p, distance: "Distância é obrigatória" }));
+                    }}
                     placeholder="10"
                     className="h-auto border-0 p-0 focus-visible:ring-0 focus-visible:border-0 shadow-none text-base font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:outline-none focus:border-0 rounded-none"
                   />
@@ -1756,6 +1806,9 @@ export function TicketForm({
                   />
                 </div>
               </div>
+              {formErrors.distance && (
+                <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.distance}</p>
+              )}
             </div>
 
             {Array.isArray(ticketCategories) && ticketCategories.length > 0 ? (
@@ -1872,16 +1925,21 @@ export function TicketForm({
                         inputMode="numeric"
                         autoComplete="off"
                         value={batch.quantity}
-                        onChange={(e) =>
-                          handleBatchChange(
-                            batch.id,
-                            "quantity",
-                            e.target.value.replace(/\D/g, ""),
-                          )
-                        }
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, "");
+                          handleBatchChange(batch.id, "quantity", v);
+                          if (v) clearFieldError(`batch_quantity_${batch.id}`);
+                        }}
+                        onBlur={() => {
+                          if (!String(batch.quantity).trim())
+                            setFormErrors((p) => ({ ...p, [`batch_quantity_${batch.id}`]: "Quantidade é obrigatória" }));
+                        }}
                         placeholder="Ex: 500"
-                        className="h-12"
+                        className={`h-12 ${formErrors[`batch_quantity_${batch.id}`] ? "border-red-8 focus-visible:ring-red-8" : ""}`}
                       />
+                      {formErrors[`batch_quantity_${batch.id}`] && (
+                        <p className="text-red-11 text-sm font-family-dm-sans">{formErrors[`batch_quantity_${batch.id}`]}</p>
+                      )}
 
                       {sold >= 1 && (
                         <div className="flex items-start gap-1">
@@ -1914,11 +1972,19 @@ export function TicketForm({
                             ? `R$${(parseInt(value) / 100).toFixed(2).replace(".", ",")}`
                             : "";
                           handleBatchChange(batch.id, "price", formatted);
+                          if (formatted) clearFieldError(`batch_price_${batch.id}`);
+                        }}
+                        onBlur={() => {
+                          if (!priceLocked && !batch.price.trim())
+                            setFormErrors((p) => ({ ...p, [`batch_price_${batch.id}`]: "Preço é obrigatório" }));
                         }}
                         placeholder="R$0,00"
                         readOnly={priceLocked}
-                        className={`h-12 ${priceLocked ? "bg-gray-4 text-gray-11 cursor-not-allowed" : ""}`}
+                        className={`h-12 ${priceLocked ? "bg-gray-4 text-gray-11 cursor-not-allowed" : formErrors[`batch_price_${batch.id}`] ? "border-red-8 focus-visible:ring-red-8" : ""}`}
                       />
+                      {formErrors[`batch_price_${batch.id}`] && !priceLocked && (
+                        <p className="text-red-11 text-sm font-family-dm-sans">{formErrors[`batch_price_${batch.id}`]}</p>
+                      )}
                       {priceLocked && (
                         <div className="flex items-center gap-1">
                           <Info className="size-5 text-gray-11" />
@@ -2242,7 +2308,7 @@ export function TicketForm({
         <Button
           type="button"
           onClick={handleSubmit}
-          disabled={saving || !isDirty}
+          disabled={saving || !canSave || (mode === "edit" && !isDirty)}
           className="w-full font-bold md:w-auto md:self-end md:px-11"
         >
           {saving

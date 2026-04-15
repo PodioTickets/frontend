@@ -92,7 +92,6 @@ export default function EventFinancialPage() {
 
   // Data for tickets/lots
   const [ticketsData, setTicketsData] = useState<FinancialTicket[]>([]);
-  const [financialBatchesMap, setFinancialBatchesMap] = useState<Map<string, { sold: string; revenue: number }>>(new Map());
 
   useEffect(() => {
     if (authLoading) return;
@@ -116,7 +115,7 @@ export default function EventFinancialPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [eventData, financialDataResponse, ticketsResponse, categoriesResponse] = await Promise.all([
+      const [eventData, financialDataResponse, ticketsResponse] = await Promise.all([
         organizerService.getEventById(eventId),
         organizerService.getEventFinancial(eventId, {
           period: (periodFilter === "geral" ? "2m" : periodFilter) as "hoje" | "7d" | "15d" | "1m" | "2m",
@@ -124,7 +123,6 @@ export default function EventFinancialPage() {
           limit: pagination.limit,
         }),
         organizerService.getTickets(eventId),
-        organizerService.getTicketCategories(eventId),
       ]);
       setEvent(eventData);
       setFinancialData({
@@ -139,63 +137,23 @@ export default function EventFinancialPage() {
         revenueChart: financialDataResponse.revenueChart,
       });
 
-      // Criar mapa de dados financeiros por ticket ID e batch ID
-      const financialTicketsMap = new Map<string, FinancialTicket>();
-      const financialBatchesMap = new Map<string, { sold: string; revenue: number }>();
-
-      if (financialDataResponse.tickets?.items) {
-        financialDataResponse.tickets.items.forEach((financialTicket: FinancialTicket) => {
-          financialTicketsMap.set(financialTicket.id, financialTicket);
-
-          // Mapear lotes financeiros se existirem
-          if (financialTicket.lots) {
-            financialTicket.lots.forEach((lot) => {
-              financialBatchesMap.set(lot.id, {
-                sold: lot.sold,
-                revenue: lot.revenue,
-              });
-            });
-          }
-        });
-      }
-
       // Criar estrutura de dados para exibição - lista de tickets
       const formattedTicketsData: FinancialTicket[] = [];
 
-      // Processar cada ticket
+      // Processar cada ticket usando dados direto do endpoint de tickets
       ticketsResponse.tickets.forEach((ticket: any) => {
-        // Usar o nome da categoria do objeto category que vem na resposta
         const categoryName = ticket.category?.name || "Sem categoria";
+        const totalSold = ticket.quantitySold || 0;
+        const totalRevenue = (ticket.batches as any[]).reduce(
+          (sum: number, b: any) => sum + (b.quantitySold || 0) * (b.price || 0),
+          0
+        );
 
-        // Verificar se o ticket tem batches
-        const hasBatches = ticket.batches && ticket.batches.length > 0;
-        const financialTicket = financialTicketsMap.get(ticket.id);
-
-        // Calcular totais do ticket (soma de todos os batches ou usar dados financeiros)
-        let totalSold = 0;
-        let totalRevenue = 0;
-
-        if (financialTicket) {
-          // Usar dados financeiros se disponíveis
-          totalSold = parseInt(financialTicket.sold) || 0;
-          totalRevenue = financialTicket.revenue || 0;
-        } else if (hasBatches) {
-          // Se não houver dados financeiros, somar dos batches
-          ticket.batches.forEach((batch: any) => {
-            const financialBatch = financialBatchesMap.get(batch.id);
-            if (financialBatch) {
-              totalSold += parseInt(financialBatch.sold) || 0;
-              totalRevenue += financialBatch.revenue || 0;
-            }
-          });
-        }
-
-        // Adicionar ticket
         formattedTicketsData.push({
           id: ticket.id,
-          type: "category", // Mantém "category" para compatibilidade com o código de renderização
+          type: "category",
           name: ticket.name,
-          subtitle: categoryName, // Nome da categoria no subtitle
+          subtitle: categoryName,
           categoryId: ticket.categoryId,
           sold: totalSold.toString(),
           revenue: totalRevenue,
@@ -205,7 +163,6 @@ export default function EventFinancialPage() {
       });
 
       setTicketsData(formattedTicketsData);
-      setFinancialBatchesMap(financialBatchesMap);
       setPagination(financialDataResponse.tickets.pagination);
     } catch (error: any) {
       console.error("Error loading event:", error);
@@ -603,10 +560,8 @@ export default function EventFinancialPage() {
                     {isExpanded && hasLots && item.lots && (
                       <div className="border-t border-gray-6 bg-primary-4/10">
                         {item.lots.map((lot: any, lotIndex: number) => {
-                          const financialLot = financialBatchesMap.get(lot.id);
-                          const lotSoldRaw = financialLot?.sold || "0";
-                          const lotSold = typeof lotSoldRaw === "string" && lotSoldRaw.includes("-") ? lotSoldRaw.split("-")[0].trim() : lotSoldRaw;
-                          const lotRevenue = financialLot?.revenue ?? 0;
+                          const lotSold = lot.quantitySold || 0;
+                          const lotRevenue = lotSold * (lot.price || 0);
                           return (
                             <div
                               key={`${item.id}-lot-${lot.id}`}
@@ -662,7 +617,6 @@ export default function EventFinancialPage() {
                 const isExpanded = expandedRows.has(item.id);
                 const isCategory = item.type === "category";
                 const hasLots = item.lots && item.lots.length > 0;
-
                 return (
                   <div key={item.id} className="w-full">
                     {/* Categoria/Ticket */}
@@ -728,14 +682,8 @@ export default function EventFinancialPage() {
 
                     {/* Lotes (quando expandido) */}
                     {isExpanded && hasLots && item.lots && item.lots.map((lot: any, lotIndex: number) => {
-                      // Buscar dados financeiros do lote
-                      const financialLot = financialBatchesMap.get(lot.id);
-                      // Extrair apenas o valor vendido (antes do hífen, se houver)
-                      const lotSoldRaw = financialLot?.sold || "0";
-                      const lotSold = typeof lotSoldRaw === "string" && lotSoldRaw.includes("-")
-                        ? lotSoldRaw.split("-")[0].trim()
-                        : lotSoldRaw;
-                      const lotRevenue = financialLot?.revenue || lot.revenue || 0;
+                      const lotSold = lot.quantitySold || 0;
+                      const lotRevenue = (lot.price || 0) * lotSold;
                       const lotCreatedAt = lot.createdAt || item.createdAt;
                       const lotName = `Lote ${lotIndex + 1} - ${item.name}`;
 

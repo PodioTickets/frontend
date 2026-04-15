@@ -59,6 +59,8 @@ import {
   categoryIdForTicketScope,
   persistTicketOrderDrafts,
 } from "@/lib/organizerTicketListDnD";
+import { writeTicketsCheckoutPreviewDraft } from "@/lib/ticketsCheckoutPreviewDraft";
+import { defaultEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 
 export default function IngressosPage() {
   const router = useRouter();
@@ -709,6 +711,17 @@ export default function IngressosPage() {
     orgNav.push("/organizer/events/new/banner");
   }, [orgNav]);
 
+  const handleOpenPreview = useCallback(() => {
+    const eventId = formData.createdEventId;
+    if (!eventId) return;
+    writeTicketsCheckoutPreviewDraft({
+      v: 1,
+      eventId,
+      kitSelectionDisplay: defaultEventKitSelectionDisplay(),
+    });
+    orgNav.push("/organizer/events/new/tickets/preview");
+  }, [formData.createdEventId, orgNav]);
+
   if (!authChecked || loading) {
     return <Loading />;
   }
@@ -1055,12 +1068,21 @@ export default function IngressosPage() {
               </>
             )}
 
-            <div className="flex justify-stretch md:justify-end">
+            <div className="flex flex-col gap-2 md:flex-row md:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleOpenPreview}
+                disabled={tickets.length === 0 || !formData.createdEventId}
+                className="h-14 w-full rounded-lg border-gray-6 font-manrope font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-auto md:px-10 md:text-[18px]"
+              >
+                Prévia
+              </Button>
               <Button
                 type="button"
                 onClick={() => void handleConfirmIngressos()}
                 variant="default"
-                disabled={savingConfirm}
+                disabled={savingConfirm || tickets.length === 0}
                 className="h-14 w-full rounded-lg font-manrope font-bold disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-auto md:px-10 md:text-[18px]"
               >
                 {savingConfirm ? "Salvando..." : "Confirmar ingressos"}

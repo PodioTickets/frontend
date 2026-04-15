@@ -24,6 +24,8 @@ export interface Ticket {
     quantity: string;
     price: string;
   }>;
+  availableQuantity: number | null;
+  isSoldOut: boolean;
   createdAt: string;
 }
 
@@ -63,6 +65,8 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
         gender: ticket.gender,
         products: ticket.productIds || [],
         batches: ticket.batches || [],
+        availableQuantity: ticket.availableQuantity ?? null,
+        isSoldOut: ticket.isSoldOut ?? false,
         createdAt: ticket.createdAt,
       }));
       return formattedTickets;

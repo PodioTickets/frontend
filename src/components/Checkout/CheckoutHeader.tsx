@@ -55,9 +55,11 @@ export default function CheckoutHeader({
             </button>
           )}
           <h1 className="text-base font-bold text-gray-12">{currentStepLabel}</h1>
-          <div className="absolute right-4">
-            <CheckoutTimer />
-          </div>
+          {activeStep > 1 && (
+            <div className="absolute right-4">
+              <CheckoutTimer compact />
+            </div>
+          )}
         </div>
       </div>
 
@@ -81,7 +83,7 @@ export default function CheckoutHeader({
             </Fragment>
           ))}
         </div>
-        <CheckoutTimer className="ml-2" />
+        {activeStep > 1 && <CheckoutTimer className="ml-2" />}
       </div>
     </>
   );

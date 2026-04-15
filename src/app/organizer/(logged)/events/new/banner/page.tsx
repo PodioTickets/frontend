@@ -841,7 +841,7 @@ export default function BannerPage() {
                   <Button
                     type="button"
                     onClick={() => void handleBannerStepNext()}
-                    disabled={uploadingBanner}
+                    disabled={uploadingBanner || (!selectedBannerFile && !formData.bannerUrl)}
                     className="h-12 px-6 text-base font-bold font-manrope rounded-lg md:h-10 md:px-4 md:text-sm"
                   >
                     {uploadingBanner ? "Enviando..." : "Próximo"}
@@ -882,7 +882,7 @@ export default function BannerPage() {
                   <Button
                     type="button"
                     onClick={() => void handleConfirmCardAndNext()}
-                    disabled={uploadingCard || syncingEvent}
+                    disabled={uploadingCard || syncingEvent || (!selectedCardFile && !formData.cardImageUrl)}
                     className="h-12 px-6 text-base font-bold font-manrope md:h-10 md:text-sm"
                   >
                     {uploadingCard || syncingEvent

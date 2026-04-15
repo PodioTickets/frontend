@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageIcon,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/Button";
@@ -255,6 +257,8 @@ export function CollaboratorDrawer({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [permissions, setPermissions] = useState<Record<string, boolean>>(() => ({
     ...DEFAULT_PERMISSIONS,
   }));
@@ -654,26 +658,46 @@ export function CollaboratorDrawer({
                       />
                     </FieldShell>
                     <FieldShell label="Senha">
-                      <input
-                        type="password"
-                        className={inputClass}
-                        placeholder="Digite sua senha"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={saving}
-                        autoComplete="new-password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          className={inputClass}
+                          placeholder="Digite sua senha"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          disabled={saving}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </FieldShell>
                     <FieldShell label="Confirmar senha">
-                      <input
-                        type="password"
-                        className={inputClass}
-                        placeholder="Digite a senha novamente"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={saving}
-                        autoComplete="new-password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          className={inputClass}
+                          placeholder="Digite a senha novamente"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          disabled={saving}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          tabIndex={-1}
+                        >
+                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </FieldShell>
                   </>
                 ) : (
@@ -899,7 +923,7 @@ export function CollaboratorDrawer({
 
         {/* Footer — mobile: remover acima + Cancelar | Adicionar/Salvar; desktop: ordem original */}
         <div className="shrink-0 border-t border-gray-6 bg-gray-1 md:bg-gray-2">
-          <div className="flex flex-row flex-wrap items-stretch gap-2 px-4 py-3 pb-0 md:pb-3 md:justify-end">
+          <div className="flex flex-row flex-wrap items-stretch gap-2 px-4 py-3 pb-0 md:pb-3 md:justify-between">
             {mode === "edit" && !isOwnerMember && (
               <Button
                 variant="destructive"
@@ -910,41 +934,41 @@ export function CollaboratorDrawer({
                 {removing ? "Deletando…" : "Deletar"}
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={saving || removing}
-              className="h-11 min-h-[44px] min-w-0 flex-1 rounded-lg border-gray-6 px-3 font-manrope font-bold text-base text-gray-12 md:min-w-[110px] md:flex-initial md:px-5"
-            >
-              Cancelar
-            </Button>
+            <div className="flex items-center gap-2 w-full md:w-max">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={saving || removing}
+                className="h-11 min-h-[44px] min-w-0 flex-1 rounded-lg border-gray-6 px-3 font-manrope font-bold text-base text-gray-12 md:min-w-[110px] md:flex-initial md:px-5"
+              >
+                Cancelar
+              </Button>
 
-            <Button
-              type="button"
-              onClick={mode === "create" ? handleCreate : handleEditSave}
-              disabled={
-                saving ||
-                removing ||
-                (mode === "edit" && (detailLoading || isOwnerMember))
-              }
-              className={cn(
-                "h-11 min-h-[44px] min-w-0 flex-1 rounded-lg px-3 font-manrope font-bold text-base md:min-w-[176px] md:flex-initial md:px-5",
-                "bg-[#59E373] text-gray-12 shadow-xs hover:bg-[#59E373]/90 hover:text-gray-1 active:bg-[#59E373]/80",
-                "md:bg-[#59E373] md:text-[#141414] md:hover:text-[#141414]/90 md:active:text-[#141414]/80"
-              )}
-            >
-              {saving ? (
-                "Salvando…"
-              ) : (
-                <>
-                  <span className="md:hidden">{primaryCtaMobile}</span>
-                  <span className="hidden md:inline">{primaryCta}</span>
-                </>
-              )}
-            </Button>
-
-
+              <Button
+                type="button"
+                onClick={mode === "create" ? handleCreate : handleEditSave}
+                disabled={
+                  saving ||
+                  removing ||
+                  (mode === "edit" && (detailLoading || isOwnerMember))
+                }
+                className={cn(
+                  "h-11 min-h-[44px] min-w-0 flex-1 rounded-lg px-3 font-manrope font-bold text-base md:min-w-[176px] md:flex-initial md:px-5",
+                  "bg-[#59E373] text-gray-12 shadow-xs hover:bg-[#59E373]/90 hover:text-gray-1 active:bg-[#59E373]/80",
+                  "md:bg-[#59E373] md:text-[#141414] md:hover:text-[#141414]/90 md:active:text-[#141414]/80"
+                )}
+              >
+                {saving ? (
+                  "Salvando…"
+                ) : (
+                  <>
+                    <span className="md:hidden">{primaryCtaMobile}</span>
+                    <span className="hidden md:inline">{primaryCta}</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
           {mode === "edit" && !isOwnerMember && (
             <div className="border-b border-gray-6 px-4 py-3 md:hidden">

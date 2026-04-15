@@ -1083,7 +1083,7 @@ export function InformationStep({
               };
               const isExpanded =
                 expandedParticipants[participantIndex] ?? false;
-              const isComplete = isParticipantComplete(participantIndex);
+              const isComplete = !!savedParticipants[participantIndex] && !participantDirtyMap[participantIndex];
               const ageLimitText = formatAgeLimit(ticket.ageLimit);
 
               return (

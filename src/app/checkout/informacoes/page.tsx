@@ -27,7 +27,7 @@ function CheckoutInformacoesContent() {
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
-  const { participants } = useCheckout();
+  const { participants, raceQuantities } = useCheckout();
   const { orderId, syncFromOrder } = useCheckoutTimer();
   const { patchParticipants } = useCheckoutReservation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,8 +42,14 @@ function CheckoutInformacoesContent() {
       return;
     }
 
+    const totalParticipantsNeeded = Object.values(raceQuantities).reduce(
+      (sum, q) => sum + (q > 0 ? q : 0),
+      0
+    );
+    const activeParticipants = participants.slice(0, totalParticipantsNeeded);
+
     const payload = {
-      participants: participants.map((p) => {
+      participants: activeParticipants.map((p) => {
         const mapped: {
           name: string;
           cpf: string;

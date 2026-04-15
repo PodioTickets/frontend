@@ -106,23 +106,35 @@ export default function PreviewEventPage() {
     <div className="bg-gray-2 min-h-screen">
 
       {/* Main Content */}
-      <div className="max-w-[1440px] mx-auto px-5 md:px-[124px] py-[52px] pb-[176px]">
-        <div className="flex flex-col gap-9 items-center">
-          {/* Title Section */}
-          <div className="flex w-full max-w-[1280px] items-center gap-3 px-0 lg:px-8">
-            <button
+      <div className="max-w-[1440px] mx-auto px-5 md:px-5 py-[52px] pb-[176px]">
+        <div className="flex flex-col gap-9 items-center w-full">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-14 w-full">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
+              >
+                <ArrowButton isOpen={false} />
+              </button>
+              <div>
+                <h1 className="font-manrope text-xl font-bold text-gray-12 md:text-2xl">
+                  Pré-visualização — tópicos
+                </h1>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 shrink-0 border-gray-6 font-manrope font-semibold text-gray-12"
               onClick={handleBack}
-              className="border border-gray-6 rounded-[52px] rotate-180 size-9 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
             >
-              <ArrowButton isOpen={false} />
-            </button>
-            <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
-              Prévia do evento
-            </h1>
+              Voltar para edição
+            </Button>
           </div>
 
           {/* Content */}
-          <div className="flex w-full max-w-[1280px] flex-col items-start gap-[52px] px-0 lg:px-8">
+          <div className="flex w-full flex-col items-start gap-[52px] px-0 lg:px-0">
             <div className="flex w-full flex-col gap-8 md:flex-row md:items-start">
               <div className="w-full min-w-0 md:flex-1">
                 <div className="relative h-[404px] w-full overflow-hidden rounded-2xl shadow-[0px_8px_16px_0px_rgba(17,17,17,0.5)] md:h-[400px]">

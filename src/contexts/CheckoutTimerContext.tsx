@@ -59,6 +59,7 @@ const STORAGE_PREFIX = "checkout_order_";
 interface StoredEntry {
   orderId: string;
   fallbackUrl: string;
+  expiresAt: string; // ISO — persisted to prevent server-side timer extension on GET
 }
 
 function storageKey(eventId: string): string {
@@ -152,6 +153,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
       saveStored(order.eventId, {
         orderId: order.orderId,
         fallbackUrl,
+        expiresAt: next.expiresAt,
       });
       setRemainingMs(computeRemainingMs(next.expiresAt, next.serverOffsetMs));
     },
@@ -245,13 +247,21 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
         const order = await getOrderRef.current(stored.orderId);
         if (cancelled) return;
         if (order.status === "PENDING") {
-          // Só reaplica se o servidor ainda tem tempo restante.
+          // Se o servidor devolver um expiresAt maior que o armazenado,
+          // mantemos o armazenado para evitar que o timer "aumente" no refresh
+          // (backend pode renovar expiresAt a cada GET).
+          const effectiveExpiresAt =
+            stored.expiresAt &&
+            new Date(order.expiresAt) > new Date(stored.expiresAt)
+              ? stored.expiresAt
+              : order.expiresAt;
+
           const remaining = computeRemainingMs(
-            order.expiresAt,
+            effectiveExpiresAt,
             computeOffsetMs(order.serverTime),
           );
           if (remaining > 0) {
-            applyOrder(order, stored.fallbackUrl);
+            applyOrder({ ...order, expiresAt: effectiveExpiresAt }, stored.fallbackUrl);
           } else {
             clearStored(eventId);
           }

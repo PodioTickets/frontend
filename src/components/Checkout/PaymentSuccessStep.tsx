@@ -560,22 +560,25 @@ export function PaymentSuccessStep({
                                       ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone)}`
                                       : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "") || "",
                                   },
-                                ].map((field, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="flex flex-col items-start rounded-lg w-full"
-                                  >
-                                    <label className="font-normal text-sm text-gray-12 font-family-dm-sans">
-                                      {field.label}
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={field.value}
-                                      readOnly
-                                      className="w-full font-medium text-base text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
-                                    />
-                                  </div>
-                                ))}
+                                ].map((field, idx) => {
+                                  if (!field.value) return null
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="flex flex-col items-start rounded-lg w-full"
+                                    >
+                                      <label className="font-normal text-sm text-gray-12 font-family-dm-sans">
+                                        {field.label}
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={field.value}
+                                        readOnly
+                                        className="w-full font-medium text-base text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
+                                      />
+                                    </div>
+                                  )
+                                })}
                               </div>
                             </div>
                           ) : (
@@ -1052,22 +1055,25 @@ export function PaymentSuccessStep({
                                       ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone)}`
                                       : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "") || "",
                                   },
-                                ].map((field, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="flex flex-col gap-2 items-start rounded-[8px] min-w-[313px]"
-                                  >
-                                    <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                                      {field.label}
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={field.value}
-                                      readOnly
-                                      className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
-                                    />
-                                  </div>
-                                ))}
+                                ].map((field, idx) => {
+                                  if (!field.value) return null
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="flex flex-col gap-2 items-start rounded-[8px] min-w-[313px]"
+                                    >
+                                      <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
+                                        {field.label}
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={field.value}
+                                        readOnly
+                                        className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
+                                      />
+                                    </div>
+                                  )
+                                })}
                               </div>
                             </div>
                           ) : (

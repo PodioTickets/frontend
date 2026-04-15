@@ -457,7 +457,7 @@ export default function TopicosPage() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || loading}
+              disabled={saving || loading || !sections.find((s) => !s.allowDelete)?.content?.trim()}
               className="h-[52px] w-full font-manrope text-base font-bold max-md:h-12 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto md:px-11 md:text-[20px]"
             >
               {saving ? (

@@ -148,6 +148,11 @@ const TicketItemMobile = memo(({
     handleImageClick(index);
   };
 
+  const showLowStock =
+    ticket.availableQuantity !== null &&
+    ticket.availableQuantity <= 10 &&
+    !ticket.isSoldOut;
+
   return (
     <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
       {/* Image Gallery */}
@@ -274,33 +279,42 @@ const TicketItemMobile = memo(({
         </div>
       </div>
 
+
       <div className="flex items-center justify-between">
         <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
           {formatPrice(price)}
         </p>
-        <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
-          <button
-            type="button"
-            onClick={() => onDecrease(ticket.id)}
-            disabled={quantity === 0}
-            className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-            aria-label="Diminuir quantidade"
-          >
-            <Minus className="size-4" />
-          </button>
-          <span className="min-w-[24px] text-center text-lg font-semibold text-gray-12 px-6 font-manrope leading-[1.1]">
-            {quantity}
-          </span>
-          <button
-            type="button"
-            onClick={() => onIncrease(ticket.id)}
-            className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
-            aria-label="Aumentar quantidade"
-          >
-            <Plus className="size-4" />
-          </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
+            <button
+              type="button"
+              onClick={() => onDecrease(ticket.id)}
+              disabled={quantity === 0}
+              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
+              aria-label="Diminuir quantidade"
+            >
+              <Minus className="size-4" />
+            </button>
+            <span className="min-w-[24px] text-center text-lg font-semibold text-gray-12 px-6 font-manrope leading-[1.1]">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={() => onIncrease(ticket.id)}
+              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
+              aria-label="Aumentar quantidade"
+            >
+              <Plus className="size-4" />
+            </button>
+          </div>
+          {showLowStock && (
+            <p className="text-xs font-medium text-red-11">
+              Restam apenas {ticket.availableQuantity} {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+            </p>
+          )}
         </div>
       </div>
+
 
       {/* Image Carousel Modal */}
       {productItems.length > 0 && (
@@ -401,6 +415,11 @@ const TicketItemDesktop = memo(({
     setCurrentMainImageIndex(index);
     handleImageClick(index);
   };
+
+  const showLowStock =
+    ticket.availableQuantity !== null &&
+    ticket.availableQuantity <= 10 &&
+    !ticket.isSoldOut;
 
   return (
     <div className="flex items-center gap-4 w-full">
@@ -530,31 +549,39 @@ const TicketItemDesktop = memo(({
             ) : null}
           </div>
         </div>
+
         <div className="flex items-center justify-between">
           <p className="text-xl font-bold text-gray-12">
             {formatPrice(price)}
           </p>
-          <div className="flex items-center gap-2 bg-primary-4 rounded-full px-2 py-2">
-            <button
-              type="button"
-              onClick={() => onDecrease(ticket.id)}
-              disabled={quantity === 0}
-              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              aria-label="Diminuir quantidade"
-            >
-              <Minus className="size-4" />
-            </button>
-            <span className="w-6 text-center text-lg font-semibold text-gray-12 px-6">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={() => onIncrease(ticket.id)}
-              className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              aria-label="Aumentar quantidade"
-            >
-              <Plus className="size-4" />
-            </button>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 bg-primary-4 rounded-full px-2 py-2">
+              <button
+                type="button"
+                onClick={() => onDecrease(ticket.id)}
+                disabled={quantity === 0}
+                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                aria-label="Diminuir quantidade"
+              >
+                <Minus className="size-4" />
+              </button>
+              <span className="w-6 text-center text-lg font-semibold text-gray-12 px-6">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => onIncrease(ticket.id)}
+                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                aria-label="Aumentar quantidade"
+              >
+                <Plus className="size-4" />
+              </button>
+            </div>
+            {showLowStock && (
+              <p className="text-xs font-medium text-red-11">
+                Restam apenas {ticket.availableQuantity} {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -599,6 +599,16 @@ export default function InformacoesPage() {
   const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
   const showAddressFields = cepDigits.length === 8;
 
+  const canSave =
+    !!formData.name?.trim() &&
+    !!formData.eventDate &&
+    !!formData.registrationStartDate?.trim() &&
+    !!formData.registrationEndDate?.trim() &&
+    cepDigits.length === 8 &&
+    !!formData.street?.trim() &&
+    !!formData.city?.trim() &&
+    !!formData.state?.trim();
+
   return (
     <>
       <div className="bg-gray-2 flex-1 pb-28 md:pb-44 px-4 md:px-[124px] mt-0 md:mt-10 min-w-0">
@@ -1030,7 +1040,7 @@ export default function InformacoesPage() {
             <div className="hidden md:flex justify-end pt-2">
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !canSave}
                 className="h-[52px] px-11 text-xl font-bold font-manrope"
               >
                 {loading ? "Salvando..." : "Próxima etapa"}
@@ -1044,7 +1054,7 @@ export default function InformacoesPage() {
         <Button
           form="create-event-information-form"
           type="submit"
-          disabled={loading}
+          disabled={loading || !canSave}
           className="h-12 w-full text-base font-bold font-manrope"
         >
           {loading ? "Salvando..." : "Próxima etapa"}
