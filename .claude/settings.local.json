@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Skill(update-config)",
+      "mcp__claude_ai_Figma__get_design_context"
     ]
   }
 }

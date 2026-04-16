@@ -49,7 +49,7 @@ export function OrganizerSidebar() {
   useEffect(() => {
     organizerService.getMyOrganizations()
       .then(setMyOrganizations)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const navItems = [
@@ -213,11 +213,7 @@ export function OrganizerSidebar() {
                       ? `${user.firstName} ${user.lastName}`
                       : user?.email || "Usuário"
                   }
-                  name={
-                    user?.firstName && user?.lastName
-                      ? `${user.firstName} ${user.lastName}`
-                      : user?.email || "Usuário"
-                  }
+                  name={`${user?.firstName} ${user?.lastName}`}
                   fallbackId={user?.id}
                   fill
                   sizes="36px"
@@ -226,9 +222,9 @@ export function OrganizerSidebar() {
                   letterClassName="text-sm font-medium text-[#B4B4B4]"
                 />
               </div>
-              <div className="content-stretch flex flex-1 flex-col items-start justify-center min-w-0">
-                <p className="text-[#B4B4B4] text-sm font-medium font-family-dm-sans leading-[1.3] truncate w-full">
-                  {organizer?.name || "Nome organização"}
+              <div className="flex flex-1 flex-col items-start justify-center min-w-0">
+                <p className="text-[#B4B4B4] text-sm font-medium font-family-dm-sans leading-[1.3] truncate w-full text-start">
+                  {user?.firstName} {user?.lastName}
                 </p>
               </div>
             </div>
@@ -298,19 +294,6 @@ export function OrganizerSidebar() {
                     </div>
                   ))}
 
-                  {/* Bottom Options */}
-                  <button
-                    onClick={() => {
-                      setIsProfileOpen(false);
-                      openAccessAllOrganizationsModal();
-                    }}
-                    className="border-b border-gray-6 flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors cursor-pointer"
-                  >
-                    <PlusCircleIcon className="size-[24px] text-gray-12 shrink-0" />
-                    <p className="font-family-dm-sans font-medium text-[14px] text-gray-12 leading-[1.3] text-center whitespace-nowrap">
-                      Acesse todas as organizações
-                    </p>
-                  </button>
                   <Link
                     href={navHref("/organizer/settings")}
                     className="border-b border-gray-6 flex gap-[8px] h-[44px] items-center overflow-clip px-[12px] py-[16px] relative shrink-0 w-full hover:bg-gray-3 transition-colors"

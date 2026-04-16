@@ -4,8 +4,34 @@ import { OrganizerSidebar } from "@/components/Organizer/OrganizerSidebar";
 import { OrganizerMobileNav } from "@/components/Organizer/OrganizerMobileNav";
 import { OrganizerAuditPageViewTracker } from "@/components/Organizer/OrganizerAuditPageViewTracker";
 import { useOrganizerAccess } from "@/hooks/useOrganizerAccess";
-import { OrganizerPermissionsProvider } from "@/contexts/OrganizerPermissionsContext";
+import {
+  OrganizerPermissionsProvider,
+  useOrganizerPermissions,
+} from "@/contexts/OrganizerPermissionsContext";
 import { Loading } from "@/components/Loading";
+
+function OrganizerLayoutContent({ children }: { children: React.ReactNode }) {
+  const { loading } = useOrganizerPermissions();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
+        <Loading />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-2 flex pt-16 md:pt-0">
+      <OrganizerAuditPageViewTracker />
+      <OrganizerMobileNav />
+      <OrganizerSidebar />
+      <main className="flex-1 ml-0 md:ml-[218px] min-w-0">
+        {children}
+      </main>
+    </div>
+  );
+}
 
 export default function OrganizerLayout({
   children,
@@ -28,19 +54,7 @@ export default function OrganizerLayout({
 
   return (
     <OrganizerPermissionsProvider>
-      <div className="min-h-screen bg-gray-2 flex pt-16 md:pt-0">
-        <OrganizerAuditPageViewTracker />
-        {/* Mobile: top bar + hamburger menu (drawer) */}
-        <OrganizerMobileNav />
-
-        {/* Sidebar: desktop only */}
-        <OrganizerSidebar />
-
-        {/* Main Content: no left margin on mobile, sidebar offset on desktop */}
-        <main className="flex-1 ml-0 md:ml-[218px] min-w-0">
-          {children}
-        </main>
-      </div>
+      <OrganizerLayoutContent>{children}</OrganizerLayoutContent>
     </OrganizerPermissionsProvider>
   );
 }

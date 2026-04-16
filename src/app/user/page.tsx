@@ -452,8 +452,12 @@ export default function UserProfilePage() {
 
     const errors: Record<string, string> = {};
 
-    if (!formData.firstName?.trim()) {
-      errors.firstName = "Nome é obrigatório";
+    const fullNameTrimmed = fullNameInput.trim();
+    const nameParts = fullNameTrimmed.split(/\s+/).filter(Boolean);
+    if (!fullNameTrimmed) {
+      errors.firstName = "Nome completo é obrigatório";
+    } else if (nameParts.length < 2) {
+      errors.firstName = "Informe nome e sobrenome";
     }
 
     if (!formData.phone?.trim()) {

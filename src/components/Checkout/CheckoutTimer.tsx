@@ -36,7 +36,7 @@ export function CheckoutTimer({ className, compact }: CheckoutTimerProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-2 rounded-xl p-3 font-family-dm-sans text-sm font-semibold transition-colors bg-gray-3 text-gray-12 w-[180px]",
+        "flex flex-col items-center gap-2 rounded-xl p-3 font-family-dm-sans text-sm font-semibold transition-colors bg-gray-3 text-gray-12 w-max",
         className,
       )}
       role="timer"

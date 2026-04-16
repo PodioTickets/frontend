@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, Suspense } from "react";
+import { ReactNode, Suspense, useEffect } from "react";
 import { useParams, usePathname } from "next/navigation";
 import { cn } from "@/utils/cn";
 import { Loading } from "@/components/Loading";
@@ -135,6 +135,10 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   const params = useParams();
   const eventId = params.id as string;
   const pathname = usePathname();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   /** No mobile a navegação entre passos fica na aba «Editar» (`EventMobileTabs` variant pageHeader). */
   const hideEditStepperOnMobile = pathname.includes("/edit");
 

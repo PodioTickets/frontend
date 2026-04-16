@@ -35,6 +35,53 @@ import { FaturaIcon } from "@/components/Icons/FaturaIcon";
 import Link from "next/link";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 
+function TicketsPagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (page: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-2 py-3">
+      <button
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page <= 1}
+        className="size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50 hover:bg-gray-3 transition-colors"
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+      <div className="flex items-center gap-1">
+        {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
+          const pageNum = i + 1;
+          const isActive = pageNum === page;
+          return (
+            <button
+              key={pageNum}
+              onClick={() => onChange(pageNum)}
+              className={`size-8 flex items-center justify-center border rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive
+                  ? "bg-primary-11 border-primary-11 text-primary-2"
+                  : "border-gray-6 hover:bg-gray-3 text-gray-12 bg-gray-4"
+                }`}
+            >
+              {pageNum}
+            </button>
+          );
+        })}
+      </div>
+      <button
+        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        disabled={page >= totalPages}
+        className="size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50 hover:bg-gray-3 transition-colors"
+      >
+        <ChevronRight className="size-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function EventFinancialPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
@@ -92,6 +139,14 @@ export default function EventFinancialPage() {
 
   // Data for tickets/lots
   const [ticketsData, setTicketsData] = useState<FinancialTicket[]>([]);
+  const [ticketsPage, setTicketsPage] = useState(1);
+  const [ticketsPagination, setTicketsPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  });
+  const TICKETS_PER_PAGE = 10;
 
   useEffect(() => {
     if (authLoading) return;
@@ -112,17 +167,21 @@ export default function EventFinancialPage() {
     loadData();
   }, [authChecked, eventId, periodFilter, pagination.page]);
 
+  useEffect(() => {
+    if (!authChecked || authLoading || !eventId) return;
+    loadTickets(ticketsPage);
+  }, [authChecked, eventId, ticketsPage]);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [eventData, financialDataResponse, ticketsResponse] = await Promise.all([
+      const [eventData, financialDataResponse] = await Promise.all([
         organizerService.getEventById(eventId),
         organizerService.getEventFinancial(eventId, {
           period: (periodFilter === "geral" ? "2m" : periodFilter) as "hoje" | "7d" | "15d" | "1m" | "2m",
           page: pagination.page,
           limit: pagination.limit,
         }),
-        organizerService.getTickets(eventId),
       ]);
       setEvent(eventData);
       setFinancialData({
@@ -136,20 +195,30 @@ export default function EventFinancialPage() {
         revenueChange: financialDataResponse.summary.revenueChange,
         revenueChart: financialDataResponse.revenueChart,
       });
+      setPagination(financialDataResponse.tickets.pagination);
+    } catch (error: any) {
+      console.error("Error loading event:", error);
+      toast.error("Erro ao carregar dados do evento");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Criar estrutura de dados para exibição - lista de tickets
-      const formattedTicketsData: FinancialTicket[] = [];
+  const loadTickets = async (page: number) => {
+    try {
+      const ticketsResponse = await organizerService.getTickets(eventId, {
+        page,
+        limit: TICKETS_PER_PAGE,
+      });
 
-      // Processar cada ticket usando dados direto do endpoint de tickets
-      ticketsResponse.tickets.forEach((ticket: any) => {
+      const formattedTicketsData: FinancialTicket[] = ticketsResponse.tickets.map((ticket: any) => {
         const categoryName = ticket.category?.name || "Sem categoria";
         const totalSold = ticket.quantitySold || 0;
         const totalRevenue = (ticket.batches as any[]).reduce(
           (sum: number, b: any) => sum + (b.quantitySold || 0) * (b.price || 0),
-          0
+          0,
         );
-
-        formattedTicketsData.push({
+        return {
           id: ticket.id,
           type: "category",
           name: ticket.name,
@@ -159,16 +228,14 @@ export default function EventFinancialPage() {
           revenue: totalRevenue,
           createdAt: ticket.createdAt,
           lots: ticket.batches,
-        });
+        };
       });
 
       setTicketsData(formattedTicketsData);
-      setPagination(financialDataResponse.tickets.pagination);
+      setTicketsPagination(ticketsResponse.pagination);
     } catch (error: any) {
-      console.error("Error loading event:", error);
-      toast.error("Erro ao carregar dados do evento");
-    } finally {
-      setLoading(false);
+      console.error("Error loading tickets:", error);
+      toast.error("Erro ao carregar ingressos");
     }
   };
 
@@ -183,6 +250,7 @@ export default function EventFinancialPage() {
       return newSet;
     });
   };
+
 
 
   if (loading) {
@@ -583,6 +651,11 @@ export default function EventFinancialPage() {
                 );
               })}
             </div>
+            <TicketsPagination
+              page={ticketsPage}
+              totalPages={ticketsPagination.totalPages}
+              onChange={setTicketsPage}
+            />
           </div>
 
           {/* Table Section (Desktop only) */}
@@ -642,11 +715,11 @@ export default function EventFinancialPage() {
                           )}
                           <div className="flex flex-col gap-0">
                             {item.subtitle && (
-                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11">
+                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
                                 {item.subtitle}
                               </p>
                             )}
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
                               {item.name}
                             </p>
                           </div>
@@ -734,6 +807,13 @@ export default function EventFinancialPage() {
                   </div>
                 );
               })}
+            </div>
+            <div className="border-t border-gray-6 px-4 py-3">
+              <TicketsPagination
+                page={ticketsPage}
+                totalPages={ticketsPagination.totalPages}
+                onChange={setTicketsPage}
+              />
             </div>
           </div>
 

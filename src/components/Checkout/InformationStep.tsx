@@ -412,7 +412,7 @@ export function InformationStep({
     if (isCurrentlyExpanded && isParticipantComplete(index)) {
       const cleanCPF = (participant.cpf || "").replace(/\D/g, "");
       if (cleanCPF.length === 11 && !isValidCPF(participant.cpf || "")) {
-        toast.error("CPF inválido: os dígitos verificadores não conferem com o número.");
+        toast.error("CPF inválido");
         return;
       }
     }

@@ -40,7 +40,7 @@ export function getCpfValidationMessage(
     return "CPF deve ter 11 dígitos";
   }
   if (!isValidCPF(raw)) {
-    return "CPF inválido: os dígitos verificadores não conferem com o número";
+    return "CPF inválido";
   }
   return null;
 }

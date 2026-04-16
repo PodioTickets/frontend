@@ -11,6 +11,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useTickets } from "@/hooks/useTickets";
+import { organizerService } from "@/services";
 import { OrderApiError } from "@/interfaces/order";
 import toast from "react-hot-toast";
 
@@ -31,7 +32,7 @@ function CheckoutIngressosContent() {
     reservingRef.current = true;
 
     // Monta { ticketId, batchId, quantity } — backend exige batchId como UUID.
-    // Convenção atual: primeiro batch do ticket é o ativo.
+    // O endpoint de listagem pode não retornar o id do lote; se faltar, busca o ingresso completo.
     const tickets: Array<{
       ticketId: string;
       batchId: string;
@@ -40,9 +41,22 @@ function CheckoutIngressosContent() {
     for (const [ticketId, quantity] of Object.entries(raceQuantities)) {
       if (!quantity || quantity <= 0) continue;
       const catalogTicket = ticketCatalog.find((t) => t.id === ticketId);
-      const batchId = catalogTicket?.batches?.[0]?.id;
+
+      let batchId = catalogTicket?.batches?.find((b) => b.id)?.id;
+
+      if (!batchId) {
+        // Fallback: busca o ingresso completo para obter o id do lote ativo
+        try {
+          const fullTicket = await organizerService.getTicketById(ticketId);
+          batchId = fullTicket?.batches?.[0]?.id;
+        } catch {
+          // ignora — vai cair no erro abaixo
+        }
+      }
+
       if (!batchId) {
         toast.error("Lote indisponível para um dos ingressos selecionados.");
+        reservingRef.current = false;
         return;
       }
       tickets.push({ ticketId, batchId, quantity });

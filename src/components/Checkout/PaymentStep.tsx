@@ -46,6 +46,7 @@ import {
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
 import toast from "react-hot-toast";
+import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 
 interface PaymentStepProps {
   event: Event;
@@ -584,6 +585,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVV, setCardCVV] = useState("");
   const [cardErrors, setCardErrors] = useState<CardErrors>({});
+  const [cardErrorModalOpen, setCardErrorModalOpen] = useState(false);
 
   const handleSetCardName = (v: string) => { setCardName(v); setCardErrors((p) => { const n = { ...p }; delete n.cardName; return n; }); };
   const handleSetCardNumber = (v: string) => { setCardNumber(v); setCardErrors((p) => { const n = { ...p }; delete n.cardNumber; return n; }); };
@@ -1168,8 +1170,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         return;
       }
       if (err.code === "PAYMENT_REFUSED") {
-        toast.error("Pagamento recusado. Verifique os dados e tente novamente.");
         regenerateIdempotencyKey();
+        setCardErrorModalOpen(true);
         return;
       }
       if (err.code === "BILLING_ADDRESS_REQUIRED") {
@@ -1185,10 +1187,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         toast.error("Tente novamente.");
         return;
       }
-      toast.error(err.message || "Erro ao processar pagamento.");
+      setCardErrorModalOpen(true);
       return;
     }
-    toast.error("Erro ao processar pagamento.");
+    setCardErrorModalOpen(true);
   };
 
   /**
@@ -1470,6 +1472,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   return (
     <>
+      <CheckoutCardErrorModal
+        open={cardErrorModalOpen}
+        onConfirm={() => setCardErrorModalOpen(false)}
+      />
+
       {/* Mobile Layout */}
       <div className="w-full md:hidden flex flex-col pb-24">
         {/* Instructional Text */}

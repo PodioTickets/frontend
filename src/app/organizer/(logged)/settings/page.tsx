@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,15 +32,13 @@ export default function OrganizerSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [organizer, setOrganizer] = useState<any>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
   const [formData, setFormData] = useState({
     name: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const userFullName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
+  const userFullName = user ? `${user?.firstName} ${user?.lastName ?? ""}`.trim() : "";
   const hasChanges = formData.name !== userFullName;
 
   useEffect(() => {
@@ -65,8 +63,6 @@ export default function OrganizerSettingsPage() {
   const loadOrganizer = async () => {
     try {
       setLoading(true);
-      const { organization: org } = await organizerService.getOrganization();
-      setOrganizer(org);
       const currentName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim();
       setFormData({ name: currentName });
     } catch (error: any) {
@@ -158,10 +154,6 @@ export default function OrganizerSettingsPage() {
         <Loading />
       </div>
     );
-  }
-
-  if (!organizer) {
-    return null;
   }
 
   return (

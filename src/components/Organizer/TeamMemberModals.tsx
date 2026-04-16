@@ -934,7 +934,7 @@ export function CollaboratorDrawer({
                 {removing ? "Deletando…" : "Deletar"}
               </Button>
             )}
-            <div className="flex items-center gap-2 w-full md:w-max">
+            <div className={`flex items-center gap-2 w-full  ${mode === "edit" && !isOwnerMember ? "md:w-max" : "md:w-full"} md:justify-between pb-2 md:pb-0`}>
               <Button
                 type="button"
                 variant="outline"

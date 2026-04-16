@@ -30,7 +30,7 @@ export const registerStep1Schema = z.object({
     )
     .refine((cpf) => isValidCPF(cpf), {
       message:
-        "CPF inválido, os dígitos verificadores estão incorretos",
+        "CPF inválido",
     }),
   dataNascimento: z
     .date({ message: "Data de nascimento é obrigatória" })

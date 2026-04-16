@@ -245,8 +245,8 @@ export default function EditTicketsPage() {
     if (!eventId) return;
 
     const handleTicketCreated = () => {
-      const qk = queryKeys.events.tickets(eventId);
-      void queryClient.refetchQueries({ queryKey: qk });
+      void queryClient.refetchQueries({ queryKey: queryKeys.events.tickets(eventId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events.products(eventId) });
     };
 
     window.addEventListener("ticketCreated", handleTicketCreated);

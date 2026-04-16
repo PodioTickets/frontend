@@ -956,7 +956,7 @@ export function KitImagePositionDrawer({
                     />
                   ))}
                   {filteredUncategorized &&
-                  filteredUncategorized.tickets.length > 0 ? (
+                    filteredUncategorized.tickets.length > 0 ? (
                     <div className="border border-gray-6 rounded-lg overflow-hidden w-full [content-visibility:auto]">
                       <div className="px-4 pt-4 pb-2">
                         <p className="font-bold text-base text-gray-12 font-manrope">
@@ -1005,19 +1005,6 @@ export function KitImagePositionDrawer({
                     onSelectPrimary={handleSelectPrimaryCategory}
                   />
                 ))}
-                {filteredUncategorized &&
-                filteredUncategorized.tickets.length > 0 ? (
-                  <UncategorizedCategoriesBlock
-                    section={filteredUncategorized}
-                    aggregatedImages={
-                      categoryAggregates[UNCATEGORIZED_CATEGORY_KEY] ?? []
-                    }
-                    primaryProductId={
-                      primaryByCategory[UNCATEGORIZED_CATEGORY_KEY]
-                    }
-                    onSelectPrimary={handleSelectPrimaryCategory}
-                  />
-                ) : null}
               </div>
             )}
           </div>

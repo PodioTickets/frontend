@@ -73,6 +73,10 @@ export default function EditInformationPage() {
     const formattedValue = formatCEP(rawValue);
     updateFormData({ cep: formattedValue });
 
+    if (errors.cep) {
+      setErrors((prev) => ({ ...prev, cep: "" }));
+    }
+
     if (rawValue.length === 8) {
       setLoadingCEP(true);
       try {

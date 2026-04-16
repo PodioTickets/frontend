@@ -34,6 +34,7 @@ export function TicketCard({
   const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
 
   const currentQuantity = raceQuantities[ticket.id] || 0;
+  const totalQuantity = Object.values(raceQuantities).reduce((s, q) => s + q, 0);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -110,7 +111,11 @@ export function TicketCard({
     updateRaceQuantity(ticket.id, Math.max(0, currentQuantity - 1));
   };
 
+  const maxQuantity = ticket.availableQuantity ?? Infinity;
+  const isAtMax = currentQuantity >= maxQuantity || totalQuantity >= 20;
+
   const handleIncrease = () => {
+    if (isAtMax) return;
     updateRaceQuantity(ticket.id, currentQuantity + 1);
   };
 
@@ -304,6 +309,7 @@ export function TicketCard({
                 <button
                   type="button"
                   onClick={handleIncrease}
+                  disabled={isAtMax}
                   className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
                   aria-label="Aumentar quantidade"
                 >
@@ -465,6 +471,7 @@ export function TicketCard({
                   <button
                     type="button"
                     onClick={handleIncrease}
+                    disabled={isAtMax}
                     className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                     aria-label="Aumentar quantidade"
                   >

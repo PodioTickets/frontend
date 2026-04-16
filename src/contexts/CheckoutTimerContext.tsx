@@ -11,9 +11,9 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { OrderApiError, type OrderResponse } from "@/interfaces/order";
+import { CheckoutExpiredModal } from "@/components/Checkout/CheckoutExpiredModal";
 
 /**
  * Estado autoritativo do timer de reserva do checkout.
@@ -121,6 +121,8 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
 
   const [state, setState] = useState<TimerState | null>(null);
   const [remainingMs, setRemainingMs] = useState(0);
+  const [expiredModalOpen, setExpiredModalOpen] = useState(false);
+  const [expiredFallbackUrl, setExpiredFallbackUrl] = useState<string | null>(null);
   const stateRef = useRef<TimerState | null>(null);
   const hasExpiredRef = useRef(false);
 
@@ -160,21 +162,34 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // handleExpired usa routerRef para ser estável (deps = []).
-  // Refs não precisam estar em deps — são sempre current.
+  // handleExpired — chamado apenas pelo tick (timer chegou a 0 de verdade).
+  // Mostra o modal "Tempo esgotado".
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleExpired = useCallback(async (message?: string) => {
+  const handleExpired = useCallback(async () => {
     if (hasExpiredRef.current) return;
     hasExpiredRef.current = true;
     const current = stateRef.current;
     if (!current) return;
     clearStored(current.eventId);
+    setExpiredFallbackUrl(current.fallbackUrl);
     setState(null);
     stateRef.current = null;
     setRemainingMs(0);
-    toast.error(message ?? "Tempo esgotado — sua reserva foi liberada.");
-    routerRef.current.push(current.fallbackUrl);
+    setExpiredModalOpen(true);
   }, []); // [] intencional: usa routerRef para evitar deps instáveis
+
+  // handleCancelledByServer — chamado pelo syncFromOrder quando o servidor
+  // retorna CANCELLED. Redireciona silenciosamente sem abrir o modal,
+  // pois o timer do cliente ainda pode estar marcando tempo (race condition).
+  const handleCancelledByServer = useCallback((fallbackUrl: string) => {
+    if (hasExpiredRef.current) return;
+    hasExpiredRef.current = true;
+    clearStored(stateRef.current?.eventId ?? "");
+    setState(null);
+    stateRef.current = null;
+    setRemainingMs(0);
+    routerRef.current.push(fallbackUrl);
+  }, []);
 
   const startTimer = useCallback(
     (order: OrderResponse, fallbackUrl: string) => {
@@ -190,11 +205,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
         current?.fallbackUrl ?? `/events/${order.eventId}`;
       if (order.status !== "PENDING") {
         if (order.status === "CANCELLED") {
-          void handleExpired(
-            order.cancelledReason === "EXPIRED"
-              ? "Tempo esgotado — sua reserva foi liberada."
-              : "Sua reserva foi cancelada.",
-          );
+          handleCancelledByServer(fallbackUrl);
         } else {
           // PAID — limpa timer silenciosamente
           clearStored(order.eventId);
@@ -206,7 +217,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
       }
       applyOrder(order, fallbackUrl);
     },
-    [applyOrder, handleExpired],
+    [applyOrder, handleCancelledByServer],
   );
 
   const clearTimer = useCallback(() => {
@@ -227,11 +238,12 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
       return order;
     } catch (err) {
       if (err instanceof OrderApiError && err.code === "ORDER_NOT_FOUND") {
-        void handleExpired("Sua reserva não foi encontrada.");
+        // Ordem não encontrada: redireciona silenciosamente sem modal
+        handleCancelledByServer(current.fallbackUrl);
       }
       return null;
     }
-  }, [syncFromOrder, handleExpired]);
+  }, [syncFromOrder, handleCancelledByServer]);
 
   // Rehidratação: ao montar, lê o eventId da URL e verifica se há pedido salvo.
   // Roda apenas uma vez no mount para evitar requests duplicados em re-renders.
@@ -374,9 +386,20 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  const handleExpiredConfirm = useCallback(() => {
+    setExpiredModalOpen(false);
+    if (expiredFallbackUrl) {
+      routerRef.current.push(expiredFallbackUrl);
+    }
+  }, [expiredFallbackUrl]);
+
   return (
     <CheckoutTimerContext.Provider value={value}>
       {children}
+      <CheckoutExpiredModal
+        open={expiredModalOpen}
+        onConfirm={handleExpiredConfirm}
+      />
     </CheckoutTimerContext.Provider>
   );
 }

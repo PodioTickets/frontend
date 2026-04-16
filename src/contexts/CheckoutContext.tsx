@@ -213,20 +213,22 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
   }, []);
 
   // Direct immediate state update - no delays, no async
+  const MAX_TICKETS_PER_ORDER = 20;
+
   const updateRaceQuantity = useCallback((raceId: string, quantity: number) => {
     const newQuantity = Math.max(0, quantity);
-    
-    // Immediate synchronous update
+
     setRaceQuantities((prev) => {
-      const updated = {
-        ...prev,
-        [raceId]: newQuantity,
-      };
+      const totalWithout = Object.entries(prev).reduce(
+        (sum, [id, qty]) => (id === raceId ? sum : sum + qty),
+        0,
+      );
+      const clamped = Math.min(newQuantity, MAX_TICKETS_PER_ORDER - totalWithout);
+      const updated = { ...prev, [raceId]: clamped };
       raceQuantitiesRef.current = updated;
       return updated;
     });
-    
-    // Schedule async save (doesn't block UI)
+
     scheduleSave();
   }, [scheduleSave]);
 

@@ -64,7 +64,11 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
         ageLimit: ticket.ageLimit,
         gender: ticket.gender,
         products: ticket.productIds || [],
-        batches: ticket.batches || [],
+        batches: (ticket.batches || []).map((b: any) => ({
+          id: b.id ?? b.batchId ?? "",
+          quantity: String(b.quantity ?? ""),
+          price: String(b.price ?? ""),
+        })),
         availableQuantity: ticket.availableQuantity ?? null,
         isSoldOut: ticket.isSoldOut ?? false,
         createdAt: ticket.createdAt,
