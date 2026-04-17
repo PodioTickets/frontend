@@ -1,7 +1,6 @@
 "use client";
 
 import { TicketCategoryCard } from "./TicketCategoryCard";
-import { TicketCard } from "./TicketCard";
 import { EventInfo } from "./EventInfo";
 import type { Event } from "@/interfaces/event";
 import { Fragment } from "react/jsx-runtime";
@@ -12,9 +11,6 @@ import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { Loading } from "../Loading";
 import type { Ticket } from "@/hooks/useTickets";
-import { useQuery } from "@tanstack/react-query";
-import { organizerService } from "@/services";
-import { queryKeys } from "@/services/cache/QueryClient";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 
 interface ModalitiesStepProps {
@@ -31,45 +27,11 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
   const { categories, loading: categoriesLoading } = useTicketCategories(eventId, !!eventId);
 
-  // Buscar produtos para obter imagens
-  const { data: productsData, isLoading: productsLoading } = useQuery({
-    queryKey: queryKeys.events.products(eventId || ""),
-    queryFn: async () => {
-      if (!eventId) return { products: [] };
-      return organizerService.getProducts(eventId);
-    },
-    enabled: !!eventId,
-    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
-  });
-
-  // Mapear produtos por ID para acesso rápido
-  const productsMap = useMemo(() => {
-    if (!productsData?.products) return {};
-    const map: Record<string, { id: string; name: string; image: string | null }> = {};
-    productsData.products.forEach((product: any) => {
-      map[product.id] = {
-        id: product.id,
-        name: product.name,
-        image: product.image || null,
-      };
-    });
-    return map;
-  }, [productsData]);
-
-  const loading = ticketsLoading || categoriesLoading || productsLoading;
+  const loading = ticketsLoading || categoriesLoading;
 
   const kitSelectionDisplay = useMemo(
     () => parseEventKitSelectionDisplay(event.kitSelectionDisplay),
     [event.kitSelectionDisplay]
-  );
-
-  /** Avulsos: sempre galeria por ingresso (ON_TICKETS), independente do layout das categorias. */
-  const kitDisplayForUncategorizedTickets = useMemo(
-    () => ({
-      ...kitSelectionDisplay,
-      kitImagesLayout: "ON_TICKETS" as const,
-    }),
-    [kitSelectionDisplay]
   );
 
   // Separar tickets com categoria dos avulsos
@@ -246,13 +208,12 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
           {categorizedTickets.length > 0 || uncategorizedTickets.length > 0 ? (
             <>
               {uncategorizedTickets.map((ticket) => (
-                <TicketCard
+                <TicketCategoryCard
                   key={ticket.id}
-                  ticket={ticket}
+                  tickets={[ticket]}
                   event={event}
-                  productsMap={productsMap}
-                  kitSelectionDisplay={kitDisplayForUncategorizedTickets}
-                  omitKitProductsWithoutImage
+
+                  kitSelectionDisplay={kitSelectionDisplay}
                 />
               ))}
               {categorizedTickets.map((category, index) => (
@@ -265,9 +226,8 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   index={index}
                   expandedByDefault={index === 0}
                   event={event}
-                  productsMap={productsMap}
+
                   kitSelectionDisplay={kitSelectionDisplay}
-                  omitKitProductsWithoutImage
                 />
               ))}
             </>
@@ -326,16 +286,13 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   const isLast = index === uncategorizedTickets.length - 1;
                   return (
                     <Fragment key={ticket.id}>
-                      <TicketCard
-                        ticket={ticket}
+                      <TicketCategoryCard
+                        tickets={[ticket]}
                         event={event}
-                        productsMap={productsMap}
-                        kitSelectionDisplay={kitDisplayForUncategorizedTickets}
-                        omitKitProductsWithoutImage
+      
+                        kitSelectionDisplay={kitSelectionDisplay}
                       />
-                      {!isLast && (
-                        <div className="w-full h-px bg-gray-6" />
-                      )}
+                      {!isLast && <div className="w-full h-px bg-gray-6" />}
                     </Fragment>
                   );
                 })}
@@ -352,9 +309,8 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                         index={index}
                         expandedByDefault={index === 0}
                         event={event}
-                        productsMap={productsMap}
+      
                         kitSelectionDisplay={kitSelectionDisplay}
-                        omitKitProductsWithoutImage
                       />
                       {!isLastCategory && (
                         <div className="w-full h-px bg-gray-6" />

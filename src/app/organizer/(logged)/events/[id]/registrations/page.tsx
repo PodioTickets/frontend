@@ -280,15 +280,15 @@ function RegistrationRow({
       </div>
 
       {/* Ticket */}
-      <div className="flex flex-1 h-full items-center w-[140px] p-4">
-        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-          <span className="text-gray-11 text-xs truncate max-w-[140px] block">
-            {registration.ticket?.category?.name ?? "—"}
+      <div className="flex flex-1 h-full items-center min-w-0 p-4">
+        <div className="flex flex-col min-w-0 w-full">
+          <span className="text-gray-11 text-xs truncate font-inter font-normal leading-[1.3]">
+            {registration.ticket?.category?.name ?? ""}
           </span>
-          <span className="text-gray-12">
-            {registration.ticket?.name ?? "—"}
+          <span className="truncate font-family-dm-sans text-sm font-semibold leading-[1.3] text-gray-12">
+            {registration.ticket?.name ?? ""}
           </span>
-        </p>
+        </div>
       </div>
 
       {/* Data compra */}
@@ -916,7 +916,6 @@ export default function EventRegistrationsPage() {
               { id: "all", label: "Todos" },
               { id: "COMPLETED", label: "Pago", icon: CheckCircle },
               { id: "CANCELLED", label: "Cancelado", icon: XCircle },
-
               { id: "CHARGEBACK", label: "ChargeBack", icon: XCircle },
               { id: "REFUNDED", label: "Estornado", icon: XCircle },
             ]}
@@ -1085,7 +1084,7 @@ export default function EventRegistrationsPage() {
                                 </div>
                               )}
                               <div className="flex flex-col gap-1 min-w-0">
-                                <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">{fullName || "—"}</p>
+                                <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">{fullName || ""}</p>
                                 <div className="flex items-center gap-2">
                                   <span className="font-family-dm-sans font-normal text-sm text-gray-11">{timeStr}</span>
                                   <span className="size-1 rounded-full bg-gray-11 shrink-0" />

@@ -12,6 +12,7 @@ import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
 import { LocationIcon } from "../Icons/LocationIcon";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -42,6 +43,7 @@ interface PaymentSuccessStepProps {
       variationName?: string | null;
       variationType?: string | null;
       isIncluded?: boolean;
+      isRequired?: boolean;
     }>;
   }>;
   participantsInfo?: Array<{
@@ -587,10 +589,10 @@ export function PaymentSuccessStep({
                                 Produtos do participante
                               </p>
                               {/* Produtos incluídos no ticket */}
-                              {participantData.includedProducts && participantData.includedProducts.length > 0 && (
+                              {participantData.includedProducts && participantData.includedProducts.filter(p => !(p.isRequired === false && p.variationName && isSemInteresseVariation({ name: p.variationName }))).length > 0 && (
                                 <div className="flex flex-col gap-3 items-start w-full">
                                   <p className="font-semibold text-sm text-gray-11 font-family-dm-sans">Incluídos no ingresso</p>
-                                  {participantData.includedProducts.map((product, idx) => (
+                                  {participantData.includedProducts.filter(p => !(p.isRequired === false && p.variationName && isSemInteresseVariation({ name: p.variationName }))).map((product, idx) => (
                                     <div
                                       key={`included-${idx}`}
                                       className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
@@ -655,7 +657,7 @@ export function PaymentSuccessStep({
                                   ))}
                                 </div>
                               )}
-                              {(!participantData.includedProducts || participantData.includedProducts.length === 0) &&
+                              {(!participantData.includedProducts || participantData.includedProducts.filter(p => !(p.isRequired === false && p.variationName && isSemInteresseVariation({ name: p.variationName }))).length === 0) &&
                                 (!participantData.additionalProducts || participantData.additionalProducts.length === 0) && (
                                   <p className="text-sm text-gray-11">
                                     Nenhum produto para este participante.
@@ -879,14 +881,17 @@ export function PaymentSuccessStep({
                               Participante{" "}
                               {participantData.participantIndex + 1}
                             </p>
-                            <h3 className="font-bold text-[24px] leading-[1.1] text-gray-12 font-manrope">
-                              {participantData.ticketName}
-                            </h3>
-                            {participantData.categoryName && (
-                              <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
-                                {participantData.categoryName}
-                              </p>
-                            )}
+                            <div className="flex flex-col items-start">
+                              {participantData.categoryName && (
+                                <p className="font-normal text-base truncate max-w-[400px] leading-[1.3] text-gray-11 font-family-dm-sans">
+                                  {participantData.categoryName}
+                                </p>
+                              )}
+                              <h3 className="font-bold text-[24px] truncate max-w-[400px] leading-[1.1] text-gray-12 font-manrope">
+                                {participantData.ticketName}
+                              </h3>
+                            </div>
+
                             <div className="flex gap-[32px] items-start">
                               <div className="flex gap-[8px] items-center">
                                 <CalendarIcon className="size-6 text-gray-12" />
@@ -1082,10 +1087,10 @@ export function PaymentSuccessStep({
                                 Produtos do participante
                               </p>
                               {/* Produtos incluídos no ticket */}
-                              {participantData.includedProducts && participantData.includedProducts.length > 0 && (
+                              {participantData.includedProducts && participantData.includedProducts.filter(p => !(p.isRequired === false && p.variationName && isSemInteresseVariation({ name: p.variationName }))).length > 0 && (
                                 <div className="flex flex-col gap-3 items-start w-full">
                                   <p className="font-semibold text-sm text-gray-11 font-family-dm-sans">Incluídos no ingresso</p>
-                                  {participantData.includedProducts.map((product, idx) => (
+                                  {participantData.includedProducts.filter(p => !(p.isRequired === false && p.variationName && isSemInteresseVariation({ name: p.variationName }))).map((product, idx) => (
                                     <div
                                       key={`included-${idx}`}
                                       className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
@@ -1113,10 +1118,10 @@ export function PaymentSuccessStep({
                                             </p>
                                             {product.variationName && (
                                               <div className="flex gap-1 items-center justify-end min-w-[147px]">
-                                                <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                                <p className="font-normal text-base text-gray-12 font-family-dm-sans">
                                                   {product.variationType || "Variação"}:
                                                 </p>
-                                                <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                                <p className="font-semibold text-base text-gray-12 font-manrope">
                                                   {product.variationName}
                                                 </p>
                                               </div>
@@ -1150,7 +1155,7 @@ export function PaymentSuccessStep({
                                   ))}
                                 </div>
                               )}
-                              {(!participantData.includedProducts || participantData.includedProducts.length === 0) &&
+                              {(!participantData.includedProducts || participantData.includedProducts.filter(p => !(p.isRequired === false && p.variationName && isSemInteresseVariation({ name: p.variationName }))).length === 0) &&
                                 (!participantData.additionalProducts || participantData.additionalProducts.length === 0) && (
                                   <p className="text-sm text-gray-11">
                                     Nenhum produto para este participante.

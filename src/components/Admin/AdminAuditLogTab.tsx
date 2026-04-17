@@ -455,6 +455,8 @@ export function AdminAuditLogTab() {
               value={dateFilter || null}
               onChange={(v) => setDateFilter(v?.trim() ?? "")}
               placeholder="Filtrar por data"
+              fromYear={2000}
+              disablePastDates={false}
               className={cn(
                 "flex-1 min-w-0 border-gray-6 bg-gray-1 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]",
                 "focus-visible:ring-[3px] focus-visible:ring-gray-4/50 focus-visible:border-gray-4"

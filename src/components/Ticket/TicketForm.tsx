@@ -91,7 +91,7 @@ export function TicketForm({
   const [distanceUnit, setDistanceUnit] = useState(
     initialData?.distanceUnit || "KM",
   );
-  const [gender, setGender] = useState(initialData?.gender || "");
+  const [gender, setGender] = useState(initialData?.gender || "all");
   const [hasAgeRestriction, setHasAgeRestriction] = useState(
     initialData?.hasAgeRestriction || false,
   );
@@ -449,7 +449,7 @@ export function TicketForm({
                   ? `R$${(b.price / 100).toFixed(2).replace(".", ",")}`
                   : "",
                 quantitySold,
-                startType: b.startDate ? "date" : "previous",
+                startType: (b as any).triggerType === "AFTER_PREVIOUS_SOLD_OUT" ? "previous" : b.startDate ? "date" : "previous",
                 startDate: b.startDate ? b.startDate.split("T")[0] : undefined,
                 startTime: b.startDate
                   ? new Date(b.startDate).toTimeString().slice(0, 5)
@@ -653,11 +653,7 @@ export function TicketForm({
   const releaseUnsavedHistoryGuard = () => {
     if (guardPushedRef.current) {
       guardPushedRef.current = false;
-      if (isEdit) {
-        orgNav.push(`/organizer/events/${eventId}/edit/tickets`);
-      } else {
-        orgNav.push(`/organizer/events/new/tickets/`);
-      }
+      orgNav.push(backUrl);
     }
   };
 
@@ -668,11 +664,7 @@ export function TicketForm({
       skipUnsavedPopStateRef.current = true;
     }
     releaseUnsavedHistoryGuard();
-    if (isEdit) {
-      orgNav.push(`/organizer/events/${eventId}/edit/tickets`);
-    } else {
-      orgNav.push(`/organizer/events/new/tickets/`);
-    }
+    orgNav.push(backUrl);
   };
 
   const handleBack = () => {
@@ -680,22 +672,14 @@ export function TicketForm({
       setLeavePromptOpen(true);
       return;
     }
-    if (isEdit) {
-      orgNav.push(`/organizer/events/${eventId}/edit/tickets`);
-    } else {
-      orgNav.push(`/organizer/events/new/tickets/`);
-    }
+    orgNav.push(backUrl);
   };
 
   const handleConfirmDeleteTicket = useCallback(async () => {
     if (!ticketId) return;
     await deleteTicket(ticketId);
     window.dispatchEvent(new CustomEvent("ticketCreated"));
-    if (isEdit) {
-      orgNav.push(`/organizer/events/${eventId}/edit/tickets`);
-    } else {
-      orgNav.push(`/organizer/events/new/tickets/`);
-    }
+    orgNav.push(backUrl);
   }, [ticketId, deleteTicket, orgNav, backUrl]);
 
   const handleSaveDraftAndLeave = () => {
@@ -848,6 +832,7 @@ export function TicketForm({
         batches: batches.map((b) => {
           const priceString = b.price.replace(/[^\d,]/g, "").replace(",", ".");
           const priceInCents = Math.round((parseFloat(priceString) || 0) * 100);
+          const triggerType = b.startType === "previous" ? "AFTER_PREVIOUS_SOLD_OUT" : "BY_TIME";
           const startDate =
             b.startType === "date" && b.startDate
               ? `${b.startDate}T${b.startTime || "00:00"}:00`
@@ -856,6 +841,7 @@ export function TicketForm({
           const base = {
             quantity: parseInt(b.quantity, 10) || 0,
             price: priceInCents,
+            triggerType,
             ...(startDate ? { startDate } : {}),
             ...(endDate ? { endDate } : {}),
           };

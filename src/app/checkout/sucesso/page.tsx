@@ -8,6 +8,7 @@ import { Suspense, useEffect, useState, useMemo } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { userService } from "@/services";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CREDIT_CARD: "Cartão de crédito",
@@ -62,28 +63,50 @@ function CheckoutSucessoContent() {
         ? (order?.pricing?.subtotal ?? 0) / registrations.length / 100
         : 0;
 
-    const participantsData = registrations.map((reg: any, index: number) => ({
-      participantIndex: index,
-      ticketName: reg.ticket?.name ?? "Ingresso",
-      categoryName: reg.ticket?.category?.name ?? undefined,
-      ticketPrice: perTicketPrice,
-      qrCode: reg.qrCode,
-      includedProducts: (reg.ticket?.includedProducts ?? []).map((p: any) => ({
-        name: p.name,
-        price: (p.price ?? 0) / 100,
-        quantity: p.quantity ?? 1,
-        variationName: p.selectedVariation?.name ?? null,
-        variationType: null,
-        isIncluded: true,
-        image: p.image ?? null,
-      })),
-      additionalProducts: (reg.products ?? []).map((p: any) => ({
-        name: p.product?.name ?? p.name ?? "",
-        price: (p.unitPrice ?? p.price ?? 0) / 100,
-        quantity: p.quantity ?? 1,
-        variationName: p.variation?.name ?? null,
-      })),
-    }));
+    const participantsData = registrations.map((reg: any, index: number) => {
+      const includedProductIds = new Set(
+        (reg.ticket?.includedProducts ?? [])
+          .filter((p: any) => p.isIncludedInTicket === true)
+          .map((p: any) => p.id)
+      );
+
+      return {
+        participantIndex: index,
+        ticketName: reg.ticket?.name ?? "Ingresso",
+        categoryName: reg.ticket?.category?.name ?? undefined,
+        ticketPrice: perTicketPrice,
+        qrCode: reg.qrCode,
+        includedProducts: (reg.ticket?.includedProducts ?? [])
+          .filter((p: any) => {
+            if (p.isIncludedInTicket === false) return false;
+            if (p.isRequired === false && p.selectedVariation?.name && isSemInteresseVariation({ name: p.selectedVariation.name })) return false;
+            return true;
+          })
+          .map((p: any) => ({
+            name: p.name,
+            price: (p.price ?? 0) / 100,
+            quantity: p.quantity ?? 1,
+            variationName: p.selectedVariation?.name ?? null,
+            variationType: p.variationType ?? null,
+            isIncluded: true,
+            isRequired: p.isRequired ?? true,
+            image: p.image ?? null,
+          })),
+        additionalProducts: (reg.products ?? [])
+          .filter((p: any) => {
+            if (includedProductIds.has(p.product?.id)) return false;
+            const variationName = p.variation?.name ?? p.variationName ?? null;
+            if (variationName && isSemInteresseVariation({ name: variationName })) return false;
+            return true;
+          })
+          .map((p: any) => ({
+            name: p.product?.name ?? p.name ?? "",
+            price: (p.unitPrice ?? p.price ?? 0) / 100,
+            quantity: p.quantity ?? 1,
+            variationName: p.variation?.name ?? p.variationName ?? null,
+          })),
+      };
+    });
 
     const participantsInfo = registrations.map((reg: any) => {
       const p = reg.participant || {};

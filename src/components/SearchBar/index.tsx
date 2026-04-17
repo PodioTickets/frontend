@@ -3,12 +3,15 @@ import { SearchInput } from "../SearchInput";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+
+type SearchResult = { id: string; title: string; href: string; logoUrl?: string };
 
 type Props = {
   search: string;
   setSearch: (search: string) => void;
-  results?: Array<{ id: string; title: string; href: string }>;
-  onResultClick?: (result: { id: string; title: string; href: string }) => void;
+  results?: SearchResult[];
+  onResultClick?: (result: SearchResult) => void;
   onSearch?: () => void;
   placeholder?: string;
   className?: string;
@@ -102,11 +105,6 @@ export function SearchBar({
     }, 200);
   }, []);
 
-  const dropdownOptions: DropdownOption[] = results.map((result) => ({
-    label: result.title,
-    href: result.href,
-    onClick: () => handleResultClick(result),
-  }));
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
@@ -125,22 +123,33 @@ export function SearchBar({
         {shouldShowDropdown && (
           <div className="absolute top-full left-0 right-0 mt-2 w-full max-h-[300px] bg-gray-2 rounded-xl shadow-[0_0_10px_rgba(0,0,0,0.1)] border border-gray-6 z-50 overflow-hidden">
             <div className="max-h-[300px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
-              {dropdownOptions.map((option, index) => (
+              {results.map((result, index) => (
                 <div
-                  key={option.href || index}
-                  className={`h-[50px] px-4 text-sm flex items-center text-gray-12 hover:bg-gray-4 hover:text-primary-11 transition-colors duration-200 cursor-pointer ${
+                  key={result.id || index}
+                  className={`h-[56px] px-4 flex items-center gap-3 text-gray-12 hover:bg-gray-4 hover:text-primary-11 transition-colors duration-200 cursor-pointer ${
                     index > 0 ? "border-t border-gray-6" : ""
                   }`}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    handleResultClick({
-                      id: option.href?.split("/").pop() || "",
-                      title: option.label,
-                      href: option.href || "",
-                    });
+                    handleResultClick(result);
                   }}
                 >
-                  <span className="truncate">{option.label}</span>
+                  <div className="w-9 h-9 shrink-0 rounded-lg border border-gray-6 overflow-hidden bg-gray-3 relative">
+                    {result.logoUrl ? (
+                      <Image
+                        src={result.logoUrl}
+                        alt={result.title}
+                        fill
+                        sizes="36px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="size-full flex items-center justify-center text-gray-11 text-xs font-semibold">
+                        {result.title.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <span className="truncate text-sm">{result.title}</span>
                 </div>
               ))}
             </div>

@@ -32,6 +32,8 @@ import { itemInitialLetter } from "@/utils/itemInitial";
 export type KitImagePositionProduct = {
   productId: string;
   url: string | null;
+  /** Todas as imagens do produto (além da `url` principal). */
+  images?: string[];
   /** Nome do produto (ex.: para inicial quando não há foto). */
   name?: string | null;
 };
@@ -62,21 +64,20 @@ export interface KitImagePositionDrawerProps {
   } | null;
   onSave?: (payload: {
     layout: KitImageLayoutMode;
-    primaryProductIdByTicketId: Record<string, string>;
-    primaryProductIdByCategoryId: Record<string, string>;
+    primaryImageUrlByTicketId: Record<string, string>;
+    primaryImageUrlByCategoryId: Record<string, string>;
   }) => void | Promise<void>;
   saveSuccessMessage?: string;
 }
 
-function resolvePrimaryAmongProducts(
+function resolvePrimaryImageUrl(
   images: KitImagePositionProduct[],
-  preferred: string | undefined
+  preferred: string | undefined,
 ): string | undefined {
-  if (images.length === 0) return undefined;
-  if (preferred && images.some((i) => i.productId === preferred)) {
-    return preferred;
-  }
-  return images[0].productId;
+  const allEntries = images.flatMap(expandProductToImageEntries);
+  if (allEntries.length === 0) return undefined;
+  if (preferred && allEntries.some((e) => e.url === preferred)) return preferred;
+  return allEntries[0]?.url;
 }
 
 function hasKitProductImageUrl(url: string | null | undefined): boolean {
@@ -86,7 +87,25 @@ function hasKitProductImageUrl(url: string | null | undefined): boolean {
 function filterProductsWithImage(
   images: KitImagePositionProduct[]
 ): KitImagePositionProduct[] {
-  return images.filter((img) => hasKitProductImageUrl(img.url));
+  return images.filter(
+    (img) =>
+      hasKitProductImageUrl(img.url) ||
+      (img.images && img.images.some((u) => hasKitProductImageUrl(u))),
+  );
+}
+
+/** Expande um produto em entradas individuais por imagem (url + images[]). */
+function expandProductToImageEntries(
+  img: KitImagePositionProduct,
+): Array<{ productId: string; url: string; name?: string | null }> {
+  const all: string[] = [];
+  if (hasKitProductImageUrl(img.url)) all.push(img.url!);
+  if (img.images) {
+    for (const u of img.images) {
+      if (hasKitProductImageUrl(u) && !all.includes(u)) all.push(u);
+    }
+  }
+  return all.map((url) => ({ productId: img.productId, url, name: img.name }));
 }
 
 function aggregateCategoryProducts(
@@ -292,8 +311,8 @@ type TicketProductStripProps = {
   ticketId: string;
   ticketName: string;
   images: KitImagePositionProduct[];
-  primaryProductId: string | undefined;
-  onSelectPrimary: (ticketId: string, productId: string) => void;
+  primaryImageUrl: string | undefined;
+  onSelectPrimary: (ticketId: string, imageUrl: string) => void;
 };
 
 const KitThumb = memo(function KitThumb({
@@ -323,7 +342,7 @@ const KitThumb = memo(function KitThumb({
   return (
     <button
       type="button"
-      onClick={() => onSelectPrimary(entityId, productId)}
+      onClick={() => onSelectPrimary(entityId, url!)}
       className={cn(
         "relative shrink-0 size-20 rounded-lg overflow-hidden",
         isPrimary
@@ -364,7 +383,7 @@ const TicketProductStrip = memo(function TicketProductStrip({
   ticketId,
   ticketName,
   images,
-  primaryProductId,
+  primaryImageUrl,
   onSelectPrimary,
 }: TicketProductStripProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -386,6 +405,11 @@ const TicketProductStrip = memo(function TicketProductStrip({
     );
   }
 
+  const totalEntries = images.reduce(
+    (sum, img) => sum + expandProductToImageEntries(img).length,
+    0,
+  );
+
   return (
     <div className="flex flex-col gap-3 w-full">
       <p className="font-medium text-base text-gray-12 font-family-dm-sans">
@@ -396,19 +420,21 @@ const TicketProductStrip = memo(function TicketProductStrip({
           ref={scrollRef}
           className="flex gap-2 items-center overflow-x-auto pb-1 pr-10 [scrollbar-width:thin]"
         >
-          {images.map((img) => (
-            <KitThumb
-              key={img.productId}
-              url={img.url}
-              productId={img.productId}
-              productName={img.name}
-              entityId={ticketId}
-              isPrimary={primaryProductId === img.productId}
-              onSelectPrimary={onSelectPrimary}
-            />
-          ))}
+          {images.flatMap((img) =>
+            expandProductToImageEntries(img).map((entry, idx) => (
+              <KitThumb
+                key={`${entry.productId}-${idx}`}
+                url={entry.url}
+                productId={entry.productId}
+                productName={entry.name}
+                entityId={ticketId}
+                isPrimary={primaryImageUrl === entry.url}
+                onSelectPrimary={onSelectPrimary}
+              />
+            ))
+          )}
         </div>
-        {images.length > 4 ? (
+        {totalEntries > 4 ? (
           <button
             type="button"
             onClick={() => scrollBy(180)}
@@ -454,13 +480,13 @@ const CategoryTicketsList = memo(function CategoryTicketsList({
 const CategoryImageStrip = memo(function CategoryImageStrip({
   categoryId,
   images,
-  primaryProductId,
+  primaryImageUrl,
   onSelectPrimary,
 }: {
   categoryId: string;
   images: KitImagePositionProduct[];
-  primaryProductId: string | undefined;
-  onSelectPrimary: (categoryId: string, productId: string) => void;
+  primaryImageUrl: string | undefined;
+  onSelectPrimary: (categoryId: string, imageUrl: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -476,25 +502,32 @@ const CategoryImageStrip = memo(function CategoryImageStrip({
     );
   }
 
+  const totalEntries = images.reduce(
+    (sum, img) => sum + expandProductToImageEntries(img).length,
+    0,
+  );
+
   return (
     <div className="relative w-full">
       <div
         ref={scrollRef}
         className="flex gap-2 items-center overflow-x-auto pb-1 pr-10 [scrollbar-width:thin]"
       >
-        {images.map((img) => (
-          <KitThumb
-            key={img.productId}
-            url={img.url}
-            productId={img.productId}
-            productName={img.name}
-            entityId={categoryId}
-            isPrimary={primaryProductId === img.productId}
-            onSelectPrimary={onSelectPrimary}
-          />
-        ))}
+        {images.flatMap((img) =>
+          expandProductToImageEntries(img).map((entry, idx) => (
+            <KitThumb
+              key={`${entry.productId}-${idx}`}
+              url={entry.url}
+              productId={entry.productId}
+              productName={entry.name}
+              entityId={categoryId}
+              isPrimary={primaryImageUrl === entry.url}
+              onSelectPrimary={onSelectPrimary}
+            />
+          ))
+        )}
       </div>
-      {images.length > 4 ? (
+      {totalEntries > 4 ? (
         <button
           type="button"
           onClick={() => scrollBy(180)}
@@ -512,14 +545,14 @@ function categoryBlockCategoriesPropsEqual(
   prev: {
     section: KitImagePositionCategorySection;
     aggregatedImages: KitImagePositionProduct[];
-    primaryProductId: string | undefined;
-    onSelectPrimary: (categoryId: string, productId: string) => void;
+    primaryImageUrl: string | undefined;
+    onSelectPrimary: (categoryId: string, imageUrl: string) => void;
   },
   next: typeof prev
 ) {
   if (prev.section !== next.section) return false;
   if (prev.aggregatedImages !== next.aggregatedImages) return false;
-  if (prev.primaryProductId !== next.primaryProductId) return false;
+  if (prev.primaryImageUrl !== next.primaryImageUrl) return false;
   if (prev.onSelectPrimary !== next.onSelectPrimary) return false;
   return true;
 }
@@ -527,13 +560,13 @@ function categoryBlockCategoriesPropsEqual(
 const CategoryBlockCategoriesMode = memo(function CategoryBlockCategoriesMode({
   section,
   aggregatedImages,
-  primaryProductId,
+  primaryImageUrl,
   onSelectPrimary,
 }: {
   section: KitImagePositionCategorySection;
   aggregatedImages: KitImagePositionProduct[];
-  primaryProductId: string | undefined;
-  onSelectPrimary: (categoryId: string, productId: string) => void;
+  primaryImageUrl: string | undefined;
+  onSelectPrimary: (categoryId: string, imageUrl: string) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -562,7 +595,7 @@ const CategoryBlockCategoriesMode = memo(function CategoryBlockCategoriesMode({
           <CategoryImageStrip
             categoryId={section.id}
             images={aggregatedImages}
-            primaryProductId={primaryProductId}
+            primaryImageUrl={primaryImageUrl}
             onSelectPrimary={onSelectPrimary}
           />
           <CategoryTicketsList tickets={ticketSummaries} />
@@ -576,13 +609,13 @@ const UncategorizedCategoriesBlock = memo(
   function UncategorizedCategoriesBlock({
     section,
     aggregatedImages,
-    primaryProductId,
+    primaryImageUrl,
     onSelectPrimary,
   }: {
     section: KitImagePositionCategorySection;
     aggregatedImages: KitImagePositionProduct[];
-    primaryProductId: string | undefined;
-    onSelectPrimary: (categoryId: string, productId: string) => void;
+    primaryImageUrl: string | undefined;
+    onSelectPrimary: (categoryId: string, imageUrl: string) => void;
   }) {
     const ticketSummaries = useMemo(
       () => section.tickets.map((t) => ({ id: t.id, name: t.name })),
@@ -609,7 +642,7 @@ const UncategorizedCategoriesBlock = memo(
           <CategoryImageStrip
             categoryId={UNCATEGORIZED_CATEGORY_KEY}
             images={aggregatedImages}
-            primaryProductId={primaryProductId}
+            primaryImageUrl={primaryImageUrl}
             onSelectPrimary={onSelectPrimary}
           />
           <CategoryTicketsList tickets={ticketSummaries} />
@@ -624,12 +657,12 @@ function categoryBlockPropsEqual(
   prev: {
     section: KitImagePositionCategorySection;
     primaryByTicket: Record<string, string>;
-    onSelectPrimary: (ticketId: string, productId: string) => void;
+    onSelectPrimary: (ticketId: string, imageUrl: string) => void;
   },
   next: {
     section: KitImagePositionCategorySection;
     primaryByTicket: Record<string, string>;
-    onSelectPrimary: (ticketId: string, productId: string) => void;
+    onSelectPrimary: (ticketId: string, imageUrl: string) => void;
   }
 ) {
   if (prev.section !== next.section) return false;
@@ -647,7 +680,7 @@ const CategoryBlock = memo(function CategoryBlock({
 }: {
   section: KitImagePositionCategorySection;
   primaryByTicket: Record<string, string>;
-  onSelectPrimary: (ticketId: string, productId: string) => void;
+  onSelectPrimary: (ticketId: string, imageUrl: string) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -671,7 +704,7 @@ const CategoryBlock = memo(function CategoryBlock({
               ticketId={t.id}
               ticketName={t.name}
               images={t.images}
-              primaryProductId={primaryByTicket[t.id]}
+              primaryImageUrl={primaryByTicket[t.id]}
               onSelectPrimary={onSelectPrimary}
             />
           ))}
@@ -741,7 +774,7 @@ export function KitImagePositionDrawer({
 
     const nextTicket: Record<string, string> = {};
     for (const t of allTicketRows) {
-      const pid = resolvePrimaryAmongProducts(
+      const pid = resolvePrimaryImageUrl(
         t.images,
         initialKitSelection?.primaryByTicket?.[t.id]
       );
@@ -752,7 +785,7 @@ export function KitImagePositionDrawer({
     const nextCat: Record<string, string> = {};
     for (const s of filteredSections) {
       const imgs = aggregateCategoryProducts(s.tickets);
-      const pid = resolvePrimaryAmongProducts(
+      const pid = resolvePrimaryImageUrl(
         imgs,
         initialKitSelection?.primaryByCategory?.[s.id]
       );
@@ -760,7 +793,7 @@ export function KitImagePositionDrawer({
     }
     if (filteredUncategorized?.tickets?.length) {
       const imgs = aggregateCategoryProducts(filteredUncategorized.tickets);
-      const pid = resolvePrimaryAmongProducts(
+      const pid = resolvePrimaryImageUrl(
         imgs,
         initialKitSelection?.primaryByCategory?.[UNCATEGORIZED_CATEGORY_KEY]
       );
@@ -778,15 +811,15 @@ export function KitImagePositionDrawer({
   ]);
 
   const handleSelectPrimary = useCallback(
-    (ticketId: string, productId: string) => {
-      setPrimaryByTicket((prev) => ({ ...prev, [ticketId]: productId }));
+    (ticketId: string, imageUrl: string) => {
+      setPrimaryByTicket((prev) => ({ ...prev, [ticketId]: imageUrl }));
     },
     []
   );
 
   const handleSelectPrimaryCategory = useCallback(
-    (categoryId: string, productId: string) => {
-      setPrimaryByCategory((prev) => ({ ...prev, [categoryId]: productId }));
+    (categoryId: string, imageUrl: string) => {
+      setPrimaryByCategory((prev) => ({ ...prev, [categoryId]: imageUrl }));
     },
     []
   );
@@ -795,8 +828,8 @@ export function KitImagePositionDrawer({
     try {
       await onSave?.({
         layout,
-        primaryProductIdByTicketId: primaryByTicket,
-        primaryProductIdByCategoryId: primaryByCategory,
+        primaryImageUrlByTicketId: primaryByTicket,
+        primaryImageUrlByCategoryId: primaryByCategory,
       });
       toast.success(saveSuccessMessage);
       onClose();
@@ -818,8 +851,8 @@ export function KitImagePositionDrawer({
   );
 
   const hasAnyCategoryImages = useMemo(
-    () => Object.values(categoryAggregates).some((imgs) => imgs.length > 0),
-    [categoryAggregates]
+    () => filteredSections.length > 0,
+    [filteredSections],
   );
 
   const handleOpenChange = useCallback(
@@ -943,7 +976,7 @@ export function KitImagePositionDrawer({
             {layout === "on_tickets" ? (
               !hasAnyImages ? (
                 <p className="text-base text-gray-11 font-family-dm-sans py-6 text-center border border-dashed border-gray-6 rounded-lg">
-                  Nenhum ingresso com produtos no kit para configurar imagens.
+                  Não há categorias com ingressos ou não há imagens nos produtos vinculados ao ingresso.
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
@@ -979,7 +1012,7 @@ export function KitImagePositionDrawer({
                             ticketId={t.id}
                             ticketName={t.name}
                             images={t.images}
-                            primaryProductId={primaryByTicket[t.id]}
+                            primaryImageUrl={primaryByTicket[t.id]}
                             onSelectPrimary={handleSelectPrimary}
                           />
                         ))}
@@ -990,7 +1023,7 @@ export function KitImagePositionDrawer({
               )
             ) : !hasAnyCategoryImages ? (
               <p className="text-base text-gray-11 font-family-dm-sans py-6 text-center border border-dashed border-gray-6 rounded-lg">
-                Nenhuma categoria com produtos no kit para configurar imagens.
+                Não há categorias com ingressos ou não há imagens nos produtos vinculados ao ingresso.
               </p>
             ) : (
               <div className="flex flex-col gap-3">
@@ -1001,7 +1034,7 @@ export function KitImagePositionDrawer({
                     aggregatedImages={
                       categoryAggregates[section.id] ?? []
                     }
-                    primaryProductId={primaryByCategory[section.id]}
+                    primaryImageUrl={primaryByCategory[section.id]}
                     onSelectPrimary={handleSelectPrimaryCategory}
                   />
                 ))}

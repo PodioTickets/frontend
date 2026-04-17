@@ -34,6 +34,7 @@ import { TimerIcon } from "@/components/Icons/Organizer/TimerIcon";
 import { FaturaIcon } from "@/components/Icons/FaturaIcon";
 import Link from "next/link";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
+import { Tooltip } from "@/components/Tooltip";
 
 function TicketsPagination({
   page,
@@ -62,8 +63,8 @@ function TicketsPagination({
               key={pageNum}
               onClick={() => onChange(pageNum)}
               className={`size-8 flex items-center justify-center border rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive
-                  ? "bg-primary-11 border-primary-11 text-primary-2"
-                  : "border-gray-6 hover:bg-gray-3 text-gray-12 bg-gray-4"
+                ? "bg-primary-11 border-primary-11 text-primary-2"
+                : "border-gray-6 hover:bg-gray-3 text-gray-12 bg-gray-4"
                 }`}
             >
               {pageNum}
@@ -713,15 +714,35 @@ export default function EventFinancialPage() {
                               </div>
                             </button>
                           )}
-                          <div className="flex flex-col gap-0">
+                          <div className="flex flex-col gap-0 w-[200px]">
                             {item.subtitle && (
-                              <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
-                                {item.subtitle}
-                              </p>
+                              <Tooltip
+                                contentClassName="w-auto px-3 py-2 gap-0"
+                                position="topRight"
+                                content={
+                                  <p className="font-inter font-normal text-xs text-gray-11 leading-[1.3] whitespace-nowrap">
+                                    {item.subtitle}
+                                  </p>
+                                }
+                              >
+                                <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
+                                  {item.subtitle}
+                                </p>
+                              </Tooltip>
                             )}
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
-                              {item.name}
-                            </p>
+                            <Tooltip
+                              contentClassName="w-auto px-3 py-2 gap-0"
+                              position="topRight"
+                              content={
+                                <p className="font-family-dm-sans text-xs font-semibold text-gray-12 leading-[1.3] whitespace-nowrap">
+                                  {item.name}
+                                </p>
+                              }
+                            >
+                              <p className="overflow-hidden text-ellipsis whitespace-nowrap font-family-dm-sans text-sm font-semibold leading-[1.3] text-gray-12">
+                                {item.name}
+                              </p>
+                            </Tooltip>
                           </div>
                         </div>
                       </div>
@@ -758,7 +779,7 @@ export default function EventFinancialPage() {
                       const lotSold = lot.quantitySold || 0;
                       const lotRevenue = (lot.price || 0) * lotSold;
                       const lotCreatedAt = lot.createdAt || item.createdAt;
-                      const lotName = `Lote ${lotIndex + 1} - ${item.name}`;
+                      const lotName = `Lote ${lotIndex + 1}`;
 
                       return (
                         <div
@@ -769,7 +790,7 @@ export default function EventFinancialPage() {
                           <div className="flex h-full items-center px-4 py-3 w-[289.5px]">
                             <div className="flex items-center gap-3">
                               <div className="flex flex-col gap-0">
-                                <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                                <p className="font-inter max-w-[250px] font-semibold leading-[1.3] text-sm text-gray-12 truncate">
                                   {lotName}
                                 </p>
                               </div>
@@ -808,7 +829,7 @@ export default function EventFinancialPage() {
                 );
               })}
             </div>
-            <div className="border-t border-gray-6 px-4 py-3">
+            <div className="px-4">
               <TicketsPagination
                 page={ticketsPage}
                 totalPages={ticketsPagination.totalPages}

@@ -43,6 +43,10 @@ export default function OrganizerEventsPage() {
   const { hasPermission } = useOrganizerPermissions();
   const canCreateEvent = hasPermission("create_event");
   const canViewDashboard = hasPermission("dashboard");
+  const canEditEvent = hasPermission("edit_event");
+  const canViewFinancial = hasPermission("financial");
+  const canViewCoupons = hasPermission("coupons");
+  const canViewPixel = hasPermission("pixel");
   const [authChecked, setAuthChecked] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -360,6 +364,7 @@ export default function OrganizerEventsPage() {
                                   <DashboardIcon className="size-4 text-gray-11" />
                                 </Link>
                                 )}
+                                {canEditEvent && (
                                 <Link
                                   href={`/organizer/events/${event.id}/edit`}
                                   className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
@@ -367,6 +372,8 @@ export default function OrganizerEventsPage() {
                                 >
                                   <PencilIcon className="size-4 text-gray-11" />
                                 </Link>
+                                )}
+                                {canViewFinancial && (
                                 <Link
                                   href={`/organizer/events/${event.id}/financial`}
                                   className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
@@ -374,7 +381,7 @@ export default function OrganizerEventsPage() {
                                 >
                                   <MoneyIcon className="size-5 text-gray-11" />
                                 </Link>
-
+                                )}
                                 <Link
                                   href={`/organizer/events/${event.id}/registrations`}
                                   className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
@@ -383,7 +390,7 @@ export default function OrganizerEventsPage() {
                                   <UsersIcon className="size-5 text-gray-11" />
                                 </Link>
 
-                                <Popover
+                                {(canViewCoupons || canViewPixel) && (<Popover
                                   open={menuOpenForId === event.id}
                                   onOpenChange={(open) =>
                                     setMenuOpenForId(open ? event.id : null)
@@ -405,6 +412,7 @@ export default function OrganizerEventsPage() {
                                     className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg"
                                   >
                                     <div className="flex flex-col gap-0.5">
+                                      {canViewCoupons && (
                                       <Link
                                         href={`/organizer/events/${event.id}/discount/cupom`}
                                         onClick={() => setMenuOpenForId(null)}
@@ -412,6 +420,8 @@ export default function OrganizerEventsPage() {
                                       >
                                         Cupom
                                       </Link>
+                                      )}
+                                      {canViewCoupons && (
                                       <Link
                                         href={`/organizer/events/${event.id}/discount/voucher`}
                                         onClick={() => setMenuOpenForId(null)}
@@ -419,6 +429,8 @@ export default function OrganizerEventsPage() {
                                       >
                                         Voucher
                                       </Link>
+                                      )}
+                                      {canViewPixel && (
                                       <Link
                                         href={`/organizer/events/${event.id}/ads`}
                                         onClick={() => setMenuOpenForId(null)}
@@ -426,6 +438,7 @@ export default function OrganizerEventsPage() {
                                       >
                                         ADS
                                       </Link>
+                                      )}
                                       <button
                                         type="button"
                                         disabled={
@@ -452,6 +465,7 @@ export default function OrganizerEventsPage() {
                                     </div>
                                   </PopoverContent>
                                 </Popover>
+                                )}
                               </div>
                             )}
                           </td>

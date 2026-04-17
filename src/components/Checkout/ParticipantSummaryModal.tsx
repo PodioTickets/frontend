@@ -60,7 +60,7 @@ interface ParticipantSummaryModalProps {
   productsMap?: Record<string, { id: string; name: string; image: string | null }>;
 }
 
-const EMPTY_CAROUSEL_TICKET: Pick<Ticket, "products"> = { products: [] };
+const EMPTY_CAROUSEL_TICKET: Pick<Ticket, "productImages"> = { productImages: [] };
 
 export function ParticipantSummaryModal({
   isOpen,
@@ -93,8 +93,8 @@ export function ParticipantSummaryModal({
     activeParticipant?.ticket ?? EMPTY_CAROUSEL_TICKET;
 
   const productItems = useMemo(
-    () => getTicketProductCarouselItems(ticketForCarousel, productsMap),
-    [ticketForCarousel, productsMap]
+    () => getTicketProductCarouselItems(ticketForCarousel),
+    [ticketForCarousel]
   );
 
   const carouselTicketId = activeParticipant?.ticket?.id ?? "";

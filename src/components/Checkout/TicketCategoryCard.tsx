@@ -7,6 +7,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import type { Event, EventKitSelectionDisplay } from "@/interfaces/event";
+import { defaultEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { getCheckoutModalityInfo } from "@/utils/checkoutModalityDisplay";
@@ -18,16 +19,14 @@ import { CategoryKitHorizontalCarousel } from "./CategoryKitHorizontalCarousel";
 import { cn } from "@/utils/cn";
 
 interface TicketCategoryCardProps {
-  categoryId: string;
-  categoryName: string;
+  categoryId?: string;
+  categoryName?: string;
   categoryDescription?: string;
   tickets: Ticket[];
-  index: number;
+  index?: number;
   expandedByDefault?: boolean;
   event: Event;
-  productsMap: Record<string, { id: string; name: string; image: string | null }>;
-  kitSelectionDisplay: EventKitSelectionDisplay;
-  omitKitProductsWithoutImage?: boolean;
+  kitSelectionDisplay?: EventKitSelectionDisplay;
 }
 
 const formatPrice = (price: number) => {
@@ -41,15 +40,9 @@ const formatPrice = (price: number) => {
 
 const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
   if (!ageLimit) return null;
-  if (ageLimit.min && ageLimit.max) {
-    return `de ${ageLimit.min} a ${ageLimit.max} anos`;
-  }
-  if (ageLimit.min) {
-    return `a partir de ${ageLimit.min} anos`;
-  }
-  if (ageLimit.max) {
-    return `até ${ageLimit.max} anos`;
-  }
+  if (ageLimit.min && ageLimit.max) return `de ${ageLimit.min} a ${ageLimit.max} anos`;
+  if (ageLimit.min) return `a partir de ${ageLimit.min} anos`;
+  if (ageLimit.max) return `até ${ageLimit.max} anos`;
   return null;
 };
 
@@ -65,25 +58,22 @@ const getDistanceKm = (ticket: Ticket): number => {
   return parseFloat(ticket.distance) || 0;
 };
 
-// Componente de ticket memoizado para evitar re-renders desnecessários
 const TicketItemMobile = memo(({
   ticket,
   event,
-  productsMap,
   quantity,
+  totalQuantity,
   onDecrease,
   onIncrease,
   kitSelectionDisplay,
-  omitKitProductsWithoutImage,
 }: {
   ticket: Ticket;
   event: Event;
-  productsMap: Record<string, { id: string; name: string; image: string | null }>;
   quantity: number;
+  totalQuantity: number;
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
-  omitKitProductsWithoutImage: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -94,26 +84,11 @@ const TicketItemMobile = memo(({
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
 
-  const showPerTicketGallery =
-    kitSelectionDisplay.showKitImagesOnSelection &&
-    kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
-
   const productItems = useMemo(
-    () =>
-      showPerTicketGallery
-        ? getTicketProductCarouselItems(ticket, productsMap, {
-          primaryProductId:
-            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
-          omitItemsWithoutImage: omitKitProductsWithoutImage,
-        })
-        : [],
-    [
-      ticket,
-      productsMap,
-      showPerTicketGallery,
-      kitSelectionDisplay.primaryKitProductByTicketId,
-      omitKitProductsWithoutImage,
-    ]
+    () => getTicketProductCarouselItems(ticket, {
+      primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+    }),
+    [ticket, kitSelectionDisplay.primaryKitProductByTicketId],
   );
 
   useEffect(() => {
@@ -125,6 +100,30 @@ const TicketItemMobile = memo(({
   }, [productItems.length]);
 
   const currentProduct = productItems[currentMainImageIndex];
+
+  // Janela de 3 thumbnails após o item atual (circular)
+  const visibleThumbnails = useMemo(() => {
+    if (productItems.length <= 1) return [];
+    const result: Array<{ item: typeof productItems[0]; idx: number }> = [];
+    for (let i = 1; i < productItems.length && result.length < 3; i++) {
+      const idx = (currentMainImageIndex + i) % productItems.length;
+      result.push({ item: productItems[idx], idx });
+    }
+    return result;
+  }, [productItems, currentMainImageIndex]);
+
+  const maxQuantity = ticket.availableQuantity ?? Infinity;
+  const isAtMax = quantity >= maxQuantity || totalQuantity >= 20;
+
+  const isBatchSoldOut =
+    ticket.activeBatch?.status === "SOLD_OUT" ||
+    ticket.activeBatchStatus === "SOLD_OUT";
+
+  const showLowStock =
+    !isBatchSoldOut &&
+    ticket.availableQuantity !== null &&
+    ticket.availableQuantity <= 10 &&
+    !ticket.isSoldOut;
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
@@ -148,14 +147,8 @@ const TicketItemMobile = memo(({
     handleImageClick(index);
   };
 
-  const showLowStock =
-    ticket.availableQuantity !== null &&
-    ticket.availableQuantity <= 10 &&
-    !ticket.isSoldOut;
-
   return (
     <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
-      {/* Image Gallery */}
       {productItems.length > 0 && (
         <div className="flex gap-3 items-center w-full justify-start">
           <button
@@ -170,14 +163,13 @@ const TicketItemMobile = memo(({
                 fallbackId={currentProduct.id}
                 fill
                 sizes="(max-width: 768px) 50vw, 136px"
-                className="size-full border-transparent"
+                className="size-full border-0"
                 letterClassName="text-3xl"
               />
             ) : null}
           </button>
           {productItems.length > 1 && (
-            <div className="flex flex-col items-center gap-1 h-[136px] justify-center">
-              {/* Seta para cima */}
+            <div className="flex flex-col items-center justify-between self-stretch">
               <button
                 onClick={handlePreviousImage}
                 className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
@@ -187,35 +179,26 @@ const TicketItemMobile = memo(({
                   <ArrowButton isOpen={true} />
                 </div>
               </button>
-              {/* Thumbnails */}
               <div className="flex flex-col gap-1">
-                {productItems
-                  .map((item, idx) => ({ item, idx }))
-                  .filter(({ idx }) => idx !== currentMainImageIndex)
-                  .slice(0, 3)
-                  .map(({ item, idx: originalIndex }) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleThumbnailClick(originalIndex)}
-                      className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                        ? 'border-primary-11'
-                        : 'border-gray-6'
-                        }`}
-                    >
-                      <ImageWithInitialFallback
-                        src={item.src}
-                        alt={item.name}
-                        name={item.name}
-                        fallbackId={item.id}
-                        fill
-                        sizes="36px"
-                        className="size-full border-transparent"
-                        letterClassName="text-sm"
-                      />
-                    </button>
-                  ))}
+                {visibleThumbnails.map(({ item, idx: originalIndex }) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleThumbnailClick(originalIndex)}
+                    className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex ? "border-primary-11" : "border-gray-6"}`}
+                  >
+                    <ImageWithInitialFallback
+                      src={item.src}
+                      alt={item.name}
+                      name={item.name}
+                      fallbackId={item.id}
+                      fill
+                      sizes="36px"
+                      className="size-full border-0"
+                      letterClassName="text-sm"
+                    />
+                  </button>
+                ))}
               </div>
-              {/* Seta para baixo */}
               <button
                 onClick={handleNextImage}
                 className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
@@ -254,7 +237,7 @@ const TicketItemMobile = memo(({
                       name={modalityInfo.name}
                       width={24}
                       height={24}
-                      className="size-6 border-transparent"
+                      className="size-6 border-0"
                       imgClassName="object-contain"
                       letterClassName="text-[10px]"
                       nativeImg
@@ -279,7 +262,6 @@ const TicketItemMobile = memo(({
         </div>
       </div>
 
-
       <div className="flex items-center justify-between">
         <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
           {formatPrice(price)}
@@ -301,22 +283,24 @@ const TicketItemMobile = memo(({
             <button
               type="button"
               onClick={() => onIncrease(ticket.id)}
+              disabled={isAtMax}
               className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 p-1"
               aria-label="Aumentar quantidade"
             >
               <Plus className="size-4" />
             </button>
           </div>
-          {showLowStock && (
+          {isBatchSoldOut ? (
+            <p className="text-xs font-medium text-red-11 text-center">Lote esgotado</p>
+          ) : showLowStock ? (
             <p className="text-xs font-medium text-red-11">
-              Restam apenas {ticket.availableQuantity} {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+              Restam apenas {ticket.availableQuantity}{" "}
+              {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
-
-      {/* Image Carousel Modal */}
       {productItems.length > 0 && (
         <ImageCarouselModal
           items={productItems}
@@ -324,9 +308,7 @@ const TicketItemMobile = memo(({
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}
           ticketName={ticket.name}
-          preferredProductId={
-            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]
-          }
+          preferredProductId={kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]}
         />
       )}
     </div>
@@ -338,21 +320,19 @@ TicketItemMobile.displayName = "TicketItemMobile";
 const TicketItemDesktop = memo(({
   ticket,
   event,
-  productsMap,
   quantity,
+  totalQuantity,
   onDecrease,
   onIncrease,
   kitSelectionDisplay,
-  omitKitProductsWithoutImage,
 }: {
   ticket: Ticket;
   event: Event;
-  productsMap: Record<string, { id: string; name: string; image: string | null }>;
   quantity: number;
+  totalQuantity: number;
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
-  omitKitProductsWithoutImage: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -362,26 +342,12 @@ const TicketItemDesktop = memo(({
   const distanceKm = getDistanceKm(ticket);
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
-  const showPerTicketGallery =
-    kitSelectionDisplay.showKitImagesOnSelection &&
-    kitSelectionDisplay.kitImagesLayout === "ON_TICKETS";
 
   const productItems = useMemo(
-    () =>
-      showPerTicketGallery
-        ? getTicketProductCarouselItems(ticket, productsMap, {
-          primaryProductId:
-            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
-          omitItemsWithoutImage: omitKitProductsWithoutImage,
-        })
-        : [],
-    [
-      ticket,
-      productsMap,
-      showPerTicketGallery,
-      kitSelectionDisplay.primaryKitProductByTicketId,
-      omitKitProductsWithoutImage,
-    ]
+    () => getTicketProductCarouselItems(ticket, {
+      primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+    }),
+    [ticket, kitSelectionDisplay.primaryKitProductByTicketId],
   );
 
   useEffect(() => {
@@ -393,6 +359,27 @@ const TicketItemDesktop = memo(({
   }, [productItems.length]);
 
   const currentProduct = productItems[currentMainImageIndex];
+
+  const visibleThumbnails = useMemo(() => {
+    if (productItems.length <= 1) return [];
+    const result: Array<{ item: typeof productItems[0]; idx: number }> = [];
+    for (let i = 1; i < productItems.length && result.length < 3; i++) {
+      const idx = (currentMainImageIndex + i) % productItems.length;
+      result.push({ item: productItems[idx], idx });
+    }
+    return result;
+  }, [productItems, currentMainImageIndex]);
+
+  const maxQuantity = ticket.availableQuantity ?? Infinity;
+  const isAtMax = quantity >= maxQuantity || totalQuantity >= 20;
+
+  const isBatchSoldOut = ticket.activeBatch?.status === "SOLD_OUT";
+
+  const showLowStock =
+    !isBatchSoldOut &&
+    ticket.availableQuantity !== null &&
+    ticket.availableQuantity <= 10 &&
+    !ticket.isSoldOut;
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
@@ -416,11 +403,6 @@ const TicketItemDesktop = memo(({
     handleImageClick(index);
   };
 
-  const showLowStock =
-    ticket.availableQuantity !== null &&
-    ticket.availableQuantity <= 10 &&
-    !ticket.isSoldOut;
-
   return (
     <div className="flex items-center gap-4 w-full">
       {productItems.length > 0 && (
@@ -438,14 +420,13 @@ const TicketItemDesktop = memo(({
                   fallbackId={currentProduct.id}
                   fill
                   sizes="136px"
-                  className="size-full border-transparent"
+                  className="size-full border-0"
                   letterClassName="text-3xl"
                 />
               </button>
             ) : null}
             {productItems.length > 1 && (
-              <div className="flex flex-col items-center gap-1">
-                {/* Seta para cima */}
+              <div className="flex flex-col items-center justify-between self-stretch">
                 <button
                   onClick={handlePreviousImage}
                   className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
@@ -453,35 +434,26 @@ const TicketItemDesktop = memo(({
                 >
                   <ArrowButton isOpen={false} className="-rotate-90" />
                 </button>
-                {/* Thumbnails */}
                 <div className="flex flex-col gap-1">
-                  {productItems
-                    .map((item, idx) => ({ item, idx }))
-                    .filter(({ idx }) => idx !== currentMainImageIndex)
-                    .slice(0, 3)
-                    .map(({ item, idx: originalIndex }) => (
-                      <button
-                        key={item.id}
-                        onClick={() => handleThumbnailClick(originalIndex)}
-                        className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex
-                          ? 'border-primary-11'
-                          : 'border-gray-6'
-                          }`}
-                      >
-                        <ImageWithInitialFallback
-                          src={item.src}
-                          alt={item.name}
-                          name={item.name}
-                          fallbackId={item.id}
-                          fill
-                          sizes="36px"
-                          className="size-full border-transparent"
-                          letterClassName="text-sm"
-                        />
-                      </button>
-                    ))}
+                  {visibleThumbnails.map(({ item, idx: originalIndex }) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleThumbnailClick(originalIndex)}
+                      className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex ? "border-primary-11" : "border-gray-6"}`}
+                    >
+                      <ImageWithInitialFallback
+                        src={item.src}
+                        alt={item.name}
+                        name={item.name}
+                        fallbackId={item.id}
+                        fill
+                        sizes="36px"
+                        className="size-full border-0"
+                        letterClassName="text-sm"
+                      />
+                    </button>
+                  ))}
                 </div>
-                {/* Seta para baixo */}
                 <button
                   onClick={handleNextImage}
                   className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
@@ -498,7 +470,7 @@ const TicketItemDesktop = memo(({
       <div
         className={cn(
           "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2",
-          productItems.length > 0 ? "flex-1 min-w-0" : "w-full"
+          productItems.length > 0 ? "flex-1 min-w-0" : "w-full",
         )}
       >
         <div className="flex flex-col gap-1">
@@ -507,14 +479,6 @@ const TicketItemDesktop = memo(({
           </h2>
           <div className="flex flex-wrap items-center justify-between gap-3 w-full">
             <div className="flex items-center gap-8 flex-wrap min-w-0">
-              {distanceKm > 0 && (
-                <div className="flex items-center gap-2">
-                  <DistanceIcon className="size-5 shrink-0" />
-                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                    {distanceKm} km
-                  </p>
-                </div>
-              )}
               {modalityInfo && (
                 <div className="flex items-center gap-2">
                   {modalityInfo.icon ? (
@@ -525,8 +489,8 @@ const TicketItemDesktop = memo(({
                         name={modalityInfo.name}
                         width={24}
                         height={24}
-                        className="size-6 bg-transparent border-transparent"
-                        imgClassName="object-contain bg-transparent border-transparent"
+                        className="size-6 bg-transparent border-0"
+                        imgClassName="object-contain bg-transparent border-0"
                         letterClassName="text-[10px]"
                         nativeImg
                       />
@@ -536,6 +500,14 @@ const TicketItemDesktop = memo(({
                   )}
                   <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
                     {modalityInfo.name}
+                  </p>
+                </div>
+              )}
+              {distanceKm > 0 && (
+                <div className="flex items-center gap-2">
+                  <DistanceIcon className="size-5 shrink-0" />
+                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {distanceKm} km
                   </p>
                 </div>
               )}
@@ -551,11 +523,9 @@ const TicketItemDesktop = memo(({
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-xl font-bold text-gray-12">
-            {formatPrice(price)}
-          </p>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 bg-primary-4 rounded-full px-2 py-2">
+          <p className="text-xl font-bold text-gray-12">{formatPrice(price)}</p>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
               <button
                 type="button"
                 onClick={() => onDecrease(ticket.id)}
@@ -565,28 +535,31 @@ const TicketItemDesktop = memo(({
               >
                 <Minus className="size-4" />
               </button>
-              <span className="w-6 text-center text-lg font-semibold text-gray-12 px-6">
+              <span className={`text-center text-lg font-semibold px-4 ${isBatchSoldOut ? "text-gray-11" : "text-gray-12"}`}>
                 {quantity}
               </span>
               <button
                 type="button"
                 onClick={() => onIncrease(ticket.id)}
+                disabled={isAtMax}
                 className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 aria-label="Aumentar quantidade"
               >
                 <Plus className="size-4" />
               </button>
             </div>
-            {showLowStock && (
+            {isBatchSoldOut ? (
+              <p className="text-xs font-medium text-red-11 text-center">Lote esgotado</p>
+            ) : showLowStock ? (
               <p className="text-xs font-medium text-red-11">
-                Restam apenas {ticket.availableQuantity} {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                Restam apenas {ticket.availableQuantity}{" "}
+                {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* Image Carousel Modal */}
       {productItems.length > 0 && (
         <ImageCarouselModal
           items={productItems}
@@ -594,9 +567,7 @@ const TicketItemDesktop = memo(({
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}
           ticketName={ticket.name}
-          preferredProductId={
-            kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]
-          }
+          preferredProductId={kitSelectionDisplay.primaryKitProductByTicketId[ticket.id]}
         />
       )}
     </div>
@@ -610,22 +581,21 @@ export function TicketCategoryCard({
   categoryName,
   categoryDescription,
   tickets,
-  index,
+  index = 0,
   expandedByDefault,
   event,
-  productsMap,
-  kitSelectionDisplay,
-  omitKitProductsWithoutImage = false,
+  kitSelectionDisplay: kitSelectionDisplayProp,
 }: TicketCategoryCardProps) {
-  const [isExpanded, setIsExpanded] = useState(
-    expandedByDefault ?? index === 0
-  );
+  const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
+  const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
   const { raceQuantities, updateRaceQuantity } = useCheckout();
 
-  // Memoizar tickets válidos
-  const validTickets = useMemo(() => {
-    return tickets.filter((t) => getTicketPrice(t) > 0);
-  }, [tickets]);
+  const totalQuantity = useMemo(
+    () => Object.values(raceQuantities).reduce((s, q) => s + q, 0),
+    [raceQuantities],
+  );
+
+  const validTickets = useMemo(() => tickets.filter((t) => getTicketPrice(t) > 0), [tickets]);
 
   const minPrice = useMemo(() => {
     if (validTickets.length === 0) return 0;
@@ -633,43 +603,72 @@ export function TicketCategoryCard({
   }, [validTickets]);
 
   const showCategoryLevelKit =
+    !!categoryId &&
     kitSelectionDisplay.showKitImagesOnSelection &&
     kitSelectionDisplay.kitImagesLayout === "ON_CATEGORIES";
 
   const categoryCarouselItems = useMemo(
     () =>
-      showCategoryLevelKit
+      showCategoryLevelKit && categoryId
         ? getCategoryKitCarouselItems(
           validTickets,
-          productsMap,
-          kitSelectionDisplay.primaryKitProductByCategoryId[categoryId]
+          kitSelectionDisplay.primaryKitProductByCategoryId[categoryId],
         )
         : [],
-    [
-      showCategoryLevelKit,
-      validTickets,
-      productsMap,
-      categoryId,
-      kitSelectionDisplay.primaryKitProductByCategoryId,
-    ]
+    [showCategoryLevelKit, validTickets, categoryId, kitSelectionDisplay.primaryKitProductByCategoryId],
   );
 
   const headerThumbItem = categoryCarouselItems[0] ?? null;
 
-  // Handlers memoizados
-  const handleToggle = useCallback(() => {
-    setIsExpanded(prev => !prev);
-  }, []);
+  const handleToggle = useCallback(() => setIsExpanded((prev) => !prev), []);
 
-  const handleDecrease = (ticketId: string) => {
+  const handleDecrease = useCallback((ticketId: string) => {
     const currentQuantity = raceQuantities[ticketId] || 0;
     updateRaceQuantity(ticketId, Math.max(0, currentQuantity - 1));
-  };
+  }, [raceQuantities, updateRaceQuantity]);
 
-  const handleIncrease = (ticketId: string) => {
+  const handleIncrease = useCallback((ticketId: string) => {
     const currentQuantity = raceQuantities[ticketId] || 0;
     updateRaceQuantity(ticketId, currentQuantity + 1);
-  };
+  }, [raceQuantities, updateRaceQuantity]);
+
+  // Bare mode: no category header/accordion, just render ticket items
+  if (!categoryName) {
+    return (
+      <>
+        <div className="w-full md:hidden flex flex-col gap-3">
+          {validTickets.map((ticket) => (
+            <TicketItemMobile
+              key={ticket.id}
+              ticket={ticket}
+              event={event}
+
+              quantity={raceQuantities[ticket.id] || 0}
+              totalQuantity={totalQuantity}
+              onDecrease={handleDecrease}
+              onIncrease={handleIncrease}
+              kitSelectionDisplay={kitSelectionDisplay}
+            />
+          ))}
+        </div>
+        <div className="hidden md:flex flex-col gap-3 w-full">
+          {validTickets.map((ticket) => (
+            <TicketItemDesktop
+              key={ticket.id}
+              ticket={ticket}
+              event={event}
+
+              quantity={raceQuantities[ticket.id] || 0}
+              totalQuantity={totalQuantity}
+              onDecrease={handleDecrease}
+              onIncrease={handleIncrease}
+              kitSelectionDisplay={kitSelectionDisplay}
+            />
+          ))}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -690,7 +689,7 @@ export function TicketCategoryCard({
                     fallbackId={headerThumbItem.id}
                     fill
                     sizes="80px"
-                    className="size-full border-transparent"
+                    className="size-full border-0"
                     letterClassName="text-lg"
                   />
                 </div>
@@ -701,9 +700,7 @@ export function TicketCategoryCard({
                 </h1>
                 {!isExpanded ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
-                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
-                      A partir de:
-                    </p>
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
                       {formatPrice(minPrice)}
                     </span>
@@ -714,13 +711,9 @@ export function TicketCategoryCard({
             <ArrowButton isOpen={isExpanded} />
           </div>
 
-          {/* Conteúdo sempre renderizado, controlado por CSS */}
           <div
             className="overflow-hidden transition-all duration-200 ease-out"
-            style={{
-              maxHeight: isExpanded ? "10000px" : "0",
-              opacity: isExpanded ? 1 : 0,
-            }}
+            style={{ maxHeight: isExpanded ? "10000px" : "0", opacity: isExpanded ? 1 : 0 }}
           >
             <div className="px-4 pb-7 border-t border-gray-6 flex flex-col gap-6">
               {categoryDescription?.trim() ? (
@@ -732,9 +725,7 @@ export function TicketCategoryCard({
                 <CategoryKitHorizontalCarousel
                   items={categoryCarouselItems}
                   primaryProductId={
-                    kitSelectionDisplay.primaryKitProductByCategoryId[
-                    categoryId
-                    ]
+                    kitSelectionDisplay.primaryKitProductByCategoryId[categoryId!]
                   }
                 />
               ) : null}
@@ -744,12 +735,12 @@ export function TicketCategoryCard({
                     key={ticket.id}
                     ticket={ticket}
                     event={event}
-                    productsMap={productsMap}
+
                     quantity={raceQuantities[ticket.id] || 0}
+                    totalQuantity={totalQuantity}
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
-                    omitKitProductsWithoutImage={omitKitProductsWithoutImage}
                   />
                 ))}
               </div>
@@ -775,7 +766,7 @@ export function TicketCategoryCard({
                     fallbackId={headerThumbItem.id}
                     fill
                     sizes="80px"
-                    className="size-full border-transparent"
+                    className="size-full border-0"
                     letterClassName="text-lg"
                   />
                 </div>
@@ -786,9 +777,7 @@ export function TicketCategoryCard({
                 </h1>
                 {!isExpanded ? (
                   <div className="flex items-center gap-1 text-base">
-                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">
-                      A partir de:
-                    </p>
+                    <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
                       {formatPrice(minPrice)}
                     </span>
@@ -801,10 +790,7 @@ export function TicketCategoryCard({
 
           <div
             className="overflow-hidden transition-all duration-200 ease-out"
-            style={{
-              maxHeight: isExpanded ? "10000px" : "0",
-              opacity: isExpanded ? 1 : 0,
-            }}
+            style={{ maxHeight: isExpanded ? "10000px" : "0", opacity: isExpanded ? 1 : 0 }}
           >
             <div className="px-4 pb-7 pt-6 flex flex-col gap-6">
               {categoryDescription?.trim() ? (
@@ -816,9 +802,7 @@ export function TicketCategoryCard({
                 <CategoryKitHorizontalCarousel
                   items={categoryCarouselItems}
                   primaryProductId={
-                    kitSelectionDisplay.primaryKitProductByCategoryId[
-                    categoryId
-                    ]
+                    kitSelectionDisplay.primaryKitProductByCategoryId[categoryId!]
                   }
                 />
               ) : null}
@@ -828,12 +812,12 @@ export function TicketCategoryCard({
                     key={ticket.id}
                     ticket={ticket}
                     event={event}
-                    productsMap={productsMap}
+
                     quantity={raceQuantities[ticket.id] || 0}
+                    totalQuantity={totalQuantity}
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
-                    omitKitProductsWithoutImage={omitKitProductsWithoutImage}
                   />
                 ))}
               </div>

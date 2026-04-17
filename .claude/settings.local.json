@@ -4,7 +4,10 @@
       "Bash(npx tsc:*)",
       "Bash(xargs basename:*)",
       "Skill(update-config)",
-      "mcp__claude_ai_Figma__get_design_context"
+      "mcp__claude_ai_Figma__get_design_context",
+      "Bash(xargs grep *)",
+      "Bash(python3 *)",
+      "Bash(node *)"
     ]
   }
 }

@@ -229,16 +229,18 @@ export default function EditTicketsPage() {
 
   const productsMap = useMemo(() => {
     if (!productsData?.products) return {};
-    const map: Record<string, { id: string; name: string; image: string | null }> = {};
+    const map: Record<string, { id: string; name: string; image: string | null; images: string[] }> = {};
     productsData.products.forEach((product: any) => {
       map[product.id] = {
         id: product.id,
         name: product.name,
         image: product.image || null,
+        images: Array.isArray(product.images) ? product.images.filter(Boolean) : [],
       };
     });
     return map;
   }, [productsData]);
+
 
   // Listener para quando um ticket é criado
   useEffect(() => {
@@ -909,11 +911,15 @@ export default function EditTicketsPage() {
     const ticketToRow = (t: Ticket) => ({
       id: t.id,
       name: t.name,
-      images: (t.products || []).map((productId: string) => ({
-        productId,
-        url: productsMap[productId]?.image ?? null,
-        name: productsMap[productId]?.name ?? null,
-      })),
+      images: (t.products || []).map((productId: string) => {
+        const p = productsMap[productId];
+        return {
+          productId,
+          url: p?.image ?? null,
+          images: p?.images ?? [],
+          name: p?.name ?? null,
+        };
+      }),
     });
 
     if (hasNoCategories) {
@@ -962,18 +968,18 @@ export default function EditTicketsPage() {
   const handleKitDrawerSave = useCallback(
     (payload: {
       layout: KitImageLayoutMode;
-      primaryProductIdByTicketId: Record<string, string>;
-      primaryProductIdByCategoryId: Record<string, string>;
+      primaryImageUrlByTicketId: Record<string, string>;
+      primaryImageUrlByCategoryId: Record<string, string>;
     }) => {
       setDraftKitSelection((prev) => ({
         ...defaultEventKitSelectionDisplay(),
         ...prev,
         kitImagesLayout: drawerModeToApiLayout(payload.layout),
         primaryKitProductByTicketId: {
-          ...payload.primaryProductIdByTicketId,
+          ...payload.primaryImageUrlByTicketId,
         },
         primaryKitProductByCategoryId: {
-          ...payload.primaryProductIdByCategoryId,
+          ...payload.primaryImageUrlByCategoryId,
         },
       }));
     },
@@ -1366,15 +1372,6 @@ export default function EditTicketsPage() {
                 onShowKitImagesOnSelectionChange={handleDraftShowKitImagesChange}
                 kitImagesLayout={draftKitSelection.kitImagesLayout}
                 onOpenKitImagePositionDrawer={() => {
-                  const hasKit = tickets.some(
-                    (t) => (t.products?.length ?? 0) > 0
-                  );
-                  if (!hasKit) {
-                    toast.error(
-                      "Adicione produtos (kit) a um ingresso para editar as imagens."
-                    );
-                    return;
-                  }
                   setKitImagePositionDrawerOpen(true);
                 }}
               />

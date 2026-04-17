@@ -10,8 +10,6 @@ import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
-import { useTickets } from "@/hooks/useTickets";
-import { organizerService } from "@/services";
 import { OrderApiError } from "@/interfaces/order";
 import toast from "react-hot-toast";
 
@@ -20,7 +18,6 @@ function CheckoutIngressosContent() {
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
-  const { tickets: ticketCatalog } = useTickets(eventId, !!eventId);
   const { raceQuantities } = useCheckout();
   const { startTimer } = useCheckoutTimer();
   const { reserveOrder } = useCheckoutReservation();
@@ -31,36 +28,9 @@ function CheckoutIngressosContent() {
     if (!eventId || reservingRef.current) return;
     reservingRef.current = true;
 
-    // Monta { ticketId, batchId, quantity } — backend exige batchId como UUID.
-    // O endpoint de listagem pode não retornar o id do lote; se faltar, busca o ingresso completo.
-    const tickets: Array<{
-      ticketId: string;
-      batchId: string;
-      quantity: number;
-    }> = [];
-    for (const [ticketId, quantity] of Object.entries(raceQuantities)) {
-      if (!quantity || quantity <= 0) continue;
-      const catalogTicket = ticketCatalog.find((t) => t.id === ticketId);
-
-      let batchId = catalogTicket?.batches?.find((b) => b.id)?.id;
-
-      if (!batchId) {
-        // Fallback: busca o ingresso completo para obter o id do lote ativo
-        try {
-          const fullTicket = await organizerService.getTicketById(ticketId);
-          batchId = fullTicket?.batches?.[0]?.id;
-        } catch {
-          // ignora — vai cair no erro abaixo
-        }
-      }
-
-      if (!batchId) {
-        toast.error("Lote indisponível para um dos ingressos selecionados.");
-        reservingRef.current = false;
-        return;
-      }
-      tickets.push({ ticketId, batchId, quantity });
-    }
+    const tickets = Object.entries(raceQuantities)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([ticketId, quantity]) => ({ ticketId, quantity }));
 
     if (tickets.length === 0) {
       toast.error("Selecione pelo menos um ingresso para continuar.");

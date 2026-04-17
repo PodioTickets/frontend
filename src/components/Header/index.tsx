@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "../Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
@@ -12,7 +12,8 @@ import { Dropdown, DropdownOption } from "../Dropdown";
 import { ArrowButton } from "../ArrowButton";
 import { SearchBar } from "../SearchBar";
 import { LanguageToggle } from "../LanguageToggle";
-import { modalitiesColumns, mockEvents } from "@/constants";
+import { modalitiesColumns } from "@/constants";
+import { eventService } from "@/services";
 import { useModalStore } from "@/stores/modalStore";
 import { User, LogOut, X, Globe } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
@@ -85,26 +86,34 @@ export function Header() {
     return full || user.email || "Usuário";
   }, [user]);
 
-  const searchResults = useMemo(() => {
-    if (search.trim().length === 0) return [];
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string }>>([]);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const query = search.toLowerCase().trim();
-    const filtered = mockEvents
-      .filter(
-        (event) =>
-          event.title.toLowerCase().includes(query) ||
-          event.organizer.toLowerCase().includes(query) ||
-          event.location.city.toLowerCase().includes(query) ||
-          event.location.state.toLowerCase().includes(query) ||
-          event.description?.toLowerCase().includes(query)
-      )
-      .slice(0, 5);
-
-    return filtered.map((event) => ({
-      id: event.id,
-      title: event.title,
-      href: `/events/${event.id}`,
-    }));
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length === 0) {
+      setSearchResults([]);
+      return;
+    }
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await eventService.searchEvents({ q, limit: 5, status: "PUBLISHED" } as any);
+        setSearchResults(
+          (res.events || []).map((e: any) => ({
+            id: e.id,
+            title: e.name || e.title,
+            href: `/events/${e.slug || e.id}`,
+            logoUrl: e.logoUrl || e.logo_url || undefined,
+          }))
+        );
+      } catch {
+        setSearchResults([]);
+      }
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
   }, [search]);
 
   const handleSearch = () => {

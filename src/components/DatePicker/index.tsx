@@ -70,6 +70,9 @@ interface DatePickerProps {
   maxDate?: Date;
   hideIcon?: boolean;
   error?: boolean;
+  fromYear?: number;
+  toYear?: number;
+  disablePastDates?: boolean;
 }
 
 export function DatePicker({
@@ -82,6 +85,9 @@ export function DatePicker({
   maxDate,
   hideIcon = false,
   error = false,
+  fromYear,
+  toYear,
+  disablePastDates = true,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -168,7 +174,7 @@ export function DatePicker({
   const isSelectionAllowed = (d: Date): boolean => {
     const day = startOfLocalDay(d);
     const today = startOfLocalDay(new Date());
-    if (day < today) return false;
+    if (disablePastDates && day < today) return false;
     if (minDate) {
       const min = startOfLocalDay(new Date(minDate));
       if (day < min) return false;
@@ -236,8 +242,9 @@ export function DatePicker({
           <Calendar
             mode="single"
             captionLayout="dropdown"
-            fromYear={new Date().getFullYear() - 10}
-            toYear={new Date().getFullYear() + 10}
+            fromYear={fromYear ?? new Date().getFullYear()}
+            toYear={toYear ?? new Date().getFullYear() + 10}
+            disablePastDates={disablePastDates}
             selected={tempDate}
             onSelect={(date: Date | undefined) => {
               if (date && isSelectionAllowed(date)) {

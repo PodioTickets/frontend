@@ -6,23 +6,6 @@ export type ImageCarouselItem = {
   id: string;
 };
 
-function carouselItemHasImage(item: ImageCarouselItem): boolean {
-  return typeof item.src === "string" && item.src.trim() !== "";
-}
-
-/** Coloca o produto principal (config do evento) na primeira posição, se existir na lista. */
-export function orderCarouselItemsWithPrimary(
-  items: ImageCarouselItem[],
-  primaryProductId?: string | null
-): ImageCarouselItem[] {
-  if (!primaryProductId || items.length === 0) return items;
-  const idx = items.findIndex((i) => i.id === primaryProductId);
-  if (idx <= 0) return items;
-  const next = [...items];
-  const [primary] = next.splice(idx, 1);
-  return [primary, ...next];
-}
-
 /**
  * Reordena para o item preferido ficar no índice central (`Math.floor(n/2)`),
  * mantendo a ordem relativa dos demais em volta (útil para miniaturas centralizadas no modal).
@@ -45,60 +28,68 @@ export function orderCarouselItemsWithPreferredInCenter<T extends { id: string }
   return [...left, preferred, ...right];
 }
 
+/**
+ * Retorna todos os itens do carrossel para um ingresso, expandindo todas as imagens
+ * de cada produto. Produtos sem imagem aparecem com src: null (exibe fallback de letra).
+ * O produto `primaryProductId` é movido para a frente.
+ */
 export function getTicketProductCarouselItems(
-  ticket: Pick<Ticket, "products">,
-  productsMap: Record<
-    string,
-    { id: string; name: string; image: string | null } | undefined
-  >,
-  options?: {
-    primaryProductId?: string | null;
-    omitItemsWithoutImage?: boolean;
-  },
+  ticket: Pick<Ticket, "productImages">,
+  options?: { primaryProductId?: string | null },
 ): ImageCarouselItem[] {
-  if (!ticket.products?.length) return [];
-  const raw = ticket.products.map((productId) => {
-    const p = productsMap[productId];
-    return {
-      id: productId,
-      name: p?.name ?? "Produto",
-      src: p?.image ?? null,
-    };
-  });
-  let ordered = orderCarouselItemsWithPrimary(raw, options?.primaryProductId);
-  if (options?.omitItemsWithoutImage) {
-    ordered = ordered.filter(carouselItemHasImage);
+  if (!ticket.productImages?.length) return [];
+
+  let products = [...ticket.productImages];
+
+  if (options?.primaryProductId) {
+    const idx = products.findIndex((p) => p.id === options.primaryProductId);
+    if (idx > 0) {
+      const [primary] = products.splice(idx, 1);
+      products = [primary, ...products];
+    }
   }
-  return ordered;
+
+  const items: ImageCarouselItem[] = [];
+  for (const product of products) {
+    if (product.images.length > 0) {
+      product.images.forEach((src, i) => {
+        items.push({ id: `${product.id}-${i}`, name: product.name, src });
+      });
+    } else {
+      items.push({ id: product.id, name: product.name, src: null });
+    }
+  }
+
+  return items;
 }
 
-/** Imagens únicas de todos os ingressos da categoria, com principal da categoria primeiro. */
+/** Imagens únicas de todos os ingressos da categoria (uma por produto), com principal primeiro. */
 export function getCategoryKitCarouselItems(
-  tickets: Pick<Ticket, "products">[],
-  productsMap: Record<
-    string,
-    { id: string; name: string; image: string | null } | undefined
-  >,
+  tickets: Pick<Ticket, "productImages">[],
   primaryProductId?: string | null,
-  options?: { omitItemsWithoutImage?: boolean },
 ): ImageCarouselItem[] {
   const seen = new Set<string>();
   const items: ImageCarouselItem[] = [];
-  for (const t of tickets) {
-    for (const pid of t.products || []) {
-      if (seen.has(pid)) continue;
-      seen.add(pid);
-      const p = productsMap[pid];
+
+  for (const ticket of tickets) {
+    for (const product of ticket.productImages || []) {
+      if (seen.has(product.id)) continue;
+      seen.add(product.id);
       items.push({
-        id: pid,
-        name: p?.name ?? "Produto",
-        src: p?.image ?? null,
+        id: product.id,
+        name: product.name,
+        src: product.images[0] ?? null,
       });
     }
   }
-  let ordered = orderCarouselItemsWithPrimary(items, primaryProductId);
-  if (options?.omitItemsWithoutImage) {
-    ordered = ordered.filter(carouselItemHasImage);
+
+  if (primaryProductId) {
+    const idx = items.findIndex((i) => i.id === primaryProductId);
+    if (idx > 0) {
+      const [primary] = items.splice(idx, 1);
+      return [primary, ...items];
+    }
   }
-  return ordered;
+
+  return items;
 }

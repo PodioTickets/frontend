@@ -85,8 +85,6 @@ export interface ReserveOrderRequest {
   eventId: string;
   tickets: Array<{
     ticketId: string;
-    /** Opcional — se omitido, o backend infere o lote ativo pelo `ticketId`. */
-    batchId?: string;
     quantity: number;
   }>;
 }

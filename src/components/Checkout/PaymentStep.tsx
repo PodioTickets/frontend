@@ -1346,6 +1346,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         toast.success("Pagamento aprovado!");
         onSuccess?.(result.orderId);
       } else {
+        // Sincroniza o estado do timer imediatamente.
+        // Se o servidor retornou CANCELLED, dispara handleCancelledByServer → redirect silencioso.
+        // Se ainda PENDING, apenas atualiza o timer.
+        syncFromOrder(result);
         toast.error("Pagamento não aprovado. Tente novamente.");
         regenerateIdempotencyKey();
       }

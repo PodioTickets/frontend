@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Check,
@@ -250,6 +251,8 @@ export function CollaboratorDrawer({
 }) {
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
 
@@ -282,6 +285,7 @@ export function CollaboratorDrawer({
     setWhitelistFromApi(null);
     setEventSearch("");
     setEventsListPage(1);
+    setFieldErrors({});
   }, []);
 
   const loadEvents = useCallback(async () => {
@@ -457,26 +461,26 @@ export function CollaboratorDrawer({
 
   const handleCreate = async () => {
     const { firstName, lastName } = splitFullName(fullName);
+    const errors: Record<string, string> = {};
     if (!firstName.trim() || !lastName.trim()) {
-      toast.error("Informe o nome completo (nome e sobrenome).");
-      return;
+      errors.fullName = "Informe o nome completo (nome e sobrenome).";
     }
     if (!email.trim()) {
-      toast.error("Informe o e-mail do membro.");
-      return;
+      errors.email = "Informe o e-mail do membro.";
     }
     if (!password.trim()) {
-      toast.error("Informe a senha inicial do colaborador.");
+      errors.password = "Informe a senha inicial do colaborador.";
+    } else if (password.length < 6) {
+      errors.password = "A senha deve ter pelo menos 6 caracteres.";
+    }
+    if (password.trim() && confirmPassword !== password) {
+      errors.confirmPassword = "As senhas não coincidem.";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem.");
-      return;
-    }
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
+    setFieldErrors({});
 
     setSaving(true);
     try {
@@ -534,19 +538,17 @@ export function CollaboratorDrawer({
     }
   };
 
-  const handleRemove = async () => {
+  const handleRemove = () => {
     if (!member || member.role === "OWNER") return;
-    const name = `${member.user.firstName} ${member.user.lastName}`.trim();
-    if (
-      !confirm(
-        `Remover ${name || "este colaborador"} da organização? Esta ação não pode ser desfeita.`
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleRemoveConfirmed = async () => {
+    if (!member) return;
     setRemoving(true);
     try {
       await organizerService.removeOrganizationMember(member.userId);
+      setDeleteConfirmOpen(false);
       toast.success("Colaborador removido.");
       onSuccess();
       onOpenChange(false);
@@ -563,6 +565,9 @@ export function CollaboratorDrawer({
 
   const inputClass =
     "h-12 w-full rounded-lg border border-gray-6 bg-gray-1 px-3 text-base text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-4 focus-visible:ring-[3px] focus-visible:ring-gray-4/50";
+
+  const inputError = (field: string) =>
+    fieldErrors[field] ? "border-red-8 focus-visible:ring-red-8/50 focus-visible:border-red-8" : "";
 
   const titleText =
     mode === "create" ? "Adicionar colaborador" : "Editar colaborador";
@@ -590,6 +595,70 @@ export function CollaboratorDrawer({
         aria-describedby={undefined}
       >
         <DrawerTitle className="sr-only">{titleText}</DrawerTitle>
+
+        {/* Wrapper relative para conter o overlay de confirmação */}
+        <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
+
+        {/* Delete confirmation overlay */}
+        <AnimatePresence>
+          {deleteConfirmOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 p-4"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className="bg-gray-1 rounded-xl shadow-2xl w-full max-w-[442px] overflow-hidden"
+              >
+                <div className="flex flex-col items-center justify-center px-5 pt-6 pb-5 gap-11">
+                  <div className="flex flex-col gap-4 items-center justify-center w-full">
+                    <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
+                      Deletar colaborador?
+                    </p>
+                    <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
+                      {member ? (
+                        <>
+                          O colaborador{" "}
+                          <span className="font-semibold text-gray-12">
+                            &quot;{`${member.user.firstName} ${member.user.lastName}`.trim()}&quot;
+                          </span>{" "}
+                          será removido permanentemente da organização. Esta ação não pode ser desfeita.
+                        </>
+                      ) : (
+                        "Este colaborador será removido permanentemente da organização. Esta ação não pode ser desfeita."
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 items-stretch w-full">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDeleteConfirmOpen(false)}
+                      disabled={removing}
+                      className="flex-1 h-12 min-h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
+                    >
+                      Fechar
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveConfirmed}
+                      disabled={removing}
+                      className="flex-1 h-12 min-h-12 bg-red-11 text-red-2 font-bold text-base font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      {removing ? "Deletando…" : "Deletar colaborador"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Header — mobile: voltar + título + breadcrumb; desktop: título + fechar */}
         <div className="shrink-0 border-b border-gray-6 px-4 py-3 md:h-[60px] md:px-5 md:py-0 md:flex md:items-center">
@@ -638,33 +707,48 @@ export function CollaboratorDrawer({
                   <>
                     <FieldShell label="Nome completo">
                       <input
-                        className={inputClass}
+                        className={cn(inputClass, inputError("fullName"))}
                         placeholder="Digite o nome completo"
                         value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        onChange={(e) => {
+                          setFullName(e.target.value);
+                          if (fieldErrors.fullName) setFieldErrors((p) => { const n = { ...p }; delete n.fullName; return n; });
+                        }}
                         disabled={saving}
                         autoComplete="name"
                       />
+                      {fieldErrors.fullName && (
+                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.fullName}</p>
+                      )}
                     </FieldShell>
                     <FieldShell label="E-mail do membro">
                       <input
                         type="email"
-                        className={inputClass}
+                        className={cn(inputClass, inputError("email"))}
                         placeholder="Digite o e-mail.."
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (fieldErrors.email) setFieldErrors((p) => { const n = { ...p }; delete n.email; return n; });
+                        }}
                         disabled={saving}
                         autoComplete="email"
                       />
+                      {fieldErrors.email && (
+                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.email}</p>
+                      )}
                     </FieldShell>
                     <FieldShell label="Senha">
                       <div className="relative">
                         <input
                           type={showPassword ? "text" : "password"}
-                          className={inputClass}
+                          className={cn(inputClass, inputError("password"))}
                           placeholder="Digite sua senha"
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            if (fieldErrors.password) setFieldErrors((p) => { const n = { ...p }; delete n.password; return n; });
+                          }}
                           disabled={saving}
                           autoComplete="new-password"
                         />
@@ -677,15 +761,21 @@ export function CollaboratorDrawer({
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
+                      {fieldErrors.password && (
+                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.password}</p>
+                      )}
                     </FieldShell>
                     <FieldShell label="Confirmar senha">
                       <div className="relative">
                         <input
                           type={showConfirmPassword ? "text" : "password"}
-                          className={inputClass}
+                          className={cn(inputClass, inputError("confirmPassword"))}
                           placeholder="Digite a senha novamente"
                           value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onChange={(e) => {
+                            setConfirmPassword(e.target.value);
+                            if (fieldErrors.confirmPassword) setFieldErrors((p) => { const n = { ...p }; delete n.confirmPassword; return n; });
+                          }}
                           disabled={saving}
                           autoComplete="new-password"
                         />
@@ -698,6 +788,9 @@ export function CollaboratorDrawer({
                           {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
+                      {fieldErrors.confirmPassword && (
+                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.confirmPassword}</p>
+                      )}
                     </FieldShell>
                   </>
                 ) : (
@@ -715,20 +808,6 @@ export function CollaboratorDrawer({
                         className={cn(inputClass, "bg-gray-2 text-gray-11")}
                         value={email}
                         readOnly
-                      />
-                    </FieldShell>
-                    <FieldShell label="Função na organização">
-                      <input
-                        readOnly
-                        className={cn(
-                          inputClass,
-                          "bg-gray-2 text-gray-11 cursor-not-allowed"
-                        )}
-                        value={
-                          member?.role === "OWNER"
-                            ? "Proprietário"
-                            : "Colaborador"
-                        }
                       />
                     </FieldShell>
                   </>
@@ -983,6 +1062,8 @@ export function CollaboratorDrawer({
             </div>
           )}
         </div>
+
+        </div>{/* fim do wrapper relative */}
       </DrawerContent>
     </Drawer>
   );

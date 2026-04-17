@@ -12,6 +12,8 @@ import { ClockIcon } from "@/components/Icons/ClockIcon";
 import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -123,56 +125,52 @@ export default function TicketDetailsPage() {
     }
   };
 
-  // Mapear tickets para participantes
   const participants = useMemo(() => {
     if (!registration) return [];
 
-    const tickets = registration.tickets || [];
-    const user = registration.user || {};
-    // Produtos vêm do registration.products com estrutura { product, variation, quantity, totalPrice, unitPrice }
-    const registrationProducts = registration.products || [];
+    const p = registration.participant || {};
+    const ticket = registration.ticket || {};
+    const products: any[] = registration.products || [];
 
-    return tickets.map((ticketItem: any, index: number) => {
-      const ticket = ticketItem.ticket || {};
-
-      return {
-        id: ticketItem.id || ticket.id || `ticket-${index}`,
-        name: user.firstName && user.lastName
-          ? `${user.firstName} ${user.lastName}`.trim()
-          : user.fullName || `Participante ${index + 1}`,
-        email: user.email || "",
-        cpf: user.documentNumber || "",
-        birthDate: user.dateOfBirth || "",
-        gender: user.gender || "",
-        phone: user.phone || "",
-        emergencyPhone: user.reservePhone || "",
-        avatarUrl: user.avatarUrl || "",
-        qrCode: registration.qrCode || "",
-        ticket: ticket,
-        emergencyContact: registration.emergencyContact || null,
-        questionAnswers: (registration.questionAnswers || []).reduce((acc: any, qa: any) => {
-          if (qa.question) {
-            acc[qa.question.id || qa.question.question] = qa.answer;
-          }
-          return acc;
-        }, {}),
-        // Produtos incluídos no ingresso (ticket.products com selectedVariation)
-        includedProducts: (ticket.products ?? []).map((p: any) => ({
-          product: { name: p.name, image: p.image ?? null, variationType: p.variationType ?? null },
-          variation: p.selectedVariation ?? null,
-          quantity: 1,
-          unitPrice: 0,
-          isIncluded: true,
-        })),
-        // Produtos adicionais comprados separadamente
-        additionalProducts: registrationProducts,
-      };
+    const includedProducts = products.filter((item: any) => {
+      if (item.product?.isIncludedInTicket !== true) return false;
+      const variationName = item.variation?.name ?? null;
+      if (item.product?.isRequired === false && variationName && isSemInteresseVariation({ name: variationName })) return false;
+      return true;
     });
+
+    const additionalProducts = products.filter((item: any) => {
+      if (item.product?.isIncludedInTicket === true) return false;
+      const variationName = item.variation?.name ?? null;
+      if (variationName && isSemInteresseVariation({ name: variationName })) return false;
+      return true;
+    });
+
+    return [{
+      id: registration.id,
+      name: p.fullName || "",
+      email: p.email || "",
+      cpf: p.documentNumber || "",
+      birthDate: p.dateOfBirth || p.birthDate || "",
+      gender: p.gender || "",
+      phone: p.phone || "",
+      avatarUrl: p.avatarUrl || "",
+      qrCode: registration.qrCode || "",
+      ticket,
+      emergencyContact: registration.emergencyContact || null,
+      questionAnswers: (registration.questionAnswers || []).reduce((acc: any, qa: any) => {
+        if (qa.question) acc[qa.question.id || qa.question.question] = qa.answer;
+        return acc;
+      }, {}),
+      includedProducts,
+      additionalProducts,
+    }];
   }, [registration]);
 
   const event = useMemo(() => {
-    if (!registration) return null;
-    return registration.event || null;
+    if (!registration?.event) return null;
+    const e = registration.event;
+    return { ...e, eventDate: e.startDate || e.eventDate };
   }, [registration]);
 
   if (loading) {
@@ -503,21 +501,23 @@ export default function TicketDetailsPage() {
                                     >
                                       <div className="flex gap-3 p-4">
                                         {productData.image && (
-                                          <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
-                                            <Image
+                                          <div className="size-[100px] rounded-lg shrink-0">
+                                            <ImageWithInitialFallback
                                               src={productData.image}
+                                              fallbackId={productData.name}
+                                              name={productData.name}
                                               alt={productData.name || "Produto"}
-                                              width={100}
-                                              height={100}
-                                              className="w-full h-full object-cover"
+                                              fill
+                                              sizes="100px"
+                                              className="w-full h-full object-cover rounded-lg"
                                             />
                                           </div>
                                         )}
                                         <div className="flex flex-col justify-between flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
+                                          <p className="text-base font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
                                             {productData.name || "Produto"}
                                           </p>
-                                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                                          <p className="text-sm font-medium text-gray-11 font-manrope">
                                             Incluso no ingresso
                                           </p>
                                         </div>
@@ -545,7 +545,7 @@ export default function TicketDetailsPage() {
                                 {participant.additionalProducts.map((item: any, productIndex: number) => {
                                   const productData = item.product || {};
                                   const variationData = item.variation || null;
-                                  const price = (item.totalPrice ?? item.unitPrice ?? 0) / 100;
+                                  const price = item.totalPrice ?? (item.unitPrice ?? 0) * (item.quantity ?? 1);
                                   return (
                                     <div
                                       key={item.id || `add-${productIndex}`}
@@ -571,7 +571,7 @@ export default function TicketDetailsPage() {
                                             )}
                                           </p>
                                           <p className="text-base font-semibold text-gray-12 font-manrope">
-                                            {formatPrice(price * (item.quantity ?? 1))}
+                                            {formatPrice(price)}
                                           </p>
                                         </div>
                                       </div>
@@ -679,7 +679,7 @@ export default function TicketDetailsPage() {
                     </p>
                     <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
                       {formatPrice(
-                        registration.kitItems.reduce((sum: number, item: any) => {
+                        (registration.kitItems ?? []).reduce((sum: number, item: any) => {
                           return sum + (item.kitItem?.price || 0) * (item.quantity || 1);
                         }, 0)
                       )}

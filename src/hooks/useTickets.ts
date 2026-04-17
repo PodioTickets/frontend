@@ -18,7 +18,10 @@ export interface Ticket {
     max?: number;
   };
   gender?: string;
+  activeBatch?: { id: string; price: number; label?: string; status?: string };
+  activeBatchStatus?: string;
   products: string[];
+  productImages: Array<{ id: string; name: string; images: string[] }>;
   batches: Array<{
     id: string;
     quantity: string;
@@ -57,13 +60,31 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
         modality: ticket.modality || "",
         distance: ticket.distance || "",
         distanceUnit: ticket.distanceUnit || "KM",
-        price:
-          ticket.batches && ticket.batches.length > 0
-            ? `R$ ${(parseFloat(ticket.batches[0].price) / 100).toFixed(2).replace(".", ",")}`
-            : "R$ 0,00",
+        price: (() => {
+          const raw = ticket.activeBatch?.price ?? ticket.batches?.[0]?.price;
+          return raw != null
+            ? `R$ ${(Number(raw) / 100).toFixed(2).replace(".", ",")}`
+            : "R$ 0,00";
+        })(),
         ageLimit: ticket.ageLimit,
         gender: ticket.gender,
+        activeBatch: ticket.activeBatch
+          ? {
+              id: ticket.activeBatch.id,
+              price: ticket.activeBatch.price,
+              label: ticket.activeBatchLabel,
+              status: ticket.activeBatchStatus,
+            }
+          : undefined,
+        activeBatchStatus: ticket.activeBatchStatus ?? undefined,
         products: ticket.productIds || [],
+        productImages: (ticket.products || []).map((tp: any) => ({
+          id: tp.productId,
+          name: tp.product?.name ?? "Produto",
+          images: Array.isArray(tp.product?.images) && tp.product.images.length > 0
+            ? tp.product.images
+            : tp.product?.image ? [tp.product.image] : [],
+        })),
         batches: (ticket.batches || []).map((b: any) => ({
           id: b.id ?? b.batchId ?? "",
           quantity: String(b.quantity ?? ""),

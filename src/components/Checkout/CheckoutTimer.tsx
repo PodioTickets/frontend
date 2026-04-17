@@ -27,7 +27,7 @@ export function CheckoutTimer({ className, compact }: CheckoutTimerProps) {
         aria-live="polite"
         aria-label="Tempo restante da reserva"
       >
-        <span className="text-gray-11">Restante:</span>
+        <span className="text-gray-11">Tempo:</span>
         <span className="tabular-nums">{formatRemaining(remainingMs)}</span>
       </div>
     );
@@ -48,7 +48,7 @@ export function CheckoutTimer({ className, compact }: CheckoutTimerProps) {
         <span className="tabular-nums">{formatRemaining(remainingMs)}</span>
       </div>
 
-      <div className="w-full bg-gray-7 h-4 rounded-full">
+      <div className="w-full bg-gray-7 h-4 rounded-full overflow-hidden">
         <div className="bg-primary-11 h-full rounded-full" style={{ width: `${Math.min(100, (remainingMs / (30 * 60 * 1000)) * 100)}%` }}></div>
       </div>
     </div>

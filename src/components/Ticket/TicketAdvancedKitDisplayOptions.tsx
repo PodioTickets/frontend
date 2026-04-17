@@ -18,7 +18,7 @@ type TicketAdvancedKitDisplayOptionsProps = {
   /** Controlado: exibir imagens do kit na escolha (persistido no evento). */
   showKitImagesOnSelection?: boolean;
   onShowKitImagesOnSelectionChange?: (value: boolean) => void;
-  /** Controlado: layout salvo (badge “Configuração atual”). Default ON_TICKETS. */
+  /** Controlado: layout salvo (badge "Configuração atual"). Default ON_TICKETS. */
   kitImagesLayout?: KitImagesLayoutApi;
 };
 

@@ -113,7 +113,7 @@ export function TicketBatchSection({
                       {sold === 1 ? "" : "s"}.
                       {quantityBelowSold && (
                         <span className="block mt-0.5 text-red-11">
-                          A quantidade precisa ser superior ao total vendido.
+                          A quantidade precisa ser superior ou igual ao total vendido.
                         </span>
                       )}
                     </span>

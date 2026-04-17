@@ -16,6 +16,11 @@ import { buttonVariants } from "@/components/Button";
 import { Button } from "@/components/Button";
 import { Dropdown, type DropdownOption } from "@/components/Dropdown";
 
+const YearRangeContext = React.createContext<{ fromYear: number; toYear: number }>({
+  fromYear: new Date().getFullYear(),
+  toYear: new Date().getFullYear() + 10,
+});
+
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   disablePastDates?: boolean;
 };
@@ -123,9 +128,8 @@ const monthNames = [
 
 function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
   const { goToMonth } = useDayPicker();
+  const { fromYear, toYear } = React.useContext(YearRangeContext);
   const current = calendarMonth.date;
-  const fromYear = 1900;
-  const toYear = new Date().getFullYear();
 
   const monthOptions: DropdownOption[] = useMemo(
     () =>
@@ -200,8 +204,13 @@ function Calendar({
   captionLayout,
   disabled: customDisabled,
   disablePastDates = true,
+  fromYear,
+  toYear,
   ...props
 }: CalendarProps) {
+  const currentYear = new Date().getFullYear();
+  const resolvedFromYear = fromYear ?? currentYear;
+  const resolvedToYear = toYear ?? currentYear + 10;
   const todayStart = (() => {
     const t = new Date();
     return new Date(t.getFullYear(), t.getMonth(), t.getDate());
@@ -237,10 +246,13 @@ function Calendar({
   };
 
   return (
+    <YearRangeContext.Provider value={{ fromYear: resolvedFromYear, toYear: resolvedToYear }}>
     <DayPicker
       showOutsideDays={showOutsideDays}
       disabled={disabledProp}
       captionLayout={captionLayout}
+      fromYear={fromYear}
+      toYear={toYear}
       className={cn("", className)}
       formatters={
         captionLayout === "dropdown"
@@ -302,6 +314,7 @@ function Calendar({
       components={components}
       {...props}
     />
+    </YearRangeContext.Provider>
   );
 }
 Calendar.displayName = "Calendar";
