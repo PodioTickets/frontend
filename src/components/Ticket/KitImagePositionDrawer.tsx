@@ -976,7 +976,7 @@ export function KitImagePositionDrawer({
             {layout === "on_tickets" ? (
               !hasAnyImages ? (
                 <p className="text-base text-gray-11 font-family-dm-sans py-6 text-center border border-dashed border-gray-6 rounded-lg">
-                  Não há categorias com ingressos ou não há imagens nos produtos vinculados ao ingresso.
+                  Não há imagens nos produtos vinculados ao ingresso.
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
