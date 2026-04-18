@@ -127,14 +127,14 @@ function buildEventIdsForCreate(
 ): string[] | undefined {
   if (events.length === 0) return undefined;
   const selected = events.filter((e) => eventSelection[e.id]).map((e) => e.id);
-  if (selected.length === 0 || selected.length === events.length) return undefined;
+  if (selected.length === 0) return undefined;
   return selected;
 }
 
 /**
- * null   → não envia o campo (sem restrição, todos os eventos)
+ * null   → não envia o campo (nenhum evento disponível para selecionar)
  * []     → restringe a nenhum evento
- * [ids]  → restringe a esses eventos
+ * [ids]  → restringe a esses eventos (envia sempre, mesmo quando todos)
  */
 function buildEventIdsForSettings(
   events: Event[],
@@ -142,9 +142,6 @@ function buildEventIdsForSettings(
 ): string[] | null {
   if (events.length === 0) return null;
   const selected = events.filter((e) => eventSelection[e.id]).map((e) => e.id);
-  // Todos selecionados: sem restrição (não envia whitelist)
-  if (selected.length === events.length) return null;
-  // Subset ou nenhum: envia exatamente o que foi escolhido
   return selected;
 }
 
