@@ -12,7 +12,8 @@ export function ContentWrapper({ children }: { children: React.ReactNode }) {
   const isAuthOrganizer =
     normalized.startsWith("/organizer/login") ||
     normalized.startsWith("/organizer/forgot-password") ||
-    normalized.startsWith("/organizer/reset-password");
+    normalized.startsWith("/organizer/reset-password") ||
+    pathname.startsWith("/admin")
 
   if (isAuthOrganizer) {
     return <div>{children}</div>;

@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { Loading } from "../Loading";
+import { ImageCarouselModal } from "./ImageCarouselModal";
 import {
   type Product,
   productPriceFromApiToReais,
@@ -51,7 +52,13 @@ function ProductCardGallery({ product }: { product: Product }) {
     return out;
   }, [product.image, product.images]);
 
+  const modalItems = useMemo(
+    () => allImages.map((src, i) => ({ id: `${product.id}-${i}`, name: product.name, src })),
+    [allImages, product.id, product.name],
+  );
+
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const safeIndex = Math.min(currentIndex, Math.max(0, allImages.length - 1));
   const currentSrc = allImages[safeIndex] ?? null;
   const hasMultiple = allImages.length > 1;
@@ -66,50 +73,65 @@ function ProductCardGallery({ product }: { product: Product }) {
   };
 
   return (
-    <div className="w-[100px] h-[100px] rounded border border-gray-6 relative overflow-hidden shrink-0 group">
-      <ImageWithInitialFallback
-        src={currentSrc}
-        alt={product.name}
-        name={product.name}
-        fallbackId={product.id}
-        fill
-        sizes="100px"
-        className="size-full border-0"
-        letterClassName="text-2xl font-semibold"
-      />
-      {hasMultiple && (
-        <>
-          <button
-            type="button"
-            onClick={handlePrev}
-            className="absolute left-0 top-0 h-full w-7 flex items-center justify-center bg-gray-12/30 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-12/50"
-            aria-label="Imagem anterior"
-          >
-            <div className="rotate-180 scale-75">
-              <ArrowButton isOpen={false} />
+    <>
+      <div
+        className="w-[100px] h-[100px] rounded border border-gray-6 relative overflow-hidden shrink-0 group cursor-pointer"
+        onClick={() => setIsModalOpen(true)}
+      >
+        <ImageWithInitialFallback
+          src={currentSrc}
+          alt={product.name}
+          name={product.name}
+          fallbackId={product.id}
+          fill
+          sizes="100px"
+          className="size-full border-0"
+          letterClassName="text-2xl font-semibold"
+        />
+        {hasMultiple && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="absolute left-0 top-0 h-full w-7 flex items-center justify-center"
+              aria-label="Imagem anterior"
+            >
+              <div className="rotate-180 scale-75 size-6 bg-gray-4 hover:bg-gray-1 transition-all duration-300 ease-in-out flex items-center justify-center rounded-full">
+                <ArrowButton isOpen={false} />
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              className="absolute right-0 top-0 h-full w-7 flex items-center justify-center"
+              aria-label="Próxima imagem"
+            >
+              <div className="scale-75 size-6 bg-gray-4 hover:bg-gray-1 transition-all duration-300 ease-in-out flex items-center justify-center rounded-full">
+                <ArrowButton isOpen={false} />
+              </div>
+            </button>
+            <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-1">
+              {allImages.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`block rounded-full transition-all ${idx === safeIndex ? "w-3 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"}`}
+                />
+              ))}
             </div>
-          </button>
-          <button
-            type="button"
-            onClick={handleNext}
-            className="absolute right-0 top-0 h-full w-7 flex items-center justify-center bg-gray-12/30 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-12/50"
-            aria-label="Próxima imagem"
-          >
-            <div className="scale-75">
-              <ArrowButton isOpen={false} />
-            </div>
-          </button>
-          <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-1">
-            {allImages.map((_, idx) => (
-              <span
-                key={idx}
-                className={`block rounded-full transition-all ${idx === safeIndex ? "w-3 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"}`}
-              />
-            ))}
-          </div>
-        </>
+          </>
+        )}
+      </div>
+
+      {modalItems.length > 0 && (
+        <ImageCarouselModal
+          items={modalItems}
+          initialIndex={safeIndex}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          ticketName={product.name}
+        />
       )}
-    </div>
+    </>
   );
 }
 
@@ -650,13 +672,13 @@ export function SubscriptionStep({
 
   const handleVariationSelect =
     (participantIndex: number, productId: string) =>
-    (option: DropdownOption) => {
-      const variationKey = getVariationKey(participantIndex, productId);
-      setSelectedVariations((prev) => ({
-        ...prev,
-        [variationKey]: option.id || null,
-      }));
-    };
+      (option: DropdownOption) => {
+        const variationKey = getVariationKey(participantIndex, productId);
+        setSelectedVariations((prev) => ({
+          ...prev,
+          [variationKey]: option.id || null,
+        }));
+      };
 
   const handleParticipantSelect = (participantIndex: number) => {
     setExpandedParticipants({ [participantIndex]: true });

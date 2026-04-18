@@ -269,11 +269,11 @@ export function OrderSummary({
                       </div>
                       <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
                         {participantData.categoryName ? (
-                          <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                          <p className="font-family-dm-sans font-normal text-sm text-gray-11 max-w-[50%] truncate">
                             {participantData.categoryName}
                           </p>
                         ) : (
-                          <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                          <p className="font-family-dm-sans font-normal text-sm text-gray-11">
                             Ingresso Avulso
                           </p>
                         )}

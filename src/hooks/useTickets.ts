@@ -21,7 +21,7 @@ export interface Ticket {
   activeBatch?: { id: string; price: number; label?: string; status?: string };
   activeBatchStatus?: string;
   products: string[];
-  productImages: Array<{ id: string; name: string; images: string[] }>;
+  productImages: Array<{ id: string; name: string; images: string[]; primaryImageIndex?: number }>;
   batches: Array<{
     id: string;
     quantity: string;
@@ -84,6 +84,9 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
           images: Array.isArray(tp.product?.images) && tp.product.images.length > 0
             ? tp.product.images
             : tp.product?.image ? [tp.product.image] : [],
+          primaryImageIndex: typeof tp.product?.primaryImageIndex === "number"
+            ? tp.product.primaryImageIndex
+            : undefined,
         })),
         batches: (ticket.batches || []).map((b: any) => ({
           id: b.id ?? b.batchId ?? "",

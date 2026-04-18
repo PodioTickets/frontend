@@ -63,10 +63,14 @@ export function getTicketProductCarouselItems(
   return items;
 }
 
-/** Imagens únicas de todos os ingressos da categoria (uma por produto), com principal primeiro. */
+/**
+ * Todas as imagens de todos os produtos únicos da categoria, expandidas.
+ * primaryImageSrc é uma URL de imagem (vem de primaryKitProductByCategoryId);
+ * a imagem com esse src é movida para a frente para ser centralizada no carousel.
+ */
 export function getCategoryKitCarouselItems(
   tickets: Pick<Ticket, "productImages">[],
-  primaryProductId?: string | null,
+  primaryImageSrc?: string | null,
 ): ImageCarouselItem[] {
   const seen = new Set<string>();
   const items: ImageCarouselItem[] = [];
@@ -75,16 +79,19 @@ export function getCategoryKitCarouselItems(
     for (const product of ticket.productImages || []) {
       if (seen.has(product.id)) continue;
       seen.add(product.id);
-      items.push({
-        id: product.id,
-        name: product.name,
-        src: product.images[0] ?? null,
-      });
+
+      if (product.images.length === 0) {
+        items.push({ id: product.id, name: product.name, src: null });
+      } else {
+        product.images.forEach((src, i) => {
+          items.push({ id: `${product.id}-${i}`, name: product.name, src });
+        });
+      }
     }
   }
 
-  if (primaryProductId) {
-    const idx = items.findIndex((i) => i.id === primaryProductId);
+  if (primaryImageSrc) {
+    const idx = items.findIndex((item) => item.src === primaryImageSrc);
     if (idx > 0) {
       const [primary] = items.splice(idx, 1);
       return [primary, ...items];

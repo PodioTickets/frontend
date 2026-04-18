@@ -10,6 +10,7 @@ import {
 } from "@/utils/ticketProductVisuals";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import { cn } from "@/utils/cn";
+import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 
 type CategoryKitHorizontalCarouselProps = {
   items: ImageCarouselItem[];
@@ -34,7 +35,8 @@ export function CategoryKitHorizontalCarousel({
 
   const preferredIndex = useMemo(() => {
     if (primaryProductId) {
-      const i = displayItems.findIndex((x) => x.id === primaryProductId);
+      // primaryProductId is an image URL from primaryKitProductByCategoryId
+      const i = displayItems.findIndex((x) => x.src === primaryProductId);
       if (i >= 0) return i;
     }
     return 0;
@@ -100,7 +102,7 @@ export function CategoryKitHorizontalCarousel({
   return (
     <>
       <div
-        className="flex w-full flex-col gap-3"
+        className="flex w-full flex-col gap-3 overflow-hidden"
         role="region"
         aria-roledescription="carrossel"
         aria-label="Imagens dos produtos do kit"
@@ -116,7 +118,7 @@ export function CategoryKitHorizontalCarousel({
             <ChevronLeft className="size-5 shrink-0" aria-hidden />
           </button>
 
-          <div ref={emblaRef} className="min-w-0 flex-1 overflow-hidden py-3">
+          <div ref={emblaRef} className="min-w-0 flex-1 overflow-hidden py-3 max-w-[592px]">
             <div className="flex items-center gap-2">
               {orderedItems.map((item, index) => {
                 const isCenter = index === selectedIndex;
@@ -136,18 +138,19 @@ export function CategoryKitHorizontalCarousel({
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8",
                       isCenter
                         ? "z-10 border-primary-8 scale-110"
-                        : "border-gray-5 opacity-60 scale-90 hover:opacity-80 hover:border-gray-7"
+                        : "border-gray-5 scale-90 hover:border-gray-7"
                     )}
                     style={{ width: 112, height: 112 }}
                     aria-label={`${item.name}.${isCenter ? " Selecionada. Ver em tamanho maior." : ""}`}
                     aria-current={isCenter ? "true" : undefined}
                   >
-                    <Image
+                    <ImageWithInitialFallback
                       src={item.src}
                       alt={item.name}
+                      name={item.name}
                       fill
                       sizes="112px"
-                      className="object-cover"
+                      className="object-cover size-[112px] border-0 rounded-lg"
                     />
                   </button>
                 );
@@ -166,7 +169,7 @@ export function CategoryKitHorizontalCarousel({
           </button>
         </div>
 
-        {!single && n <= 12 ? (
+        {!single && (
           <div className="flex flex-wrap justify-center gap-1.5 px-2">
             {orderedItems.map((item, i) => (
               <button
@@ -183,11 +186,7 @@ export function CategoryKitHorizontalCarousel({
               />
             ))}
           </div>
-        ) : !single ? (
-          <p className="text-center text-xs text-gray-11">
-            {selectedIndex + 1} de {n}
-          </p>
-        ) : null}
+        )}
       </div>
 
       <ImageCarouselModal

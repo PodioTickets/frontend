@@ -66,6 +66,7 @@ const TicketItemMobile = memo(({
   onDecrease,
   onIncrease,
   kitSelectionDisplay,
+  showProductImages = true,
 }: {
   ticket: Ticket;
   event: Event;
@@ -74,6 +75,7 @@ const TicketItemMobile = memo(({
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
+  showProductImages?: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -85,10 +87,12 @@ const TicketItemMobile = memo(({
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
 
   const productItems = useMemo(
-    () => getTicketProductCarouselItems(ticket, {
-      primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
-    }),
-    [ticket, kitSelectionDisplay.primaryKitProductByTicketId],
+    () => showProductImages
+      ? getTicketProductCarouselItems(ticket, {
+        primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+      })
+      : [],
+    [ticket, kitSelectionDisplay.primaryKitProductByTicketId, showProductImages],
   );
 
   useEffect(() => {
@@ -325,6 +329,7 @@ const TicketItemDesktop = memo(({
   onDecrease,
   onIncrease,
   kitSelectionDisplay,
+  showProductImages = true,
 }: {
   ticket: Ticket;
   event: Event;
@@ -333,6 +338,7 @@ const TicketItemDesktop = memo(({
   onDecrease: (id: string) => void;
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
+  showProductImages?: boolean;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -344,10 +350,12 @@ const TicketItemDesktop = memo(({
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
 
   const productItems = useMemo(
-    () => getTicketProductCarouselItems(ticket, {
-      primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
-    }),
-    [ticket, kitSelectionDisplay.primaryKitProductByTicketId],
+    () => showProductImages
+      ? getTicketProductCarouselItems(ticket, {
+        primaryProductId: kitSelectionDisplay.primaryKitProductByTicketId[ticket.id],
+      })
+      : [],
+    [ticket, kitSelectionDisplay.primaryKitProductByTicketId, showProductImages],
   );
 
   useEffect(() => {
@@ -607,6 +615,9 @@ export function TicketCategoryCard({
     kitSelectionDisplay.showKitImagesOnSelection &&
     kitSelectionDisplay.kitImagesLayout === "ON_CATEGORIES";
 
+  // ON_CATEGORIES com categoria real → imagens no carousel da categoria, não no ticket
+  const showTicketLevelImages = !showCategoryLevelKit;
+
   const categoryCarouselItems = useMemo(
     () =>
       showCategoryLevelKit && categoryId
@@ -642,12 +653,12 @@ export function TicketCategoryCard({
               key={ticket.id}
               ticket={ticket}
               event={event}
-
               quantity={raceQuantities[ticket.id] || 0}
               totalQuantity={totalQuantity}
               onDecrease={handleDecrease}
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
+              showProductImages={showTicketLevelImages}
             />
           ))}
         </div>
@@ -657,12 +668,12 @@ export function TicketCategoryCard({
               key={ticket.id}
               ticket={ticket}
               event={event}
-
               quantity={raceQuantities[ticket.id] || 0}
               totalQuantity={totalQuantity}
               onDecrease={handleDecrease}
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
+              showProductImages={showTicketLevelImages}
             />
           ))}
         </div>
@@ -735,12 +746,12 @@ export function TicketCategoryCard({
                     key={ticket.id}
                     ticket={ticket}
                     event={event}
-
                     quantity={raceQuantities[ticket.id] || 0}
                     totalQuantity={totalQuantity}
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
+                    showProductImages={showTicketLevelImages}
                   />
                 ))}
               </div>
@@ -772,7 +783,7 @@ export function TicketCategoryCard({
                 </div>
               ) : null}
               <div className="flex flex-col items-start justify-center gap-6 min-w-0">
-                <h1 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
+                <h1 className="text-xl font-bold font-manrope text-gray-12 truncate max-w-[600px]">
                   {categoryName}
                 </h1>
                 {!isExpanded ? (
@@ -812,12 +823,12 @@ export function TicketCategoryCard({
                     key={ticket.id}
                     ticket={ticket}
                     event={event}
-
                     quantity={raceQuantities[ticket.id] || 0}
                     totalQuantity={totalQuantity}
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
+                    showProductImages={showTicketLevelImages}
                   />
                 ))}
               </div>

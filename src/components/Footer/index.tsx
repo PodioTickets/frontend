@@ -15,8 +15,9 @@ export function Footer() {
   const appSurface = useOrganizerAppSurface();
   const organizerPath = withOrganizerPathPrefix(pathname, appSurface);
   const isOrganizer = organizerPath.startsWith("/organizer");
+  const isAdmin = pathname.startsWith("/admin");
 
-  if (isOrganizer) {
+  if (isOrganizer || isAdmin) {
     return null;
   }
 
