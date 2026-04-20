@@ -36,6 +36,8 @@ export async function getCroppedImageFile(
     throw new Error("Canvas 2D não disponível");
   }
 
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(
     image,
     pixelCrop.x,
@@ -48,8 +50,10 @@ export async function getCroppedImageFile(
     opts.targetHeight
   );
 
-  const mime = opts.mimeType ?? "image/jpeg";
-  const quality = mime === "image/jpeg" ? (opts.quality ?? 0.92) : undefined;
+  const mime = opts.mimeType ?? "image/png";
+  const quality = mime === "image/jpeg" || mime === "image/webp"
+    ? (opts.quality ?? 1.0)
+    : undefined;
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(

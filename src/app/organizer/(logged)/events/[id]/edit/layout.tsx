@@ -14,6 +14,7 @@ import { ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
 function EditProgressBar() {
   const pathname = usePathname();
@@ -131,10 +132,13 @@ function EditProgressBar() {
 
 function EditLayoutContent({ children }: { children: ReactNode }) {
   const { event, loading } = useEditEvent();
-  useEventPermissionGuard("edit_event");
+  useEventPermissionGuard(["edit_event", "view_event"]);
+  const { hasPermission } = useOrganizerPermissions();
   const params = useParams();
   const eventId = params.id as string;
   const pathname = usePathname();
+
+  const readOnly = !hasPermission("edit_event") && hasPermission("view_event");
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -157,7 +161,9 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
         <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
           <EditProgressBar />
         </div>
-        {children}
+        <div className={cn(readOnly && "pointer-events-none select-none opacity-70 [&_[data-nav]]:pointer-events-auto [&_[data-nav]]:cursor-pointer [&_[data-nav]]:select-auto")}>
+          {children}
+        </div>
       </div>
     </div>
   );

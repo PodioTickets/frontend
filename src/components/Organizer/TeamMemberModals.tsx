@@ -57,7 +57,7 @@ const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
     id: "view_event",
     title: "Visualizar Evento",
     description:
-      "Permite visualizar a página pública do evento como os participantes enxergam.",
+      "Permite visualizar o painel de edição do evento e acessar a aba de inscrições, sem permissão para editar.",
   },
   {
     id: "coupons",
@@ -87,9 +87,9 @@ const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
 
 const DEFAULT_PERMISSIONS: Record<string, boolean> = {
   dashboard: true,
-  financial: true,
-  edit_event: true,
-  view_event: false,
+  financial: false,
+  edit_event: false,
+  view_event: true,
   coupons: false,
   pixel: false,
   notify: false,
@@ -131,11 +131,6 @@ function buildEventIdsForCreate(
   return selected;
 }
 
-/**
- * null   → não envia o campo (nenhum evento disponível para selecionar)
- * []     → restringe a nenhum evento
- * [ids]  → restringe a esses eventos (envia sempre, mesmo quando todos)
- */
 function buildEventIdsForSettings(
   events: Event[],
   eventSelection: Record<string, boolean>
@@ -596,469 +591,469 @@ export function CollaboratorDrawer({
         {/* Wrapper relative para conter o overlay de confirmação */}
         <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
 
-        {/* Delete confirmation overlay */}
-        <AnimatePresence>
-          {deleteConfirmOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 p-4"
-            >
+          {/* Delete confirmation overlay */}
+          <AnimatePresence>
+            {deleteConfirmOpen && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 16 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 16 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="bg-gray-1 rounded-xl shadow-2xl w-full max-w-[442px] overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 p-4"
               >
-                <div className="flex flex-col items-center justify-center px-5 pt-6 pb-5 gap-11">
-                  <div className="flex flex-col gap-4 items-center justify-center w-full">
-                    <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
-                      Deletar colaborador?
-                    </p>
-                    <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                      {member ? (
-                        <>
-                          O colaborador{" "}
-                          <span className="font-semibold text-gray-12">
-                            &quot;{`${member.user.firstName} ${member.user.lastName}`.trim()}&quot;
-                          </span>{" "}
-                          será removido permanentemente da organização. Esta ação não pode ser desfeita.
-                        </>
-                      ) : (
-                        "Este colaborador será removido permanentemente da organização. Esta ação não pode ser desfeita."
-                      )}
-                    </p>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className="bg-gray-1 rounded-xl shadow-2xl w-full max-w-[442px] overflow-hidden"
+                >
+                  <div className="flex flex-col items-center justify-center px-5 pt-6 pb-5 gap-11">
+                    <div className="flex flex-col gap-4 items-center justify-center w-full">
+                      <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
+                        Deletar colaborador?
+                      </p>
+                      <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
+                        {member ? (
+                          <>
+                            O colaborador{" "}
+                            <span className="font-semibold text-gray-12">
+                              &quot;{`${member.user.firstName} ${member.user.lastName}`.trim()}&quot;
+                            </span>{" "}
+                            será removido permanentemente da organização. Esta ação não pode ser desfeita.
+                          </>
+                        ) : (
+                          "Este colaborador será removido permanentemente da organização. Esta ação não pode ser desfeita."
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 items-stretch w-full">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDeleteConfirmOpen(false)}
+                        disabled={removing}
+                        className="flex-1 h-12 min-h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
+                      >
+                        Fechar
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveConfirmed}
+                        disabled={removing}
+                        className="flex-1 h-12 min-h-12 bg-red-11 text-red-2 font-bold text-base font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        {removing ? "Deletando…" : "Deletar colaborador"}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 items-stretch w-full">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setDeleteConfirmOpen(false)}
-                      disabled={removing}
-                      className="flex-1 h-12 min-h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
-                    >
-                      Fechar
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={handleRemoveConfirmed}
-                      disabled={removing}
-                      className="flex-1 h-12 min-h-12 bg-red-11 text-red-2 font-bold text-base font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
-                    >
-                      {removing ? "Deletando…" : "Deletar colaborador"}
-                    </button>
-                  </div>
-                </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
 
-        {/* Header — mobile: voltar + título + breadcrumb; desktop: título + fechar */}
-        <div className="shrink-0 border-b border-gray-6 px-4 py-3 md:h-[60px] md:px-5 md:py-0 md:flex md:items-center">
-          <div className="flex items-start gap-3 md:h-full md:w-full md:items-center md:justify-between">
-            <div className="flex min-w-0 flex-1 items-start gap-3 md:items-center">
+          {/* Header — mobile: voltar + título + breadcrumb; desktop: título + fechar */}
+          <div className="shrink-0 border-b border-gray-6 px-4 py-3 md:h-[60px] md:px-5 md:py-0 md:flex md:items-center">
+            <div className="flex items-start gap-3 md:h-full md:w-full md:items-center md:justify-between">
+              <div className="flex min-w-0 flex-1 items-start gap-3 md:items-center">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={saving || removing}
+                  className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg text-gray-12 hover:bg-gray-3 transition-colors disabled:opacity-50 md:hidden"
+                  aria-label="Voltar"
+                >
+                  <ArrowLeft className="size-5" strokeWidth={2} />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-xl md:font-semibold md:font-family-dm-sans md:leading-[1.3]">
+                    {titleText}
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-11 font-family-dm-sans md:hidden">
+                    {breadcrumbTrail}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={saving || removing}
-                className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg text-gray-12 hover:bg-gray-3 transition-colors disabled:opacity-50 md:hidden"
-                aria-label="Voltar"
+                className="hidden size-9 shrink-0 items-center justify-center rounded-lg text-gray-12 hover:bg-gray-3 transition-colors disabled:opacity-50 md:flex"
+                aria-label="Fechar"
               >
-                <ArrowLeft className="size-5" strokeWidth={2} />
+                <X className="size-5" strokeWidth={2} />
               </button>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-xl md:font-semibold md:font-family-dm-sans md:leading-[1.3]">
-                  {titleText}
-                </h2>
-                <p className="mt-1 text-xs text-gray-11 font-family-dm-sans md:hidden">
-                  {breadcrumbTrail}
-                </p>
-              </div>
             </div>
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={saving || removing}
-              className="hidden size-9 shrink-0 items-center justify-center rounded-lg text-gray-12 hover:bg-gray-3 transition-colors disabled:opacity-50 md:flex"
-              aria-label="Fechar"
-            >
-              <X className="size-5" strokeWidth={2} />
-            </button>
           </div>
-        </div>
 
-        {/* Scroll body */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-7 py-5">
-            {/* Informações básicas */}
-            <section className="flex flex-col gap-4 md:gap-5 px-4">
-              <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">
-                Informações básicas
-              </h3>
-              <div className="flex flex-col gap-4">
-                {mode === "create" ? (
-                  <>
-                    <FieldShell label="Nome completo">
-                      <input
-                        className={cn(inputClass, inputError("fullName"))}
-                        placeholder="Digite o nome completo"
-                        value={fullName}
-                        onChange={(e) => {
-                          setFullName(e.target.value);
-                          if (fieldErrors.fullName) setFieldErrors((p) => { const n = { ...p }; delete n.fullName; return n; });
-                        }}
-                        disabled={saving}
-                        autoComplete="name"
-                      />
-                      {fieldErrors.fullName && (
-                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.fullName}</p>
-                      )}
-                    </FieldShell>
-                    <FieldShell label="E-mail do membro">
-                      <input
-                        type="email"
-                        className={cn(inputClass, inputError("email"))}
-                        placeholder="Digite o e-mail.."
-                        value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          if (fieldErrors.email) setFieldErrors((p) => { const n = { ...p }; delete n.email; return n; });
-                        }}
-                        disabled={saving}
-                        autoComplete="email"
-                      />
-                      {fieldErrors.email && (
-                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.email}</p>
-                      )}
-                    </FieldShell>
-                    <FieldShell label="Senha">
-                      <div className="relative">
+          {/* Scroll body */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-7 py-5">
+              {/* Informações básicas */}
+              <section className="flex flex-col gap-4 md:gap-5 px-4">
+                <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">
+                  Informações básicas
+                </h3>
+                <div className="flex flex-col gap-4">
+                  {mode === "create" ? (
+                    <>
+                      <FieldShell label="Nome completo">
                         <input
-                          type={showPassword ? "text" : "password"}
-                          className={cn(inputClass, inputError("password"))}
-                          placeholder="Digite sua senha"
-                          value={password}
+                          className={cn(inputClass, inputError("fullName"))}
+                          placeholder="Digite o nome completo"
+                          value={fullName}
                           onChange={(e) => {
-                            setPassword(e.target.value);
-                            if (fieldErrors.password) setFieldErrors((p) => { const n = { ...p }; delete n.password; return n; });
+                            setFullName(e.target.value);
+                            if (fieldErrors.fullName) setFieldErrors((p) => { const n = { ...p }; delete n.fullName; return n; });
                           }}
                           disabled={saving}
-                          autoComplete="new-password"
+                          autoComplete="name"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          tabIndex={-1}
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      {fieldErrors.password && (
-                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.password}</p>
-                      )}
-                    </FieldShell>
-                    <FieldShell label="Confirmar senha">
-                      <div className="relative">
+                        {fieldErrors.fullName && (
+                          <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.fullName}</p>
+                        )}
+                      </FieldShell>
+                      <FieldShell label="E-mail do membro">
                         <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          className={cn(inputClass, inputError("confirmPassword"))}
-                          placeholder="Digite a senha novamente"
-                          value={confirmPassword}
+                          type="email"
+                          className={cn(inputClass, inputError("email"))}
+                          placeholder="Digite o e-mail.."
+                          value={email}
                           onChange={(e) => {
-                            setConfirmPassword(e.target.value);
-                            if (fieldErrors.confirmPassword) setFieldErrors((p) => { const n = { ...p }; delete n.confirmPassword; return n; });
+                            setEmail(e.target.value);
+                            if (fieldErrors.email) setFieldErrors((p) => { const n = { ...p }; delete n.email; return n; });
                           }}
                           disabled={saving}
-                          autoComplete="new-password"
+                          autoComplete="email"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          tabIndex={-1}
-                        >
-                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      {fieldErrors.confirmPassword && (
-                        <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.confirmPassword}</p>
-                      )}
-                    </FieldShell>
-                  </>
-                ) : (
-                  <>
-                    <FieldShell label="Nome completo">
-                      <input
-                        className={cn(inputClass, "bg-gray-2 text-gray-11")}
-                        value={fullName}
-                        readOnly
-                      />
-                    </FieldShell>
-                    <FieldShell label="E-mail do membro">
-                      <input
-                        type="email"
-                        className={cn(inputClass, "bg-gray-2 text-gray-11")}
-                        value={email}
-                        readOnly
-                      />
-                    </FieldShell>
-                  </>
-                )}
-              </div>
-            </section>
-
-            {isOwnerMember && (
-              <p className="px-4 -mt-2 text-sm text-gray-11 font-family-dm-sans">
-                O proprietário possui acesso total a permissões e eventos da
-                organização.
-              </p>
-            )}
-
-            {/* Permissões */}
-            <section className="flex flex-col gap-4 md:gap-5 px-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">
-                  Permissões
-                </h3>
-                <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2">
-                  <button
-                    type="button"
-                    onClick={selectAllPermissions}
-                    disabled={saving || removing || isOwnerMember}
-                    className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
-                  >
-                    Selecionar tudo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearAllPermissions}
-                    disabled={saving || removing || isOwnerMember}
-                    className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
-                  >
-                    Limpar tudo
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3">
-                {PERMISSION_ROWS.map((row) => (
-                  <button
-                    key={row.id}
-                    type="button"
-                    onClick={() => togglePermission(row.id)}
-                    disabled={saving || removing || isOwnerMember}
-                    className={cn(
-                      "flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50",
-                      "disabled:opacity-50"
-                    )}
-                  >
-                    <PermissionCheckbox checked={!!permissions[row.id]} />
-                    <div className="flex min-w-0 flex-1 flex-col gap-3 leading-[1.3]">
-                      <p className="text-base font-semibold text-gray-12 font-family-dm-sans">
-                        {row.title}
-                      </p>
-                      <p className="text-sm font-normal text-gray-11 font-family-dm-sans">
-                        {row.description}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Eventos */}
-            <section className="flex flex-col gap-4 md:gap-5 px-4 pb-6 md:pb-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">
-                  Eventos
-                </h3>
-                <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2">
-                  <button
-                    type="button"
-                    onClick={selectAllEvents}
-                    disabled={
-                      saving ||
-                      removing ||
-                      loadingEvents ||
-                      events.length === 0 ||
-                      isOwnerMember
-                    }
-                    className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
-                  >
-                    Selecionar tudo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearAllEvents}
-                    disabled={
-                      saving ||
-                      removing ||
-                      loadingEvents ||
-                      events.length === 0 ||
-                      isOwnerMember
-                    }
-                    className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
-                  >
-                    Limpar tudo
-                  </button>
-                </div>
-              </div>
-              {detailLoading && mode === "edit" ? (
-                <p className="text-sm text-gray-11 font-family-dm-sans px-1">
-                  Carregando dados do colaborador…
-                </p>
-              ) : loadingEvents ? (
-                <p className="text-sm text-gray-11 font-family-dm-sans">
-                  Carregando eventos…
-                </p>
-              ) : events.length === 0 ? (
-                <p className="text-sm text-gray-11 font-family-dm-sans">
-                  Nenhum evento encontrado.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="relative w-full">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-gray-11" />
-                    <input
-                      type="search"
-                      value={eventSearch}
-                      onChange={(e) => setEventSearch(e.target.value)}
-                      placeholder="Buscar por nome, email.."
-                      disabled={saving || removing || isOwnerMember}
-                      className={cn(
-                        inputClass,
-                        "pl-11",
-                        (saving || removing || isOwnerMember) && "opacity-50"
-                      )}
-                      aria-label="Buscar eventos"
-                    />
-                  </div>
-                  {filteredEventsForList.length === 0 ? (
-                    <p className="text-sm text-gray-11 font-family-dm-sans px-1">
-                      Nenhum evento corresponde à busca.
-                    </p>
+                        {fieldErrors.email && (
+                          <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.email}</p>
+                        )}
+                      </FieldShell>
+                      <FieldShell label="Senha">
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            className={cn(inputClass, inputError("password"))}
+                            placeholder="Digite sua senha"
+                            value={password}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              if (fieldErrors.password) setFieldErrors((p) => { const n = { ...p }; delete n.password; return n; });
+                            }}
+                            disabled={saving}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            tabIndex={-1}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                        {fieldErrors.password && (
+                          <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.password}</p>
+                        )}
+                      </FieldShell>
+                      <FieldShell label="Confirmar senha">
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            className={cn(inputClass, inputError("confirmPassword"))}
+                            placeholder="Digite a senha novamente"
+                            value={confirmPassword}
+                            onChange={(e) => {
+                              setConfirmPassword(e.target.value);
+                              if (fieldErrors.confirmPassword) setFieldErrors((p) => { const n = { ...p }; delete n.confirmPassword; return n; });
+                            }}
+                            disabled={saving}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            tabIndex={-1}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                        {fieldErrors.confirmPassword && (
+                          <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.confirmPassword}</p>
+                        )}
+                      </FieldShell>
+                    </>
                   ) : (
                     <>
-                      {paginatedFilteredEvents.map((ev) => {
-                        const img = eventListImageUrl(ev);
-                        return (
-                          <button
-                            key={ev.id}
-                            type="button"
-                            onClick={() => toggleEvent(ev.id)}
-                            disabled={saving || removing || isOwnerMember}
-                            className={cn(
-                              "flex w-full items-center gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50",
-                              "disabled:opacity-50"
-                            )}
-                          >
-                            <PermissionCheckbox
-                              checked={!!eventSelection[ev.id]}
-                            />
-                            <span className="relative size-11 shrink-0 overflow-hidden rounded-lg border border-gray-6 bg-gray-3">
-                              {img ? (
-                                <Image
-                                  src={img}
-                                  alt={ev.name}
-                                  width={44}
-                                  height={44}
-                                  className="size-11 object-cover"
-                                />
-                              ) : (
-                                <span className="flex size-full items-center justify-center">
-                                  <ImageIcon
-                                    className="size-5 text-gray-11"
-                                    aria-hidden
-                                  />
-                                </span>
-                              )}
-                            </span>
-                            <p className="min-w-0 flex-1 text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
-                              {ev.name}
-                            </p>
-                          </button>
-                        );
-                      })}
-                      <CollaboratorDrawerEventsPagination
-                        totalPages={eventsTotalPages}
-                        safePage={safeEventsPage}
-                        onPageChange={setEventsListPage}
-                        disabled={saving || removing || isOwnerMember}
-                      />
+                      <FieldShell label="Nome completo">
+                        <input
+                          className={cn(inputClass, "bg-gray-2 text-gray-11")}
+                          value={fullName}
+                          readOnly
+                        />
+                      </FieldShell>
+                      <FieldShell label="E-mail do membro">
+                        <input
+                          type="email"
+                          className={cn(inputClass, "bg-gray-2 text-gray-11")}
+                          value={email}
+                          readOnly
+                        />
+                      </FieldShell>
                     </>
                   )}
                 </div>
+              </section>
+
+              {isOwnerMember && (
+                <p className="px-4 -mt-2 text-sm text-gray-11 font-family-dm-sans">
+                  O proprietário possui acesso total a permissões e eventos da
+                  organização.
+                </p>
               )}
-            </section>
-          </div>
-        </div>
 
-        {/* Footer — mobile: remover acima + Cancelar | Adicionar/Salvar; desktop: ordem original */}
-        <div className="shrink-0 border-t border-gray-6 bg-gray-1 md:bg-gray-2">
-          <div className="flex flex-row flex-wrap items-stretch gap-2 px-4 py-3 pb-0 md:pb-3 md:justify-between">
-            {mode === "edit" && !isOwnerMember && (
-              <Button
-                variant="destructive"
-                onClick={handleRemove}
-                disabled={saving || removing}
-                className="hidden h-11 font-manrope font-bold text-base md:inline-flex"
-              >
-                {removing ? "Deletando…" : "Deletar"}
-              </Button>
-            )}
-            <div className={`flex items-center gap-2 w-full  ${mode === "edit" && !isOwnerMember ? "md:w-max" : "md:w-full"} md:justify-between pb-2 md:pb-0`}>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={saving || removing}
-                className="h-11 min-h-[44px] min-w-0 flex-1 rounded-lg border-gray-6 px-3 font-manrope font-bold text-base text-gray-12 md:min-w-[110px] md:flex-initial md:px-5"
-              >
-                Cancelar
-              </Button>
+              {/* Permissões */}
+              <section className="flex flex-col gap-4 md:gap-5 px-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">
+                    Permissões
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllPermissions}
+                      disabled={saving || removing || isOwnerMember}
+                      className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
+                    >
+                      Selecionar tudo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearAllPermissions}
+                      disabled={saving || removing || isOwnerMember}
+                      className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
+                    >
+                      Limpar tudo
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {PERMISSION_ROWS.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => togglePermission(row.id)}
+                      disabled={saving || removing || isOwnerMember}
+                      className={cn(
+                        "flex w-full gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50",
+                        "disabled:opacity-50"
+                      )}
+                    >
+                      <PermissionCheckbox checked={!!permissions[row.id]} />
+                      <div className="flex min-w-0 flex-1 flex-col gap-2">
+                        <p className="text-base font-semibold text-gray-12 font-family-dm-sans">
+                          {row.title}
+                        </p>
+                        <p className="text-sm font-normal text-gray-11 font-family-dm-sans">
+                          {row.description}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
 
-              <Button
-                type="button"
-                onClick={mode === "create" ? handleCreate : handleEditSave}
-                disabled={
-                  saving ||
-                  removing ||
-                  (mode === "edit" && (detailLoading || isOwnerMember))
-                }
-                className={cn(
-                  "h-11 min-h-[44px] min-w-0 flex-1 rounded-lg px-3 font-manrope font-bold text-base md:min-w-[176px] md:flex-initial md:px-5",
-                  "bg-[#59E373] text-gray-12 shadow-xs hover:bg-[#59E373]/90 hover:text-gray-1 active:bg-[#59E373]/80",
-                  "md:bg-[#59E373] md:text-[#141414] md:hover:text-[#141414]/90 md:active:text-[#141414]/80"
-                )}
-              >
-                {saving ? (
-                  "Salvando…"
+              {/* Eventos */}
+              <section className="flex flex-col gap-4 md:gap-5 px-4 pb-6 md:pb-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <h3 className="text-base font-bold text-gray-12 font-manrope leading-[1.1] md:text-lg">
+                    Eventos
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllEvents}
+                      disabled={
+                        saving ||
+                        removing ||
+                        loadingEvents ||
+                        events.length === 0 ||
+                        isOwnerMember
+                      }
+                      className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
+                    >
+                      Selecionar tudo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearAllEvents}
+                      disabled={
+                        saving ||
+                        removing ||
+                        loadingEvents ||
+                        events.length === 0 ||
+                        isOwnerMember
+                      }
+                      className="h-11 rounded-lg border border-gray-6 bg-gray-1 px-3 text-sm font-bold text-gray-12 font-family-dm-sans hover:bg-gray-2 transition-colors disabled:opacity-50 md:h-10 md:px-5"
+                    >
+                      Limpar tudo
+                    </button>
+                  </div>
+                </div>
+                {detailLoading && mode === "edit" ? (
+                  <p className="text-sm text-gray-11 font-family-dm-sans px-1">
+                    Carregando dados do colaborador…
+                  </p>
+                ) : loadingEvents ? (
+                  <p className="text-sm text-gray-11 font-family-dm-sans">
+                    Carregando eventos…
+                  </p>
+                ) : events.length === 0 ? (
+                  <p className="text-sm text-gray-11 font-family-dm-sans">
+                    Nenhum evento encontrado.
+                  </p>
                 ) : (
-                  <>
-                    <span className="md:hidden">{primaryCtaMobile}</span>
-                    <span className="hidden md:inline">{primaryCta}</span>
-                  </>
+                  <div className="flex flex-col gap-3">
+                    <div className="relative w-full">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-gray-11" />
+                      <input
+                        type="search"
+                        value={eventSearch}
+                        onChange={(e) => setEventSearch(e.target.value)}
+                        placeholder="Buscar por nome, email.."
+                        disabled={saving || removing || isOwnerMember}
+                        className={cn(
+                          inputClass,
+                          "pl-11",
+                          (saving || removing || isOwnerMember) && "opacity-50"
+                        )}
+                        aria-label="Buscar eventos"
+                      />
+                    </div>
+                    {filteredEventsForList.length === 0 ? (
+                      <p className="text-sm text-gray-11 font-family-dm-sans px-1">
+                        Nenhum evento corresponde à busca.
+                      </p>
+                    ) : (
+                      <>
+                        {paginatedFilteredEvents.map((ev) => {
+                          const img = eventListImageUrl(ev);
+                          return (
+                            <button
+                              key={ev.id}
+                              type="button"
+                              onClick={() => toggleEvent(ev.id)}
+                              disabled={saving || removing || isOwnerMember}
+                              className={cn(
+                                "flex w-full items-center gap-3 rounded-lg border border-gray-6 px-3 py-4 text-left transition-colors hover:bg-gray-2/50",
+                                "disabled:opacity-50"
+                              )}
+                            >
+                              <PermissionCheckbox
+                                checked={!!eventSelection[ev.id]}
+                              />
+                              <span className="relative size-11 shrink-0 overflow-hidden rounded-lg border border-gray-6 bg-gray-3">
+                                {img ? (
+                                  <Image
+                                    src={img}
+                                    alt={ev.name}
+                                    width={44}
+                                    height={44}
+                                    className="size-11 object-cover"
+                                  />
+                                ) : (
+                                  <span className="flex size-full items-center justify-center">
+                                    <ImageIcon
+                                      className="size-5 text-gray-11"
+                                      aria-hidden
+                                    />
+                                  </span>
+                                )}
+                              </span>
+                              <p className="min-w-0 flex-1 text-base font-semibold text-gray-12 font-family-dm-sans leading-[1.3] wrap-break-word">
+                                {ev.name}
+                              </p>
+                            </button>
+                          );
+                        })}
+                        <CollaboratorDrawerEventsPagination
+                          totalPages={eventsTotalPages}
+                          safePage={safeEventsPage}
+                          onPageChange={setEventsListPage}
+                          disabled={saving || removing || isOwnerMember}
+                        />
+                      </>
+                    )}
+                  </div>
                 )}
-              </Button>
+              </section>
             </div>
           </div>
-          {mode === "edit" && !isOwnerMember && (
-            <div className="border-b border-gray-6 px-4 py-3 md:hidden">
-              <Button
-                variant="destructive"
-                onClick={handleRemove}
-                disabled={saving || removing}
-                className="h-11 w-full rounded-lg font-manrope font-bold text-base"
-              >
-                {removing ? "Deletando…" : "Deletar da organização"}
-              </Button>
+
+          {/* Footer — mobile: remover acima + Cancelar | Adicionar/Salvar; desktop: ordem original */}
+          <div className="shrink-0 border-t border-gray-6 bg-gray-1 md:bg-gray-2">
+            <div className="flex flex-row flex-wrap items-stretch gap-2 px-4 py-3 pb-0 md:pb-3 md:justify-between">
+              {mode === "edit" && !isOwnerMember && (
+                <Button
+                  variant="destructive"
+                  onClick={handleRemove}
+                  disabled={saving || removing}
+                  className="hidden h-11 font-manrope font-bold text-base md:inline-flex"
+                >
+                  {removing ? "Deletando…" : "Deletar"}
+                </Button>
+              )}
+              <div className={`flex items-center gap-2 w-full  ${mode === "edit" && !isOwnerMember ? "md:w-max" : "md:w-full"} md:justify-between pb-2 md:pb-0`}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={saving || removing}
+                  className="h-11 min-h-[44px] min-w-0 flex-1 rounded-lg border-gray-6 px-3 font-manrope font-bold text-base text-gray-12 md:min-w-[110px] md:flex-initial md:px-5"
+                >
+                  Cancelar
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={mode === "create" ? handleCreate : handleEditSave}
+                  disabled={
+                    saving ||
+                    removing ||
+                    (mode === "edit" && (detailLoading || isOwnerMember))
+                  }
+                  className={cn(
+                    "h-11 min-h-[44px] min-w-0 flex-1 rounded-lg px-3 font-manrope font-bold text-base md:min-w-[176px] md:flex-initial md:px-5",
+                    "bg-[#59E373] text-gray-12 shadow-xs hover:bg-[#59E373]/90 hover:text-gray-1 active:bg-[#59E373]/80",
+                    "md:bg-[#59E373] md:text-[#141414] md:hover:text-[#141414]/90 md:active:text-[#141414]/80"
+                  )}
+                >
+                  {saving ? (
+                    "Salvando…"
+                  ) : (
+                    <>
+                      <span className="md:hidden">{primaryCtaMobile}</span>
+                      <span className="hidden md:inline">{primaryCta}</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          )}
-        </div>
+            {mode === "edit" && !isOwnerMember && (
+              <div className="border-b border-gray-6 px-4 py-3 md:hidden">
+                <Button
+                  variant="destructive"
+                  onClick={handleRemove}
+                  disabled={saving || removing}
+                  className="h-11 w-full rounded-lg font-manrope font-bold text-base"
+                >
+                  {removing ? "Deletando…" : "Deletar da organização"}
+                </Button>
+              </div>
+            )}
+          </div>
 
         </div>{/* fim do wrapper relative */}
       </DrawerContent>

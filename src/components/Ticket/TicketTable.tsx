@@ -328,6 +328,7 @@ function SortableTicketRow({
         <div className="flex h-full w-[148px] shrink-0 items-center justify-center gap-1 px-2 py-2">
           <button
             type="button"
+            data-nav
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
@@ -401,6 +402,7 @@ function SortableTicketRow({
           </div>
           <button
             type="button"
+            data-nav
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();

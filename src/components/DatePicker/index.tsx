@@ -243,7 +243,7 @@ export function DatePicker({
             mode="single"
             captionLayout="dropdown"
             fromYear={fromYear ?? new Date().getFullYear()}
-            toYear={toYear ?? new Date().getFullYear() + 10}
+            toYear={toYear ?? new Date().getFullYear() + 4}
             disablePastDates={disablePastDates}
             selected={tempDate}
             onSelect={(date: Date | undefined) => {

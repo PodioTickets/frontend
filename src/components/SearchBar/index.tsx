@@ -5,7 +5,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-type SearchResult = { id: string; title: string; href: string; logoUrl?: string };
+type SearchResult = {
+  id: string;
+  title: string;
+  href: string;
+  logoUrl?: string;
+  location?: string;
+  date?: string;
+};
 
 type Props = {
   search: string;
@@ -51,8 +58,8 @@ export function SearchBar({
 
   const handleResultClick = useCallback(
     (result: { id: string; title: string; href: string }) => {
-    if (onResultClick) {
-      onResultClick(result);
+      if (onResultClick) {
+        onResultClick(result);
       } else {
         router.push(result.href);
       }
@@ -70,9 +77,9 @@ export function SearchBar({
           onSearch();
         } else {
           router.push(`/search?q=${encodeURIComponent(search.trim())}`);
-    }
-    setSearch("");
-    setIsOpen(false);
+        }
+        setSearch("");
+        setIsOpen(false);
         setIsFocused(false);
       } else if (e.key === "Escape") {
         setIsOpen(false);
@@ -126,9 +133,7 @@ export function SearchBar({
               {results.map((result, index) => (
                 <div
                   key={result.id || index}
-                  className={`h-[56px] px-4 flex items-center gap-3 text-gray-12 hover:bg-gray-4 hover:text-primary-11 transition-colors duration-200 cursor-pointer ${
-                    index > 0 ? "border-t border-gray-6" : ""
-                  }`}
+                  className={`min-h-[56px] px-4 py-3 flex items-center gap-3 text-gray-12 hover:bg-gray-4 transition-colors duration-200 cursor-pointer ${index > 0 ? "border-t border-gray-6" : ""}`}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     handleResultClick(result);
@@ -149,7 +154,16 @@ export function SearchBar({
                       </div>
                     )}
                   </div>
-                  <span className="truncate text-sm">{result.title}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate text-sm font-semibold text-gray-12 leading-[1.3]">
+                      {result.title}
+                    </span>
+                    {(result.location || result.date) && (
+                      <span className="truncate text-xs text-gray-11 leading-[1.3] mt-0.5">
+                        {[result.location, result.date].filter(Boolean).join(" • ")}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

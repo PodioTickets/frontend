@@ -48,6 +48,10 @@ interface CheckoutTimerContextValue {
   clearTimer: () => void;
   /** Força re-sincronização via GET /orders/{id}. */
   refreshFromServer: () => Promise<OrderResponse | null>;
+  /** Suprime o refresh automático de visibilidade (ex.: modal de erro de pagamento aberto). */
+  pauseVisibilityRefresh: () => void;
+  /** Retoma o refresh automático de visibilidade. */
+  resumeVisibilityRefresh: () => void;
 }
 
 const CheckoutTimerContext = createContext<
@@ -125,6 +129,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
   const [expiredFallbackUrl, setExpiredFallbackUrl] = useState<string | null>(null);
   const stateRef = useRef<TimerState | null>(null);
   const hasExpiredRef = useRef(false);
+  const suppressVisibilityRefreshRef = useRef(false);
 
   // Refs estáveis para funções usadas no tick — evita re-runs desnecessários.
   const getOrderRef = useRef(getOrder);
@@ -353,11 +358,19 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]); // Apenas [state] — intencional para evitar loop
 
+  const pauseVisibilityRefresh = useCallback(() => {
+    suppressVisibilityRefreshRef.current = true;
+  }, []);
+
+  const resumeVisibilityRefresh = useCallback(() => {
+    suppressVisibilityRefreshRef.current = false;
+  }, []);
+
   // Re-sincroniza quando a aba volta ao foco.
   useEffect(() => {
     if (!state) return;
     const onVisibility = () => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && !suppressVisibilityRefreshRef.current) {
         void refreshFromServer();
       }
     };
@@ -375,6 +388,8 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
       syncFromOrder,
       clearTimer,
       refreshFromServer,
+      pauseVisibilityRefresh,
+      resumeVisibilityRefresh,
     }),
     [
       state,
@@ -383,6 +398,8 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
       syncFromOrder,
       clearTimer,
       refreshFromServer,
+      pauseVisibilityRefresh,
+      resumeVisibilityRefresh,
     ],
   );
 

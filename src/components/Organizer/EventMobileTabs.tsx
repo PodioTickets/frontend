@@ -18,11 +18,11 @@ export interface EventTabItem {
   href: string;
 }
 
-const EVENT_TABS_DEF = (eventId: string) => [
+const EVENT_TABS_DEF = (eventId: string): { label: string; href: string; permission: string | string[] | null }[] => [
   { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard`, permission: "dashboard" },
-  { label: "Inscrições", href: `/organizer/events/${eventId}/registrations`, permission: null },
+  { label: "Inscrições", href: `/organizer/events/${eventId}/registrations`, permission: "view_event" },
   { label: "Financeiro", href: `/organizer/events/${eventId}/financial`, permission: "financial" },
-  { label: "Editar", href: `/organizer/events/${eventId}/edit`, permission: "edit_event" },
+  { label: "Editar", href: `/organizer/events/${eventId}/edit`, permission: ["edit_event", "view_event"] },
   { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom`, permission: "coupons" },
   { label: "Ads", href: `/organizer/events/${eventId}/ads`, permission: "pixel" },
   { label: "Notificação", href: `/organizer/events/${eventId}/notifications`, permission: "notify" },
@@ -34,7 +34,11 @@ export function getEventTabs(
 ): EventTabItem[] {
   const can = hasPermission ?? (() => true);
   return EVENT_TABS_DEF(eventId)
-    .filter((t) => t.permission === null || can(t.permission))
+    .filter((t) => {
+      if (t.permission === null) return true;
+      if (Array.isArray(t.permission)) return t.permission.some((p) => can(p));
+      return can(t.permission);
+    })
     .map(({ label, href }) => ({ label, href }));
 }
 

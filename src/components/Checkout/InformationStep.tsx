@@ -20,6 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
+import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { UserAutocomplete } from "../UserAutocomplete";
 import type { LinkedUser } from "@/hooks/useLinkedUsers";
 import toast from "react-hot-toast";
@@ -69,6 +70,7 @@ export function InformationStep({
   } = useCheckout();
 
   const eventId = event?.id;
+  const { clearTimer } = useCheckoutTimer();
 
   // Buscar tickets e categorias do servidor
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
@@ -247,6 +249,23 @@ export function InformationStep({
 
     return result;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
+
+  // Detecta remoção de todos os ingressos: cancela reserva no servidor e volta
+  const hadParticipantsRef = useRef(false);
+  const hasCancelledRef = useRef(false);
+
+  useEffect(() => {
+    if (participantsWithRaces.length > 0) hadParticipantsRef.current = true;
+  }, [participantsWithRaces.length]);
+
+  useEffect(() => {
+    if (previewMode || loading || !hadParticipantsRef.current || hasCancelledRef.current) return;
+    if (participantsWithRaces.length === 0) {
+      hasCancelledRef.current = true;
+      clearTimer();
+      onBack();
+    }
+  }, [participantsWithRaces.length, loading, previewMode, clearTimer, onBack]);
 
   // Garantir que o array de participantes tenha pelo menos o número necessário de elementos
   useEffect(() => {

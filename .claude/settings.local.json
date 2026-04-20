@@ -7,7 +7,14 @@
       "mcp__claude_ai_Figma__get_design_context",
       "Bash(xargs grep *)",
       "Bash(python3 *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "mcp__obsidian__*",
+      "mcp__obsidian__list-available-vaults",
+      "mcp__obsidian__read-note",
+      "Bash(where jq *)",
+      "Bash(powershell.exe -NonInteractive -Command '$content = Get-Content \"C:/Users/muril/Documents/Obsidian Vault/claude.md\" -Raw -Encoding UTF8; $escaped = $content -replace \"\\\\\\\\\\\\\\\\\", \"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\" -replace \"\\\\\"\", \"\\\\\\\\\\\\\\\\\\\\\"\" -replace \"`r`n\", \"\\\\\\\\n\" -replace \"`n\", \"\\\\\\\\n\"; Write-Output \"{\\\\\"hookSpecificOutput\\\\\":{\\\\\"hookEventName\\\\\":\\\\\"SessionStart\\\\\",\\\\\"additionalContext\\\\\":\\\\\"INSTRUCOES PERMANENTES \\(claude.md\\):\\\\\\\\n$escaped\\\\\"}}\"')",
+      "Bash(powershell.exe -NonInteractive -File \"C:/Users/muril/.claude/read-claude-md.ps1\")",
+      "Bash(powershell.exe -NonInteractive -ExecutionPolicy Bypass -File \"C:/Users/muril/.claude/read-claude-md.ps1\")"
     ]
   }
 }

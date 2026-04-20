@@ -87,7 +87,6 @@ export function getCheckoutModalityInfo(
   const modalityValue = ticket.modality?.trim();
   if (!modalityValue) return null;
 
-  console.log("modalityValue", modalityValue);
   const fromEvent = event.modalities?.find(
     (m) =>
       m.name === modalityValue ||

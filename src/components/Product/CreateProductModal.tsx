@@ -969,7 +969,7 @@ export function CreateProductModal() {
                           ))}
 
                           {/* Slot de adicionar foto */}
-                          {productImages.length < 5 && (
+                          {productImages.length < 7 && (
                             <div
                               onDrop={handleDrop}
                               onDragOver={handleDragOver}
@@ -997,7 +997,7 @@ export function CreateProductModal() {
                           Arraste uma imagem para este campo ou clique aqui
                         </h1>
                         <p className="font-family-dm-sans text-gray-11">
-                          Pode adicionar até 5 fotos do seu produto <br />
+                          Pode adicionar até 7 fotos do seu produto <br />
                           PNG ou JPG, máximo 10MB cada
                         </p>
                       </div>

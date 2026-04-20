@@ -901,11 +901,12 @@ export function TicketForm({
       return true;
     } catch (error: unknown) {
       console.error("Error saving ticket:", error);
+      const apiMessage =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : (error as { response?: { data?: { message?: string } } })?.response?.data
-            ?.message || "Erro ao salvar ingresso";
+        apiMessage ||
+        (error instanceof Error ? error.message : null) ||
+        "Erro ao salvar ingresso";
       toast.error(errorMessage);
       return false;
     } finally {

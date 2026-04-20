@@ -4,10 +4,11 @@ import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext"
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 
 /**
- * Redireciona para o dashboard do evento se o usuário não tiver a permissão.
+ * Redireciona para o dashboard do evento se o usuário não tiver nenhuma das permissões.
+ * Aceita uma chave única ou um array (OR — basta ter uma).
  * Retorna `true` enquanto ainda está verificando (loading).
  */
-export function useEventPermissionGuard(permissionKey: string): boolean {
+export function useEventPermissionGuard(permissionKey: string | string[]): boolean {
   const { hasPermission, loading } = useOrganizerPermissions();
   const orgNav = useOrganizerNavigate();
   const params = useParams();
@@ -15,7 +16,9 @@ export function useEventPermissionGuard(permissionKey: string): boolean {
 
   useEffect(() => {
     if (loading) return;
-    if (!hasPermission(permissionKey)) {
+    const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+    const allowed = keys.some((k) => hasPermission(k));
+    if (!allowed) {
       if (eventId) {
         orgNav.replace(`/organizer/events/${eventId}/dashboard`);
       } else {

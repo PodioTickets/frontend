@@ -70,6 +70,7 @@ type RegistrationListRow = Omit<Registration, "user"> & {
   ticket?: {
     name?: string;
     price?: number;
+    total?: number;
     category?: { name?: string };
   };
   order?: {
@@ -307,8 +308,8 @@ function RegistrationRow({
       {/* Valor */}
       <div className="flex h-full items-center justify-center p-4 w-[120px]">
         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
-          R$ {(registration.ticket?.price
-            ? (registration.ticket.price / 100).toLocaleString("pt-BR", {
+          R$ {(registration.ticket?.total
+            ? (registration.ticket.total / 100).toLocaleString("pt-BR", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })
@@ -344,24 +345,28 @@ function RegistrationRow({
 
       {/* Ações */}
       <div className="flex gap-1 h-full items-center justify-center px-4 py-2 w-[112px]">
-        <button
-          onClick={onViewPaymentDetails}
-          name="view-payment-details"
-          aria-label="Ver pedido"
-          title="Ver pedido"
-          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-        >
-          <FileText className="size-4 text-gray-11" />
-        </button>
-        <button
-          onClick={onViewRegistration}
-          name="view-registration"
-          aria-label="Ver ingresso"
-          title="Ver ingresso"
-          className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
-        >
-          <TicketIcon className="size-4 text-gray-11" />
-        </button>
+        {!isCancelled && (
+          <>
+            <button
+              onClick={onViewPaymentDetails}
+              name="view-payment-details"
+              aria-label="Ver pedido"
+              title="Ver pedido"
+              className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+            >
+              <FileText className="size-4 text-gray-11" />
+            </button>
+            <button
+              onClick={onViewRegistration}
+              name="view-registration"
+              aria-label="Ver ingresso"
+              title="Ver ingresso"
+              className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
+            >
+              <TicketIcon className="size-4 text-gray-11" />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1105,23 +1110,27 @@ export default function EventRegistrationsPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="h-px bg-gray-6" />
-                        <div className="flex gap-2 p-3">
-                          <button
-                            type="button"
-                            onClick={() => openViewRegistrationModal({ registrationId: registration.id, eventId, eventName: event?.name })}
-                            className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
-                          >
-                            Ver ingresso
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openPaymentDetailsModal({ registrationId: registration.id, eventId, eventName: event?.name })}
-                            className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
-                          >
-                            Ver pedido
-                          </button>
-                        </div>
+                        {!isCancelled && (
+                          <>
+                            <div className="h-px bg-gray-6" />
+                            <div className="flex gap-2 p-3">
+                              <button
+                                type="button"
+                                onClick={() => openViewRegistrationModal({ registrationId: registration.id, eventId, eventName: event?.name })}
+                                className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                              >
+                                Ver ingresso
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openPaymentDetailsModal({ registrationId: registration.id, eventId, eventName: event?.name })}
+                                className="flex-1 h-11 flex items-center justify-center rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                              >
+                                Ver pedido
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     );
                   })}
@@ -1174,12 +1183,12 @@ export default function EventRegistrationsPage() {
                 <div className="bg-gray-4 border-b border-gray-6 flex h-[44px] items-center">
                   <div className="flex h-full items-center p-4 w-[136px]">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                      ID do pedido
+                      ID da inscrição
                     </p>
                   </div>
                   <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                      Cliente
+                      Participante
                     </p>
                   </div>
                   <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">

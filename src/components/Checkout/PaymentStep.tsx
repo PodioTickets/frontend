@@ -613,7 +613,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const { participants, raceQuantities } = useCheckout();
   const eventId = event?.id;
-  const { orderId, syncFromOrder, clearTimer } = useCheckoutTimer();
+  const { orderId, syncFromOrder, clearTimer, pauseVisibilityRefresh, resumeVisibilityRefresh } = useCheckoutTimer();
   const {
     patchBillingAddress,
     payOrder,
@@ -1171,6 +1171,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       }
       if (err.code === "PAYMENT_REFUSED") {
         regenerateIdempotencyKey();
+        pauseVisibilityRefresh();
         setCardErrorModalOpen(true);
         return;
       }
@@ -1187,9 +1188,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         toast.error("Tente novamente.");
         return;
       }
+      pauseVisibilityRefresh();
       setCardErrorModalOpen(true);
       return;
     }
+    pauseVisibilityRefresh();
     setCardErrorModalOpen(true);
   };
 
@@ -1478,7 +1481,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     <>
       <CheckoutCardErrorModal
         open={cardErrorModalOpen}
-        onConfirm={() => setCardErrorModalOpen(false)}
+        onConfirm={() => {
+          setCardErrorModalOpen(false);
+          resumeVisibilityRefresh();
+        }}
       />
 
       {/* Mobile Layout */}

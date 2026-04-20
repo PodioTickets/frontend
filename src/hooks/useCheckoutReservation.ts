@@ -240,6 +240,18 @@ export function useCheckoutReservation() {
     [],
   );
 
+  /** `DELETE /orders/{id}` — cancela pedido pendente iniciado pelo usuário. */
+  const cancelOrder = useCallback(async (orderId: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/${orderId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    // 404 = já cancelado/não encontrado — tratar como sucesso
+    if (!res.ok && res.status !== 404) {
+      await handleResponse<void>(res);
+    }
+  }, []);
+
   return {
     reserveOrder,
     getOrder,
@@ -248,5 +260,6 @@ export function useCheckoutReservation() {
     patchBillingAddress,
     payOrder,
     getPaymentStatus,
+    cancelOrder,
   };
 }

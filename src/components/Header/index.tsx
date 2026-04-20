@@ -86,7 +86,7 @@ export function Header() {
     return full || user.email || "Usuário";
   }, [user]);
 
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; href: string; logoUrl?: string; location?: string; date?: string }>>([]);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -100,12 +100,31 @@ export function Header() {
       try {
         const res = await eventService.searchEvents({ q, limit: 5, status: "PUBLISHED" } as any);
         setSearchResults(
-          (res.events || []).map((e: any) => ({
-            id: e.id,
-            title: e.name || e.title,
-            href: `/events/${e.slug || e.id}`,
-            logoUrl: e.logoUrl || e.logo_url || undefined,
-          }))
+          (res.events || []).map((e: any) => {
+            const city: string = e.city || "";
+            const state: string = e.state || "";
+            const locationParts = [city, state].filter(Boolean);
+            const location = locationParts.length > 0 ? locationParts.join(", ") : (e.location || undefined);
+
+            let date: string | undefined;
+            const rawDate = e.eventDate || e.event_date;
+            if (rawDate) {
+              date = new Date(rawDate).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              });
+            }
+
+            return {
+              id: e.id,
+              title: e.name || e.title,
+              href: `/events/${e.slug || e.id}`,
+              logoUrl: e.logoUrl || e.logo_url || undefined,
+              location,
+              date,
+            };
+          })
         );
       } catch {
         setSearchResults([]);

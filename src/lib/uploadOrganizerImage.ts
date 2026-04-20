@@ -25,23 +25,17 @@ export function dataUrlToFile(dataUrl: string, filename: string): File {
 }
 
 /**
- * Reduz dimensão e/ou recompacta JPEG/WebP antes do upload (tópicos, banner, etc.).
- * PNG mantém tipo; GIF/WebP muito grandes viram JPEG quando não há transparência crítica.
+ * Redimensiona apenas se as dimensões forem absurdamente grandes (> 4000px).
+ * Nunca recomprime por peso — a qualidade do arquivo original é preservada.
+ * Saída sempre PNG (lossless). Arquivos dentro do limite passam sem qualquer processamento.
  */
 export async function maybeDownscaleImageFileForUpload(
   file: File,
-  options?: { maxDimension?: number; maxBytesBeforeResize?: number },
+  options?: { maxDimension?: number },
 ): Promise<File> {
-  const maxDim = options?.maxDimension ?? 2200;
-  const maxBytes = options?.maxBytesBeforeResize ?? 900_000;
-  /** Acima disso ainda medimos pixels — fotos ~400KB podem ter 6k px. */
-  const minBytesToProbeDimensions = 380_000;
+  const maxDim = options?.maxDimension ?? 4000;
 
   if (!file.type.startsWith("image/") || file.type === "image/gif") {
-    return file;
-  }
-
-  if (file.size <= maxBytes && file.size < minBytesToProbeDimensions) {
     return file;
   }
 
@@ -50,37 +44,27 @@ export async function maybeDownscaleImageFileForUpload(
     const img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      let { naturalWidth: w, naturalHeight: h } = img;
-      if (w <= 0 || h <= 0) {
+      const { naturalWidth: w, naturalHeight: h } = img;
+      if (w <= 0 || h <= 0 || Math.max(w, h) <= maxDim) {
         resolve(file);
         return;
       }
 
-      const largest = Math.max(w, h);
-      const overSized = largest > maxDim;
-      const overWeight = file.size > maxBytes;
-      if (!overSized && !overWeight) {
-        resolve(file);
-        return;
-      }
-
-      const scale = overSized ? maxDim / largest : 1;
-      w = Math.max(1, Math.round(w * scale));
-      h = Math.max(1, Math.round(h * scale));
+      const scale = maxDim / Math.max(w, h);
+      const tw = Math.max(1, Math.round(w * scale));
+      const th = Math.max(1, Math.round(h * scale));
 
       const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = tw;
+      canvas.height = th;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         resolve(file);
         return;
       }
-      ctx.drawImage(img, 0, 0, w, h);
-
-      const usePng = file.type === "image/png";
-      const mime = usePng ? "image/png" : "image/jpeg";
-      const quality = usePng ? undefined : 0.84;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, tw, th);
 
       canvas.toBlob(
         (blob) => {
@@ -89,11 +73,9 @@ export async function maybeDownscaleImageFileForUpload(
             return;
           }
           const base = file.name.replace(/\.[^.]+$/, "") || "image";
-          const ext = usePng ? "png" : "jpg";
-          resolve(new File([blob], `${base}.${ext}`, { type: mime }));
+          resolve(new File([blob], `${base}.png`, { type: "image/png" }));
         },
-        mime,
-        quality,
+        "image/png",
       );
     };
     img.onerror = () => {

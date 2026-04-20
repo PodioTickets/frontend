@@ -65,7 +65,7 @@ export function TicketBatchSection({
               <h3 className="text-gray-12 text-lg font-bold font-family-dm-sans leading-[1.1]">
                 Lote {index + 1} {index === 0 && "(Obrigatório)"}
               </h3>
-              {index > 0 && (
+              {index > 0 && sold === 0 && (
                 <button
                   type="button"
                   title="Remover lote"

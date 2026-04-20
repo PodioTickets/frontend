@@ -18,7 +18,7 @@ import { Dropdown, type DropdownOption } from "@/components/Dropdown";
 
 const YearRangeContext = React.createContext<{ fromYear: number; toYear: number }>({
   fromYear: new Date().getFullYear(),
-  toYear: new Date().getFullYear() + 10,
+  toYear: new Date().getFullYear() + 4,
 });
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
@@ -142,7 +142,7 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
 
   const yearOptions: DropdownOption[] = useMemo(() => {
     const list: DropdownOption[] = [];
-    for (let y = toYear; y >= fromYear; y--) {
+    for (let y = fromYear; y <= toYear; y++) {
       list.push({ id: String(y), label: String(y) });
     }
     return list;

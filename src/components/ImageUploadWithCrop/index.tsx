@@ -207,11 +207,10 @@ export const ImageUploadWithCrop = forwardRef<ImageUploadWithCropRef, ImageUploa
       setApplying(true);
       try {
         const file = await getCroppedImageFile(imageSrc, croppedAreaPixels, {
-          fileName: `${outputBaseName}-${Date.now()}.jpg`,
-          mimeType: "image/jpeg",
+          fileName: `${outputBaseName}-${Date.now()}.png`,
+          mimeType: "image/png",
           targetWidth: spec.outputWidth,
           targetHeight: spec.outputHeight,
-          quality: 0.92,
         });
         onCropped(file);
         closeModal();
