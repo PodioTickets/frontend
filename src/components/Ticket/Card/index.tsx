@@ -131,11 +131,19 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
         <h3 className="font-bold text-base leading-[1.1] text-gray-12 font-manrope line-clamp-2">
           {ticket.event.name}
         </h3>
-        <div className="flex gap-1 items-center justify-center">
-          <MapPin className="size-5 shrink-0 text-gray-12" />
-          <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-            {ticket.event.location.city}, {ticket.event.location.state}
-          </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-1 items-center justify-center">
+            <MapPin className="size-5 shrink-0 text-gray-12" />
+            <p className="font-normal text-sm text-gray-12 font-family-dm-sans">
+              {ticket.event.location.city}, {ticket.event.location.state}
+            </p>
+          </div>
+          <div className="flex gap-1 items-center justify-center">
+            <Calendar className="size-4 shrink-0 text-gray-12" />
+            <p className="font-normal text-sm text-gray-12 font-family-dm-sans">
+              {formatDate(ticket.event.eventDate)}
+            </p>
+          </div>
         </div>
       </div>
 

@@ -227,12 +227,12 @@ export default function EventPage() {
           const shouldShowImage = hasBannerUrl && !imageError;
 
           return shouldShowImage ? (
-            <div className="relative w-full h-[174px] md:h-[174px] mt-10 shadow-[0_5px_10px_rgba(0,0,0,0.3)] z-10 rounded-xl overflow-hidden bg-gray-3">
+            <div className="relative w-full h-[174px] md:h-[174px] mt-10 z-10 rounded-xl overflow-hidden bg-gray-3">
               <Image
                 src={event.bannerUrl}
                 alt={event.name}
                 fill
-                className="object-cover rounded-xl"
+                className="object-cover rounded-xl border-0"
                 style={{ position: 'absolute' }}
                 onError={(e) => {
                   setImageError(true);
@@ -245,7 +245,7 @@ export default function EventPage() {
               />
             </div>
           ) : (
-            <div className="relative w-full h-[174px] md:h-[174px] mt-10 shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden bg-gray-3 flex items-center justify-center">
+            <div className="relative w-full h-[174px] md:h-[174px] mt-10 rounded-xl overflow-hidden bg-gray-3 flex items-center justify-center">
               <Image
                 src="/banners/placeholder.png"
                 alt="Placeholder"
