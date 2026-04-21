@@ -6,6 +6,7 @@ import {
   type OrderPaymentStatusResponse,
   type OrderResponse,
   type PatchBillingAddressRequest,
+  type PatchCouponRequest,
   type PatchParticipantsRequest,
   type PatchProductsRequest,
   type PayOrderRequest,
@@ -86,15 +87,22 @@ function toOrderResponse(data: any): OrderResponse {
       batchName: t.ticketName ?? t.batchName,
       quantity: t.quantity,
       unitPrice: t.unitPrice ?? 0,
+      unitDiscount: t.unitDiscount ?? 0,
+      totalDiscount: t.totalDiscount ?? 0,
+      finalUnitPrice: t.finalUnitPrice ?? t.unitPrice ?? 0,
+      finalTotalPrice: t.finalTotalPrice ?? 0,
     })),
-    pricing: data.pricing ?? {
-      subtotal: data.totalAmount ?? 0,
-      serviceFee: data.serviceFee ?? 0,
-      couponDiscount: data.discount ?? 0,
-      voucherDiscount: 0,
-      total: data.finalAmount ?? data.totalAmount ?? 0,
+    pricing: {
+      subtotal: data.pricing?.subtotal ?? data.totalAmount ?? 0,
+      serviceFee: data.pricing?.serviceFee ?? data.serviceFee ?? 0,
+      couponDiscount: data.pricing?.couponDiscount ?? data.discount ?? 0,
+      voucherDiscount: data.pricing?.voucherDiscount ?? 0,
+      // Sempre usa finalAmount da raiz — pricing.total pode ser o bruto sem desconto
+      total: data.finalAmount ?? data.pricing?.total ?? data.totalAmount ?? 0,
       currency: "BRL" as const,
     },
+    coupon: data.coupon ?? null,
+    voucher: data.voucher ?? null,
     payment: data.payment,
     registrations: data.registrations,
     cancelledAt: data.cancelledAt,
@@ -240,6 +248,19 @@ export function useCheckoutReservation() {
     [],
   );
 
+  /** `PATCH /orders/{id}/coupon` — aplica/remove cupom ou voucher. Enviar `{}` para remover. */
+  const patchCoupon = useCallback(
+    async (orderId: string, payload: PatchCouponRequest): Promise<OrderResponse> => {
+      const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/${orderId}/coupon`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      });
+      return handleOrderResponse(res);
+    },
+    [],
+  );
+
   /** `DELETE /orders/{id}` — cancela pedido pendente iniciado pelo usuário. */
   const cancelOrder = useCallback(async (orderId: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}${ORDERS_PATH}/${orderId}`, {
@@ -258,6 +279,7 @@ export function useCheckoutReservation() {
     patchParticipants,
     patchProducts,
     patchBillingAddress,
+    patchCoupon,
     payOrder,
     getPaymentStatus,
     cancelOrder,

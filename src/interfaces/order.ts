@@ -23,6 +23,25 @@ export interface OrderTicket {
   batchName?: string;
   quantity: number;
   unitPrice: number;
+  unitDiscount?: number;
+  totalDiscount?: number;
+  finalUnitPrice?: number;
+  finalTotalPrice?: number;
+}
+
+export interface OrderCoupon {
+  id: string;
+  code: string | null;
+  couponType: "DISCOUNT" | "QUANTITY" | "AGE";
+  type: "PERCENTAGE" | "FIXED";
+  value: number;
+}
+
+export interface OrderVoucher {
+  id: string;
+  code: string;
+  name?: string;
+  status: string;
 }
 
 export interface OrderPricing {
@@ -73,6 +92,8 @@ export interface OrderResponse {
   serverTime: string;
   tickets: OrderTicket[];
   pricing: OrderPricing;
+  coupon?: OrderCoupon | null;
+  voucher?: OrderVoucher | null;
   payment?: OrderPaymentInfo;
   registrations?: OrderRegistration[];
   cancelledAt?: string;
@@ -113,6 +134,11 @@ export interface PatchProductsRequest {
     variationId?: string;
     quantity: number;
   }>;
+}
+
+export interface PatchCouponRequest {
+  couponCode?: string;
+  voucherCode?: string;
 }
 
 export interface PatchBillingAddressRequest {
@@ -177,6 +203,12 @@ export type OrderErrorCode =
   | "PARTICIPANTS_REQUIRED"
   | "PAYMENT_REFUSED"
   | "IDEMPOTENCY_KEY_MISMATCH"
+  | "COUPON_NOT_FOUND"
+  | "COUPON_EXPIRED"
+  | "COUPON_MIN_VALUE"
+  | "VOUCHER_NOT_FOUND"
+  | "VOUCHER_EXPIRED"
+  | "DISCOUNT_CONFLICT"
   | "VALIDATION_ERROR";
 
 export interface OrderErrorResponse {

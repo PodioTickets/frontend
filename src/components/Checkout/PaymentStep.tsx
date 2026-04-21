@@ -43,6 +43,15 @@ import {
   type PatchBillingAddressRequest,
   type PayOrderRequest,
 } from "@/interfaces/order";
+
+const COUPON_ERROR_MESSAGES: Record<string, string> = {
+  COUPON_NOT_FOUND: "Cupom inválido ou não encontrado.",
+  COUPON_EXPIRED: "Cupom expirado.",
+  COUPON_MIN_VALUE: "Pedido abaixo do valor mínimo do cupom.",
+  VOUCHER_NOT_FOUND: "Voucher inválido ou não encontrado.",
+  VOUCHER_EXPIRED: "Voucher expirado.",
+  DISCOUNT_CONFLICT: "Cupom e voucher não podem ser usados juntos.",
+};
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
 import toast from "react-hot-toast";
@@ -592,11 +601,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const handleSetCardExpiry = (v: string) => { setCardExpiry(v); setCardErrors((p) => { const n = { ...p }; delete n.cardExpiry; return n; }); };
   const handleSetCardCVV = (v: string) => { setCardCVV(v); setCardErrors((p) => { const n = { ...p }; delete n.cardCVV; return n; }); };
 
+  // Order state from server (authoritative for pricing, coupon, voucher)
+  const [currentOrder, setCurrentOrder] = useState<OrderResponse | null>(null);
+  const orderFetchedRef = useRef(false);
+
   // Coupon states
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
-  const [couponDiscount, setCouponDiscount] = useState<number>(0);
-  const [isCouponApplied, setIsCouponApplied] = useState(false);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   // PIX states
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
@@ -615,9 +627,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const eventId = event?.id;
   const { orderId, syncFromOrder, clearTimer, pauseVisibilityRefresh, resumeVisibilityRefresh } = useCheckoutTimer();
   const {
+    getOrder,
     patchBillingAddress,
+    patchCoupon,
     payOrder,
   } = useCheckoutReservation();
+
+  // Busca o pedido do servidor no mount para obter pricing, coupon e voucher atualizados.
+  useEffect(() => {
+    if (!orderId || orderFetchedRef.current) return;
+    orderFetchedRef.current = true;
+    getOrder(orderId)
+      .then((order) => setCurrentOrder(order))
+      .catch(() => { /* ignora — usa valores locais como fallback */ });
+  }, [orderId, getOrder]);
 
   /**
    * Idempotency key pro POST /pay. Gerada UMA vez quando o usuário monta
@@ -867,6 +890,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     [categories]
   );
 
+  // Mapa ticketId → reservedTicket para desconto por ingresso.
+  const reservedTicketsMap = useMemo(() => {
+    type ReservedTicket = NonNullable<typeof currentOrder>["tickets"][0];
+    if (!currentOrder) return {} as Record<string, ReservedTicket>;
+    const map: Record<string, ReservedTicket> = {};
+    currentOrder.tickets.forEach((t) => { map[t.ticketId] = t; });
+    return map;
+  }, [currentOrder]);
+
   const participantsData = useMemo(() => {
     const data: Array<{
       participantIndex: number;
@@ -893,10 +925,21 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       voucherDiscount?: number;
     }> = [];
 
+    const orderCoupon = currentOrder?.coupon;
+    const orderVoucher = currentOrder?.voucher;
+
     participantsWithTickets.forEach(({ ticket, participantIndex }) => {
       const participant = participants[participantIndex];
       if (participant && (participant.name || participant.cpf)) {
         const products = getParticipantProducts(participantIndex);
+        const reservedTicket = reservedTicketsMap[ticket.id];
+        const unitDiscount = reservedTicket?.unitDiscount ?? 0;
+
+        // Exibe badge de cupom apenas para cupons com código (DISCOUNT manual).
+        const hasCoupon = !!orderCoupon && !!orderCoupon.code && unitDiscount > 0;
+        // Voucher sempre exibe quando aplicado.
+        const hasVoucher = !!orderVoucher && !orderCoupon && unitDiscount > 0;
+
         data.push({
           participantIndex,
           ticketName: ticket.name,
@@ -911,17 +954,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             gender: participant.gender,
           },
           additionalProducts: products.length > 0 ? products : undefined,
-          // TODO: Adicionar cupom e voucher quando estiverem no contexto
-          couponCode: undefined,
-          couponDiscount: undefined,
-          voucherCode: undefined,
-          voucherDiscount: undefined,
+          couponCode: hasCoupon ? (orderCoupon!.code ?? undefined) : undefined,
+          couponDiscount: hasCoupon ? unitDiscount / 100 : undefined,
+          voucherCode: hasVoucher ? orderVoucher!.code : undefined,
+          voucherDiscount: hasVoucher ? unitDiscount / 100 : undefined,
         });
       }
     });
 
     return data;
-  }, [participantsWithTickets, participants, productsData]);
+  }, [participantsWithTickets, participants, productsData, currentOrder, reservedTicketsMap]);
 
   // Calcular produtos selecionados a partir do contexto (productVariations de cada participante)
   const orderItems = useMemo((): Array<{
@@ -1043,13 +1085,31 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return { totalParticipants: participants, totalPrice: total };
   }, [participantsWithTickets]);
 
-  const serviceFee = event.serviceFee || 0;
+  // Usa valores do servidor quando disponíveis (authoritative), senão fallback local.
+  const serviceFee = currentOrder
+    ? currentOrder.pricing.serviceFee / 100
+    : (event.serviceFee || 0);
   const additionalProductsTotal = orderItems.reduce(
     (sum, item) => sum + item.price / 100,
     0
   );
-  const subtotalValue = totalPrice + serviceFee + additionalProductsTotal;
-  const totalValue = subtotalValue - couponDiscount;
+  const subtotalValue = totalPrice + (event.serviceFee || 0) + additionalProductsTotal;
+
+  // Desconto e total vêm do servidor (finalAmount = totalAmount - discount).
+  const couponDiscount = currentOrder?.pricing.couponDiscount
+    ? currentOrder.pricing.couponDiscount / 100
+    : 0;
+  const voucherDiscount = currentOrder?.pricing.voucherDiscount
+    ? currentOrder.pricing.voucherDiscount / 100
+    : 0;
+  const totalValue = currentOrder
+    ? (currentOrder.pricing.total - (currentOrder.pricing.couponDiscount ?? 0) - (currentOrder.pricing.voucherDiscount ?? 0)) / 100
+    : subtotalValue - couponDiscount - voucherDiscount;
+
+  const isCouponApplied = !!currentOrder?.coupon;
+  const isVoucherApplied = !!currentOrder?.voucher;
+  const appliedCouponName = currentOrder?.coupon?.code ?? (isCouponApplied ? "Desconto automático" : undefined);
+  const appliedVoucherName = currentOrder?.voucher?.name ?? currentOrder?.voucher?.code;
 
   // Calcular opções de parcelamento baseado no valor total
   const installmentOptions = useMemo(() => {
@@ -1070,43 +1130,29 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return totalValue - discount;
   };
 
-  // Coupon validation
-  const validateCoupon = (code: string): boolean => {
-    // Remove espaços e converte para maiúsculo
-    const cleanCode = code.trim().replace(/\s/g, "");
-
-    // Verifica se tem 6 dígitos
-    if (cleanCode.length !== 6) {
-      return false;
-    }
-
-    // Verifica se é apenas números
-    if (!/^\d+$/.test(cleanCode)) {
-      return false;
-    }
-
-    // Verifica se é o cupom válido
-    return cleanCode === "111111";
-  };
-
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
-      setCouponError("Por favor, digite um código de cupom");
-      setIsCouponApplied(false);
-      setCouponDiscount(0);
+      setCouponError("Digite um código de cupom.");
       return;
     }
-
-    if (validateCoupon(couponCode)) {
-      // Cupom válido - aplicar desconto de R$ 40,00
-      setCouponError(null);
-      setIsCouponApplied(true);
-      setCouponDiscount(40);
-    } else {
-      // Cupom inválido
-      setCouponError("Cupom inválido");
-      setIsCouponApplied(false);
-      setCouponDiscount(0);
+    if (!orderId) {
+      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      return;
+    }
+    setCouponLoading(true);
+    setCouponError(null);
+    try {
+      const updated = await patchCoupon(orderId, { couponCode: couponCode.trim().toUpperCase() });
+      syncFromOrder(updated);
+      setCurrentOrder(updated);
+    } catch (err) {
+      if (err instanceof OrderApiError) {
+        setCouponError(COUPON_ERROR_MESSAGES[err.code] ?? err.message ?? "Cupom inválido.");
+      } else {
+        setCouponError("Erro ao aplicar cupom. Tente novamente.");
+      }
+    } finally {
+      setCouponLoading(false);
     }
   };
 
@@ -1218,6 +1264,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         billingAddress: payload,
       });
       syncFromOrder(updated);
+      setCurrentOrder(updated);
       setBillingAddressConfirmed(true);
     } catch (err) {
       if (err instanceof OrderApiError) {
@@ -1643,16 +1690,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   placeholder="Código de cupom (opcional)"
                   value={couponCode}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").substring(0, 6);
+                    const value = e.target.value.toUpperCase().substring(0, 30);
                     setCouponCode(value);
                     setCouponError(null);
-                    if (isCouponApplied) {
-                      setIsCouponApplied(false);
-                      setCouponDiscount(0);
-                    }
                   }}
-                  maxLength={6}
-                  inputMode="numeric"
+                  maxLength={30}
                   className={
                     couponError
                       ? "border-red-6"
@@ -1898,16 +1940,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             total={totalValue}
             couponCode={couponCode}
             couponDiscount={couponDiscount}
+            couponName={appliedCouponName}
             couponError={couponError}
             isCouponApplied={isCouponApplied}
-            onApplyCoupon={handleApplyCoupon}
+            isCouponLoading={couponLoading}
+            voucherCode={currentOrder?.voucher?.code}
+            voucherDiscount={voucherDiscount}
+            voucherName={appliedVoucherName}
+            onApplyCoupon={() => { void handleApplyCoupon(); }}
             onCouponChange={(code) => {
               setCouponCode(code);
               setCouponError(null);
-              if (isCouponApplied) {
-                setIsCouponApplied(false);
-                setCouponDiscount(0);
-              }
             }}
             participantsData={participantsData}
             onParticipantClick={handleParticipantClick}

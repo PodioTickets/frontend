@@ -45,8 +45,8 @@ interface ParticipantData {
 }
 
 interface OrderSummaryProps {
-  items?: OrderItem[]; // Produtos opcionais
-  groupedTickets?: GroupedTicket[]; // Ingressos selecionados
+  items?: OrderItem[];
+  groupedTickets?: GroupedTicket[];
   serviceFee: number;
   total: number;
   couponCode?: string;
@@ -54,6 +54,7 @@ interface OrderSummaryProps {
   couponName?: string;
   couponError?: string | null;
   isCouponApplied?: boolean;
+  isCouponLoading?: boolean;
   voucherCode?: string;
   voucherDiscount?: number;
   voucherName?: string;
@@ -73,6 +74,7 @@ export function OrderSummary({
   couponName,
   couponError = null,
   isCouponApplied = false,
+  isCouponLoading = false,
   voucherCode,
   voucherDiscount = 0,
   voucherName,
@@ -84,7 +86,6 @@ export function OrderSummary({
   const [couponCode, setCouponCode] = useState(externalCouponCode);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
 
-  // Sync external coupon code
   useEffect(() => {
     if (externalCouponCode !== couponCode) {
       setCouponCode(externalCouponCode);
@@ -212,18 +213,18 @@ export function OrderSummary({
                   placeholder="Código de cupom (opcional)"
                   value={couponCode}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").substring(0, 25);
+                    const value = e.target.value.toUpperCase().substring(0, 30);
                     setCouponCode(value);
-                    if (onCouponChange) {
-                      onCouponChange(value);
-                    }
+                    onCouponChange?.(value);
                   }}
-                  maxLength={25}
+                  maxLength={30}
                   className="flex-1 text-base text-gray-11 font-family-dm-sans font-normal leading-[1.3] bg-transparent border-none outline-none"
                 />
               </div>
               <Button
                 onClick={onApplyCoupon}
+                isLoading={isCouponLoading}
+                disabled={isCouponLoading}
               >
                 Aplicar
               </Button>
@@ -301,73 +302,75 @@ export function OrderSummary({
                     </div>
                   </div>
 
-                  {/* Perfil do Participante */}
-                  {participantData.participant && (
+                  {/* Perfil + Badges */}
+                  {(participantData.participant || participantData.couponCode || participantData.voucherCode) && (
                     <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="border border-gray-6 flex items-center p-3 rounded-xl w-full">
-                          <div className="flex gap-2 items-center">
-                            <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
-                              {participantData.participant.name ? (
-                                <span className="text-sm font-bold text-gray-12">
-                                  {participantData.participant.name.charAt(0).toUpperCase()}
-                                </span>
-                              ) : (
-                                <div className="size-10 rounded-full bg-gray-5" />
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-1 items-start justify-center">
-                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
-                                {participantData.participant.name || `Participante ${participantData.participantIndex + 1}`}
-                              </p>
-                              <div className="flex gap-2 items-center justify-center">
-                                {participantData.participant.birthDate && (
-                                  <>
-                                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                                      {formatDate(participantData.participant.birthDate)}
-                                    </p>
-                                    <div className="size-1 bg-gray-11 rounded-full" />
-                                  </>
+                      {participantData.participant && (
+                        <div className="flex items-center justify-between w-full">
+                          <div className="border border-gray-6 flex items-center p-3 rounded-xl flex-1">
+                            <div className="flex gap-2 items-center">
+                              <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
+                                {participantData.participant.name ? (
+                                  <span className="text-sm font-bold text-gray-12">
+                                    {participantData.participant.name.charAt(0).toUpperCase()}
+                                  </span>
+                                ) : (
+                                  <div className="size-10 rounded-full bg-gray-5" />
                                 )}
-                                {participantData.participant.gender && (
-                                  <>
-                                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                                      {getGenderLabel(participantData.participant.gender)}
-                                    </p>
-                                    {participantData.participant.cpf && (
+                              </div>
+                              <div className="flex flex-col gap-1 items-start justify-center">
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
+                                  {participantData.participant.name || `Participante ${participantData.participantIndex + 1}`}
+                                </p>
+                                <div className="flex gap-2 items-center justify-center">
+                                  {participantData.participant.birthDate && (
+                                    <>
+                                      <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                        {formatDate(participantData.participant.birthDate)}
+                                      </p>
                                       <div className="size-1 bg-gray-11 rounded-full" />
-                                    )}
-                                  </>
-                                )}
-                                {participantData.participant.cpf && (
-                                  <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                                    {maskCPF(participantData.participant.cpf)}
-                                  </p>
-                                )}
+                                    </>
+                                  )}
+                                  {participantData.participant.gender && (
+                                    <>
+                                      <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                        {getGenderLabel(participantData.participant.gender)}
+                                      </p>
+                                      {participantData.participant.cpf && (
+                                        <div className="size-1 bg-gray-11 rounded-full" />
+                                      )}
+                                    </>
+                                  )}
+                                  {participantData.participant.cpf && (
+                                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                      {maskCPF(participantData.participant.cpf)}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
+                          <div className="flex items-center ml-2">
+                            <button
+                              onClick={() => toggleParticipant(index)}
+                              className="flex items-center justify-center size-6"
+                            >
+                              <ArrowButton isOpen={false} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center">
-                          <button
-                            onClick={() => toggleParticipant(index)}
-                            className="flex items-center justify-center size-6"
-                          >
-                            <ArrowButton isOpen={false} />
-                          </button>
-                        </div>
-                      </div>
+                      )}
 
                       {/* Badge de Cupom */}
                       {participantData.couponCode && participantData.couponDiscount && (
                         <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
                           <div className="flex gap-1 items-center">
-                            <TicketIcon className="size-6 text-yellow-12" />
+                            <TicketIcon className="size-4 text-yellow-12" />
                             <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
                               Cupom: {participantData.couponCode}
                             </p>
                           </div>
-                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
                             {Math.round((participantData.couponDiscount / participantData.ticketPrice) * 100)}% OFF
                           </p>
                         </div>
@@ -377,12 +380,12 @@ export function OrderSummary({
                       {participantData.voucherCode && participantData.voucherDiscount && (
                         <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
                           <div className="flex gap-1 items-center">
-                            <StarIcon className="size-6 text-yellow-12" />
+                            <StarIcon className="size-4 text-yellow-12" />
                             <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
                               Voucher: {participantData.voucherCode}
                             </p>
                           </div>
-                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
                             100% Cortesia
                           </p>
                         </div>
