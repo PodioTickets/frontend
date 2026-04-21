@@ -158,23 +158,6 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
               {ticket.modality.name}
             </p>
           </div>
-
-          {/* Date and Time */}
-          <div className="flex items-center justify-between w-full">
-            <div className="flex gap-1 items-center justify-center">
-              <Calendar className="size-5 shrink-0 text-gray-12" />
-              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                {formatDate(ticket.event.eventDate)}
-              </p>
-            </div>
-            <div className="flex gap-1 items-center justify-center">
-              <Clock className="size-5 shrink-0 text-gray-12" />
-              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                {formatTime(ticket.event.eventDate)}
-              </p>
-            </div>
-          </div>
-
           {/* Distance */}
           {ticket.distance && (
             <div className="flex gap-1 items-center justify-center">
