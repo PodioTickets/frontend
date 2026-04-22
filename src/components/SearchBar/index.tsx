@@ -70,23 +70,29 @@ export function SearchBar({
     [onResultClick, router, setSearch]
   );
 
+  const triggerSearch = useCallback(() => {
+    if (search.trim().length > 0) {
+      if (onSearch) {
+        onSearch();
+      } else {
+        router.push(`/search?q=${encodeURIComponent(search.trim())}`);
+      }
+      setSearch("");
+      setIsOpen(false);
+      setIsFocused(false);
+    }
+  }, [search, onSearch, router, setSearch]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter" && search.trim().length > 0) {
-        if (onSearch) {
-          onSearch();
-        } else {
-          router.push(`/search?q=${encodeURIComponent(search.trim())}`);
-        }
-        setSearch("");
-        setIsOpen(false);
-        setIsFocused(false);
+      if (e.key === "Enter") {
+        triggerSearch();
       } else if (e.key === "Escape") {
         setIsOpen(false);
         inputRef.current?.blur();
       }
     },
-    [search, onSearch, router, setSearch]
+    [triggerSearch]
   );
 
   const handleChange = useCallback(
@@ -126,6 +132,7 @@ export function SearchBar({
           onFocus={handleFocus}
           onBlur={handleBlur}
           showClearButton={true}
+          onSearchIconClick={triggerSearch}
         />
         {shouldShowDropdown && (
           <div className="absolute top-full left-0 right-0 mt-2 w-full max-h-[300px] bg-gray-2 rounded-xl shadow-[0_0_10px_rgba(0,0,0,0.1)] border border-gray-6 z-50 overflow-hidden">

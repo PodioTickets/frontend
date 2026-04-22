@@ -128,6 +128,7 @@ export function CreateProductModal() {
   const organizerHiddenSemInteresseRef = useRef<ProductVariation | null>(null);
 
   const isEditing = data?.productId !== undefined;
+  const isReadOnly = data?.readOnly === true;
   const eventId = data?.eventId;
   const isProductLoading = isEditing && productFetchStatus === "loading";
 
@@ -867,7 +868,7 @@ export function CreateProductModal() {
                     )}
                   >
                     {isEditing ? (
-                      "Editar produto"
+                      isReadOnly ? "Visualizar produto" : "Editar produto"
                     ) : (
                       <>
                         <span className="md:hidden">Criar produto</span>
@@ -900,7 +901,7 @@ export function CreateProductModal() {
 
               {/* Content */}
               <div className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none] max-md:pb-36 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
-                <div className="flex flex-col gap-5 p-5 max-md:gap-8 max-md:p-4">
+                <div className={cn("flex flex-col gap-5 p-5 max-md:gap-8 max-md:p-4", isReadOnly && "pointer-events-none select-none opacity-70")}>
                   <div className="flex min-h-0 flex-col gap-11 max-md:gap-8 md:flex-1">
                     <div className="flex flex-col gap-6">
                       <div className="flex flex-col gap-1">
@@ -1603,7 +1604,7 @@ export function CreateProductModal() {
               </div>
 
               {/* Footer */}
-              <div
+              {!isReadOnly && <div
                 className={cn(
                   "flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-6",
                   "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-60 max-md:flex-col max-md:items-stretch max-md:bg-gray-1 max-md:p-4",
@@ -1658,7 +1659,7 @@ export function CreateProductModal() {
                         : "Criar produto"}
                   </Button>
                 </div>
-              </div>
+              </div>}
             </div>
           </motion.div>
 

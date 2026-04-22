@@ -42,11 +42,13 @@ interface TicketProductsSectionProps {
     product?: ProductData["product"];
     ticketBatchesTotalQuantity: number;
     linkedTickets?: { name: string; categoryName: string }[];
+    readOnly?: boolean;
   }) => void;
   openAddExistingProductsModal: (params: {
     eventId: string;
     excludeProductIds: string[];
   }) => void;
+  readOnly?: boolean;
 }
 
 function SortableTicketProductCard({
@@ -123,6 +125,7 @@ function SortableTicketProductCard({
             type="button"
             title="Editar"
             onClick={onEdit}
+            data-nav
             className="bg-gray-2 border border-gray-6 rounded-lg size-9 flex items-center justify-center hover:bg-gray-3 transition-colors"
           >
             <PencilIcon className="size-5 text-gray-11" />
@@ -150,6 +153,7 @@ export function TicketProductsSection({
   ticketBatchesTotalQuantity,
   openCreateProductModal,
   openAddExistingProductsModal,
+  readOnly = false,
 }: TicketProductsSectionProps) {
   const [activeProductDragId, setActiveProductDragId] = useState<string | null>(null);
 
@@ -280,6 +284,7 @@ export function TicketProductsSection({
                         product: product.product,
                         ticketBatchesTotalQuantity,
                         linkedTickets,
+                        readOnly,
                       });
                     }}
                     onRemove={() => {

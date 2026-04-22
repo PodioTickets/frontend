@@ -38,12 +38,13 @@ function CheckoutProdutosContent() {
       productId: string;
       variationId?: string;
       quantity: number;
+      participantEmail: string;
     }> = [];
     participants.forEach((p) => {
       if (!p.productVariations) return;
       Object.entries(p.productVariations).forEach(([productId, variationId]) => {
         if (!variationId) return;
-        products.push({ productId, variationId, quantity: 1 });
+        products.push({ productId, variationId, quantity: 1, participantEmail: p.email });
       });
     });
 

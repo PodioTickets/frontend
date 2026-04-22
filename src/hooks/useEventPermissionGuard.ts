@@ -19,7 +19,9 @@ export function useEventPermissionGuard(permissionKey: string | string[]): boole
     const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
     const allowed = keys.some((k) => hasPermission(k));
     if (!allowed) {
-      if (eventId) {
+      // Se a própria página de dashboard não é permitida, vai para a lista de eventos
+      const isDashboardGuard = keys.length === 1 && keys[0] === "dashboard";
+      if (eventId && !isDashboardGuard) {
         orgNav.replace(`/organizer/events/${eventId}/dashboard`);
       } else {
         orgNav.replace("/organizer/events");

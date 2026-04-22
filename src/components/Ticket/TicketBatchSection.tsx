@@ -63,7 +63,7 @@ export function TicketBatchSection({
           >
             <div className="flex items-center justify-between">
               <h3 className="text-gray-12 text-lg font-bold font-family-dm-sans leading-[1.1]">
-                Lote {index + 1} {index === 0 && "(Obrigatório)"}
+                Lote {index + 1}
               </h3>
               {index > 0 && sold === 0 && (
                 <button
@@ -90,7 +90,10 @@ export function TicketBatchSection({
                   onChange={(e) => {
                     const v = e.target.value.replace(/\D/g, "");
                     onBatchChange(batch.id, "quantity", v);
-                    if (v) onClearFieldError(`batch_quantity_${batch.id}`);
+                    if (v) {
+                      onClearFieldError(`batch_quantity_${batch.id}`);
+                      onClearFieldError(`batch_quantity_server_${batch.id}`);
+                    }
                   }}
                   onBlur={() => {
                     if (!String(batch.quantity).trim())
@@ -111,9 +114,10 @@ export function TicketBatchSection({
                       {sold} vaga{sold === 1 ? "" : "s"}{" "}
                       {sold === 1 ? "foi" : "foram"} vendida
                       {sold === 1 ? "" : "s"}.
-                      {quantityBelowSold && (
+                      {(quantityBelowSold || formErrors[`batch_quantity_server_${batch.id}`]) && (
                         <span className="block mt-0.5 text-red-11">
-                          A quantidade precisa ser superior ou igual ao total vendido.
+                          {formErrors[`batch_quantity_server_${batch.id}`] ||
+                            "A quantidade precisa ser superior ou igual ao total vendido."}
                         </span>
                       )}
                     </span>

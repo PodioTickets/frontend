@@ -141,8 +141,13 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
   );
 
   const yearOptions: DropdownOption[] = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const start = Math.max(fromYear, Math.min(toYear, currentYear));
     const list: DropdownOption[] = [];
-    for (let y = fromYear; y <= toYear; y++) {
+    for (let y = start; y <= toYear; y++) {
+      list.push({ id: String(y), label: String(y) });
+    }
+    for (let y = start - 1; y >= fromYear; y--) {
       list.push({ id: String(y), label: String(y) });
     }
     return list;

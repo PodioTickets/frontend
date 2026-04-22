@@ -370,7 +370,7 @@ export function InstallmentsDrawer({
               </div>
 
               {/* Cards Section */}
-              <div className="grid grid-cols-3 gap-4 mb-5">
+              <div className="grid grid-cols-2 gap-4 mb-5">
                 {/* Total pendente */}
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
                   <div className="flex items-center justify-between mb-3">
@@ -383,21 +383,6 @@ export function InstallmentsDrawer({
                   </div>
                   <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
                     R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-
-                {/* Liberação hoje */}
-                <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-family-dm-sans font-normal text-gray-11">
-                      Liberação hoje
-                    </p>
-                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-3 flex items-center justify-center">
-                      <TimerIcon className="size-5 text-primary-12" />
-                    </div>
-                  </div>
-                  <p className="font-family-dm-sans font-extrabold text-xl text-gray-12">
-                    R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 

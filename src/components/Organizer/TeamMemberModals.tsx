@@ -36,22 +36,16 @@ function eventListImageUrl(ev: Event): string | null {
 
 const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
   {
-    id: "dashboard",
-    title: "Dashboard",
-    description:
-      "Acesso ao painel geral do evento com visão resumida de vendas, inscritos e desempenho.",
-  },
-  {
     id: "financial",
     title: "Financeiro",
     description:
-      "Acesso às informações financeiras do evento, incluindo faturamento, valores a receber e histórico de repasses.",
+      "Gerencie repasses, saldos e valores em processamento, com histórico e outras informações financeiras.",
   },
   {
     id: "edit_event",
     title: "Editar Evento",
     description:
-      "Permite editar as configurações do evento, como informações, datas, modalidades, preços e configurações gerais.",
+      "Atualize as informações do evento, como data, ingressos, kits, perguntas e outras configurações.",
   },
   {
     id: "view_event",
@@ -86,7 +80,6 @@ const PERMISSION_ROWS: { id: string; title: string; description: string }[] = [
 ];
 
 const DEFAULT_PERMISSIONS: Record<string, boolean> = {
-  dashboard: true,
   financial: false,
   edit_event: false,
   view_event: true,
@@ -507,12 +500,24 @@ export function CollaboratorDrawer({
       onOpenChange(false);
       return;
     }
+    const { firstName, lastName } = splitFullName(fullName);
+    const errors: Record<string, string> = {};
+    if (!firstName.trim() || !lastName.trim()) {
+      errors.fullName = "Informe o nome completo (nome e sobrenome).";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
     setSaving(true);
     try {
       const eventIds = buildEventIdsForSettings(events, eventSelection);
       await organizerService.updateOrganizationMemberSettings(member.userId, {
         role: "EMPLOYEE",
         permissions: permissionsToArray(permissions),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         ...(eventIds !== null ? { eventIds } : {}),
         clientPage: organizerMemberSettingsClientPage(member.userId),
       });
@@ -789,15 +794,24 @@ export function CollaboratorDrawer({
                     <>
                       <FieldShell label="Nome completo">
                         <input
-                          className={cn(inputClass, "bg-gray-2 text-gray-11")}
+                          className={cn(inputClass, inputError("fullName"))}
+                          placeholder="Digite o nome completo"
                           value={fullName}
-                          readOnly
+                          onChange={(e) => {
+                            setFullName(e.target.value);
+                            if (fieldErrors.fullName) setFieldErrors((p) => { const n = { ...p }; delete n.fullName; return n; });
+                          }}
+                          disabled={saving || detailLoading}
+                          autoComplete="name"
                         />
+                        {fieldErrors.fullName && (
+                          <p className="text-sm text-red-11 font-family-dm-sans">{fieldErrors.fullName}</p>
+                        )}
                       </FieldShell>
                       <FieldShell label="E-mail do membro">
                         <input
                           type="email"
-                          className={cn(inputClass, "bg-gray-2 text-gray-11")}
+                          className={cn(inputClass, "bg-gray-2 text-gray-11 cursor-not-allowed")}
                           value={email}
                           readOnly
                         />

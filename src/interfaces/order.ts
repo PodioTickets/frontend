@@ -133,6 +133,7 @@ export interface PatchProductsRequest {
     productId: string;
     variationId?: string;
     quantity: number;
+    participantEmail: string;
   }>;
 }
 

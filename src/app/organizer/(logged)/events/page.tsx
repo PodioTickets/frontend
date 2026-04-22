@@ -42,8 +42,9 @@ export default function OrganizerEventsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { hasPermission } = useOrganizerPermissions();
   const canCreateEvent = hasPermission("create_event");
-  const canViewDashboard = hasPermission("dashboard");
+  const canViewDashboard = hasPermission("dashboard"); // true se tiver qualquer permissão real
   const canEditEvent = hasPermission("edit_event");
+  const canViewEvent = hasPermission("view_event");
   const canViewFinancial = hasPermission("financial");
   const canViewCoupons = hasPermission("coupons");
   const canViewPixel = hasPermission("pixel");
@@ -364,11 +365,11 @@ export default function OrganizerEventsPage() {
                                   <DashboardIcon className="size-4 text-gray-11" />
                                 </Link>
                                 )}
-                                {canEditEvent && (
+                                {(canEditEvent || canViewEvent) && (
                                 <Link
                                   href={`/organizer/events/${event.id}/edit`}
                                   className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                  title="Editar"
+                                  title={canEditEvent ? "Editar" : "Visualizar"}
                                 >
                                   <PencilIcon className="size-4 text-gray-11" />
                                 </Link>

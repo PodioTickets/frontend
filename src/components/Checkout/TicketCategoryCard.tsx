@@ -257,8 +257,8 @@ const TicketItemMobile = memo(({
             )}
           </div>
           {ageLimitText ? (
-            <div className="bg-yellow-3 rounded-full px-4 py-3 shrink-0 max-w-full">
-              <p className="text-base font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
+            <div className="bg-yellow-3 rounded-full px-4 py-2 shrink-0 max-w-full">
+              <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
                 Limite de idade: {ageLimitText}
               </p>
             </div>
@@ -521,8 +521,8 @@ const TicketItemDesktop = memo(({
               )}
             </div>
             {ageLimitText ? (
-              <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-3 shrink-0 max-w-full">
-                <p className="text-base font-medium font-family-dm-sans leading-[1.3]">
+              <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-2 shrink-0 max-w-full">
+                <p className="text-sm font-medium font-family-dm-sans">
                   Limite de idade: {ageLimitText}
                 </p>
               </div>

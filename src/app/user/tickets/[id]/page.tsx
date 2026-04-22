@@ -32,15 +32,6 @@ export default function TicketDetailsPage() {
         setLoading(true);
         const data = await userService.getMyRegistrationById(registrationId);
         setRegistration(data);
-        // Expandir primeiro participante por padrão
-        if (data?.tickets && data.tickets.length > 0) {
-          setExpandedParticipants({ 0: true });
-          setActiveTab({ 0: "info" });
-        } else if (data) {
-          // Mesmo sem tickets, expandir se tiver dados
-          setExpandedParticipants({ 0: true });
-          setActiveTab({ 0: "info" });
-        }
       } catch (error: any) {
         console.error("Erro ao buscar detalhes da inscrição:", error);
         setRegistration(null);
@@ -270,9 +261,16 @@ export default function TicketDetailsPage() {
                       <p className="text-base text-gray-12 font-family-dm-sans">
                         Participante {index + 1}
                       </p>
-                      <h2 className="text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                        {ticket.name || "Ingresso"}
-                      </h2>
+                      <div className="flex flex-col items-start gap-1">
+                        {ticket.category?.name && (
+                          <p className="text-sm text-gray-11 font-family-dm-sans truncate max-w-[400px]">
+                            {ticket.category.name}
+                          </p>
+                        )}
+                        <h2 className="text-2xl font-bold text-gray-12 font-manrope truncate max-w-[400px]">
+                          {ticket.name || "Ingresso"}
+                        </h2>
+                      </div>
                       <div className="flex gap-8 items-center">
                         {distance && (
                           <div className="flex gap-2 items-center">
@@ -365,26 +363,28 @@ export default function TicketDetailsPage() {
                   </div>
 
                   {/* Tabs */}
-                  <div className={`flex gap-3 items-start px-4 pt-5 ${isExpanded ? "pb-0" : "pb-5"}`}>
-                    <button
-                      onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "info" }))}
-                      className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "info"
-                        ? "bg-primary-11 text-primary-2"
-                        : "bg-gray-5 text-gray-11"
-                        }`}
-                    >
-                      Informações
-                    </button>
-                    <button
-                      onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
-                      className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products"
-                        ? "bg-primary-11 text-primary-2"
-                        : "bg-gray-5 text-gray-11"
-                        }`}
-                    >
-                      Produtos
-                    </button>
-                  </div>
+                  {isExpanded && (
+                    <div className="flex gap-3 items-start px-4 pt-5">
+                      <button
+                        onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "info" }))}
+                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "info"
+                          ? "bg-primary-11 text-primary-2"
+                          : "bg-gray-5 text-gray-11"
+                          }`}
+                      >
+                        Informações
+                      </button>
+                      <button
+                        onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
+                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products"
+                          ? "bg-primary-11 text-primary-2"
+                          : "bg-gray-5 text-gray-11"
+                          }`}
+                      >
+                        Produtos
+                      </button>
+                    </div>
+                  )}
 
                   {/* Tab Content */}
                   {isExpanded && (

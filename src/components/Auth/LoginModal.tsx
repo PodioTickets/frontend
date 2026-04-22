@@ -7,7 +7,7 @@ import { useForgotPassword } from "@/hooks/useForgotPassword";
 import { useResetPassword } from "@/hooks/useResetPassword";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Mail, Lock, X, Clock, ArrowLeft } from "lucide-react";
+import { Mail, Lock, X, Clock, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import {
   loginSchema,
@@ -207,6 +207,9 @@ function ForgotPasswordNewPasswordPanel({
   onClose: () => void;
   isPending: boolean;
 }) {
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   return (
     <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
       <div className="flex items-start justify-between px-4 py-4 border-b border-gray-6 shrink-0 gap-2">
@@ -245,18 +248,26 @@ function ForgotPasswordNewPasswordPanel({
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
               <Input
                 id="new-password-field"
-                type="password"
+                type={showNewPassword ? "text" : "password"}
                 autoComplete="new-password"
                 placeholder="Digite uma nova senha"
                 value={password}
                 onChange={(e) => onPasswordChange(e.target.value)}
-                className={`pl-10 h-12 rounded-lg ${
+                className={`pl-10 pr-10 h-12 rounded-lg ${
                   fieldErrors.password
                     ? "border-red-9 focus-visible:border-red-9"
                     : ""
                 }`}
                 aria-invalid={!!fieldErrors.password}
               />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                aria-label={showNewPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
             {fieldErrors.password ? (
               <p className="text-sm text-red-9 font-family-dm-sans">
@@ -275,18 +286,26 @@ function ForgotPasswordNewPasswordPanel({
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
               <Input
                 id="confirm-new-password-field"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
                 placeholder="Digite sua senha novamente"
                 value={confirmPassword}
                 onChange={(e) => onConfirmPasswordChange(e.target.value)}
-                className={`pl-10 h-12 rounded-lg ${
+                className={`pl-10 pr-10 h-12 rounded-lg ${
                   fieldErrors.confirmPassword
                     ? "border-red-9 focus-visible:border-red-9"
                     : ""
                 }`}
                 aria-invalid={!!fieldErrors.confirmPassword}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
             {fieldErrors.confirmPassword ? (
               <p className="text-sm text-red-9 font-family-dm-sans">
@@ -372,6 +391,8 @@ export function LoginModal() {
   }>({});
   /** Cooldown alinhado ao backend (1 min entre reenvios efetivos) */
   const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
+
+  const [showPassword, setShowPassword] = useState(false);
 
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -754,20 +775,28 @@ export function LoginModal() {
                             Senha
                           </label>
                           <div className="relative w-full">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
-                              type="password"
+                              type={showPassword ? "text" : "password"}
                               placeholder="Digite sua senha"
                               value={formData.password}
                               onChange={(e) =>
                                 handleInputChange("password", e.target.value)
                               }
-                              className={`pl-10 h-12 ${errors.password
+                              className={`pl-10 pr-10 h-12 ${errors.password
                                   ? "border-red-9 focus-visible:border-red-9"
                                   : ""
                                 }`}
                               aria-invalid={!!errors.password}
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((v) => !v)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                            >
+                              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
                           </div>
                           {errors.password && (
                             <p className="text-sm text-red-9 font-family-dm-sans">
@@ -981,20 +1010,28 @@ export function LoginModal() {
                             Senha
                           </label>
                           <div className="relative w-full">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
-                              type="password"
+                              type={showPassword ? "text" : "password"}
                               placeholder="Digite sua senha"
                               value={formData.password}
                               onChange={(e) =>
                                 handleInputChange("password", e.target.value)
                               }
-                              className={`pl-10 h-12 ${errors.password
+                              className={`pl-10 pr-10 h-12 ${errors.password
                                   ? "border-red-9 focus-visible:border-red-9"
                                   : ""
                                 }`}
                               aria-invalid={!!errors.password}
                             />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((v) => !v)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                            >
+                              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
                           </div>
                           {errors.password && (
                             <p className="text-sm text-red-9 font-family-dm-sans">

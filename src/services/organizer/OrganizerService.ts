@@ -53,7 +53,6 @@ export interface CreateOrganizationRequest {
 
 /** Chaves canônicas — ver API `organizations/me/members`. */
 export type OrganizerPermissionKey =
-  | "dashboard"
   | "financial"
   | "edit_event"
   | "view_event"
@@ -160,6 +159,8 @@ export interface UpdateOrganizationMemberSettingsRequest {
   role?: "OWNER" | "EMPLOYEE";
   permissions?: string[];
   eventIds?: string[];
+  firstName?: string;
+  lastName?: string;
   /** Contexto para audit no backend (opcional). */
   clientPage?: string;
 }

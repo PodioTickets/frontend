@@ -49,6 +49,10 @@ export function OrganizerPermissionsProvider({ children }: { children: React.Rea
   const hasPermission = useCallback(
     (key: string) => {
       if (isOwner) return true;
+      // Dashboard é derivado — qualquer permissão real dá acesso
+      if (key === "dashboard") {
+        return permissions.length > 0;
+      }
       return permissions.includes(key);
     },
     [isOwner, permissions],

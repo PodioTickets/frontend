@@ -6,7 +6,7 @@ import {
   DrawerContent,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, CheckCircle, FileText, Search } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, CheckCircle, FileText, Search, EyeIcon } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { TransferDetailsDrawer } from "./TransferDetailsDrawer";
 import { RepasseIcon } from "../Icons/RepasseIcon";
@@ -16,6 +16,7 @@ import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 import { organizerService } from "@/services";
 import type { Transfer } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
+import { Pagination } from "../Pagination";
 
 interface TransferHistoryDrawerProps {
   isOpen: boolean;
@@ -254,7 +255,7 @@ export function TransferHistoryDrawer({
                             <div className="flex-1 min-w-0 flex flex-col gap-3">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex flex-col min-w-0">
-                                  <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">ID Pedido: {d.id}</p>
+                                  <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">ID Repasse: {d.id}</p>
                                   <div className="flex items-center gap-2">
                                     <p className="font-family-dm-sans font-normal text-sm text-gray-11">{d.requestDate}</p>
                                   </div>
@@ -268,9 +269,6 @@ export function TransferHistoryDrawer({
                           <div className="flex flex-col gap-3 border-b border-gray-6 pb-3">
                             <p className="font-manrope font-extrabold text-xl text-gray-12">
                               R$ {d.value.toFixed(2).replace(".", ",")}
-                            </p>
-                            <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                              Chave pix: <span className="font-family-dm-sans font-semibold text-gray-12">{d.pixKey}</span>
                             </p>
                           </div>
                         </div>
@@ -357,12 +355,7 @@ export function TransferHistoryDrawer({
                 <div className="bg-gray-4 border-b border-gray-6 flex h-[44px] items-center">
                   <div className="flex h-full items-center p-4 w-[120px]">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                      ID pedido
-                    </p>
-                  </div>
-                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
-                      Chave pix
+                      ID repasse
                     </p>
                   </div>
                   <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
@@ -407,15 +400,8 @@ export function TransferHistoryDrawer({
                         >
                           {/* ID pedido */}
                           <div className="flex h-full items-center p-4 w-[120px]">
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {displayTransfer.id}
-                            </p>
-                          </div>
-
-                          {/* Chave pix */}
-                          <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center w-full">
-                              {displayTransfer.pixKey}
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
+                              #{displayTransfer.id}
                             </p>
                           </div>
 
@@ -465,7 +451,7 @@ export function TransferHistoryDrawer({
                               }}
                               className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                             >
-                              <DetailsIcon className="size-5 text-gray-12" />
+                              <EyeIcon className="size-5 text-gray-11" />
                             </button>
                           </div>
                         </div>
@@ -474,41 +460,7 @@ export function TransferHistoryDrawer({
                   )}
                 </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                      const pageNum = i + 1;
-                      const isActive = pageNum === currentPage;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${isActive
-                            ? "bg-[#59E373] border-[#59E373] text-gray-12"
-                            : "border-gray-6 hover:bg-gray-3 text-gray-12"
-                            }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage >= totalPages}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
-                )}
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
               </div>
             </div>
           </div>

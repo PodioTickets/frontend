@@ -21,6 +21,7 @@ import { UnsavedTicketChangesModal } from "./UnsavedTicketChangesModal";
 import { DeleteTicketModal } from "./DeleteTicketModal";
 import { cn } from "@/utils/cn";
 import { useTickets } from "@/hooks/useTickets";
+import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { TicketBatchSection } from "./TicketBatchSection";
 import { TicketProductsSection } from "./TicketProductsSection";
 
@@ -55,6 +56,8 @@ export function TicketForm({
 }: TicketFormProps) {
   const orgNav = useOrganizerNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = useOrganizerPermissions();
+  const readOnly = !hasPermission("edit_event") && hasPermission("view_event");
   const { deleteTicket } = useTickets(eventId, !!eventId);
   const {
     openCreateProductModal,
@@ -462,8 +465,6 @@ export function TicketForm({
             });
             setBatches(loadedBatches.length > 0 ? loadedBatches : [defaultBatch]);
           }
-
-          console.log(ticketData);
 
           if (ticketData.products && Array.isArray(ticketData.products)) {
             setProducts(ticketData.products);
@@ -901,12 +902,30 @@ export function TicketForm({
       return true;
     } catch (error: unknown) {
       console.error("Error saving ticket:", error);
-      const apiMessage =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const responseData = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
+      const apiMessage = responseData?.message as string | undefined;
       const errorMessage =
         apiMessage ||
         (error instanceof Error ? error.message : null) ||
         "Erro ao salvar ingresso";
+
+      // Erro de quantidade mínima de lote: exibir inline no campo correto
+      if (apiMessage && /m[íi]nimo.*vagas/i.test(apiMessage)) {
+        const serverBatchId = responseData?.batchId as string | undefined;
+        const minMatch = apiMessage.match(/m[íi]nimo\s+(\d+)\s+vagas/i);
+        const minRequired = minMatch ? parseInt(minMatch[1], 10) : null;
+
+        const targetBatch = serverBatchId
+          ? batches.find((b) => b.id === serverBatchId)
+          : minRequired !== null
+            ? batches.find((b) => parseInt(b.quantity, 10) < minRequired)
+            : null;
+
+        if (targetBatch) {
+          setFormErrors((prev) => ({ ...prev, [`batch_quantity_server_${targetBatch.id}`]: apiMessage }));
+        }
+      }
+
       toast.error(errorMessage);
       return false;
     } finally {
@@ -971,6 +990,7 @@ export function TicketForm({
           <button
             type="button"
             onClick={handleBack}
+            data-nav
             className="md:border border-gray-6 rotate-180 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer shrink-0 size-8 rounded-lg md:size-9 md:rounded-[52px]"
           >
             <ArrowButton isOpen={false} />
@@ -1250,7 +1270,7 @@ export function TicketForm({
           </div>
 
           {/* Produtos do kit */}
-          {hasKit && (
+          {(hasKit || products.length > 0) && (
             <TicketProductsSection
               products={products}
               setProducts={setProducts}
@@ -1260,6 +1280,7 @@ export function TicketForm({
               ticketBatchesTotalQuantity={ticketBatchesTotalQuantity}
               openCreateProductModal={openCreateProductModal}
               openAddExistingProductsModal={openAddExistingProductsModal}
+              readOnly={readOnly}
             />
           )}
         </div>

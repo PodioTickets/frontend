@@ -21,6 +21,7 @@ import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
+import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { UserAutocomplete } from "../UserAutocomplete";
 import type { LinkedUser } from "@/hooks/useLinkedUsers";
 import toast from "react-hot-toast";
@@ -70,7 +71,8 @@ export function InformationStep({
   } = useCheckout();
 
   const eventId = event?.id;
-  const { clearTimer } = useCheckoutTimer();
+  const { clearTimer, orderId } = useCheckoutTimer();
+  const { patchParticipants } = useCheckoutReservation();
 
   // Buscar tickets e categorias do servidor
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
@@ -649,10 +651,12 @@ export function InformationStep({
       participantIndex,
       raceId: ticketId,
       onConfirm: () => {
-        // Remover o participante
+        const currentQuantity = raceQuantities[ticketId] || 0;
+        const newQuantity = Math.max(0, currentQuantity - 1);
+
+        // Atualiza estado local imediatamente
         removeParticipant(participantIndex);
 
-        // Remover do estado de salvos e erros
         setSavedParticipants((prev) => {
           const updated = { ...prev };
           delete updated[participantIndex];
@@ -664,10 +668,57 @@ export function InformationStep({
           return updated;
         });
 
-        // Atualizar a quantidade do ticket correspondente
-        const currentQuantity = raceQuantities[ticketId] || 0;
-        if (currentQuantity > 0) {
-          updateRaceQuantity(ticketId, currentQuantity - 1);
+        updateRaceQuantity(ticketId, newQuantity);
+
+        // Devolve a vaga reservada no servidor via PATCH /participants
+        if (orderId) {
+          const mapGender = (value?: string) => {
+            if (!value) return undefined;
+            const v = value.toLowerCase();
+            if (v.startsWith("m")) return "MALE" as const;
+            if (v.startsWith("f")) return "FEMALE" as const;
+            if (v.includes("prefere") || v.includes("prefer")) return "PREFER_NOT_TO_SAY" as const;
+            return "OTHER" as const;
+          };
+
+          const remaining = participants.filter((_, i) => i !== participantIndex);
+
+          const payload = {
+            participants: remaining.map((p) => {
+              const mapped: {
+                name: string; cpf: string; email: string;
+                birthDate: string; phone: string;
+                gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
+                emergencyContactName?: string; emergencyPhone?: string;
+                hasEmergencyContact?: boolean;
+                questionAnswers?: Array<{ questionId: string; answer: string | boolean | number }>;
+              } = {
+                name: p.name,
+                cpf: p.cpf.replace(/\D/g, ""),
+                email: p.email,
+                birthDate: p.birthDate,
+                phone: p.phone?.replace(/\D/g, "") || "",
+              };
+              const gender = mapGender(p.gender);
+              if (gender) mapped.gender = gender;
+              if (p.emergencyContactName?.trim()) mapped.emergencyContactName = p.emergencyContactName.trim();
+              if (p.emergencyPhone?.trim()) mapped.emergencyPhone = p.emergencyPhone.replace(/\D/g, "");
+              if (p.hasEmergencyContact) mapped.hasEmergencyContact = true;
+              if (p.questionAnswers && Object.keys(p.questionAnswers).length > 0) {
+                mapped.questionAnswers = Object.entries(p.questionAnswers).map(
+                  ([questionId, answer]) => ({
+                    questionId,
+                    answer: Array.isArray(answer) ? JSON.stringify(answer) : (answer as string | boolean | number),
+                  }),
+                );
+              }
+              return mapped;
+            }),
+          };
+
+          patchParticipants(orderId, payload).catch(() => {
+            toast.error("Erro ao devolver a vaga. Tente novamente.");
+          });
         }
       },
     });
@@ -1241,7 +1292,7 @@ export function InformationStep({
                             </p>
                             <h1 className="text-lg font-bold">{ticket.name}</h1>
                             {ageLimitText && (
-                              <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-2 w-fit text-sm">
+                              <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-2 w-fit text-xs">
                                 Limite de idade: {ageLimitText}
                               </div>
                             )}

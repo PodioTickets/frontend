@@ -6,23 +6,40 @@ import * as React from "react";
 interface SearchInputProps extends React.ComponentProps<"input"> {
   onClear?: () => void;
   showClearButton?: boolean;
+  onSearchIconClick?: () => void;
 }
 
 export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
   function SearchInput(
-    { className, value, onClear, showClearButton = true, ...props },
+    { className, value, onClear, showClearButton = true, onSearchIconClick, ...props },
     ref
   ) {
     const hasValue = value && value.toString().length > 0;
 
     return (
       <div className="relative w-full">
-        <SearchIcon
-          className={cn(
-            "absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-200 pointer-events-none z-10",
-            hasValue ? "text-primary-7" : "text-gray-4"
-          )}
-        />
+        {onSearchIconClick ? (
+          <button
+            type="button"
+            onClick={onSearchIconClick}
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-0 cursor-pointer"
+            tabIndex={-1}
+          >
+            <SearchIcon
+              className={cn(
+                "w-5 h-5 transition-colors duration-200",
+                hasValue ? "text-primary-7" : "text-gray-4"
+              )}
+            />
+          </button>
+        ) : (
+          <SearchIcon
+            className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-200 pointer-events-none z-10",
+              hasValue ? "text-primary-7" : "text-gray-4"
+            )}
+          />
+        )}
 
         <input
           ref={ref}
