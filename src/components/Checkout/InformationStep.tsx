@@ -858,9 +858,11 @@ export function InformationStep({
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
-            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
-              {question.description ?? ""}
-            </label>
+            {question.description && (
+              <label className="text-sm font-normal text-gray-11 font-family-dm-sans mb-2 -mt-2">
+                {question.description ?? ""}
+              </label>
+            )}
             <input
               type="text"
               value={typeof answer === "string" ? answer : ""}
@@ -889,9 +891,11 @@ export function InformationStep({
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
-            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
-              {question.description ?? ""}
-            </label>
+            {question.description && (
+              <label className="text-sm font-normal text-gray-11 font-family-dm-sans mb-2 -mt-2">
+                {question.description ?? ""}
+              </label>
+            )}
             <div className="flex flex-col gap-3">
               {question.options?.map((option) => {
                 const isSelected = selectedOptions.includes(option);
@@ -930,9 +934,11 @@ export function InformationStep({
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
-            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
-              {question.description ?? ""}
-            </label>
+            {question.description && (
+              <label className="text-sm font-normal text-gray-11 font-family-dm-sans mb-2 -mt-2">
+                {question.description ?? ""}
+              </label>
+            )}
             <div className="flex flex-col gap-3">
               {question.options?.map((option) => {
                 const isSelected =
@@ -984,9 +990,11 @@ export function InformationStep({
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
-            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
-              {question.description ?? ""}
-            </label>
+            {question.description && (
+              <label className="text-sm font-normal text-gray-11 font-family-dm-sans mb-2 -mt-2">
+                {question.description ?? ""}
+              </label>
+            )}
             <div className="flex flex-col gap-3">
               {trueFalseOptions.map((option) => {
                 const isSelected = typeof answer === "string" && answer === option;
@@ -1022,9 +1030,11 @@ export function InformationStep({
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
-            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
-              {question.description ?? ""}
-            </label>
+            {question.description && (
+              <label className="text-sm font-normal text-gray-11 font-family-dm-sans mb-2 -mt-2">
+                {question.description ?? ""}
+              </label>
+            )}
             <input
               type="number"
               value={typeof answer === "string" ? answer : ""}
