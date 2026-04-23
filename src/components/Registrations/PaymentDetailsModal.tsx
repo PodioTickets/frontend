@@ -887,7 +887,7 @@ export function PaymentDetailsModal() {
                         {/* Header */}
                         <div className="flex items-center justify-between px-4 py-5 border-b border-gray-6">
                           <h3 className="font-manrope font-semibold text-[18px] leading-[1.1] text-gray-12">
-                            Ingressos adquiridos
+                            Ingressos vinculados a este pedido
                           </h3>
                           <div className="flex gap-1 items-center">
                             <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
