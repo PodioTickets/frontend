@@ -571,8 +571,8 @@ export function TransferDetailsDrawer({
                           </div>
                           {order.installment && (
                             <div className="flex items-center gap-0.5">
-                              <span className="font-family-dm-sans font-normal leading-[1.3] text-[14px] text-gray-11">Parcelado:</span>
                               <span className="font-family-dm-sans font-normal leading-[1.3] text-[14px] text-gray-11">{order.installment}</span>
+                              <span className="font-family-dm-sans font-normal leading-[1.3] text-[14px] text-gray-11">de R${order.value}</span>
                             </div>
                           )}
                         </div>

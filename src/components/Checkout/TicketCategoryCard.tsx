@@ -218,9 +218,16 @@ const TicketItemMobile = memo(({
       )}
 
       <div className="flex flex-col gap-5">
-        <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
-          {ticket.name}
-        </h2>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
+            {ticket.name}
+          </h2>
+          {ticket.description?.trim() ? (
+            <span className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
+              {ticket.description.trim()}
+            </span>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 w-full">
           <div className="flex flex-wrap gap-4 items-center min-w-0">
             {distanceKm > 0 && (
@@ -474,100 +481,107 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       )}
+      <div className="w-full">
+        {ticket.description?.trim() ? (
+          <span className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
+            {ticket.description.trim()}
+          </span>
+        ) : null}
+        <div
+          className={cn(
+            "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2",
+            productItems.length > 0 ? "flex-1 min-w-0" : "w-full",
+          )}
+        >
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
+              {ticket.name}
+            </h2>
 
-      <div
-        className={cn(
-          "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2",
-          productItems.length > 0 ? "flex-1 min-w-0" : "w-full",
-        )}
-      >
-        <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
-            {ticket.name}
-          </h2>
-          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-            <div className="flex items-center gap-8 flex-wrap min-w-0">
-              {modalityInfo && (
-                <div className="flex items-center gap-2">
-                  {modalityInfo.icon ? (
-                    <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                      <ImageWithInitialFallback
-                        src={modalityInfo.icon}
-                        alt={modalityInfo.name}
-                        name={modalityInfo.name}
-                        width={24}
-                        height={24}
-                        className="size-6 bg-transparent border-0"
-                        imgClassName="object-contain bg-transparent border-0"
-                        letterClassName="text-[10px]"
-                        nativeImg
-                      />
-                    </div>
-                  ) : (
-                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                  )}
-                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                    {modalityInfo.name}
-                  </p>
-                </div>
-              )}
-              {distanceKm > 0 && (
-                <div className="flex items-center gap-2">
-                  <DistanceIcon className="size-5 shrink-0" />
-                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                    {distanceKm} km
-                  </p>
-                </div>
-              )}
-            </div>
-            {ageLimitText ? (
-              <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-2 shrink-0 max-w-full">
-                <p className="text-sm font-medium font-family-dm-sans">
-                  Limite de idade: {ageLimitText}
-                </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+              <div className="flex items-center gap-8 flex-wrap min-w-0">
+                {modalityInfo && (
+                  <div className="flex items-center gap-2">
+                    {modalityInfo.icon ? (
+                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                        <ImageWithInitialFallback
+                          src={modalityInfo.icon}
+                          alt={modalityInfo.name}
+                          name={modalityInfo.name}
+                          width={24}
+                          height={24}
+                          className="size-6 bg-transparent border-0"
+                          imgClassName="object-contain bg-transparent border-0"
+                          letterClassName="text-[10px]"
+                          nativeImg
+                        />
+                      </div>
+                    ) : (
+                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                    )}
+                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                      {modalityInfo.name}
+                    </p>
+                  </div>
+                )}
+                {distanceKm > 0 && (
+                  <div className="flex items-center gap-2">
+                    <DistanceIcon className="size-5 shrink-0" />
+                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                      {distanceKm} km
+                    </p>
+                  </div>
+                )}
               </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <p className="text-xl font-bold text-gray-12">{formatPrice(price)}</p>
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
-              <button
-                type="button"
-                onClick={() => onDecrease(ticket.id)}
-                disabled={quantity === 0}
-                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                aria-label="Diminuir quantidade"
-              >
-                <Minus className="size-4" />
-              </button>
-              <span className={`text-center text-lg font-semibold px-4 ${isBatchSoldOut ? "text-gray-11" : "text-gray-12"}`}>
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => onIncrease(ticket.id)}
-                disabled={isAtMax}
-                className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                aria-label="Aumentar quantidade"
-              >
-                <Plus className="size-4" />
-              </button>
+              {ageLimitText ? (
+                <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-2 shrink-0 max-w-full">
+                  <p className="text-sm font-medium font-family-dm-sans">
+                    Limite de idade: {ageLimitText}
+                  </p>
+                </div>
+              ) : null}
             </div>
-            {isBatchSoldOut ? (
-              <p className="text-xs font-medium text-red-11 text-center">Lote esgotado</p>
-            ) : showLowStock ? (
-              <p className="text-xs font-medium text-red-11">
-                Restam apenas {ticket.availableQuantity}{" "}
-                {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-              </p>
-            ) : null}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <p className="text-xl font-bold text-gray-12">{formatPrice(price)}</p>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
+                <button
+                  type="button"
+                  onClick={() => onDecrease(ticket.id)}
+                  disabled={quantity === 0}
+                  className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  aria-label="Diminuir quantidade"
+                >
+                  <Minus className="size-4" />
+                </button>
+                <span className={`text-center text-lg font-semibold px-4 ${isBatchSoldOut ? "text-gray-11" : "text-gray-12"}`}>
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onIncrease(ticket.id)}
+                  disabled={isAtMax}
+                  className="size-6 cursor-pointer rounded-full flex items-center justify-center bg-gray-12 hover:bg-gray-11 text-gray-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  aria-label="Aumentar quantidade"
+                >
+                  <Plus className="size-4" />
+                </button>
+              </div>
+              {isBatchSoldOut ? (
+                <p className="text-xs font-medium text-red-11 text-center">Lote esgotado</p>
+              ) : showLowStock ? (
+                <p className="text-xs font-medium text-red-11">
+                  Restam apenas {ticket.availableQuantity}{" "}
+                  {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
 
+      </div>
       {productItems.length > 0 && (
         <ImageCarouselModal
           items={productItems}

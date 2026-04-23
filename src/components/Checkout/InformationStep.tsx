@@ -35,15 +35,7 @@ interface InformationStepProps {
   onNext: () => void;
   onBack: () => void;
   isSubmitting?: boolean;
-  /**
-   * Quando definido (inclui array vazio), ignora GET de perguntas e usa esta lista
-   * (ex.: rascunho do organizador com perguntas ainda não salvas na API).
-   */
   previewQuestions?: Question[];
-  /**
-   * Quando true, oculta o cabeçalho e os campos básicos (nome, email, CPF…),
-   * exibindo apenas as perguntas do organizador.
-   */
   previewMode?: boolean;
 }
 
@@ -786,14 +778,13 @@ export function InformationStep({
   const previewQuestionList = previewQuestions;
   const usePreviewQuestionList = previewQuestionList !== undefined;
 
-  // Buscar perguntas do evento via API - já vem no formato correto com isRequired, order, etc.
   const { data: questionsFromApi = [] } = useQuery<Question[]>({
     queryKey: queryKeys.events.questions(eventId || ""),
     queryFn: async () => {
       if (!eventId) return [];
       try {
         const loadedQuestions = await organizerService.getQuestions(eventId);
-        return Array.isArray(loadedQuestions) ? loadedQuestions : [];
+        return loadedQuestions
       } catch (error) {
         console.error("Error loading questions:", error);
         return [];
@@ -867,6 +858,9 @@ export function InformationStep({
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
+            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
+              {question.description ?? ""}
+            </label>
             <input
               type="text"
               value={typeof answer === "string" ? answer : ""}
@@ -894,6 +888,9 @@ export function InformationStep({
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
+            </label>
+            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
+              {question.description ?? ""}
             </label>
             <div className="flex flex-col gap-3">
               {question.options?.map((option) => {
@@ -932,6 +929,9 @@ export function InformationStep({
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
+            </label>
+            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
+              {question.description ?? ""}
             </label>
             <div className="flex flex-col gap-3">
               {question.options?.map((option) => {
@@ -984,6 +984,9 @@ export function InformationStep({
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
             </label>
+            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
+              {question.description ?? ""}
+            </label>
             <div className="flex flex-col gap-3">
               {trueFalseOptions.map((option) => {
                 const isSelected = typeof answer === "string" && answer === option;
@@ -1018,6 +1021,9 @@ export function InformationStep({
             <label className="text-base font-normal text-gray-12 font-family-dm-sans">
               {question.question}
               {isRequired && <span className="text-red-9 ml-1">*</span>}
+            </label>
+            <label className="text-sm font-normal text-gray-11 font-family-dm-sans">
+              {question.description ?? ""}
             </label>
             <input
               type="number"

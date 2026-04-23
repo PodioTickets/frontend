@@ -54,6 +54,7 @@ export interface Question {
   type: "text" | "true_false" | "number" | "select" | "multiple_choice";
   options?: string[];
   isRequired: boolean;
+  description?: string;
   order: number;
   createdAt: string;
   updatedAt: string;

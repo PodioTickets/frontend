@@ -17,6 +17,7 @@ export interface Ticket {
     min?: number;
     max?: number;
   };
+  description?: string
   gender?: string;
   activeBatch?: { id: string; price: number; label?: string; status?: string };
   activeBatchStatus?: string;
@@ -66,15 +67,16 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
             ? `R$ ${(Number(raw) / 100).toFixed(2).replace(".", ",")}`
             : "R$ 0,00";
         })(),
+        description: ticket.description ?? undefined,
         ageLimit: ticket.ageLimit,
         gender: ticket.gender,
         activeBatch: ticket.activeBatch
           ? {
-              id: ticket.activeBatch.id,
-              price: ticket.activeBatch.price,
-              label: ticket.activeBatchLabel,
-              status: ticket.activeBatchStatus,
-            }
+            id: ticket.activeBatch.id,
+            price: ticket.activeBatch.price,
+            label: ticket.activeBatchLabel,
+            status: ticket.activeBatchStatus,
+          }
           : undefined,
         activeBatchStatus: ticket.activeBatchStatus ?? undefined,
         products: ticket.productIds || [],

@@ -20,7 +20,7 @@ export interface EventTabItem {
 
 const EVENT_TABS_DEF = (eventId: string): { label: string; href: string; permission: string | string[] | null }[] => [
   { label: "Dashboard", href: `/organizer/events/${eventId}/dashboard`, permission: "dashboard" },
-  { label: "Inscrições", href: `/organizer/events/${eventId}/registrations`, permission: "view_event" },
+  { label: "Inscrições", href: `/organizer/events/${eventId}/registrations`, permission: "dashboard" },
   { label: "Financeiro", href: `/organizer/events/${eventId}/financial`, permission: "financial" },
   { label: "Editar", href: `/organizer/events/${eventId}/edit`, permission: ["edit_event", "view_event"] },
   { label: "Desconto", href: `/organizer/events/${eventId}/discount/cupom`, permission: "coupons" },

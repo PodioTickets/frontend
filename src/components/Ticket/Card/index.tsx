@@ -5,7 +5,6 @@ import { MapPin, Calendar, Clock, Navigation } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { useRouter } from "next/navigation";
-import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
 import { modalitiesColumns } from "@/constants";
 
 export interface Ticket {
@@ -89,14 +88,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     });
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
+  console.log(ticket)
 
   const imageUrl = ticket.event.imageUrl
     ? ticket.event.imageUrl.startsWith("http")

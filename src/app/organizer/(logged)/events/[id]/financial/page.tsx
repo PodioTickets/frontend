@@ -102,12 +102,6 @@ export default function EventFinancialPage() {
   const [isRefundedOpen, setIsRefundedOpen] = useState(false);
   const [isChargebackOpen, setIsChargebackOpen] = useState(false);
   const { openRequestTransferModal } = useRequestTransferModal();
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 1,
-  });
 
   // Financial data
   const [financialData, setFinancialData] = useState<{
@@ -143,11 +137,10 @@ export default function EventFinancialPage() {
   const [ticketsPage, setTicketsPage] = useState(1);
   const [ticketsPagination, setTicketsPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 20,
     total: 0,
     totalPages: 1,
   });
-  const TICKETS_PER_PAGE = 10;
 
   useEffect(() => {
     if (authLoading) return;
@@ -166,12 +159,7 @@ export default function EventFinancialPage() {
   useEffect(() => {
     if (!authChecked || authLoading || !eventId) return;
     loadData();
-  }, [authChecked, eventId, periodFilter, pagination.page]);
-
-  useEffect(() => {
-    if (!authChecked || authLoading || !eventId) return;
-    loadTickets(ticketsPage);
-  }, [authChecked, eventId, ticketsPage]);
+  }, [authChecked, eventId, periodFilter, ticketsPage]);
 
   const loadData = async () => {
     try {
@@ -180,8 +168,8 @@ export default function EventFinancialPage() {
         organizerService.getEventById(eventId),
         organizerService.getEventFinancial(eventId, {
           period: (periodFilter === "geral" ? "2m" : periodFilter) as "hoje" | "7d" | "15d" | "1m" | "2m",
-          page: pagination.page,
-          limit: pagination.limit,
+          page: ticketsPage,
+          limit: 20,
         }),
       ]);
       setEvent(eventData);
@@ -196,24 +184,10 @@ export default function EventFinancialPage() {
         revenueChange: financialDataResponse.summary.revenueChange,
         revenueChart: financialDataResponse.revenueChart,
       });
-      setPagination(financialDataResponse.tickets.pagination);
-    } catch (error: any) {
-      console.error("Error loading event:", error);
-      toast.error("Erro ao carregar dados do evento");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const loadTickets = async (page: number) => {
-    try {
-      const ticketsResponse = await organizerService.getTickets(eventId, {
-        page,
-        limit: TICKETS_PER_PAGE,
-      });
-
-      const formattedTicketsData: FinancialTicket[] = ticketsResponse.tickets.map((ticket: any) => {
-        const categoryName = ticket.category?.name || "Sem categoria";
+      const rawTickets: any[] = financialDataResponse.tickets.data.tickets;
+      const formattedTickets: FinancialTicket[] = rawTickets.map((ticket) => {
+        const categoryName = ticket.category?.name || "Ingresso avulso";
         const totalSold = ticket.quantitySold || 0;
         const totalRevenue = (ticket.batches as any[]).reduce(
           (sum: number, b: any) => sum + (b.quantitySold || 0) * (b.price || 0),
@@ -231,12 +205,13 @@ export default function EventFinancialPage() {
           lots: ticket.batches,
         };
       });
-
-      setTicketsData(formattedTicketsData);
-      setTicketsPagination(ticketsResponse.pagination);
+      setTicketsData(formattedTickets);
+      setTicketsPagination(financialDataResponse.tickets.data.pagination);
     } catch (error: any) {
-      console.error("Error loading tickets:", error);
-      toast.error("Erro ao carregar ingressos");
+      console.error("Error loading event:", error);
+      toast.error("Erro ao carregar dados do evento");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -838,44 +813,6 @@ export default function EventFinancialPage() {
             </div>
           </div>
 
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 w-full">
-              {/* Mobile: arrows + numbered buttons (Figma style) */}
-              <button
-                onClick={() => setPagination((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
-                disabled={pagination.page <= 1}
-                className="lg:hidden size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <div className="flex items-center justify-center gap-2">
-                {Array.from({ length: Math.min(pagination.totalPages, 8) }, (_, i) => {
-                  const pageNum = i + 1;
-                  const isActive = pageNum === pagination.page;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPagination({ ...pagination, page: pageNum })}
-                      className={`size-8 flex items-center justify-center border rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive
-                        ? "bg-primary-11 border-primary-11 text-primary-2"
-                        : "border-gray-6 hover:bg-gray-3 text-gray-12 bg-gray-4"
-                        }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                onClick={() => setPagination((p) => ({ ...p, page: Math.min(pagination.totalPages, p.page + 1) }))}
-                disabled={pagination.page >= pagination.totalPages}
-                className="lg:hidden size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

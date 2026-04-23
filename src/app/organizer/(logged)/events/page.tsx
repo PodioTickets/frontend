@@ -440,6 +440,7 @@ export default function OrganizerEventsPage() {
                                         ADS
                                       </Link>
                                       )}
+                                      {canEditEvent && (
                                       <button
                                         type="button"
                                         disabled={
@@ -463,6 +464,7 @@ export default function OrganizerEventsPage() {
                                           ? "Reativar evento"
                                           : "Suspender evento"}
                                       </button>
+                                      )}
                                     </div>
                                   </PopoverContent>
                                 </Popover>

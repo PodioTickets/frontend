@@ -172,7 +172,7 @@ export function PaymentItemDetailsDrawer({
     if (!paymentDetails?.registrations?.length) return [];
     return paymentDetails.registrations.map((reg) => ({
       id: reg.id,
-      registrationCode: reg.id.slice(0, 8),
+      registrationCode: reg.id ? reg.id.slice(0, 8) : "—",
       name: reg.name || "Participante",
       email: reg.email || "",
       ticketName: reg.ticket?.name || "—",

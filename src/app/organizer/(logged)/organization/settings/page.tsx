@@ -541,6 +541,21 @@ export default function OrganizationSettingsPage() {
                   className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
                 />
               </div>
+
+              <div className="flex flex-col gap-2 items-start">
+                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                  E-mail fiscal
+                </label>
+                <Input
+                  type="text"
+                  name="emailFiscal"
+                  value={organizer.email}
+                  onChange={handleInputChange}
+                  placeholder="E-mail fiscal"
+                  disabled
+                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                />
+              </div>
             </div>
           </div>
 
@@ -719,36 +734,6 @@ export default function OrganizationSettingsPage() {
                   }}
                   placeholder="(00) 0000-0000"
                   maxLength={14}
-                />
-              </div>
-
-              {/* Site Oficial */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Site Oficial
-                </label>
-                <Input
-                  type="url"
-                  name="siteUrl"
-                  value={formData.siteUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://www.meuevento.com.br"
-
-                />
-              </div>
-
-              {/* Instagram Oficial */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Instagram Oficial
-                </label>
-                <Input
-                  type="text"
-                  name="instagram"
-                  value={formData.instagram}
-                  onChange={handleInputChange}
-                  placeholder="@meuevento"
-
                 />
               </div>
             </div>

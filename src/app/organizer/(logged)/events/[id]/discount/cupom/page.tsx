@@ -29,6 +29,7 @@ interface Coupon {
   expiryDate: string;
   status: "ACTIVE" | "INACTIVE" | "EXPIRED";
   eventId: string;
+  usageCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -317,6 +318,9 @@ export default function CouponsPage() {
                             Validade
                           </th>
                           <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
+                            Usos do cupom
+                          </th>
+                          <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                             Status
                           </th>
                           <th className="text-end py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
@@ -355,6 +359,11 @@ export default function CouponsPage() {
                               <td className="py-4 px-5 text-center">
                                 <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
                                   {coupon.expiryDate ? formatDate(coupon.expiryDate) : "Sem data de expiração"}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5 text-center">
+                                <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
+                                  {coupon.usageCount}
                                 </span>
                               </td>
                               <td className="py-4 px-5 text-center">

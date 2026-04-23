@@ -41,6 +41,7 @@ export function CreateQuestionModal() {
   const { isOpen, closeCreateQuestionModal, data, onModalSave } = useCreateQuestionModal();
   const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [question, setQuestion] = useState("");
+  const [description, setDescription] = useState("");
   const [type, setType] = useState<QuestionType>("text");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [isRequired, setIsRequired] = useState(true);
@@ -72,6 +73,7 @@ export function CreateQuestionModal() {
         // Editing mode - load question data
         const q = data.question;
         setQuestion(q.question);
+        setDescription(q.description ?? "");
         setType(q.type);
         setOptions(q.options && q.options.length > 0 ? q.options : ["", ""]);
         setIsRequired(q.isRequired);
@@ -92,6 +94,7 @@ export function CreateQuestionModal() {
       } else {
         // Create mode - reset form
         setQuestion("");
+        setDescription("");
         setType("text");
         setOptions(["", ""]);
         setIsRequired(true);
@@ -158,6 +161,7 @@ export function CreateQuestionModal() {
     try {
       const questionData: CreateQuestionRequest = {
         question: question.trim(),
+        description: description.trim() || undefined,
         type,
         isRequired,
         options: (type === "select" || type === "multiple_choice")
@@ -254,15 +258,15 @@ export function CreateQuestionModal() {
 
   const panelMotion = isMdUp
     ? {
-        initial: { opacity: 0, scale: 0.95, y: 20 },
-        animate: { opacity: 1, scale: 1, y: 0 },
-        exit: { opacity: 0, scale: 0.95, y: 20 },
-      }
+      initial: { opacity: 0, scale: 0.95, y: 20 },
+      animate: { opacity: 1, scale: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.95, y: 20 },
+    }
     : {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: { opacity: 0 },
-      };
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0 },
+    };
 
   return (
     <>
@@ -316,12 +320,7 @@ export function CreateQuestionModal() {
                         "md:font-family-dm-sans md:text-[20px] md:font-semibold",
                       )}
                     >
-                      <span className="md:hidden">
-                        {isEditing ? "Editar pergunta" : "Criar questionário"}
-                      </span>
-                      <span className="hidden md:inline">
-                        {isEditing ? "Editar pergunta" : "Criar pergunta"}
-                      </span>
+                      {isEditing ? "Editar pergunta" : "Criar pergunta"}
                     </h2>
                   </div>
                   <button
@@ -338,7 +337,7 @@ export function CreateQuestionModal() {
                 <div className="min-h-0 flex-1 overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
                   <div className="flex flex-col gap-8 p-4 max-md:gap-8 md:gap-9 md:p-5">
                     {/* Pergunta Input */}
-                    <div className="flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-5">
                       <div className="flex flex-col gap-2">
                         <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
                           Pergunta
@@ -350,6 +349,19 @@ export function CreateQuestionModal() {
                           placeholder="Digite uma pergunta aos participantes"
                           maxLength={200}
                           className="h-12 px-3 pr-24"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                          Descrição <span className="text-gray-10 text-sm">(opcional)</span>
+                        </label>
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Adicione uma descrição ou instruções adicionais para a pergunta"
+                          maxLength={500}
+                          rows={3}
+                          className="w-full resize-none rounded-lg border border-gray-6 bg-transparent px-3 py-2.5 font-family-dm-sans text-base font-normal text-gray-12 placeholder:text-gray-10 focus:outline-none focus:ring-1 focus:ring-gray-7 transition-colors"
                         />
                       </div>
                     </div>

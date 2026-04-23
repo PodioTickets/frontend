@@ -101,11 +101,18 @@ function permissionsFromArray(
 ): Record<string, boolean> {
   const base: Record<string, boolean> = {};
   for (const row of PERMISSION_ROWS) base[row.id] = false;
-  if (keys?.length) {
-    for (const k of keys) {
-      const key = k.toLowerCase();
-      if (key in base) base[key] = true;
-    }
+  if (!keys?.length) return base;
+
+  const set = new Set(keys.map((k) => k.toLowerCase()));
+
+  // Remove permissões implícitas para não pré-selecionar o que não foi concedido explicitamente:
+  // notify implica view_event → se só notify estiver presente, não marcar view_event
+  if (set.has("notify") && !set.has("edit_event") && !set.has("financial")) {
+    set.delete("view_event");
+  }
+
+  for (const k of set) {
+    if (k in base) base[k] = true;
   }
   return base;
 }

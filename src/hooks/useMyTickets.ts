@@ -128,7 +128,7 @@ export function useMyTickets(
             event: {
               id: reg.event?.id || "",
               name: reg.event?.name || "Evento sem nome",
-              imageUrl: reg.event?.bannerUrl || reg.event?.imageUrl,
+              imageUrl: reg.event?.logoUrl || "",
               eventDate: reg.event?.eventDate || reg.purchaseDate,
               location: {
                 city: reg.event?.city || reg.event?.location?.city || "Cidade não informada",
@@ -141,7 +141,6 @@ export function useMyTickets(
             },
             status: reg.status || "PENDING",
             distance,
-            // Campos adicionais que podem ser úteis no futuro
             qrCode: reg.qrCode,
             purchaseDate: reg.purchaseDate,
             payment: reg.payment,

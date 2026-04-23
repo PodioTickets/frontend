@@ -199,11 +199,6 @@ export function ChargebackDrawer({
                       ID pedido
                     </p>
                   </div>
-                  <div className="flex h-full items-center p-4 w-[120px]">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                      ID transação
-                    </p>
-                  </div>
                   <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
                       Comprador
@@ -255,15 +250,6 @@ export function ChargebackDrawer({
                               {displayItem.orderId && displayItem.orderId.length > 10
                                 ? `#${displayItem.orderId.slice(0, 6)}...${displayItem.orderId.slice(-4)}`
                                 : displayItem.orderId || "—"}
-                            </p>
-                          </div>
-
-                          {/* ID transação */}
-                          <div className="flex h-full items-center p-4 w-[120px]">
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {displayItem.transactionId && displayItem.transactionId.length > 8
-                                ? displayItem.transactionId.slice(0, 8)
-                                : displayItem.transactionId || "—"}
                             </p>
                           </div>
 

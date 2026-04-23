@@ -490,6 +490,7 @@ export interface KitItem {
 
 export interface CreateQuestionRequest {
   question: string;
+  description?: string;
   type: "text" | "true_false" | "number" | "select" | "multiple_choice";
   options?: string[];
   isRequired?: boolean;
@@ -500,6 +501,7 @@ export interface CreateQuestionRequest {
 export interface Question {
   id: string;
   question: string;
+  description?: string;
   type: "text" | "true_false" | "number" | "select" | "multiple_choice";
   options?: string[];
   isRequired: boolean;
@@ -701,12 +703,15 @@ export interface FinancialData {
   summary: FinancialSummary;
   revenueChart: RevenueChartData;
   tickets: {
-    items: FinancialTicket[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
+    message: string;
+    data: {
+      tickets: any[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
     };
   };
 }

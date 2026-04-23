@@ -1,21 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { useCreateCouponModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { Dropdown } from "@/components/Dropdown";
 import { Radio } from "@/components/Radio";
 import { Checkbox } from "@/components/CheckBox";
 import { DatePicker } from "@/components/DatePicker";
-import { X, Plus, ChevronDown, ChevronUp, Info, Trash2 } from "lucide-react";
+import { X, Plus, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { TrashIcon } from "../Icons/TrashIcon";
-import { InfoIcon } from "../Icons/InfoIcon";
 import { organizerService } from "@/services";
 import { ArrowButton } from "../ArrowButton";
 import { SelectTicketsModal } from "./SelectTicketsModal";
+import { cn } from "@/utils/cn";
 
 type CouponType = "DISCOUNT" | "QUANTITY" | "AGE";
 type DiscountType = "PERCENTAGE" | "FIXED";
@@ -39,6 +38,18 @@ export function CreateCouponModal() {
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMdUp, setIsMdUp] = useState(true);
+
+  useLayoutEffect(() => {
+    setIsMdUp(window.matchMedia("(min-width: 768px)").matches);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => setIsMdUp(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
   const advancedPanelRef = useRef<HTMLDivElement>(null);
@@ -346,7 +357,7 @@ export function CreateCouponModal() {
         value: numericValue,
         note: note.trim() || undefined,
         expiryDate: expiryEnabled && expiryDate ? expiryDate : undefined,
-        minCartValue: minCartEnabled && minCartValue ? parseFloat(minCartValue.replace("R$", "").replace(".", "").replace(",", ".")) : undefined,
+        minCartValue: minCartEnabled && minCartValue ? parseInt(minCartValue) : undefined,
         cpfListStatus,
         cpfList: cpfListStatus === "ENABLED" ? cpfList : undefined,
         // Campos específicos por tipo
@@ -394,6 +405,36 @@ export function CreateCouponModal() {
 
   if (!isOpen) return null;
 
+  const panelMotion = isMdUp
+    ? {
+      initial: { opacity: 0, scale: 0.95, y: 20 },
+      animate: { opacity: 1, scale: 1, y: 0 },
+      exit: { opacity: 0, scale: 0.95, y: 20 },
+    }
+    : {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0 },
+    };
+
+  const couponTypeLabel =
+    couponType === "DISCOUNT"
+      ? "Cupom de desconto"
+      : couponType === "QUANTITY"
+        ? "Cupom por quantidade (automático)"
+        : couponType === "AGE"
+          ? "Cupom por idade (automático)"
+          : null;
+
+  const couponTypeDescription =
+    couponType === "DISCOUNT"
+      ? "Crie um código para o participante digitar no pagamento e receber o desconto"
+      : couponType === "QUANTITY"
+        ? "Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos"
+        : couponType === "AGE"
+          ? "Desconto automático para participantes dentro de uma faixa de idade na data do evento"
+          : null;
+
   return (
     <>
       <AnimatePresence>
@@ -411,34 +452,62 @@ export function CreateCouponModal() {
 
             {/* Modal */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              {...panelMotion}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 z-50 md:flex md:items-center md:justify-center md:p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+              <div
+                className={cn(
+                  "flex flex-col overflow-hidden bg-gray-1 shadow-2xl",
+                  "max-md:h-full max-md:w-full max-md:pt-14",
+                  "md:w-full md:max-w-[1098px] md:max-h-[90vh] md:rounded-xl md:border md:border-gray-6",
+                )}
+              >
                 {/* Header */}
-                <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
-                  <h2 className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[1.3]">
-                    {isEditing ? "Editar cupom" : "Criar cupom"}
-                  </h2>
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center justify-between border-b border-gray-6",
+                    "max-md:fixed max-md:inset-x-0 max-md:top-0 max-md:z-10 max-md:h-[52px] max-md:bg-gray-1 max-md:px-4",
+                    "md:px-5 md:py-3",
+                  )}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-2 md:contents">
+                    <button
+                      type="button"
+                      onClick={closeCreateCouponModal}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-[52px] md:border border-gray-6 transition-colors hover:bg-gray-3 md:hidden rotate-180"
+                      aria-label="Fechar"
+                    >
+                      <ArrowButton isOpen={false} />
+                    </button>
+                    <h2
+                      className={cn(
+                        "truncate leading-[1.3] text-gray-12",
+                        "max-md:font-manrope max-md:text-base max-md:font-extrabold",
+                        "md:font-family-dm-sans md:text-[20px] md:font-semibold",
+                      )}
+                    >
+                      {isEditing ? "Editar cupom" : "Criar cupom"}
+                    </h2>
+                  </div>
                   <button
                     onClick={closeCreateCouponModal}
-                    className="text-gray-11 hover:text-gray-12 transition-colors p-1 rounded-lg hover:bg-gray-3"
+                    className="hidden p-1 text-gray-11 transition-colors hover:text-gray-12 md:block"
+                    aria-label="Fechar"
                   >
                     <X className="size-6" />
                   </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-hidden flex">
+                <div className="flex flex-1 overflow-hidden">
                   <div
                     ref={modalBodyScrollRef}
-                    className="flex-1 overflow-y-auto p-5"
+                    className="flex-1 overflow-y-auto p-5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2"
                   >
                     <div className="flex flex-col gap-9 max-w-full">
+
                       {/* Tipo de cupom */}
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col gap-3">
@@ -449,101 +518,97 @@ export function CreateCouponModal() {
                             Escolha um tipo de desconto para configurar
                           </p>
                         </div>
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            onClick={() => {
-                              setCouponType("DISCOUNT");
-                              setMinQuantity("");
-                              setMinAge("");
-                              setMaxAge("");
-                            }}
-                            className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "DISCOUNT"
-                              ? "bg-primary-4 border-primary-8"
-                              : "border-gray-6 hover:bg-gray-2"
-                              }`}
-                          >
-                            <Checkbox checked={couponType === "DISCOUNT"} />
-                            <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "DISCOUNT" ? "text-gray-12" : "text-gray-11"
-                              }`}>
-                              Cupom de desconto
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setCouponType("QUANTITY");
-                              setMinAge("");
-                              setMaxAge("");
-                            }}
-                            className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "QUANTITY"
-                              ? "bg-primary-4 border-primary-8"
-                              : "border-gray-6 hover:bg-gray-2"
-                              }`}
-                          >
-                            <Checkbox checked={couponType === "QUANTITY"} />
-                            <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "QUANTITY" ? "text-gray-12" : "text-gray-11"
-                              }`}>
-                              Cupom por quantidade
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setCouponType("AGE");
-                              setMinQuantity("");
-                            }}
-                            className={`flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors ${couponType === "AGE"
-                              ? "bg-primary-4 border-primary-8"
-                              : "border-gray-6 hover:bg-gray-2"
-                              }`}
-                          >
-                            <Checkbox checked={couponType === "AGE"} />
-                            <span className={`text-sm font-family-dm-sans leading-[1.3] ${couponType === "AGE" ? "text-gray-12" : "text-gray-11"
-                              }`}>
-                              Cupom por idade
-                            </span>
-                          </button>
+                        <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
+                          {(
+                            [
+                              { key: "DISCOUNT" as CouponType, label: "Cupom de desconto", onSelect: () => { setCouponType("DISCOUNT"); setMinQuantity(""); setMinAge(""); setMaxAge(""); } },
+                              { key: "QUANTITY" as CouponType, label: "Cupom por quantidade", onSelect: () => { setCouponType("QUANTITY"); setMinAge(""); setMaxAge(""); } },
+                              { key: "AGE" as CouponType, label: "Cupom por idade", onSelect: () => { setCouponType("AGE"); setMinQuantity(""); } },
+                            ] as const
+                          ).map(({ key, label, onSelect }) => (
+                            <button
+                              key={key}
+                              onClick={onSelect}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors w-full md:w-auto",
+                                couponType === key
+                                  ? "bg-primary-4 border-primary-8"
+                                  : "border-gray-6 hover:bg-gray-2",
+                              )}
+                            >
+                              <Checkbox checked={couponType === key} />
+                              <span className={cn(
+                                "text-sm font-family-dm-sans leading-[1.3]",
+                                couponType === key ? "text-gray-12" : "text-gray-11",
+                              )}>
+                                {label}
+                              </span>
+                            </button>
+                          ))}
                         </div>
                       </div>
 
-                      {/* Renderizar inputs apenas após selecionar um tipo */}
                       {couponType && (
                         <>
                           {/* Título do tipo de cupom selecionado */}
+                          <div className="flex flex-col gap-3">
+                            <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
+                              {couponTypeLabel}
+                            </h3>
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                              {couponTypeDescription}
+                            </p>
+                          </div>
+
+                          {/* Código do cupom — apenas DISCOUNT */}
                           {couponType === "DISCOUNT" && (
-                            <div className="flex flex-col gap-3">
-                              <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                                Cupom de desconto
-                              </h3>
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Crie um código para o participante digitar no pagamento e receber o desconto
-                              </p>
+                            <div className="flex flex-col gap-2">
+                              <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                Código do cupom
+                              </label>
+                              <div className="relative">
+                                <Input
+                                  type="text"
+                                  placeholder="Ex: PODIO10"
+                                  value={code}
+                                  onChange={(e) => {
+                                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                    if (val.length <= 25) setCode(val);
+                                  }}
+                                  maxLength={25}
+                                  className="h-12 pr-16"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-11 font-family-dm-sans pointer-events-none">
+                                  {code.length}/25
+                                </span>
+                              </div>
                             </div>
                           )}
 
+                          {/* Nota */}
+                          <div className="flex flex-col gap-2">
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                              Nota{" "}
+                              <span className="text-gray-11 text-sm">(opcional)</span>
+                            </label>
+                            <Input
+                              type="text"
+                              placeholder="Ex: Cupom para parceiros / campanha de Instagram"
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                              className="h-12"
+                            />
+                            <div className="flex items-center gap-1.5">
+                              <Info className="size-4 shrink-0 text-gray-11" />
+                              <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                                Essa nota é só para organização interna
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Quantidade mínima — QUANTITY */}
                           {couponType === "QUANTITY" && (
-                            <div className="flex flex-col gap-3">
-                              <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                                Cupom por quantidade (automático)
-                              </h3>
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Desconto automático quando o carrinho atingir uma quantidade mínima de ingressos
-                              </p>
-                            </div>
-                          )}
-
-                          {couponType === "AGE" && (
-                            <div className="flex flex-col gap-3">
-                              <h3 className="text-gray-12 text-xl font-bold font-manrope leading-[1.1]">
-                                Cupom por idade (automático)
-                              </h3>
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Desconto automático para participantes dentro de uma faixa de idade na data do evento
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Quantidade mínima de ingressos - apenas para QUANTITY */}
-                          {couponType === "QUANTITY" && (
-                            <div className="flex flex-col gap-2.5 w-[596px]">
+                            <div className="flex flex-col gap-2.5 md:w-[596px]">
                               <div className="flex flex-col gap-2">
                                 <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                   Quantidade mínima de ingressos
@@ -552,10 +617,7 @@ export function CreateCouponModal() {
                                   type="text"
                                   placeholder="Ex: 3"
                                   value={minQuantity}
-                                  onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9]/g, "");
-                                    setMinQuantity(val);
-                                  }}
+                                  onChange={(e) => setMinQuantity(e.target.value.replace(/[^0-9]/g, ""))}
                                   className="h-12"
                                 />
                               </div>
@@ -565,7 +627,7 @@ export function CreateCouponModal() {
                             </div>
                           )}
 
-                          {/* Regra de idade - apenas para AGE */}
+                          {/* Faixa de idade — AGE */}
                           {couponType === "AGE" && (
                             <div className="flex flex-col gap-5 w-full">
                               <div className="flex flex-col gap-3">
@@ -605,38 +667,9 @@ export function CreateCouponModal() {
                             </div>
                           )}
 
-                          {/* Código do cupom - apenas para DISCOUNT */}
-                          {couponType === "DISCOUNT" && (
-                            <div className="flex flex-col gap-2.5">
-                              <div className="flex flex-col gap-2">
-                                <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Nome do cupom
-                                </label>
-                                <Input
-                                  type="text"
-                                  placeholder="Ex: PODIO10"
-                                  value={code}
-                                  onChange={(e) => {
-                                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                                    if (val.length > 30) {
-                                      return;
-                                    }
-                                    setCode(val);
-                                  }}
-                                  maxLength={30}
-                                  className="h-12"
-                                />
-                              </div>
-
-                            </div>
-                          )}
-
-
-
-
                           {/* Tipo de desconto */}
                           <div className="flex flex-col gap-4">
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-2">
                               <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                 Tipo de desconto
                               </h3>
@@ -644,8 +677,8 @@ export function CreateCouponModal() {
                                 Escolha como o desconto será aplicado
                               </p>
                             </div>
-                            <div className="flex gap-2.5">
-                              <label className="flex items-center gap-2">
+                            <div className="flex gap-6">
+                              <label className="flex items-center gap-2 cursor-pointer">
                                 <Radio
                                   checked={discountType === "PERCENTAGE"}
                                   onChange={() => { setDiscountType("PERCENTAGE"); setValue(""); }}
@@ -654,7 +687,7 @@ export function CreateCouponModal() {
                                   Percentual (%)
                                 </span>
                               </label>
-                              <label className="flex items-center gap-2">
+                              <label className="flex items-center gap-2 cursor-pointer">
                                 <Radio
                                   checked={discountType === "FIXED"}
                                   onChange={() => { setDiscountType("FIXED"); setValue(""); }}
@@ -664,7 +697,7 @@ export function CreateCouponModal() {
                                 </span>
                               </label>
                             </div>
-                            <div className="flex flex-col gap-2 w-[259px]">
+                            <div className="flex flex-col gap-2 w-full md:w-[259px]">
                               <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Valor
                               </label>
@@ -676,17 +709,13 @@ export function CreateCouponModal() {
                                   const val = e.target.value;
                                   if (discountType === "PERCENTAGE") {
                                     const num = val.replace(/[^0-9]/g, "");
-                                    if (num === "" || (parseInt(num) >= 0 && parseInt(num) <= 100)) {
-                                      setValue(num ? `${num}%` : "");
-                                    }
+                                    if (num === "" || parseInt(num) <= 100) setValue(num ? `${num}%` : "");
                                   } else {
-                                    // Format as currency
                                     const num = val.replace(/[^0-9]/g, "");
                                     if (num === "") {
                                       setValue("");
                                     } else {
-                                      const formatted = (parseInt(num) / 100).toFixed(2).replace(".", ",");
-                                      setValue(`R$ ${formatted}`);
+                                      setValue(`R$ ${(parseInt(num) / 100).toFixed(2).replace(".", ",")}`);
                                     }
                                   }
                                 }}
@@ -695,62 +724,30 @@ export function CreateCouponModal() {
                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-4">
-                            <div className="flex flex-col gap-3">
-                              <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                                Aplicar em ingressos
-                              </h3>
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                Deseja aplicar em todos os ingressos?
-                              </p>
-                            </div>
-                            <div className="flex gap-4">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={appliesTo === "all"}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) setAppliesTo("all");
-                                  }}
-                                />
-                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                  Sim
-                                </span>
-                              </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <Checkbox
-                                  checked={appliesTo === "specific"}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) setAppliesTo("specific");
-                                  }}
-                                />
-                                <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                  Ingressos específicos
-                                </span>
-                              </label>
-                            </div>
-                            {appliesTo === "specific" && (
-                              <div className="flex flex-col gap-2 w-[276px]">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowSelectTicketsModal(true)}
-                                  className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
-                                >
-                                  <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                    {selectedTicketIds.length > 0
-                                      ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
-                                      : "Selecione os ingressos"}
-                                  </span>
-                                  <ArrowButton isOpen={false} />
-                                </button>
-                              </div>
-                            )}
+                          {/* Aplicar em quais ingressos */}
+                          <div className="flex flex-col gap-2">
+                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                              Aplicar em quais ingressos?
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setShowSelectTicketsModal(true)}
+                              className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left w-full md:max-w-[276px]"
+                            >
+                              <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
+                                {appliesTo === "specific" && selectedTicketIds.length > 0
+                                  ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
+                                  : "Todos os ingressos"}
+                              </span>
+                              <ArrowButton isOpen={false} />
+                            </button>
                           </div>
 
                           {/* Conteúdo avançado */}
                           <div className="flex flex-col gap-5">
                             <button
                               onClick={() => setShowAdvanced(!showAdvanced)}
-                              className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
+                              className="flex items-center gap-2 text-gray-11 hover:text-gray-12 transition-colors self-start"
                             >
                               <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
                                 Mostrar conteúdo avançado opcionais
@@ -772,23 +769,16 @@ export function CreateCouponModal() {
                                       const scrollEl = modalBodyScrollRef.current;
                                       const panel = advancedPanelRef.current;
                                       if (!scrollEl || !panel) return;
-                                      const parentRect =
-                                        scrollEl.getBoundingClientRect();
-                                      const panelRect =
-                                        panel.getBoundingClientRect();
-                                      const padding = 20;
                                       const bottomOverflow =
-                                        panelRect.bottom -
-                                        (parentRect.bottom - padding);
-                                      if (bottomOverflow > 0) {
-                                        scrollEl.scrollTop += bottomOverflow;
-                                      }
+                                        panel.getBoundingClientRect().bottom -
+                                        (scrollEl.getBoundingClientRect().bottom - 20);
+                                      if (bottomOverflow > 0) scrollEl.scrollTop += bottomOverflow;
                                     });
                                   }}
                                 >
                                   {/* Validade do cupom */}
                                   <div className="flex flex-col gap-5">
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                         Validade do cupom
                                       </h3>
@@ -796,35 +786,26 @@ export function CreateCouponModal() {
                                         Após essa data, o cupom não poderá ser usado
                                       </p>
                                     </div>
-                                    <div className="flex gap-4">
+                                    <div className="flex gap-6">
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={!expiryEnabled}
                                           onCheckedChange={(checked) => {
-                                            if (checked) {
-                                              setExpiryEnabled(false);
-                                              setExpiryDate(null);
-                                            }
+                                            if (checked) { setExpiryEnabled(false); setExpiryDate(null); }
                                           }}
                                         />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                          Desabilitar
-                                        </span>
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
                                       </label>
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={expiryEnabled}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) setExpiryEnabled(true);
-                                          }}
+                                          onCheckedChange={(checked) => { if (checked) setExpiryEnabled(true); }}
                                         />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                          Habilitar
-                                        </span>
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
                                       </label>
                                     </div>
                                     {expiryEnabled && (
-                                      <div className="flex flex-col gap-3">
+                                      <div className="flex flex-col gap-2">
                                         <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                           Expira em:
                                         </label>
@@ -833,66 +814,52 @@ export function CreateCouponModal() {
                                           onChange={setExpiryDate}
                                           minDate={minSelectableExpiryDate}
                                           placeholder="00/00/2026"
-                                          className="w-auto"
+                                          className="w-full md:w-auto"
                                         />
                                       </div>
                                     )}
                                   </div>
 
-                                  {/* Valor mínimo do carrinho */}
+                                  {/* Limite por cupom */}
                                   <div className="flex flex-col gap-5">
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                        Valor mínimo do carrinho
+                                        Limite por cupom
                                       </h3>
                                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        O cupom só será aplicado se o carrinho atingir esse valor
+                                        Número máximo de vezes que esse cupom pode ser utilizado
                                       </p>
                                     </div>
-                                    <div className="flex gap-4">
+                                    <div className="flex gap-6">
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={!minCartEnabled}
                                           onCheckedChange={(checked) => {
-                                            if (checked) {
-                                              setMinCartEnabled(false);
-                                              setMinCartValue("");
-                                            }
+                                            if (checked) { setMinCartEnabled(false); setMinCartValue(""); }
                                           }}
                                         />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                          Desabilitar
-                                        </span>
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
                                       </label>
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={minCartEnabled}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) setMinCartEnabled(true);
-                                          }}
+                                          onCheckedChange={(checked) => { if (checked) setMinCartEnabled(true); }}
                                         />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                          Habilitar
-                                        </span>
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
                                       </label>
                                     </div>
                                     {minCartEnabled && (
-                                      <div className="flex flex-col gap-2 w-[259px]">
+                                      <div className="flex flex-col gap-2 w-full md:w-[259px]">
                                         <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                          Valor mínimo do carrinho
+                                          Quantidade máxima de usos
                                         </label>
                                         <Input
                                           type="text"
-                                          placeholder="Ex: 100,00"
+                                          placeholder="Ex: 45"
                                           value={minCartValue}
                                           onChange={(e) => {
                                             const num = e.target.value.replace(/[^0-9]/g, "");
-                                            if (num === "") {
-                                              setMinCartValue("");
-                                            } else {
-                                              const formatted = (parseInt(num) / 100).toFixed(2).replace(".", ",");
-                                              setMinCartValue(`R$ ${formatted}`);
-                                            }
+                                            setMinCartValue(num);
                                           }}
                                           className="h-12"
                                         />
@@ -902,7 +869,7 @@ export function CreateCouponModal() {
 
                                   {/* Lista exclusiva por CPF */}
                                   <div className="flex flex-col gap-4">
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
                                         Deseja ativar lista exclusiva por CPF?
                                       </h3>
@@ -910,33 +877,25 @@ export function CreateCouponModal() {
                                         Restrinja o cupom para uma lista específica de CPFs
                                       </p>
                                     </div>
-                                    <div className="flex gap-4">
+                                    <div className="flex gap-6">
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={cpfListStatus === "DISABLED"}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) setCpfListStatus("DISABLED");
-                                          }}
+                                          onCheckedChange={(checked) => { if (checked) setCpfListStatus("DISABLED"); }}
                                         />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                          Desabilitado
-                                        </span>
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitado</span>
                                       </label>
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={cpfListStatus === "ENABLED"}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) setCpfListStatus("ENABLED");
-                                          }}
+                                          onCheckedChange={(checked) => { if (checked) setCpfListStatus("ENABLED"); }}
                                         />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">
-                                          Habilitar
-                                        </span>
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
                                       </label>
                                     </div>
 
                                     {cpfListStatus === "ENABLED" && (
-                                      <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg flex flex-col">
+                                      <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden flex flex-col">
                                         <div className="p-5 flex flex-col gap-3">
                                           <h4 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                             Lista exclusiva
@@ -944,18 +903,24 @@ export function CreateCouponModal() {
                                           <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
                                             Restrinja o cupom para uma lista específica de CPFs. Importe um CSV com 1 CPF por linha (apenas números)
                                           </p>
+                                          <div className="pt-1">
+                                            <button
+                                              type="button"
+                                              onClick={handleImportCSV}
+                                              className="flex items-center gap-2 h-11 px-5 border border-gray-6 rounded-lg text-gray-12 font-bold font-manrope text-base hover:bg-gray-3 transition-colors"
+                                            >
+                                              <Plus className="size-5" />
+                                              Importar CSV
+                                            </button>
+                                          </div>
                                         </div>
                                         <div className="flex flex-col">
                                           <div className="bg-gray-3 border-t border-b border-gray-6 flex h-11 items-center">
                                             <div className="flex-1 px-4">
-                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                                                CPFs autorizados
-                                              </p>
+                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">CPFs autorizados</p>
                                             </div>
-                                            <div className="border-r border-gray-6 px-4">
-                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                                                Ações
-                                              </p>
+                                            <div className="border-l border-gray-6 h-full flex items-center justify-center px-4 w-[74px]">
+                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">Ações</p>
                                             </div>
                                           </div>
                                           {cpfList.length === 0 ? (
@@ -964,37 +929,32 @@ export function CreateCouponModal() {
                                             </div>
                                           ) : (
                                             cpfList.map((cpf, index) => (
-                                              <div
-                                                key={index}
-                                                className="border-b border-gray-6 flex h-[52px] items-center"
-                                              >
+                                              <div key={index} className="border-b border-gray-6 h-[52px] flex items-center">
                                                 <div className="flex-1 px-4">
                                                   <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
                                                     {formatCPF(cpf)}
                                                   </p>
                                                 </div>
-                                                <div className="px-4">
+                                                <div className="flex items-center justify-center px-4 w-[74px]">
                                                   <button
                                                     type="button"
                                                     title="Remover CPF"
                                                     onClick={() => handleRemoveCPF(index)}
                                                     className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
                                                   >
-                                                    <TrashIcon className="size-4 text-red-12" />
+                                                    <TrashIcon className="size-5 text-red-12" />
                                                   </button>
                                                 </div>
                                               </div>
                                             ))
                                           )}
-                                          <div className="p-4 flex justify-start">
+                                          <div className="p-4 flex justify-center">
                                             <button
                                               onClick={handleAddCPF}
-                                              className="flex items-center gap-2 px-4 py-2 text-gray-11 hover:text-gray-12 transition-colors"
+                                              className="flex items-center gap-1 h-11 px-11 text-gray-11 text-base font-semibold font-family-dm-sans hover:text-gray-12 transition-colors"
                                             >
-                                              <Plus className="size-5" />
-                                              <span className="text-base font-semibold font-family-dm-sans leading-[1.3]">
-                                                Adicionar campo
-                                              </span>
+                                              <Plus className="size-6" />
+                                              Adicionar campo
                                             </button>
                                           </div>
                                         </div>
@@ -1012,11 +972,17 @@ export function CreateCouponModal() {
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-2 border-t border-gray-6 flex items-center justify-end gap-2 px-4 py-3 shrink-0">
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center gap-3 border-t border-gray-6 bg-gray-1",
+                    "max-md:flex-row max-md:p-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
+                    "md:justify-end md:px-5 md:py-3",
+                  )}
+                >
                   <Button
                     onClick={closeCreateCouponModal}
                     variant="outline"
-                    className="border-gray-6 text-gray-12 h-11 px-5"
+                    className="border-gray-6 text-gray-12 h-11 px-5 max-md:flex-1"
                     disabled={isSubmitting}
                   >
                     Cancelar
@@ -1024,10 +990,10 @@ export function CreateCouponModal() {
                   <Button
                     onClick={handleSave}
                     variant="default"
-                    className="h-11 px-5"
+                    className="h-11 px-5 max-md:flex-1"
                     disabled={isSubmitting || !hasChanges}
                   >
-                    {isSubmitting ? "Salvando..." : isEditing ? "Editar cupom" : "Criar cupom"}
+                    {isSubmitting ? "Salvando..." : isEditing ? "Salvar alterações" : "Criar cupom"}
                   </Button>
                 </div>
               </div>
@@ -1036,15 +1002,12 @@ export function CreateCouponModal() {
         )}
       </AnimatePresence>
 
-      {/* Modal de seleção de ingressos */}
       <SelectTicketsModal
         isOpen={showSelectTicketsModal}
         onClose={() => setShowSelectTicketsModal(false)}
         onConfirm={(ticketIds) => {
           setSelectedTicketIds(ticketIds);
-          if (ticketIds.length > 0) {
-            setAppliesTo("specific");
-          }
+          setAppliesTo(ticketIds.length > 0 ? "specific" : "all");
         }}
         eventId={eventId}
         selectedTicketIds={selectedTicketIds}
