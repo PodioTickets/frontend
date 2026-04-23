@@ -419,9 +419,16 @@ const TicketItemDesktop = memo(({
   };
 
   return (
-    <div className="flex items-center gap-4 w-full">
+    <div
+      className={cn(
+        "w-full",
+        productItems.length > 0
+          ? "grid grid-cols-[auto_1fr] gap-x-4"
+          : "flex flex-col gap-2",
+      )}
+    >
       {productItems.length > 0 && (
-        <div className="shrink-0">
+        <div className="row-start-1 self-center shrink-0">
           <div className="flex items-center gap-2">
             {currentProduct ? (
               <button
@@ -481,65 +488,53 @@ const TicketItemDesktop = memo(({
           </div>
         </div>
       )}
-      <div className="w-full">
-        {ticket.description?.trim() ? (
-          <span className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
-            {ticket.description.trim()}
-          </span>
-        ) : null}
-        <div
-          className={cn(
-            "bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2",
-            productItems.length > 0 ? "flex-1 min-w-0" : "w-full",
-          )}
-        >
+      <div className={cn("min-w-0", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
+        <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+          {ageLimitText ? (
+            <div className="absolute top-4 right-4 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 pointer-events-none">
+              <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
+                Limite de idade: {ageLimitText}
+              </p>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
               {ticket.name}
             </h2>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-              <div className="flex items-center gap-8 flex-wrap min-w-0">
-                {modalityInfo && (
-                  <div className="flex items-center gap-2">
-                    {modalityInfo.icon ? (
-                      <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
-                        <ImageWithInitialFallback
-                          src={modalityInfo.icon}
-                          alt={modalityInfo.name}
-                          name={modalityInfo.name}
-                          width={24}
-                          height={24}
-                          className="size-6 bg-transparent border-0"
-                          imgClassName="object-contain bg-transparent border-0"
-                          letterClassName="text-[10px]"
-                          nativeImg
-                        />
-                      </div>
-                    ) : (
-                      <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
-                    )}
-                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                      {modalityInfo.name}
-                    </p>
-                  </div>
-                )}
-                {distanceKm > 0 && (
-                  <div className="flex items-center gap-2">
-                    <DistanceIcon className="size-5 shrink-0" />
-                    <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                      {distanceKm} km
-                    </p>
-                  </div>
-                )}
-              </div>
-              {ageLimitText ? (
-                <div className="bg-yellow-3 text-yellow-12 rounded-full px-4 py-2 shrink-0 max-w-full">
-                  <p className="text-sm font-medium font-family-dm-sans">
-                    Limite de idade: {ageLimitText}
+            <div className="flex items-center gap-8 flex-wrap min-w-0">
+              {modalityInfo && (
+                <div className="flex items-center gap-2">
+                  {modalityInfo.icon ? (
+                    <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
+                      <ImageWithInitialFallback
+                        src={modalityInfo.icon}
+                        alt={modalityInfo.name}
+                        name={modalityInfo.name}
+                        width={24}
+                        height={24}
+                        className="size-6 bg-transparent border-0"
+                        imgClassName="object-contain bg-transparent border-0"
+                        letterClassName="text-[10px]"
+                        nativeImg
+                      />
+                    </div>
+                  ) : (
+                    <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
+                  )}
+                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {modalityInfo.name}
                   </p>
                 </div>
-              ) : null}
+              )}
+              {distanceKm > 0 && (
+                <div className="flex items-center gap-2">
+                  <DistanceIcon className="size-5 shrink-0" />
+                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
+                    {distanceKm} km
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -580,8 +575,17 @@ const TicketItemDesktop = memo(({
             </div>
           </div>
         </div>
-
       </div>
+      {ticket.description?.trim() ? (
+        <span
+          className={cn(
+            "text-sm text-gray-11 font-family-dm-sans",
+            productItems.length > 0 && "col-start-2",
+          )}
+        >
+          {ticket.description.trim()}
+        </span>
+      ) : null}
       {productItems.length > 0 && (
         <ImageCarouselModal
           items={productItems}
@@ -594,6 +598,7 @@ const TicketItemDesktop = memo(({
       )}
     </div>
   );
+
 });
 
 TicketItemDesktop.displayName = "TicketItemDesktop";
