@@ -277,7 +277,17 @@ const TicketItemMobile = memo(({
         <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
           {formatPrice(price)}
         </p>
-        <div className="flex flex-col gap-2">
+        <div className="relative">
+          <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
+            {isBatchSoldOut ? (
+              <p className="text-xs font-medium text-red-11 whitespace-nowrap">Lote esgotado</p>
+            ) : showLowStock ? (
+              <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+                Restam apenas {ticket.availableQuantity}{" "}
+                {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+              </p>
+            ) : null}
+          </div>
           <div className="flex items-center bg-primary-3 rounded-full px-2 py-2 h-11">
             <button
               type="button"
@@ -301,14 +311,6 @@ const TicketItemMobile = memo(({
               <Plus className="size-4" />
             </button>
           </div>
-          {isBatchSoldOut ? (
-            <p className="text-xs font-medium text-red-11 text-center">Lote esgotado</p>
-          ) : showLowStock ? (
-            <p className="text-xs font-medium text-red-11">
-              Restam apenas {ticket.availableQuantity}{" "}
-              {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-            </p>
-          ) : null}
         </div>
       </div>
 
@@ -423,7 +425,7 @@ const TicketItemDesktop = memo(({
       className={cn(
         "w-full",
         productItems.length > 0
-          ? "grid grid-cols-[auto_1fr] gap-x-4"
+          ? "grid grid-cols-[auto_1fr] gap-x-4 items-center"
           : "flex flex-col gap-2",
       )}
     >
@@ -489,15 +491,15 @@ const TicketItemDesktop = memo(({
         </div>
       )}
       <div className={cn("min-w-0", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
-        <div className="relative bg-gray-2 border border-gray-6 rounded-xl h-full p-5 flex flex-col gap-2 w-full">
+        <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
           {ageLimitText ? (
-            <div className="absolute top-4 right-4 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 pointer-events-none">
+            <div className="absolute top-5 right-5 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1">
               <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
                 Limite de idade: {ageLimitText}
               </p>
             </div>
           ) : null}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col justify-center gap-1">
             <h2 className="text-xl font-bold font-manrope leading-[1.1] text-gray-12">
               {ticket.name}
             </h2>
@@ -523,24 +525,26 @@ const TicketItemDesktop = memo(({
                     <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
                   )}
                   <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                    {modalityInfo.name}
-                  </p>
-                </div>
-              )}
-              {distanceKm > 0 && (
-                <div className="flex items-center gap-2">
-                  <DistanceIcon className="size-5 shrink-0" />
-                  <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                    {distanceKm} km
+                  {distanceKm} km
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-end justify-between">
             <p className="text-xl font-bold text-gray-12">{formatPrice(price)}</p>
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 relative">
+              <div className="absolute bottom-full right-0 pb-1">
+                {isBatchSoldOut ? (
+                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">Lote esgotado</p>
+                ) : showLowStock ? (
+                  <p className="text-xs font-medium text-red-11 whitespace-nowrap">
+                    Restam apenas {ticket.availableQuantity}{" "}
+                    {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
+                  </p>
+                ) : null}
+              </div>
               <div className="flex items-center justify-center w-max gap-2 bg-primary-4 rounded-full px-2 py-2">
                 <button
                   type="button"
@@ -564,14 +568,6 @@ const TicketItemDesktop = memo(({
                   <Plus className="size-4" />
                 </button>
               </div>
-              {isBatchSoldOut ? (
-                <p className="text-xs font-medium text-red-11 text-center">Lote esgotado</p>
-              ) : showLowStock ? (
-                <p className="text-xs font-medium text-red-11">
-                  Restam apenas {ticket.availableQuantity}{" "}
-                  {ticket.availableQuantity === 1 ? "vaga" : "vagas"}!
-                </p>
-              ) : null}
             </div>
           </div>
         </div>
@@ -580,7 +576,7 @@ const TicketItemDesktop = memo(({
         <span
           className={cn(
             "pl-3 text-sm text-gray-11 font-family-dm-sans",
-            productItems.length > 0 ? "col-start-2 pt-2" : "",
+            productItems.length > 0 ? "col-start-2 -mt-3" : "",
           )}
         >
           {ticket.description.trim()}
