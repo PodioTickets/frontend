@@ -53,6 +53,8 @@ interface OrderSummaryProps {
   couponDiscount?: number;
   couponName?: string;
   couponPercent?: number;
+  couponType?: "PERCENTAGE" | "FIXED";
+  couponFixedValue?: number;
   couponError?: string | null;
   isCouponApplied?: boolean;
   isCouponLoading?: boolean;
@@ -74,6 +76,8 @@ export function OrderSummary({
   couponDiscount = 0,
   couponName,
   couponPercent,
+  couponType,
+  couponFixedValue,
   couponError = null,
   isCouponApplied = false,
   isCouponLoading = false,
@@ -135,6 +139,9 @@ export function OrderSummary({
   // Calcular subtotal dos ingressos
   const ticketsSubtotal = groupedTickets.reduce((sum, ticket) => sum + ticket.total, 0);
 
+  // Total de ingressos para label do cupom FIXED
+  const totalTicketCount = groupedTickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
+
   // Subtotal total (ingressos + produtos + taxa)
   const subtotal = ticketsSubtotal + productsSubtotal + serviceFee;
 
@@ -172,10 +179,17 @@ export function OrderSummary({
             <p className="font-manrope font-bold">{formatPrice(serviceFee)}</p>
           </div>
 
+          {/* Subtotal */}
+          <div className="flex items-center justify-between text-base text-gray-12">
+            <p className="font-manrope font-semibold">Subtotal:</p>
+            <p className="font-manrope font-bold">{formatPrice(subtotal)}</p>
+          </div>
+
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">
+                {couponType === "FIXED" && totalTicketCount > 1 ? `${totalTicketCount}x ` : ""}
                 {couponName ? `Cupom ${couponName}` : "Cupom aplicado"}
                 {couponPercent != null && couponPercent > 0 ? ` (${couponPercent}% OFF)` : ""}:
               </p>
@@ -192,12 +206,6 @@ export function OrderSummary({
               <p className="font-manrope font-bold">{formatPrice(voucherDiscount)}</p>
             </div>
           )}
-
-          {/* Subtotal */}
-          <div className="flex items-center justify-between text-base text-gray-12">
-            <p className="font-manrope font-semibold">Subtotal:</p>
-            <p className="font-manrope font-bold">{formatPrice(subtotal)}</p>
-          </div>
         </div>
 
         {/* Total */}
@@ -369,9 +377,9 @@ export function OrderSummary({
                             </p>
                           </div>
                           <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                            {couponPercent != null ? couponPercent : (participantData.ticketPrice > 0
-                              ? Math.round((participantData.couponDiscount! / participantData.ticketPrice) * 100)
-                              : 0)}% OFF
+                            {couponType === "FIXED"
+                              ? `-${formatPrice(couponFixedValue ?? 0)}`
+                              : `${couponPercent ?? (participantData.ticketPrice > 0 ? Math.round((participantData.couponDiscount! / participantData.ticketPrice) * 100) : 0)}% OFF`}
                           </p>
                         </div>
                       )}

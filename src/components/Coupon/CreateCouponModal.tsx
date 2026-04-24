@@ -578,9 +578,6 @@ export function CreateCouponModal() {
                                   maxLength={25}
                                   className="h-12 pr-16"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-11 font-family-dm-sans pointer-events-none">
-                                  {code.length}/25
-                                </span>
                               </div>
                             </div>
                           )}

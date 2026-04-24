@@ -1095,12 +1095,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   );
   const subtotalValue = totalPrice + (event.serviceFee || 0) + additionalProductsTotal;
 
-  // Para cupons percentuais, desconto = percent × (ingressos + produtos).
+  // Para cupons percentuais: percent × (ingressos + produtos). Para FIXED: value × nº de ingressos.
   const couponDiscount = useMemo(() => {
     if (!currentOrder?.coupon) return 0;
     const coupon = currentOrder.coupon;
     if (coupon.type === "PERCENTAGE" && coupon.value > 0) {
       return ((totalPrice + additionalProductsTotal) * coupon.value) / 100;
+    }
+    if (coupon.type === "FIXED" && coupon.value > 0) {
+      const totalTickets = currentOrder.tickets.reduce((sum, t) => sum + t.quantity, 0);
+      return coupon.value * totalTickets;
     }
     return currentOrder.pricing.couponDiscount ? currentOrder.pricing.couponDiscount / 100 : 0;
   }, [currentOrder, totalPrice, additionalProductsTotal]);
@@ -1957,6 +1961,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             couponDiscount={couponDiscount}
             couponName={appliedCouponName}
             couponPercent={couponPercent}
+            couponType={currentOrder?.coupon?.type ?? undefined}
+            couponFixedValue={currentOrder?.coupon?.type === "FIXED" ? currentOrder.coupon.value : undefined}
             couponError={couponError}
             isCouponApplied={isCouponApplied}
             isCouponLoading={couponLoading}

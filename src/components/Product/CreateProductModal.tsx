@@ -1472,7 +1472,7 @@ export function CreateProductModal() {
                     <div className="flex w-full flex-col gap-3 md:gap-5">
                       <div className="flex flex-col gap-3">
                         <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Deseja liberar a edição da variação pelo comprador?
+                          Deseja liberar a edição da variação pelo comprador após a compra?
                         </p>
                         <div className="flex flex-wrap items-center gap-x-[10px] gap-y-2">
                           <div className="flex items-center gap-2">
