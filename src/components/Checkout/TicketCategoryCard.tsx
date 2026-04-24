@@ -489,7 +489,7 @@ const TicketItemDesktop = memo(({
         </div>
       )}
       <div className={cn("min-w-0", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
-        <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
+        <div className="relative bg-gray-2 border border-gray-6 rounded-xl h-full p-5 flex flex-col gap-2 w-full">
           {ageLimitText ? (
             <div className="absolute top-4 right-4 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1 pointer-events-none">
               <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
@@ -579,8 +579,8 @@ const TicketItemDesktop = memo(({
       {ticket.description?.trim() ? (
         <span
           className={cn(
-            "text-sm text-gray-11 font-family-dm-sans",
-            productItems.length > 0 && "col-start-2",
+            "pl-3 text-sm text-gray-11 font-family-dm-sans",
+            productItems.length > 0 ? "col-start-2 pt-2" : "",
           )}
         >
           {ticket.description.trim()}

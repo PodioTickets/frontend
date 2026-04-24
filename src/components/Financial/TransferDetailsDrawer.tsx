@@ -31,7 +31,7 @@ interface TransferDetailsDrawerProps {
 
 // Mock data - substituir com dados reais da API
 const mockTransferDetails = {
-  id: "REP_9231",
+  id: "999ef0df-a1a3-4e10-95eb-7b2b8df6f0c7",
   date: "24 outubro, 2025",
   time: "14:30",
   status: "Concluído",
@@ -229,22 +229,23 @@ export function TransferDetailsDrawer({
 
             {/* ── Info Header ── */}
             {/* Desktop */}
-            <div className="hidden md:flex mb-7 items-center gap-3 text-[16px]">
-              <div className="flex items-center gap-1">
-                <span className="text-gray-11 font-family-dm-sans font-normal">Data:</span>
-                <span className="text-gray-12 font-manrope font-semibold">
-                  {mockTransferDetails.date} às {mockTransferDetails.time}
-                </span>
-              </div>
-              <span className="w-1 h-1 rounded-full bg-gray-11" />
+            <div className="hidden md:flex mb-7 items-start flex-col gap-3 text-[16px]">
               <div className="flex items-center gap-1">
                 <span className="text-gray-11 font-family-dm-sans font-normal">ID do repasse:</span>
                 <span className="text-gray-12 font-manrope font-semibold">{mockTransferDetails.id}</span>
               </div>
-              <span className="w-1 h-1 rounded-full bg-gray-11" />
-              <span className={`inline-flex items-center justify-center px-3 py-2 rounded text-[14px] font-family-dm-sans font-normal ${getStatusBadge(mockTransferDetails.status)}`}>
-                {mockTransferDetails.status}
-              </span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-11 font-family-dm-sans font-normal">Data:</span>
+                  <span className="text-gray-12 font-manrope font-semibold">
+                    {mockTransferDetails.date} às {mockTransferDetails.time}
+                  </span>
+                </div>
+                <span className="w-1 h-1 rounded-full bg-gray-11" />
+                <span className={`inline-flex items-center justify-center px-3 py-2 rounded text-[14px] font-family-dm-sans font-normal ${getStatusBadge(mockTransferDetails.status)}`}>
+                  {mockTransferDetails.status}
+                </span>
+              </div>
             </div>
 
             {/* Mobile info card */}

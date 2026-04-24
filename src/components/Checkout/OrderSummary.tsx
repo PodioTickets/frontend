@@ -52,6 +52,7 @@ interface OrderSummaryProps {
   couponCode?: string;
   couponDiscount?: number;
   couponName?: string;
+  couponPercent?: number;
   couponError?: string | null;
   isCouponApplied?: boolean;
   isCouponLoading?: boolean;
@@ -72,6 +73,7 @@ export function OrderSummary({
   couponCode: externalCouponCode = "",
   couponDiscount = 0,
   couponName,
+  couponPercent,
   couponError = null,
   isCouponApplied = false,
   isCouponLoading = false,
@@ -171,12 +173,13 @@ export function OrderSummary({
           </div>
 
           {/* Cupom aplicado */}
-          {isCouponApplied && couponDiscount > 0 && couponName && (
+          {isCouponApplied && couponDiscount > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">
-                Cupom {couponName} ({couponDiscount > 0 ? `${Math.round((couponDiscount / subtotal) * 100)}% OFF` : ""}):
+                {couponName ? `Cupom ${couponName}` : "Cupom aplicado"}
+                {couponPercent != null && couponPercent > 0 ? ` (${couponPercent}% OFF)` : ""}:
               </p>
-              <p className="font-manrope font-bold">{formatPrice(couponDiscount)}</p>
+              <p className="font-manrope font-bold">-{formatPrice(couponDiscount)}</p>
             </div>
           )}
 
@@ -239,7 +242,6 @@ export function OrderSummary({
       {/* Resumo da Compra */}
       <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] overflow-hidden">
         <div className="flex flex-col items-start px-4 py-1">
-          {/* Título */}
           <div className="flex items-center justify-center py-4 w-full">
             <p className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
               Resumo da sua compra
@@ -268,18 +270,14 @@ export function OrderSummary({
                           Participante {participantData.participantIndex + 1}
                         </p>
                       </div>
-                      <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
-                        {participantData.categoryName ? (
-                          <p className="font-family-dm-sans font-normal text-sm text-gray-11 max-w-[50%] truncate">
-                            {participantData.categoryName}
-                          </p>
-                        ) : (
-                          <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                            Ingresso Avulso
-                          </p>
-                        )}
-                        {participantData.ticketName}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <p className="font-family-dm-sans font-normal text-sm text-gray-11 max-w-full truncate">
+                          {participantData.categoryName || "Ingresso Avulso"}
+                        </p>
+                        <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
+                          {participantData.ticketName}
+                        </p>
+                      </div>
 
                       <div className="flex items-end justify-between w-full text-gray-12">
                         <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
@@ -371,7 +369,9 @@ export function OrderSummary({
                             </p>
                           </div>
                           <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                            {Math.round((participantData.couponDiscount / participantData.ticketPrice) * 100)}% OFF
+                            {couponPercent != null ? couponPercent : (participantData.ticketPrice > 0
+                              ? Math.round((participantData.couponDiscount! / participantData.ticketPrice) * 100)
+                              : 0)}% OFF
                           </p>
                         </div>
                       )}

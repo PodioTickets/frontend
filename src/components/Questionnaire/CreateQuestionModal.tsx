@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -50,6 +50,9 @@ export function CreateQuestionModal() {
   const [showSelectTicketsModal, setShowSelectTicketsModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editingDescription, setEditingDescription] = useState("");
+  const descriptionRef = useRef("");
 
   useLayoutEffect(() => {
     setIsMdUp(window.matchMedia("(min-width: 768px)").matches);
@@ -74,6 +77,7 @@ export function CreateQuestionModal() {
         const q = data.question;
         setQuestion(q.question);
         setDescription(q.description ?? "");
+        descriptionRef.current = q.description ?? "";
         setType(q.type);
         setOptions(q.options && q.options.length > 0 ? q.options : ["", ""]);
         setIsRequired(q.isRequired);
@@ -95,6 +99,7 @@ export function CreateQuestionModal() {
         // Create mode - reset form
         setQuestion("");
         setDescription("");
+        descriptionRef.current = "";
         setType("text");
         setOptions(["", ""]);
         setIsRequired(true);
@@ -120,6 +125,16 @@ export function CreateQuestionModal() {
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
+  };
+
+  const handleSaveDescription = () => {
+    descriptionRef.current = editingDescription;
+    setDescription(editingDescription);
+    setIsEditingDescription(false);
+  };
+
+  const handleCancelDescription = () => {
+    setIsEditingDescription(false);
   };
 
   const handleSave = async () => {
@@ -161,7 +176,7 @@ export function CreateQuestionModal() {
     try {
       const questionData: CreateQuestionRequest = {
         question: question.trim(),
-        description: description.trim() || undefined,
+        description: descriptionRef.current.trim() || undefined,
         type,
         isRequired,
         options: (type === "select" || type === "multiple_choice")
@@ -337,7 +352,7 @@ export function CreateQuestionModal() {
                 <div className="min-h-0 flex-1 overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
                   <div className="flex flex-col gap-8 p-4 max-md:gap-8 md:gap-9 md:p-5">
                     {/* Pergunta Input */}
-                    <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-2">
                       <div className="flex flex-col gap-2">
                         <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
                           Pergunta
@@ -351,19 +366,33 @@ export function CreateQuestionModal() {
                           className="h-12 px-3 pr-24"
                         />
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                          Descrição <span className="text-gray-10 text-sm">(opcional)</span>
-                        </label>
-                        <textarea
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          placeholder="Adicione uma descrição ou instruções adicionais para a pergunta"
-                          maxLength={500}
-                          rows={3}
-                          className="w-full resize-none rounded-lg border border-gray-6 bg-transparent px-3 py-2.5 font-family-dm-sans text-base font-normal text-gray-12 placeholder:text-gray-10 focus:outline-none focus:ring-1 focus:ring-gray-7 transition-colors"
+                      {isEditingDescription ? (
+                        <input
+                          type="text"
+                          value={editingDescription}
+                          onChange={(e) => { setEditingDescription(e.target.value); descriptionRef.current = e.target.value; }}
+                          onBlur={handleSaveDescription}
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === "Enter") handleSaveDescription();
+                            else if (e.key === "Escape") handleCancelDescription();
+                          }}
+                          placeholder="Adicione uma observação para o cliente..."
+                          className="w-full border-0 border-b border-gray-6 bg-transparent font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-11 focus:border-primary-8 focus:outline-none"
+                          autoFocus
                         />
-                      </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDescription(description);
+                            setIsEditingDescription(true);
+                          }}
+                          className="w-full text-left font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-11 hover:text-gray-12"
+                        >
+                          {description || "Adicione uma observação para o cliente..."}
+                        </button>
+                      )}
                     </div>
 
                     {/* Tipo de resposta */}

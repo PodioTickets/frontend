@@ -15,8 +15,8 @@ import { Dropdown } from "../Dropdown";
 import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
 import { Checkbox } from "../CheckBox";
 import type { Question } from "@/interfaces/event";
-import { eventService } from "@/services";
-import { useQuery } from "@tanstack/react-query";
+import { eventService, userService } from "@/services";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
@@ -42,6 +42,7 @@ interface InformationStepProps {
 interface ParticipantWithTicket {
   ticketId: string;
   ticket: Ticket;
+  categoryName: string;
   participantIndex: number;
   isExpanded: boolean;
 }
@@ -65,6 +66,7 @@ export function InformationStep({
   const eventId = event?.id;
   const { clearTimer, orderId } = useCheckoutTimer();
   const { patchParticipants } = useCheckoutReservation();
+  const queryClient = useQueryClient();
 
   // Buscar tickets e categorias do servidor
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
@@ -221,6 +223,7 @@ export function InformationStep({
           result.push({
             ticketId: ticket.id,
             ticket,
+            categoryName: category.name,
             participantIndex: participantIndex++,
             isExpanded: false,
           });
@@ -235,6 +238,7 @@ export function InformationStep({
         result.push({
           ticketId: ticket.id,
           ticket,
+          categoryName: "",
           participantIndex: participantIndex++,
           isExpanded: false,
         });
@@ -456,10 +460,29 @@ export function InformationStep({
     updateParticipant(index, { [name]: value });
   };
 
-  const handleCPFChange = (index: number, value: string) => {
+  const handleCPFChange = async (index: number, value: string) => {
     clearParticipantFieldError(index, "cpf");
     const masked = maskCPF(value);
     updateParticipant(index, { cpf: masked });
+
+    const clean = masked.replace(/\D/g, "");
+    if (clean.length === 11 && isValidCPF(masked)) {
+      try {
+        const user = await userService.getUserByCpf(clean);
+        if (user) {
+          const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+          updateParticipant(index, {
+            name: fullName,
+            email: user.email || "",
+            phone: user.phone ? maskPhone(user.phone) : "",
+            birthDate: user.dateOfBirth || "",
+            gender: user.gender || "",
+          });
+        }
+      } catch {
+        // silently ignore — não bloqueia o preenchimento manual
+      }
+    }
   };
 
   const handlePhoneChange = (
@@ -574,7 +597,10 @@ export function InformationStep({
   };
 
   // Retorna erros de validação por campo para um participante (para exibir no formulário)
-  const getParticipantValidationErrors = (index: number): Record<string, string> => {
+  const getParticipantValidationErrors = (
+    index: number,
+    ageLimit?: { min?: number; max?: number }
+  ): Record<string, string> => {
     const participant = participants[index];
     const errors: Record<string, string> = {};
     if (!participant) return errors;
@@ -608,6 +634,17 @@ export function InformationStep({
 
     if (!birthDate) {
       errors.birthDate = "Data de nascimento é obrigatória";
+    } else if (ageLimit && (ageLimit.min || ageLimit.max)) {
+      const referenceDate = event?.eventDate ? new Date(event.eventDate) : new Date();
+      const birth = new Date(birthDate);
+      const age = Math.floor(
+        (referenceDate.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+      );
+      if (ageLimit.min && age < ageLimit.min) {
+        errors.birthDate = `Idade mínima para este ingresso é ${ageLimit.min} anos`;
+      } else if (ageLimit.max && age > ageLimit.max) {
+        errors.birthDate = `Idade máxima para este ingresso é ${ageLimit.max} anos`;
+      }
     }
 
     if (!phone) {
@@ -1155,7 +1192,7 @@ export function InformationStep({
 
           {/* Cards de participantes */}
           {participantsWithRaces.map(
-            ({ ticket, participantIndex, ticketId }, index) => {
+            ({ ticket, categoryName, participantIndex, ticketId }, index) => {
               const participant = participants[participantIndex] || {
                 name: "",
                 cpf: "",
@@ -1205,6 +1242,9 @@ export function InformationStep({
                               <p className="text-sm font-medium text-gray-12">
                                 {participant.name ||
                                   `Participante ${index + 1}`}
+                              </p>
+                              <p className="text-sm text-gray-11 font-family-dm-sans mt-2">
+                                {categoryName.trim() || "Ingresso avulso"}
                               </p>
                               <p className="font-bold text-2xl text-gray-12 mb-2">
                                 {ticket.name}
@@ -1306,7 +1346,12 @@ export function InformationStep({
                             <p className="text-sm text-gray-11">
                               Participante {index + 1}
                             </p>
-                            <h1 className="text-lg font-bold">{ticket.name}</h1>
+                            <div>
+                              <p className="text-sm text-gray-11 font-family-dm-sans">
+                                {categoryName.trim() || "Ingresso avulso"}
+                              </p>
+                              <h1 className="text-lg font-bold">{ticket.name}</h1>
+                            </div>
                             {ageLimitText && (
                               <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-2 w-fit text-xs">
                                 Limite de idade: {ageLimitText}
@@ -1673,8 +1718,8 @@ export function InformationStep({
                             {formatPrice(getTicketPrice(ticket))}
                           </h1>
                           <Button
-                            onClick={() => {
-                              const errors = getParticipantValidationErrors(participantIndex);
+                            onClick={async () => {
+                              const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit);
                               if (Object.keys(errors).length > 0) {
                                 setFieldErrors((prev) => ({ ...prev, [participantIndex]: errors }));
                                 setExpandedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
@@ -1703,6 +1748,24 @@ export function InformationStep({
                               }));
                               setSavedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
                               toggleParticipant(participantIndex);
+
+                              // Salvar como linked-user em background e atualizar lista
+                              if (p?.cpf && p?.name) {
+                                const nameParts = (p.name || "").trim().split(/\s+/);
+                                const firstName = nameParts[0] || "";
+                                const lastName = nameParts.slice(1).join(" ") || "";
+                                userService.createOrLinkUser({
+                                  firstName,
+                                  lastName,
+                                  email: p.email || "",
+                                  documentNumber: (p.cpf || "").replace(/\D/g, ""),
+                                  phone: (p.phone || "").replace(/\D/g, ""),
+                                  dateOfBirth: p.birthDate || "",
+                                  gender: p.gender || "",
+                                }).then(() => {
+                                  queryClient.invalidateQueries({ queryKey: ["linked-users"] });
+                                }).catch(() => {});
+                              }
                             }}
                             disabled={savedParticipants[participantIndex] && !participantDirtyMap[participantIndex] || previewMode}
                             variant="default"

@@ -91,6 +91,7 @@ export default function EditQuestionnairePage() {
             const q: Question = {
               id,
               question: payload.questionData.question,
+              description: payload.questionData.description,
               type: payload.questionData.type,
               options: payload.questionData.options,
               isRequired: payload.questionData.isRequired ?? true,
@@ -111,6 +112,7 @@ export default function EditQuestionnairePage() {
                 ? {
                   ...q,
                   question: payload.questionData.question,
+                  description: payload.questionData.description,
                   type: payload.questionData.type,
                   options: payload.questionData.options,
                   isRequired: payload.questionData.isRequired ?? true,
@@ -214,6 +216,7 @@ export default function EditQuestionnairePage() {
         if (!isPendingQuestionId(q.id)) continue;
         await organizerService.createQuestion(eventId, {
           question: q.question,
+          description: q.description,
           type: q.type,
           isRequired: q.isRequired,
           options: q.options,

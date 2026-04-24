@@ -85,8 +85,8 @@ export interface AuthError {
   message: string;
   code?: string;
   field?: string;
-  /** Para exibir erro no input do cadastro (CPF ↔ documentNumber na API). */
-  formFieldErrors?: Partial<Record<"cpf", string>>;
+  /** Para exibir erro no input do cadastro. */
+  formFieldErrors?: Partial<Record<"cpf" | "email", string>>;
 }
 
 export type DocumentAvailabilityResult = {
@@ -435,6 +435,22 @@ export class UserService {
     }
   }
 
+  async updateRegistrationProductVariation(
+    registrationId: string,
+    productId: string,
+    variationId: string
+  ): Promise<any> {
+    try {
+      const response = await this.apiClient.patch(
+        `/api/v1/registrations/${registrationId}/products/${productId}/variation`,
+        { variationId }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   async forgotPassword(data: {
     email: string;
     accountType?: "USER" | "ORGANIZER";
@@ -570,7 +586,7 @@ export class UserService {
     limit?: number;
     status?: string;
   }): Promise<{
-    registrations: any[];
+    orders: any[];
     pagination: {
       page: number;
       limit: number;
@@ -589,7 +605,7 @@ export class UserService {
       });
       return (
         response.data.data || {
-          registrations: [],
+          orders: [],
           pagination: { page, limit, total: 0, totalPages: 1 },
         }
       );
@@ -612,6 +628,25 @@ export class UserService {
       const response = await this.apiClient.get(`/api/v1/orders/${orderId}/details`);
       return response.data.data || response.data;
     } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getUserByCpf(cpf: string): Promise<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    documentNumber: string;
+    phone: string;
+    dateOfBirth: string;
+    gender: string;
+  } | null> {
+    try {
+      const response = await this.apiClient.get(`/api/v1/user/by-cpf/${cpf}`);
+      return response.data.data || null;
+    } catch (error: any) {
+      if (error?.response?.status === 404) return null;
       throw this.handleError(error);
     }
   }
@@ -714,6 +749,13 @@ export class UserService {
     ) {
       return "Já existe um usuário cadastrado com este CPF.";
     }
+    if (
+      httpStatus === 409 &&
+      /email/i.test(m) &&
+      /already\s+exists|already registered|already\s+in\s+use/i.test(m)
+    ) {
+      return "Este e-mail já está cadastrado.";
+    }
     return message;
   }
 
@@ -743,7 +785,7 @@ export class UserService {
 
       const localized = this.mapAuthErrorMessageToPtBr(messageStr, statusCode);
 
-      const formFieldErrors: Partial<Record<"cpf", string>> = {};
+      const formFieldErrors: Partial<Record<"cpf" | "email", string>> = {};
       if (data.field === "documentNumber" && localized) {
         formFieldErrors.cpf = localized;
       }
@@ -752,6 +794,9 @@ export class UserService {
           formFieldErrors.cpf = this.mapAuthErrorMessageToPtBr(m, statusCode);
           break;
         }
+      }
+      if (data.field === "email" || (statusCode === 409 && /email/i.test(messageStr) && /already/i.test(messageStr))) {
+        formFieldErrors.email = this.mapAuthErrorMessageToPtBr(messageStr, statusCode);
       }
 
       return {

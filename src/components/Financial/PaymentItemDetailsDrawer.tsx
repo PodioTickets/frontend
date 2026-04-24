@@ -19,6 +19,7 @@ import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Pagination } from "@/components/Pagination";
 import { XCircleIcon } from "lucide-react";
+import { TicketIcon } from "../Icons/TicketIcon";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -176,7 +177,7 @@ export function PaymentItemDetailsDrawer({
       name: reg.name || "Participante",
       email: reg.email || "",
       ticketName: reg.ticket?.name || "—",
-      categoryName: reg.ticketCategory?.name || "—",
+      categoryName: reg.ticketCategory?.name || "Ingresso avulso",
     }));
   }, [paymentDetails]);
 
@@ -521,7 +522,7 @@ export function PaymentItemDetailsDrawer({
                           className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer shrink-0"
                           title="Ver comprovante"
                         >
-                          <FileText className="size-4 text-gray-11" />
+                          <TicketIcon className="size-4 text-gray-11" />
                         </button>
                       </div>
                     </div>

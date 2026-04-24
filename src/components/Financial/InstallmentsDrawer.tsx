@@ -85,18 +85,14 @@ export function InstallmentsDrawer({
     }
   };
 
-  // Converter Installment para formato de exibição
   const formatInstallmentForDisplay = (installment: Installment, registrationId?: string) => {
     const date = new Date(installment.dueDate);
     const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-
-    // Usar paymentId para buscar detalhes (GET /api/v1/payments/order/{paymentId}/details)
-    // O installment.id serve apenas para identificação visual na lista
     const paymentId = installment.paymentId || installment.orderId;
-    
+
     return {
-      orderId: paymentId || "", // Usar paymentId para buscar os detalhes via /api/v1/payments/order/{paymentId}/details
-      transactionId: installment.id, // ID da parcela (apenas para exibição visual)
+      orderId: paymentId || "",
+      transactionId: installment.id,
       buyer: {
         name: `${installment.buyer.firstName} ${installment.buyer.lastName}`,
         email: installment.buyer.email,
@@ -114,13 +110,13 @@ export function InstallmentsDrawer({
 
   const filteredInstallments = searchQuery.trim()
     ? displayInstallments.filter((d) => {
-        const q = searchQuery.toLowerCase();
-        return (
-          (d.orderId || "").toLowerCase().includes(q) ||
-          (d.buyer?.name || "").toLowerCase().includes(q) ||
-          (d.buyer?.email || "").toLowerCase().includes(q)
-        );
-      })
+      const q = searchQuery.toLowerCase();
+      return (
+        (d.orderId || "").toLowerCase().includes(q) ||
+        (d.buyer?.name || "").toLowerCase().includes(q) ||
+        (d.buyer?.email || "").toLowerCase().includes(q)
+      );
+    })
     : displayInstallments;
 
   const totalPages = Math.ceil(filteredInstallments.length / itemsPerPage);
@@ -213,7 +209,7 @@ export function InstallmentsDrawer({
             <div className="p-4 flex flex-col gap-4">
               {/* Summary cards: Total a receber, Receber hoje, Transações parcelas a receber */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col justify-between gap-3">
                   <div className="flex flex-col gap-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
                       <CalendarIcon className="size-5 text-blue-12" />
@@ -224,19 +220,9 @@ export function InstallmentsDrawer({
                     R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col justify-between gap-3">
                   <div className="flex flex-col gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary-4 flex items-center justify-center shrink-0">
-                      <TimerIcon className="size-5 text-primary-12" />
-                    </div>
-                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Receber hoje</p>
-                  </div>
-                  <p className="font-manrope font-extrabold text-lg text-gray-12">
-                    R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3 col-span-2">
-                  <div className="flex gap-3 items-center">
                     <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
                       <FileText className="size-5 text-[#2F265F]" />
                     </div>
@@ -364,8 +350,6 @@ export function InstallmentsDrawer({
           <div className="hidden md:block flex-1 overflow-y-auto">
             <div className="p-5">
               <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
-                <span>Nome da categoria: <span className="text-gray-12">{categoryName}</span></span>
-                <span className="w-1 h-1 rounded-full bg-gray-11" />
                 <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 
@@ -409,11 +393,6 @@ export function InstallmentsDrawer({
                   <div className="flex h-full items-center p-4 w-[120px]">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
                       ID pedido
-                    </p>
-                  </div>
-                  <div className="flex h-full items-center p-4 w-[120px]">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                      ID transação
                     </p>
                   </div>
                   <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
@@ -465,14 +444,6 @@ export function InstallmentsDrawer({
                             #{installment.orderId.slice(0, 6)}...{installment.orderId.slice(-4)}
                           </p>
                         </div>
-
-                        {/* ID transação */}
-                        <div className="flex h-full items-center p-4 w-[120px]">
-                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {installment.transactionId.slice(0, 8)}
-                          </p>
-                        </div>
-
                         {/* Comprador */}
                         <div className="flex flex-1 h-full items-center gap-3 min-h-px min-w-px p-4">
                           <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0">

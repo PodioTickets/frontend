@@ -1,4 +1,5 @@
 {
+  "disabledMcpjsonServers": ["claude.ai Figma"],
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",

@@ -11,42 +11,41 @@ import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { ClockIcon } from "@/components/Icons/ClockIcon";
 import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { Pencil } from "lucide-react";
+import { ProductVariationCard, type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
 
 export default function TicketDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const registrationId = params.id as string;
-  const [registration, setRegistration] = useState<any>(null);
+  const orderId = params.id as string;
+
+  const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<Record<number, "info" | "products">>({});
 
   useEffect(() => {
-    if (!registrationId) return;
-
-    const fetchRegistration = async () => {
+    if (!orderId) return;
+    const fetch = async () => {
       try {
         setLoading(true);
-        const data = await userService.getMyRegistrationById(registrationId);
-        setRegistration(data);
+        const data = await userService.getOrderDetails(orderId);
+        setOrderData(data);
       } catch (error: any) {
-        console.error("Erro ao buscar detalhes da inscrição:", error);
-        setRegistration(null);
+        console.error("Erro ao buscar detalhes do pedido:", error);
+        setOrderData(null);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchRegistration();
-  }, [registrationId]);
+    fetch();
+  }, [orderId]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("pt-BR", {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -55,8 +54,7 @@ export default function TicketDetailsPage() {
 
   const formatTime = (dateString: string) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("pt-BR", {
+    return new Date(dateString).toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
@@ -64,13 +62,12 @@ export default function TicketDetailsPage() {
   };
 
   const formatPrice = (price: number) => {
-    let value = price / 100
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(value);
+    }).format(price / 100);
   };
 
   const maskCPF = (cpf: string) => {
@@ -81,88 +78,70 @@ export default function TicketDetailsPage() {
   const formatPhone = (phone: string) => {
     if (!phone) return "";
     const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 11) {
-      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    }
-    if (cleaned.length === 10) {
-      return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    }
+    if (cleaned.length === 11) return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    if (cleaned.length === 10) return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
     return phone;
   };
 
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
-    const genderMap: Record<string, string> = {
+    const map: Record<string, string> = {
       MALE: "Masculino",
       FEMALE: "Feminino",
       OTHER: "Outro",
       PREFER_NOT_TO_SAY: "Prefiro não dizer",
-      masculino: "Masculino",
-      feminino: "Feminino",
-      outro: "Outro",
-      "prefiro-nao-dizer": "Prefiro não dizer",
     };
-    return genderMap[gender] || gender;
+    return map[gender] || gender;
   };
 
   const toggleParticipant = (index: number) => {
-    setExpandedParticipants((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-    // Se estiver expandindo, definir tab padrão
+    setExpandedParticipants((prev) => ({ ...prev, [index]: !prev[index] }));
     if (!expandedParticipants[index]) {
       setActiveTab((prev) => ({ ...prev, [index]: "info" }));
     }
   };
 
   const participants = useMemo(() => {
-    if (!registration) return [];
+    if (!orderData) return [];
+    return (orderData.registrations || []).map((reg: any) => {
+      const p = reg.participant || {};
+      const ticket = reg.ticket || {};
 
-    const p = registration.participant || {};
-    const ticket = registration.ticket || {};
-    const products: any[] = registration.products || [];
+      const includedProducts: IncludedProduct[] = (ticket.includedProducts || []).filter((item: any) => {
+        const selectedName = item.selectedVariation?.name ?? null;
+        if (selectedName && isSemInteresseVariation({ name: selectedName })) return false;
+        return true;
+      });
 
-    const includedProducts = products.filter((item: any) => {
-      if (item.product?.isIncludedInTicket !== true) return false;
-      const variationName = item.variation?.name ?? null;
-      if (item.product?.isRequired === false && variationName && isSemInteresseVariation({ name: variationName })) return false;
-      return true;
+      const additionalProducts = (reg.additionalProducts || []).filter((item: any) => {
+        const variationName = item.variation?.name ?? null;
+        if (variationName && isSemInteresseVariation({ name: variationName })) return false;
+        return true;
+      });
+
+      return {
+        id: reg.id,
+        name: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || "",
+        email: p.email || "",
+        cpf: p.documentNumber || "",
+        birthDate: p.dateOfBirth || "",
+        gender: p.gender || "",
+        phone: p.phone || "",
+        avatarUrl: p.avatarUrl || "",
+        qrCode: reg.qrCode || "",
+        ticket,
+        emergencyContact: reg.emergencyContact || null,
+        questionAnswers: reg.questionAnswers || [],
+        includedProducts,
+        additionalProducts,
+      };
     });
-
-    const additionalProducts = products.filter((item: any) => {
-      if (item.product?.isIncludedInTicket === true) return false;
-      const variationName = item.variation?.name ?? null;
-      if (variationName && isSemInteresseVariation({ name: variationName })) return false;
-      return true;
-    });
-
-    return [{
-      id: registration.id,
-      name: p.fullName || "",
-      email: p.email || "",
-      cpf: p.documentNumber || "",
-      birthDate: p.dateOfBirth || p.birthDate || "",
-      gender: p.gender || "",
-      phone: p.phone || "",
-      avatarUrl: p.avatarUrl || "",
-      qrCode: registration.qrCode || "",
-      ticket,
-      emergencyContact: registration.emergencyContact || null,
-      questionAnswers: (registration.questionAnswers || []).reduce((acc: any, qa: any) => {
-        if (qa.question) acc[qa.question.id || qa.question.question] = qa.answer;
-        return acc;
-      }, {}),
-      includedProducts,
-      additionalProducts,
-    }];
-  }, [registration]);
+  }, [orderData]);
 
   const event = useMemo(() => {
-    if (!registration?.event) return null;
-    const e = registration.event;
-    return { ...e, eventDate: e.startDate || e.eventDate };
-  }, [registration]);
+    if (!orderData?.event) return null;
+    return orderData.event;
+  }, [orderData]);
 
   if (loading) {
     return (
@@ -172,7 +151,7 @@ export default function TicketDetailsPage() {
     );
   }
 
-  if (!registration) {
+  if (!orderData) {
     return (
       <div className="min-h-screen bg-gray-2">
         <div className="mx-auto max-w-[1280px] px-4 md:px-20 pt-13 pb-20">
@@ -181,9 +160,7 @@ export default function TicketDetailsPage() {
               onClick={() => router.back()}
               className="cursor-pointer size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 transition-colors"
             >
-              <div className="rotate-180">
-                <ArrowButton isOpen={false} />
-              </div>
+              <div className="rotate-180"><ArrowButton isOpen={false} /></div>
             </button>
             <h1 className="text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
               Detalhes do seu ingresso
@@ -191,7 +168,7 @@ export default function TicketDetailsPage() {
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-xl p-8 text-center">
             <p className="text-gray-11 mb-4 font-family-dm-sans">
-              Inscrição não encontrada ou erro ao carregar os dados.
+              Pedido não encontrado ou erro ao carregar os dados.
             </p>
             <button
               onClick={() => router.push("/user/tickets")}
@@ -205,6 +182,10 @@ export default function TicketDetailsPage() {
     );
   }
 
+  const order = orderData.order || {};
+  const payment = orderData.payment || {};
+  const pricing = order.pricing || {};
+
   return (
     <div className="min-h-screen bg-gray-2">
       <div className="mx-auto max-w-[700px] px-4 pt-13 pb-20">
@@ -215,9 +196,7 @@ export default function TicketDetailsPage() {
               onClick={() => router.back()}
               className="cursor-pointer size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 transition-colors"
             >
-              <div className="rotate-180">
-                <ArrowButton isOpen={false} />
-              </div>
+              <div className="rotate-180"><ArrowButton isOpen={false} /></div>
             </button>
             <h1 className="text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
               Detalhes do seu ingresso
@@ -232,7 +211,7 @@ export default function TicketDetailsPage() {
         {participants.length === 0 ? (
           <div className="bg-gray-1 border border-gray-6 rounded-xl p-8 text-center">
             <p className="text-gray-11 font-family-dm-sans">
-              Nenhum participante encontrado para esta inscrição.
+              Nenhum participante encontrado para este pedido.
             </p>
           </div>
         ) : (
@@ -241,8 +220,6 @@ export default function TicketDetailsPage() {
               const isExpanded = expandedParticipants[index] || false;
               const tab = activeTab[index] || "info";
               const ticket = participant.ticket || {};
-
-              // Calcular distância do ticket
               const distance = ticket.distance
                 ? `${ticket.distance} ${ticket.distanceUnit || "Km"}`
                 : null;
@@ -300,11 +277,8 @@ export default function TicketDetailsPage() {
                     </div>
                     {/* QR Code */}
                     <div className="shrink-0">
-                      {registration?.qrCode ? (
-                        <RegistrationQRCode
-                          qrCodeData={registration.qrCode}
-                          size={120}
-                        />
+                      {participant.qrCode ? (
+                        <RegistrationQRCode qrCodeData={participant.qrCode} size={120} />
                       ) : (
                         <div className="size-[120px] bg-gray-5 rounded-lg flex items-center justify-center">
                           <span className="text-xs text-gray-11">QR Code</span>
@@ -319,7 +293,7 @@ export default function TicketDetailsPage() {
                       <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
                         {participant.avatarUrl ? (
                           <Image
-                            src={getAvatarUrl(participant.avatarUrl || "") as string}
+                            src={getAvatarUrl(participant.avatarUrl) as string}
                             alt="Avatar"
                             width={40}
                             height={40}
@@ -345,9 +319,7 @@ export default function TicketDetailsPage() {
                           {participant.gender && (
                             <>
                               {getGenderLabel(participant.gender)}
-                              {participant.cpf && (
-                                <span className="size-1 bg-gray-11 rounded-full" />
-                              )}
+                              {participant.cpf && <span className="size-1 bg-gray-11 rounded-full" />}
                             </>
                           )}
                           {participant.cpf && maskCPF(participant.cpf)}
@@ -367,19 +339,17 @@ export default function TicketDetailsPage() {
                     <div className="flex gap-3 items-start px-4 pt-5">
                       <button
                         onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "info" }))}
-                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "info"
-                          ? "bg-primary-11 text-primary-2"
-                          : "bg-gray-5 text-gray-11"
-                          }`}
+                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${
+                          tab === "info" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                        }`}
                       >
                         Informações
                       </button>
                       <button
                         onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
-                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products"
-                          ? "bg-primary-11 text-primary-2"
-                          : "bg-gray-5 text-gray-11"
-                          }`}
+                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${
+                          tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                        }`}
                       >
                         Produtos
                       </button>
@@ -391,34 +361,29 @@ export default function TicketDetailsPage() {
                     <div className="px-4 pb-6 pt-8">
                       {tab === "info" && (
                         <div className="flex flex-col gap-8">
-                          {/* Informações do participante */}
                           <div>
                             <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1] mb-5">
                               Informações do participante
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2">
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">
-                                  Nome
-                                </label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">Nome</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.name || "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">
-                                  Email
-                                </label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.email || "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">
-                                  CPF
-                                </label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">CPF</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                  {participant.cpf ? participant.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : "-"}
+                                  {participant.cpf
+                                    ? participant.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                                    : "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
@@ -430,17 +395,13 @@ export default function TicketDetailsPage() {
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">
-                                  Telefone
-                                </label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">Telefone</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.phone ? formatPhone(participant.phone) : "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">
-                                  Sexo
-                                </label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">Sexo</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {getGenderLabel(participant.gender) || "-"}
                                 </p>
@@ -451,15 +412,17 @@ export default function TicketDetailsPage() {
                                     Contato de emergência
                                   </label>
                                   <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                    {participant.emergencyContact.name ? participant.emergencyContact.name : "-"} - {participant.emergencyContact.phone ? formatPhone(participant.emergencyContact.phone) : "-"}
+                                    {participant.emergencyContact.name || "-"} -{" "}
+                                    {participant.emergencyContact.phone
+                                      ? formatPhone(participant.emergencyContact.phone)
+                                      : "-"}
                                   </p>
                                 </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Perguntas do Organizador */}
-                          {registration.questionAnswers && registration.questionAnswers.length > 0 && (
+                          {participant.questionAnswers.length > 0 && (
                             <>
                               <div className="w-full h-px bg-gray-6" />
                               <div>
@@ -467,7 +430,7 @@ export default function TicketDetailsPage() {
                                   Perguntas do Organizador
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {registration.questionAnswers.map((qa: any) => (
+                                  {participant.questionAnswers.map((qa: any) => (
                                     <div key={qa.id} className="flex flex-col py-4">
                                       <label className="text-base text-gray-12 font-family-dm-sans">
                                         {qa.question?.question || "Pergunta"}
@@ -485,67 +448,36 @@ export default function TicketDetailsPage() {
                       )}
 
                       {tab === "products" && (
-                        <div className="flex flex-col gap-6">
-                          {/* Produtos incluídos no ingresso */}
-                          {participant.includedProducts && participant.includedProducts.length > 0 && (
-                            <div className="flex flex-col gap-3">
-                              <p className="text-sm font-semibold text-gray-11 font-family-dm-sans">Incluídos no ingresso</p>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {participant.includedProducts.map((item: any, productIndex: number) => {
-                                  const productData = item.product || {};
-                                  const variationData = item.variation || null;
-                                  return (
-                                    <div
-                                      key={`inc-${productIndex}`}
-                                      className="bg-gray-2 border border-gray-6 rounded-xl"
-                                    >
-                                      <div className="flex gap-3 p-4">
-                                        {productData.image && (
-                                          <div className="size-[100px] rounded-lg shrink-0">
-                                            <ImageWithInitialFallback
-                                              src={productData.image}
-                                              fallbackId={productData.name}
-                                              name={productData.name}
-                                              alt={productData.name || "Produto"}
-                                              fill
-                                              sizes="100px"
-                                              className="w-full h-full object-cover rounded-lg"
-                                            />
-                                          </div>
-                                        )}
-                                        <div className="flex flex-col justify-between flex-1 min-w-0">
-                                          <p className="text-base font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
-                                            {productData.name || "Produto"}
-                                          </p>
-                                          <p className="text-sm font-medium text-gray-11 font-manrope">
-                                            Incluso no ingresso
-                                          </p>
-                                        </div>
-                                      </div>
-                                      {variationData && (
-                                        <div className="border-t border-gray-6 p-4">
-                                          <p className="text-base font-semibold text-gray-12 font-manrope">
-                                            <span className="font-normal">{productData.variationType || "Variação"}:</span>{" "}
-                                            {variationData.name}
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                        <div className="flex flex-col gap-8">
+                          {participant.includedProducts.length > 0 && (
+                            <div className="flex flex-col gap-4">
+                              <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                                Incluídos no ingresso
+                              </h3>
+                              <div className="flex flex-wrap gap-3">
+                                {participant.includedProducts.map((product: IncludedProduct) => (
+                                  <ProductVariationCard
+                                    key={product.id}
+                                    product={product}
+                                    orderCreatedAt={order.createdAt}
+                                    registrationId={participant.id}
+                                  />
+                                ))}
                               </div>
                             </div>
                           )}
 
-                          {/* Produtos adicionais */}
-                          {participant.additionalProducts && participant.additionalProducts.length > 0 && (
-                            <div className="flex flex-col gap-3">
-                              <p className="text-sm font-semibold text-gray-11 font-family-dm-sans">Adicionais</p>
+                          {participant.additionalProducts.length > 0 && (
+                            <div className="flex flex-col gap-4">
+                              <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                                Adicionais
+                              </h3>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {participant.additionalProducts.map((item: any, productIndex: number) => {
                                   const productData = item.product || {};
                                   const variationData = item.variation || null;
-                                  const price = item.totalPrice ?? (item.unitPrice ?? 0) * (item.quantity ?? 1);
+                                  const price =
+                                    item.totalPrice ?? (item.unitPrice ?? 0) * (item.quantity ?? 1);
                                   return (
                                     <div
                                       key={item.id || `add-${productIndex}`}
@@ -578,7 +510,9 @@ export default function TicketDetailsPage() {
                                       {variationData && (
                                         <div className="border-t border-gray-6 p-4">
                                           <p className="text-base font-semibold text-gray-12 font-manrope">
-                                            <span className="font-normal">{productData.variationType || "Variação"}:</span>{" "}
+                                            <span className="font-normal">
+                                              {productData.variationType || "Variação"}:
+                                            </span>{" "}
                                             {variationData.name}
                                           </p>
                                         </div>
@@ -590,8 +524,8 @@ export default function TicketDetailsPage() {
                             </div>
                           )}
 
-                          {(!participant.includedProducts || participant.includedProducts.length === 0) &&
-                            (!participant.additionalProducts || participant.additionalProducts.length === 0) && (
+                          {participant.includedProducts.length === 0 &&
+                            participant.additionalProducts.length === 0 && (
                               <p className="text-base text-gray-11 font-family-dm-sans">
                                 Nenhum produto para este participante.
                               </p>
@@ -607,127 +541,102 @@ export default function TicketDetailsPage() {
         )}
 
         {/* Order Details */}
-        {registration.order && (
-          <div className="mt-10">
-            <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden">
-              <div className="flex flex-col gap-2 px-4 py-6">
-                {/* Order Information Section */}
-                <div className="flex flex-col gap-2">
-                  {/* Número do pedido */}
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Número do pedido:
-                    </p>
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      #{registration.order.id || "N/A"}
-                    </p>
-                  </div>
-
-                  {/* Nome do evento */}
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Nome do evento:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                      {event?.name || "N/A"}
-                    </p>
-                  </div>
-
-                  {/* Data */}
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Data:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                      {registration.order.purchaseDate ? formatDate(registration.order.purchaseDate) : "N/A"}
-                    </p>
-                  </div>
-
-                  {/* Forma de pagamento */}
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Forma de pagamento:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                      {registration.order.payment?.method === "CREDIT_CARD"
-                        ? "Cartão de crédito"
-                        : registration.order.payment?.method === "PIX"
-                          ? "PIX"
-                          : registration.order.payment?.method || "N/A"}
-                    </p>
-                  </div>
-
-                  {/* Participantes */}
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Participantes:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                      {participants.length}
-                    </p>
-                  </div>
+        <div className="mt-10">
+          <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden">
+            <div className="flex flex-col gap-2 px-4 py-6">
+              <div className="flex flex-col gap-2">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Número do pedido:
+                  </p>
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    #{order.id || "N/A"}
+                  </p>
                 </div>
 
-                {/* Divider */}
-                <div className="w-full h-px bg-gray-6 my-2" />
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Nome do evento:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
+                    {event?.name || "N/A"}
+                  </p>
+                </div>
 
-                {/* Financial Breakdown Section */}
-                <div className="flex flex-col gap-2">
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Produtos adicionais:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                      {formatPrice(
-                        (registration.kitItems ?? []).reduce((sum: number, item: any) => {
-                          return sum + (item.kitItem?.price || 0) * (item.quantity || 1);
-                        }, 0)
-                      )}
-                    </p>
-                  </div>
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Data:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                    {order.createdAt ? formatDate(order.createdAt) : "N/A"}
+                  </p>
+                </div>
 
-                  {/* Subtotal */}
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Subtotal:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                      {formatPrice(registration.order.totalAmount || 0)}
-                    </p>
-                  </div>
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Forma de pagamento:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                    {payment.method === "CREDIT_CARD"
+                      ? "Cartão de crédito"
+                      : payment.method === "PIX"
+                      ? "PIX"
+                      : payment.method || "N/A"}
+                  </p>
+                </div>
 
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Taxa de serviço:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                      {formatPrice(registration.order.serviceFee || 0)}
-                    </p>
-                  </div>
-
-                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                      Desconto cupom:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                      – {formatPrice(registration.order.discount || 0)}
-                    </p>
-                  </div>
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Participantes:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                    {participants.length}
+                  </p>
                 </div>
               </div>
 
-              {/* Total pago (fora do card, abaixo) */}
-              <div className="px-4 py-4 pb-8 flex items-center justify-center gap-1">
-                <p className="text-xl font-medium text-gray-12 font-manrope leading-[1.1]">
-                  Total pago:
-                </p>
-                <p className="text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                  {formatPrice(registration.order.finalAmount || 0)}
-                </p>
+              <div className="w-full h-px bg-gray-6 my-2" />
+
+              <div className="flex flex-col gap-2">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Subtotal:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                    {formatPrice(pricing.subtotal ?? 0)}
+                  </p>
+                </div>
+
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Taxa de serviço:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                    {formatPrice(pricing.serviceFee ?? 0)}
+                  </p>
+                </div>
+
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Desconto cupom:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                    – {formatPrice(pricing.discount ?? 0)}
+                  </p>
+                </div>
               </div>
             </div>
+
+            <div className="px-4 py-4 pb-8 flex items-center justify-center gap-1">
+              <p className="text-xl font-medium text-gray-12 font-manrope leading-[1.1]">
+                Total pago:
+              </p>
+              <p className="text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                {formatPrice(pricing.total ?? 0)}
+              </p>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

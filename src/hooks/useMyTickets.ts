@@ -5,6 +5,29 @@ import type { Ticket } from "@/components/Ticket/Card";
 
 const DEFAULT_MODALITY_ICON = "/icons-3d/Icon3D-corrida-de-rua.webp";
 
+const KNOWN_REG_STATUSES = new Set(["CONFIRMED", "PENDING", "COMPLETED", "CANCELLED"]);
+
+const ORDER_STATUS_MAP: Record<string, "CONFIRMED" | "PENDING" | "COMPLETED" | "CANCELLED"> = {
+  PAID: "CONFIRMED",
+  CONFIRMED: "CONFIRMED",
+  APPROVED: "CONFIRMED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  REFUNDED: "CANCELLED",
+  PENDING: "PENDING",
+  WAITING_PAYMENT: "PENDING",
+};
+
+function resolveOrderStatus(
+  regStatus: string | undefined,
+  orderStatus: string | undefined
+): "CONFIRMED" | "PENDING" | "COMPLETED" | "CANCELLED" {
+  if (regStatus && KNOWN_REG_STATUSES.has(regStatus)) {
+    return regStatus as "CONFIRMED" | "PENDING" | "COMPLETED" | "CANCELLED";
+  }
+  return ORDER_STATUS_MAP[orderStatus ?? ""] ?? "PENDING";
+}
+
 /**
  * A lista GET /registrations/me costuma trazer `ticket.modality` (string) sem o array `modalities`.
  * Também aceita `modalities[0].modality`, snake_case e ícone em `template.icon`.
@@ -115,38 +138,38 @@ export function useMyTickets(
     queryKey: queryKeys.user.tickets(params),
     queryFn: async () => {
       const response = await userService.getMyTickets({ page, limit, status });
-      const registrations = response.registrations || (response as any).data?.registrations || [];
+      const orders: any[] = response.orders || [];
 
-      // Transform API response to Ticket format
-      const transformedTickets: Ticket[] = registrations.map(
-        (reg: any) => {
-          const { name: modalityName, icon: modalityIcon, distance } =
-            modalityFromRegistration(reg);
+      // Um card por pedido — usa a primeira registration para modalidade/distância/qrCode
+      const transformedTickets: Ticket[] = orders.map((order: any) => {
+        const firstReg: any = order.registrations?.[0] ?? {};
+        const { name: modalityName, icon: modalityIcon, distance } =
+          modalityFromRegistration(firstReg);
 
-          return {
-            id: reg.id,
-            event: {
-              id: reg.event?.id || "",
-              name: reg.event?.name || "Evento sem nome",
-              imageUrl: reg.event?.logoUrl || "",
-              eventDate: reg.event?.eventDate || reg.purchaseDate,
-              location: {
-                city: reg.event?.city || reg.event?.location?.city || "Cidade não informada",
-                state: reg.event?.state || reg.event?.location?.state || "Estado não informado",
-              },
+        return {
+          id: order.id,
+          event: {
+            id: order.event?.id || "",
+            name: order.event?.name || "Evento sem nome",
+            imageUrl: order.event?.logoUrl || order.event?.imageUrl || "",
+            eventDate: order.event?.startDate || order.event?.eventDate || "",
+            location: {
+              city: order.event?.city || order.event?.location?.city || "Cidade não informada",
+              state: order.event?.state || order.event?.location?.state || "Estado não informado",
             },
-            modality: {
-              icon: modalityIcon,
-              name: modalityName,
-            },
-            status: reg.status || "PENDING",
-            distance,
-            qrCode: reg.qrCode,
-            purchaseDate: reg.purchaseDate,
-            payment: reg.payment,
-          };
-        }
-      );
+          },
+          modality: {
+            icon: modalityIcon,
+            name: modalityName,
+          },
+          status: resolveOrderStatus(firstReg.status, order.status),
+          distance,
+          qrCode: firstReg.qrCode,
+          purchaseDate: order.createdAt,
+          createdAt: order.createdAt,
+          payment: order.payment,
+        };
+      });
 
       return {
         tickets: transformedTickets,

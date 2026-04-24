@@ -5,11 +5,12 @@ import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { Suspense, useState, useRef } from "react";
+import { Suspense, useState, useRef, useEffect } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import { useTickets } from "@/hooks/useTickets";
 import { OrderApiError } from "@/interfaces/order";
 import toast from "react-hot-toast";
 
@@ -18,18 +19,33 @@ function CheckoutIngressosContent() {
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
-  const { raceQuantities } = useCheckout();
+  const { raceQuantities, updateRaceQuantity } = useCheckout();
   const { startTimer } = useCheckoutTimer();
   const { reserveOrder } = useCheckoutReservation();
   const [reserving, setReserving] = useState(false);
   const reservingRef = useRef(false);
+  const { tickets: availableTickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+
+  // Remove from state any ticket that was deleted by the organizer
+  useEffect(() => {
+    if (ticketsLoading || availableTickets.length === 0) return;
+    const validIds = new Set(availableTickets.map((t) => t.id));
+    Object.entries(raceQuantities).forEach(([ticketId, qty]) => {
+      if (qty > 0 && !validIds.has(ticketId)) {
+        updateRaceQuantity(ticketId, 0);
+      }
+    });
+    // raceQuantities intentionally excluded: effect runs only when tickets load/change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableTickets, ticketsLoading]);
 
   const handleNext = async () => {
     if (!eventId || reservingRef.current) return;
     reservingRef.current = true;
 
+    const validIds = new Set(availableTickets.map((t) => t.id));
     const tickets = Object.entries(raceQuantities)
-      .filter(([, quantity]) => quantity > 0)
+      .filter(([ticketId, quantity]) => quantity > 0 && validIds.has(ticketId))
       .map(([ticketId, quantity]) => ({ ticketId, quantity }));
 
     if (tickets.length === 0) {

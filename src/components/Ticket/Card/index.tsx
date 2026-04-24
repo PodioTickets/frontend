@@ -28,8 +28,9 @@ export interface Ticket {
   // Campos adicionais da API
   qrCode?: string;
   purchaseDate?: string;
+  createdAt?: string;
   payment?: {
-    id: string;
+    id?: string;
     method: string;
     status: string;
     amount: number;
@@ -88,8 +89,6 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     });
   };
 
-  console.log(ticket)
-
   const imageUrl = ticket.event.imageUrl
     ? ticket.event.imageUrl.startsWith("http")
       ? ticket.event.imageUrl
@@ -100,7 +99,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     <div
       onClick={handleClick}
       className={cn(
-        "bg-gray-2 flex flex-col items-start overflow-hidden rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full max-w-[300px] cursor-pointer border border-transparent hover:border-gray-6 hover:translate-y-[-5px] transition-all duration-300",
+        "bg-gray-2 flex flex-col items-start overflow-hidden rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] w-full max-w-[300px] cursor-pointer ring ring-transparent hover:ring-gray-6 hover:translate-y-[-5px] transition-all duration-300",
         className
       )}
     >
@@ -158,15 +157,6 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
               {ticket.modality.name}
             </p>
           </div>
-          {/* Distance */}
-          {ticket.distance && (
-            <div className="flex gap-1 items-center justify-center">
-              <Navigation className="size-5 shrink-0 text-gray-12" />
-              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-                {ticket.distance}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Status Badge */}

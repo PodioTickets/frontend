@@ -1095,21 +1095,36 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   );
   const subtotalValue = totalPrice + (event.serviceFee || 0) + additionalProductsTotal;
 
-  // Desconto e total vêm do servidor (finalAmount = totalAmount - discount).
-  const couponDiscount = currentOrder?.pricing.couponDiscount
-    ? currentOrder.pricing.couponDiscount / 100
-    : 0;
+  // Para cupons percentuais, desconto = percent × (ingressos + produtos).
+  const couponDiscount = useMemo(() => {
+    if (!currentOrder?.coupon) return 0;
+    const coupon = currentOrder.coupon;
+    if (coupon.type === "PERCENTAGE" && coupon.value > 0) {
+      return ((totalPrice + additionalProductsTotal) * coupon.value) / 100;
+    }
+    return currentOrder.pricing.couponDiscount ? currentOrder.pricing.couponDiscount / 100 : 0;
+  }, [currentOrder, totalPrice, additionalProductsTotal]);
+
   const voucherDiscount = currentOrder?.pricing.voucherDiscount
     ? currentOrder.pricing.voucherDiscount / 100
     : 0;
   const totalValue = currentOrder
-    ? (currentOrder.pricing.total - (currentOrder.pricing.couponDiscount ?? 0) - (currentOrder.pricing.voucherDiscount ?? 0)) / 100
+    ? currentOrder.pricing.total / 100 - couponDiscount - voucherDiscount
     : subtotalValue - couponDiscount - voucherDiscount;
 
   const isCouponApplied = !!currentOrder?.coupon;
   const isVoucherApplied = !!currentOrder?.voucher;
   const appliedCouponName = currentOrder?.coupon?.code ?? (isCouponApplied ? "Desconto automático" : undefined);
   const appliedVoucherName = currentOrder?.voucher?.name ?? currentOrder?.voucher?.code;
+
+  // Percentual do cupom vem diretamente do objeto coupon da API.
+  const couponPercent = useMemo(() => {
+    if (!currentOrder?.coupon) return undefined;
+    if (currentOrder.coupon.type === "PERCENTAGE" && currentOrder.coupon.value > 0) {
+      return currentOrder.coupon.value;
+    }
+    return undefined;
+  }, [currentOrder]);
 
   // Calcular opções de parcelamento baseado no valor total
   const installmentOptions = useMemo(() => {
@@ -1941,6 +1956,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             couponCode={couponCode}
             couponDiscount={couponDiscount}
             couponName={appliedCouponName}
+            couponPercent={couponPercent}
             couponError={couponError}
             isCouponApplied={isCouponApplied}
             isCouponLoading={couponLoading}

@@ -7,7 +7,7 @@ import { useForgotPassword } from "@/hooks/useForgotPassword";
 import { useResetPassword } from "@/hooks/useResetPassword";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Mail, Lock, X, Clock, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, X, Clock, ArrowLeft, Eye, EyeOff, Info } from "lucide-react";
 import Image from "next/image";
 import {
   loginSchema,
@@ -397,6 +397,7 @@ export function LoginModal() {
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [credentialsError, setCredentialsError] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -409,6 +410,7 @@ export function LoginModal() {
       setConfirmNewPassword("");
       setResetPasswordFieldErrors({});
       setForgotResendCooldown(0);
+      setCredentialsError(false);
     }
   }, [isOpen]);
 
@@ -447,7 +449,7 @@ export function LoginModal() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
+    setCredentialsError(false);
     if (errors[field]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -492,13 +494,7 @@ export function LoginModal() {
           toast.error(firstError.message);
         }
       } else {
-        // Erro da API ou do contexto
-        console.log("error", error);
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Erro ao fazer login. Tente novamente.";
-        toast.error(errorMessage);
+        setCredentialsError(true);
       }
     } finally {
       setIsSubmitting(false);
@@ -805,6 +801,16 @@ export function LoginModal() {
                           )}
                         </div>
 
+                        {/* Credentials error banner */}
+                        {credentialsError && (
+                          <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
+                            <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
+                            <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
+                              E-mail ou senha incorretos. Verifique suas credenciais e tente novamente
+                            </p>
+                          </div>
+                        )}
+
                         {/* Forgot password link */}
                         <button
                           type="button"
@@ -1039,6 +1045,16 @@ export function LoginModal() {
                             </p>
                           )}
                         </div>
+
+                        {/* Credentials error banner */}
+                        {credentialsError && (
+                          <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
+                            <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
+                            <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
+                              E-mail ou senha incorretos. Verifique suas credenciais e tente novamente
+                            </p>
+                          </div>
+                        )}
 
                         {/* Forgot password link */}
                         <button

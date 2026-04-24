@@ -585,27 +585,6 @@ export function CreateCouponModal() {
                             </div>
                           )}
 
-                          {/* Nota */}
-                          <div className="flex flex-col gap-2">
-                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Nota{" "}
-                              <span className="text-gray-11 text-sm">(opcional)</span>
-                            </label>
-                            <Input
-                              type="text"
-                              placeholder="Ex: Cupom para parceiros / campanha de Instagram"
-                              value={note}
-                              onChange={(e) => setNote(e.target.value)}
-                              className="h-12"
-                            />
-                            <div className="flex items-center gap-1.5">
-                              <Info className="size-4 shrink-0 text-gray-11" />
-                              <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                                Essa nota é só para organização interna
-                              </p>
-                            </div>
-                          </div>
-
                           {/* Quantidade mínima — QUANTITY */}
                           {couponType === "QUANTITY" && (
                             <div className="flex flex-col gap-2.5 md:w-[596px]">
@@ -747,7 +726,7 @@ export function CreateCouponModal() {
                           <div className="flex flex-col gap-5">
                             <button
                               onClick={() => setShowAdvanced(!showAdvanced)}
-                              className="flex items-center gap-2 text-gray-11 hover:text-gray-12 transition-colors self-start"
+                              className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
                             >
                               <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
                                 Mostrar conteúdo avançado opcionais
@@ -851,7 +830,7 @@ export function CreateCouponModal() {
                                     {minCartEnabled && (
                                       <div className="flex flex-col gap-2 w-full md:w-[259px]">
                                         <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                          Quantidade máxima de usos
+                                          Limite
                                         </label>
                                         <Input
                                           type="text"

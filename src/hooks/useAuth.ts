@@ -35,7 +35,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: any;
   login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterData, options?: { skipAutoLogin?: boolean }) => Promise<{ id: string; email: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -43,7 +43,7 @@ interface AuthContextType {
 interface RegisterData {
   email: string;
   password: string;
-  complete_name: string;
+  complete_name?: string;
   acceptedTerms: boolean;
   acceptedPrivacyPolicy: boolean;
   // Campos opcionais
@@ -253,14 +253,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const register = async (data: RegisterData) => {
+  const register = async (data: RegisterData, options?: { skipAutoLogin?: boolean }): Promise<{ id: string; email: string }> => {
     setIsLoading(true);
     setError(null);
     try {
       const registerRequest: any = {
         email: data.email,
         password: data.password,
-        complete_name: data.complete_name,
+        complete_name: data.complete_name ?? "",
         acceptedTerms: data.acceptedTerms,
         acceptedPrivacyPolicy: data.acceptedPrivacyPolicy,
       };
@@ -271,15 +271,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data.reserve_phone)
         registerRequest.reserve_phone = data.reserve_phone;
       if (data.dateOfBirth) {
-        // Converte Date para string no formato YYYY-MM-DD
         if (typeof data.dateOfBirth === "string") {
           registerRequest.dateOfBirth = data.dateOfBirth;
         } else if (data.dateOfBirth instanceof Date) {
           const year = data.dateOfBirth.getFullYear();
-          const month = String(data.dateOfBirth.getMonth() + 1).padStart(
-            2,
-            "0"
-          );
+          const month = String(data.dateOfBirth.getMonth() + 1).padStart(2, "0");
           const day = String(data.dateOfBirth.getDate()).padStart(2, "0");
           registerRequest.dateOfBirth = `${year}-${month}-${day}`;
         }
@@ -288,8 +284,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data.state) registerRequest.state = data.state;
       if (data.city) registerRequest.city = data.city;
       if (data.documentType) registerRequest.documentType = data.documentType;
-      if (data.documentNumber)
-        registerRequest.documentNumber = data.documentNumber;
+      if (data.documentNumber) registerRequest.documentNumber = data.documentNumber;
       if (data.sex) registerRequest.sex = data.sex;
       if (data.receiveCalendarEvents !== undefined)
         registerRequest.receiveCalendarEvents = data.receiveCalendarEvents;
@@ -297,19 +292,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         registerRequest.receivePartnerPromos = data.receivePartnerPromos;
       if (data.language) registerRequest.language = data.language;
 
-      const user = await userService.register(registerRequest);
+      const createdUser = await userService.register(registerRequest);
 
-      if (!user) {
+      if (!createdUser) {
         throw new Error("Erro ao realizar cadastro: usuário não retornado");
       }
 
-      const loginData = {
-        emailOrCpf: data.email,
-        password: data.password,
-      };
+      if (options?.skipAutoLogin) {
+        return { id: createdUser.id, email: createdUser.email };
+      }
 
+      // Auto-login após criação de conta (fluxo legado)
       try {
-        const response: any = await userService.login(loginData);
+        const response: any = await userService.login({ emailOrCpf: data.email, password: data.password });
         if (response.success && response.data?.user) {
           const loggedUser = response.data.user;
           if (response.data.access_token) {
@@ -325,33 +320,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           localStorage.setItem("user", JSON.stringify(userWithCache));
           setUser(loggedUser);
         } else {
-          // Se o login automático falhar, ainda consideramos o registro como sucesso
-          // mas não fazemos login automático
-          const errorMessage =
-            response.error ||
-            "Cadastro realizado, mas o login automático falhou. Faça login manualmente.";
+          const errorMessage = response.error || "Cadastro realizado, mas o login automático falhou.";
           console.warn("Login automático após registro falhou:", errorMessage);
-          // Não lança erro aqui, apenas avisa
           setError(errorMessage);
         }
       } catch (loginError: any) {
-        // Se o login automático falhar, ainda consideramos o registro como sucesso
         console.warn("Erro no login automático após registro:", loginError);
-        const errorMessage =
-          loginError.message ||
-          "Cadastro realizado, mas o login automático falhou. Faça login manualmente.";
-        setError(errorMessage);
-        // Não relança o erro para não quebrar o fluxo de registro
+        setError(loginError.message || "Cadastro realizado, mas o login automático falhou.");
       }
+
+      return { id: createdUser.id, email: createdUser.email };
     } catch (err: unknown) {
       console.error("Registration error:", err);
       const e = err as Error;
-      const errorMessage =
-        e?.message || "Erro ao realizar cadastro. Tente novamente.";
+      const errorMessage = e?.message || "Erro ao realizar cadastro. Tente novamente.";
       setError(errorMessage as any);
-      if (e instanceof Error) {
-        throw e;
-      }
+      if (e instanceof Error) throw e;
       throw new Error(errorMessage);
     } finally {
       setIsLoading(false);

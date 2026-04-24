@@ -193,13 +193,17 @@ export function RequestTransferModal() {
                           </button>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
                         <p className="font-family-dm-sans font-normal text-base text-gray-11">
                           Mínimo: <span className="font-semibold text-gray-11">R$ {formatBalance(minAmount)}</span>
                         </p>
                         <div className="w-full h-px bg-gray-6" />
                         <p className="font-family-dm-sans font-normal text-base text-gray-11">
                           Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
+                        </p>
+                        <div className="w-full h-px bg-gray-6" />
+                        <p className="font-family-dm-sans font-normal text-base text-red-11">
+                          Taxa do organizador: <span className="font-semibold">4%</span>
                         </p>
                         {processingAmount != null && (
                           <>
@@ -343,6 +347,10 @@ export function RequestTransferModal() {
                           <span className="w-px h-5 bg-gray-6" />
                           <span className="text-[16px] leading-[1.3] text-gray-11">
                             Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
+                          </span>
+                          <span className="w-px h-5 bg-gray-6" />
+                          <span className="text-[16px] leading-[1.3] text-red-11">
+                            Taxa do organizador: <span className="font-semibold">4%</span>
                           </span>
                         </div>
                         <button

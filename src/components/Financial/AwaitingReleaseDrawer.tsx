@@ -213,7 +213,7 @@ export function AwaitingReleaseDrawer({
             <div className="p-4 flex flex-col gap-4">
               {/* Summary cards */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col justify-between gap-3">
                   <div className="flex flex-col gap-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
                       <CalendarIcon className="size-5 text-blue-12" />
@@ -224,19 +224,8 @@ export function AwaitingReleaseDrawer({
                     R$ {(actualData.totalPending / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3">
+                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col justify-between gap-3">
                   <div className="flex flex-col gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary-4 flex items-center justify-center shrink-0">
-                      <TimerIcon className="size-5 text-primary-12" />
-                    </div>
-                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Liberação hoje</p>
-                  </div>
-                  <p className="font-manrope font-extrabold text-lg text-gray-12">
-                    R$ {(actualData.releaseToday / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="bg-gray-1 border border-gray-6 rounded-xl p-4 flex flex-col gap-3 col-span-2">
-                  <div className="flex gap-3 items-center">
                     <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
                       <FileText className="size-5 text-[#2F265F]" />
                     </div>
@@ -246,6 +235,7 @@ export function AwaitingReleaseDrawer({
                     {pagination.totalOrders}
                   </p>
                 </div>
+
               </div>
 
               {/* Search */}
@@ -420,11 +410,6 @@ export function AwaitingReleaseDrawer({
                       ID pedido
                     </p>
                   </div>
-                  <div className="flex h-full items-center p-4 w-[120px]">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                      ID transação
-                    </p>
-                  </div>
                   <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
                       Comprador
@@ -472,13 +457,6 @@ export function AwaitingReleaseDrawer({
                         <div className="flex h-full items-center p-4 w-[120px]">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
                             #{item.orderId.slice(0, 6)}...{item.orderId.slice(-4)}
-                          </p>
-                        </div>
-
-                        {/* ID transação */}
-                        <div className="flex h-full items-center p-4 w-[120px]">
-                          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {item.transactionId.length > 8 ? item.transactionId.slice(0, 8) : item.transactionId}
                           </p>
                         </div>
 

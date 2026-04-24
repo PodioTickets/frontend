@@ -32,9 +32,10 @@ type RegisterStep = 1 | 2 | 3;
 export function RegisterModal() {
   const { isOpen, closeRegisterModal, data: modalData } = useRegisterModal();
   const { openLoginModal } = useLoginModal();
-  const { register, isLoading: authLoading, user, refetchUser } = useAuth();
+  const { register, login, isLoading: authLoading, user, refetchUser } = useAuth();
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   // Verifica se é para completar cadastro
   const isCompletingProfile = modalData?.completeProfile === true && !!user;
@@ -66,6 +67,7 @@ export function RegisterModal() {
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
+      setPendingUserId(null);
     }
   }, [isOpen]);
 
@@ -214,188 +216,113 @@ export function RegisterModal() {
     }
   };
 
+  const buildPersonalUpdateData = (data: typeof formData) => {
+    const updateData: any = {};
+    const nameParts = data.nome.trim().split(" ");
+    updateData.firstName = nameParts[0] || "";
+    updateData.lastName = nameParts.slice(1).join(" ") || "";
+
+    if (data.sexo) {
+      const genderMap: Record<string, string> = {
+        masculino: "MALE",
+        feminino: "FEMALE",
+        outro: "OTHER",
+        "prefiro não informar": "PREFER_NOT_TO_SAY",
+        "prefiro-nao-dizer": "PREFER_NOT_TO_SAY",
+      };
+      updateData.gender = genderMap[data.sexo.toLowerCase().trim()] ?? data.sexo;
+    }
+    if (data.telefone) updateData.phone = data.telefone.replace(/\D/g, "");
+    if (data.telefoneEmergencia) updateData.emergencyPhone = data.telefoneEmergencia.replace(/\D/g, "");
+    if (data.dataNascimento) {
+      const date = data.dataNascimento;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      updateData.dateOfBirth = `${year}-${month}-${day}`;
+    }
+    if (data.nacionalidade) updateData.country = data.nacionalidade;
+    if (data.cpf) {
+      updateData.documentNumber = data.cpf.replace(/\D/g, "");
+      updateData.documentType = "CPF";
+    }
+    return updateData;
+  };
+
   const handleNext = async () => {
+    // Step 1: email + senha → cria o usuário sem login e avança
     if (currentStep === 1) {
-      if (validateStep2()) {
+      if (!validateStep2()) return;
+      setIsSubmitting(true);
+      try {
+        const created = await register(
+          {
+            email: formData.email,
+            password: formData.senha,
+            acceptedTerms: true,
+            acceptedPrivacyPolicy: true,
+          },
+          { skipAutoLogin: true }
+        );
+        setPendingUserId(created.id);
         setCurrentStep(2);
+      } catch (error: unknown) {
+        const e = error as Error & Partial<Pick<AuthError, "formFieldErrors">>;
+        const msg = e?.message || "Erro ao criar conta. Tente novamente.";
+        if (e.formFieldErrors?.email) {
+          setErrors((prev) => ({ ...prev, email: e.formFieldErrors!.email! }));
+        }
+        toast.error(msg);
+      } finally {
+        setIsSubmitting(false);
       }
       return;
     }
 
+    // Step 2: dados pessoais → atualiza o usuário criado (ou completa perfil)
     if (currentStep === 2) {
       if (!validateStep1()) return;
 
-      const cpfDigits = formData.cpf.replace(/\D/g, "");
-      const existingDigits = ((user as any)?.documentNumber || "").replace(
-        /\D/g,
-        ""
-      );
-      const skipCpfAvailabilityCheck =
-        isCompletingProfile &&
-        !!existingDigits &&
-        cpfDigits === existingDigits;
-
       setIsSubmitting(true);
       try {
-        if (!skipCpfAvailabilityCheck && cpfDigits.length === 11) {
-          const check = await userService.checkDocumentNumberAvailability(
-            cpfDigits,
-            {
-              excludeUserId:
-                isCompletingProfile && user?.id ? user.id : undefined,
-            }
-          );
-          if (!check.available) {
-            const msg = check.message || "Este CPF já está cadastrado";
-            setErrors((prev) => ({ ...prev, cpf: msg }));
-            toast.error(msg);
-            return;
-          }
+        const targetUserId = isCompletingProfile ? user?.id : pendingUserId;
+        if (!targetUserId) {
+          toast.error("Sessão expirada. Tente novamente.");
+          setCurrentStep(1);
+          return;
         }
 
-        await submitRegistration();
+        await userService.updateUser(targetUserId, buildPersonalUpdateData(formData));
+
+        // Faz login somente após atualizar os dados pessoais
+        if (!isCompletingProfile) {
+          await login({ emailOrCpf: formData.email, password: formData.senha });
+        } else {
+          await refetchUser();
+        }
+
+        setCurrentStep(3);
+        toast.success(isCompletingProfile ? "Cadastro finalizado com sucesso!" : "Cadastro realizado com sucesso!");
+
+        if (isCompletingProfile) {
+          setTimeout(() => {
+            closeRegisterModal();
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem("redirectAfterLogin");
+            }
+          }, 1500);
+        }
       } catch (error: unknown) {
         const e = error as Error & Partial<Pick<AuthError, "formFieldErrors">>;
-        const errorMessage =
-          e?.message || "Erro ao realizar cadastro. Tente novamente.";
+        const msg = e?.message || "Erro ao salvar informações. Tente novamente.";
         if (e.formFieldErrors?.cpf) {
-          setErrors((prev) => ({
-            ...prev,
-            cpf: e.formFieldErrors!.cpf!,
-          }));
+          setErrors((prev) => ({ ...prev, cpf: e.formFieldErrors!.cpf! }));
         }
-        toast.error(errorMessage);
+        toast.error(msg);
       } finally {
         setIsSubmitting(false);
       }
     }
-  };
-
-  const submitRegistration = async () => {
-    if (isCompletingProfile && user) {
-        // Se for completar cadastro, usa updateUser
-        const updateData: any = {};
-
-        // Parse nome completo em firstName e lastName
-        const nameParts = formData.nome.trim().split(" ");
-        if (nameParts.length > 0) {
-          updateData.firstName = nameParts[0];
-          updateData.lastName = nameParts.slice(1).join(" ") || "";
-        }
-
-        // Normalizar gênero (igual à tela do usuário)
-        if (formData.sexo) {
-          const genderLower = formData.sexo.toLowerCase().trim();
-          if (genderLower === "masculino") {
-            updateData.gender = "MALE";
-          } else if (genderLower === "feminino") {
-            updateData.gender = "FEMALE";
-          } else if (genderLower === "outro") {
-            updateData.gender = "OTHER";
-          } else if (
-            genderLower === "prefiro-nao-dizer"
-          ) {
-            updateData.gender = "PREFER_NOT_TO_SAY";
-          } else {
-            updateData.gender = genderLower || formData.sexo;
-          }
-        }
-        if (formData.telefone) {
-          updateData.phone = formData.telefone.replace(/\D/g, "");
-        }
-        if (formData.telefoneEmergencia) {
-          updateData.emergencyPhone = formData.telefoneEmergencia.replace(
-            /\D/g,
-            ""
-          );
-        }
-        if (formData.dataNascimento) {
-          const date = formData.dataNascimento;
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          const day = String(date.getDate()).padStart(2, "0");
-          updateData.dateOfBirth = `${year}-${month}-${day}`;
-        }
-        if (formData.nacionalidade) {
-          updateData.country = formData.nacionalidade;
-        }
-        if (formData.cpf) {
-          updateData.documentNumber = formData.cpf.replace(/\D/g, "");
-          updateData.documentType = "CPF";
-        }
-
-        await userService.updateUser(user.id, updateData);
-        await refetchUser();
-
-        // Se a atualização for bem-sucedida, vai para o passo 3 (sucesso)
-        setCurrentStep(3);
-        toast.success("Cadastro finalizado com sucesso!");
-
-        setTimeout(() => {
-          closeRegisterModal();
-          if (typeof window !== "undefined") {
-            sessionStorage.removeItem("redirectAfterLogin");
-          }
-        }, 1500);
-      } else {
-        // Prepara os dados para o registro conforme EmailRegisterDto
-        const registerData: any = {
-          email: formData.email,
-          password: formData.senha,
-          complete_name: formData.nome.trim(), // Nome completo
-          acceptedTerms: true, // Assumindo que o usuário aceitou os termos ao chegar no passo 3
-          acceptedPrivacyPolicy: true, // Assumindo que o usuário aceitou a política ao chegar no passo 3
-        };
-
-        // Campos opcionais conforme o DTO
-        // Normalizar gênero para o formato esperado pela API
-        if (formData.sexo) {
-          const genderLower = formData.sexo.toLowerCase().trim();
-          if (genderLower === "masculino") {
-            registerData.gender = "MALE";
-          } else if (genderLower === "feminino") {
-            registerData.gender = "FEMALE";
-          } else if (genderLower === "outro") {
-            registerData.gender = "OTHER";
-          } else if (genderLower === "prefiro-nao-dizer") {
-            registerData.gender = "PREFER_NOT_TO_SAY";
-          } else {
-            // Se já estiver no formato correto, usa diretamente
-            registerData.gender = formData.sexo;
-          }
-        }
-        if (formData.telefone) {
-          registerData.phone = formData.telefone.replace(/\D/g, ""); // Remove formatação
-        }
-        if (formData.telefoneEmergencia) {
-          registerData.reserve_phone = formData.telefoneEmergencia.replace(
-            /\D/g,
-            ""
-          ); // Remove formatação
-        }
-        if (formData.dataNascimento) {
-          // Converte Date para string no formato YYYY-MM-DD
-          const date = formData.dataNascimento;
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          const day = String(date.getDate()).padStart(2, "0");
-          registerData.dateOfBirth = `${year}-${month}-${day}`;
-        }
-        if (formData.nacionalidade) {
-          registerData.country = formData.nacionalidade;
-        }
-        if (formData.cpf) {
-          // CPF vai como documentNumber com documentType "CPF"
-          registerData.documentNumber = formData.cpf.replace(/\D/g, ""); // Remove formatação
-          registerData.documentType = "CPF"; // Assumindo que CPF é o tipo de documento
-        }
-
-        await register(registerData);
-
-        // Se o registro for bem-sucedido, vai para o passo 3 (sucesso)
-        setCurrentStep(3);
-        toast.success("Cadastro realizado com sucesso!");
-      }
   };
 
   const handleFinish = () => {
@@ -524,13 +451,15 @@ export function RegisterModal() {
       {/* Mobile Header */}
       <div className="md:hidden border-b border-gray-6 flex items-center justify-center h-[52px] px-4 py-2 relative shrink-0 w-full">
         <div className="flex gap-2 items-center flex-1">
-          <button
-            onClick={handleBack}
-            className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
-            aria-label="Voltar"
-          >
-            <ArrowButton isOpen={true} />
-          </button>
+          {!isCompletingProfile && (
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
+              aria-label="Voltar"
+            >
+              <ArrowButton isOpen={true} />
+            </button>
+          )}
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
             Informações pessoais
           </p>
@@ -777,13 +706,15 @@ export function RegisterModal() {
     <>
       {/* Desktop Header */}
       <div className="hidden md:flex border-b border-gray-6 gap-0.5 items-center px-4 py-3 relative shrink-0 w-full overflow-visible">
-        <button
-          onClick={handleBack}
-          className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
-          aria-label="Voltar"
-        >
-          <ArrowButton isOpen={true} />
-        </button>
+        {!isCompletingProfile && (
+          <button
+            onClick={handleBack}
+            className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={true} />
+          </button>
+        )}
         <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
           Informações pessoais
         </p>
@@ -1028,13 +959,15 @@ export function RegisterModal() {
       {/* Mobile Header */}
       <div className="md:hidden border-b border-gray-6 flex items-center justify-center h-[52px] px-4 py-2 relative shrink-0 w-full">
         <div className="flex gap-2 items-center flex-1">
-          <button
-            onClick={handleBack}
-            className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
-            aria-label="Voltar"
-          >
-            <ArrowButton isOpen={true} />
-          </button>
+          {!isCompletingProfile && (
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
+              aria-label="Voltar"
+            >
+              <ArrowButton isOpen={true} />
+            </button>
+          )}
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
             Dados de acesso a conta
           </p>
@@ -1133,9 +1066,10 @@ export function RegisterModal() {
         <div className="flex flex-col items-start relative shrink-0 w-full">
           <Button
             onClick={handleNext}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg font-manrope"
+            disabled={isSubmitting || authLoading}
+            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Próximo
+            {isSubmitting || authLoading ? "Criando conta..." : "Próximo"}
           </Button>
         </div>
       </div>
@@ -1146,13 +1080,15 @@ export function RegisterModal() {
     <>
       {/* Desktop Header */}
       <div className="hidden md:flex border-b border-gray-6 gap-0.5 items-center px-4 py-3 relative shrink-0 w-full overflow-visible">
-        <button
-          onClick={handleBack}
-          className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
-          aria-label="Voltar"
-        >
-          <ArrowButton isOpen={true} />
-        </button>
+        {!isCompletingProfile && (
+          <button
+            onClick={handleBack}
+            className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={true} />
+          </button>
+        )}
         <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
           Dados de acesso a conta
         </p>
@@ -1255,8 +1191,12 @@ export function RegisterModal() {
 
         {/* Desktop: step 1 = dados de acesso, botão Próximo */}
         <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full">
-          <Button onClick={handleNext} className="px-8 font-bold text-xl">
-            Próximo
+          <Button
+            onClick={handleNext}
+            disabled={isSubmitting || authLoading}
+            className="px-8 font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting || authLoading ? "Criando conta..." : "Próximo"}
           </Button>
         </div>
       </div>
