@@ -199,13 +199,13 @@ export default function CouponsPage() {
   const getValueDisplay = (coupon: Coupon) => {
     return coupon.type === "PERCENTAGE"
       ? `${coupon.value}%`
-      : formatCurrency(coupon.value);
+      : formatCurrency(coupon.value / 100);
   };
 
   const getValueDisplayMobile = (coupon: Coupon) => {
     return coupon.type === "PERCENTAGE"
       ? `${coupon.value}% (Percentual)`
-      : `${formatCurrency(coupon.value)} (Valor fixo)`;
+      : `${formatCurrency(coupon.value / 100)} (Valor fixo)`;
   };
 
   if (!authChecked || loading) {

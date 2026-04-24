@@ -1104,7 +1104,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
     if (coupon.type === "FIXED" && coupon.value > 0) {
       const totalTickets = currentOrder.tickets.reduce((sum, t) => sum + t.quantity, 0);
-      return coupon.value * totalTickets;
+      return (coupon.value / 100) * totalTickets;
     }
     return currentOrder.pricing.couponDiscount ? currentOrder.pricing.couponDiscount / 100 : 0;
   }, [currentOrder, totalPrice, additionalProductsTotal]);
@@ -1113,7 +1113,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     ? currentOrder.pricing.voucherDiscount / 100
     : 0;
   const totalValue = currentOrder
-    ? currentOrder.pricing.total / 100 - couponDiscount - voucherDiscount
+    ? currentOrder.pricing.total / 100
     : subtotalValue - couponDiscount - voucherDiscount;
 
   const isCouponApplied = !!currentOrder?.coupon;
@@ -1962,7 +1962,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             couponName={appliedCouponName}
             couponPercent={couponPercent}
             couponType={currentOrder?.coupon?.type ?? undefined}
-            couponFixedValue={currentOrder?.coupon?.type === "FIXED" ? currentOrder.coupon.value : undefined}
+            couponFixedValue={currentOrder?.coupon?.type === "FIXED" ? currentOrder.coupon.value / 100 : undefined}
             couponError={couponError}
             isCouponApplied={isCouponApplied}
             isCouponLoading={couponLoading}

@@ -79,7 +79,7 @@ export function CreateCouponModal() {
     if (c.value != null) {
       originalValue = originalType === "PERCENTAGE"
         ? `${c.value}%`
-        : `R$ ${Number(c.value).toFixed(2).replace(".", ",")}`;
+        : `R$ ${Number(c.value / 100).toFixed(2).replace(".", ",")}`;
     }
     const originalAppliesTo = (c.appliesTo === "all" || !c.appliesTo) ? "all" : "specific";
     const originalTicketIds = Array.isArray(c.appliesTo)
@@ -126,7 +126,7 @@ export function CreateCouponModal() {
           if (type === "PERCENTAGE") {
             setValue(`${c.value}%`);
           } else {
-            const formatted = Number(c.value).toFixed(2).replace(".", ",");
+            const formatted = Number(c.value / 100).toFixed(2).replace(".", ",");
             setValue(`R$ ${formatted}`);
           }
         } else {
@@ -311,8 +311,8 @@ export function CreateCouponModal() {
     }
 
     const numericValue = discountType === "PERCENTAGE"
-      ? parseFloat(value.replace("%", "").replace(",", "."))
-      : parseFloat(value.replace("R$", "").replace(".", "").replace(",", "."));
+      ? parseFloat(value.replace(/[^0-9]/g, ""))
+      : parseFloat(value.replace(/[^0-9,]/g, "").replace(",", "."));
 
     if (isNaN(numericValue) || numericValue <= 0) {
       toast.error("Digite um valor válido");
@@ -354,7 +354,7 @@ export function CreateCouponModal() {
       const couponData: any = {
         couponType,
         type: discountType,
-        value: numericValue,
+        value: discountType === "FIXED" ? Math.round(numericValue * 100) : numericValue,
         note: note.trim() || undefined,
         expiryDate: expiryEnabled && expiryDate ? expiryDate : undefined,
         minCartValue: minCartEnabled && minCartValue ? parseInt(minCartValue) : undefined,
@@ -687,11 +687,11 @@ export function CreateCouponModal() {
                                     const num = val.replace(/[^0-9]/g, "");
                                     if (num === "" || parseInt(num) <= 100) setValue(num ? `${num}%` : "");
                                   } else {
-                                    const num = val.replace(/[^0-9]/g, "");
-                                    if (num === "") {
+                                    const raw = val.replace(/[^0-9,]/g, "");
+                                    if (!raw) {
                                       setValue("");
                                     } else {
-                                      setValue(`R$ ${(parseInt(num) / 100).toFixed(2).replace(".", ",")}`);
+                                      setValue(`R$ ${raw}`);
                                     }
                                   }
                                 }}
