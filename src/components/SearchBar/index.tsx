@@ -2,7 +2,7 @@
 import { SearchInput } from "../SearchInput";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 
 type SearchResult = {
@@ -38,6 +38,13 @@ export function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    inputRef.current?.blur();
+    setIsFocused(false);
+    setIsOpen(false);
+  }, [pathname]);
 
   const shouldShowDropdown =
     search.length > 0 && results.length > 0 && isFocused;
