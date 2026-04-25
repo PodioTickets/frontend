@@ -157,7 +157,7 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-2">
       <EventPageHeader eventName={event?.name} />
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 xl:px-0">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
         <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
           <EditProgressBar />
         </div>
