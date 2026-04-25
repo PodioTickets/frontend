@@ -6,10 +6,10 @@ export function isCurrentUserOrganizationOwner(
   currentUserId: string | null | undefined,
 ): boolean {
   if (!organization || !currentUserId) return false;
-  const ownerMember = organization.members?.find(
-    (m) => String(m.role ?? "").toUpperCase() === "OWNER",
-  );
-  if (!ownerMember) return false;
-  const ownerId = ownerMember.userId || ownerMember.user?.id;
-  return Boolean(ownerId && String(ownerId) === String(currentUserId));
+  const currentMember = organization.members?.find((m) => {
+    const memberId = m.userId || m.user?.id;
+    return Boolean(memberId && String(memberId) === String(currentUserId));
+  });
+  if (!currentMember) return false;
+  return String(currentMember.role ?? "").toUpperCase() === "OWNER";
 }
