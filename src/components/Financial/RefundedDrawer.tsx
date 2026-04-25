@@ -6,6 +6,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
@@ -18,6 +19,7 @@ import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
+import { Tooltip } from "../Tooltip";
 
 interface RefundedDrawerProps {
   isOpen: boolean;
@@ -140,6 +142,7 @@ export function RefundedDrawer({
     <>
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
         <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
+          <DrawerTitle className="sr-only">Estornados - Detalhes</DrawerTitle>
           {/* Header */}
           <DrawerHeader className="border-b border-gray-6 px-5 py-3">
             <div className="flex items-center justify-between">
@@ -204,7 +207,7 @@ export function RefundedDrawer({
                       Comprador
                     </p>
                   </div>
-                  <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
+                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
                       Data
                     </p>
@@ -246,11 +249,16 @@ export function RefundedDrawer({
                         >
                           {/* ID pedido */}
                           <div className="flex h-full items-center p-4 w-[120px]">
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {displayItem.orderId && displayItem.orderId.length > 10
-                                ? `#${displayItem.orderId.slice(0, 6)}...${displayItem.orderId.slice(-4)}`
-                                : displayItem.orderId || "—"}
-                            </p>
+                            <Tooltip
+                              position="topRight"
+                              trigger="hover"
+                              content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{displayItem.orderId}</p>}
+                              contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                            >
+                              <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
+                                #{displayItem.orderId.slice(0, 6)}...{displayItem.orderId.slice(-4)}
+                              </p>
+                            </Tooltip>
                           </div>
 
                           {/* Comprador */}

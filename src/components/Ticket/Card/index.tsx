@@ -19,13 +19,9 @@ export interface Ticket {
       state: string;
     };
   };
-  modality: {
-    icon?: string;
-    name: string;
-  };
+  modalities: string[];
   status: "CONFIRMED" | "PENDING" | "COMPLETED" | "CANCELLED";
   distance?: string;
-  // Campos adicionais da API
   qrCode?: string;
   purchaseDate?: string;
   createdAt?: string;
@@ -77,8 +73,9 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     router.push(`/user/tickets/${ticket.id}`);
   };
 
-  const modalityIconSrc =
-    modalitiesColumns[0].find(item => item.label === ticket.modality.name)?.icon;
+  const allModalityOptions = modalitiesColumns.flat();
+  const getModalityIcon = (name: string) =>
+    allModalityOptions.find(item => item.label === name)?.icon;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -141,21 +138,25 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
       {/* Info Section */}
       <div className="flex flex-col gap-4 items-start justify-center pt-3 px-0 w-full">
         <div className="flex flex-col gap-3 items-start px-3 w-full">
-          {/* Modality */}
-          <div className="flex gap-1 items-center w-full">
-            <ImageWithInitialFallback
-              src={modalityIconSrc}
-              alt={ticket.modality.name}
-              name={ticket.modality.name}
-              width={20}
-              height={20}
-              className="shrink-0 size-6 bg-transparent border-transparent border-0 object-contain"
-              imgClassName="object-contain"
-              letterClassName="text-[10px]"
-            />
-            <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans line-clamp-1">
-              {ticket.modality.name}
-            </p>
+          {/* Modalities */}
+          <div className="flex flex-col gap-1 w-full">
+            {(ticket.modalities.length > 0 ? ticket.modalities : ["Modalidade não informada"]).map((name) => (
+              <div key={name} className="flex gap-1 items-center w-full">
+                <ImageWithInitialFallback
+                  src={getModalityIcon(name)}
+                  alt={name}
+                  name={name}
+                  width={20}
+                  height={20}
+                  className="shrink-0 size-6 bg-transparent border-transparent border-0 object-contain"
+                  imgClassName="object-contain"
+                  letterClassName="text-[10px]"
+                />
+                <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans line-clamp-1">
+                  {name}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 

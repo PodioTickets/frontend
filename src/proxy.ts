@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((o) => o.trim())
-  .filter((o) => o.length > 0);
-
 /**
  * Host do painel (ex.: app.podioticket.com.br). Sem protocolo; porta opcional em dev
  * (ex.: app.localhost:3000).
@@ -226,7 +220,6 @@ function applyOrganizerHostRouting(request: NextRequest): NextResponse | null {
 
 function isValidOrigin(origin: string | null, host: string | null): boolean {
   if (!origin || !host) return false;
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
   if (origin === `https://${host}`) return true;
   const isDev = process.env.NODE_ENV === "development";
   if (isDev && origin.includes("localhost")) return true;

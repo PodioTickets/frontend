@@ -701,22 +701,56 @@ export function CreateCouponModal() {
                           </div>
 
                           {/* Aplicar em quais ingressos */}
-                          <div className="flex flex-col gap-2">
-                            <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Aplicar em quais ingressos?
+                          <div className="flex flex-col gap-3">
+                            <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                              Quer aplicar esse cupom a todos os ingressos?
                             </label>
-                            <button
-                              type="button"
-                              onClick={() => setShowSelectTicketsModal(true)}
-                              className="border border-gray-7 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left w-full md:max-w-[276px]"
-                            >
-                              <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
-                                {appliesTo === "specific" && selectedTicketIds.length > 0
-                                  ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
-                                  : "Todos os ingressos"}
-                              </span>
-                              <ArrowButton isOpen={false} />
-                            </button>
+                            <div className="flex flex-wrap gap-6 max-md:gap-10">
+                              <label className="flex cursor-pointer items-center gap-2">
+                                <Radio
+                                  checked={appliesTo === "all"}
+                                  onChange={() => {
+                                    setAppliesTo("all");
+                                    setSelectedTicketIds([]);
+                                  }}
+                                  name="apply-coupon-tickets"
+                                  className="size-6"
+                                />
+                                <span className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-12">
+                                  Sim
+                                </span>
+                              </label>
+                              <label className="flex cursor-pointer items-center gap-2">
+                                <Radio
+                                  checked={appliesTo === "specific"}
+                                  onChange={() => setAppliesTo("specific")}
+                                  name="apply-coupon-tickets"
+                                  className="size-6"
+                                />
+                                <span className="font-family-dm-sans text-sm font-normal leading-[1.3] text-gray-12">
+                                  Não
+                                </span>
+                              </label>
+                            </div>
+                            {appliesTo === "specific" && (
+                              <div className="flex w-full max-w-none flex-col gap-2 md:max-w-[276px]">
+                                <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                                  Aplicar em quais ingressos?
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSelectTicketsModal(true)}
+                                  className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-6 px-3 text-left transition-colors hover:bg-gray-3"
+                                >
+                                  <span className="font-family-dm-sans text-base font-normal text-gray-11">
+                                    {selectedTicketIds.length > 0
+                                      ? `${selectedTicketIds.length} ingresso${selectedTicketIds.length > 1 ? "s" : ""} selecionado${selectedTicketIds.length > 1 ? "s" : ""}`
+                                      : "Selecione os ingressos"}
+                                  </span>
+                                  <ArrowButton isOpen={false} />
+                                </button>
+                              </div>
+                            )}
                           </div>
 
                           {/* Conteúdo avançado */}

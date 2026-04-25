@@ -815,7 +815,7 @@ export function TicketForm({
       ).trim();
       const ticketData = {
         name: ticketName.trim(),
-        description: descriptionToPersist || undefined,
+        description: isEdit ? descriptionToPersist : (descriptionToPersist || undefined),
         categoryId: selectedGroupId || initialGroupId || undefined,
         modality: modalityLabel,
         distance: distance || undefined,
@@ -827,7 +827,7 @@ export function TicketForm({
               min: minAge ? parseInt(minAge) : undefined,
               max: maxAge ? parseInt(maxAge) : undefined,
             }
-            : undefined,
+            : (isEdit ? null : undefined),
         hasKit: hasKit || false,
         productIds: products.map((p) => p.productId),
         batches: batches.map((b) => {

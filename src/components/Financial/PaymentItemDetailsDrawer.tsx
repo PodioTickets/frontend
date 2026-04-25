@@ -6,6 +6,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { X, ChevronRight, ArrowLeft, Ticket, CheckCircle, Copy, FileText } from "lucide-react";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
@@ -20,6 +21,7 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { Pagination } from "@/components/Pagination";
 import { XCircleIcon } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
+import { ArrowButton } from "../ArrowButton";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -192,6 +194,7 @@ export function PaymentItemDetailsDrawer({
     return (
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
         <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
+          <DrawerTitle className="sr-only">Comprovante do pagamento</DrawerTitle>
           <div className="flex items-center justify-center h-full">
             <Loading />
           </div>
@@ -209,15 +212,16 @@ export function PaymentItemDetailsDrawer({
   return (
     <Drawer open={isOpen} onOpenChange={onClose} direction="right">
       <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
+        <DrawerTitle className="sr-only">Comprovante do pagamento</DrawerTitle>
         {/* Header */}
         <DrawerHeader className="border-b border-gray-6 px-5 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
-                className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 transition-colors cursor-pointer"
+                className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rotate-180"
               >
-                <ArrowLeft className="size-5 text-gray-12" />
+                <ArrowButton className="text-gray-12" />
               </button>
               <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
                 Comprovante do pagamento

@@ -134,6 +134,7 @@ export function CreateQuestionModal() {
   };
 
   const handleCancelDescription = () => {
+    descriptionRef.current = description;
     setIsEditingDescription(false);
   };
 
@@ -176,7 +177,7 @@ export function CreateQuestionModal() {
     try {
       const questionData: CreateQuestionRequest = {
         question: question.trim(),
-        description: descriptionRef.current.trim() || undefined,
+        description: isEditing ? descriptionRef.current.trim() : (descriptionRef.current.trim() || undefined),
         type,
         isRequired,
         options: (type === "select" || type === "multiple_choice")

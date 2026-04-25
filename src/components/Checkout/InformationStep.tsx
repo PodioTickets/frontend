@@ -1754,6 +1754,9 @@ export function InformationStep({
                                 const nameParts = (p.name || "").trim().split(/\s+/);
                                 const firstName = nameParts[0] || "";
                                 const lastName = nameParts.slice(1).join(" ") || "";
+                                const genderOption = sexoOptions.find(
+                                  (opt) => opt.label === p.gender || opt.id === p.gender?.toLowerCase()
+                                );
                                 userService.createOrLinkUser({
                                   firstName,
                                   lastName,
@@ -1761,7 +1764,7 @@ export function InformationStep({
                                   documentNumber: (p.cpf || "").replace(/\D/g, ""),
                                   phone: (p.phone || "").replace(/\D/g, ""),
                                   dateOfBirth: p.birthDate || "",
-                                  gender: p.gender || "",
+                                  gender: genderOption?.id || p.gender || "",
                                 }).then(() => {
                                   queryClient.invalidateQueries({ queryKey: ["linked-users"] });
                                 }).catch(() => {});

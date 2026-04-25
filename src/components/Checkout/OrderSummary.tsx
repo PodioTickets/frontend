@@ -44,25 +44,36 @@ interface ParticipantData {
   voucherDiscount?: number;
 }
 
+export interface OrderSummaryCoupon {
+  code?: string;
+  discount?: number;
+  name?: string;
+  percent?: number;
+  /** Como o desconto é calculado */
+  type?: "PERCENTAGE" | "FIXED";
+  /** Categoria do cupom */
+  couponType?: "DISCOUNT" | "QUANTITY" | "AGE";
+  fixedValue?: number;
+  error?: string | null;
+  isApplied?: boolean;
+  isLoading?: boolean;
+  onApply: () => void;
+  onChange?: (code: string) => void;
+}
+
+export interface OrderSummaryVoucher {
+  code?: string;
+  discount?: number;
+  name?: string;
+}
+
 interface OrderSummaryProps {
   items?: OrderItem[];
   groupedTickets?: GroupedTicket[];
   serviceFee: number;
   total: number;
-  couponCode?: string;
-  couponDiscount?: number;
-  couponName?: string;
-  couponPercent?: number;
-  couponType?: "PERCENTAGE" | "FIXED";
-  couponFixedValue?: number;
-  couponError?: string | null;
-  isCouponApplied?: boolean;
-  isCouponLoading?: boolean;
-  voucherCode?: string;
-  voucherDiscount?: number;
-  voucherName?: string;
-  onApplyCoupon: () => void;
-  onCouponChange?: (coupon: string) => void;
+  coupon: OrderSummaryCoupon;
+  voucher?: OrderSummaryVoucher;
   participantsData?: ParticipantData[];
   onParticipantClick?: (participantIndex: number) => void;
 }
@@ -72,23 +83,28 @@ export function OrderSummary({
   groupedTickets = [],
   serviceFee,
   total,
-  couponCode: externalCouponCode = "",
-  couponDiscount = 0,
-  couponName,
-  couponPercent,
-  couponType,
-  couponFixedValue,
-  couponError = null,
-  isCouponApplied = false,
-  isCouponLoading = false,
-  voucherCode,
-  voucherDiscount = 0,
-  voucherName,
-  onApplyCoupon,
-  onCouponChange,
+  coupon,
+  voucher,
   participantsData = [],
   onParticipantClick,
 }: OrderSummaryProps) {
+  const {
+    code: externalCouponCode = "",
+    discount: couponDiscount = 0,
+    name: couponName,
+    percent: couponPercent,
+    type: couponValueType,
+    couponType,
+    fixedValue: couponFixedValue,
+    error: couponError = null,
+    isApplied: isCouponApplied = false,
+    isLoading: isCouponLoading = false,
+    onApply: onApplyCoupon,
+    onChange: onCouponChange,
+  } = coupon;
+  const voucherCode = voucher?.code;
+  const voucherDiscount = voucher?.discount ?? 0;
+  const voucherName = voucher?.name;
   const [couponCode, setCouponCode] = useState(externalCouponCode);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
 
@@ -189,8 +205,10 @@ export function OrderSummary({
           {isCouponApplied && couponDiscount > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">
-                {couponType === "FIXED" && totalTicketCount > 1 ? `${totalTicketCount}x ` : ""}
-                {couponName ? `Cupom ${couponName}` : "Cupom aplicado"}
+                {couponValueType === "FIXED" && totalTicketCount > 1 ? `${totalTicketCount}x ` : ""}
+                {couponType === "QUANTITY"
+                  ? (couponName ?? "Desconto aplicado")
+                  : (couponName ? `Cupom ${couponName}` : "Cupom aplicado")}
                 {couponPercent != null && couponPercent > 0 ? ` (${couponPercent}% OFF)` : ""}:
               </p>
               <p className="font-manrope font-bold">-{formatPrice(couponDiscount)}</p>
@@ -312,9 +330,9 @@ export function OrderSummary({
                   {(participantData.participant || participantData.couponCode || participantData.voucherCode) && (
                     <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
                       {participantData.participant && (
-                        <div className="flex items-center justify-between w-full">
-                          <div className="border border-gray-6 flex items-center p-3 rounded-xl flex-1">
-                            <div className="flex gap-2 items-center">
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <div className="border border-gray-6 flex items-center p-3 rounded-xl flex-1 min-w-0">
+                            <div className="flex gap-2 items-center min-w-0">
                               <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
                                 {participantData.participant.name ? (
                                   <span className="text-sm font-bold text-gray-12">
@@ -324,31 +342,31 @@ export function OrderSummary({
                                   <div className="size-10 rounded-full bg-gray-5" />
                                 )}
                               </div>
-                              <div className="flex flex-col gap-1 items-start justify-center">
-                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">
+                              <div className="flex flex-col gap-1 items-start justify-center min-w-0">
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate w-full">
                                   {participantData.participant.name || `Participante ${participantData.participantIndex + 1}`}
                                 </p>
-                                <div className="flex gap-2 items-center justify-center">
+                                <div className="flex gap-1 items-center min-w-0 overflow-hidden">
                                   {participantData.participant.birthDate && (
                                     <>
-                                      <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                      <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
                                         {formatDate(participantData.participant.birthDate)}
                                       </p>
-                                      <div className="size-1 bg-gray-11 rounded-full" />
+                                      <div className="size-1 bg-gray-11 rounded-full shrink-0" />
                                     </>
                                   )}
                                   {participantData.participant.gender && (
                                     <>
-                                      <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                      <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
                                         {getGenderLabel(participantData.participant.gender)}
                                       </p>
                                       {participantData.participant.cpf && (
-                                        <div className="size-1 bg-gray-11 rounded-full" />
+                                        <div className="size-1 bg-gray-11 rounded-full shrink-0" />
                                       )}
                                     </>
                                   )}
                                   {participantData.participant.cpf && (
-                                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
+                                    <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
                                       {maskCPF(participantData.participant.cpf)}
                                     </p>
                                   )}
@@ -356,14 +374,12 @@ export function OrderSummary({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center ml-2">
-                            <button
-                              onClick={() => toggleParticipant(index)}
-                              className="flex items-center justify-center size-6"
-                            >
-                              <ArrowButton isOpen={false} />
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => toggleParticipant(index)}
+                            className="flex items-center justify-center size-6 shrink-0"
+                          >
+                            <ArrowButton isOpen={false} />
+                          </button>
                         </div>
                       )}
 
@@ -373,11 +389,11 @@ export function OrderSummary({
                           <div className="flex gap-1 items-center">
                             <TicketIcon className="size-4 text-yellow-12" />
                             <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                              Cupom: {participantData.couponCode}
+                              {couponType === "QUANTITY" ? participantData.couponCode : `Cupom: ${participantData.couponCode}`}
                             </p>
                           </div>
                           <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                            {couponType === "FIXED"
+                            {couponValueType === "FIXED"
                               ? `-${formatPrice(couponFixedValue ?? 0)}`
                               : `${couponPercent ?? (participantData.ticketPrice > 0 ? Math.round((participantData.couponDiscount! / participantData.ticketPrice) * 100) : 0)}% OFF`}
                           </p>

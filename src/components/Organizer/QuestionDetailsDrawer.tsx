@@ -5,6 +5,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Question } from "@/interfaces/event";
@@ -84,6 +85,7 @@ export function QuestionDetailsDrawer({
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()} direction="right">
       <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[883px] border-l border-gray-6 rounded-l-xl">
+        <DrawerTitle className="sr-only">Detalhes das perguntas</DrawerTitle>
         <DrawerHeader className="border-b border-gray-6 px-5 py-3 flex flex-row items-center justify-between shrink-0">
           <p className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
             Detalhes das perguntas

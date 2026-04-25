@@ -10,7 +10,7 @@ import { useOrganizerPathname } from "@/hooks/useOrganizerPathname";
 import { useAuth } from "@/hooks/useAuth";
 import { Menu, X, Building2 } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
-import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
+import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { UsersIcon } from "../Icons/Organizer/UsersIcon";
 import { LogOutIcon } from "../Icons/LogOutIcon";
@@ -128,6 +128,7 @@ export function OrganizerMobileNav() {
             <Menu className="size-6" />
           </button>
           <DrawerContent className="h-full w-[85%] max-w-[320px] rounded-none flex flex-col p-0 overflow-hidden">
+            <DrawerTitle className="sr-only">Menu de navegação</DrawerTitle>
             {/* Header: apenas botão fechar */}
             <div className="flex flex-row items-center justify-between shrink-0 px-4 pt-4 pb-2 bg-[#191919]">
               <span className="relative h-6 w-[120px] shrink-0 block">

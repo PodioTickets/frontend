@@ -5,6 +5,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { X, ChevronLeft, ChevronRight, CheckCircle, FileText, Search, EyeIcon } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
@@ -13,6 +14,7 @@ import { RepasseIcon } from "../Icons/RepasseIcon";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
 import { TimerIcon } from "../Icons/Organizer/TimerIcon";
+import { Tooltip } from "@/components/Tooltip";
 import { organizerService } from "@/services";
 import type { Transfer } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
@@ -77,9 +79,9 @@ export function TransferHistoryDrawer({
     const date = new Date(transfer.requestedAt);
     const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     const formattedTime = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
+    const id = transfer.id
     return {
-      id: transfer.id,
+      id: `#${id.slice(0, 6)}...${id.slice(-4)}`,
       pixKey: transfer.bankAccount?.account || "N/A",
       requestDate: formattedDate,
       requestTime: formattedTime,
@@ -116,6 +118,7 @@ export function TransferHistoryDrawer({
     <>
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
         <DrawerContent className="bg-gray-2 md:bg-gray-1 h-full border-l border-gray-6">
+          <DrawerTitle className="sr-only">Histórico de repasses</DrawerTitle>
           {/* ========== MOBILE Header ========== */}
           <DrawerHeader className="md:hidden border-b border-gray-6 p-0">
             <div className="flex flex-col">
@@ -255,7 +258,14 @@ export function TransferHistoryDrawer({
                             <div className="flex-1 min-w-0 flex flex-col gap-3">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex flex-col min-w-0">
-                                  <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">ID Repasse: {d.id}</p>
+                                  <Tooltip
+                                    position="topRight"
+                                    trigger="hover"
+                                    content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{d.id}</p>}
+                                    contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                                  >
+                                    <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate cursor-help">ID Repasse: {d.id}</p>
+                                  </Tooltip>
                                   <div className="flex items-center gap-2">
                                     <p className="font-family-dm-sans font-normal text-sm text-gray-11">{d.requestDate}</p>
                                   </div>
@@ -400,9 +410,16 @@ export function TransferHistoryDrawer({
                         >
                           {/* ID pedido */}
                           <div className="flex h-full items-center p-4 w-[120px]">
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate">
-                              #{displayTransfer.id}
-                            </p>
+                            <Tooltip
+                              position="topRight"
+                              trigger="hover"
+                              content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{transfer.id}</p>}
+                              contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                            >
+                              <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
+                                {displayTransfer.id}
+                              </p>
+                            </Tooltip>
                           </div>
 
                           {/* Data da solicitação */}

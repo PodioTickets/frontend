@@ -6,6 +6,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { X, ChevronRight, Ticket, Building2, FileText, Search } from "lucide-react";
 import { PixIcon } from "@/components/Icons/PixIcon";
@@ -163,7 +164,7 @@ export function TransferDetailsDrawer({
   return (
     <Drawer open={isOpen} onOpenChange={onClose} direction="right">
       <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
-
+        <DrawerTitle className="sr-only">Detalhes do repasse</DrawerTitle>
         {/* ── Header ── */}
         <DrawerHeader className="border-b border-gray-6 px-5 py-3">
           {/* Desktop */}

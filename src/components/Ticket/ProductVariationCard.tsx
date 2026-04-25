@@ -92,10 +92,13 @@ export function ProductVariationCard({
   const [localSelected, setLocalSelected] = useState(
     product.selectedVariation ?? null
   );
+  const [localVariationEdited, setLocalVariationEdited] = useState(
+    product.variationEdited
+  );
 
   const banner = computeBanner(product, orderCreatedAt);
   const imageSrc = resolveImageSrc(product.image);
-  const canAlter = product.canEditVariation && !product.variationEdited;
+  const canAlter = product.canEditVariation && !localVariationEdited;
 
   const handleSelectVariation = async (variation: ProductVariation) => {
     if (isSaving || localSelected?.id === variation.id) {
@@ -110,6 +113,7 @@ export function ProductVariationCard({
         variation.id
       );
       setLocalSelected(variation);
+      setLocalVariationEdited(true);
       onVariationUpdated?.(product.id, variation.id);
       toast.success("Variação atualizada com sucesso!");
       setIsSelecting(false);
@@ -183,7 +187,7 @@ export function ProductVariationCard({
           )}
         </div>
 
-        {product.buyerVariationEditAllowed && (
+        {product.buyerVariationEditAllowed && !localVariationEdited && (
           <button
             type="button"
             onClick={() => canAlter && setIsSelecting((v) => !v)}

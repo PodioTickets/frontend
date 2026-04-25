@@ -6,6 +6,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
@@ -21,6 +22,8 @@ import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 import { getAvatarUrl } from "@/utils/avatar";
 import Image from "next/image";
 import { Button } from "../Button";
+import { Tooltip } from "../Tooltip";
+import { Pagination } from "../Pagination";
 
 interface AwaitingReleaseDrawerProps {
   isOpen: boolean;
@@ -137,6 +140,7 @@ export function AwaitingReleaseDrawer({
     <>
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
         <DrawerContent className="bg-gray-2 md:bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
+          <DrawerTitle className="sr-only">Aguardando liberação - Detalhes</DrawerTitle>
           {/* ========== MOBILE Header (Figma) ========== */}
           <DrawerHeader className="md:hidden border-b border-gray-6 p-0">
             <div className="flex flex-col">
@@ -455,8 +459,18 @@ export function AwaitingReleaseDrawer({
                       >
                         {/* ID pedido */}
                         <div className="flex h-full items-center p-4 w-[120px]">
+                          <Tooltip
+                            position="topRight"
+                            trigger="hover"
+                            content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{item.orderId}</p>}
+                            contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                          >
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
+                              #{item.orderId.slice(0, 6)}...{item.orderId.slice(-4)}
+                            </p>
+                          </Tooltip>
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            #{item.orderId.slice(0, 6)}...{item.orderId.slice(-4)}
+
                           </p>
                         </div>
 
@@ -536,54 +550,7 @@ export function AwaitingReleaseDrawer({
                   )}
                 </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4 px-5 border-t border-gray-6">
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={!pagination.hasPreviousPage || loading}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    {(() => {
-                      // Calcular quais páginas mostrar
-                      const maxVisible = 8;
-                      let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-                      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-
-                      // Ajustar se estiver perto do final
-                      if (endPage - startPage + 1 < maxVisible) {
-                        startPage = Math.max(1, endPage - maxVisible + 1);
-                      }
-
-                      return Array.from({ length: endPage - startPage + 1 }, (_, i) => {
-                        const pageNum = startPage + i;
-                        const isActive = pageNum === currentPage;
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            disabled={loading}
-                            className={`size-8 flex items-center justify-center border rounded-lg text-sm font-inter font-normal transition-colors ${isActive
-                              ? "bg-[#59E373] border-[#59E373] text-gray-12"
-                              : "border-gray-6 hover:bg-gray-3 text-gray-12"
-                              } disabled:opacity-50`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      });
-                    })()}
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={!pagination.hasNextPage || loading}
-                      className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
-                )}
+                <Pagination onPageChange={setCurrentPage} currentPage={pagination.page} totalPages={pagination.totalPages} />
               </div>
             </div>
           </div>

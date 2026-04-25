@@ -612,13 +612,15 @@ export interface TopCity {
 }
 
 export interface LotNearDepletion {
-  lotId: string;
-  name: string;
+  ticketId: string;
+  ticketName: string;
   status: "Normal" | "Atenção" | "Crítico";
   sold: number;
   total: number;
   remaining: number;
   percentageSold: number;
+  activeBatch?: { id: string; number: number; label: string } | null;
+  batches?: Array<{ id: string; number: number; label: string }>;
 }
 
 export interface SalesHeatmapData {

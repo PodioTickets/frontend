@@ -6,6 +6,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
@@ -21,6 +22,7 @@ import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
+import { Tooltip } from "../Tooltip";
 
 interface InstallmentsDrawerProps {
   isOpen: boolean;
@@ -133,6 +135,7 @@ export function InstallmentsDrawer({
     <>
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
         <DrawerContent className="bg-gray-2 md:bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
+          <DrawerTitle className="sr-only">Parcelados a receber - Detalhes</DrawerTitle>
           {/* ========== MOBILE Header (Figma) ========== */}
           <DrawerHeader className="md:hidden border-b border-gray-6 p-0">
             <div className="flex flex-col">
@@ -440,8 +443,18 @@ export function InstallmentsDrawer({
                       >
                         {/* ID pedido */}
                         <div className="flex h-full items-center p-4 w-[120px]">
+                          <Tooltip
+                            position="topRight"
+                            trigger="hover"
+                            content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{installment.orderId}</p>}
+                            contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                          >
+                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
+                              #{installment.orderId.slice(0, 6)}...{installment.orderId.slice(-4)}
+                            </p>
+                          </Tooltip>
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            #{installment.orderId.slice(0, 6)}...{installment.orderId.slice(-4)}
+
                           </p>
                         </div>
                         {/* Comprador */}

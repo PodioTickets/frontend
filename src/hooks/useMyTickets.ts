@@ -140,11 +140,14 @@ export function useMyTickets(
       const response = await userService.getMyTickets({ page, limit, status });
       const orders: any[] = response.orders || [];
 
-      // Um card por pedido — usa a primeira registration para modalidade/distância/qrCode
+      // Um card por pedido
       const transformedTickets: Ticket[] = orders.map((order: any) => {
         const firstReg: any = order.registrations?.[0] ?? {};
-        const { name: modalityName, icon: modalityIcon, distance } =
-          modalityFromRegistration(firstReg);
+        const { distance } = modalityFromRegistration(firstReg);
+
+        const modalities: string[] = Array.isArray(order.modalities)
+          ? order.modalities.filter(Boolean)
+          : [];
 
         return {
           id: order.id,
@@ -158,10 +161,7 @@ export function useMyTickets(
               state: order.event?.state || order.event?.location?.state || "Estado não informado",
             },
           },
-          modality: {
-            icon: modalityIcon,
-            name: modalityName,
-          },
+          modalities,
           status: resolveOrderStatus(firstReg.status, order.status),
           distance,
           qrCode: firstReg.qrCode,

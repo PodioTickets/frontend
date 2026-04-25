@@ -170,7 +170,7 @@ export function ViewRegistrationModal() {
   };
 
   const ticketName = currentRegistration?.ticket?.name || currentRegistration?.modalities?.[0]?.modality?.name || "—";
-  const categoryName = currentRegistration?.ticket?.category?.name || currentRegistration?.modalities?.[0]?.modality?.category?.name || "—";
+  const categoryName = currentRegistration?.ticket?.category?.name || currentRegistration?.modalities?.[0]?.modality?.category?.name || "Ingresso avulso";
   const user = currentRegistration?.user || currentRegistration?.buyer;
   const participantName = user
     ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.fullName || "—"
@@ -700,14 +700,17 @@ export function ViewRegistrationModal() {
                         </div>
 
                       </div>
-                      <div className="flex flex-col py-4">
-                        <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                          Telefone de emergência
-                        </p>
-                        <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                          {emergencyPhone || "—"}
-                        </p>
-                      </div>
+                      {emergencyPhone && (
+                        <div className="flex flex-col py-4">
+                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                            Telefone de emergência
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+                            {emergencyPhone || "—"}
+                          </p>
+                        </div>
+                      )}
+
                     </div>
                   </div>
 
@@ -731,13 +734,14 @@ export function ViewRegistrationModal() {
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-x-2 gap-y-4 w-full">
+                      <div className="grid grid-cols-2 w-full">
                         {questions.length > 0 ? (
                           questions.slice(0, 4).map((q: any, index: number) => (
-                            <div key={q.id || index} className="flex flex-col gap-2 py-4">
+                            <div key={q.id || index} className="flex flex-col py-4">
                               <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
                                 Pergunta: {q.question?.question || q.question || `Pergunta ${index + 1}`}
                               </p>
+                              <p className="font-family-dm-sans font-normal text-gray-11 text-sm mb-2">{q.question?.description}</p>
                               <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
                                 R: {q.answer || "—"}
                               </p>

@@ -633,6 +633,21 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     payOrder,
   } = useCheckoutReservation();
 
+  // Restaura endereço de cobrança persistido para este pedido
+  useEffect(() => {
+    if (!orderId) return;
+    try {
+      const saved = localStorage.getItem(`checkout_billing_${orderId}`);
+      if (saved) {
+        const { address } = JSON.parse(saved) as { address: CheckoutBillingAddress };
+        setBillingAddress(address);
+        setBillingAddressConfirmed(true);
+      }
+    } catch {
+      /* ignora erros de storage */
+    }
+  }, [orderId]);
+
   // Busca o pedido do servidor no mount para obter pricing, coupon e voucher atualizados.
   useEffect(() => {
     if (!orderId || orderFetchedRef.current) return;
@@ -1285,6 +1300,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       syncFromOrder(updated);
       setCurrentOrder(updated);
       setBillingAddressConfirmed(true);
+      try {
+        localStorage.setItem(
+          `checkout_billing_${orderId}`,
+          JSON.stringify({ address: billingAddress }),
+        );
+      } catch { /* ignora */ }
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (
@@ -1957,23 +1978,28 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             groupedTickets={groupedTickets}
             serviceFee={serviceFee}
             total={totalValue}
-            couponCode={couponCode}
-            couponDiscount={couponDiscount}
-            couponName={appliedCouponName}
-            couponPercent={couponPercent}
-            couponType={currentOrder?.coupon?.type ?? undefined}
-            couponFixedValue={currentOrder?.coupon?.type === "FIXED" ? currentOrder.coupon.value / 100 : undefined}
-            couponError={couponError}
-            isCouponApplied={isCouponApplied}
-            isCouponLoading={couponLoading}
-            voucherCode={currentOrder?.voucher?.code}
-            voucherDiscount={voucherDiscount}
-            voucherName={appliedVoucherName}
-            onApplyCoupon={() => { void handleApplyCoupon(); }}
-            onCouponChange={(code) => {
-              setCouponCode(code);
-              setCouponError(null);
+            coupon={{
+              code: couponCode,
+              discount: couponDiscount,
+              name: appliedCouponName,
+              percent: couponPercent,
+              type: currentOrder?.coupon?.type ?? undefined,
+              couponType: currentOrder?.coupon?.couponType ?? undefined,
+              fixedValue: currentOrder?.coupon?.type === "FIXED" ? currentOrder.coupon.value / 100 : undefined,
+              error: couponError,
+              isApplied: isCouponApplied,
+              isLoading: couponLoading,
+              onApply: () => { void handleApplyCoupon(); },
+              onChange: (code) => {
+                setCouponCode(code);
+                setCouponError(null);
+              },
             }}
+            voucher={currentOrder?.voucher ? {
+              code: currentOrder.voucher.code,
+              discount: voucherDiscount,
+              name: appliedVoucherName,
+            } : undefined}
             participantsData={participantsData}
             onParticipantClick={handleParticipantClick}
           />

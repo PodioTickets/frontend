@@ -700,9 +700,17 @@ export function SubscriptionStep({
 
   const hasAllRequiredVariations = (participantIndex: number): boolean => {
     const participantRequiredProducts = getRequiredProductsForParticipant(participantIndex);
-    return participantRequiredProducts.every((product) => {
+    const productsNeedingSelection = participantRequiredProducts.filter(
+      (p) => p.variations.length > 1
+    );
+    if (productsNeedingSelection.length === 0) return true;
+
+    const contextVariations = participants[participantIndex]?.productVariations ?? {};
+
+    return productsNeedingSelection.every((product) => {
       const variationKey = getVariationKey(participantIndex, product.id);
-      return selectedVariations[variationKey] && selectedVariations[variationKey] !== null;
+      const val = selectedVariations[variationKey] ?? contextVariations[product.id];
+      return val != null && val !== "";
     });
   };
 
@@ -712,25 +720,31 @@ export function SubscriptionStep({
   };
 
   const handleSaveAndNext = (participantIndex: number) => {
-    if (hasAllRequiredVariations(participantIndex)) {
-      setCompletedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
-      setExpandedParticipants((prev) => {
-        const newState = { ...prev };
-        delete newState[participantIndex];
-        return newState;
-      });
-      const nextParticipant = participantsWithTickets.find(
-        (p) =>
-          !completedParticipants[p.participantIndex] &&
-          p.participantIndex !== participantIndex
-      );
-      if (nextParticipant) {
-        setSelectedParticipant(nextParticipant.participantIndex);
-        setExpandedParticipants((prev) => ({
-          ...prev,
-          [nextParticipant.participantIndex]: true,
-        }));
-      }
+    if (!isParticipantComplete(participantIndex)) return;
+
+    const newCompleted = { ...completedParticipants, [participantIndex]: true };
+    setCompletedParticipants(newCompleted);
+
+    setExpandedParticipants((prev) => {
+      const newState = { ...prev };
+      delete newState[participantIndex];
+      return newState;
+    });
+
+    const nextParticipant = participantsWithTickets.find((p) => {
+      if (p.participantIndex === participantIndex) return false;
+      if (newCompleted[p.participantIndex]) return false;
+      return !hasAllRequiredVariations(p.participantIndex);
+    });
+
+    if (nextParticipant) {
+      setSelectedParticipant(nextParticipant.participantIndex);
+      setExpandedParticipants((prev) => ({
+        ...prev,
+        [nextParticipant.participantIndex]: true,
+      }));
+    } else {
+      onNext();
     }
   };
 
@@ -1011,7 +1025,7 @@ export function SubscriptionStep({
                     <Button
                       className="w-full mt-4"
                       onClick={() => handleSaveAndNext(participantIndex)}
-                      disabled={!hasAllRequiredVariations(participantIndex)}
+                      disabled={!isParticipantComplete(participantIndex)}
                     >
                       Salvar e próximo
                     </Button>
@@ -1148,6 +1162,7 @@ export function SubscriptionStep({
               getSelectedVariation={getSelectedVariation}
               variant="desktop"
             />
+
           </div>
         </div>
 
@@ -1284,16 +1299,10 @@ export function SubscriptionStep({
               </div>
 
               <Button
-                onClick={onNext}
+                onClick={() => handleSaveAndNext(selectedParticipant)}
                 className="w-full mt-8 font-bold"
                 isLoading={isSubmitting}
-                disabled={
-                  isSubmitting ||
-                  totalParticipants === 0 ||
-                  !participantsWithTickets.every(({ participantIndex }) =>
-                    isParticipantComplete(participantIndex)
-                  )
-                }
+                disabled={isSubmitting || totalParticipants === 0 || !isParticipantComplete(selectedParticipant)}
               >
                 Salvar e próximo
               </Button>
