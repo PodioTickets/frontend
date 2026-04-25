@@ -83,7 +83,7 @@ const TicketItemMobile = memo(({
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
-  const distanceUnit = ticket?.distanceUnit
+  const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
 
@@ -356,7 +356,7 @@ const TicketItemDesktop = memo(({
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
-  const distanceUnit = ticket?.distanceUnit
+  const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
 
