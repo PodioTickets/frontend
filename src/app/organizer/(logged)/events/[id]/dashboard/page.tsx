@@ -764,7 +764,7 @@ export default function EventDashboardPage() {
       />
 
       {/* Desktop content */}
-      <div className="hidden md:block max-w-7xl mx-auto py-8">
+      <div className="hidden md:block max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0 py-8">
         {/* Title and Description - conforme Figma */}
         <div className="mb-8 flex flex-col gap-1">
           <h1 className="font-manrope font-bold text-[20px] leading-[1.3] text-gray-12">

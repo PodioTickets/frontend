@@ -25,8 +25,8 @@ export function EventPageHeader({ eventName }: EventPageHeaderProps) {
 
   return (
     <div className="bg-gray-1 border-b border-gray-6 md:mb-6 pt-6">
-      <div className="max-w-7xl mx-auto lg:px-0">
-        <div className="mb-4 px-4 md:px-0">
+      <div>
+        <div className="mb-4 px-6">
           <div className="flex items-center gap-2 text-sm text-gray-11">
             <Link href={navHref("/organizer/events")} className="hover:text-gray-12">
               Eventos
