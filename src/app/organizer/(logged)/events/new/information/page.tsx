@@ -631,7 +631,7 @@ export default function InformacoesPage() {
           </div>
         </div>
 
-        <div className="max-w-[1060px] mx-auto flex flex-col gap-9 md:gap-[44px] md:px-5 pt-4 md:pt-0">
+        <div className="max-w-[1060px] mx-auto flex flex-col gap-9 md:gap-[44px] px-4 md:px-5 pt-4 md:pt-0">
           <div className="hidden md:flex flex-col gap-[16px]">
             <h1 className="text-gray-12 text-[28px] font-bold font-manrope leading-[1.1]">
               Criar evento
