@@ -271,7 +271,7 @@ export default function EventFinancialPage() {
         backLinkClassName="rotate-180"
       />
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-0">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
 
         {/* Page Title - Desktop */}
         <div className="mb-6 hidden lg:flex items-center justify-between w-full">

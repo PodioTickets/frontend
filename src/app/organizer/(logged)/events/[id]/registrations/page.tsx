@@ -681,7 +681,7 @@ export default function EventRegistrationsPage() {
         backLinkClassName="rotate-180"
       />
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-0">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
         {/* Page Title - Desktop only */}
         <div className="mb-6 hidden md:block">
           <h1 className="text-3xl font-bold text-gray-12 mb-2">Inscrições</h1>

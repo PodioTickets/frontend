@@ -254,7 +254,7 @@ export function EventMobileTabs({
   const isPageHeader = variant === "pageHeader";
 
   const scrollClass = isPageHeader
-    ? "w-full min-w-0  overflow-x-auto px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden"
+    ? "w-full min-w-0  overflow-x-auto px-6 [&::-webkit-scrollbar]:hidden"
     : "w-full min-w-0 overflow-x-auto border-b border-gray-6 [&::-webkit-scrollbar]:hidden";
 
   const rowClass = isPageHeader

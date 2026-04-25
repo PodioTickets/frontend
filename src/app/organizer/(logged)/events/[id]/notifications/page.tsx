@@ -82,7 +82,7 @@ export default function EventNotificationsPage() {
         backLinkClassName="rotate-180"
       />
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-0 py-4 md:py-6">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0 py-4 md:py-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-4 md:mb-6">
           <div>
             <h1 className="text-gray-12 font-extrabold font-manrope leading-[1.1] text-base md:text-[28px] md:font-bold">
