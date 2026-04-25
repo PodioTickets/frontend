@@ -239,8 +239,8 @@ export function normalizeOrganizationAuditLogItem(
 
   let metadata: Record<string, unknown> | undefined =
     raw.metadata &&
-    typeof raw.metadata === "object" &&
-    !Array.isArray(raw.metadata)
+      typeof raw.metadata === "object" &&
+      !Array.isArray(raw.metadata)
       ? { ...(raw.metadata as Record<string, unknown>) }
       : undefined;
 
@@ -666,12 +666,14 @@ export interface DashboardData {
 export interface FinancialSummary {
   availableBalance: number;
   installmentsToReceive: number;
-  awaitingRelease: number;
-  totalTransferred: number;
-  refunded: number;
-  chargebacks: number;
+  pendingRelease: number;
+  awaitingAudit: number;
+  totalWithdrawn: number;
+  totalRefunded: number;
+  refundedCount: number;
+  totalChargebacks: number;
   grossRevenue: number;
-  revenueChange: number;
+  isAudited: boolean;
 }
 
 export interface RevenueChartData {
@@ -703,7 +705,7 @@ export interface FinancialTicket {
 
 export interface FinancialData {
   summary: FinancialSummary;
-  revenueChart: RevenueChartData;
+  revenueChart?: RevenueChartData;
   tickets: {
     message: string;
     data: {
@@ -722,7 +724,7 @@ export interface Transfer {
   id: string;
   amount: number;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-  requestedAt: string;
+  createdAt: string;
   completedAt?: string;
   paymentMethod: "PIX" | "TED" | "DOC";
   bankAccount?: {
@@ -914,15 +916,15 @@ function normalizeEventNotification(raw: Record<string, unknown>): EventNotifica
   const chRaw = raw.channels;
   const channels: EventNotificationChannel[] = Array.isArray(chRaw)
     ? (chRaw.filter((c) =>
-        typeof c === "string" &&
-        (EVENT_NOTIFICATION_CHANNELS as string[]).includes(c)
-      ) as EventNotificationChannel[])
+      typeof c === "string" &&
+      (EVENT_NOTIFICATION_CHANNELS as string[]).includes(c)
+    ) as EventNotificationChannel[])
     : [];
 
   const st = raw.status;
   const status: EventNotificationStatus =
     typeof st === "string" &&
-    (EVENT_NOTIFICATION_STATUSES as string[]).includes(st)
+      (EVENT_NOTIFICATION_STATUSES as string[]).includes(st)
       ? (st as EventNotificationStatus)
       : "review";
 

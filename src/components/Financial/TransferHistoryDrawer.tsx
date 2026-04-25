@@ -76,7 +76,8 @@ export function TransferHistoryDrawer({
   };
 
   const formatTransferForDisplay = (transfer: Transfer) => {
-    const date = new Date(transfer.requestedAt);
+    const date = new Date(transfer.createdAt);
+    console.log(date)
     const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     const formattedTime = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const id = transfer.id
@@ -403,6 +404,7 @@ export function TransferHistoryDrawer({
                   ) : (
                     paginatedTransfers.map((transfer) => {
                       const displayTransfer = formatTransferForDisplay(transfer);
+                      console.log(displayTransfer)
                       return (
                         <div
                           key={transfer.id}
@@ -492,11 +494,12 @@ export function TransferHistoryDrawer({
             setIsDetailsOpen(false);
             setSelectedTransfer(null);
           }}
+          eventId={eventId}
           transfer={{
             id: selectedTransfer.id,
             pixKey: selectedTransfer.bankAccount?.account || "N/A",
-            requestDate: new Date(selectedTransfer.requestedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }),
-            requestTime: new Date(selectedTransfer.requestedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+            requestDate: new Date(selectedTransfer.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }),
+            requestTime: new Date(selectedTransfer.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
             value: selectedTransfer.amount / 100,
             status: selectedTransfer.status === "COMPLETED" ? "Concluído" :
               selectedTransfer.status === "PROCESSING" ? "Processando" :

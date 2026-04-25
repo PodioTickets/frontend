@@ -7,6 +7,10 @@ import { X, Building2, Ticket } from "lucide-react";
 import { useRequestTransferModal } from "@/stores/modalStore";
 import Image from "next/image";
 import { ArrowButton } from "@/components/ArrowButton";
+import { Input } from "../Input";
+import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
+import { getApiClient } from "@/services/base/ApiClient";
+import toast from "react-hot-toast";
 
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
@@ -14,6 +18,7 @@ export function RequestTransferModal() {
   const [amountFocused, setAmountFocused] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // API pode enviar em centavos; normalizar para exibição em reais
   const rawBalance = data?.availableBalance ?? 125000;
@@ -84,16 +89,30 @@ export function RequestTransferModal() {
     setAmount(num.toFixed(2).replace(".", ","));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const numericAmount = parseFloat(amount.replace(",", "."));
-    if (!numericAmount || numericAmount < minAmount) {
+    if (!numericAmount || numericAmount < minAmount) return;
+    if (numericAmount > availableBalance) return;
+
+    const eventId = data?.eventId as string | undefined;
+    if (!eventId) {
+      toast.error("Evento não identificado");
       return;
     }
-    if (numericAmount > availableBalance) {
-      return;
+
+    setIsSubmitting(true);
+    try {
+      await getApiClient().post(
+        `/api/v1/events/${eventId}/repasse/withdrawals`,
+        { amount: Math.round(numericAmount * 100) }
+      );
+      setTransferAmount(formatAmount(amount));
+      setShowSuccess(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao solicitar saque");
+    } finally {
+      setIsSubmitting(false);
     }
-    setTransferAmount(formatAmount(amount));
-    setShowSuccess(true);
   };
 
   const handleClose = () => {
@@ -265,10 +284,10 @@ export function RequestTransferModal() {
                     <Button
                       type="button"
                       onClick={handleConfirm}
-                      disabled={!isValidAmount}
+                      disabled={!isValidAmount || isSubmitting}
                       className="flex-1 h-11 bg-primary-11 text-primary-2 font-manrope font-bold text-base hover:bg-primary-10 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Confirmar
+                      {isSubmitting ? "Aguarde..." : "Confirmar"}
                     </Button>
                   </div>
                 </>
@@ -336,63 +355,44 @@ export function RequestTransferModal() {
                           onFocus={() => setAmountFocused(true)}
                           onBlur={handleAmountBlur}
                           placeholder="R$ 0,00"
-                          className="h-[71px] text-[24px] font-manrope font-extrabold tracking-[1px] border border-gray-6 rounded-lg px-3 py-6 w-full"
+                          className="h-[71px] text-[24px] font-manrope font-extrabold tracking-[1px] border border-gray-6 rounded-lg pl-3 pr-28 py-2 w-full outline-none focus:ring-[3px] focus:ring-gray-4/50 focus:border-gray-4 transition-[color,box-shadow] placeholder:text-gray-11"
                         />
-                      </div>
-                      <div className="flex items-center justify-between h-5 font-family-dm-sans">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[16px] leading-[1.3] text-gray-11">
-                            Mínimo: <span className="font-semibold text-gray-12">R$ {formatBalance(minAmount)}</span>
-                          </span>
-                          <span className="w-px h-5 bg-gray-6" />
-                          <span className="text-[16px] leading-[1.3] text-gray-11">
-                            Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
-                          </span>
-                          <span className="w-px h-5 bg-gray-6" />
-                          <span className="text-[16px] leading-[1.3] text-red-11">
-                            Taxa do organizador: <span className="font-semibold">4%</span>
-                          </span>
-                        </div>
                         <button
                           type="button"
                           onClick={handleUseAll}
-                          className="text-[16px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3]"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3] whitespace-nowrap"
                         >
                           Sacar tudo
                         </button>
+                      </div>
+                      <div className="flex items-center gap-2 font-family-dm-sans flex-wrap">
+                        <span className="text-[14px] leading-[1.3] text-gray-11">
+                          Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
+                        </span>
+                        <span className="w-px h-4 bg-gray-6" />
+                        <span className="text-[14px] leading-[1.3] text-gray-12">
+                          Valor a receber: <span className="font-semibold">R$ {formatBalance(numericAmount * 0.96)}</span>
+                        </span>
+                        <span className="w-px h-4 bg-gray-6" />
+                        <span className="text-[14px] leading-[1.3] text-gray-12">
+                          Taxa do organizador: <span className="font-semibold">R$ {formatBalance(availableBalance - (numericAmount * 0.96))}</span>
+                        </span>
                       </div>
                     </div>
                     <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex flex-col gap-5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-lg bg-[#ebe4ff] flex items-center justify-center shrink-0">
-                            <Building2 className="size-6 text-gray-12" />
+                            <FinanceIcon className="size-6 text-gray-12" />
                           </div>
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col">
                             <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">Banco Nubank</p>
                             <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Chave: {maskedPixKey}</p>
                           </div>
                         </div>
                         <button type="button" className="text-[16px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3]">
-                          Precisa alterar a conta?
+                          Trocar conta
                         </button>
-                      </div>
-                      <div className="h-px bg-gray-6" />
-                      <div className="flex flex-col gap-3">
-                        <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Organização</p>
-                        <div className="flex items-center gap-2">
-                          {organizationAvatar ? (
-                            <img src={organizationAvatar} alt={organizationName} className="size-8 rounded-full shrink-0 object-cover" />
-                          ) : (
-                            <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                              <span className="text-gray-12 font-semibold text-sm">{organizationName.charAt(0).toUpperCase()}</span>
-                            </div>
-                          )}
-                          <div className="flex flex-col gap-3">
-                            <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">{organizationName}</p>
-                            <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">CNPJ: {organizationCnpj}</p>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -400,8 +400,8 @@ export function RequestTransferModal() {
                     <Button variant="outline" onClick={handleClose} className="h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2">
                       Cancelar
                     </Button>
-                    <Button variant="default" onClick={handleConfirm} disabled={!isValidAmount} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
-                      Confirmar
+                    <Button variant="default" onClick={handleConfirm} disabled={!isValidAmount || isSubmitting} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSubmitting ? "Aguarde..." : "Confirmar"}
                     </Button>
                   </div>
                 </>

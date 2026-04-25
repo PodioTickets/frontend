@@ -641,16 +641,7 @@ export default function AdminRepassePage() {
             </div>
           </div>
         </div>
-
-        {/* Count */}
-        <p className="text-sm text-gray-11 font-medium font-family-dm-sans mb-3 md:mb-4">
-          {loading
-            ? "Carregando…"
-            : pagination.total === 1
-              ? "1 Repasse encontrado"
-              : `${pagination.total} Repasses encontrados`}
-        </p>
-
+        
         {/* Mobile cards */}
         <div className="md:hidden flex flex-col gap-3">
           {loading ? (

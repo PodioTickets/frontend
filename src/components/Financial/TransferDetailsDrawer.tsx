@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { getApiClient } from "@/services/base/ApiClient";
 import {
   Drawer,
   DrawerClose,
@@ -15,9 +16,23 @@ import { ArrowButton } from "../ArrowButton";
 import { Pagination } from "@/components/Pagination";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 
+interface TransferDetail {
+  id: string;
+  eventId: string;
+  amount: number;
+  feeRate: number;
+  feeAmount: number;
+  netAmount: number;
+  status: "PENDING" | "COMPLETED" | "CANCELLED";
+  notes: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
 interface TransferDetailsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  eventId: string;
   transfer: {
     id: string;
     pixKey: string;
@@ -116,15 +131,55 @@ const mockTransferDetails = {
 export function TransferDetailsDrawer({
   isOpen,
   onClose,
+  eventId,
   transfer,
   eventName = "Maratona 2024",
   categoryName = "Nome da categoria",
 }: TransferDetailsDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [detail, setDetail] = useState<TransferDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const itemsPerPage = 10;
 
+  useEffect(() => {
+    if (!isOpen || !eventId || !transfer?.id) return;
+    let cancelled = false;
+    setDetail(null);
+    setLoadingDetail(true);
+    getApiClient()
+      .get<{ data: { transfer: TransferDetail } }>(
+        `/api/v1/events/${eventId}/financial/transfers/${transfer.id}`
+      )
+      .then((res) => {
+        if (!cancelled) setDetail(res.data.data.transfer);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingDetail(false);
+      });
+    return () => { cancelled = true; };
+  }, [isOpen, eventId, transfer?.id]);
+
   const formatValue = (v: number) => v.toFixed(2).replace(".", ",");
+
+  const statusLabel = (s: string) => {
+    if (s === "COMPLETED" || s === "Concluído") return "Concluído";
+    if (s === "CANCELLED") return "Cancelado";
+    return "Pendente";
+  };
+
+  const resolvedStatus = detail ? statusLabel(detail.status) : transfer.status;
+  const resolvedId = detail?.id ?? transfer.id;
+  const resolvedDate = detail
+    ? new Date(detail.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
+    : transfer.requestDate;
+  const resolvedTime = detail
+    ? new Date(detail.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : transfer.requestTime;
+  const grossValue = detail ? detail.amount / 100 : transfer.value;
+  const feeValue = detail ? detail.feeAmount / 100 : 0;
+  const netValue = detail ? detail.netAmount / 100 : transfer.value;
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -155,11 +210,12 @@ export function TransferDetailsDrawer({
   };
 
   const getStatusBadge = (status: string) => {
-    if (status === "Concluído") return "bg-primary-11 text-primary-2";
+    if (status === "Concluído" || status === "COMPLETED") return "bg-primary-11 text-primary-2";
+    if (status === "Cancelado" || status === "CANCELLED") return "bg-red-3 text-red-11";
     return "bg-yellow-10/20 text-yellow-11";
   };
 
-  const { event, account, values } = mockTransferDetails;
+  const { event, account } = mockTransferDetails;
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose} direction="right">
@@ -233,18 +289,18 @@ export function TransferDetailsDrawer({
             <div className="hidden md:flex mb-7 items-start flex-col gap-3 text-[16px]">
               <div className="flex items-center gap-1">
                 <span className="text-gray-11 font-family-dm-sans font-normal">ID do repasse:</span>
-                <span className="text-gray-12 font-manrope font-semibold">{mockTransferDetails.id}</span>
+                <span className="text-gray-12 font-manrope font-semibold">{resolvedId}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
                   <span className="text-gray-11 font-family-dm-sans font-normal">Data:</span>
                   <span className="text-gray-12 font-manrope font-semibold">
-                    {mockTransferDetails.date} às {mockTransferDetails.time}
+                    {resolvedDate} às {resolvedTime}
                   </span>
                 </div>
                 <span className="w-1 h-1 rounded-full bg-gray-11" />
-                <span className={`inline-flex items-center justify-center px-3 py-2 rounded text-[14px] font-family-dm-sans font-normal ${getStatusBadge(mockTransferDetails.status)}`}>
-                  {mockTransferDetails.status}
+                <span className={`inline-flex items-center justify-center px-3 py-2 rounded text-[14px] font-family-dm-sans font-normal ${getStatusBadge(resolvedStatus)}`}>
+                  {resolvedStatus}
                 </span>
               </div>
             </div>
@@ -254,93 +310,16 @@ export function TransferDetailsDrawer({
               <div className="flex items-center gap-1 text-[13px]">
                 <span className="text-gray-11 font-family-dm-sans">Data:</span>
                 <span className="text-gray-12 font-manrope font-semibold">
-                  {mockTransferDetails.date} às {mockTransferDetails.time}
+                  {resolvedDate} às {resolvedTime}
                 </span>
               </div>
               <div className="flex items-center gap-6 text-[13px]">
                 <span className="text-gray-11 font-family-dm-sans">
-                  ID: {mockTransferDetails.id}
+                  ID: {resolvedId}
                 </span>
-                <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[12px] font-family-dm-sans font-normal ${getStatusBadge(mockTransferDetails.status)}`}>
-                  {mockTransferDetails.status}
+                <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[12px] font-family-dm-sans font-normal ${getStatusBadge(resolvedStatus)}`}>
+                  {resolvedStatus}
                 </span>
-              </div>
-            </div>
-
-            {/* ── Evento Section ── */}
-            <div className="mb-5 md:mb-7">
-              <p className="text-[16px] md:text-[18px] text-gray-12 font-manrope font-bold mb-3">Evento</p>
-
-              {/* Desktop: side-by-side */}
-              <div className="hidden md:flex bg-gray-2 border border-gray-6 rounded-lg p-4 items-center gap-6">
-                <div className="flex flex-1 flex-col gap-3">
-                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                    Nome do evento
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
-                      <Ticket className="size-6 text-gray-12" />
-                    </div>
-                    <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                      {event.name}
-                    </p>
-                  </div>
-                </div>
-                <div className="h-full w-px bg-gray-6" />
-                <div className="flex flex-1 flex-col gap-3">
-                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                    Organização
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                      <span className="text-gray-12 font-semibold text-sm">
-                        {event.organizer.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                        {event.organizer.name}
-                      </p>
-                      <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">
-                        CNPJ: 27.912.458/0001-73
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile: stacked */}
-              <div className="md:hidden bg-gray-2 border border-gray-6 rounded-lg p-4">
-                <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 mb-2">
-                  Nome do evento
-                </p>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
-                    <Ticket className="size-5 text-gray-12" />
-                  </div>
-                  <p className="font-family-dm-sans font-semibold text-[15px] leading-[1.3] text-gray-12">
-                    {event.name}
-                  </p>
-                </div>
-                <hr className="border-gray-6 mb-4" />
-                <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 mb-2">
-                  Organização
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                    <span className="text-gray-12 font-semibold text-sm">
-                      {event.organizer.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <p className="font-family-dm-sans font-semibold text-[15px] leading-[1.3] text-gray-12">
-                      {event.organizer.name}
-                    </p>
-                    <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11">
-                      CNPJ: 27.912.458/0001-73
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -362,7 +341,7 @@ export function TransferDetailsDrawer({
                         {account.bank}
                       </p>
                       <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                        Chave: {account.pixKey}
+                        Chave: {transfer.pixKey}
                       </p>
                     </div>
                   </div>
@@ -383,7 +362,7 @@ export function TransferDetailsDrawer({
                       {account.bank}
                     </p>
                     <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11">
-                      Chave: {account.pixKey}
+                      Chave: {transfer.pixKey}
                     </p>
                   </div>
                 </div>
@@ -402,7 +381,7 @@ export function TransferDetailsDrawer({
                     Valor repassado (líquido)
                   </p>
                   <p className="font-manrope font-extrabold text-[36px] leading-[1.1] tracking-[1px] text-gray-12">
-                    R$ {values.netValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {netValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="flex gap-6 items-center">
@@ -411,7 +390,7 @@ export function TransferDetailsDrawer({
                       Total bruto
                     </p>
                     <p className="font-manrope font-extrabold text-[18px] leading-[1.1] text-gray-12">
-                      R$ {values.grossValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      R$ {grossValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="h-full w-px bg-gray-6" />
@@ -420,7 +399,7 @@ export function TransferDetailsDrawer({
                       Taxas de processamento
                     </p>
                     <p className="font-manrope font-extrabold text-[18px] leading-[1.1] text-red-11">
-                      - R$ {values.fee.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      - R$ {feeValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="h-full w-px bg-gray-6" />
@@ -429,7 +408,7 @@ export function TransferDetailsDrawer({
                       Outros abatimentos
                     </p>
                     <p className="font-manrope font-extrabold text-[18px] leading-[1.1] text-gray-12">
-                      - R$ {values.otherDiscounts.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      - R$ {(0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -441,7 +420,7 @@ export function TransferDetailsDrawer({
                   Valor do repasse
                 </p>
                 <p className="font-manrope font-extrabold text-[28px] leading-[1.1] tracking-[0.5px] text-gray-12 mb-4">
-                  R$ {values.netValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  R$ {netValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
 
                 <div className="flex flex-col items-start mb-2">
@@ -449,7 +428,7 @@ export function TransferDetailsDrawer({
                     Valor recebido
                   </p>
                   <p className="font-manrope font-bold text-[15px] text-gray-12">
-                    R$ {values.grossValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    R$ {grossValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 
@@ -460,7 +439,7 @@ export function TransferDetailsDrawer({
                     Taxas de processamento
                   </p>
                   <p className="font-manrope font-bold text-[15px] text-red-11">
-                    - R$ {values.fee.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    - R$ {feeValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
 

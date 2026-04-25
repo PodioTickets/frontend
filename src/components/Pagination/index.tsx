@@ -39,7 +39,7 @@ export function Pagination({
   return (
     <div
       className={cn(
-        "flex items-center justify-center gap-2 min-w-0 w-full overflow-x-auto py-2 [&::-webkit-scrollbar]:hidden",
+        "flex items-center justify-center gap-2 min-w-0 w-full overflow-x-auto py-2 [&::-webkit-scrollbar]:hidden bg-gray-1",
         className
       )}
       style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}

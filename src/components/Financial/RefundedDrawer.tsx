@@ -20,6 +20,7 @@ import toast from "react-hot-toast";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Tooltip } from "../Tooltip";
+import { BookIcon } from "../Icons/BookIcon";
 
 interface RefundedDrawerProps {
   isOpen: boolean;
@@ -56,6 +57,8 @@ interface RefundedItem {
     avatarUrl: string | null;
   };
   reason?: string;
+  transferredAmount?: number;
+  compensatedAmount?: number;
 }
 
 export function RefundedDrawer({
@@ -134,7 +137,9 @@ export function RefundedDrawer({
       date: formattedDate,
       time: formattedTime,
       paymentMethod: item.paymentMethod,
-      value: item.amount / 100, // Converter de centavos
+      value: item.amount / 100,
+      transferredAmount: item.transferredAmount != null ? item.transferredAmount / 100 : 0,
+      compensatedAmount: item.compensatedAmount != null ? item.compensatedAmount / 100 : 0,
     };
   };
 
@@ -221,6 +226,42 @@ export function RefundedDrawer({
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center">
                       Valor
                     </p>
+                  </div>
+                  <div className="flex flex-1 h-full items-center justify-center gap-1 min-h-px min-w-px p-4">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center whitespace-nowrap">
+                      Total repassado
+                    </p>
+                    <Tooltip
+                      position="bottomRight"
+                      trigger="hover"
+                      usePortal
+                      content={
+                        <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
+                          Refere-se ao valor já repassado ao organizador. Se estiver em R$0,00, o repasse ainda não foi solicitado. Se houver um valor (ex: R$10,00), indica quanto já foi recebido pelo organizador neste pedido.
+                        </p>
+                      }
+                      contentClassName="max-w-[260px] px-3 py-2"
+                    >
+                      <BookIcon className="size-4 text-gray-11 cursor-help shrink-0" />
+                    </Tooltip>
+                  </div>
+                  <div className="flex flex-1 h-full items-center justify-center gap-1 min-h-px min-w-px p-4">
+                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12 text-center whitespace-nowrap">
+                      Compensado
+                    </p>
+                    <Tooltip
+                      position="bottomRight"
+                      trigger="hover"
+                      usePortal
+                      content={
+                        <p className="font-family-dm-sans font-normal text-sm leading-[1.4] text-gray-12 text-left">
+                          Refere-se à compensação do valor estornado pela PódioTicket. Se o valor ainda não foi repassado ao organizador, a compensação é realizada automaticamente, pois não é possível solicitar repasse de pedidos estornados.
+                        </p>
+                      }
+                      contentClassName="max-w-[260px] px-3 py-2"
+                    >
+                      <BookIcon className="size-4 text-gray-11 cursor-help shrink-0" />
+                    </Tooltip>
                   </div>
                   <div className="flex h-full items-center justify-center p-4 w-[64px]">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
@@ -326,6 +367,20 @@ export function RefundedDrawer({
                                 -{displayItem.value.toFixed(2).replace(".", ",")}
                               </span>
                             </div>
+                          </div>
+
+                          {/* Total repassado */}
+                          <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
+                            <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              R$ {displayItem.transferredAmount!.toFixed(2).replace(".", ",")}
+                            </span>
+                          </div>
+
+                          {/* Compensado */}
+                          <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px p-4">
+                            <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
+                              R$ {displayItem.compensatedAmount!.toFixed(2).replace(".", ",")}
+                            </span>
                           </div>
 
                           {/* Ações */}

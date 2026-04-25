@@ -176,12 +176,12 @@ export default function EventFinancialPage() {
       setFinancialData({
         availableBalance: financialDataResponse.summary.availableBalance,
         installmentsToReceive: financialDataResponse.summary.installmentsToReceive,
-        awaitingRelease: financialDataResponse.summary.awaitingRelease,
-        totalTransferred: financialDataResponse.summary.totalTransferred,
-        refunded: financialDataResponse.summary.refunded,
-        chargebacks: financialDataResponse.summary.chargebacks,
+        awaitingRelease: financialDataResponse.summary.pendingRelease,
+        totalTransferred: financialDataResponse.summary.totalWithdrawn,
+        refunded: financialDataResponse.summary.totalRefunded,
+        chargebacks: financialDataResponse.summary.totalChargebacks,
         grossRevenue: financialDataResponse.summary.grossRevenue,
-        revenueChange: financialDataResponse.summary.revenueChange,
+        revenueChange: 0,
         revenueChart: financialDataResponse.revenueChart,
       });
 
@@ -283,6 +283,7 @@ export default function EventFinancialPage() {
           </div>
           <div>
             <Button onClick={() => openRequestTransferModal({
+              eventId,
               availableBalance: financialData.availableBalance,
               onViewHistory: () => setIsTransferHistoryOpen(true)
             })}>
@@ -421,6 +422,7 @@ export default function EventFinancialPage() {
             <Button
               className="w-full font-manrope font-bold text-base"
               onClick={() => openRequestTransferModal({
+                eventId,
                 availableBalance: financialData.availableBalance,
                 onViewHistory: () => setIsTransferHistoryOpen(true)
               })}
