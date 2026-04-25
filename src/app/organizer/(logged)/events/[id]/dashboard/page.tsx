@@ -1116,7 +1116,7 @@ export default function EventDashboardPage() {
                         {lot.status}
                       </div>
                       <div>
-                        <span className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">Virada do lote: </span>
+                        <span className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">Lote atual: </span>
                         <span className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12">{lot.activeBatch?.label ?? "—"}</span>
                       </div>
                     </div>
@@ -1372,7 +1372,7 @@ export default function EventDashboardPage() {
                   </div>
                   <div className="flex justify-between text-sm text-gray-11">
                     <span>Status: <span className="font-semibold text-gray-12">{lot.status}</span></span>
-                    <span>Virada do lote: <span className="font-semibold text-gray-12">{lot.activeBatch?.label ?? "—"}</span></span>
+                    <span>Lote atual: <span className="font-semibold text-gray-12">{lot.activeBatch?.label ?? "—"}</span></span>
                   </div>
                 </div>
               );

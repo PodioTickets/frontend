@@ -19,6 +19,18 @@ import { ArrowButton } from "../ArrowButton";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 
+function formatAnswer(answer: any): string {
+  if (answer == null) return "—";
+  if (Array.isArray(answer)) return answer.join(", ");
+  if (typeof answer === "string") {
+    try {
+      const parsed = JSON.parse(answer);
+      if (Array.isArray(parsed)) return parsed.join(", ");
+    } catch {}
+  }
+  return String(answer) || "—";
+}
+
 export function ViewRegistrationModal() {
   const { isOpen, closeViewRegistrationModal, data } = useViewRegistrationModal();
   const { openPaymentDetailsModal } = usePaymentDetailsModal();
@@ -464,7 +476,7 @@ export function ViewRegistrationModal() {
                               {q.question?.question || q.question || `Pergunta ${index + 1}`}
                             </p>
                             <p className="font-family-dm-sans font-medium text-base text-gray-12">
-                              {q.answer || "—"}
+                              {formatAnswer(q.answer)}
                             </p>
                           </div>
                         ))}
@@ -561,15 +573,15 @@ export function ViewRegistrationModal() {
                     {/* Participant Header */}
                     <div className="flex flex-col pr-5 border-b border-gray-6">
                       <div className="flex items-center justify-between pb-6">
-                        <div className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-5 max-w-[70%]">
                           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
                             Participante
                           </p>
                           <div className="flex flex-col">
-                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11 truncate">
                               {categoryName}
                             </p>
-                            <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12">
+                            <p className="font-manrope font-bold text-[20px] leading-[1.1] text-gray-12 truncate">
                               {ticketName}
                             </p>
                           </div>
@@ -743,7 +755,7 @@ export function ViewRegistrationModal() {
                               </p>
                               <p className="font-family-dm-sans font-normal text-gray-11 text-sm mb-2">{q.question?.description}</p>
                               <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                                R: {q.answer || "—"}
+                                R: {formatAnswer(q.answer)}
                               </p>
                             </div>
                           ))
@@ -876,7 +888,7 @@ export function ViewRegistrationModal() {
                           Pergunta: {q.question?.question || q.question || `Pergunta ${index + 1}`}
                         </label>
                         <p className="font-family-dm-sans font-medium leading-[1.3] text-gray-12">
-                          {q.answer || "—"}
+                          {formatAnswer(q.answer)}
                         </p>
                       </div>
                     ))}
