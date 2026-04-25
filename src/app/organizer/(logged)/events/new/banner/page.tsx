@@ -792,7 +792,7 @@ export default function BannerPage() {
         Imagens principais do evento para os participantes visualizarem
       </p>
 
-      <div className="mx-auto flex w-full max-w-[1100px] flex-col items-stretch gap-6 px-0 md:items-center md:gap-9 md:px-8 md:mt-10">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-col items-stretch gap-6 px-4 md:items-center md:gap-9 md:px-8 md:mt-10">
         <div className="hidden md:flex flex-col gap-4 items-center w-full">
           <div className="flex gap-3 items-center flex-wrap justify-center">
             <button

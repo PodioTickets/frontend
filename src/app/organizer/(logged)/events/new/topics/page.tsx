@@ -416,7 +416,7 @@ export default function TopicosPage() {
           </h1>
         </div>
 
-        <div className="flex min-w-0 w-full max-w-full flex-col items-stretch md:px-0">
+        <div className="flex min-w-0 w-full max-w-full flex-col items-stretch px-4 md:px-0">
           <SortableTopicsList
             topics={sections}
             onReorder={handleTopicsReorder}
