@@ -56,11 +56,24 @@ interface PaymentSuccessStepProps {
     gender: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | null;
     emergencyContactName?: string;
     emergencyPhone?: string;
+    questionAnswers?: Array<{ question: any; answer: any }>;
   }>;
   serviceFee?: number;
   couponDiscount?: number;
   voucherDiscount?: number;
   date?: string;
+}
+
+function formatAnswer(answer: any): string {
+  if (answer == null) return "—";
+  if (Array.isArray(answer)) return answer.join(", ");
+  if (typeof answer === "string") {
+    try {
+      const parsed = JSON.parse(answer);
+      if (Array.isArray(parsed)) return parsed.join(", ");
+    } catch {}
+  }
+  return String(answer) || "—";
 }
 
 export function PaymentSuccessStep({
@@ -582,6 +595,29 @@ export function PaymentSuccessStep({
                                   )
                                 })}
                               </div>
+                              {participant.questionAnswers && participant.questionAnswers.length > 0 && (
+                                <>
+                                  <div className="w-full h-px bg-gray-6 my-2" />
+                                  <p className="font-bold text-lg leading-[1.1] text-gray-12 font-manrope w-full">
+                                    Perguntas do Organizador
+                                  </p>
+                                  <div className="grid grid-cols-1 gap-4 w-full">
+                                    {participant.questionAnswers.map((q: any, idx: number) => (
+                                      <div key={idx} className="flex flex-col items-start rounded-lg w-full">
+                                        <label className="font-normal text-sm text-gray-12 font-family-dm-sans">
+                                          {q.question?.question || q.question || `Pergunta ${idx + 1}`}
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={formatAnswer(q.answer)}
+                                          readOnly
+                                          className="w-full font-medium text-base text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="flex flex-col gap-5 items-start pb-6 pt-8 px-4 w-full">
@@ -1080,6 +1116,29 @@ export function PaymentSuccessStep({
                                   )
                                 })}
                               </div>
+                              {participant.questionAnswers && participant.questionAnswers.length > 0 && (
+                                <>
+                                  <div className="w-full h-px bg-gray-6 my-2" />
+                                  <p className="font-bold text-[20px] leading-[1.1] text-gray-12 font-manrope w-full">
+                                    Perguntas do Organizador
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-10 w-full">
+                                    {participant.questionAnswers.map((q: any, idx: number) => (
+                                      <div key={idx} className="flex flex-col gap-2 items-start rounded-[8px] min-w-[313px]">
+                                        <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
+                                          {q.question?.question || q.question || `Pergunta ${idx + 1}`}
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={formatAnswer(q.answer)}
+                                          readOnly
+                                          className="w-full font-medium text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans bg-transparent border-0 outline-none"
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="flex flex-col gap-5 items-start pb-[24px] pt-[32px] px-[16px] w-full">

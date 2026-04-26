@@ -55,6 +55,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   transpilePackages: ["quill-resize-module"],
   async headers() {
     return [

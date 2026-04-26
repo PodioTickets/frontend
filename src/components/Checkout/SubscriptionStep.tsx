@@ -1241,7 +1241,7 @@ export function SubscriptionStep({
                         <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                           <span className="flex flex-col gap-0.5">
                             {ticket.groupId && categories.find((c) => c.id === ticket.groupId)?.name ? (
-                              <span className="text-xs font-normal text-gray-11">
+                              <span className="text-xs font-normal text-gray-11 truncate max-w-[50%]">
                                 {categories.find((c) => c.id === ticket.groupId)?.name}
                               </span>
                             ) : (

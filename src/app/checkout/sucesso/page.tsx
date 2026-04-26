@@ -120,6 +120,7 @@ function CheckoutSucessoContent() {
         gender: (p.gender ?? null) as "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY" | null,
         emergencyContactName: reg.emergencyContact?.name || "",
         emergencyPhone: reg.emergencyContact?.phone || "",
+        questionAnswers: reg.questionAnswers || [],
       };
     });
 

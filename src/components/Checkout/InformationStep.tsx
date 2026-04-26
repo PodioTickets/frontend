@@ -1154,7 +1154,7 @@ export function InformationStep({
                       className="flex items-center justify-between text-base text-gray-12"
                     >
                       <div className="flex flex-col">
-                        <p className="text-gray-11 text-xs truncate"> {ticket.categoryName ? (
+                        <p className="text-gray-11 text-xs truncate">{ticket.categoryName ? (
                           ticket.categoryName
                         ) : "Ingresso Avulso"}</p>
                         <p className="font-semibold text-gray-12 text-base truncate">
@@ -1767,7 +1767,7 @@ export function InformationStep({
                                   gender: genderOption?.id || p.gender || "",
                                 }).then(() => {
                                   queryClient.invalidateQueries({ queryKey: ["linked-users"] });
-                                }).catch(() => {});
+                                }).catch(() => { });
                               }
                             }}
                             disabled={savedParticipants[participantIndex] && !participantDirtyMap[participantIndex] || previewMode}
