@@ -203,7 +203,7 @@ export default function VouchersPage() {
         backHref={`/organizer/events/${eventId}/dashboard`}
         backLinkClassName="rotate-180"
       />
-      <div className="max-w-7xl mx-auto px-4 lg:px-0 py-6 pb-20 md:pb-6">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0 py-6 pb-20 md:pb-6">
         <div className="flex flex-col gap-9">
           {/* Desktop: Title Section */}
           <div className="hidden md:flex flex-col gap-4">

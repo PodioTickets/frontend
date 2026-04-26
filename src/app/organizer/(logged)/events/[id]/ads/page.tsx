@@ -203,7 +203,7 @@ export default function AdsPage() {
         backLinkClassName="rotate-180"
       />
 
-      <div className="max-w-7xl mx-auto px-4 md:px-4 lg:px-0 py-6 md:py-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-4 lg:px-6 2xl:px-0 py-6 md:py-6">
         <div className="flex flex-col gap-6 md:gap-10">
           {/* Title Section - mobile: 18px title, 14px description; desktop: 28px, 16px */}
           <div className="flex flex-col gap-3 md:gap-4">
