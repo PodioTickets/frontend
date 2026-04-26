@@ -1,0 +1,11 @@
+services:
+  frontend:
+    image: ghcr.io/${GHCR_IMAGE}:latest
+    container_name: podiotickets-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      ORGANIZER_APP_HOST: ${ORGANIZER_APP_HOST}
+      ROOT_SITE_URL: ${ROOT_SITE_URL}

@@ -99,6 +99,7 @@ export function PaymentSuccessStep({
     gender: p.gender || '',
     emergencyContactName: p.emergencyContactName || '',
     emergencyPhone: p.emergencyPhone || '',
+    questionAnswers: p.questionAnswers,
   }));
 
   const [activeTabs, setActiveTabs] = useState<Record<number, "info" | "products">>({});

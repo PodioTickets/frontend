@@ -16,9 +16,6 @@ jobs:
       contents: read
       packages: write
 
-    outputs:
-      image: ${{ steps.meta.outputs.tags }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +60,18 @@ jobs:
     environment: production
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: docker-compose.yml
+          target: ~/podiotickets-frontend
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -70,20 +79,17 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            cd ~/podiotickets-frontend
+
+            cat > .env <<EOF
+            GHCR_IMAGE=${{ env.IMAGE_NAME }}
+            ORGANIZER_APP_HOST=${{ secrets.ORGANIZER_APP_HOST }}
+            ROOT_SITE_URL=${{ secrets.ROOT_SITE_URL }}
+            EOF
+
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
-
-            docker stop podiotickets-frontend 2>/dev/null || true
-            docker rm   podiotickets-frontend 2>/dev/null || true
-
-            docker run -d \
-              --name podiotickets-frontend \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              -e NODE_ENV=production \
-              -e ORGANIZER_APP_HOST=${{ secrets.ORGANIZER_APP_HOST }} \
-              -e ROOT_SITE_URL=${{ secrets.ROOT_SITE_URL }} \
-              ghcr.io/${{ env.IMAGE_NAME }}:latest
+            docker compose pull
+            docker compose up -d --remove-orphans
 
             docker image prune -f
