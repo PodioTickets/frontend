@@ -18,8 +18,11 @@ export const forgotPasswordStep1Schema = loginSchema.pick({ email: true });
 export const registerStep1Schema = z.object({
   nome: z
     .string()
-    .min(1, "Nome é obrigatório")
-    .min(3, "Nome deve ter pelo menos 3 caracteres"),
+    .min(1, "Nome completo é obrigatório")
+    .refine(
+      (v) => v.trim().split(/\s+/).length >= 2,
+      { message: "Informe o nome completo" }
+    ),
   nacionalidade: z.string().min(1, "Nacionalidade é obrigatória"),
   cpf: z
     .string()

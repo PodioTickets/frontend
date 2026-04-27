@@ -154,7 +154,7 @@ export function TransferDetailsDrawer({
       .then((res) => {
         if (!cancelled) setDetail(res.data.data.transfer);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         if (!cancelled) setLoadingDetail(false);
       });
@@ -334,9 +334,9 @@ export function TransferDetailsDrawer({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-[#ebe4ff] flex items-center justify-center shrink-0">
-                      <Building2 className="size-6 text-gray-12" />
+                      <FinanceIcon className="size-6 text-gray-12" />
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col">
                       <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
                         {account.bank}
                       </p>
@@ -455,224 +455,6 @@ export function TransferDetailsDrawer({
                 </div>
               </div>
             </div>
-
-            {/* ── Orders ── */}
-            <div>
-              {/* ── Desktop: table ── */}
-              <div className="hidden md:block bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden">
-                {/* Table Header + Search */}
-                <div className="px-4 py-5 border-b border-gray-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="font-manrope font-bold text-[18px] leading-[1.1] text-gray-12 shrink-0">
-                    {filteredOrders.length} transaç{filteredOrders.length !== 1 ? "ões" : "ão"}{search.trim() ? " encontrada" + (filteredOrders.length !== 1 ? "s" : "") : " deste lote"}
-                  </p>
-                  <div className="relative w-full sm:max-w-[300px]">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-11" />
-                    <input
-                      type="search"
-                      value={search}
-                      onChange={(e) => handleSearch(e.target.value)}
-                      placeholder="Buscar por ID, data ou valor"
-                      className="h-9 w-full rounded-lg border border-gray-6 bg-gray-1 pl-9 pr-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8 focus-visible:ring-[2px] focus-visible:ring-gray-6"
-                    />
-                  </div>
-                </div>
-
-                {/* Column headers */}
-                <div className="bg-gray-3 border-b border-t border-gray-6 flex h-[44px] items-center">
-                  <div className="flex h-full items-center px-4 py-4 w-[120px]">
-                    <p className="font-inter font-medium leading-[1.3] text-[14px] text-gray-12">ID pedido</p>
-                  </div>
-                  <div className="flex flex-1 h-full items-start min-h-px min-w-px px-4 py-4">
-                    <p className="font-inter font-medium leading-[1.3] text-[14px] text-gray-12">Comprador</p>
-                  </div>
-                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px px-4 py-4">
-                    <p className="font-inter font-medium leading-[1.3] text-[14px] text-gray-12">Data</p>
-                  </div>
-                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px px-4 py-4">
-                    <p className="font-inter font-medium leading-[1.3] text-[14px] text-gray-12">Valor</p>
-                  </div>
-                  <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px px-4 py-4">
-                    <p className="font-inter font-medium leading-[1.3] text-[14px] text-gray-12">Pagamento</p>
-                  </div>
-                  <div className="flex h-full items-center justify-end px-4 py-4 w-[74px]">
-                    <p className="font-inter font-medium leading-[1.3] text-[14px] text-gray-12">Ações</p>
-                  </div>
-                </div>
-
-                {/* Table Rows */}
-                <div className="flex flex-col items-start w-full">
-                  {paginatedOrders.length === 0 && (
-                    <div className="w-full py-12 flex items-center justify-center">
-                      <p className="text-sm text-gray-11 font-family-dm-sans">
-                        Nenhuma transação encontrada para &quot;{search}&quot;.
-                      </p>
-                    </div>
-                  )}
-                  {paginatedOrders.map((order, index) => (
-                    <div
-                      key={`${order.orderId}-${index}`}
-                      className="bg-gray-1 border-b border-gray-6 flex items-center justify-between w-full last:border-b-0"
-                    >
-                      <div className="flex h-full items-center px-4 py-3 w-[120px]">
-                        <p className="font-family-dm-sans font-semibold leading-[1.3] text-[14px] text-gray-12 truncate">
-                          {order.orderId}
-                        </p>
-                      </div>
-                      <div className="flex flex-1 h-full items-center gap-2.5 min-h-px min-w-px px-4 py-3 w-[197px]">
-                        <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
-                          {order.buyer.avatar ? (
-                            <img src={order.buyer.avatar} alt={order.buyer.name} className="size-full object-cover" />
-                          ) : (
-                            <span className="text-gray-12 font-semibold text-sm">
-                              {order.buyer.name.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-2 min-w-0">
-                          <p className="font-family-dm-sans font-semibold leading-[1.3] text-[14px] text-gray-12 truncate">
-                            {order.buyer.name}
-                          </p>
-                          <p className="font-family-dm-sans font-normal leading-[1.3] text-[14px] text-gray-11 truncate whitespace-nowrap">
-                            {order.buyer.email}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px px-4 py-3">
-                        <p className="font-inter font-semibold leading-[1.3] text-[14px] text-gray-12">
-                          {order.date}
-                        </p>
-                      </div>
-                      <div className="flex flex-1 h-full items-center justify-center min-h-px min-w-px px-4 py-3">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex items-center gap-0.5">
-                            <span className="font-inter font-semibold leading-[1.3] text-[14px] text-gray-12">R$</span>
-                            <span className="font-inter font-semibold leading-[1.3] text-[14px] text-gray-12">
-                              {order.value.toFixed(2).replace(".", ",")}
-                            </span>
-                          </div>
-                          {order.installment && (
-                            <div className="flex items-center gap-0.5">
-                              <span className="font-family-dm-sans font-normal leading-[1.3] text-[14px] text-gray-11">{order.installment}</span>
-                              <span className="font-family-dm-sans font-normal leading-[1.3] text-[14px] text-gray-11">de R${order.value}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-1 h-full items-center justify-center gap-2 min-h-px min-w-px px-4 py-3">
-                        {order.paymentMethod === "Pix" ? (
-                          <PixIcon className="size-5 text-gray-12" />
-                        ) : (
-                          <CardIcon className="size-5 text-gray-12" />
-                        )}
-                        <p className="font-inter font-semibold leading-[1.3] text-[14px] text-gray-12">
-                          {order.paymentMethod}
-                        </p>
-                      </div>
-                      <div className="flex h-full items-center justify-end px-4 py-3 w-[74px]">
-                        <button className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer">
-                          <FileText className="size-4 text-gray-11" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="px-4 py-4 border-t border-gray-6">
-                    <Pagination
-                      currentPage={safePage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* ── Mobile: card list ── */}
-              <div className="md:hidden flex flex-col gap-4">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-11" />
-                  <input
-                    type="search"
-                    value={search}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    placeholder="Nome, CPF, IDs.."
-                    className="h-10 w-full rounded-lg border border-gray-6 bg-gray-2 pl-9 pr-3 text-sm text-gray-12 placeholder:text-gray-11 font-family-dm-sans outline-none focus-visible:border-gray-8 focus-visible:ring-[2px] focus-visible:ring-gray-6"
-                  />
-                </div>
-
-                {/* Count */}
-                <p className="font-family-dm-sans text-[13px] text-gray-11">
-                  {filteredOrders.length} transaç{filteredOrders.length !== 1 ? "ões" : "ão"}{search.trim() ? " encontrada" + (filteredOrders.length !== 1 ? "s" : "") : " deste lote"}
-                </p>
-
-                {/* Cards */}
-                {paginatedOrders.length === 0 ? (
-                  <div className="py-12 flex items-center justify-center">
-                    <p className="text-sm text-gray-11 font-family-dm-sans">
-                      Nenhuma transação encontrada para &quot;{search}&quot;.
-                    </p>
-                  </div>
-                ) : (
-                  paginatedOrders.map((order, index) => (
-                    <div
-                      key={`mob-${order.orderId}-${index}`}
-                      className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-3"
-                    >
-                      {/* Buyer row + payment icon */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
-                            {order.buyer.avatar ? (
-                              <img src={order.buyer.avatar} alt={order.buyer.name} className="size-full object-cover" />
-                            ) : (
-                              <span className="text-gray-12 font-semibold text-sm">
-                                {order.buyer.name.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-0.5 min-w-0">
-                            <p className="font-family-dm-sans font-semibold text-[14px] text-gray-12 truncate">
-                              {order.buyer.name}
-                            </p>
-                            <p className="font-family-dm-sans font-normal text-[12px] text-gray-11 truncate">
-                              {order.buyer.email}
-                            </p>
-                          </div>
-                        </div>
-                        {order.paymentMethod === "Pix" ? (
-                          <PixIcon className="size-5 text-gray-12 shrink-0" />
-                        ) : (
-                          <CardIcon className="size-5 text-gray-12 shrink-0" />
-                        )}
-                      </div>
-
-                      {/* Value */}
-                      <p className="font-manrope font-extrabold text-[22px] leading-[1.1] text-gray-12">
-                        R$ {order.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-
-                      <hr className="border-gray-6" />
-
-                      {/* Ver detalhes */}
-                      <button className="w-full h-9 rounded-lg border border-gray-6 bg-transparent text-[14px] font-family-dm-sans font-medium text-gray-12 hover:bg-gray-3 transition-colors cursor-pointer">
-                        Ver detalhes
-                      </button>
-                    </div>
-                  ))
-                )}
-
-                {/* Pagination */}
-                <Pagination
-                  currentPage={safePage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  className="justify-center"
-                />
-              </div>
-            </div>
-
           </div>
         </div>
       </DrawerContent>

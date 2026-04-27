@@ -352,9 +352,6 @@ export default function EventFinancialPage() {
                       {(financialData.awaitingRelease / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <button onClick={() => setIsAwaitingReleaseOpen(true)} className="text-sm text-gray-11 underline font-family-dm-sans font-normal pb-3 pt-1 px-3">
-                    Ver detalhes
-                  </button>
                 </div>
                 {/* Total já repassado */}
                 <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-center">
@@ -485,12 +482,6 @@ export default function EventFinancialPage() {
                 <p className="font-family-dm-sans font-bold text-[20px] text-gray-12">
                   R${(financialData.awaitingRelease / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
-                <button
-                  onClick={() => setIsAwaitingReleaseOpen(true)}
-                  className="text-[14px] text-gray-11 underline font-family-dm-sans font-medium cursor-pointer"
-                >
-                  Ver detalhes
-                </button>
               </div>
             </div>
 

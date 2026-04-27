@@ -633,7 +633,7 @@ export default function EventPage() {
       <div className="hidden md:block">
         {event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError && (
           <div
-            className="absolute top-0 left-0 w-full max-h-[600px] h-full blur-sm"
+            className="absolute top-0 left-0 w-full max-h-[600px] h-full blur-sm scale-105"
             style={{
               backgroundImage: `url(${event?.bannerUrl})`,
               backgroundSize: "cover",
@@ -641,7 +641,7 @@ export default function EventPage() {
               backgroundRepeat: "no-repeat",
             }}
           >
-            <div className="absolute bottom-0 left-0 w-full h-[50%] bg-linear-to-b from-transparent to-white" />
+            <div className="absolute bottom-0 left-0 w-full h-[40%] bg-linear-to-b from-transparent to-white" />
           </div>
         )}
 
@@ -658,7 +658,7 @@ export default function EventPage() {
             return (
               <div className="w-full z-10 relative flex flex-col items-center justify-center mt-0 2xl:mt-14">
                 <div className="w-full flex items-start justify-center gap-8">
-                  <div className="relative w-full h-[400px] rounded-xl overflow-hidden bg-gray-3">
+                  <div className="relative w-full h-[400px]">
                     <Image
                       src={event.bannerUrl}
                       alt={event.name}
@@ -671,7 +671,7 @@ export default function EventPage() {
                       onLoad={() => {
                         setImageError(false);
                       }}
-                      className="object-cover shadow-[0_5px_10px_rgba(0,0,0,0.3)] rounded-xl"
+                      className="object-cover rounded-xl"
                       priority
                       unoptimized
                     />
@@ -878,8 +878,8 @@ export default function EventPage() {
                     <div
                       className="topic-rich-html text-gray-11 text-sm prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{
-                      __html: normalizeTopicHtmlAnchorHrefs(section.content),
-                    }}
+                        __html: normalizeTopicHtmlAnchorHrefs(section.content),
+                      }}
                     />
                   </div>
                   <div className="w-full h-px bg-gray-6" />

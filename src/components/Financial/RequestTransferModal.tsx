@@ -369,14 +369,6 @@ export function RequestTransferModal() {
                         <span className="text-[14px] leading-[1.3] text-gray-11">
                           Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
                         </span>
-                        <span className="w-px h-4 bg-gray-6" />
-                        <span className="text-[14px] leading-[1.3] text-gray-12">
-                          Valor a receber: <span className="font-semibold">R$ {formatBalance(numericAmount * 0.96)}</span>
-                        </span>
-                        <span className="w-px h-4 bg-gray-6" />
-                        <span className="text-[14px] leading-[1.3] text-gray-12">
-                          Taxa do organizador: <span className="font-semibold">R$ {formatBalance(availableBalance - (numericAmount * 0.96))}</span>
-                        </span>
                       </div>
                     </div>
                     <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex flex-col gap-5">

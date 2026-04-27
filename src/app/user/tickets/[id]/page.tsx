@@ -45,10 +45,16 @@ export default function TicketDetailsPage() {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
+    const datePart = dateString.split("T")[0];
+    if (datePart && /^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      const [year, month, day] = datePart.split("-");
+      return `${day}/${month}/${year}`;
+    }
     return new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+      timeZone: "UTC",
     });
   };
 
@@ -57,7 +63,8 @@ export default function TicketDetailsPage() {
     return new Date(dateString).toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true,
+      hour12: false,
+      timeZone: "UTC",
     });
   };
 

@@ -39,6 +39,18 @@ export interface LocationFacetState {
   cities: LocationFacetCity[];
 }
 
+/** Lista ordenada de estados brasileiros para selects de formulário. */
+export const BRAZIL_STATES: { uf: string; name: string }[] = Object.entries(
+  BRAZIL_UF_NAMES
+)
+  .map(([uf, name]) => ({ uf, name }))
+  .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+/** Lookup inverso: nome completo (minúsculo) → sigla UF */
+const BRAZIL_NAME_TO_UF: Record<string, string> = Object.fromEntries(
+  Object.entries(BRAZIL_UF_NAMES).map(([uf, name]) => [name.toLowerCase(), uf])
+);
+
 function formatStateLabel(state: string): string {
   const t = state.trim();
   if (t.length === 2) {
@@ -46,6 +58,20 @@ function formatStateLabel(state: string): string {
     if (BRAZIL_UF_NAMES[uf]) return BRAZIL_UF_NAMES[uf];
   }
   return t;
+}
+
+/**
+ * Normaliza o valor do estado para a sigla UF canônica (ex: "São Paulo" → "SP").
+ * Garante que dados inconsistentes no banco não gerem entradas duplicadas no picker.
+ */
+function normalizeStateKey(raw: string): string {
+  const t = raw.trim();
+  if (!t) return t;
+  if (t.length === 2) {
+    const uf = t.toUpperCase();
+    return BRAZIL_UF_NAMES[uf] ? uf : t;
+  }
+  return BRAZIL_NAME_TO_UF[t.toLowerCase()] ?? t;
 }
 
 function rowState(row: Record<string, unknown>): string {
@@ -145,7 +171,7 @@ export function aggregateLocationFacetPairs(
   const map = new Map<string, { displayLabel: string; cities: Set<string> }>();
 
   for (const { state, city } of pairs) {
-    const st = (state || "").trim();
+    const st = normalizeStateKey((state || "").trim());
     if (!st) continue;
     const ct = (city || "").trim();
 

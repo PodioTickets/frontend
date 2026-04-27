@@ -30,7 +30,6 @@ import { Dropdown } from "@/components/Dropdown";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { SelectTicketsFilterModal } from "@/components/Registrations/SelectTicketsFilterModal";
-import { useTickets } from "@/hooks/useTickets";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { CartIcon } from "@/components/Icons/CartIcon";
@@ -74,6 +73,7 @@ type RegistrationListRow = Omit<Registration, "user"> & {
     category?: { name?: string };
   };
   order?: {
+    id?: string;
     payment?: {
       status?: string;
       metadata?: unknown;
@@ -379,6 +379,7 @@ export default function EventRegistrationsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingList, setLoadingList] = useState(false);
   const [event, setEvent] = useState<Pick<Event, "id" | "name"> | null>(null);
   const [registrations, setRegistrations] = useState<RegistrationListRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -388,7 +389,6 @@ export default function EventRegistrationsPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [appliedDateRange, setAppliedDateRange] = useState<DateRange | undefined>(undefined);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const { tickets } = useTickets(eventId, true);
   const { openViewRegistrationModal } = useViewRegistrationModal();
   const { openExportDataModal } = useExportDataModal();
   const { openPaymentDetailsModal } = usePaymentDetailsModal();
@@ -420,42 +420,46 @@ export default function EventRegistrationsPage() {
     }
   }, [authLoading, isAuthenticated, orgNav, authChecked]);
 
-  const loadData = useCallback(async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
+      const [eventData, aggregateStats] = await Promise.all([
+        organizerService.getEventById(eventId),
+        organizerService.getEventRegistrationStats(eventId).catch(() => null),
+      ]);
+      setEvent(eventData || { id: eventId, name: "Evento de Exemplo" });
+      if (aggregateStats) {
+        setStats((prev) => mergeRegistrationStatsWithTrendFallback(prev, aggregateStats));
+      }
+    } catch {
+      setEvent({ id: eventId, name: "Evento de Exemplo" });
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
 
+  const loadRegistrations = useCallback(async () => {
+    try {
+      setLoadingList(true);
       try {
-        const [eventData, registrationsData, aggregateStats] = await Promise.all([
-          organizerService.getEventById(eventId),
-          organizerService.getEventRegistrationsEnhanced(eventId, {
-            page: pagination.page,
-            limit: pagination.limit,
-            status:
-              statusFilter !== "all"
-                ? toRegistrationApiStatus(statusFilter)
-                : undefined,
-            search: searchTerm || undefined,
-            ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
-            startDate: appliedDateRange?.from?.toISOString(),
-            endDate: appliedDateRange?.to?.toISOString(),
-          }),
-          organizerService.getEventRegistrationStats(eventId).catch(() => null),
-        ]);
-
-        setEvent(eventData || { id: eventId, name: "Evento de Exemplo" });
+        const registrationsData = await organizerService.getEventRegistrationsEnhanced(eventId, {
+          page: pagination.page,
+          limit: pagination.limit,
+          status:
+            statusFilter !== "all"
+              ? toRegistrationApiStatus(statusFilter)
+              : undefined,
+          search: searchTerm || undefined,
+          ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
+          startDate: appliedDateRange?.from?.toISOString(),
+          endDate: appliedDateRange?.to?.toISOString(),
+        });
         setRegistrations(registrationsData.registrations as RegistrationListRow[]);
         setPagination(registrationsData.pagination);
-        setStats(
-          mergeRegistrationStatsWithTrendFallback(
-            registrationsData.stats,
-            aggregateStats,
-          ),
+        setStats((prev) =>
+          mergeRegistrationStatsWithTrendFallback(registrationsData.stats, prev),
         );
       } catch {
-        // Usar mocks quando API falhar
-        const eventData = { id: eventId, name: "Evento de Exemplo" };
-        setEvent(eventData);
-
         const filteredMocks =
           statusFilter === "all"
             ? mockRegistrations
@@ -467,8 +471,6 @@ export default function EventRegistrationsPage() {
           total: filteredMocks.length,
           totalPages: Math.ceil(filteredMocks.length / 20) || 1,
         });
-
-        // Calcular estatísticas dos mocks
         const total = filteredMocks.length;
         const paid = filteredMocks.filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED").length;
         const cancelled = filteredMocks.filter((r) => r.status === "CANCELLED").length;
@@ -478,26 +480,11 @@ export default function EventRegistrationsPage() {
         setStats({ total, paid, cancelled, totalCollected });
       }
     } catch (error: unknown) {
-      console.error("Error loading data:", error);
-      setEvent({ id: eventId, name: "Evento de Exemplo" });
+      console.error("Error loading registrations:", error);
       setRegistrations(mockRegistrations);
-      setPagination({
-        page: 1,
-        limit: 20,
-        total: mockRegistrations.length,
-        totalPages: 1,
-      });
-
-      // Calcular estatísticas dos mocks em caso de erro
-      const total = mockRegistrations.length;
-      const paid = mockRegistrations.filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED").length;
-      const cancelled = mockRegistrations.filter((r) => r.status === "CANCELLED").length;
-      const totalCollected = mockRegistrations
-        .filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED")
-        .reduce((sum, r) => sum + (r.finalAmount || 0), 0);
-      setStats({ total, paid, cancelled, totalCollected });
+      setPagination({ page: 1, limit: 20, total: mockRegistrations.length, totalPages: 1 });
     } finally {
-      setLoading(false);
+      setLoadingList(false);
     }
   }, [
     appliedDateRange?.from,
@@ -512,8 +499,14 @@ export default function EventRegistrationsPage() {
 
   useEffect(() => {
     if (!authChecked || authLoading || !eventId) return;
+    void loadInitialData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authChecked, authLoading, eventId]);
+
+  useEffect(() => {
+    if (!authChecked || authLoading || !eventId) return;
     const timeoutId = setTimeout(() => {
-      void loadData();
+      void loadRegistrations();
     }, searchTerm ? 500 : 0);
 
     return () => clearTimeout(timeoutId);
@@ -522,7 +515,7 @@ export default function EventRegistrationsPage() {
     authChecked,
     authLoading,
     eventId,
-    loadData,
+    loadRegistrations,
     pagination.page,
     searchTerm,
     selectedTicketIds,
@@ -572,75 +565,6 @@ export default function EventRegistrationsPage() {
     };
   };
 
-  const filteredRegistrations = registrations.filter((reg) => {
-    const searchLower = searchTerm.toLowerCase().trim();
-
-    // Se não há termo de busca, retorna true
-    if (!searchLower) return true;
-
-    const userName = `${reg.user?.firstName || ""} ${reg.user?.lastName || ""}`.toLowerCase();
-    // CPF pode estar em documentNumber ou cpf
-    const cpf = reg.user?.documentNumber || reg.user?.cpf || "";
-    const cpfNumbers = cpf.replace(/\D/g, ""); // Remove formatação do CPF (apenas números)
-    const cpfFormatted = cpf.toLowerCase(); // CPF com formatação original
-    const orderId = reg.id?.toLowerCase() || "";
-
-    // Buscar por nome do ticket nas modalidades
-    const ticketNames =
-      reg.modalities
-        ?.map((m) => m.modality?.name?.toLowerCase() || "")
-        .join(" ") || "";
-
-    // Extrair números do termo de busca
-    const searchNumbers = searchLower.replace(/\D/g, "");
-
-    // Busca por CPF: funciona com busca parcial tanto em números quanto com formatação
-    const matchesCPF =
-      (searchNumbers.length > 0 && cpfNumbers.length > 0 && cpfNumbers.includes(searchNumbers)) || // Busca por números (ex: "123" encontra "12345678900")
-      (cpfFormatted.length > 0 && cpfFormatted.includes(searchLower)); // Busca com formatação (ex: "123.456" encontra "123.456.789-00")
-
-    const matchesSearch =
-      userName.includes(searchLower) ||
-      matchesCPF ||
-      orderId.includes(searchLower) ||
-      ticketNames.includes(searchLower);
-
-    // Calcular o status final usando a mesma lógica do componente
-    const finalStatus = getFinalStatus(reg);
-    const matchesStatus = statusFilter === "all" || finalStatus === statusFilter;
-
-    // Date range filter - only filter when both dates are selected and different (usa o range aplicado)
-    const matchesDateRange = !appliedDateRange?.from || !appliedDateRange?.to || appliedDateRange.from.getTime() === appliedDateRange.to.getTime()
-      ? true
-      : (() => {
-        if (!reg.purchaseDate) return false;
-        const purchaseDate = new Date(reg.purchaseDate);
-        const fromDate = new Date(appliedDateRange.from!);
-        fromDate.setHours(0, 0, 0, 0);
-        const toDate = new Date(appliedDateRange.to!);
-        toDate.setHours(23, 59, 59, 999);
-        purchaseDate.setHours(0, 0, 0, 0);
-        return purchaseDate >= fromDate && purchaseDate <= toDate;
-      })();
-
-    const matchesTickets = selectedTicketIds.length === 0 || (() => {
-      if (reg.ticketId) {
-        return selectedTicketIds.includes(reg.ticketId);
-      }
-      if (!reg.modalities || reg.modalities.length === 0) return false;
-      const selectedTickets = tickets.filter(t => selectedTicketIds.includes(t.id));
-      if (selectedTickets.length === 0) return false;
-      return reg.modalities.some((regMod) =>
-        selectedTickets.some(ticket =>
-          ticket.name === regMod.modality?.name ||
-          ticket.modality === regMod.modality?.name ||
-          ticket.id === regMod.modality?.id
-        )
-      );
-    })();
-
-    return matchesSearch && matchesStatus && matchesDateRange && matchesTickets;
-  });
 
   const hasActiveFilters =
     searchTerm.trim().length > 0 ||
@@ -903,7 +827,7 @@ export default function EventRegistrationsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11" />
             <Input
               type="text"
-              placeholder="Nome, CPF, ID do pedido, ticket..."
+              placeholder="Nome, CPF, ID do pedido, ingresso..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-[46px]"
@@ -1038,12 +962,12 @@ export default function EventRegistrationsPage() {
 
         {/* Registrations List */}
         <div className="relative">
-          {loading && registrations.length > 0 && (
+          {loadingList && registrations.length > 0 && (
             <div className="absolute inset-0 bg-gray-2/80 z-10 flex items-center justify-center rounded-lg min-h-[200px]">
               <Loading />
             </div>
           )}
-          {filteredRegistrations.length === 0 && !loading ? (
+          {registrations.length === 0 && !loadingList ? (
             <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center">
               <Users className="size-12 text-gray-11 mx-auto mb-4" />
               <p className="text-gray-11 mb-4">
@@ -1052,7 +976,7 @@ export default function EventRegistrationsPage() {
                   : "Nenhuma inscrição ainda"}
               </p>
             </div>
-          ) : filteredRegistrations.length === 0 && loading ? (
+          ) : registrations.length === 0 && loadingList ? (
             <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center min-h-[200px] flex items-center justify-center">
               <Loading />
             </div>
@@ -1062,7 +986,7 @@ export default function EventRegistrationsPage() {
               <div className="md:hidden flex flex-col gap-4">
                 <h2 className="font-manrope font-bold text-xl text-gray-12">Lista de inscrições</h2>
                 <div className="flex flex-col gap-3">
-                  {filteredRegistrations.map((registration) => {
+                  {registrations.map((registration) => {
                     const finalStatus = getFinalStatus(registration);
                     const paymentStatus = registration.order?.payment?.status;
                     const isPaid = finalStatus === "CONFIRMED" || finalStatus === "COMPLETED" || paymentStatus === "PAID";
@@ -1171,7 +1095,7 @@ export default function EventRegistrationsPage() {
                 )}
                 <Button
                   className="w-full h-12 rounded-lg font-manrope font-bold"
-                  onClick={() => openExportDataModal({ registrations: filteredRegistrations, eventId, eventName: event?.name })}
+                  onClick={() => openExportDataModal({ registrations: registrations, eventId, eventName: event?.name })}
                 >
                   Exportar CSV
                 </Button>
@@ -1220,7 +1144,7 @@ export default function EventRegistrationsPage() {
 
                 {/* Rows */}
                 <div className="flex flex-col items-start w-full">
-                  {filteredRegistrations.map((registration) => (
+                  {registrations.map((registration) => (
                     <RegistrationRow
                       key={registration.id}
                       registration={registration}
@@ -1300,7 +1224,7 @@ export default function EventRegistrationsPage() {
                 <Button
                   onClick={() => {
                     openExportDataModal({
-                      registrations: filteredRegistrations,
+                      registrations: registrations,
                       eventId,
                       eventName: event?.name,
                     });

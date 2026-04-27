@@ -14,6 +14,8 @@ import { LocationIcon } from "@/components/Icons/LocationIcon";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
+import { Dropdown } from "@/components/Dropdown";
+import { BRAZIL_STATES } from "@/utils/locationFacets";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
@@ -701,13 +703,23 @@ export default function EditInformationPage() {
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     Estado
                   </label>
-                  <Input
-                    type="text"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    placeholder="Digite o nome do estado"
-                    className="h-12"
+                  <Dropdown
+                    dataAttribute="state-edit"
+                    options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${uf} — ${name}` }))}
+                    selectedIds={formData.state ? [formData.state] : []}
+                    onSelect={(option) => updateFormData({ state: option.id ?? "" })}
+                    width="w-full"
+                    maxHeight="max-h-[240px]"
+                    className="top-14"
+                    trigger={() => (
+                      <div className="border-gray-6 flex h-12 w-full items-center rounded-md border bg-transparent px-3 md:text-base cursor-pointer hover:bg-gray-3 transition-colors">
+                        <span className={formData.state ? "text-gray-12" : "text-gray-11"}>
+                          {formData.state
+                            ? `${formData.state} — ${BRAZIL_STATES.find((s) => s.uf === formData.state)?.name ?? ""}`
+                            : "Selecione o estado"}
+                        </span>
+                      </div>
+                    )}
                   />
                 </div>
               </div>

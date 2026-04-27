@@ -950,8 +950,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         const reservedTicket = reservedTicketsMap[ticket.id];
         const unitDiscount = reservedTicket?.unitDiscount ?? 0;
 
-        // Exibe badge de cupom apenas para cupons com código (DISCOUNT manual).
-        const hasCoupon = !!orderCoupon && !!orderCoupon.code && unitDiscount > 0;
+        // Exibe badge de cupom para qualquer cupom aplicado (manual ou automático).
+        const hasCoupon = !!orderCoupon && unitDiscount > 0;
         // Voucher sempre exibe quando aplicado.
         const hasVoucher = !!orderVoucher && !orderCoupon && unitDiscount > 0;
 
@@ -969,7 +969,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             gender: participant.gender,
           },
           additionalProducts: products.length > 0 ? products : undefined,
-          couponCode: hasCoupon ? (orderCoupon!.code ?? undefined) : undefined,
+          couponCode: hasCoupon ? (orderCoupon!.code ?? "Desconto automático") : undefined,
           couponDiscount: hasCoupon ? unitDiscount / 100 : undefined,
           voucherCode: hasVoucher ? orderVoucher!.code : undefined,
           voucherDiscount: hasVoucher ? unitDiscount / 100 : undefined,
@@ -1133,7 +1133,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const isCouponApplied = !!currentOrder?.coupon;
   const isVoucherApplied = !!currentOrder?.voucher;
-  const appliedCouponName = currentOrder?.coupon?.code ?? (isCouponApplied ? "Desconto automático" : undefined);
+  const isAutomaticCoupon = currentOrder?.coupon?.couponType === "QUANTITY" || currentOrder?.coupon?.couponType === "AGE";
+  const appliedCouponName = currentOrder?.coupon?.code ?? (isCouponApplied ? (isAutomaticCoupon ? "Cupom automático" : "Desconto automático") : undefined);
   const appliedVoucherName = currentOrder?.voucher?.name ?? currentOrder?.voucher?.code;
 
   // Percentual do cupom vem diretamente do objeto coupon da API.

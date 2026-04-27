@@ -26,7 +26,7 @@ function formatAnswer(answer: any): string {
     try {
       const parsed = JSON.parse(answer);
       if (Array.isArray(parsed)) return parsed.join(", ");
-    } catch {}
+    } catch { }
   }
   return String(answer) || "—";
 }
@@ -574,9 +574,12 @@ export function ViewRegistrationModal() {
                     <div className="flex flex-col pr-5 border-b border-gray-6">
                       <div className="flex items-center justify-between pb-6">
                         <div className="flex flex-col gap-5 max-w-[70%]">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            Participante
-                          </p>
+                          <div className="flex flex-col gap-2">
+                            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 truncate">ID: <span className="text-gray-11">#{currentRegistration.id}</span></p>
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                              Participante
+                            </p>
+                          </div>
                           <div className="flex flex-col">
                             <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-11 truncate">
                               {categoryName}

@@ -472,7 +472,7 @@ export function RegisterModal() {
           {/* Nome */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Nome
+              Nome completo
             </label>
             <div className="relative w-full">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
@@ -726,7 +726,7 @@ export function RegisterModal() {
           {/* Nome */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              Nome
+              Nome completo
             </label>
             <div className="relative w-full">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />

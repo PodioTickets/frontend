@@ -49,9 +49,7 @@ export interface OrderSummaryCoupon {
   discount?: number;
   name?: string;
   percent?: number;
-  /** Como o desconto é calculado */
   type?: "PERCENTAGE" | "FIXED";
-  /** Categoria do cupom */
   couponType?: "DISCOUNT" | "QUANTITY" | "AGE";
   fixedValue?: number;
   error?: string | null;
@@ -207,7 +205,7 @@ export function OrderSummary({
               <p className="font-manrope font-semibold">
                 {couponValueType === "FIXED" && totalTicketCount > 1 ? `${totalTicketCount}x ` : ""}
                 {couponType === "QUANTITY"
-                  ? (couponName ?? "Desconto aplicado")
+                  ? (couponName ?? "Cupom aplicado")
                   : (couponName ? `Cupom ${couponName}` : "Cupom aplicado")}
                 {couponPercent != null && couponPercent > 0 ? ` (${couponPercent}% OFF)` : ""}:
               </p>
@@ -389,7 +387,7 @@ export function OrderSummary({
                           <div className="flex gap-1 items-center">
                             <TicketIcon className="size-4 text-yellow-12" />
                             <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                              {couponType === "QUANTITY" ? participantData.couponCode : `Cupom: ${participantData.couponCode}`}
+                              {couponType === "QUANTITY" || couponType === "AGE" ? "Cupom automático" : `Cupom: ${participantData.couponCode}`}
                             </p>
                           </div>
                           <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">

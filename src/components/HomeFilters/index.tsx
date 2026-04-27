@@ -17,11 +17,8 @@ import { useEventLocationFacets } from "@/hooks/useEventLocationFacets";
 import { LocationCascadePicker } from "@/components/LocationCascadePicker";
 
 interface HomeFiltersProps {
-  /** Valor exato de `state` na API / URL */
   initialState?: string | null;
-  /** Valor exato de `city` na API / URL */
   initialCity?: string | null;
-  /** @deprecated use `initialState` / `initialCity` */
   initialLocation?: string | null;
   initialModalities?: string[];
   initialDateRange?: DateRange | undefined;
@@ -320,9 +317,8 @@ export function HomeFilters({
               <div className="flex flex-col">
                 <h1 className="font-family-manrope font-bold">Datas</h1>
                 <p
-                  className={`font-family-dm-sans font-normal text-gray-11 ${
-                    selectedDateRange?.from ? "text-base" : "text-base"
-                  }`}
+                  className={`font-family-dm-sans font-normal text-gray-11 ${selectedDateRange?.from ? "text-base" : "text-base"
+                    }`}
                 >
                   {formatDateRange()}
                 </p>
@@ -355,9 +351,8 @@ export function HomeFilters({
                 <h1 className="font-family-manrope font-bold">Modalidade</h1>
                 <p className="font-family-dm-sans font-normal text-gray-11">
                   {selectedModalities.length > 0
-                    ? `${selectedModalities.length} selecionada${
-                        selectedModalities.length > 1 ? "s" : ""
-                      }`
+                    ? `${selectedModalities.length} selecionada${selectedModalities.length > 1 ? "s" : ""
+                    }`
                     : "Qual modalidade?"}
                 </p>
               </div>
@@ -379,9 +374,8 @@ export function HomeFilters({
               <div className="flex flex-col">
                 <h1 className="font-family-manrope font-bold">Preço</h1>
                 <p
-                  className={`font-family-dm-sans font-normal text-gray-11 ${
-                    isAllPrices ? "text-base" : "text-xs"
-                  }`}
+                  className={`font-family-dm-sans font-normal text-gray-11 ${isAllPrices ? "text-base" : "text-xs"
+                    }`}
                 >
                   {formatPriceRange()}
                 </p>

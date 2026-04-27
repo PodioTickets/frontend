@@ -442,7 +442,7 @@ export function PaymentDetailsModal() {
                   <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
                     <div className="flex gap-3 items-center justify-between">
                       <div className="flex gap-3 items-center">
-                        {paymentInfo.cardBrand ? (
+                        {paymentInfo.paymentMethod !== "PIX" ? (
                           <div className="size-10 shrink-0 flex items-center justify-center">
                             <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
                           </div>
