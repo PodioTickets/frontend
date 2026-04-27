@@ -20,7 +20,6 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-query": "^5.90.10",
     "@uiw/react-heat-map": "^2.3.3",
-    "@vercel/analytics": "^1.5.0",
     "ag-charts-community": "^13.1.0",
     "ag-charts-enterprise": "^13.1.0",
     "ag-charts-react": "^13.1.0",

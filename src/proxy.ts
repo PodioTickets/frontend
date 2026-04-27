@@ -76,7 +76,6 @@ function isProbableOrganizerEventIdSegment(segment: string): boolean {
 function isAppHostInfrastructurePath(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/api")) return true;
-  if (pathname.startsWith("/_vercel")) return true;
   if (pathname.startsWith("/.well-known")) return true;
   if (
     pathname === "/favicon.ico" ||
@@ -324,7 +323,7 @@ export async function proxy(request: NextRequest) {
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
     `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
-    } 'unsafe-inline' blob: https://va.vercel-scripts.com https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
+    } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com`,
     `style-src ${trustedDomains.join(
       " "
     )} 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com`,

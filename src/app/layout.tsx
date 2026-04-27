@@ -3,7 +3,6 @@ import { Manrope, DM_Sans } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import { Analytics } from "@vercel/analytics/next";
 import { ToasterWrapper } from "@/components/ToasterWrapper";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -86,7 +85,6 @@ export default async function RootLayout({
             </div>
           </Providers>
         </OrganizerAppSurfaceProvider>
-        <Analytics />
       </body>
     </html>
   );
