@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { getApiClient } from "@/services/base/ApiClient";
 import {
   Drawer,
@@ -9,12 +9,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronRight, Ticket, Building2, FileText, Search } from "lucide-react";
-import { PixIcon } from "@/components/Icons/PixIcon";
-import { CardIcon } from "@/components/Icons/CardIcon";
+import { X, ChevronRight } from "lucide-react";
 import { ArrowButton } from "../ArrowButton";
-import { Pagination } from "@/components/Pagination";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
+import Image from "next/image";
 
 interface TransferDetail {
   id: string;
@@ -23,10 +21,29 @@ interface TransferDetail {
   feeRate: number;
   feeAmount: number;
   netAmount: number;
+  receiptUrl: string;
   status: "PENDING" | "COMPLETED" | "CANCELLED";
   notes: string | null;
   createdAt: string;
   completedAt: string | null;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  tradeName: string | null;
+  document: string;
+  email: string;
+  phone: string | null;
+  ownerName: string;
+  pix: string | null;
+  bankName: string | null;
+  bankCode: string | null;
+  agency: string | null;
+  account: string | null;
+  accountType: string | null;
+  accountHolderName: string | null;
+  accountHolderDocument: string | null;
 }
 
 interface TransferDetailsDrawerProps {
@@ -35,187 +52,68 @@ interface TransferDetailsDrawerProps {
   eventId: string;
   transfer: {
     id: string;
-    pixKey: string;
     requestDate: string;
     requestTime: string;
     value: number;
     status: string;
   };
-  eventName?: string;
-  categoryName?: string;
 }
-
-// Mock data - substituir com dados reais da API
-const mockTransferDetails = {
-  id: "999ef0df-a1a3-4e10-95eb-7b2b8df6f0c7",
-  date: "24 outubro, 2025",
-  time: "14:30",
-  status: "Concluído",
-  event: {
-    name: "Nome do evento",
-    organizer: {
-      name: "Organizer Text",
-      email: "Organizer Text",
-      avatar: null,
-    },
-  },
-  account: {
-    bank: "Banco Nubank",
-    pixKey: "25.300.324/0001-76",
-    type: "Conta PJ",
-  },
-  values: {
-    netValue: 145200.0,
-    grossValue: 150000.0,
-    fee: 4800.0,
-    otherDiscounts: 0.0,
-  },
-  orders: [
-    {
-      orderId: "#6b82...51d6",
-      transactionId: "1240-2414",
-      buyer: { name: "Ahmad Ballard", email: "NoahSilva@gmail.com", avatar: null },
-      date: "18/10/2026",
-      value: 100.0,
-      installment: "1/4",
-      paymentMethod: "Pix",
-    },
-    {
-      orderId: "#6b82...51d6",
-      transactionId: "1240-2414",
-      buyer: { name: "Ahmad Ballard", email: "NoahSilva@gmail.com", avatar: null },
-      date: "18/10/2026",
-      value: 150.0,
-      installment: null,
-      paymentMethod: "Pix",
-    },
-    {
-      orderId: "#6b82...51d6",
-      transactionId: "1240-2414",
-      buyer: { name: "Ahmad Ballard", email: "NoahSilva@gmail.com", avatar: null },
-      date: "18/10/2026",
-      value: 100.0,
-      installment: "1/4",
-      paymentMethod: "Pix",
-    },
-    {
-      orderId: "#6b82...51d6",
-      transactionId: "1240-2414",
-      buyer: { name: "Ahmad Ballard", email: "NoahSilva@gmail.com", avatar: null },
-      date: "18/10/2026",
-      value: 150.0,
-      installment: null,
-      paymentMethod: "Pix",
-    },
-    {
-      orderId: "#6b82...51d6",
-      transactionId: "1240-2414",
-      buyer: { name: "Ahmad Ballard", email: "NoahSilva@gmail.com", avatar: null },
-      date: "18/10/2026",
-      value: 100.0,
-      installment: "1/2",
-      paymentMethod: "Pix",
-    },
-    {
-      orderId: "#6b82...51d6",
-      transactionId: "1240-2414",
-      buyer: { name: "Ahmad Ballard", email: "NoahSilva@gmail.com", avatar: null },
-      date: "18/10/2026",
-      value: 150.0,
-      installment: null,
-      paymentMethod: "Pix",
-    },
-  ],
-};
 
 export function TransferDetailsDrawer({
   isOpen,
   onClose,
   eventId,
   transfer,
-  eventName = "Maratona 2024",
-  categoryName = "Nome da categoria",
 }: TransferDetailsDrawerProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [detail, setDetail] = useState<TransferDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const itemsPerPage = 10;
+  const [data, setData] = useState<{ transfer: TransferDetail; organization: Organization } | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !eventId || !transfer?.id) return;
     let cancelled = false;
-    setDetail(null);
-    setLoadingDetail(true);
+    setData(null);
+    setLoading(true);
     getApiClient()
-      .get<{ data: { transfer: TransferDetail } }>(
+      .get<{ data: { transfer: TransferDetail; organization: Organization } }>(
         `/api/v1/events/${eventId}/financial/transfers/${transfer.id}`
       )
       .then((res) => {
-        if (!cancelled) setDetail(res.data.data.transfer);
+        if (!cancelled) setData(res.data.data);
       })
       .catch(() => { })
       .finally(() => {
-        if (!cancelled) setLoadingDetail(false);
+        if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
   }, [isOpen, eventId, transfer?.id]);
 
-  const formatValue = (v: number) => v.toFixed(2).replace(".", ",");
-
   const statusLabel = (s: string) => {
-    if (s === "COMPLETED" || s === "Concluído") return "Concluído";
+    if (s === "COMPLETED") return "Concluído";
     if (s === "CANCELLED") return "Cancelado";
     return "Pendente";
   };
 
-  const resolvedStatus = detail ? statusLabel(detail.status) : transfer.status;
-  const resolvedId = detail?.id ?? transfer.id;
-  const resolvedDate = detail
-    ? new Date(detail.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
+  const resolvedStatus = data ? statusLabel(data.transfer.status) : transfer.status;
+  const resolvedId = data?.transfer.id ?? transfer.id;
+  const resolvedDate = data
+    ? new Date(data.transfer.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
     : transfer.requestDate;
-  const resolvedTime = detail
-    ? new Date(detail.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  const resolvedTime = data
+    ? new Date(data.transfer.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     : transfer.requestTime;
-  const grossValue = detail ? detail.amount / 100 : transfer.value;
-  const feeValue = detail ? detail.feeAmount / 100 : 0;
-  const netValue = detail ? detail.netAmount / 100 : transfer.value;
+  const grossValue = data ? data.transfer.amount / 100 : transfer.value;
+  const feeValue = data ? data.transfer.feeAmount / 100 : 0;
+  const netValue = data ? data.transfer.netAmount / 100 : transfer.value;
 
-  const filteredOrders = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return mockTransferDetails.orders;
-    return mockTransferDetails.orders.filter((o) => {
-      const valueStr = formatValue(o.value);
-      return (
-        o.orderId.toLowerCase().includes(q) ||
-        o.transactionId.toLowerCase().includes(q) ||
-        o.date.toLowerCase().includes(q) ||
-        valueStr.includes(q) ||
-        `r$${valueStr}`.includes(q)
-      );
-    });
-  }, [search]);
-
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const safePage = Math.min(currentPage, Math.max(1, totalPages));
-
-  const paginatedOrders = filteredOrders.slice(
-    (safePage - 1) * itemsPerPage,
-    safePage * itemsPerPage
-  );
-
-  const handleSearch = (value: string) => {
-    setSearch(value);
-    setCurrentPage(1);
-  };
+  const org = data?.organization;
+  const bankDisplay = org?.bankName ?? "—";
+  const pixKeyDisplay = org?.pix ?? "—";
 
   const getStatusBadge = (status: string) => {
     if (status === "Concluído" || status === "COMPLETED") return "bg-primary-11 text-primary-2";
     if (status === "Cancelado" || status === "CANCELLED") return "bg-red-3 text-red-11";
     return "bg-yellow-10/20 text-yellow-11";
   };
-
-  const { event, account } = mockTransferDetails;
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose} direction="right">
@@ -323,6 +221,7 @@ export function TransferDetailsDrawer({
               </div>
             </div>
 
+
             {/* ── Account Section ── */}
             <div className="mb-5 md:mb-7">
               <p className="text-[16px] md:text-[18px] text-gray-12 font-manrope font-bold mb-3">
@@ -338,16 +237,13 @@ export function TransferDetailsDrawer({
                     </div>
                     <div className="flex flex-col">
                       <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                        {account.bank}
+                        {loading ? "Carregando..." : bankDisplay}
                       </p>
                       <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                        Chave: {transfer.pixKey}
+                        Chave: {loading ? "..." : pixKeyDisplay}
                       </p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center justify-center px-3 py-2 rounded bg-[#ebe4ff] text-[16px] font-family-dm-sans font-normal text-[#2f265f]">
-                    {account.type}
-                  </span>
                 </div>
               </div>
 
@@ -359,16 +255,13 @@ export function TransferDetailsDrawer({
                   </div>
                   <div className="flex flex-col gap-1">
                     <p className="font-family-dm-sans font-semibold text-[15px] leading-[1.3] text-gray-12">
-                      {account.bank}
+                      {loading ? "Carregando..." : bankDisplay}
                     </p>
                     <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11">
-                      Chave: {transfer.pixKey}
+                      Chave: {loading ? "..." : pixKeyDisplay}
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex items-center justify-center px-3 py-1.5 rounded bg-[#ebe4ff] text-[13px] font-family-dm-sans font-normal text-[#2f265f]">
-                  {account.type}
-                </span>
               </div>
             </div>
 
@@ -405,6 +298,7 @@ export function TransferDetailsDrawer({
                 </div>
               </div>
 
+
               {/* Mobile */}
               <div className="md:hidden bg-gray-2 border border-gray-6 rounded-lg p-4">
                 <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 mb-1">
@@ -433,19 +327,50 @@ export function TransferDetailsDrawer({
                     - R$ {feeValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-
-                <hr className="border-gray-6 mb-4" />
-
-                <div className="flex flex-col items-start">
-                  <p className="font-family-dm-sans font-normal text-[13px] text-gray-11">
-                    Total de transações deste repasse
-                  </p>
-                  <p className="font-manrope font-bold text-[15px] text-gray-12">
-                    {mockTransferDetails.orders.length}
-                  </p>
-                </div>
               </div>
             </div>
+
+            {/* ── Cancellation reason ── */}
+            {resolvedStatus === "Cancelado" && data?.transfer.notes && (
+              <div className="mb-5 md:mb-7 rounded-lg border border-red-6 bg-red-2 p-4 flex flex-col gap-1">
+                <p className="text-[13px] md:text-[14px] font-family-dm-sans font-semibold text-red-11">
+                  Motivo do cancelamento
+                </p>
+                <p className="text-[13px] md:text-[15px] font-family-dm-sans font-normal text-red-12">
+                  {data.transfer.notes}
+                </p>
+              </div>
+            )}
+
+            {data?.transfer.receiptUrl && (
+              <div className="border border-gray-6 rounded-lg overflow-hidden flex flex-col">
+                {data?.transfer.receiptUrl.match(/\.(png|jpe?g|webp)(\?|$)/i) ? (
+                  <div className="relative w-full aspect-video bg-gray-3">
+                    <Image
+                      src={data?.transfer.receiptUrl}
+                      alt="Comprovante"
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <a
+                    href={data?.transfer.receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 hover:bg-gray-3 transition-colors"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-11 shrink-0">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14,2 14,8 20,8" />
+                    </svg>
+                    <span className="text-base font-semibold text-primary-11 font-family-dm-sans underline">
+                      Ver comprovante (PDF)
+                    </span>
+                  </a>
+                )}
+              </div>)}
           </div>
         </div>
       </DrawerContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { X, Info } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -30,6 +30,7 @@ export interface WithdrawalItem {
   netAmount: number;
   status: WithdrawalStatus;
   notes?: string | null;
+  receiptUrl?: string | null;
   completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -180,6 +181,8 @@ export function WithdrawalDetailsDrawer({
   const [denyNotes, setDenyNotes] = useState("");
   const [detail, setDetail] = useState<WithdrawalItem | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen || !item) return;
@@ -203,6 +206,40 @@ export function WithdrawalDetailsDrawer({
   if (!item) return null;
 
   const resolved = detail ?? item;
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 10MB.");
+      return;
+    }
+    const allowed = ["image/png", "image/jpeg", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Formato inválido. Use PNG, JPG ou PDF.");
+      return;
+    }
+
+    setIsUploadingReceipt(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await getApiClient().patch<{ data: { receiptUrl: string } }>(
+        `/api/v1/admin/withdrawals/${item.id}/receipt`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      const receiptUrl = res.data.data.receiptUrl;
+      setDetail((prev) => (prev ? { ...prev, receiptUrl } : { ...item, receiptUrl }));
+      toast.success("Comprovante enviado com sucesso!");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? "Erro ao enviar comprovante.");
+    } finally {
+      setIsUploadingReceipt(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleApprove = async () => {
     if (isApproving || isDenying) return;
@@ -341,14 +378,6 @@ export function WithdrawalDetailsDrawer({
                   <p className="font-normal text-gray-11 font-family-dm-sans">Total arrecadado:</p>
                   <p className="font-semibold text-gray-12 font-family-dm-sans">{formatCurrency(resolved.amount)}</p>
                 </div>
-                <div className="flex items-center justify-between text-lg leading-[1.3]">
-                  <p className="font-normal text-gray-11 font-family-dm-sans">
-                    Taxa da plataforma ({(resolved.feeRate * 100).toFixed(0)}%):
-                  </p>
-                  <p className="font-semibold text-red-11 font-family-dm-sans">
-                    -{formatCurrency(resolved.feeAmount)}
-                  </p>
-                </div>
                 <div className="w-full h-px bg-gray-8" />
                 <div className="flex items-center justify-between">
                   <p className="text-lg font-normal leading-[1.3] text-gray-12 font-family-dm-sans">
@@ -378,21 +407,85 @@ export function WithdrawalDetailsDrawer({
               <p className="text-base font-semibold leading-[1.3] text-gray-11 font-family-dm-sans">
                 Comprovante de Transferência
               </p>
-              <div className="border-2 border-dashed border-gray-6 rounded-xl flex flex-col items-center justify-center gap-4 py-9 px-6 w-full">
-                <div className="size-16 flex items-center justify-center text-primary-11">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,application/pdf"
+                className="hidden"
+                onChange={handleReceiptUpload}
+              />
+
+              {resolved.receiptUrl ? (
+                <div className="border border-gray-6 rounded-xl overflow-hidden flex flex-col">
+                  {resolved.receiptUrl.match(/\.(png|jpe?g|webp)(\?|$)/i) ? (
+                    <div className="relative w-full aspect-video bg-gray-3">
+                      <Image
+                        src={resolved.receiptUrl}
+                        alt="Comprovante"
+                        fill
+                        className="object-contain"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <a
+                      href={resolved.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-4 hover:bg-gray-3 transition-colors"
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-11 shrink-0">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14,2 14,8 20,8" />
+                      </svg>
+                      <span className="text-base font-semibold text-primary-11 font-family-dm-sans underline">
+                        Ver comprovante (PDF)
+                      </span>
+                    </a>
+                  )}
+                  <div className="border-t border-gray-6 px-4 py-3 flex items-center justify-between bg-gray-2">
+                    <p className="text-sm font-normal text-gray-11 font-family-dm-sans">
+                      Comprovante anexado
+                    </p>
+                    <button
+                      type="button"
+                      disabled={isUploadingReceipt}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-sm font-semibold text-primary-11 font-family-dm-sans hover:text-primary-10 transition-colors disabled:opacity-50"
+                    >
+                      {isUploadingReceipt ? "Enviando..." : "Substituir"}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col items-center gap-4 w-full">
-                  <p className="text-lg font-bold leading-[1.1] text-primary-11 font-manrope text-center">
-                    Anexar comprovante
-                  </p>
-                  <p className="text-base font-semibold leading-[1.1] text-gray-12 font-manrope text-center">
-                    PNG, JPG ou PDF — máx. 10MB
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isUploadingReceipt}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-6 rounded-xl flex flex-col items-center justify-center gap-4 py-9 px-6 w-full hover:border-primary-11 hover:bg-primary-3/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isUploadingReceipt ? (
+                    <div className="size-8 border-2 border-gray-6 border-t-primary-11 rounded-full animate-spin" />
+                  ) : (
+                    <div className="size-16 flex items-center justify-center text-primary-11">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <p className="text-lg font-bold leading-[1.1] text-primary-11 font-manrope text-center">
+                      {isUploadingReceipt ? "Enviando comprovante..." : "Anexar comprovante"}
+                    </p>
+                    {!isUploadingReceipt && (
+                      <p className="text-base font-semibold leading-[1.1] text-gray-12 font-manrope text-center">
+                        PNG, JPG ou PDF — máx. 10MB
+                      </p>
+                    )}
+                  </div>
+                </button>
+              )}
             </div>
           </>}
         </div>

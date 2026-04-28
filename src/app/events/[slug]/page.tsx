@@ -78,10 +78,13 @@ export default function EventPage() {
   >({});
   const [showFixedButton, setShowFixedButton] = useState(false);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [eventSlug]);
+
   // Resetar estado da imagem quando o evento mudar
   useEffect(() => {
     if (event?.id) {
-      // Resetar estado de erro quando mudar de evento
       setImageError(false);
     }
   }, [event?.id, event?.bannerUrl]);
@@ -435,9 +438,8 @@ export default function EventPage() {
 
 
         {/* Apenas tópicos habilitados (sem descrição do evento). */}
-        <div className="px-4 space-y-4">
+        <div className="px-4 space-y-4 mt-10">
           {topicSections.map((section, index) => {
-            const hasHTML = section.content.includes("<");
             return (
               <Fragment key={section.id}>
                 <div
