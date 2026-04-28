@@ -375,7 +375,7 @@ export function ChangeEmailModal() {
                         <ChevronLeft className="w-5 h-5 text-gray-11" />
                       </button>
                       <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                        Confirme o novo e-mail
+                        Confirme seu e-mail
                       </h2>
                     </div>
                     <button
