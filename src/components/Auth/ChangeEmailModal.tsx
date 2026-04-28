@@ -391,7 +391,7 @@ export function ChangeEmailModal() {
                     <div className="flex flex-col gap-6 items-start pb-6 pt-4 px-6 w-full">
                       <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
                         Enviamos um código de 6 dígitos para{" "}
-                        <span className="font-bold">{maskEmail(newEmail)}</span>.
+                        <span className="font-bold">{maskEmail(user?.email || "")}</span>.
                         Digite-o abaixo para confirmar a troca.
                       </p>
 
