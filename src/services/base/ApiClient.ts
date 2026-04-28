@@ -12,7 +12,7 @@ export interface ApiResponse<T = any> {
 
 export function getApiClient() {
   return new ApiClient(
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333"
+    (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "")
   );
 }
 
