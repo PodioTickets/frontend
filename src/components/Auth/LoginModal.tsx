@@ -7,6 +7,7 @@ import { useForgotPassword } from "@/hooks/useForgotPassword";
 import { useResetPassword } from "@/hooks/useResetPassword";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
+import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { Mail, Lock, X, ArrowLeft, Eye, EyeOff, Info } from "lucide-react";
 import Image from "next/image";
 import {
@@ -152,25 +153,12 @@ function ForgotPasswordEnterCodePanel({
             <span className="font-bold text-gray-12">{sentToEmail}</span>.
             Digite-o abaixo para continuar.
           </p>
-          <div className="flex flex-col gap-2 w-full min-w-0">
-            <label
-              htmlFor="reset-code-field"
-              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
-            >
-              Código de verificação
-            </label>
-            <Input
-              id="reset-code-field"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="000000"
-              maxLength={6}
+          <div className="flex flex-col gap-3 w-full min-w-0">
+            <OtpCodeInput
               value={code}
-              onChange={(e) => onCodeChange(e.target.value.replace(/\D/g, ""))}
-              className={`h-12 text-center tracking-[0.4em] text-xl rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""}`}
-              aria-invalid={!!error}
+              onChange={onCodeChange}
               disabled={isVerifying}
+              error={!!error}
             />
             {error ? (
               <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>

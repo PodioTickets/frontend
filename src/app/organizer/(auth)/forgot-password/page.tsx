@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
+import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { Mail, ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useForgotPassword } from "@/hooks/useForgotPassword";
@@ -248,22 +249,15 @@ export default function OrganizerForgotPasswordPage() {
                   onSubmit={handleSubmitCode}
                   className="flex flex-col gap-6 items-center w-full"
                 >
-                  <div className="flex flex-col gap-2 items-start w-full">
-                    <label className="text-base text-gray-12 font-family-dm-sans">
-                      Código de verificação
-                    </label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      placeholder="000000"
-                      maxLength={6}
+                  <div className="flex flex-col gap-3 items-start w-full">
+                    <OtpCodeInput
                       value={resetCode}
-                      onChange={(e) =>
-                        setResetCode(e.target.value.replace(/\D/g, ""))
-                      }
-                      className={`h-12 w-full text-center tracking-[0.4em] text-xl ${errors.code ? "border-red-11" : ""}`}
+                      onChange={(v) => {
+                        setResetCode(v);
+                        if (errors.code) setErrors((p) => { const n = { ...p }; delete n.code; return n; });
+                      }}
                       disabled={isVerifying}
+                      error={!!errors.code}
                     />
                     {errors.code ? (
                       <p className="text-sm text-red-11 font-family-dm-sans">
