@@ -303,6 +303,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       localStorage.setItem("user", JSON.stringify({ ...userObj, _cachedAt: Date.now() }));
       setUser(userObj as any);
 
+      // Busca o perfil completo em background para popular todos os campos do User
+      refetchUser().catch(() => {});
+
       return { id: createdUser.id, email: createdUser.email };
     } catch (err: unknown) {
       console.error("Registration error:", err);
