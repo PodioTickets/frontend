@@ -368,8 +368,6 @@ export function AwaitingReleaseDrawer({
           <div className="hidden md:block flex-1 overflow-y-auto">
             <div className="p-5">
               <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
-                <span>Nome da categoria: <span className="text-gray-12">{categoryName}</span></span>
-                <span className="w-1 h-1 rounded-full bg-gray-11" />
                 <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 

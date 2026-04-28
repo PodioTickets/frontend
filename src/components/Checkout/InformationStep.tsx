@@ -337,7 +337,6 @@ export function InformationStep({
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
       quantity: number;
-      /** Nome da categoria (ingressos em grupo); vazio para avulsos. */
       categoryName: string;
       raceName: string;
       distance: string;
@@ -1154,7 +1153,7 @@ export function InformationStep({
                       className="flex items-center justify-between text-base text-gray-12"
                     >
                       <div className="flex flex-col">
-                        <p className="text-gray-11 text-xs truncate">{ticket.categoryName ? (
+                        <p className="text-gray-11 text-xs truncate max-w-[200px]">{ticket.categoryName ? (
                           ticket.categoryName
                         ) : "Ingresso Avulso"}</p>
                         <p className="font-semibold text-gray-12 text-base truncate">

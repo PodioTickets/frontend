@@ -220,10 +220,6 @@ export function RequestTransferModal() {
                         <p className="font-family-dm-sans font-normal text-base text-gray-11">
                           Disponível: <span className="font-semibold text-gray-12">R$ {formatBalance(availableBalance)}</span>
                         </p>
-                        <div className="w-full h-px bg-gray-6" />
-                        <p className="font-family-dm-sans font-normal text-base text-red-11">
-                          Taxa do organizador: <span className="font-semibold">4%</span>
-                        </p>
                         {processingAmount != null && (
                           <>
                             <div className="w-full h-px bg-gray-6" />

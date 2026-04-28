@@ -53,9 +53,6 @@ export function PaymentItemDetailsDrawer({
   isOpen,
   onClose,
   paymentItem,
-  eventName = "Maratona 2024",
-  categoryName = "Nome da categoria",
-  type = "installment",
 }: PaymentItemDetailsDrawerProps) {
   const [copied, setCopied] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);

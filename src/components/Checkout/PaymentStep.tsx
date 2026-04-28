@@ -1728,7 +1728,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               <div className="flex flex-col gap-3">
                 <Input
                   type="text"
-                  placeholder="Código de cupom (opcional)"
+                  placeholder="Código de cupom"
                   value={couponCode}
                   onChange={(e) => {
                     const value = e.target.value.toUpperCase().substring(0, 30);
@@ -1749,11 +1749,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     {couponError}
                   </p>
                 )}
-                {isCouponApplied && (
-                  <p className="text-base font-medium text-primary-11 font-family-dm-sans">
-                    Cupom aplicado com sucesso!
-                  </p>
-                )}
                 {!isCouponApplied && (
                   <Button
                     onClick={handleApplyCoupon}
@@ -1772,10 +1767,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
         {/* Toggle Button */}
         <div
-          className="bg-gray-2 place-self-end w-1/3 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 cursor-pointer transition-transform active:scale-95"
+          className="bg-gray-2 place-self-end w-1/3 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 cursor-pointer transition-transform"
           onClick={openModal}
         >
-          <p className="text-sm font-medium text-gray-11 text-center font-family-dm-sans">
+          <p className="text-xs font-medium text-gray-11 text-center font-family-dm-sans">
             Mostrar resumo
           </p>
         </div>
@@ -2023,10 +2018,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               }`}
           >
             {/* Close Button */}
-            <div className="bg-gray-2 w-1/3 place-self-end border-t border-l border-r border-gray-6 rounded-tl-xl px-4 py-2 flex items-center justify-center shrink-0">
+            <div className="bg-gray-1 w-1/3 border-b place-self-end border-t border-l border-r border-gray-6 rounded-tl-xl px-4 py-2 flex items-center justify-center shrink-0">
               <button
                 onClick={closeModal}
-                className="text-sm font-medium text-gray-11 font-family-dm-sans transition-colors hover:text-gray-12 active:scale-95"
+                className="text-xs font-medium text-gray-11 font-family-dm-sans transition-colors hover:text-gray-12 active:scale-95"
               >
                 Fechar resumo
               </button>

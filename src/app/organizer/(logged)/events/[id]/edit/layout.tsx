@@ -15,6 +15,7 @@ import Link from "next/link";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
 import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
+import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 
 function EditProgressBar() {
   const pathname = usePathname();
@@ -156,7 +157,15 @@ function EditLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <EventPageHeader eventName={event?.name} />
+      <div className="hidden md:block">
+        <EventPageHeader eventName={event?.name} />
+      </div>
+      <EventMobileHeader
+        eventId={eventId}
+        eventName={event?.name}
+        activeHref={pathname}
+        backHref={`/organizer/events`}
+      />
       <div className="max-w-7xl mx-auto px-4 lg:px-6 2xl:px-0">
         <div className={cn(hideEditStepperOnMobile && "hidden md:block")}>
           <EditProgressBar />
