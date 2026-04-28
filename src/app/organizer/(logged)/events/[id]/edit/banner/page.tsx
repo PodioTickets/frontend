@@ -699,10 +699,10 @@ export default function EditBannerPage() {
                   <Button
                     type="button"
                     onClick={() => void handleBannerStepNext()}
-                    disabled={uploadingBanner}
+                    disabled={uploadingBanner || !selectedBannerFile}
                     className="h-12 px-6 text-base font-bold font-manrope rounded-lg md:h-10 md:px-4 md:text-sm"
                   >
-                    {uploadingBanner ? "Enviando..." : "Próximo"}
+                    {uploadingBanner ? "Enviando..." : "Salvar"}
                   </Button>
                 </div>
               </div>
@@ -740,10 +740,10 @@ export default function EditBannerPage() {
                   <Button
                     type="button"
                     onClick={() => void handleConfirmCardAndNext()}
-                    disabled={uploadingCard}
+                    disabled={uploadingCard || !selectedCardFile}
                     className="h-12 px-6 text-base font-bold font-manrope md:h-10 md:text-sm"
                   >
-                    {uploadingCard ? "Enviando..." : "Confirmar e próximo"}
+                    {uploadingCard ? "Enviando..." : "Salvar"}
                   </Button>
                 </div>
               </div>
