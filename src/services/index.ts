@@ -16,7 +16,7 @@ export {
   removeQueries,
 } from "./cache/QueryClient";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
 export const apiClient = new ApiClient(API_BASE_URL);
 export const userService = new UserService(apiClient);
 export const eventService = new EventService(apiClient);
