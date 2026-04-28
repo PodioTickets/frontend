@@ -7,11 +7,19 @@ interface ForgotPasswordData {
   accountType?: "USER" | "ORGANIZER";
 }
 
+interface VerifyCodeData {
+  email: string;
+  code: string;
+  accountType?: "USER" | "ORGANIZER";
+}
+
 interface UseForgotPasswordReturn {
   forgotPassword: (data: ForgotPasswordData) => Promise<void>;
   resendCode: (data: ForgotPasswordData) => Promise<void>;
+  verifyResetCode: (data: VerifyCodeData) => Promise<{ token: string }>;
   isPending: boolean;
   isResending: boolean;
+  isVerifying: boolean;
   error: Error | null;
 }
 
@@ -19,7 +27,7 @@ const FORGOT_PASSWORD_SUCCESS_FALLBACK =
   "Se uma conta existir com este e-mail, enviaremos instruções para redefinir a senha.";
 
 const RESEND_RESET_SUCCESS_FALLBACK =
-  "Se o e-mail estiver cadastrado, você receberá um novo link em instantes.";
+  "Se o e-mail estiver cadastrado, você receberá um novo código em instantes.";
 
 function pickSuccessMessage(body: unknown): string | undefined {
   if (!body || typeof body !== "object") return undefined;
@@ -83,6 +91,19 @@ export function useForgotPassword(): UseForgotPasswordReturn {
     },
   });
 
+  const verifyMutation = useMutation({
+    mutationFn: async (data: VerifyCodeData) => {
+      return userService.verifyResetCode(data);
+    },
+    onError: (error: any) => {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Código inválido ou expirado.";
+      toast.error(errorMessage);
+    },
+  });
+
   return {
     forgotPassword: async (data: ForgotPasswordData) => {
       await mutation.mutateAsync(data);
@@ -90,8 +111,12 @@ export function useForgotPassword(): UseForgotPasswordReturn {
     resendCode: async (data: ForgotPasswordData) => {
       await resendMutation.mutateAsync(data);
     },
+    verifyResetCode: async (data: VerifyCodeData) => {
+      return verifyMutation.mutateAsync(data);
+    },
     isPending: mutation.isPending,
     isResending: resendMutation.isPending,
+    isVerifying: verifyMutation.isPending,
     error: mutation.error as Error | null,
   };
 }

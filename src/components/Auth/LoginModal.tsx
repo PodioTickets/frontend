@@ -7,7 +7,7 @@ import { useForgotPassword } from "@/hooks/useForgotPassword";
 import { useResetPassword } from "@/hooks/useResetPassword";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Mail, Lock, X, Clock, ArrowLeft, Eye, EyeOff, Info } from "lucide-react";
+import { Mail, Lock, X, ArrowLeft, Eye, EyeOff, Info } from "lucide-react";
 import Image from "next/image";
 import {
   loginSchema,
@@ -52,7 +52,7 @@ function ForgotPasswordPanel({
       <form onSubmit={onSubmit} className="flex flex-col w-full">
         <div className="flex flex-col gap-8 pt-4 pb-6 px-6">
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Informe o e-mail da sua conta e enviaremos um link para criar uma
+            Informe o e-mail da sua conta e enviaremos um código para criar uma
             nova senha
           </p>
           <div className="flex flex-col gap-2 w-full min-w-0">
@@ -87,7 +87,7 @@ function ForgotPasswordPanel({
             disabled={isPending}
             className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? "Enviando..." : "Enviar link de recuperação"}
+            {isPending ? "Enviando..." : "Enviar código de recuperação"}
           </Button>
         </div>
       </form>
@@ -95,31 +95,47 @@ function ForgotPasswordPanel({
   );
 }
 
-function ForgotPasswordCheckEmailPanel({
+function ForgotPasswordEnterCodePanel({
   sentToEmail,
+  code,
+  onCodeChange,
+  error,
+  onSubmit,
+  onBack,
   onClose,
   onResend,
   isResending,
+  isVerifying,
   resendCooldownSeconds,
 }: {
   sentToEmail: string;
+  code: string;
+  onCodeChange: (value: string) => void;
+  error?: string;
+  onSubmit: (e: FormEvent) => void;
+  onBack: () => void;
   onClose: () => void;
   onResend: () => void;
   isResending: boolean;
+  isVerifying: boolean;
   resendCooldownSeconds: number;
 }) {
-  const steps = [
-    "Abra seu e-mail e procure por Podioticket",
-    'Clique no link "Redefinir minha senha"',
-    "Crie sua nova senha",
-  ] as const;
-
   return (
     <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
-      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
-        <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
-          Verifique seu e-mail
-        </h2>
+      <div className="flex items-start justify-between px-4 py-4 border-b border-gray-6 shrink-0 gap-2">
+        <div className="flex gap-0.5 items-center min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="size-[18px] text-gray-12" />
+          </button>
+          <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans truncate pl-0.5">
+            Verifique seu e-mail
+          </h2>
+        </div>
         <button
           type="button"
           onClick={onClose}
@@ -129,59 +145,65 @@ function ForgotPasswordCheckEmailPanel({
           <X className="size-[18px] text-gray-12" />
         </button>
       </div>
-      <div className="flex flex-col gap-8 pt-4 pb-6 px-6 w-full">
-        <div className="flex flex-col gap-4 w-full min-w-0">
+      <form onSubmit={onSubmit} className="flex flex-col w-full">
+        <div className="flex flex-col gap-6 pt-4 pb-2 px-6 w-full">
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Se uma conta existir com{" "}
-            <span className="font-bold text-gray-12">{sentToEmail}</span>, você
-            receberá um e-mail em instantes com o link para redefinir a senha.
+            Enviamos um código de 6 dígitos para{" "}
+            <span className="font-bold text-gray-12">{sentToEmail}</span>.
+            Digite-o abaixo para continuar.
           </p>
-          <div className="flex flex-col gap-3 w-full">
-            {steps.map((text, index) => (
-              <div
-                key={text}
-                className="flex gap-2 items-center w-full min-w-0 rounded-lg"
-              >
-                <div className="flex size-6 shrink-0 items-center justify-center rounded bg-primary-4">
-                  <span className="font-medium text-sm leading-[1.3] text-primary-12 font-family-dm-sans">
-                    {index + 1}
-                  </span>
-                </div>
-                <p className="font-medium text-sm leading-[1.3] text-primary-12 font-family-dm-sans min-w-0">
-                  {text}
-                </p>
-              </div>
-            ))}
-            <div className="flex gap-1 items-center w-full rounded-lg bg-yellow-3 p-3">
-              <Clock
-                className="size-5 shrink-0 text-yellow-12"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              <p className="font-medium text-sm leading-[1.3] text-yellow-12 font-family-dm-sans">
-                O link expira em até 1 hora
-              </p>
-            </div>
+          <div className="flex flex-col gap-2 w-full min-w-0">
+            <label
+              htmlFor="reset-code-field"
+              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+            >
+              Código de verificação
+            </label>
+            <Input
+              id="reset-code-field"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              maxLength={6}
+              value={code}
+              onChange={(e) => onCodeChange(e.target.value.replace(/\D/g, ""))}
+              className={`h-12 text-center tracking-[0.4em] text-xl rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""}`}
+              aria-invalid={!!error}
+              disabled={isVerifying}
+            />
+            {error ? (
+              <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-2 items-center justify-center w-full">
+            <p className="font-medium text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
+              Não recebeu o código?
+            </p>
+            <button
+              type="button"
+              onClick={onResend}
+              disabled={isResending || resendCooldownSeconds > 0}
+              className="font-semibold text-sm leading-[1.3] text-primary-10 font-family-dm-sans hover:text-primary-11 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-transparent border-0 p-0"
+            >
+              {isResending
+                ? "Reenviando..."
+                : resendCooldownSeconds > 0
+                  ? `Reenviar em ${resendCooldownSeconds}s`
+                  : "Reenviar código"}
+            </button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 items-center justify-center w-full">
-          <p className="font-medium text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
-            Não recebeu o email?
-          </p>
-          <button
-            type="button"
-            onClick={onResend}
-            disabled={isResending || resendCooldownSeconds > 0}
-            className="font-semibold text-sm leading-[1.3] text-primary-10 font-family-dm-sans hover:text-primary-11 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-transparent border-0 p-0"
+        <div className="flex px-6 pt-4 pb-8 w-full">
+          <Button
+            type="submit"
+            disabled={isVerifying || code.length !== 6}
+            className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isResending
-              ? "Reenviando..."
-              : resendCooldownSeconds > 0
-                ? `Reenviar em ${resendCooldownSeconds}s`
-                : "Reenviar e-mail"}
-          </button>
+            {isVerifying ? "Verificando..." : "Verificar código"}
+          </Button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
@@ -355,7 +377,7 @@ const GoogleIcon = () => (
   </svg>
 );
 
-type ForgotFlow = "idle" | "email" | "check-email" | "new-password";
+type ForgotFlow = "idle" | "email" | "enter-code" | "new-password";
 
 export function LoginModal() {
   const { isOpen, closeLoginModal, openLoginModal, data: loginModalData } =
@@ -365,8 +387,10 @@ export function LoginModal() {
   const {
     forgotPassword,
     resendCode,
+    verifyResetCode,
     isPending: forgotPasswordPending,
     isResending: forgotPasswordResending,
+    isVerifying: forgotPasswordVerifying,
   } = useForgotPassword();
   const { resetPassword, isPending: resetPasswordPending } = useResetPassword();
 
@@ -382,6 +406,8 @@ export function LoginModal() {
   const [forgotEmailError, setForgotEmailError] = useState<string | undefined>(
     undefined
   );
+  const [resetCode, setResetCode] = useState("");
+  const [resetCodeError, setResetCodeError] = useState<string | undefined>(undefined);
   const [resetPasswordToken, setResetPasswordToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -405,6 +431,8 @@ export function LoginModal() {
       setForgotEmail("");
       setPasswordResetEmail("");
       setForgotEmailError(undefined);
+      setResetCode("");
+      setResetCodeError(undefined);
       setResetPasswordToken("");
       setNewPassword("");
       setConfirmNewPassword("");
@@ -513,8 +541,10 @@ export function LoginModal() {
       setForgotEmailError(undefined);
       await forgotPassword({ email: forgotEmail, accountType: "USER" });
       setPasswordResetEmail(forgotEmail);
+      setResetCode("");
+      setResetCodeError(undefined);
       setForgotResendCooldown(60);
-      setForgotFlow("check-email");
+      setForgotFlow("enter-code");
     } catch (error) {
       if (error instanceof ZodError) {
         const first = error.issues[0];
@@ -526,11 +556,33 @@ export function LoginModal() {
     }
   };
 
+  const handleCodeSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (resetCode.length !== 6) {
+      setResetCodeError("Digite os 6 dígitos do código");
+      return;
+    }
+    try {
+      setResetCodeError(undefined);
+      const result = await verifyResetCode({
+        email: passwordResetEmail,
+        code: resetCode,
+        accountType: "USER",
+      });
+      setResetPasswordToken(result.token);
+      setForgotFlow("new-password");
+    } catch {
+      // Erro tratado no hook (toast)
+    }
+  };
+
   const handleResendResetEmail = async () => {
     if (!passwordResetEmail || forgotResendCooldown > 0) return;
     try {
       await resendCode({ email: passwordResetEmail, accountType: "USER" });
       setForgotResendCooldown(60);
+      setResetCode("");
+      setResetCodeError(undefined);
     } catch {
       // Erro tratado no hook (toast)
     }
@@ -564,7 +616,7 @@ export function LoginModal() {
     setConfirmNewPassword("");
     setResetPasswordToken("");
     if (passwordResetEmail) {
-      setForgotFlow("check-email");
+      setForgotFlow("enter-code");
     } else {
       setForgotFlow("email");
     }
@@ -617,12 +669,18 @@ export function LoginModal() {
         isPending={forgotPasswordPending}
         onClose={closeLoginModal}
       />
-    ) : forgotFlow === "check-email" ? (
-      <ForgotPasswordCheckEmailPanel
+    ) : forgotFlow === "enter-code" ? (
+      <ForgotPasswordEnterCodePanel
         sentToEmail={passwordResetEmail}
+        code={resetCode}
+        onCodeChange={setResetCode}
+        error={resetCodeError}
+        onSubmit={handleCodeSubmit}
+        onBack={() => setForgotFlow("email")}
         onClose={closeLoginModal}
         onResend={handleResendResetEmail}
         isResending={forgotPasswordResending}
+        isVerifying={forgotPasswordVerifying}
         resendCooldownSeconds={forgotResendCooldown}
       />
     ) : forgotFlow === "new-password" ? (
