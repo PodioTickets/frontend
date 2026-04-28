@@ -366,7 +366,7 @@ export function TransferDetailsDrawer({
                       <polyline points="14,2 14,8 20,8" />
                     </svg>
                     <span className="text-base font-semibold text-primary-11 font-family-dm-sans underline">
-                      Ver comprovante (PDF)
+                      Ver comprovante
                     </span>
                   </a>
                 )}
