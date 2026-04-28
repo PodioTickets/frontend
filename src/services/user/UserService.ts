@@ -551,6 +551,27 @@ export class UserService {
     }
   }
 
+  async changeEmail(data: {
+    newEmail: string;
+    currentPassword: string;
+  }): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await this.apiClient.patch("/api/v1/auth/change-email", data);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async verifyEmailChange(code: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await this.apiClient.post("/api/v1/auth/verify-email-change", { code });
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   async removeAvatar(): Promise<void> {
     try {
       await this.apiClient.delete("/api/v1/user/avatar");
