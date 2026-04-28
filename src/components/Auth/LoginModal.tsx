@@ -661,7 +661,7 @@ export function LoginModal() {
       <ForgotPasswordEnterCodePanel
         sentToEmail={passwordResetEmail}
         code={resetCode}
-        onCodeChange={setResetCode}
+        onCodeChange={(v) => { setResetCode(v); if (resetCodeError) setResetCodeError(undefined); }}
         error={resetCodeError}
         onSubmit={handleCodeSubmit}
         onBack={() => setForgotFlow("email")}

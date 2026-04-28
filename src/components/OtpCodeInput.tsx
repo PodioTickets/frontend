@@ -17,7 +17,6 @@ export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputP
   useEffect(() => {
     if (value === "") {
       setDigits(["", "", "", "", "", ""]);
-      inputRefs.current[0]?.focus();
     }
   }, [value]);
 
@@ -57,6 +56,7 @@ export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputP
             type="text"
             inputMode="numeric"
             autoComplete={index === 0 ? "one-time-code" : "off"}
+            aria-label={`Dígito ${index + 1} de 6`}
             maxLength={1}
             value={digit}
             onChange={(e) => updateDigit(index, e.target.value)}
