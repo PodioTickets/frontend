@@ -85,7 +85,6 @@ export function TransferHistoryDrawer({
     const id = transfer.id
     return {
       id: `#${id.slice(0, 6)}...${id.slice(-4)}`,
-      pixKey: transfer.bankAccount?.account || "N/A",
       requestDate: formattedDate,
       requestTime: formattedTime,
       value: transfer.amount / 100, // Converter de centavos
@@ -517,7 +516,6 @@ export function TransferHistoryDrawer({
           eventId={eventId}
           transfer={{
             id: selectedTransfer.id,
-            pixKey: selectedTransfer.bankAccount?.account || "N/A",
             requestDate: new Date(selectedTransfer.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }),
             requestTime: new Date(selectedTransfer.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
             value: selectedTransfer.amount / 100,
@@ -526,8 +524,6 @@ export function TransferHistoryDrawer({
                 selectedTransfer.status === "FAILED" ? "Falhou" :
                   selectedTransfer.status === "CANCELLED" ? "Cancelado" : "Pendente",
           }}
-          eventName={eventName}
-          categoryName={categoryName}
         />
       )}
     </>
