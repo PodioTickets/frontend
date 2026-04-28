@@ -187,10 +187,10 @@ export function UserAutocomplete({
             type="button"
             onClick={handleDelete}
             disabled={deleting}
-            className="absolute right-3 size-6 flex items-center justify-center rounded bg-red-11 hover:bg-red-12 transition-colors disabled:opacity-50"
+            className="absolute right-3 size-6 flex items-center justify-center rounded bg-gray-4 hover:bg-gray-5 transition-colors disabled:opacity-50"
             title="Remover usuário vinculado"
           >
-            <X className="size-3 text-red-2" />
+            <X className="size-3 text-gray-11" />
           </button>
         )}
       </div>

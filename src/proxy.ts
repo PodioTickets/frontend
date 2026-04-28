@@ -225,6 +225,75 @@ function isValidOrigin(origin: string | null, host: string | null): boolean {
   return false;
 }
 
+function adminAppHostConfig(): { raw: string; hostname: string } | null {
+  const raw = process.env.ADMIN_APP_HOST?.trim();
+  if (!raw) return null;
+  const hostname = raw.split(":")[0].toLowerCase();
+  return { raw, hostname };
+}
+
+function applyAdminHostRouting(request: NextRequest): NextResponse | null {
+  const cfg = adminAppHostConfig();
+  if (!cfg) return null;
+
+  const currentHost = effectiveRequestHostname(request);
+  const onAdminHost = currentHost === cfg.hostname;
+  const { pathname } = request.nextUrl;
+
+  if (onAdminHost) {
+    // Canonical: strip /admin prefix se presente
+    if (pathname.startsWith("/admin")) {
+      const rest = pathname.slice("/admin".length) || "/";
+      const dest = request.nextUrl.clone();
+      dest.pathname = rest === "" ? "/" : rest;
+      if (urlsEquivalentForRedirect(dest, request.nextUrl)) return null;
+      return NextResponse.redirect(dest, 307);
+    }
+
+    if (isAppHostInfrastructurePath(pathname)) return null;
+
+    // Auth guard integrado ao host admin
+    const isLoginPath = pathname === "/login" || pathname.startsWith("/login/");
+    const token = request.cookies.get("access_token")?.value;
+
+    if (isLoginPath && token) {
+      const dest = request.nextUrl.clone();
+      dest.pathname = "/events";
+      return NextResponse.redirect(dest, 307);
+    }
+
+    if (!isLoginPath && !token) {
+      const dest = request.nextUrl.clone();
+      dest.pathname = "/login";
+      if (pathname !== "/") dest.searchParams.set("next", pathname);
+      return NextResponse.redirect(dest, 307);
+    }
+
+    // Rewrite para /admin/*
+    const internalPath = pathname === "/" ? "/admin" : `/admin${pathname}`;
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = internalPath;
+    return NextResponse.rewrite(rewriteUrl);
+  }
+
+  // Fora do host admin: redireciona /admin/* para o host admin (URL curta)
+  if (pathname.startsWith("/admin")) {
+    const dest = request.nextUrl.clone();
+    dest.hostname = cfg.hostname;
+    const portFromEnv = cfg.raw.includes(":") ? cfg.raw.split(":")[1] : "";
+    if (portFromEnv) dest.port = portFromEnv;
+    if (process.env.NODE_ENV === "production") {
+      dest.protocol = "https:";
+      if (!portFromEnv) dest.port = "";
+    }
+    const rest = pathname.slice("/admin".length) || "/";
+    dest.pathname = rest === "" ? "/" : rest;
+    return NextResponse.redirect(dest, 307);
+  }
+
+  return null;
+}
+
 function applyAdminAuthGuard(request: NextRequest): NextResponse | null {
   const { pathname } = request.nextUrl;
 
@@ -234,14 +303,12 @@ function applyAdminAuthGuard(request: NextRequest): NextResponse | null {
   const token = request.cookies.get("access_token")?.value;
 
   if (isPublic) {
-    // Já autenticado tentando acessar o login → redireciona para área logada
     if (token) {
       return NextResponse.redirect(new URL("/admin/events", request.url));
     }
     return null;
   }
 
-  // Rota protegida sem token
   if (!token) {
     const loginUrl = new URL("/admin/login", request.url);
     loginUrl.searchParams.set("next", pathname);
@@ -253,6 +320,9 @@ function applyAdminAuthGuard(request: NextRequest): NextResponse | null {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const adminHostRoute = applyAdminHostRouting(request);
+  if (adminHostRoute) return adminHostRoute;
 
   const adminGuard = applyAdminAuthGuard(request);
   if (adminGuard) return adminGuard;
