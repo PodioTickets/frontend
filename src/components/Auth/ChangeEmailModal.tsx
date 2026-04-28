@@ -29,6 +29,7 @@ export function ChangeEmailModal() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +60,7 @@ export function ChangeEmailModal() {
     setCodeError("");
     setResendCooldown(0);
     setIsSubmitting(false);
+    setIsResending(false);
   };
 
   const handleClose = () => {
@@ -122,7 +124,8 @@ export function ChangeEmailModal() {
   };
 
   const handleResend = async () => {
-    if (resendCooldown > 0 || isSubmitting) return;
+    if (resendCooldown > 0 || isSubmitting || isResending) return;
+    setIsResending(true);
     try {
       await userService.changeEmail({ newEmail: newEmail.trim().toLowerCase(), currentPassword });
       setResendCooldown(60);
@@ -133,6 +136,8 @@ export function ChangeEmailModal() {
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || "Erro ao reenviar código.";
       toast.error(msg);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -424,10 +429,10 @@ export function ChangeEmailModal() {
                         <button
                           type="button"
                           onClick={handleResend}
-                          disabled={resendCooldown > 0 || isSubmitting}
+                          disabled={resendCooldown > 0 || isSubmitting || isResending}
                           className="text-primary-10 font-semibold text-base leading-[1.3] underline font-family-dm-sans hover:text-primary-11 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
+                          {isResending ? "Reenviando..." : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
                         </button>
                       </div>
                     </div>

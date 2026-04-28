@@ -86,7 +86,7 @@ export function useForgotPassword(): UseForgotPasswordReturn {
       const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
-        "Não foi possível reenviar o e-mail. Tente novamente em instantes.";
+        "Não foi possível reenviar o código. Tente novamente em instantes.";
       toast.error(errorMessage);
     },
   });
