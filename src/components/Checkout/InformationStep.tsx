@@ -1401,67 +1401,72 @@ export function InformationStep({
                             <label className="text-sm font-medium text-gray-12">
                               Nome completo
                             </label>
-                            <UserAutocomplete
-                              value={participant.name}
-                              disabled={previewMode}
-                              onChange={(value) => {
-                                clearParticipantFieldError(participantIndex, "name");
-                                updateParticipant(participantIndex, { name: value });
-                              }}
-                              onSelectUser={(user: LinkedUser) => {
-                                // Preencher automaticamente os campos quando um usuário é selecionado
-                                // Formatar CPF se necessário
-                                const formattedCPF = user.documentNumber
-                                  ? maskCPF(user.documentNumber.replace(/\D/g, ""))
-                                  : "";
-
-                                // Formatar telefone se necessário (pode vir sem formatação da API)
-                                const formattedPhone = user.phone
-                                  ? maskPhone(user.phone.replace(/\D/g, ""))
-                                  : "";
-
-                                // Normalizar gênero (pode vir em diferentes formatos)
-                                let normalizedGender = user.gender || "";
-                                if (normalizedGender) {
-                                  // Verificar se é um dos valores esperados
-                                  const genderLower = normalizedGender.toLowerCase();
-
-                                  // Converter valores em inglês para português
-                                  if (genderLower === "male" || genderLower === "masculino") {
-                                    normalizedGender = "Masculino";
-                                  } else if (genderLower === "female" || genderLower === "feminino") {
-                                    normalizedGender = "Feminino";
-                                  } else if (genderLower === "other" || genderLower === "outro") {
-                                    normalizedGender = "Outro";
-                                  } else if (genderLower === "prefiro-nao-dizer" || genderLower === "prefiro-nao-informar" || genderLower === "prefer not to say") {
-                                    normalizedGender = "Prefiro não dizer";
-                                  } else {
-                                    // Se não for reconhecido, tentar mapear para o label correspondente
-                                    const genderOption = sexoOptions.find(
-                                      (opt) => opt.id.toLowerCase() === genderLower || opt.label.toLowerCase() === genderLower
-                                    );
-                                    normalizedGender = genderOption ? genderOption.label : normalizedGender;
+                            <div className="relative">
+                              <UserAutocomplete
+                                value={participant.name}
+                                disabled={previewMode}
+                                onDeleteUser={async (userId) => {
+                                  await userService.removeLinkedUser(userId);
+                                  queryClient.invalidateQueries({ queryKey: ["linked-users"] });
+                                }}
+                                onChange={(value) => {
+                                  clearParticipantFieldError(participantIndex, "name");
+                                  updateParticipant(participantIndex, { name: value });
+                                  // Se o usuário editar manualmente, desvincular linked user
+                                  if (selectedLinkedUserIds[participantIndex]) {
+                                    setSelectedLinkedUserIds((prev) => {
+                                      const next = { ...prev };
+                                      delete next[participantIndex];
+                                      return next;
+                                    });
                                   }
-                                }
+                                }}
+                                onSelectUser={(user: LinkedUser) => {
+                                  const formattedPhone = user.phone
+                                    ? maskPhone(user.phone.replace(/\D/g, ""))
+                                    : "";
 
-                                updateParticipant(participantIndex, {
-                                  name: `${user.firstName} ${user.lastName}`.trim(),
-                                  email: user.email || "",
-                                  cpf: formattedCPF,
-                                  phone: formattedPhone,
-                                  birthDate: user.dateOfBirth || "",
-                                  gender: normalizedGender,
-                                });
+                                  let normalizedGender = user.gender || "";
+                                  if (normalizedGender) {
+                                    const genderLower = normalizedGender.toLowerCase();
+                                    if (genderLower === "male" || genderLower === "masculino") {
+                                      normalizedGender = "Masculino";
+                                    } else if (genderLower === "female" || genderLower === "feminino") {
+                                      normalizedGender = "Feminino";
+                                    } else if (genderLower === "other" || genderLower === "outro") {
+                                      normalizedGender = "Outro";
+                                    } else if (genderLower === "prefiro-nao-dizer" || genderLower === "prefiro-nao-informar" || genderLower === "prefer not to say") {
+                                      normalizedGender = "Prefiro não dizer";
+                                    } else {
+                                      const genderOption = sexoOptions.find(
+                                        (opt) => opt.id.toLowerCase() === genderLower || opt.label.toLowerCase() === genderLower
+                                      );
+                                      normalizedGender = genderOption ? genderOption.label : normalizedGender;
+                                    }
+                                  }
 
-                                // Marcar que este participante foi selecionado da lista (já está vinculado)
-                                setSelectedLinkedUserIds((prev) => ({
-                                  ...prev,
-                                  [participantIndex]: user.id,
-                                }));
-                              }}
-                              placeholder="Digite nome completo ou selecione um usuário"
-                              className={`w-full ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
-                            />
+                                  updateParticipant(participantIndex, {
+                                    name: `${user.firstName} ${user.lastName}`.trim(),
+                                    email: user.email || "",
+                                    phone: formattedPhone,
+                                    birthDate: user.dateOfBirth || "",
+                                    gender: normalizedGender,
+                                  });
+
+                                  setSelectedLinkedUserIds((prev) => ({
+                                    ...prev,
+                                    [participantIndex]: user.id,
+                                  }));
+
+                                  // Verifica o CPF em tempo real para garantir dados atualizados
+                                  if (user.documentNumber) {
+                                    handleCPFChange(participantIndex, user.documentNumber);
+                                  }
+                                }}
+                                placeholder="Digite nome completo ou selecione um usuário"
+                                className={`w-full ${selectedLinkedUserIds[participantIndex] ? "pr-9" : ""} ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
+                              />
+                            </div>
                             {fieldErrors[participantIndex]?.name && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].name}</p>
                             )}

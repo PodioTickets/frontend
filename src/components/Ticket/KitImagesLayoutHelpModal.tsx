@@ -12,7 +12,9 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { Tooltip } from "@/components/Tooltip";
 import { Button } from "@/components/Button";
+import { BookIcon } from "@/components/Icons/BookIcon";
 import { cn } from "@/utils/cn";
 
 const KIT_DESC =
@@ -151,12 +153,75 @@ function PreviewNasCategorias() {
   );
 }
 
-type KitImagesLayoutHelpModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-};
+function StepDots({ step }: { step: number }) {
+  return (
+    <div className="flex items-center gap-2" aria-hidden>
+      <span
+        className={cn(
+          "h-2 rounded-full transition-colors",
+          step === 0 ? "w-8 bg-primary-11" : "size-2 bg-gray-6",
+        )}
+      />
+      <span
+        className={cn(
+          "h-2 rounded-full transition-colors",
+          step === 1 ? "w-8 bg-primary-11" : "size-2 bg-gray-6",
+        )}
+      />
+    </div>
+  );
+}
 
-export function KitImagesLayoutHelpModal({ open, onOpenChange }: KitImagesLayoutHelpModalProps) {
+function KitTooltipPanel({
+  step,
+  setStep,
+  onFinish,
+}: {
+  step: number;
+  setStep: React.Dispatch<React.SetStateAction<number>>;
+  onFinish: () => void;
+}) {
+  const isLast = step === 1;
+  const title = step === 0 ? "Nos ingressos" : "Nas categorias";
+
+  return (
+    <div className="flex w-[400px] flex-col gap-4 rounded-tl-xl rounded-tr-xl rounded-br-xl border border-gray-6 bg-gray-2 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
+      <p className="font-manrope text-sm font-bold leading-[1.1] text-gray-12">{title}</p>
+
+      {step === 0 ? <PreviewNosIngressos /> : <PreviewNasCategorias />}
+
+      <p className="font-family-dm-sans text-xs font-normal leading-[1.3] text-gray-11">{HELP_COPY}</p>
+
+      <div className="flex items-center justify-between gap-3">
+        <StepDots step={step} />
+        <div className="flex shrink-0 items-center gap-2">
+          {step > 0 && (
+            <button
+              type="button"
+              onClick={() => setStep(0)}
+              className="flex size-9 items-center justify-center rounded-full border border-gray-6 bg-gray-1 text-gray-12 transition-colors hover:bg-gray-3"
+              aria-label="Voltar"
+            >
+              <ChevronLeft className="size-4" strokeWidth={2} />
+            </button>
+          )}
+          <Button
+            type="button"
+            variant="default"
+            onClick={isLast ? onFinish : () => setStep(1)}
+            className="h-9 px-5 font-manrope text-sm font-bold"
+          >
+            {isLast ? "Fechar" : "Próximo"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function KitImagesLayoutHelpModal() {
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [mounted, setMounted] = useState(false);
 
@@ -165,131 +230,155 @@ export function KitImagesLayoutHelpModal({ open, onOpenChange }: KitImagesLayout
   }, []);
 
   useEffect(() => {
-    if (!open) setStep(0);
-  }, [open]);
+    if (!tooltipOpen && !modalOpen) setStep(0);
+  }, [tooltipOpen, modalOpen]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!modalOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onOpenChange(false);
+      if (e.key === "Escape") setModalOpen(false);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
+  }, [modalOpen]);
+
+  const triggerClass =
+    "inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-2 hover:text-gray-12";
 
   const title = step === 0 ? "Nos ingressos" : "Nas categorias";
   const isLast = step === 1;
 
-  const handleNext = () => {
-    if (isLast) {
-      onOpenChange(false);
-    } else {
-      setStep(1);
-    }
-  };
-
-  const handleBack = () => {
-    if (step > 0) setStep(0);
-  };
-
-  if (!mounted) return null;
-
-  return createPortal(
-    <AnimatePresence>
-      {open ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="kit-help-modal-title"
-          onClick={() => onOpenChange(false)}
+  return (
+    <span className="inline-flex shrink-0 items-center">
+      {/* Desktop: Tooltip on hover */}
+      <div className="hidden md:contents">
+        <Tooltip
+          open={tooltipOpen}
+          onOpenChange={setTooltipOpen}
+          trigger="hover"
+          interactiveHover
+          position="topRight"
+          leaveDelayMs={250}
+          usePortal
+          contentClassName="p-0 bg-transparent shadow-none rounded-none gap-0 items-stretch w-auto"
+          content={
+            <KitTooltipPanel
+              step={step}
+              setStep={setStep}
+              onFinish={() => setTooltipOpen(false)}
+            />
+          }
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 12 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="flex max-h-[min(90vh,720px)] w-full max-w-[400px] flex-col overflow-hidden rounded-xl bg-gray-1 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            className={triggerClass}
+            aria-label="Ajuda: como as imagens do kit aparecem nos ingressos e nas categorias"
+            aria-expanded={tooltipOpen}
+            aria-haspopup="true"
           >
-            <div className="flex items-center justify-between border-b border-gray-6 px-4 py-4">
-              <h2
-                id="kit-help-modal-title"
-                className="font-manrope text-base font-extrabold leading-[1.1] text-gray-12"
-              >
-                {title}
-              </h2>
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="flex size-9 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-2 hover:text-gray-12"
-                aria-label="Fechar"
-              >
-                <X className="size-5" strokeWidth={2} />
-              </button>
-            </div>
+            <BookIcon className="size-5" />
+          </button>
+        </Tooltip>
+      </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-              <AnimatePresence mode="wait">
+      {/* Mobile: click opens centered modal */}
+      <button
+        type="button"
+        className={cn(triggerClass, "md:hidden")}
+        aria-label="Ajuda: como as imagens do kit aparecem nos ingressos e nas categorias"
+        aria-expanded={modalOpen}
+        aria-haspopup="dialog"
+        onClick={() => setModalOpen(true)}
+      >
+        <BookIcon className="size-5" />
+      </button>
+
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {modalOpen ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="kit-help-modal-title"
+                onClick={() => setModalOpen(false)}
+              >
                 <motion.div
-                  key={step}
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.15 }}
+                  initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex max-h-[min(90vh,720px)] w-full max-w-[400px] flex-col overflow-hidden rounded-xl bg-gray-1 shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {step === 0 ? <PreviewNosIngressos /> : <PreviewNasCategorias />}
-                </motion.div>
-              </AnimatePresence>
-              <p className="mt-4 font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                {HELP_COPY}
-              </p>
-            </div>
+                  <div className="flex items-center justify-between border-b border-gray-6 px-4 py-4">
+                    <h2
+                      id="kit-help-modal-title"
+                      className="font-manrope text-base font-extrabold leading-[1.1] text-gray-12"
+                    >
+                      {title}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className="flex size-9 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-2 hover:text-gray-12"
+                      aria-label="Fechar"
+                    >
+                      <X className="size-5" strokeWidth={2} />
+                    </button>
+                  </div>
 
-            <div className="flex items-center gap-3 border-t border-gray-6 px-4 py-4">
-              <div className="flex items-center gap-2" aria-hidden>
-                <span
-                  className={cn(
-                    "h-2 rounded-full transition-colors",
-                    step === 0 ? "w-8 bg-primary-11" : "size-2 bg-gray-6",
-                  )}
-                />
-                <span
-                  className={cn(
-                    "h-2 rounded-full transition-colors",
-                    step === 1 ? "w-8 bg-primary-11" : "size-2 bg-gray-6",
-                  )}
-                />
-              </div>
-              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-                {step > 0 ? (
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-gray-6 bg-gray-1 text-gray-12 transition-colors hover:bg-gray-2"
-                    aria-label="Voltar"
-                  >
-                    <ChevronLeft className="size-5" strokeWidth={2} />
-                  </button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleNext}
-                  className="h-11 min-w-0 flex-1 font-manrope text-base font-bold text-gray-12"
-                >
-                  Próximo
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>,
-    document.body,
+                  <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={step}
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {step === 0 ? <PreviewNosIngressos /> : <PreviewNasCategorias />}
+                      </motion.div>
+                    </AnimatePresence>
+                    <p className="mt-4 font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                      {HELP_COPY}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 border-t border-gray-6 px-4 py-4">
+                    <StepDots step={step} />
+                    <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                      {step > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setStep(0)}
+                          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-gray-6 bg-gray-1 text-gray-12 transition-colors hover:bg-gray-2"
+                          aria-label="Voltar"
+                        >
+                          <ChevronLeft className="size-5" strokeWidth={2} />
+                        </button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={isLast ? () => setModalOpen(false) : () => setStep(1)}
+                        className="h-11 min-w-0 flex-1 font-manrope text-base font-bold text-gray-12"
+                      >
+                        {isLast ? "Fechar" : "Próximo"}
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>,
+          document.body,
+        )}
+    </span>
   );
 }

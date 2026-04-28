@@ -34,6 +34,7 @@ import {
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { COUNTRIES_PT_BR } from "@/data/countries";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 /** Alinha valores antigos da API («Brasileira», etc.) ao nome do país da lista de cadastro. */
 function mapStoredCountryToPickerValue(raw: string | null | undefined): string {
@@ -565,15 +566,13 @@ export default function UserProfilePage() {
             {/* Profile Picture Section */}
             <div className="flex flex-col gap-6 items-center px-4 py-0 md:flex-row md:items-end md:gap-4 md:px-0">
               <div className="relative size-24 shrink-0 overflow-hidden rounded-full">
-                <Image
+                <ImageWithInitialFallback
                   src={getAvatarUrl(user?.avatarUrl)}
                   alt="Profile"
                   fill
-                  className="object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Ccircle cx='48' cy='48' r='48' fill='%23d9d9d9'/%3E%3C/svg%3E";
-                  }}
+                  sizes="36px"
+                  name={user?.firstName ?? ""}
+                  className="object-cover w-full h-full rounded-full"
                 />
               </div>
               <div className="flex flex-col gap-4 items-start justify-center w-full md:flex-1 md:items-start">

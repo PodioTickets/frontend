@@ -731,6 +731,14 @@ export class UserService {
     }
   }
 
+  async removeLinkedUser(linkedUserId: string): Promise<void> {
+    try {
+      await this.apiClient.delete(`/api/v1/user/linked-users/${linkedUserId}`);
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   /** Mensagens conhecidas da API em inglês → texto exibido ao usuário (toast / input). */
   private mapAuthErrorMessageToPtBr(
     message: string,

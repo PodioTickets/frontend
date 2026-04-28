@@ -437,13 +437,7 @@ export default function EventPage() {
         {/* Apenas tópicos habilitados (sem descrição do evento). */}
         <div className="px-4 space-y-4">
           {topicSections.map((section, index) => {
-            const isExpanded = expandedSections[section.id] || false;
             const hasHTML = section.content.includes("<");
-            const textLength = hasHTML
-              ? section.content.replace(/<[^>]*>/g, "").length
-              : section.content.length;
-            const shouldTruncate = textLength > 150;
-
             return (
               <Fragment key={section.id}>
                 <div
@@ -453,20 +447,12 @@ export default function EventPage() {
                     {section.title}
                   </h2>
                   <div
-                    className={`topic-rich-html text-sm text-gray-11 mb-3 prose prose-sm max-w-none ${!isExpanded && shouldTruncate ? "line-clamp-3" : ""}`}
+                    className={`topic-rich-html text-sm text-gray-11 mb-3 prose prose-sm max-w-none`}
                     dangerouslySetInnerHTML={{
                       __html: normalizeTopicHtmlAnchorHrefs(section.content),
                     }}
                   />
-                  {shouldTruncate && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => toggleSection(section.id)}
-                      className="underline text-gray-11 font-bold px-0"
-                    >
-                      {isExpanded ? "Mostrar menos" : "Mostrar mais"}
-                    </Button>
-                  )}
+
                 </div>
                 <div className="w-full h-px bg-gray-6" />
               </Fragment>

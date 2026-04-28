@@ -402,15 +402,6 @@ export function TransferDetailsDrawer({
                       - R$ {feeValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <div className="h-full w-px bg-gray-6" />
-                  <div className="flex flex-1 flex-col gap-4">
-                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                      Outros abatimentos
-                    </p>
-                    <p className="font-manrope font-extrabold text-[18px] leading-[1.1] text-gray-12">
-                      - R$ {(0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
                 </div>
               </div>
 

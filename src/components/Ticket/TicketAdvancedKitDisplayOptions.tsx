@@ -7,7 +7,6 @@ import { Radio } from "@/components/Radio";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "../ArrowButton";
 import type { KitImagesLayoutApi } from "@/lib/eventKitSelectionDisplay";
-import { BookIcon } from "../Icons/BookIcon";
 import { KitImagesLayoutHelpModal } from "./KitImagesLayoutHelpModal";
 
 type TicketAdvancedKitDisplayOptionsProps = {
@@ -30,7 +29,6 @@ export function TicketAdvancedKitDisplayOptions({
   kitImagesLayout = "ON_TICKETS",
 }: TicketAdvancedKitDisplayOptionsProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [kitHelpOpen, setKitHelpOpen] = useState(false);
   const [internalShow, setInternalShow] = useState(true);
   const showKitImagesOnSelection =
     controlledShow !== undefined ? controlledShow : internalShow;
@@ -88,20 +86,12 @@ export function TicketAdvancedKitDisplayOptions({
               "md:px-0 md:pb-0 md:gap-3",
             )}
           >
-            <div className="flex w-full items-center gap-3">
-              <p className="min-w-0 flex-1 font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+            <div className="flex w-full items-center gap-3 md:gap-1">
+              <p className="min-w-0 max-md:flex-1 font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
                 Deseja exibir as imagens do kit para os participantes na tela de
                 escolha de ingressos?
               </p>
-              <button
-                type="button"
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-2 hover:text-gray-12 md:hidden"
-                aria-label="Ajuda: como as imagens do kit aparecem nos ingressos e nas categorias"
-                aria-expanded={kitHelpOpen}
-                onClick={() => setKitHelpOpen(true)}
-              >
-                <BookIcon className="size-5" />
-              </button>
+              <KitImagesLayoutHelpModal />
             </div>
             <div className="flex flex-wrap items-center gap-6 md:gap-6">
               <div className="flex items-center gap-2">
@@ -185,7 +175,6 @@ export function TicketAdvancedKitDisplayOptions({
         </div>
       ) : null}
 
-      <KitImagesLayoutHelpModal open={kitHelpOpen} onOpenChange={setKitHelpOpen} />
     </div>
   );
 }

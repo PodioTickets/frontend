@@ -5,11 +5,13 @@ import { useLinkedUsers, type LinkedUser } from "@/hooks/useLinkedUsers";
 import { cn } from "@/utils/cn";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
+import { X } from "lucide-react";
 
 interface UserAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onSelectUser?: (user: LinkedUser) => void;
+  onDeleteUser?: (userId: string) => Promise<void>;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -19,6 +21,7 @@ export function UserAutocomplete({
   value,
   onChange,
   onSelectUser,
+  onDeleteUser,
   placeholder = "Digite o nome ou selecione um usuário",
   className,
   disabled = false,
@@ -39,7 +42,7 @@ export function UserAutocomplete({
     }
 
     const term = searchTerm.toLowerCase().trim();
-    
+
     return linkedUsers.filter((user) => {
       const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
       const firstName = user.firstName?.toLowerCase() || "";
@@ -47,14 +50,14 @@ export function UserAutocomplete({
 
       // Busca por nome completo
       if (fullName.includes(term)) return true;
-      
+
       // Busca por partes do nome (primeiro ou último nome)
       if (firstName.includes(term) || lastName.includes(term)) return true;
-      
+
       // Busca por palavras separadas (ex: "joão silva" encontra "João da Silva")
       const searchWords = term.split(/\s+/).filter(w => w.length > 0);
       if (searchWords.length > 1) {
-        const allWordsMatch = searchWords.every(word => 
+        const allWordsMatch = searchWords.every(word =>
           firstName.includes(word) || lastName.includes(word) || fullName.includes(word)
         );
         if (allWordsMatch) return true;
@@ -93,7 +96,7 @@ export function UserAutocomplete({
     setSearchTerm(fullName);
     onChange(fullName);
     setIsOpen(false);
-    
+
     if (onSelectUser) {
       onSelectUser(user);
     }
@@ -114,58 +117,83 @@ export function UserAutocomplete({
   // Componente para item do usuário (permite usar useState para erro de imagem)
   const UserItem = ({ user }: { user: LinkedUser }) => {
     const [imageError, setImageError] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const fullName = `${user.firstName} ${user.lastName}`.trim();
     const firstLetter = fullName.charAt(0).toUpperCase();
     const hasAvatar = !!user.avatarUrl && !imageError;
 
-    return (
-      <button
-        type="button"
-        onClick={() => handleSelectUser(user)}
-        className="w-full px-4 py-3 text-left hover:bg-gray-3 transition-colors focus:outline-none focus:bg-gray-3"
-      >
-        <div className="flex items-center gap-3">
-          {/* Avatar ou inicial */}
-          {hasAvatar ? (
-            <div className="relative size-10 rounded-full overflow-hidden shrink-0">
-              <Image
-                src={getAvatarUrl(user.avatarUrl!)}
-                alt={fullName}
-                fill
-                className="object-cover"
-                onError={() => setImageError(true)}
-              />
-            </div>
-          ) : (
-            <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
-              <span className="text-primary-11 font-semibold text-sm">
-                {firstLetter}
-              </span>
-            </div>
-          )}
+    const handleDelete = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!onDeleteUser || deleting) return;
+      setDeleting(true);
+      try {
+        await onDeleteUser(user.id);
+      } finally {
+        setDeleting(false);
+      }
+    };
 
-          <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-12 text-sm truncate">
-                {fullName}
-              </span>
-              {user.isMainUser && (
-                <span className="text-xs px-2 py-0.5 rounded bg-primary-5 text-primary-11 font-medium shrink-0">
-                  Você
+    return (
+      <div className="flex items-center relative">
+        <button
+          type="button"
+          onClick={() => handleSelectUser(user)}
+          className="flex-1 min-w-0 px-4 py-3 text-left hover:bg-gray-3 transition-colors focus:outline-none focus:bg-gray-3"
+        >
+          <div className="flex items-center gap-3">
+            {hasAvatar ? (
+              <div className="relative size-10 rounded-full overflow-hidden shrink-0">
+                <Image
+                  src={getAvatarUrl(user.avatarUrl!)}
+                  alt={fullName}
+                  fill
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            ) : (
+              <div className="size-10 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
+                <span className="text-primary-11 font-semibold text-sm">
+                  {firstLetter}
                 </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-gray-11 truncate">{user.email}</span>
-              {user.documentNumber && (
-                <span className="text-xs text-gray-11">
-                  CPF: {formatCPF(user.documentNumber)}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1 flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-12 text-sm truncate">
+                  {fullName}
                 </span>
-              )}
+                {user.isMainUser && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-primary-5 text-primary-11 font-medium shrink-0">
+                    Você
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-gray-11 truncate">{user.email}</span>
+                {user.documentNumber && (
+                  <span className="text-xs text-gray-11">
+                    CPF: {formatCPF(user.documentNumber)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </button>
+        </button>
+
+        {!user.isMainUser && onDeleteUser && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="absolute right-3 size-6 flex items-center justify-center rounded bg-red-11 hover:bg-red-12 transition-colors disabled:opacity-50"
+            title="Remover usuário vinculado"
+          >
+            <X className="size-3 text-red-2" />
+          </button>
+        )}
+      </div>
     );
   };
 

@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
 import { Dropdown } from "@/components/Dropdown";
 import { BRAZIL_STATES } from "@/utils/locationFacets";
+import { useCitiesByState } from "@/hooks/useCitiesByState";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
@@ -45,6 +46,8 @@ export default function EditInformationPage() {
   const eventId = params.id as string;
   const appSurface = useOrganizerAppSurface();
   const { formData, updateFormData, errors, setErrors } = useEditEvent();
+
+  const { cities: stateCities, loading: loadingCities } = useCitiesByState(formData.state ?? "");
 
   const [saving, setSaving] = useState(false);
   const [loadingCEP, setLoadingCEP] = useState(false);
@@ -689,13 +692,25 @@ export default function EditInformationPage() {
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     Cidade
                   </label>
-                  <Input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="Digite o nome da cidade"
-                    className="h-12"
+                  <Dropdown
+                    dataAttribute="city-edit"
+                    options={stateCities.map((c) => ({ id: c, label: c }))}
+                    selectedIds={formData.city ? [formData.city] : []}
+                    onSelect={(option) => updateFormData({ city: option.id ?? "" })}
+                    width="w-full"
+                    maxHeight="max-h-[240px]"
+                    className="top-14"
+                    trigger={() => (
+                      <div className={`border-gray-6 flex h-12 w-full items-center rounded-md border bg-transparent px-3 md:text-base transition-colors ${!formData.state ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-3"}`}>
+                        <span className={formData.city ? "text-gray-12" : "text-gray-11"}>
+                          {loadingCities
+                            ? "Carregando cidades..."
+                            : !formData.state
+                              ? "Selecione o estado primeiro"
+                              : formData.city || "Selecione a cidade"}
+                        </span>
+                      </div>
+                    )}
                   />
                 </div>
 
@@ -707,7 +722,7 @@ export default function EditInformationPage() {
                     dataAttribute="state-edit"
                     options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${uf} — ${name}` }))}
                     selectedIds={formData.state ? [formData.state] : []}
-                    onSelect={(option) => updateFormData({ state: option.id ?? "" })}
+                    onSelect={(option) => updateFormData({ state: option.id ?? "", city: "" })}
                     width="w-full"
                     maxHeight="max-h-[240px]"
                     className="top-14"

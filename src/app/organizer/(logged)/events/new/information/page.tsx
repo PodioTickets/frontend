@@ -20,6 +20,7 @@ import { Loading } from "@/components/Loading";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
 import { Dropdown } from "@/components/Dropdown";
 import { BRAZIL_STATES } from "@/utils/locationFacets";
+import { useCitiesByState } from "@/hooks/useCitiesByState";
 import {
   DATE_NOT_BEFORE_TODAY_TOAST,
   getMinDateForRegistrationEndPicker,
@@ -56,6 +57,8 @@ export default function InformacoesPage() {
   const { isAuthenticated, user } = useAuth();
   const { formData, updateFormData, errors, setErrors } = useCreateEvent();
   const { hasPermission, loading: permissionsLoading } = useOrganizerPermissions();
+  const { cities: stateCities, loading: loadingCities } = useCitiesByState(formData.state ?? "");
+
   const [loading, setLoading] = useState(false);
   const [loadingCEP, setLoadingCEP] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -881,13 +884,28 @@ export default function InformacoesPage() {
                       <label className="text-gray-12 text-base font-family-dm-sans">
                         Cidade
                       </label>
-                      <Input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        placeholder="Digite o nome da cidade"
-                        className={`h-12 ${errors.city ? "border-red-10" : ""}`}
+                      <Dropdown
+                        dataAttribute="city-new"
+                        options={stateCities.map((c) => ({ id: c, label: c }))}
+                        selectedIds={formData.city ? [formData.city] : []}
+                        onSelect={(option) => {
+                          updateFormData({ city: option.id ?? "" });
+                          if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
+                        }}
+                        width="w-full"
+                        maxHeight="max-h-[240px]"
+                        className="top-14"
+                        trigger={() => (
+                          <div className={`border-gray-6 flex h-12 w-full items-center rounded-md border bg-transparent px-3 md:text-base transition-colors ${errors.city ? "border-red-10" : ""} ${!formData.state ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-3"}`}>
+                            <span className={formData.city ? "text-gray-12" : "text-gray-11"}>
+                              {loadingCities
+                                ? "Carregando cidades..."
+                                : !formData.state
+                                  ? "Selecione o estado primeiro"
+                                  : formData.city || "Selecione a cidade"}
+                            </span>
+                          </div>
+                        )}
                       />
                       {errors.city && (
                         <p className="text-red-10 text-sm">{errors.city}</p>
@@ -903,8 +921,9 @@ export default function InformacoesPage() {
                         options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${uf} — ${name}` }))}
                         selectedIds={formData.state ? [formData.state] : []}
                         onSelect={(option) => {
-                          updateFormData({ state: option.id ?? "" });
+                          updateFormData({ state: option.id ?? "", city: "" });
                           if (errors.state) setErrors((prev) => ({ ...prev, state: "" }));
+                          if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
                         }}
                         width="w-full"
                         maxHeight="max-h-[240px]"
