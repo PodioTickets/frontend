@@ -26,6 +26,7 @@ export const adminService = new AdminService(apiClient);
 export type {
   AdminAuditLogItem,
   AdminAuditOrganization,
+  AdminProfile,
 } from "./admin/AdminService";
 
 export type {

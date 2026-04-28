@@ -3,12 +3,25 @@
 import type { ReactNode } from "react";
 import { AdminSidebar } from "@/components/Admin/AdminSidebar";
 import { AdminMobileNav } from "@/components/Admin/AdminMobileNav";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 
 export default function AdminLoggedLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const { loading, isAdmin } = useAdminAccess();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
+        <div className="size-8 border-2 border-gray-6 border-t-primary-11 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) return null;
+
   return (
     <div className="min-h-screen bg-gray-2 flex pt-16 md:pt-0">
       <AdminMobileNav />

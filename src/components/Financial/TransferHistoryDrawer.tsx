@@ -45,11 +45,12 @@ export function TransferHistoryDrawer({
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [metrics, setMetrics] = useState<{ totalAmount: number; totalCount: number }>({ totalAmount: 0, totalCount: 0 });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const itemsPerPage = 10;
 
-  const totalTransferredReais = totalTransferred / 100;
+  const totalTransferredReais = (metrics.totalAmount || totalTransferred) / 100;
 
   useEffect(() => {
     if (isOpen && eventId) {
@@ -66,6 +67,7 @@ export function TransferHistoryDrawer({
       setLoading(true);
       const data = await organizerService.getEventTransferHistory(eventId);
       setTransfers(data.transfers);
+      setMetrics(data.metrics);
     } catch (error: any) {
       console.error("Error loading transfers:", error);
       toast.error("Erro ao carregar histórico de repasses");
@@ -89,7 +91,8 @@ export function TransferHistoryDrawer({
       value: transfer.amount / 100, // Converter de centavos
       status: transfer.status === "COMPLETED" ? "Concluído" :
         transfer.status === "PROCESSING" ? "Processando" :
-          transfer.status === "FAILED" ? "Falhou" : "Pendente",
+          transfer.status === "FAILED" ? "Falhou" :
+            transfer.status === "CANCELLED" ? "Cancelado" : "Pendente",
     };
   };
 
@@ -109,10 +112,13 @@ export function TransferHistoryDrawer({
   );
 
   const getStatusBadge = (status: string) => {
-    if (status === "Concluído") {
-      return "bg-primary-11 text-primary-1";
+    switch (status) {
+      case "Concluído":   return "bg-primary-11 text-primary-1";
+      case "Processando": return "bg-yellow-11 text-yellow-1";
+      case "Cancelado":   return "bg-red-11 text-red-1";
+      case "Falhou":      return "bg-red-3 text-red-11";
+      default:            return "bg-gray-4 text-gray-12";
     }
-    return "bg-yellow-11 text-yellow-1";
   };
 
   return (
@@ -215,7 +221,7 @@ export function TransferHistoryDrawer({
                     <p className="font-family-dm-sans font-normal text-base text-gray-11">Transações de repasse</p>
                   </div>
                   <p className="font-manrope font-extrabold text-lg text-gray-12">
-                    {transfers.length}
+                    {metrics.totalCount}
                   </p>
                 </div>
               </div>
@@ -346,18 +352,34 @@ export function TransferHistoryDrawer({
                 <span>Evento: <span className="text-gray-12">{eventName}</span></span>
               </div>
 
-              <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3 mb-5 w-1/3">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                    Total já repassado
-                  </p>
-                  <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                    <CalendarIcon className="size-5 text-gray-12" />
+              <div className="flex gap-3 mb-5">
+                <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3 flex-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                      Total já repassado
+                    </p>
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
+                      <CalendarIcon className="size-5 text-gray-12" />
+                    </div>
                   </div>
+                  <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
+                    R$ {totalTransferredReais.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
                 </div>
-                <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
-                  R$ {totalTransferredReais.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
+
+                <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3 flex-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
+                      Transações de repasse
+                    </p>
+                    <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
+                      <FileText className="size-4 text-gray-12" />
+                    </div>
+                  </div>
+                  <p className="font-family-dm-sans font-extrabold text-[20px] text-gray-12">
+                    {metrics.totalCount}
+                  </p>
+                </div>
               </div>
 
               {/* Table */}
@@ -503,7 +525,8 @@ export function TransferHistoryDrawer({
             value: selectedTransfer.amount / 100,
             status: selectedTransfer.status === "COMPLETED" ? "Concluído" :
               selectedTransfer.status === "PROCESSING" ? "Processando" :
-                selectedTransfer.status === "FAILED" ? "Falhou" : "Pendente",
+                selectedTransfer.status === "FAILED" ? "Falhou" :
+                  selectedTransfer.status === "CANCELLED" ? "Cancelado" : "Pendente",
           }}
           eventName={eventName}
           categoryName={categoryName}

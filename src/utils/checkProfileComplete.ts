@@ -6,13 +6,13 @@ export function skipsParticipantProfileFlow(
   user: unknown,
   pathname?: string | null,
 ): boolean {
-  if (typeof pathname === "string" && pathname.startsWith("/organizer")) {
+  if (typeof pathname === "string" && (pathname.startsWith("/organizer") || pathname.startsWith("/admin"))) {
     return true;
   }
   const u = user as { role?: string } | null;
   if (!u?.role) return false;
   const r = String(u.role).toUpperCase();
-  return r.includes("ORGANIZER");
+  return r.includes("ORGANIZER") || r.includes("ADMIN") || r.includes("PODIOGO_STAFF");
 }
 
 /**

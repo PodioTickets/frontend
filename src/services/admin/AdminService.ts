@@ -313,8 +313,25 @@ function unwrapOrganizationsPayload(body: Record<string, unknown>): {
   return { items: rawItems, pagination };
 }
 
+export interface AdminProfile {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+  avatarUrl?: string | null;
+}
+
 export class AdminService {
   constructor(private apiClient: ApiClient) {}
+
+  async getMe(): Promise<AdminProfile> {
+    const res = await this.apiClient.get<{ data: AdminProfile } | AdminProfile>(
+      "/api/v1/admin/me"
+    );
+    const body = res.data as any;
+    return (body?.data ?? body) as AdminProfile;
+  }
 
   async getAdminOrganizations(params?: {
     page?: number;

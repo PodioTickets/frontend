@@ -950,8 +950,8 @@ export default function EventDashboardPage() {
             <div className="h-[316px]">
               <RevenueChart
                 data={{
-                  labels: dashboardData.registrationsTrend.chartData?.labels || ["Jan", "Fev", "Mar", "Abr"],
-                  revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) || [4000, 12000, 8000, 10000],
+                  labels: dashboardData.registrationsTrend.chartData?.labels ?? [],
+                  revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) ?? [],
                   dailyData: dashboardData.registrationsTrend.chartData?.dailyData,
                 }}
               />
@@ -1296,8 +1296,8 @@ export default function EventDashboardPage() {
           <div className="min-h-0 w-full">
             <RevenueChart
               data={{
-                labels: dashboardData.registrationsTrend.chartData?.labels || ["Jan", "Fev", "Mar", "Abr"],
-                revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) || [4000, 12000, 8000, 10000],
+                labels: dashboardData.registrationsTrend.chartData?.labels ?? [],
+                revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) ?? [],
                 dailyData: dashboardData.registrationsTrend.chartData?.dailyData,
               }}
             />

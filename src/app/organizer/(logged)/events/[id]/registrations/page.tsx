@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { mockRegistrations } from "@/constants";
 import {
   Search,
   Users,
@@ -460,29 +459,14 @@ export default function EventRegistrationsPage() {
           mergeRegistrationStatsWithTrendFallback(registrationsData.stats, prev),
         );
       } catch {
-        const filteredMocks =
-          statusFilter === "all"
-            ? mockRegistrations
-            : mockRegistrations.filter((r) => r.status === statusFilter);
-        setRegistrations(filteredMocks);
-        setPagination({
-          page: 1,
-          limit: 20,
-          total: filteredMocks.length,
-          totalPages: Math.ceil(filteredMocks.length / 20) || 1,
-        });
-        const total = filteredMocks.length;
-        const paid = filteredMocks.filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED").length;
-        const cancelled = filteredMocks.filter((r) => r.status === "CANCELLED").length;
-        const totalCollected = filteredMocks
-          .filter((r) => r.status === "CONFIRMED" || r.status === "COMPLETED")
-          .reduce((sum, r) => sum + (r.finalAmount || 0), 0);
-        setStats({ total, paid, cancelled, totalCollected });
+        setRegistrations([]);
+        setPagination({ page: 1, limit: 20, total: 0, totalPages: 1 });
+        setStats({ total: 0, paid: 0, cancelled: 0, totalCollected: 0 });
       }
     } catch (error: unknown) {
       console.error("Error loading registrations:", error);
-      setRegistrations(mockRegistrations);
-      setPagination({ page: 1, limit: 20, total: mockRegistrations.length, totalPages: 1 });
+      setRegistrations([]);
+      setPagination({ page: 1, limit: 20, total: 0, totalPages: 1 });
     } finally {
       setLoadingList(false);
     }

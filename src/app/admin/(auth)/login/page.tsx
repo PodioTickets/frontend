@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { adminService } from "@/services";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Mail, Lock, Star, Eye, EyeOff } from "lucide-react";
@@ -31,7 +32,8 @@ function translateLoginError(msg: string): string {
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const { login, logout } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,13 +55,29 @@ export default function AdminLoginPage() {
     setIsSubmitting(true);
     try {
       const validatedData: LoginFormData = loginSchema.parse(formData);
+
+      // Login via endpoint padrão (sem accountType) → JWT com role ADMIN/PODIOGO_STAFF
       await login({
         emailOrCpf: validatedData.email,
         password: validatedData.password,
-        accountType: "ORGANIZER",
       });
+
+      // Verifica se o usuário tem permissão de admin
+      try {
+        await adminService.getMe();
+      } catch (adminError: any) {
+        await logout();
+        const status = adminError?.response?.status;
+        const msg = status === 403
+          ? "Acesso negado. Sua conta não possui permissão de administrador."
+          : "Erro ao verificar permissões. Tente novamente.";
+        toast.error(msg);
+        return;
+      }
+
       toast.success("Login realizado com sucesso!");
-      router.push("/admin/events");
+      const next = searchParams.get("next");
+      router.push(next && next.startsWith("/admin") ? next : "/admin/events");
       setFormData({ email: "", password: "" });
       setErrors({});
     } catch (error) {

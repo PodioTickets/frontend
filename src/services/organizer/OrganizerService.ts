@@ -723,10 +723,14 @@ export interface FinancialData {
 export interface Transfer {
   id: string;
   amount: number;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  feeRate?: number;
+  feeAmount?: number;
+  netAmount?: number;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED";
+  notes?: string | null;
   createdAt: string;
-  completedAt?: string;
-  paymentMethod: "PIX" | "TED" | "DOC";
+  completedAt?: string | null;
+  paymentMethod?: "PIX" | "TED" | "DOC";
   bankAccount?: {
     bankName: string;
     account: string;
@@ -2092,15 +2096,20 @@ export class OrganizerService {
 
   async getEventTransferHistory(eventId: string): Promise<{
     transfers: Transfer[];
-    totalTransferred: number;
+    metrics: { totalAmount: number; totalCount: number };
   }> {
     const { data: response } = await this.apiClient.get<{
       data: {
         transfers: Transfer[];
-        totalTransferred: number;
+        metrics?: { totalAmount: number; totalCount: number };
+        totalTransferred?: number;
       };
     }>(`/api/v1/events/${eventId}/financial/transfers`);
-    return response.data;
+    const d = response.data;
+    return {
+      transfers: d.transfers ?? [],
+      metrics: d.metrics ?? { totalAmount: d.totalTransferred ?? 0, totalCount: d.transfers?.length ?? 0 },
+    };
   }
 
   async getEventInstallments(eventId: string): Promise<{

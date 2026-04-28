@@ -35,7 +35,11 @@ export function useAdminAccess() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user || !isAdmin) {
+    if (!user) {
+      router.replace("/admin/login");
+      return;
+    }
+    if (!isAdmin) {
       router.replace("/");
     }
   }, [loading, user, isAdmin, router]);

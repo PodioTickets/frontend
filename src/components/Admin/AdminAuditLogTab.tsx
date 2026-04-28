@@ -26,6 +26,7 @@ import {
 import toast from "react-hot-toast";
 import { AdminAuditLogDetailsDrawer } from "./AdminAuditLogDetailsDrawer";
 import type { AdminAuditChangeDetail } from "@/services/admin/AdminService";
+import { Pagination } from "../Pagination";
 
 const ITEMS_PER_PAGE = 20;
 const ORG_PICKER_PAGE_SIZE = 20;
@@ -53,84 +54,6 @@ const KIND_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "MEMBER_EVENTS", label: "MEMBER_EVENTS" },
   { value: "MEMBER_SETTINGS", label: "MEMBER_SETTINGS" },
 ];
-
-function AdminLogsPaginationBar({
-  totalPages,
-  safePage,
-  onPageChange,
-  variant,
-}: {
-  totalPages: number;
-  safePage: number;
-  onPageChange: (page: number) => void;
-  variant: "mobile" | "desktop";
-}) {
-  if (totalPages <= 1) return null;
-
-  const isMobile = variant === "mobile";
-  const navBtn = isMobile
-    ? "size-8 shrink-0 rounded-lg border border-gray-6 bg-gray-4/80 hover:bg-gray-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-    : "size-8 rounded-full border border-gray-6 bg-gray-1 hover:bg-gray-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors";
-  const pageBtn = (active: boolean) =>
-    cn(
-      "size-8 shrink-0 border text-sm font-medium font-family-dm-sans transition-colors",
-      isMobile ? "rounded-lg" : "rounded-full",
-      active
-        ? "bg-primary-11 text-gray-1 border-primary-11"
-        : isMobile
-          ? "bg-gray-4 text-gray-12 border-transparent hover:bg-gray-5"
-          : "bg-gray-1 border-gray-6 text-gray-12 hover:bg-gray-2"
-    );
-
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 min-w-0",
-        isMobile &&
-          "justify-center w-full max-w-full overflow-x-auto py-4 [&::-webkit-scrollbar]:hidden",
-        !isMobile && "justify-end px-4 py-5 border-t border-gray-6"
-      )}
-      style={
-        isMobile
-          ? { scrollbarWidth: "none", msOverflowStyle: "none" }
-          : undefined
-      }
-    >
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.max(1, safePage - 1))}
-        disabled={safePage <= 1}
-        className={navBtn}
-        aria-label="Página anterior"
-      >
-        <ChevronLeft
-          className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")}
-        />
-      </button>
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-        <button
-          key={p}
-          type="button"
-          onClick={() => onPageChange(p)}
-          className={pageBtn(safePage === p)}
-        >
-          {p}
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
-        disabled={safePage >= totalPages}
-        className={navBtn}
-        aria-label="Próxima página"
-      >
-        <ChevronRight
-          className={cn("size-4", isMobile ? "text-gray-12" : "text-gray-11")}
-        />
-      </button>
-    </div>
-  );
-}
 
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
@@ -285,8 +208,8 @@ export function AdminAuditLogTab() {
         if (cancelled) return;
         toast.error(
           e?.response?.data?.message ||
-            e?.message ||
-            "Erro ao carregar organizações."
+          e?.message ||
+          "Erro ao carregar organizações."
         );
         setOrgListItems([]);
         setOrgListTotalPages(1);
@@ -338,7 +261,7 @@ export function AdminAuditLogTab() {
         if (e?.response?.status === 403) {
           toast.error(
             e?.response?.data?.message ||
-              "Você não tem permissão para visualizar o log global."
+            "Você não tem permissão para visualizar o log global."
           );
           setItems([]);
           setTotal(0);
@@ -346,8 +269,8 @@ export function AdminAuditLogTab() {
         } else {
           toast.error(
             e?.response?.data?.message ||
-              e?.message ||
-              "Erro ao carregar o log do sistema."
+            e?.message ||
+            "Erro ao carregar o log do sistema."
           );
           setItems([]);
           setTotal(0);
@@ -551,15 +474,15 @@ export function AdminAuditLogTab() {
                       const counts =
                         org.memberCount != null || org.eventCount != null
                           ? [
-                              org.memberCount != null
-                                ? `${org.memberCount} membros`
-                                : null,
-                              org.eventCount != null
-                                ? `${org.eventCount} eventos`
-                                : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")
+                            org.memberCount != null
+                              ? `${org.memberCount} membros`
+                              : null,
+                            org.eventCount != null
+                              ? `${org.eventCount} eventos`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
                           : null;
                       return (
                         <button
@@ -932,22 +855,20 @@ export function AdminAuditLogTab() {
         </div>
 
         {!loading && (
-          <AdminLogsPaginationBar
+          <Pagination
             totalPages={totalPages}
-            safePage={safePage}
+            currentPage={page}
             onPageChange={setPage}
-            variant="desktop"
           />
         )}
       </div>
 
       {!loading && (
         <div className="md:hidden mt-3">
-          <AdminLogsPaginationBar
+          <Pagination
             totalPages={totalPages}
-            safePage={safePage}
+            currentPage={page}
             onPageChange={setPage}
-            variant="mobile"
           />
         </div>
       )}

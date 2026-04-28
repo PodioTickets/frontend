@@ -225,8 +225,38 @@ function isValidOrigin(origin: string | null, host: string | null): boolean {
   return false;
 }
 
+function applyAdminAuthGuard(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+
+  if (!pathname.startsWith("/admin")) return null;
+
+  const isPublic = pathname.startsWith("/admin/login");
+  const token = request.cookies.get("access_token")?.value;
+
+  if (isPublic) {
+    // Já autenticado tentando acessar o login → redireciona para área logada
+    if (token) {
+      return NextResponse.redirect(new URL("/admin/events", request.url));
+    }
+    return null;
+  }
+
+  // Rota protegida sem token
+  if (!token) {
+    const loginUrl = new URL("/admin/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return null;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const adminGuard = applyAdminAuthGuard(request);
+  if (adminGuard) return adminGuard;
+
   const hostRoute = applyOrganizerHostRouting(request);
   if (hostRoute) return hostRoute;
 
