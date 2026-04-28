@@ -35,7 +35,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: any;
   login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }) => Promise<void>;
-  register: (data: RegisterData, options?: { skipAutoLogin?: boolean }) => Promise<{ id: string; email: string }>;
+  register: (data: RegisterData) => Promise<{ id: string; email: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -43,19 +43,19 @@ interface AuthContextType {
 interface RegisterData {
   email: string;
   password: string;
-  complete_name?: string;
+  complete_name: string;
+  gender: string;
+  phone: string;
+  dateOfBirth: string;
+  country: string;
+  documentType: string;
+  documentNumber: string;
   acceptedTerms: boolean;
   acceptedPrivacyPolicy: boolean;
   // Campos opcionais
-  gender?: string;
-  phone?: string;
   reserve_phone?: string;
-  dateOfBirth?: string | Date;
-  country?: string;
   state?: string;
   city?: string;
-  documentType?: string;
-  documentNumber?: string;
   sex?: string;
   receiveCalendarEvents?: boolean;
   receivePartnerPromos?: boolean;
@@ -253,81 +253,55 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const register = async (data: RegisterData, options?: { skipAutoLogin?: boolean }): Promise<{ id: string; email: string }> => {
+  const register = async (data: RegisterData): Promise<{ id: string; email: string }> => {
     setIsLoading(true);
     setError(null);
     try {
-      const registerRequest: any = {
+      const createdUser = await userService.register({
         email: data.email,
         password: data.password,
-        complete_name: data.complete_name ?? "",
+        complete_name: data.complete_name,
+        gender: data.gender,
+        phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        country: data.country,
+        documentType: data.documentType,
+        documentNumber: data.documentNumber,
         acceptedTerms: data.acceptedTerms,
         acceptedPrivacyPolicy: data.acceptedPrivacyPolicy,
-      };
-
-      // Campos opcionais
-      if (data.gender) registerRequest.gender = data.gender;
-      if (data.phone) registerRequest.phone = data.phone;
-      if (data.reserve_phone)
-        registerRequest.reserve_phone = data.reserve_phone;
-      if (data.dateOfBirth) {
-        if (typeof data.dateOfBirth === "string") {
-          registerRequest.dateOfBirth = data.dateOfBirth;
-        } else if (data.dateOfBirth instanceof Date) {
-          const year = data.dateOfBirth.getFullYear();
-          const month = String(data.dateOfBirth.getMonth() + 1).padStart(2, "0");
-          const day = String(data.dateOfBirth.getDate()).padStart(2, "0");
-          registerRequest.dateOfBirth = `${year}-${month}-${day}`;
-        }
-      }
-      if (data.country) registerRequest.country = data.country;
-      if (data.state) registerRequest.state = data.state;
-      if (data.city) registerRequest.city = data.city;
-      if (data.documentType) registerRequest.documentType = data.documentType;
-      if (data.documentNumber) registerRequest.documentNumber = data.documentNumber;
-      if (data.sex) registerRequest.sex = data.sex;
-      if (data.receiveCalendarEvents !== undefined)
-        registerRequest.receiveCalendarEvents = data.receiveCalendarEvents;
-      if (data.receivePartnerPromos !== undefined)
-        registerRequest.receivePartnerPromos = data.receivePartnerPromos;
-      if (data.language) registerRequest.language = data.language;
-
-      const createdUser = await userService.register(registerRequest);
+        reserve_phone: data.reserve_phone,
+        state: data.state,
+        city: data.city,
+        sex: data.sex,
+        receiveCalendarEvents: data.receiveCalendarEvents,
+        receivePartnerPromos: data.receivePartnerPromos,
+        language: data.language,
+      });
 
       if (!createdUser) {
         throw new Error("Erro ao realizar cadastro: usuário não retornado");
       }
 
-      if (options?.skipAutoLogin) {
-        return { id: createdUser.id, email: createdUser.email };
+      const apiClient = (userService as any).apiClient;
+      if (createdUser.access_token && apiClient?.setAccessToken) {
+        apiClient.setAccessToken(createdUser.access_token);
+        if (createdUser.refresh_token) {
+          apiClient.setRefreshToken(createdUser.refresh_token);
+        }
       }
 
-      // Auto-login após criação de conta (fluxo legado)
-      try {
-        const response: any = await userService.login({ emailOrCpf: data.email, password: data.password });
-        if (response.success && response.data?.user) {
-          const loggedUser = response.data.user;
-          if (response.data.access_token) {
-            const apiClient = (userService as any).apiClient;
-            if (apiClient && apiClient.setAccessToken) {
-              apiClient.setAccessToken(response.data.access_token);
-              if (response.data.refresh_token) {
-                apiClient.setRefreshToken(response.data.refresh_token);
-              }
-            }
-          }
-          const userWithCache = { ...loggedUser, _cachedAt: Date.now() };
-          localStorage.setItem("user", JSON.stringify(userWithCache));
-          setUser(loggedUser);
-        } else {
-          const errorMessage = response.error || "Cadastro realizado, mas o login automático falhou.";
-          console.warn("Login automático após registro falhou:", errorMessage);
-          setError(errorMessage);
-        }
-      } catch (loginError: any) {
-        console.warn("Erro no login automático após registro:", loginError);
-        setError(loginError.message || "Cadastro realizado, mas o login automático falhou.");
-      }
+      const userObj = {
+        id: createdUser.id,
+        email: createdUser.email,
+        firstName: createdUser.firstName ?? "",
+        lastName: createdUser.lastName ?? "",
+        documentNumber: createdUser.documentNumber ?? "",
+        role: createdUser.role,
+        accountType: createdUser.accountType ?? "USER",
+        avatarUrl: createdUser.avatarUrl ?? "",
+      };
+      localStorage.setItem("user", JSON.stringify({ ...userObj, _cachedAt: Date.now() }));
+      setUser(userObj as any);
 
       return { id: createdUser.id, email: createdUser.email };
     } catch (err: unknown) {

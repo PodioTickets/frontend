@@ -32,10 +32,9 @@ type RegisterStep = 1 | 2 | 3;
 export function RegisterModal() {
   const { isOpen, closeRegisterModal, data: modalData } = useRegisterModal();
   const { openLoginModal } = useLoginModal();
-  const { register, login, isLoading: authLoading, user, refetchUser } = useAuth();
+  const { register, isLoading: authLoading, user, refetchUser } = useAuth();
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   // Verifica se é para completar cadastro
   const isCompletingProfile = modalData?.completeProfile === true && !!user;
@@ -67,7 +66,6 @@ export function RegisterModal() {
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
-      setPendingUserId(null);
     }
   }, [isOpen]);
 
@@ -250,71 +248,67 @@ export function RegisterModal() {
   };
 
   const handleNext = async () => {
-    // Step 1: email + senha → cria o usuário sem login e avança
+    // Step 1: email + senha → só valida e avança, sem chamada de API
     if (currentStep === 1) {
       if (!validateStep2()) return;
-      setIsSubmitting(true);
-      try {
-        const created = await register(
-          {
-            email: formData.email,
-            password: formData.senha,
-            acceptedTerms: true,
-            acceptedPrivacyPolicy: true,
-          },
-          { skipAutoLogin: true }
-        );
-        setPendingUserId(created.id);
-        setCurrentStep(2);
-      } catch (error: unknown) {
-        const e = error as Error & Partial<Pick<AuthError, "formFieldErrors">>;
-        const msg = e?.message || "Erro ao criar conta. Tente novamente.";
-        if (e.formFieldErrors?.email) {
-          setErrors((prev) => ({ ...prev, email: e.formFieldErrors!.email! }));
-        }
-        toast.error(msg);
-      } finally {
-        setIsSubmitting(false);
-      }
+      setCurrentStep(2);
       return;
     }
 
-    // Step 2: dados pessoais → atualiza o usuário criado (ou completa perfil)
+    // Step 2: dados pessoais
     if (currentStep === 2) {
       if (!validateStep1()) return;
 
       setIsSubmitting(true);
       try {
-        const targetUserId = isCompletingProfile ? user?.id : pendingUserId;
-        if (!targetUserId) {
-          toast.error("Sessão expirada. Tente novamente.");
-          setCurrentStep(1);
-          return;
-        }
-
-        await userService.updateUser(targetUserId, buildPersonalUpdateData(formData));
-
-        // Faz login somente após atualizar os dados pessoais
-        if (!isCompletingProfile) {
-          await login({ emailOrCpf: formData.email, password: formData.senha });
-        } else {
-          await refetchUser();
-        }
-
-        setCurrentStep(3);
-        toast.success(isCompletingProfile ? "Cadastro finalizado com sucesso!" : "Cadastro realizado com sucesso!");
-
+        // Fluxo: completar perfil Google OAuth
         if (isCompletingProfile) {
+          await userService.updateUser(user!.id, buildPersonalUpdateData(formData));
+          await refetchUser();
+          setCurrentStep(3);
+          toast.success("Cadastro finalizado com sucesso!");
           setTimeout(() => {
             closeRegisterModal();
             if (typeof window !== "undefined") {
               sessionStorage.removeItem("redirectAfterLogin");
             }
           }, 1500);
+          return;
         }
+
+        // Fluxo: novo cadastro com email/senha — uma única chamada com todos os dados
+        const genderMap: Record<string, string> = {
+          masculino: "MALE",
+          feminino: "FEMALE",
+          outro: "OTHER",
+          "prefiro não informar": "PREFER_NOT_TO_SAY",
+        };
+        const date = formData.dataNascimento!;
+        const dateOfBirth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+        await register({
+          email: formData.email,
+          password: formData.senha,
+          complete_name: formData.nome.trim(),
+          gender: genderMap[formData.sexo.toLowerCase().trim()] ?? formData.sexo,
+          phone: formData.telefone,
+          reserve_phone: formData.telefoneEmergencia || undefined,
+          dateOfBirth,
+          country: formData.nacionalidade,
+          documentNumber: formData.cpf,
+          documentType: "CPF",
+          acceptedTerms: true,
+          acceptedPrivacyPolicy: true,
+        });
+
+        setCurrentStep(3);
+        toast.success("Cadastro realizado com sucesso!");
       } catch (error: unknown) {
         const e = error as Error & Partial<Pick<AuthError, "formFieldErrors">>;
-        const msg = e?.message || "Erro ao salvar informações. Tente novamente.";
+        const msg = e?.message || "Erro ao criar conta. Tente novamente.";
+        if (e.formFieldErrors?.email) {
+          setErrors((prev) => ({ ...prev, email: e.formFieldErrors!.email! }));
+        }
         if (e.formFieldErrors?.cpf) {
           setErrors((prev) => ({ ...prev, cpf: e.formFieldErrors!.cpf! }));
         }

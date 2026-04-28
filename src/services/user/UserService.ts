@@ -31,18 +31,18 @@ export interface RegisterRequest {
   email: string;
   password: string;
   complete_name: string;
+  gender: string;
+  phone: string;
+  dateOfBirth: string;
+  country: string;
+  documentType: string;
+  documentNumber: string;
   acceptedTerms: boolean;
   acceptedPrivacyPolicy: boolean;
   // Campos opcionais
-  gender?: string;
-  phone?: string;
   reserve_phone?: string;
-  dateOfBirth?: string | Date;
-  country?: string;
   state?: string;
   city?: string;
-  documentType?: string;
-  documentNumber?: string;
   sex?: string;
   receiveCalendarEvents?: boolean;
   receivePartnerPromos?: boolean;
@@ -51,17 +51,20 @@ export interface RegisterRequest {
 
 export interface RegisterResponse {
   message?: string;
+  success?: boolean;
   data?: {
+    access_token?: string;
+    refresh_token?: string;
     user: {
       id: string;
       email: string;
       firstName?: string;
       lastName?: string;
-      complete_name?: string;
-      phone?: string;
       documentNumber?: string;
       role: string;
+      accountType?: string;
       isActive?: boolean;
+      avatarUrl?: string;
     };
   };
 }
@@ -260,51 +263,42 @@ export class UserService {
     }
   }
 
-  async register(data: RegisterRequest) {
+  async register(data: RegisterRequest): Promise<{
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    documentNumber?: string;
+    role: string;
+    accountType?: string;
+    avatarUrl?: string;
+    access_token?: string;
+    refresh_token?: string;
+  }> {
     try {
-      // Prepara os dados conforme o formato esperado pelo servidor (EmailRegisterDto)
       const registerData: any = {
         email: data.email,
         password: data.password,
         complete_name: data.complete_name,
+        gender: data.gender,
+        phone: data.phone.replace(/\D/g, ""),
+        dateOfBirth: data.dateOfBirth,
+        country: data.country,
+        documentType: data.documentType,
+        documentNumber: data.documentNumber.replace(/\D/g, ""),
         acceptedTerms: data.acceptedTerms ?? true,
         acceptedPrivacyPolicy: data.acceptedPrivacyPolicy ?? true,
       };
 
-      // Campos opcionais
-      if (data.gender) registerData.gender = data.gender;
-      if (data.phone) registerData.phone = data.phone.replace(/\D/g, ""); // Remove formatação
-      if (data.reserve_phone)
-        registerData.reserve_phone = data.reserve_phone.replace(/\D/g, ""); // Remove formatação
-      if (data.dateOfBirth) {
-        // Garante que dateOfBirth seja uma string no formato YYYY-MM-DD
-        if (typeof data.dateOfBirth === "string") {
-          registerData.dateOfBirth = data.dateOfBirth;
-        } else {
-          // Se não é string, assume que é Date
-          const date = data.dateOfBirth as Date;
-          registerData.dateOfBirth = date.toISOString().split("T")[0]; // Formato YYYY-MM-DD
-        }
-      }
-      if (data.country) registerData.country = data.country;
+      if (data.reserve_phone) registerData.reserve_phone = data.reserve_phone.replace(/\D/g, "");
       if (data.state) registerData.state = data.state;
       if (data.city) registerData.city = data.city;
-      if (data.documentType) registerData.documentType = data.documentType;
-      if (data.documentNumber)
-        registerData.documentNumber = data.documentNumber.replace(/\D/g, ""); // Remove formatação
       if (data.sex) registerData.sex = data.sex;
-      if (data.receiveCalendarEvents !== undefined)
-        registerData.receiveCalendarEvents = data.receiveCalendarEvents;
-      if (data.receivePartnerPromos !== undefined)
-        registerData.receivePartnerPromos = data.receivePartnerPromos;
+      if (data.receiveCalendarEvents !== undefined) registerData.receiveCalendarEvents = data.receiveCalendarEvents;
+      if (data.receivePartnerPromos !== undefined) registerData.receivePartnerPromos = data.receivePartnerPromos;
       if (data.language) registerData.language = data.language;
 
-      const response = await this.apiClient.post<RegisterResponse>(
-        "/api/v1/auth/register",
-        registerData
-      );
-
-      console.log("response", response);
+      const response = await this.apiClient.post<RegisterResponse>("/api/v1/auth/register", registerData);
       const responseBody = response.data as RegisterResponse;
       const user = responseBody?.data?.user;
 
@@ -312,7 +306,11 @@ export class UserService {
         throw new Error("Resposta do servidor não contém dados do usuário");
       }
 
-      return user;
+      return {
+        ...user,
+        access_token: responseBody.data?.access_token,
+        refresh_token: responseBody.data?.refresh_token,
+      };
     } catch (error: any) {
       throw this.handleError(error);
     }
