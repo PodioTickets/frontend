@@ -1,11 +1,13 @@
+# syntax=docker/dockerfile:1.4
 FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
 
 # ── 1. Instala dependências ───────────────────────────────────────────────────
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store-frontend,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 # ── 2. Build ──────────────────────────────────────────────────────────────────
 FROM base AS builder
