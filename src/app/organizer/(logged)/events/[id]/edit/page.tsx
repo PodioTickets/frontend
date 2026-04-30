@@ -40,11 +40,11 @@ import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 const EVENT_NAME_MAX_LENGTH = 100;
 
 const SOCIAL_NETWORKS = [
-  { key: "instagram", label: "Instagram", placeholder: "Instagram.com/seuevento", Icon: InstagramIcon },
-  { key: "facebook", label: "Facebook", placeholder: "Facebook.com/seuevento", Icon: FacebookIcon },
-  { key: "youtube", label: "Youtube", placeholder: "Youtube.com/seuevento", Icon: YoutubeIcon },
-  { key: "tiktok", label: "Tiktok", placeholder: "Tiktok.com/seuevento", Icon: TiktokIcon },
-  { key: "website", label: "Site oficial", placeholder: "seusite.com.br", Icon: Globe },
+  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/seuevento", Icon: InstagramIcon },
+  { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/seuevento", Icon: FacebookIcon },
+  { key: "youtube", label: "Youtube", placeholder: "https://youtube.com/@seuevento", Icon: YoutubeIcon },
+  { key: "tiktok", label: "Tiktok", placeholder: "https://tiktok.com/@seuevento", Icon: TiktokIcon },
+  { key: "website", label: "Site oficial", placeholder: "https://seusite.com.br", Icon: Globe },
 ];
 
 interface ViaCEPResponse {
