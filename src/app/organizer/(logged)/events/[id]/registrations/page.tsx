@@ -380,7 +380,7 @@ export default function EventRegistrationsPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingList, setLoadingList] = useState(false);
-  const [event, setEvent] = useState<Pick<Event, "id" | "name" | "slug"> | null>(null);
+  const [event, setEvent] = useState<Pick<Event, "id" | "name"> & { slug?: string } | null>(null);
   const [registrations, setRegistrations] = useState<RegistrationListRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
