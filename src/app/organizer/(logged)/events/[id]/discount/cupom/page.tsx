@@ -212,7 +212,7 @@ export default function CouponsPage() {
     return (
       <div className="min-h-screen bg-gray-2">
         <div className="hidden md:block">
-          <EventPageHeader eventName={event?.name} />
+          <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
         </div>
         <div className="md:hidden">
           <EventMobileHeader
@@ -233,7 +233,7 @@ export default function CouponsPage() {
   return (
     <div className="min-h-screen bg-gray-2">
       <div className="hidden md:block">
-        <EventPageHeader eventName={event?.name} />
+        <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
       </div>
       <EventMobileHeader
         eventId={eventId}
