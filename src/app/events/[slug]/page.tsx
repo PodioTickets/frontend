@@ -784,8 +784,7 @@ export default function EventPage() {
                                 className="w-full text-gray-12 border-gray-6"
                                 onClick={() => setIsContactModalOpen(true)}
                               >
-                                <MessageIcon className="min-w-5 min-h-5" />
-                                Falar com organizador
+                                Falar com o organizador
                               </Button>
                             </div>
                           );
@@ -1052,8 +1051,7 @@ export default function EventPage() {
                             className="w-full text-gray-12 border-gray-6"
                             onClick={() => setIsContactModalOpen(true)}
                           >
-                            <MessageIcon className="min-w-5 min-h-5" />
-                            Falar com organizador
+                            Falar com o organizador
                           </Button>
                         </div>
                       );

@@ -329,8 +329,7 @@ function OrganizerBlock({
               }
             }}
           >
-            <MessageIcon className="min-h-5 min-w-5" />
-            {mobile ? "Falar com o organizador" : "Falar com organizador"}
+            Falar com o organizador
           </Button>
         </div>
       ) : (
