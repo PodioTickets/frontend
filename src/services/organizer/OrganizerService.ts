@@ -1661,6 +1661,27 @@ export class OrganizerService {
     return response.data;
   }
 
+  async exportEventRegistrations(
+    eventId: string,
+    format: "txt" | "excel" | "pdf",
+    fields?: string[],
+  ): Promise<{ blob: Blob; filename: string }> {
+    const params: Record<string, string> = { format };
+    if (fields && fields.length > 0) params.fields = fields.join(",");
+
+    const response = await this.apiClient.get<Blob>(
+      `/api/v1/events/${eventId}/registrations/export`,
+      { params, responseType: "blob" },
+    );
+
+    const contentDisposition = (response.headers as any)["content-disposition"] ?? "";
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    const ext = format === "excel" ? "xlsx" : format === "pdf" ? "pdf" : "csv";
+    const filename = match?.[1] ?? `inscricoes-${eventId.slice(0, 8)}.${ext}`;
+
+    return { blob: response.data as unknown as Blob, filename };
+  }
+
   async getEventStats(eventId: string): Promise<EventStats> {
     const { data: response } = await this.apiClient.get<{ data: EventStats }>(
       `/api/v1/events/${eventId}/stats`

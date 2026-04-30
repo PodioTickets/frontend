@@ -2,7 +2,7 @@
 
 import { useExportDataModal } from "@/stores/modalStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, ChevronDown } from "lucide-react";
+import { X, Check, ChevronDown, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/Button";
 import { ExcelIcon } from "../Icons/ExcelIcon";
@@ -11,6 +11,8 @@ import { PDFIcon } from "../Icons/PDFIcon";
 import { ArrowButton } from "../ArrowButton";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
+import { organizerService } from "@/services";
+import toast from "react-hot-toast";
 
 type ExportFormat = "txt" | "excel" | "pdf";
 
@@ -142,6 +144,7 @@ export function ExportDataModal() {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("txt");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(DEFAULT_SELECTED));
+  const [isExporting, setIsExporting] = useState(false);
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
@@ -160,9 +163,37 @@ export function ExportDataModal() {
   const selectAll = () => setSelectedFields(new Set(ALL_FIELDS.map((f) => f.id)));
   const clearAll = () => setSelectedFields(new Set());
 
-  const handleExport = () => {
-    console.log("Exportando como:", selectedFormat, "campos:", Array.from(selectedFields));
-    closeExportDataModal();
+  const handleExport = async () => {
+    if (!eventId) {
+      toast.error("Evento não identificado");
+      return;
+    }
+    if (selectedFields.size === 0) {
+      toast.error("Selecione ao menos um campo para exportar");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const { blob, filename } = await organizerService.exportEventRegistrations(
+        eventId,
+        selectedFormat,
+        Array.from(selectedFields),
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      closeExportDataModal();
+    } catch (err) {
+      console.error("Erro ao exportar:", err);
+      toast.error("Erro ao exportar. Tente novamente.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const AdvancedToggle = ({ className = "" }: { className?: string }) => (
@@ -294,9 +325,10 @@ export function ExportDataModal() {
               <Button
                 type="button"
                 onClick={handleExport}
-                className="flex-1 h-11 bg-primary-11 text-primary-2 font-manrope font-bold text-base hover:bg-primary-10"
+                disabled={isExporting}
+                className="flex-1 h-11 bg-primary-11 text-primary-2 font-manrope font-bold text-base hover:bg-primary-10 disabled:opacity-60"
               >
-                Exportar
+                {isExporting ? <Loader2 className="size-4 animate-spin" /> : "Exportar"}
               </Button>
             </div>
           </motion.div>
@@ -396,9 +428,10 @@ export function ExportDataModal() {
               </Button>
               <Button
                 onClick={handleExport}
-                className="h-11 font-manrope font-bold"
+                disabled={isExporting}
+                className="h-11 font-manrope font-bold disabled:opacity-60"
               >
-                Exportar
+                {isExporting ? <Loader2 className="size-4 animate-spin" /> : "Exportar"}
               </Button>
             </div>
           </motion.div>
