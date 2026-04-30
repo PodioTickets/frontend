@@ -107,6 +107,7 @@ function toOrderResponse(data: any): OrderResponse {
     registrations: data.registrations,
     cancelledAt: data.cancelledAt,
     cancelledReason: data.cancelledReason,
+    couponAutoRemoved: data.couponAutoRemoved ?? false,
   };
 }
 

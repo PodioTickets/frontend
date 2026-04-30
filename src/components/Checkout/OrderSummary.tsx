@@ -69,6 +69,7 @@ interface OrderSummaryProps {
   items?: OrderItem[];
   groupedTickets?: GroupedTicket[];
   serviceFee: number;
+  subtotalOverride?: number;
   total: number;
   coupon: OrderSummaryCoupon;
   voucher?: OrderSummaryVoucher;
@@ -80,6 +81,7 @@ export function OrderSummary({
   items = [],
   groupedTickets = [],
   serviceFee,
+  subtotalOverride,
   total,
   coupon,
   voucher,
@@ -156,8 +158,8 @@ export function OrderSummary({
   // Total de ingressos para label do cupom FIXED
   const totalTicketCount = groupedTickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
 
-  // Subtotal total (ingressos + produtos + taxa)
-  const subtotal = ticketsSubtotal + productsSubtotal + serviceFee;
+  // Subtotal total — usa valor do backend quando disponível
+  const subtotal = subtotalOverride ?? (ticketsSubtotal + productsSubtotal + serviceFee);
 
   const toggleParticipant = (index: number) => {
     setExpandedParticipants((prev) => ({
@@ -203,7 +205,10 @@ export function OrderSummary({
           {isCouponApplied && couponDiscount > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">
-                {couponValueType === "FIXED" && totalTicketCount > 1 ? `${totalTicketCount}x ` : ""}
+                {(() => {
+                  const coveredCount = participantsData.filter(p => p.couponDiscount && p.couponDiscount > 0).length;
+                  return couponValueType === "FIXED" && coveredCount > 1 ? `${coveredCount}x ` : "";
+                })()}
                 {couponType === "QUANTITY" || couponType === "AGE"
                   ? "Cupom automático"
                   : (couponName ? `Cupom ${couponName}` : "Cupom aplicado")}
@@ -295,7 +300,7 @@ export function OrderSummary({
                         </p>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <p className="font-family-dm-sans font-normal text-sm text-gray-11 max-w-full truncate">
+                        <p className="font-family-dm-sans font-normal text-sm text-gray-11 max-w-[200px] truncate">
                           {participantData.categoryName || "Ingresso Avulso"}
                         </p>
                         <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
@@ -391,9 +396,7 @@ export function OrderSummary({
                             </p>
                           </div>
                           <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                            {couponValueType === "FIXED"
-                              ? `-${formatPrice(couponFixedValue ?? 0)}`
-                              : `${couponPercent ?? (participantData.ticketPrice > 0 ? Math.round((participantData.couponDiscount! / participantData.ticketPrice) * 100) : 0)}% OFF`}
+                            -{formatPrice(participantData.couponDiscount!)}
                           </p>
                         </div>
                       )}

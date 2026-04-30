@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { ArrowLeft, Phone, ShoppingCart } from "lucide-react";
+import { ArrowLeft, GlobeIcon, Phone, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
@@ -12,6 +12,7 @@ import { useEventBySlug } from "@/hooks/useEvent";
 import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
+import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
 import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
@@ -25,6 +26,10 @@ import { cn } from "@/utils/cn";
 import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
 import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
+import { InstagramIcon } from "@/components/Icons/InstagramIcon";
+import { FacebookIcon } from "@/components/Icons/FacebookIcon";
+import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
+import { TiktokIcon } from "@/components/Icons/TiktokIcon";
 
 function OrganizerAvatar({
   logoUrl,
@@ -73,6 +78,7 @@ export default function EventPage() {
   const { openLoginModal } = useLoginModal();
   const [imageError, setImageError] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({});
@@ -116,14 +122,7 @@ export default function EventPage() {
     }).format(new Date(date));
   };
 
-  const toggleSection = (sectionId: string) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [sectionId]: !prev[sectionId],
-    }));
-  };
 
-  // Controlar visibilidade do botão fixado ao scrollar
   useEffect(() => {
     const handleScroll = () => {
       // Mostrar botão quando scrollar mais de 200px
@@ -210,7 +209,7 @@ export default function EventPage() {
   return (
     <>
       {/* Mobile Layout */}
-      <div className="md:hidden bg-gray-2 min-h-screen pb-24">
+      <div className="md:hidden bg-gray-2 min-h-screen pb-24 px-4">
         {event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError && (
           <div
             className="absolute top-0 left-0 w-full max-h-[300px] h-full blur-sm"
@@ -230,7 +229,7 @@ export default function EventPage() {
           const shouldShowImage = hasBannerUrl && !imageError;
 
           return shouldShowImage ? (
-            <div className="relative w-full h-[174px] md:h-[174px] mt-10 z-10 rounded-xl overflow-hidden bg-gray-3">
+            <div className="relative w-full h-[174px] md:h-[174px] mt-4 z-10 rounded-xl overflow-hidden">
               <Image
                 src={event.bannerUrl}
                 alt={event.name}
@@ -261,23 +260,42 @@ export default function EventPage() {
         })()}
 
         {/* Main Event Card */}
-        <div className="px-4">
-          <div className="rounded-2xl mt-10 relative z-10 px-4 pt-6 pb-4 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
+        <div className="">
+          <div className="rounded-2xl mt-4 relative z-10 px-4 pt-6 pb-4 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
             <h1 className="text-xl font-bold text-gray-12 mb-4">
               {event.name}
             </h1>
 
             <div className="flex flex-col gap-3 mb-4">
-              <div className="flex items-center gap-2 text-gray-11">
-                <LocationIcon className="size-5 text-gray-11" />
+              <div className="flex items-center gap-2 text-gray-12">
+                <LocationIcon className="size-5 text-gray-12" />
                 <span className="text-sm">
                   {event.location || `${event.city}, ${event.state}`}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-gray-11">
-                <CalendarIcon className="size-5 text-gray-11" />
+              <div className="flex items-center gap-2 text-gray-12">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                  <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                </svg>
+
                 <span className="text-sm">
-                  {formatDate(new Date(event.eventDate))}
+                  Acontece em {formatDate(new Date(event.eventDate))}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-12">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                  <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 7.5H17.5" stroke="#202020" stroke-width="1" strokeLinecap="round" />
+                </svg>
+
+                <span className="text-sm">
+                  Inscrições até {formatDate(new Date(event.registrationEndDate))}
                 </span>
               </div>
               {event.modalities
@@ -306,44 +324,57 @@ export default function EventPage() {
                 })}
             </div>
 
-            {/* Organizer Section */}
             <div className="bg-gray-3 border border-gray-6 rounded-lg p-4 mb-4">
-              <p className="text-sm text-gray-11 mb-3">Organizador</p>
               {(() => {
                 const organizer = getEventOrganizer(event);
                 if (!organizer) return null;
 
+
+                const socialLinks = [
+                  { url: event.instagram, icon: InstagramIcon },
+                  { url: event.facebook, icon: FacebookIcon },
+                  { url: event.youtube, icon: YoutubeIcon },
+                  { url: event.tiktok, icon: TiktokIcon },
+                  { url: event.website, icon: GlobeIcon },
+                ]
+
+
                 return (
                   <>
-                    <div className="flex items-start gap-3 mb-3">
+                    <div className="flex items-center gap-3 mb-3">
                       <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
                         <p className="text-sm font-semibold text-gray-12">
                           {organizer.name}
                         </p>
-                        {organizer.phone && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <Phone className="size-3.5 text-gray-11 shrink-0" />
-                            <a
-                              href={`tel:${phoneDigitsForTel(organizer.phone) || organizer.phone.replace(/\D/g, "")}`}
-                              className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
-                            >
-                              {formatBrazilianPhone(organizer.phone)}
-                            </a>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {socialLinks.map(({ url, icon: Icon }, index) => {
+                            if (!url) return null
+
+                            return (
+                              <Link
+                                key={index}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
+                              >
+                                <Icon className="size-4" />
+                              </Link>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
                     <Button
                       variant="outline"
-                      className="w-full text-gray-12 border-gray-6 bg-gray-1"
+                      className="w-full text-gray-12 border-gray-6"
                       onClick={() => {
                         if (organizer.email) {
                           window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
                         }
                       }}
                     >
-                      <MessageIcon className="min-w-5 min-h-5" />
                       Falar com o organizador
                     </Button>
                   </>
@@ -430,9 +461,6 @@ export default function EventPage() {
             <ShareIcon className="size-5" />
             Compartilhar
           </Button>
-          <button className="text-sm text-gray-11 font-semibold underline w-full text-center">
-            Denunciar evento
-          </button>
         </div>
 
 
@@ -714,36 +742,47 @@ export default function EventPage() {
                           const organizer = getEventOrganizer(event);
                           if (!organizer) return null;
 
+                          const socialLinks = [
+                            { url: event.instagram, icon: InstagramIcon },
+                            { url: event.facebook, icon: FacebookIcon },
+                            { url: event.youtube, icon: YoutubeIcon },
+                            { url: event.tiktok, icon: TiktokIcon },
+                            { url: event.website, icon: GlobeIcon },
+                          ]
+
+
                           return (
                             <div className="space-y-3">
-                              <div className="flex items-start gap-3">
+                              <div className="flex items-center gap-3">
                                 <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 flex flex-col gap-1">
                                   <p className="text-sm font-semibold text-gray-12 truncate">
                                     {organizer.name}
                                   </p>
-                                  {organizer.phone && (
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                      <Phone className="size-3.5 text-gray-11 shrink-0" />
-                                      <a
-                                        href={`tel:${phoneDigitsForTel(organizer.phone) || organizer.phone.replace(/\D/g, "")}`}
-                                        className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
-                                      >
-                                        {formatBrazilianPhone(organizer.phone)}
-                                      </a>
-                                    </div>
-                                  )}
+                                  <div className="flex items-center gap-1">
+                                    {socialLinks.map(({ url, icon: Icon }, index) => {
+                                      if (!url) return null
+
+                                      return (
+                                        <Link
+                                          key={index}
+                                          href={url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
+                                        >
+                                          <Icon className="size-4" />
+                                        </Link>
+                                      )
+                                    })}
+                                  </div>
                                 </div>
                               </div>
 
                               <Button
                                 variant="outline"
                                 className="w-full text-gray-12 border-gray-6"
-                                onClick={() => {
-                                  if (organizer.email) {
-                                    window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
-                                  }
-                                }}
+                                onClick={() => setIsContactModalOpen(true)}
                               >
                                 <MessageIcon className="min-w-5 min-h-5" />
                                 Falar com organizador
@@ -1011,11 +1050,7 @@ export default function EventPage() {
                           <Button
                             variant="outline"
                             className="w-full text-gray-12 border-gray-6"
-                            onClick={() => {
-                              if (organizer.email) {
-                                window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
-                              }
-                            }}
+                            onClick={() => setIsContactModalOpen(true)}
                           >
                             <MessageIcon className="min-w-5 min-h-5" />
                             Falar com organizador
@@ -1117,6 +1152,12 @@ export default function EventPage() {
         onClose={() => setIsShareModalOpen(false)}
         eventName={event.name}
         eventUrl={`/events/${event.slug}`}
+      />
+      <ContactOrganizerModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        organizerEmail={getEventOrganizer(event)?.email ?? ""}
+        eventName={event.name}
       />
     </>
   );

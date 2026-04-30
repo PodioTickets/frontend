@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 export interface Ticket {
   id: string;
   name: string;
+  isActive: boolean;
   groupId: string;
   /** Ordem de exibição dentro da categoria (ou entre avulsos). */
   sortOrder?: number;
@@ -35,7 +36,7 @@ export interface Ticket {
 
 const EMPTY_TICKETS: Ticket[] = [];
 
-export function useTickets(eventId: string | null, enabled: boolean = true) {
+export function useTickets(eventId: string | null, enabled: boolean = true, includeInactive: boolean = false) {
   const queryClient = useQueryClient();
 
   // Query para buscar tickets
@@ -45,16 +46,18 @@ export function useTickets(eventId: string | null, enabled: boolean = true) {
     error,
     refetch: loadTickets,
   } = useQuery<Ticket[]>({
-    queryKey: queryKeys.events.tickets(eventId || ""),
+    queryKey: [...queryKeys.events.tickets(eventId || ""), { includeInactive }],
     queryFn: async () => {
       if (!eventId) return [];
       const response = await organizerService.getTickets(eventId, {
         page: 1,
         limit: 500,
+        ...(includeInactive && { includeInactive: true }),
       });
       const formattedTickets: Ticket[] = response.tickets.map((ticket: any) => ({
         id: ticket.id,
         name: ticket.name,
+        isActive: ticket.isActive ?? true,
         groupId: ticket.categoryId || "uncategorized",
         sortOrder:
           typeof ticket.sortOrder === "number" ? ticket.sortOrder : undefined,

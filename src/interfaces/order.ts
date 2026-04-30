@@ -98,6 +98,7 @@ export interface OrderResponse {
   registrations?: OrderRegistration[];
   cancelledAt?: string;
   cancelledReason?: OrderCancelledReason;
+  couponAutoRemoved?: boolean;
 }
 
 // ---- Request bodies ----

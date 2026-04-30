@@ -94,7 +94,11 @@ export function ChangeEmailModal() {
       setStep("code");
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || "Erro ao solicitar troca de e-mail.";
-      toast.error(msg);
+      if (typeof msg === "string" && msg.toLowerCase().includes("em uso")) {
+        setFormErrors((p) => ({ ...p, newEmail: msg }));
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }

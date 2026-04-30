@@ -543,7 +543,10 @@ export function InformationStep({
         (p?.email || "") !== sp.email ||
         (p?.birthDate || "") !== sp.birthDate ||
         (p?.phone || "") !== sp.phone ||
-        (p?.gender || "") !== sp.gender;
+        (p?.gender || "") !== sp.gender ||
+        String(p?.hasEmergencyContact ?? false) !== (sp.hasEmergencyContact ?? "false") ||
+        (p?.emergencyContactName || "") !== (sp.emergencyContactName || "") ||
+        (p?.emergencyPhone || "") !== (sp.emergencyPhone || "");
       const currentQA = questionAnswers[index] || {};
       map[index] = fieldsDirty || JSON.stringify(currentQA) !== JSON.stringify(snapshot.questionAnswers);
     });
@@ -744,9 +747,15 @@ export function InformationStep({
             }),
           };
 
-          patchParticipants(orderId, payload).catch(() => {
-            toast.error("Erro ao devolver a vaga. Tente novamente.");
-          });
+          patchParticipants(orderId, payload)
+            .then((res) => {
+              if (res.couponAutoRemoved) {
+                toast("Cupom de quantidade removido: carrinho abaixo do mínimo exigido.", { icon: "ℹ️" });
+              }
+            })
+            .catch(() => {
+              toast.error("Erro ao devolver a vaga. Tente novamente.");
+            });
         }
       },
     });
@@ -1746,6 +1755,9 @@ export function InformationStep({
                                     birthDate: p?.birthDate || "",
                                     phone: p?.phone || "",
                                     gender: p?.gender || "",
+                                    hasEmergencyContact: String(p?.hasEmergencyContact ?? false),
+                                    emergencyContactName: p?.emergencyContactName || "",
+                                    emergencyPhone: p?.emergencyPhone || "",
                                   },
                                   questionAnswers: { ...(questionAnswers[participantIndex] || {}) },
                                 },

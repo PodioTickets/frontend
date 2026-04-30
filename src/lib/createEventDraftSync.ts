@@ -104,6 +104,13 @@ export function buildCreateEventBodyFromForm(
     eventData.regulationUrl = reg;
   }
 
+  if (formData.contactEmail?.trim()) eventData.contactEmail = formData.contactEmail.trim();
+  if (formData.instagram?.trim()) eventData.instagram = formData.instagram.trim();
+  if (formData.facebook?.trim()) eventData.facebook = formData.facebook.trim();
+  if (formData.youtube?.trim()) eventData.youtube = formData.youtube.trim();
+  if (formData.tiktok?.trim()) eventData.tiktok = formData.tiktok.trim();
+  if (formData.website?.trim()) eventData.website = formData.website.trim();
+
   return eventData;
 }
 

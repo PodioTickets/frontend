@@ -844,7 +844,7 @@ export interface PaymentDetails {
   };
   coupon: {
     id: string;
-    code: string;
+    code: string | null;
     type: string;
     discountValue: number | null;
     discountPercentage: number | null;
@@ -1828,7 +1828,7 @@ export class OrganizerService {
 
   async getTickets(
     eventId: string,
-    params?: { categoryId?: string; page?: number; limit?: number }
+    params?: { categoryId?: string; page?: number; limit?: number; includeInactive?: boolean }
   ): Promise<{ tickets: any[]; pagination: any }> {
     const { data: response } = await this.apiClient.get<{
       data: { tickets: any[]; pagination: any };

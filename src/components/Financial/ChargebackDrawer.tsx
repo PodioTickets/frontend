@@ -8,10 +8,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, RotateCcw, FileText } from "lucide-react";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
-import { DetailsIcon } from "../Icons/DetailsIcon";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { organizerService } from "@/services";
@@ -20,7 +19,6 @@ import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ChargeBackIcon } from "../Icons/ChargeBackIcon";
 import { Tooltip } from "../Tooltip";
-import { BookIcon } from "../Icons/BookIcon";
 
 interface ChargebackDrawerProps {
   isOpen: boolean;
@@ -354,7 +352,7 @@ export function ChargebackDrawer({
                               }}
                               className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                             >
-                              <DetailsIcon className="size-5 text-gray-12" />
+                              <FileText className="size-4 text-gray-11" />
                             </button>
                           </div>
                         </div>

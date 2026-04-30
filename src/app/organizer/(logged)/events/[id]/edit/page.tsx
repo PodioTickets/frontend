@@ -11,17 +11,19 @@ import { DatePicker } from "@/components/DatePicker";
 import { TimePicker } from "@/components/TimePicker";
 import { InfoIcon } from "@/components/Icons/InfoIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { Plus } from "lucide-react";
+import { Plus, Mail, Globe } from "lucide-react";
+import { InstagramIcon } from "@/components/Icons/InstagramIcon";
+import { FacebookIcon } from "@/components/Icons/FacebookIcon";
+import { TrashIcon } from "@/components/Icons/TrashIcon";
 import toast from "react-hot-toast";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
 import { Dropdown } from "@/components/Dropdown";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { BRAZIL_STATES } from "@/utils/locationFacets";
 import { useCitiesByState } from "@/hooks/useCitiesByState";
 import { ArrowButton } from "@/components/ArrowButton";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
-
-const EVENT_NAME_MAX_LENGTH = 100;
 import {
   DATE_NOT_BEFORE_TODAY_TOAST,
   getMinDateForRegistrationEndPicker,
@@ -30,6 +32,20 @@ import {
   REGISTRATION_END_BEFORE_START_TOAST,
   wouldRegistrationEndBeforeStart,
 } from "@/utils/registrationPeriod";
+import { EmailIcon } from "@/components/Icons/EmailIcon";
+import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
+import { ContactEmailHelpTooltip } from "@/components/Organizer/ContactEmailHelpTooltip";
+import { TiktokIcon } from "@/components/Icons/TiktokIcon";
+
+const EVENT_NAME_MAX_LENGTH = 100;
+
+const SOCIAL_NETWORKS = [
+  { key: "instagram", label: "Instagram", placeholder: "Instagram.com/seuevento", Icon: InstagramIcon },
+  { key: "facebook", label: "Facebook", placeholder: "Facebook.com/seuevento", Icon: FacebookIcon },
+  { key: "youtube", label: "Youtube", placeholder: "Youtube.com/seuevento", Icon: YoutubeIcon },
+  { key: "tiktok", label: "Tiktok", placeholder: "Tiktok.com/seuevento", Icon: TiktokIcon },
+  { key: "website", label: "Site oficial", placeholder: "seusite.com.br", Icon: Globe },
+];
 
 interface ViaCEPResponse {
   cep: string;
@@ -55,6 +71,7 @@ export default function EditInformationPage() {
   const [uploadingPDF, setUploadingPDF] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>(formData.regulationUrl || "");
+  const [openSocials, setOpenSocials] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getCurrentDatePlaceholder = () => {
@@ -401,6 +418,13 @@ export default function EditInformationPage() {
         eventData.googleMapsLink = formData.googleMapsLink;
       }
 
+      if (formData.contactEmail?.trim()) eventData.contactEmail = formData.contactEmail.trim();
+      if (formData.instagram?.trim()) eventData.instagram = formData.instagram.trim();
+      if (formData.facebook?.trim()) eventData.facebook = formData.facebook.trim();
+      if (formData.youtube?.trim()) eventData.youtube = formData.youtube.trim();
+      if (formData.tiktok?.trim()) eventData.tiktok = formData.tiktok.trim();
+      if (formData.website?.trim()) eventData.website = formData.website.trim();
+
       if (registrationStartDateTime) {
         eventData.registrationStartDate = registrationStartDateTime;
       }
@@ -692,25 +716,16 @@ export default function EditInformationPage() {
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     Cidade
                   </label>
-                  <Dropdown
-                    dataAttribute="city-edit"
+                  <SearchableSelect
                     options={stateCities.map((c) => ({ id: c, label: c }))}
-                    selectedIds={formData.city ? [formData.city] : []}
-                    onSelect={(option) => updateFormData({ city: option.id ?? "" })}
-                    width="w-full"
-                    maxHeight="max-h-[240px]"
-                    className="top-14"
-                    trigger={() => (
-                      <div className={`border-gray-6 flex h-12 w-full items-center rounded-md border bg-transparent px-3 md:text-base transition-colors ${!formData.state ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-3"}`}>
-                        <span className={formData.city ? "text-gray-12" : "text-gray-11"}>
-                          {loadingCities
-                            ? "Carregando cidades..."
-                            : !formData.state
-                              ? "Selecione o estado primeiro"
-                              : formData.city || "Selecione a cidade"}
-                        </span>
-                      </div>
-                    )}
+                    value={formData.city ?? ""}
+                    onChange={(val) => updateFormData({ city: val })}
+                    placeholder={!formData.state ? "Selecione o estado primeiro" : "Selecione a cidade"}
+                    searchPlaceholder="Pesquisar cidade..."
+                    emptyText="Nenhuma cidade encontrada"
+                    disabled={!formData.state}
+                    loading={loadingCities}
+                    loadingText="Carregando cidades..."
                   />
                 </div>
 
@@ -761,6 +776,96 @@ export default function EditInformationPage() {
                     className="h-12 pl-10"
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 md:gap-3">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                    Email de atendimento
+                  </h2>
+                  <ContactEmailHelpTooltip />
+                </div>
+                <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">
+                  Utilizado para receber dúvidas dos participantes
+                </p>
+              </div>
+              <div className="relative w-full md:w-1/2">
+                <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+                <Input
+                  type="email"
+                  name="contactEmail"
+                  value={formData.contactEmail}
+                  onChange={handleInputChange}
+                  placeholder="atendimento@seuevento.com.br"
+                  className="h-12 pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 md:gap-3">
+              <div className="flex flex-col gap-2">
+                <h2 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                  Redes sociais
+                </h2>
+                <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.4] md:leading-[1.3]">
+                  Adicione os canais oficiais do evento. Eles aparecem na página pública para que os participantes possam acompanhar atualizações
+                </p>
+              </div>
+              <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-5">
+                {SOCIAL_NETWORKS.some(({ key }) => openSocials.has(key) || !!(formData as any)[key]) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {SOCIAL_NETWORKS.filter(({ key }) => openSocials.has(key) || !!(formData as any)[key]).map(({ key, label, placeholder, Icon }) => (
+                      <div key={key} className="flex gap-4 items-center">
+                        <div className="flex flex-1 gap-4 items-center min-w-0">
+                          <Icon className="size-8 shrink-0 text-gray-12" />
+                          <Input
+                            type="url"
+                            value={(formData as any)[key] || ""}
+                            onChange={(e) => updateFormData({ [key]: e.target.value } as any)}
+                            placeholder={placeholder}
+                            className="h-12 flex-1"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateFormData({ [key]: "" } as any);
+                            setOpenSocials((prev) => { const s = new Set(prev); s.delete(key); return s; });
+                          }}
+                          className="size-8 flex items-center justify-center rounded-lg bg-red-2 border-[1.5px] border-red-6 shrink-0 hover:bg-red-3 transition-colors"
+                          aria-label={`Remover ${label}`}
+                        >
+                          <TrashIcon className="size-5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {SOCIAL_NETWORKS.some(({ key }) => openSocials.has(key) || !!(formData as any)[key]) &&
+                  SOCIAL_NETWORKS.some(({ key }) => !openSocials.has(key) && !(formData as any)[key]) && (
+                    <div className="bg-gray-6 h-px w-full shrink-0" />
+                  )}
+                {SOCIAL_NETWORKS.some(({ key }) => !openSocials.has(key) && !(formData as any)[key]) && (
+                  <div className="flex flex-wrap gap-3">
+                    {SOCIAL_NETWORKS.filter(({ key }) => !openSocials.has(key) && !(formData as any)[key]).map(({ key, label, Icon }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setOpenSocials((prev) => new Set([...prev, key]))}
+                        className="flex items-center gap-2 border border-gray-6 rounded-lg px-4 py-3 text-gray-12 hover:bg-gray-3 transition-colors"
+                      >
+                        <Icon className="size-6 shrink-0" />
+                        <span className="font-manrope font-semibold text-base leading-[1.1]">{label}</span>
+                        <Plus className="size-6 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                  Clique para adicionar uma rede social
+                </p>
               </div>
             </div>
 

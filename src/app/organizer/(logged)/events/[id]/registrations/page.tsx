@@ -73,6 +73,7 @@ type RegistrationListRow = Omit<Registration, "user"> & {
   };
   order?: {
     id?: string;
+    finalAmount: number;
     payment?: {
       status?: string;
       metadata?: unknown;
@@ -307,8 +308,8 @@ function RegistrationRow({
       {/* Valor */}
       <div className="flex h-full items-center justify-center p-4 w-[120px]">
         <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
-          R$ {(registration.ticket?.total
-            ? (registration.ticket.total / 100).toLocaleString("pt-BR", {
+          R$ {(registration.order?.finalAmount
+            ? (registration.order.finalAmount / 100).toLocaleString("pt-BR", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })
@@ -484,7 +485,7 @@ export default function EventRegistrationsPage() {
   useEffect(() => {
     if (!authChecked || authLoading || !eventId) return;
     void loadInitialData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked, authLoading, eventId]);
 
   useEffect(() => {
@@ -983,7 +984,7 @@ export default function EventRegistrationsPage() {
                     const createdDate = registration.createdAt ? new Date(registration.createdAt) : null;
                     const timeStr = createdDate ? createdDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + "H" : "—";
                     const dateStr = createdDate ? createdDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
-                    const price = registration.ticket?.price != null ? (registration.ticket.price / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
+                    const price = registration?.order?.finalAmount != null ? (registration?.order?.finalAmount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
                     return (
                       <div key={registration.id} className="bg-gray-1 border border-gray-6 rounded-lg overflow-hidden">
                         <div className="flex flex-col gap-5 px-3 py-4">

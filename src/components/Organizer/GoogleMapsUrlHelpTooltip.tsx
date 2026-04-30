@@ -354,6 +354,7 @@ export function GoogleMapsUrlHelpTooltip() {
           interactiveHover
           position="topRight"
           leaveDelayMs={250}
+          usePortal
           contentClassName="w-[min(100vw-2rem,403px)] max-w-[403px] p-0 bg-transparent shadow-none rounded-none gap-0 items-stretch px-0 py-0"
           content={
             <TooltipHelpPanel

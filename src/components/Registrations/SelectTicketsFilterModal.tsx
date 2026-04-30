@@ -24,7 +24,7 @@ export function SelectTicketsFilterModal({
   selectedTicketIds = [],
 }: SelectTicketsFilterModalProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(selectedTicketIds);
-  const { tickets, loading } = useTickets(eventId, isOpen);
+  const { tickets, loading } = useTickets(eventId, isOpen, true);
   const { categories } = useTicketCategories(eventId, isOpen);
 
   // Mapear categorias por ID
@@ -188,12 +188,14 @@ function TicketCard({ ticket, categoryName, isSelected, onToggle }: TicketCardPr
       onClick={onToggle}
     >
       <div className="flex flex-col gap-2 mb-4">
-        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-          {categoryName}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3] truncate">
+            {categoryName}
+          </p>
+        </div>
         <div className="flex items-center gap-2">
-          <TicketIcon className="size-5 text-gray-12" />
-          <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
+          <TicketIcon className={`size-5 min-w-[20px] min-h-[20px] text-gray-12`} />
+          <p className={`text-base font-bold font-manrope leading-[1.1] text-gray-12 truncate`}>
             {ticket.name}
           </p>
         </div>

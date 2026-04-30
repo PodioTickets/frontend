@@ -1108,21 +1108,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     (sum, item) => sum + item.price / 100,
     0
   );
-  const subtotalValue = totalPrice + (event.serviceFee || 0) + additionalProductsTotal;
+  // Subtotal e desconto de cupom vêm direto do backend — não recalcular no frontend
+  const subtotalValue = currentOrder
+    ? currentOrder.pricing.subtotal / 100
+    : totalPrice + (event.serviceFee || 0) + additionalProductsTotal;
 
-  // Para cupons percentuais: percent × (ingressos + produtos). Para FIXED: value × nº de ingressos.
-  const couponDiscount = useMemo(() => {
-    if (!currentOrder?.coupon) return 0;
-    const coupon = currentOrder.coupon;
-    if (coupon.type === "PERCENTAGE" && coupon.value > 0) {
-      return ((totalPrice + additionalProductsTotal) * coupon.value) / 100;
-    }
-    if (coupon.type === "FIXED" && coupon.value > 0) {
-      const totalTickets = currentOrder.tickets.reduce((sum, t) => sum + t.quantity, 0);
-      return (coupon.value / 100) * totalTickets;
-    }
-    return currentOrder.pricing.couponDiscount ? currentOrder.pricing.couponDiscount / 100 : 0;
-  }, [currentOrder, totalPrice, additionalProductsTotal]);
+  const couponDiscount = currentOrder?.pricing.couponDiscount
+    ? currentOrder.pricing.couponDiscount / 100
+    : 0;
 
   const voucherDiscount = currentOrder?.pricing.voucherDiscount
     ? currentOrder.pricing.voucherDiscount / 100
@@ -1973,6 +1966,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             items={orderItems}
             groupedTickets={groupedTickets}
             serviceFee={serviceFee}
+            subtotalOverride={currentOrder ? subtotalValue : undefined}
             total={totalValue}
             coupon={{
               code: couponCode,

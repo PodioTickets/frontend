@@ -143,7 +143,16 @@ export function PaymentDetailsModal() {
       : "À vista",
     authorizationCode: paymentDetails.payment?.authorizationCode || "—",
     transactionId: paymentDetails.transactionId || "—",
-    coupon: paymentDetails.coupon?.code || "—",
+    coupon: (() => {
+      const c = paymentDetails.coupon;
+      if (!c) return "—";
+      if (c.code) return c.code;
+      if (c.type === "PERCENTAGE" && c.discountPercentage != null)
+        return `${c.discountPercentage}% de desconto`;
+      if (c.discountValue != null)
+        return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(c.discountValue / 100);
+      return "—";
+    })(),
     nsu: paymentDetails.payment?.nsu || "—",
     ip: paymentDetails.payment?.transactionIp || "—",
   } : {

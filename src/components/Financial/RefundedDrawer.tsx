@@ -8,7 +8,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
 import { DetailsIcon } from "../Icons/DetailsIcon";
@@ -345,7 +345,7 @@ export function RefundedDrawer({
                               }}
                               className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer"
                             >
-                              <DetailsIcon className="size-5 text-gray-12" />
+                              <FileText className="size-4 text-gray-11" />
                             </button>
                           </div>
                         </div>

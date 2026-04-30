@@ -35,6 +35,8 @@ interface PaymentSuccessStepProps {
       price: number;
       quantity: number;
       variationName?: string | null;
+      variationType?: string | null;
+      image?: string | null;
     }>;
     includedProducts?: Array<{
       name: string;
@@ -679,17 +681,45 @@ export function PaymentSuccessStep({
                                   {participantData.additionalProducts.map((product, idx) => (
                                     <div
                                       key={`add-${idx}`}
-                                      className="border border-gray-6 flex items-center justify-between p-4 rounded-xl w-full"
+                                      className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
                                     >
-                                      <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                        {product.name}
-                                        {product.quantity > 1 && (
-                                          <span className="text-gray-11 font-normal"> x{product.quantity}</span>
-                                        )}
-                                      </p>
-                                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                        {formatCurrency(product.price * product.quantity)}
-                                      </p>
+                                      <div className="flex flex-1 gap-3 items-center w-full">
+                                        <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                          <ImageWithInitialFallback
+                                            src={(product as any).image}
+                                            alt={product.name}
+                                            name={product.name}
+                                            fallbackId={`add-${idx}`}
+                                            fill
+                                            sizes="100px"
+                                            className="size-full rounded-lg"
+                                            letterClassName="text-2xl font-semibold"
+                                          />
+                                        </div>
+                                        <div className="flex flex-1 flex-col gap-6 items-start justify-center min-w-0">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                            {product.name}
+                                            {product.quantity > 1 && (
+                                              <span className="text-gray-11 font-normal"> x{product.quantity}</span>
+                                            )}
+                                          </p>
+                                          <div className="flex items-center justify-between w-full">
+                                            <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                              {product.price > 0 ? formatCurrency(product.price * product.quantity) : "Incluso"}
+                                            </p>
+                                            {product.variationName && (
+                                              <div className="flex gap-1 items-center justify-end min-w-[147px]">
+                                                <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                                  {product.variationType || "Variação"}:
+                                                </p>
+                                                <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                                  {product.variationName}
+                                                </p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -1200,17 +1230,45 @@ export function PaymentSuccessStep({
                                   {participantData.additionalProducts.map((product, idx) => (
                                     <div
                                       key={`add-${idx}`}
-                                      className="border border-gray-6 flex items-center justify-between p-4 rounded-xl w-full"
+                                      className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
                                     >
-                                      <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                        {product.name}
-                                        {product.quantity > 1 && (
-                                          <span className="text-gray-11 font-normal"> x{product.quantity}</span>
-                                        )}
-                                      </p>
-                                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                        {formatCurrency(product.price * product.quantity)}
-                                      </p>
+                                      <div className="flex flex-1 gap-3 items-center w-full">
+                                        <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                          <ImageWithInitialFallback
+                                            src={(product as any).image}
+                                            alt={product.name}
+                                            name={product.name}
+                                            fallbackId={`add-${idx}`}
+                                            fill
+                                            sizes="100px"
+                                            className="size-full rounded-lg"
+                                            letterClassName="text-2xl font-semibold"
+                                          />
+                                        </div>
+                                        <div className="flex flex-1 flex-col gap-6 items-start justify-center min-w-0">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                            {product.name}
+                                            {product.quantity > 1 && (
+                                              <span className="text-gray-11 font-normal"> x{product.quantity}</span>
+                                            )}
+                                          </p>
+                                          <div className="flex items-center justify-between w-full">
+                                            <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                              {product.price > 0 ? formatCurrency(product.price * product.quantity) : "Incluso"}
+                                            </p>
+                                            {product.variationName && (
+                                              <div className="flex gap-1 items-center justify-end min-w-[147px]">
+                                                <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                                  {product.variationType || "Variação"}:
+                                                </p>
+                                                <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                                  {product.variationName}
+                                                </p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>

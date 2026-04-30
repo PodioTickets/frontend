@@ -22,6 +22,12 @@ interface EditEventFormData {
   cardImageUrl: string;
   regulationUrl: string;
   description: string;
+  contactEmail: string;
+  instagram: string;
+  facebook: string;
+  youtube: string;
+  tiktok: string;
+  website: string;
 }
 
 interface EditEventContextType {
@@ -52,6 +58,12 @@ const defaultFormData: EditEventFormData = {
   cardImageUrl: "",
   regulationUrl: "",
   description: "",
+  contactEmail: "",
+  instagram: "",
+  facebook: "",
+  youtube: "",
+  tiktok: "",
+  website: "",
 };
 
 const EditEventContext = createContext<EditEventContextType | undefined>(undefined);
@@ -122,6 +134,12 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
         cardImageUrl: typeof cardImageFromApi === "string" ? cardImageFromApi.trim() : "",
         regulationUrl: (eventData as any).regulationUrl || "",
         description: eventData.description || "",
+        contactEmail: (eventData as any).contactEmail || "",
+        instagram: (eventData as any).instagram || "",
+        facebook: (eventData as any).facebook || "",
+        youtube: (eventData as any).youtube || "",
+        tiktok: (eventData as any).tiktok || "",
+        website: (eventData as any).website || "",
       });
     } catch (error) {
       console.error("Error loading event:", error);

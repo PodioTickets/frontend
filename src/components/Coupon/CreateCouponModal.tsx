@@ -33,8 +33,9 @@ export function CreateCouponModal() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
   const [expiryEnabled, setExpiryEnabled] = useState(false);
-  const [minCartValue, setMinCartValue] = useState("");
-  const [minCartEnabled, setMinCartEnabled] = useState(false);
+  const [usageLimit, setUsageLimit] = useState("");
+  const [usageLimitEnabled, setUsageLimitEnabled] = useState(false);
+  const [usageLimitError, setUsageLimitError] = useState("");
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,8 +97,8 @@ export function CreateCouponModal() {
       JSON.stringify([...selectedTicketIds].sort()) !== JSON.stringify(originalTicketIds) ||
       expiryDate !== (c.expiryDate || null) ||
       expiryEnabled !== !!c.expiryDate ||
-      minCartValue !== (c.minCartValue?.toString() || "") ||
-      minCartEnabled !== !!c.minCartValue ||
+      usageLimit !== (c.maxUsage?.toString() || "") ||
+      usageLimitEnabled !== !!c.maxUsage ||
       cpfListStatus !== (c.cpfListStatus || "DISABLED") ||
       JSON.stringify(cpfList) !== JSON.stringify(c.cpfList || []) ||
       minQuantity !== (c.minQuantity?.toString() || "") ||
@@ -107,7 +108,7 @@ export function CreateCouponModal() {
   }, [
     isEditing, data, couponType, code, note, discountType, value,
     appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
-    minCartValue, minCartEnabled, cpfListStatus, cpfList,
+    usageLimit, usageLimitEnabled, cpfListStatus, cpfList,
     minQuantity, minAge, maxAge,
   ]);
 
@@ -151,8 +152,8 @@ export function CreateCouponModal() {
 
         setExpiryDate(c.expiryDate || null);
         setExpiryEnabled(!!c.expiryDate);
-        setMinCartValue(c.minCartValue?.toString() || "");
-        setMinCartEnabled(!!c.minCartValue);
+        setUsageLimit(c.maxUsage?.toString() || "");
+        setUsageLimitEnabled(!!c.maxUsage);
         setCpfListStatus(c.cpfListStatus || "DISABLED");
         setCpfList(c.cpfList || []);
         setMinQuantity(c.minQuantity?.toString() || "");
@@ -170,8 +171,9 @@ export function CreateCouponModal() {
         setShowAdvanced(false);
         setExpiryDate(null);
         setExpiryEnabled(false);
-        setMinCartValue("");
-        setMinCartEnabled(false);
+        setUsageLimit("");
+        setUsageLimitEnabled(false);
+        setUsageLimitError("");
         setCpfListStatus("DISABLED");
         setCpfList([]);
         setMinQuantity("");
@@ -343,6 +345,16 @@ export function CreateCouponModal() {
       }
     }
 
+    if (usageLimitEnabled && usageLimit) {
+      const currentUsageCount = data?.coupon?.usageCount ?? 0;
+      if (parseInt(usageLimit) < currentUsageCount) {
+        const msg = `O limite não pode ser menor que o uso atual (${currentUsageCount})`;
+        setUsageLimitError(msg);
+        toast.error(msg);
+        return;
+      }
+    }
+
     if (!eventId) {
       toast.error("Evento não encontrado");
       return;
@@ -357,7 +369,7 @@ export function CreateCouponModal() {
         value: discountType === "FIXED" ? Math.round(numericValue * 100) : numericValue,
         note: note.trim() || undefined,
         expiryDate: expiryEnabled && expiryDate ? expiryDate : undefined,
-        minCartValue: minCartEnabled && minCartValue ? parseInt(minCartValue) : undefined,
+        maxUsage: usageLimitEnabled && usageLimit ? parseInt(usageLimit) : undefined,
         cpfListStatus,
         cpfList: cpfListStatus === "ENABLED" ? cpfList : undefined,
         // Campos específicos por tipo
@@ -843,22 +855,22 @@ export function CreateCouponModal() {
                                     <div className="flex gap-6">
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
-                                          checked={!minCartEnabled}
+                                          checked={!usageLimitEnabled}
                                           onCheckedChange={(checked) => {
-                                            if (checked) { setMinCartEnabled(false); setMinCartValue(""); }
+                                            if (checked) { setUsageLimitEnabled(false); setUsageLimit(""); setUsageLimitError(""); }
                                           }}
                                         />
                                         <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
                                       </label>
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
-                                          checked={minCartEnabled}
-                                          onCheckedChange={(checked) => { if (checked) setMinCartEnabled(true); }}
+                                          checked={usageLimitEnabled}
+                                          onCheckedChange={(checked) => { if (checked) setUsageLimitEnabled(true); }}
                                         />
                                         <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
                                       </label>
                                     </div>
-                                    {minCartEnabled && (
+                                    {usageLimitEnabled && (
                                       <div className="flex flex-col gap-2 w-full md:w-[259px]">
                                         <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                           Limite
@@ -866,13 +878,22 @@ export function CreateCouponModal() {
                                         <Input
                                           type="text"
                                           placeholder="Ex: 45"
-                                          value={minCartValue}
+                                          value={usageLimit}
                                           onChange={(e) => {
                                             const num = e.target.value.replace(/[^0-9]/g, "");
-                                            setMinCartValue(num);
+                                            setUsageLimit(num);
+                                            const currentUsageCount = data?.coupon?.usageCount ?? 0;
+                                            if (num && parseInt(num) < currentUsageCount) {
+                                              setUsageLimitError(`O limite não pode ser menor que o uso atual (${currentUsageCount})`);
+                                            } else {
+                                              setUsageLimitError("");
+                                            }
                                           }}
-                                          className="h-12"
+                                          className={`h-12 ${usageLimitError ? "border-red-6 focus:border-red-10" : ""}`}
                                         />
+                                        {usageLimitError && (
+                                          <p className="text-sm text-red-11">{usageLimitError}</p>
+                                        )}
                                       </div>
                                     )}
                                   </div>

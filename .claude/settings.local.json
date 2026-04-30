@@ -17,7 +17,8 @@
       "Bash(powershell.exe -NonInteractive -ExecutionPolicy Bypass -File \"C:/Users/muril/.claude/read-claude-md.ps1\")",
       "Bash(curl -s \"http://localhost:3333/api/v1/payments/order/55b6bb92-7e49-48e3-8f20-79a27e045fea/details\")",
       "Bash(git log *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(npx prisma *)"
     ]
   },
   "disabledMcpjsonServers": [

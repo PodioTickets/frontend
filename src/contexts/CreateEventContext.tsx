@@ -20,6 +20,12 @@ export interface CreateEventFormData {
   cardImageUrl: string;
   regulationUrl: string;
   createdEventId: string | null;
+  contactEmail: string;
+  instagram: string;
+  facebook: string;
+  youtube: string;
+  tiktok: string;
+  website: string;
 }
 
 interface CreateEventContextType {
@@ -52,6 +58,12 @@ const initialFormData: CreateEventFormData = {
   cardImageUrl: "",
   regulationUrl: "",
   createdEventId: null,
+  contactEmail: "",
+  instagram: "",
+  facebook: "",
+  youtube: "",
+  tiktok: "",
+  website: "",
 };
 
 // Helper function to load initial data from localStorage

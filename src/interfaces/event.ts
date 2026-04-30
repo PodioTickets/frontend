@@ -22,6 +22,11 @@ export interface Event {
   /** URL do regulamento do evento (ex.: PDF) */
   regulationUrl?: string;
   eventDate: string;
+  website?: string;
+  tiktok?: string;
+  youtube?: string;
+  facebook?: string;
+  instagram?: string;
   registrationStartDate: string;
   registrationEndDate: string;
   hasRegistrationSlotsAvailable?: boolean;

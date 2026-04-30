@@ -64,12 +64,6 @@ function CheckoutSucessoContent() {
         : 0;
 
     const participantsData = registrations.map((reg: any, index: number) => {
-      const includedProductIds = new Set(
-        (reg.ticket?.includedProducts ?? [])
-          .filter((p: any) => p.isIncludedInTicket === true)
-          .map((p: any) => p.id)
-      );
-
       return {
         participantIndex: index,
         ticketName: reg.ticket?.name ?? "Ingresso",
@@ -84,27 +78,15 @@ function CheckoutSucessoContent() {
           })
           .map((p: any) => ({
             name: p.name,
-            price: (p.price ?? 0) / 100,
-            quantity: p.quantity ?? 1,
+            price: (p.basePrice ?? 0) / 100,
+            quantity: 1,
             variationName: p.selectedVariation?.name ?? null,
             variationType: p.variationType ?? null,
             isIncluded: true,
             isRequired: p.isRequired ?? true,
             image: p.image ?? null,
           })),
-        additionalProducts: (reg.products ?? [])
-          .filter((p: any) => {
-            if (includedProductIds.has(p.product?.id)) return false;
-            const variationName = p.variation?.name ?? p.variationName ?? null;
-            if (variationName && isSemInteresseVariation({ name: variationName })) return false;
-            return true;
-          })
-          .map((p: any) => ({
-            name: p.product?.name ?? p.name ?? "",
-            price: (p.unitPrice ?? p.price ?? 0) / 100,
-            quantity: p.quantity ?? 1,
-            variationName: p.variation?.name ?? p.variationName ?? null,
-          })),
+        additionalProducts: [],
       };
     });
 
