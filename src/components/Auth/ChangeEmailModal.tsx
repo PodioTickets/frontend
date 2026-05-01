@@ -240,6 +240,14 @@ export function ChangeEmailModal() {
                       <h2 className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
                         Deseja alterar seu e-mail?
                       </h2>
+                      {user?.email && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-gray-3 rounded-lg border border-gray-6">
+                          <Mail className="w-4 h-4 text-gray-11 shrink-0" />
+                          <span className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
+                            {user.email}
+                          </span>
+                        </div>
+                      )}
                       <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
                         Você usa este e-mail para entrar no PódioTicket e receber
                         confirmações de inscrição. Ao continuar, informe o novo

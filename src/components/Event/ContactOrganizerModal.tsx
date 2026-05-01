@@ -52,13 +52,6 @@ interface FormState {
   message: string;
 }
 
-interface LockedFields {
-  name: boolean;
-  cpf: boolean;
-  email: boolean;
-  phone: boolean;
-}
-
 interface FormErrors {
   name?: string;
   cpf?: string;
@@ -89,13 +82,6 @@ export function ContactOrganizerModal({
     message: "",
   });
 
-  const [locked, setLocked] = useState<LockedFields>({
-    name: false,
-    cpf: false,
-    email: false,
-    phone: false,
-  });
-
   const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
@@ -112,13 +98,6 @@ export function ContactOrganizerModal({
       email: user?.email || prev.email,
       phone: rawPhone ? maskPhone(rawPhone) : prev.phone,
     }));
-
-    setLocked({
-      name: !!fullName,
-      cpf: !!rawCpf,
-      email: !!user?.email,
-      phone: !!rawPhone,
-    });
 
     setErrors({});
     setTurnstileToken(null);
@@ -150,7 +129,9 @@ export function ContactOrganizerModal({
   const validate = (): boolean => {
     const next: FormErrors = {};
 
+    const nameParts = form.name.trim().split(/\s+/).filter(Boolean);
     if (!form.name.trim()) next.name = "Nome é obrigatório";
+    else if (nameParts.length < 2) next.name = "Informe o nome completo (nome e sobrenome)";
 
     const cpfDigits = form.cpf.replace(/\D/g, "");
     if (!cpfDigits) {
@@ -195,12 +176,8 @@ export function ContactOrganizerModal({
     onClose();
   };
 
-  const fieldClass = (error?: string, isLocked?: boolean) =>
-    cn(
-      "h-12 rounded-lg",
-      error && "border-red-9 focus-visible:border-red-9",
-      isLocked && "opacity-60 cursor-not-allowed bg-gray-3"
-    );
+  const fieldClass = (error?: string) =>
+    cn("h-12 rounded-lg", error && "border-red-9 focus-visible:border-red-9");
 
   const subjectTriggerMobile = (isOpen: boolean) => (
     <div
@@ -245,28 +222,28 @@ export function ContactOrganizerModal({
           <div className="flex flex-col gap-2">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Nome completo</label>
             <Input type="text" placeholder="Nome Sobrenome" value={form.name} onChange={handleField("name")}
-              className={fieldClass(errors.name, locked.name)} readOnly={locked.name} tabIndex={locked.name ? -1 : undefined} />
+              className={fieldClass(errors.name)} />
             {errors.name && <p className="text-sm text-red-9 font-family-dm-sans">{errors.name}</p>}
           </div>
           {/* CPF */}
           <div className="flex flex-col gap-2">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">CPF</label>
             <Input type="text" placeholder="000.000.000-00" value={form.cpf} onChange={handleCpfChange} maxLength={14}
-              className={fieldClass(errors.cpf, locked.cpf)} readOnly={locked.cpf} tabIndex={locked.cpf ? -1 : undefined} />
+              className={fieldClass(errors.cpf)} />
             {errors.cpf && <p className="text-sm text-red-9 font-family-dm-sans">{errors.cpf}</p>}
           </div>
           {/* Email */}
           <div className="flex flex-col gap-2">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">E-mail</label>
             <Input type="email" placeholder="seu@email.com" value={form.email} onChange={handleField("email")}
-              className={fieldClass(errors.email, locked.email)} readOnly={locked.email} tabIndex={locked.email ? -1 : undefined} />
+              className={fieldClass(errors.email)} />
             {errors.email && <p className="text-sm text-red-9 font-family-dm-sans">{errors.email}</p>}
           </div>
           {/* Telefone */}
           <div className="flex flex-col gap-2">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Telefone</label>
             <Input type="tel" placeholder="(00) 00000-0000" value={form.phone} onChange={handlePhoneChange} maxLength={15}
-              className={fieldClass(errors.phone, locked.phone)} readOnly={locked.phone} tabIndex={locked.phone ? -1 : undefined} />
+              className={fieldClass(errors.phone)} />
             {errors.phone && <p className="text-sm text-red-9 font-family-dm-sans">{errors.phone}</p>}
           </div>
           {/* Assunto */}
@@ -306,28 +283,28 @@ export function ContactOrganizerModal({
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Nome completo</label>
             <Input type="text" placeholder="Nome Sobrenome" value={form.name} onChange={handleField("name")}
-              className={fieldClass(errors.name, locked.name)} readOnly={locked.name} tabIndex={locked.name ? -1 : undefined} />
+              className={fieldClass(errors.name)} />
             {errors.name && <p className="text-sm text-red-9 font-family-dm-sans">{errors.name}</p>}
           </div>
           {/* CPF */}
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">CPF</label>
             <Input type="text" placeholder="000.000.000-00" value={form.cpf} onChange={handleCpfChange} maxLength={14}
-              className={fieldClass(errors.cpf, locked.cpf)} readOnly={locked.cpf} tabIndex={locked.cpf ? -1 : undefined} />
+              className={fieldClass(errors.cpf)} />
             {errors.cpf && <p className="text-sm text-red-9 font-family-dm-sans">{errors.cpf}</p>}
           </div>
           {/* Email */}
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">E-mail</label>
             <Input type="email" placeholder="seu@email.com" value={form.email} onChange={handleField("email")}
-              className={fieldClass(errors.email, locked.email)} readOnly={locked.email} tabIndex={locked.email ? -1 : undefined} />
+              className={fieldClass(errors.email)} />
             {errors.email && <p className="text-sm text-red-9 font-family-dm-sans">{errors.email}</p>}
           </div>
           {/* Telefone */}
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">Telefone</label>
             <Input type="tel" placeholder="(00) 00000-0000" value={form.phone} onChange={handlePhoneChange} maxLength={15}
-              className={fieldClass(errors.phone, locked.phone)} readOnly={locked.phone} tabIndex={locked.phone ? -1 : undefined} />
+              className={fieldClass(errors.phone)} />
             {errors.phone && <p className="text-sm text-red-9 font-family-dm-sans">{errors.phone}</p>}
           </div>
           {/* Assunto */}
@@ -455,7 +432,7 @@ export function ContactOrganizerModal({
 
           {/* Body */}
           <form onSubmit={handleSubmit} noValidate>
-            <div className="pt-4 pb-6">
+            <div className="pt-4 pb-4">
               <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans px-6 mb-8">
                 Preencha os campos abaixo para enviar sua mensagem.
               </p>
@@ -463,7 +440,7 @@ export function ContactOrganizerModal({
             </div>
 
             {/* Footer */}
-            <div className="flex flex-col items-end gap-3 px-6 pb-8 pt-4">
+            <div className="flex flex-col items-end gap-3 px-6 pb-8">
               {TURNSTILE_SITE_KEY && (
                 <Turnstile
                   ref={desktopTurnstileRef}
