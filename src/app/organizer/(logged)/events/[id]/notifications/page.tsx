@@ -23,7 +23,7 @@ export default function EventNotificationsPage() {
   useEventPermissionGuard("notify");
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [event, setEvent] = useState<{ name?: string } | null>(null);
+  const [event, setEvent] = useState<{ name?: string; slug?: string } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [listRefreshKey, setListRefreshKey] = useState(0);
 
@@ -59,7 +59,7 @@ export default function EventNotificationsPage() {
     return (
       <div className="min-h-screen bg-gray-2">
         <div className="hidden md:block">
-          <EventPageHeader eventName={event?.name} />
+          <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
         </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loading />
@@ -71,7 +71,7 @@ export default function EventNotificationsPage() {
   return (
     <div className="min-h-screen bg-gray-2">
       <div className="hidden md:block">
-        <EventPageHeader eventName={event?.name} />
+        <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
       </div>
 
       <EventMobileHeader

@@ -380,7 +380,7 @@ export default function EventRegistrationsPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingList, setLoadingList] = useState(false);
-  const [event, setEvent] = useState<Pick<Event, "id" | "name"> | null>(null);
+  const [event, setEvent] = useState<Pick<Event, "id" | "name"> & { slug?: string } | null>(null);
   const [registrations, setRegistrations] = useState<RegistrationListRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -579,7 +579,7 @@ export default function EventRegistrationsPage() {
   return (
     <div className="min-h-screen bg-gray-2">
       <div className="hidden md:block">
-        <EventPageHeader eventName={event?.name} />
+        <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
       </div>
 
       <EventMobileHeader

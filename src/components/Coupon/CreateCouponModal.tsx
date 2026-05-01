@@ -38,6 +38,7 @@ export function CreateCouponModal() {
   const [usageLimitError, setUsageLimitError] = useState("");
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
+  const [cpfSearch, setCpfSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
 
@@ -265,6 +266,11 @@ export function CreateCouponModal() {
 
   const handleRemoveCPF = (index: number) => {
     setCpfList(cpfList.filter((_, i) => i !== index));
+  };
+
+  const handleClearList = () => {
+    setCpfList([]);
+    setCpfSearch("");
   };
 
   const formatCPF = (cpf: string) => {
@@ -927,26 +933,24 @@ export function CreateCouponModal() {
 
                                     {cpfListStatus === "ENABLED" && (
                                       <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden flex flex-col">
-                                        <div className="p-5 flex flex-col gap-3">
-                                          <h4 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                            Lista exclusiva
-                                          </h4>
-                                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                            Restrinja o cupom para uma lista específica de CPFs. Importe um CSV com 1 CPF por linha (apenas números)
-                                          </p>
-                                          <div className="pt-1">
-                                            <button
-                                              type="button"
-                                              onClick={handleImportCSV}
-                                              className="flex items-center gap-2 h-11 px-5 border border-gray-6 rounded-lg text-gray-12 font-bold font-manrope text-base hover:bg-gray-3 transition-colors"
-                                            >
-                                              <Plus className="size-5" />
-                                              Importar CSV
-                                            </button>
+                                        {/* Search field */}
+                                        <div className="p-3 border-b border-gray-6">
+                                          <div className="relative">
+                                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-10 pointer-events-none" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                              <path d="M7.333 12.667A5.333 5.333 0 1 0 7.333 2a5.333 5.333 0 0 0 0 10.667ZM14 14l-2.9-2.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                            <input
+                                              type="text"
+                                              placeholder="Busque um cpf..."
+                                              value={cpfSearch}
+                                              onChange={(e) => setCpfSearch(e.target.value)}
+                                              className="w-full h-10 pl-9 pr-3 bg-gray-1 border border-gray-6 rounded-lg text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none focus:border-gray-8"
+                                            />
                                           </div>
                                         </div>
+                                        {/* Table */}
                                         <div className="flex flex-col">
-                                          <div className="bg-gray-3 border-t border-b border-gray-6 flex h-11 items-center">
+                                          <div className="bg-gray-3 border-b border-gray-6 flex h-11 items-center">
                                             <div className="flex-1 px-4">
                                               <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">CPFs autorizados</p>
                                             </div>
@@ -958,36 +962,72 @@ export function CreateCouponModal() {
                                             <div className="p-8 text-center">
                                               <p className="text-gray-11 text-sm">Nenhum CPF adicionado</p>
                                             </div>
-                                          ) : (
-                                            cpfList.map((cpf, index) => (
-                                              <div key={index} className="border-b border-gray-6 h-[52px] flex items-center">
-                                                <div className="flex-1 px-4">
-                                                  <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                                                    {formatCPF(cpf)}
-                                                  </p>
-                                                </div>
-                                                <div className="flex items-center justify-center px-4 w-[74px]">
-                                                  <button
-                                                    type="button"
-                                                    title="Remover CPF"
-                                                    onClick={() => handleRemoveCPF(index)}
-                                                    className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
-                                                  >
-                                                    <TrashIcon className="size-5 text-red-12" />
-                                                  </button>
-                                                </div>
+                                          ) : (() => {
+                                            const filtered = cpfList.filter((cpf) => {
+                                              const query = cpfSearch.replace(/\D/g, "");
+                                              return formatCPF(cpf).includes(cpfSearch) || cpf.includes(query);
+                                            });
+                                            return filtered.length === 0 ? (
+                                              <div className="p-8 text-center">
+                                                <p className="text-gray-11 text-sm">Nenhum CPF encontrado</p>
                                               </div>
-                                            ))
-                                          )}
-                                          <div className="p-4 flex justify-center">
+                                            ) : (
+                                              filtered.map((cpf) => {
+                                                const realIndex = cpfList.indexOf(cpf);
+                                                return (
+                                                  <div key={realIndex} className="border-b border-gray-6 h-[52px] flex items-center">
+                                                    <div className="flex-1 px-4">
+                                                      <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                                                        {formatCPF(cpf)}
+                                                      </p>
+                                                    </div>
+                                                    <div className="flex items-center justify-center px-4 w-[74px]">
+                                                      <button
+                                                        type="button"
+                                                        title="Remover CPF"
+                                                        onClick={() => handleRemoveCPF(realIndex)}
+                                                        className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
+                                                      >
+                                                        <TrashIcon className="size-5 text-red-12" />
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })
+                                            );
+                                          })()}
+                                        </div>
+                                        {/* Footer actions */}
+                                        <div className="px-4 py-3 border-t border-gray-6 flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
                                             <button
-                                              onClick={handleAddCPF}
-                                              className="flex items-center gap-1 h-11 px-11 text-gray-11 text-base font-semibold font-family-dm-sans hover:text-gray-12 transition-colors"
+                                              type="button"
+                                              onClick={handleImportCSV}
+                                              className="flex items-center gap-1.5 h-9 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
                                             >
-                                              <Plus className="size-6" />
+                                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M13.333 10v1.333A2 2 0 0 1 11.333 13.333H4.667A2 2 0 0 1 2.667 11.333V10M5.333 6.667 8 9.333m0 0 2.667-2.666M8 9.333V2.667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                              </svg>
+                                              Importar arquivo
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={handleAddCPF}
+                                              className="flex items-center gap-1.5 h-9 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
+                                            >
+                                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                              </svg>
                                               Adicionar campo
                                             </button>
                                           </div>
+                                          <button
+                                            type="button"
+                                            onClick={handleClearList}
+                                            className="text-sm font-semibold font-family-dm-sans text-gray-11 hover:text-red-11 transition-colors"
+                                          >
+                                            Limpar lista
+                                          </button>
                                         </div>
                                       </div>
                                     )}

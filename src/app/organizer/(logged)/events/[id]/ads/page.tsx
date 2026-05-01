@@ -179,7 +179,7 @@ export default function AdsPage() {
     return (
       <div className="min-h-screen bg-gray-2">
         <div className="hidden md:block">
-          <EventPageHeader eventName={event?.name} />
+          <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
         </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <Loading />
@@ -192,7 +192,7 @@ export default function AdsPage() {
     <div className="min-h-screen bg-gray-2">
       {/* Desktop header */}
       <div className="hidden md:block">
-        <EventPageHeader eventName={event?.name} />
+        <EventPageHeader eventName={event?.name} eventSlug={event?.slug} />
       </div>
 
       <EventMobileHeader
