@@ -1076,7 +1076,7 @@ export function CreateCouponModal() {
                                             <button
                                               type="button"
                                               onClick={handleConfirmAddCPF}
-                                              className="h-9 px-3 rounded-lg bg-green-9 text-white text-sm font-semibold font-family-dm-sans hover:bg-green-10 transition-colors"
+                                              className="h-9 px-3 rounded-lg border border-gray-6 text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
                                             >
                                               Confirmar
                                             </button>
