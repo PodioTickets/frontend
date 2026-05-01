@@ -59,6 +59,9 @@ export function CreateCouponModal() {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [isAddingCpf, setIsAddingCpf] = useState(false);
   const [newCpfInput, setNewCpfInput] = useState("");
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isDraggingCsv, setIsDraggingCsv] = useState(false);
+  const [cpfListError, setCpfListError] = useState("");
 
   const minSelectableExpiryDate = useMemo(() => {
     const d = new Date();
@@ -289,12 +292,10 @@ export function CreateCouponModal() {
   };
 
   const handleImportCSV = () => {
-    csvInputRef.current?.click();
+    setShowImportModal(true);
   };
 
-  const handleCSVFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processCSVFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
@@ -308,17 +309,35 @@ export function CreateCouponModal() {
         if (cpfList.includes(digits) || newCpfs.includes(digits)) { duplicates++; continue; }
         newCpfs.push(digits);
       }
-      if (newCpfs.length > 0) setCpfList((prev) => [...prev, ...newCpfs]);
+      if (newCpfs.length > 0) {
+        setCpfList((prev) => [...prev, ...newCpfs]);
+        setCpfListError("");
+      }
       const parts: string[] = [];
       if (newCpfs.length > 0) parts.push(`${newCpfs.length} CPF(s) importado(s)`);
       if (duplicates > 0) parts.push(`${duplicates} duplicado(s) ignorado(s)`);
       if (invalid > 0) parts.push(`${invalid} inválido(s) ignorado(s)`);
       if (parts.length > 0) toast.success(parts.join(", "));
       else toast.error("Nenhum CPF válido encontrado no arquivo.");
+      setShowImportModal(false);
     };
     reader.onerror = () => toast.error("Erro ao ler o arquivo.");
     reader.readAsText(file);
+  };
+
+  const handleCSVFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processCSVFile(file);
     e.target.value = "";
+  };
+
+  const handleDropzoneDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingCsv(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    processCSVFile(file);
   };
 
   const handleRemoveCPF = (index: number) => {
@@ -416,6 +435,13 @@ export function CreateCouponModal() {
         toast.error(msg);
         return;
       }
+    }
+
+    if (cpfListStatus === "ENABLED" && cpfList.length === 0) {
+      const msg = "Adicione ao menos um CPF à lista ou desabilite a restrição por CPF";
+      setCpfListError(msg);
+      toast.error(msg);
+      return;
     }
 
     if (!eventId) {
@@ -524,6 +550,117 @@ export function CreateCouponModal() {
         className="hidden"
         onChange={handleCSVFileChange}
       />
+
+      {/* Modal de importação de CSV */}
+      <AnimatePresence>
+        {showImportModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black/60 z-[60]"
+              onClick={() => setShowImportModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-[61] flex items-center justify-center p-4"
+            >
+              <div className="bg-gray-1 rounded-xl w-full max-w-[480px] flex flex-col overflow-hidden shadow-xl">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6">
+                  <span className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]">Importar lista de CPF</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportModal(false)}
+                    className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
+                  >
+                    <X className="size-4 text-gray-11" />
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-col gap-9 px-5 pt-5 pb-8 overflow-y-auto">
+                  {/* Formato esperado */}
+                  <div className="flex flex-col gap-4">
+                    <h3 className="text-gray-12 text-lg font-semibold font-family-manrope leading-[1.1]">Formato esperado do arquivo</h3>
+                    <div className="w-[290px] bg-gray-2 rounded-lg border border-gray-6 overflow-hidden flex flex-col">
+                      {["111.111.111-11", "111.111.111-11", "111.111.111-11"].map((cpf, i) => (
+                        <div key={i} className="flex items-center gap-3 h-8 border-b border-gray-6">
+                          <div className="w-8 h-8 flex items-center justify-center border-r border-gray-6 shrink-0">
+                            <span className="text-gray-11 text-sm font-family-dm-sans">{i + 1}</span>
+                          </div>
+                          <span className="text-green-11 text-sm font-semibold font-family-dm-sans">{cpf}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-3 h-8 border-b border-gray-6">
+                        <div className="w-8 h-8 flex items-center justify-center border-r border-gray-6 shrink-0">
+                          <span className="text-gray-11 text-sm font-family-dm-sans">4</span>
+                        </div>
+                        <span className="text-gray-11 text-sm font-semibold font-family-dm-sans">...</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <svg className="size-6 shrink-0 text-gray-11 mt-0.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+                        <circle cx="12" cy="8" r="1" fill="currentColor"/>
+                        <line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">1 CPF por linha. Pode usar apenas números, com pontuação ou sem pontuação. Duplicadas serão ignoradas automaticamente.</p>
+                    </div>
+                  </div>
+
+                  {/* Drop zone */}
+                  <div className="flex flex-col gap-4">
+                    <h3 className="text-gray-12 text-lg font-semibold font-family-manrope leading-[1.1]">Arquivo CSV</h3>
+                    <div
+                      onClick={() => csvInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
+                      onDragLeave={() => setIsDraggingCsv(false)}
+                      onDrop={handleDropzoneDrop}
+                      className={`flex items-center gap-4 p-6 rounded-xl border-2 cursor-pointer transition-colors ${isDraggingCsv ? "border-green-8 bg-green-2" : "border-gray-6 hover:border-gray-8 hover:bg-gray-2"}`}
+                    >
+                      <div className="size-16 flex items-center justify-center shrink-0">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="16" y="8" width="32" height="40" rx="3" stroke="#203C25" strokeWidth="3"/>
+                          <path d="M22 24h20M22 30h14M22 36h8" stroke="#203C25" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-4">
+                        <p className="text-green-11 text-base font-bold font-family-dm-sans leading-[1.3] text-center">Clique para selecionar ou arraste o arquivo aqui</p>
+                        <p className="text-gray-12 text-base font-semibold font-family-manrope leading-[1.1]">Formato aceito: .CSV e .TXT</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-2 px-4 py-3 bg-gray-2 border-t border-gray-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowImportModal(false)}
+                    className="h-11 px-5 rounded-lg border border-gray-6 text-gray-12 text-base font-bold font-family-manrope hover:bg-gray-3 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => csvInputRef.current?.click()}
+                    className="h-11 px-5 rounded-lg bg-green-9 text-green-2 text-base font-bold font-family-manrope hover:bg-green-10 transition-colors"
+                  >
+                    Importar lista
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isOpen && (
           <>
@@ -991,18 +1128,22 @@ export function CreateCouponModal() {
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={cpfListStatus === "DISABLED"}
-                                          onCheckedChange={(checked) => { if (checked) setCpfListStatus("DISABLED"); }}
+                                          onCheckedChange={(checked) => { if (checked) { setCpfListStatus("DISABLED"); setCpfListError(""); } }}
                                         />
                                         <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitado</span>
                                       </label>
                                       <label className="flex items-center gap-2 cursor-pointer">
                                         <Checkbox
                                           checked={cpfListStatus === "ENABLED"}
-                                          onCheckedChange={(checked) => { if (checked) setCpfListStatus("ENABLED"); }}
+                                          onCheckedChange={(checked) => { if (checked) { setCpfListStatus("ENABLED"); setCpfListError(""); } }}
                                         />
                                         <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
                                       </label>
                                     </div>
+
+                                    {cpfListError && (
+                                      <p className="text-red-11 text-sm font-family-dm-sans leading-[1.3]">{cpfListError}</p>
+                                    )}
 
                                     {cpfListStatus === "ENABLED" && (
                                       <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden flex flex-col">
