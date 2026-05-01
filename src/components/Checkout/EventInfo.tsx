@@ -1,18 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "../Button";
 import type { Event } from "@/interfaces/event";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { MessageIcon } from "../Icons/MessageIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
-import {
-  formatBrazilianCnpjCpf,
-  getEventOrganizer,
-  organizationDocumentKind,
-} from "@/utils/organization";
+import { getEventOrganizer } from "@/utils/organization";
 import { getAvatarUrl } from "@/utils/avatar";
+import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
+import { InstagramIcon } from "@/components/Icons/InstagramIcon";
+import { FacebookIcon } from "@/components/Icons/FacebookIcon";
+import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
+import { TiktokIcon } from "@/components/Icons/TiktokIcon";
+import { GlobeIcon } from "lucide-react";
+import Link from "next/link";
 
 interface EventInfoProps {
   event: Event;
@@ -25,6 +28,7 @@ interface EventInfoProps {
 
 export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [] }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   const formatDate = (date: string) => {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -169,50 +173,63 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           Do dia {formatDate(event.eventDate)}
         </p>
 
-        <div className="flex flex-col gap-2 bg-gray-3 rounded-lg p-3 border border-gray-6">
-          <p className="text-sm font-medium text-gray-11">Organizador</p>
+        {(() => {
+          const organizer = getEventOrganizer(event);
+          if (!organizer) return null;
 
-          {(() => {
-            const organizer = getEventOrganizer(event);
-            if (!organizer) return null;
+          const socialLinks = [
+            { url: event.instagram, icon: InstagramIcon },
+            { url: event.facebook, icon: FacebookIcon },
+            { url: event.youtube, icon: YoutubeIcon },
+            { url: event.tiktok, icon: TiktokIcon },
+            { url: event.website, icon: GlobeIcon },
+          ];
 
-            const docFormatted = formatBrazilianCnpjCpf(organizer.document);
-            const docKind = organizationDocumentKind(organizer.document);
-
-            return (
-              <div className="flex items-center gap-2">
+          return (
+            <div className="bg-gray-3 border border-gray-6 rounded-lg p-3">
+              <div className="flex items-center gap-3 mb-3">
                 <ImageWithInitialFallback
                   src={getAvatarUrl(organizer.logoUrl)}
                   alt={organizer.name}
                   name={organizer.name}
-                  width={48}
-                  height={48}
-                  className="rounded-full size-12 border border-primary-8"
+                  width={40}
+                  height={40}
+                  className="rounded-full size-10 shrink-0"
                   imgClassName="object-cover"
                   letterClassName="text-xs"
                 />
-                <div>
-                  <p className="text-sm font-medium text-gray-12">
+                <div className="flex-1 min-w-0 flex flex-col gap-1">
+                  <p className="text-sm font-semibold text-gray-12 truncate">
                     {organizer.name}
                   </p>
-                  {docFormatted ? (
-                    <p className="text-sm text-gray-11 font-family-dm-sans">
-                      <span className="text-gray-11">{docKind}:</span>{" "}
-                      <span className="text-gray-11">
-                        {docFormatted}
-                      </span>
-                    </p>
-                  ) : null}
+                  <div className="flex items-center gap-1">
+                    {socialLinks.map(({ url, icon: Icon }, index) => {
+                      if (!url) return null;
+                      return (
+                        <Link
+                          key={index}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="border border-gray-6 size-7 rounded-full text-gray-12 flex items-center justify-center"
+                        >
+                          <Icon className="size-3.5" />
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            );
-          })()}
-
-          <Button variant="ghost" className="w-full border border-gray-6 mt-2">
-            <MessageIcon className="size-5" />
-            Falar com organizador
-          </Button>
-        </div>
+              <Button
+                variant="outline"
+                className="w-full text-gray-12 border-gray-6"
+                onClick={() => setIsContactModalOpen(true)}
+              >
+                Falar com o organizador
+              </Button>
+            </div>
+          );
+        })()}
 
         <div className="flex flex-col w-full mt-4 gap-2">
           {groupedTickets.length > 0 ? (
@@ -266,6 +283,13 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           Proximo
         </Button>
       </div>
+
+      <ContactOrganizerModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        organizerEmail={getEventOrganizer(event)?.email ?? ""}
+        eventName={event.name}
+      />
     </div>
   );
 }

@@ -769,58 +769,67 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
-  // Agrupa ingressos por ticket para exibição
+  // Lookup local para obter distance/distanceUnit por ticketId
+  const localTicketLookup = useMemo(() => {
+    const map = new Map<string, Ticket>();
+    categorizedTickets.forEach((c) => c.tickets.forEach((t) => map.set(t.id, t)));
+    uncategorizedTickets.forEach((t) => map.set(t.id, t));
+    return map;
+  }, [categorizedTickets, uncategorizedTickets]);
+
+  // Agrupa ingressos por ticket para exibição — usa valores do servidor quando disponíveis
   const groupedTickets = useMemo(() => {
-    const grouped: Array<{
-      quantity: number;
-      raceName: string;
-      distance: string;
-      price: number;
-      total: number;
-    }> = [];
+    if (currentOrder?.tickets?.length) {
+      const map = new Map<string, { quantity: number; raceName: string; distance: string; price: number; total: number }>();
+      currentOrder.tickets.forEach((t) => {
+        const local = localTicketLookup.get(t.ticketId);
+        const unitPrice = (t.finalUnitPrice ?? t.unitPrice) / 100;
+        const lineTotal = (t.finalTotalPrice ?? t.unitPrice) / 100;
+        const existing = map.get(t.ticketId);
+        if (existing) {
+          existing.quantity += t.quantity;
+          existing.total += lineTotal;
+        } else {
+          map.set(t.ticketId, {
+            quantity: t.quantity,
+            raceName: t.batchName ?? local?.name ?? "",
+            distance: local?.distance ? `${local.distance} ${local.distanceUnit || ""}` : "",
+            price: unitPrice,
+            total: lineTotal,
+          });
+        }
+      });
+      return Array.from(map.values());
+    }
 
-    const ticketMap = new Map<string, { ticket: Ticket; quantity: number }>();
-
-    // Tickets com categoria
+    // Fallback para quando o pedido ainda não foi carregado
+    const map = new Map<string, { ticket: Ticket; quantity: number }>();
     categorizedTickets.forEach((category) => {
       category.tickets.forEach((ticket) => {
         const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) {
-          const existing = ticketMap.get(ticket.id);
-          if (existing) {
-            existing.quantity += quantity;
-          } else {
-            ticketMap.set(ticket.id, { ticket, quantity });
-          }
+          const existing = map.get(ticket.id);
+          if (existing) existing.quantity += quantity;
+          else map.set(ticket.id, { ticket, quantity });
         }
       });
     });
-
-    // Tickets avulsos
     uncategorizedTickets.forEach((ticket) => {
       const quantity = raceQuantities[ticket.id] || 0;
       if (quantity > 0) {
-        const existing = ticketMap.get(ticket.id);
-        if (existing) {
-          existing.quantity += quantity;
-        } else {
-          ticketMap.set(ticket.id, { ticket, quantity });
-        }
+        const existing = map.get(ticket.id);
+        if (existing) existing.quantity += quantity;
+        else map.set(ticket.id, { ticket, quantity });
       }
     });
-
-    ticketMap.forEach(({ ticket, quantity }) => {
-      grouped.push({
-        quantity,
-        raceName: ticket.name,
-        distance: ticket.distance ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
-        price: getTicketPrice(ticket),
-        total: getTicketPrice(ticket) * quantity,
-      });
-    });
-
-    return grouped;
-  }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
+    return Array.from(map.values()).map(({ ticket, quantity }) => ({
+      quantity,
+      raceName: ticket.name,
+      distance: ticket.distance ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
+      price: getTicketPrice(ticket),
+      total: getTicketPrice(ticket) * quantity,
+    }));
+  }, [currentOrder, localTicketLookup, raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   // Criar lista de participantes baseada nos tickets selecionados
   const participantsWithTickets = useMemo(() => {
@@ -980,7 +989,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           participantIndex,
           ticketName: ticket.name,
           categoryName: ticket.groupId ? categoryNameMap.get(ticket.groupId) : undefined,
-          ticketPrice: getTicketPrice(ticket),
+          ticketPrice: reservedTicket ? reservedTicket.unitPrice / 100 : getTicketPrice(ticket),
           participant: {
             name: participant.name || "",
             cpf: participant.cpf || "",
@@ -1108,18 +1117,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     },
   ];
 
-  // Calculate totals
-  const { totalParticipants, totalPrice } = useMemo(() => {
-    let participants = 0;
-    let total = 0;
+  // Totais — usa servidor quando disponível
+  const totalParticipants = currentOrder
+    ? currentOrder.tickets.reduce((sum, t) => sum + t.quantity, 0)
+    : participantsWithTickets.length;
 
-    participantsWithTickets.forEach(({ ticket }) => {
-      participants++;
-      total += getTicketPrice(ticket);
-    });
-
-    return { totalParticipants: participants, totalPrice: total };
-  }, [participantsWithTickets]);
+  const totalPrice = currentOrder
+    ? currentOrder.pricing.total / 100
+    : participantsWithTickets.reduce((sum, { ticket }) => sum + getTicketPrice(ticket), 0);
 
   // Usa valores do servidor quando disponíveis (authoritative), senão fallback local.
   const serviceFee = currentOrder

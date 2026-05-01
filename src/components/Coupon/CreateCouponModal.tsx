@@ -36,6 +36,7 @@ export function CreateCouponModal() {
   const [usageLimit, setUsageLimit] = useState("");
   const [usageLimitEnabled, setUsageLimitEnabled] = useState(false);
   const [usageLimitError, setUsageLimitError] = useState("");
+  const [codeError, setCodeError] = useState("");
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
   const [cpfSearch, setCpfSearch] = useState("");
@@ -178,6 +179,7 @@ export function CreateCouponModal() {
         setUsageLimit("");
         setUsageLimitEnabled(false);
         setUsageLimitError("");
+        setCodeError("");
         setCpfListStatus("DISABLED");
         setCpfList([]);
         setMinQuantity("");
@@ -469,8 +471,13 @@ export function CreateCouponModal() {
 
       closeCreateCouponModal();
     } catch (error: any) {
-      console.error("Error saving coupon:", error);
-      toast.error(error.response?.data?.message || "Erro ao salvar cupom");
+      const raw = error.response?.data?.message ?? error?.message ?? "";
+      const message = Array.isArray(raw) ? raw[0] : String(raw);
+      if (message.includes("already exists")) {
+        setCodeError("Esse código já existe para este evento");
+      } else {
+        toast.error(message || "Erro ao salvar cupom");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -654,10 +661,14 @@ export function CreateCouponModal() {
                                   onChange={(e) => {
                                     const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
                                     if (val.length <= 25) setCode(val);
+                                    if (codeError) setCodeError("");
                                   }}
                                   maxLength={25}
-                                  className="h-12 pr-16"
+                                  className={cn("h-12 pr-16", codeError && "border-red-9 focus-visible:border-red-9")}
                                 />
+                                {codeError && (
+                                  <p className="text-sm text-red-9 font-family-dm-sans">{codeError}</p>
+                                )}
                               </div>
                             </div>
                           )}

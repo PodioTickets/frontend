@@ -26,6 +26,9 @@ import { HeartIcon } from "../Icons/HeartIcon";
 import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
 import Image from "next/image";
 import { COUNTRIES_PT_BR } from "@/data/countries";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 type RegisterStep = 1 | 2 | 3;
 
@@ -35,6 +38,9 @@ export function RegisterModal() {
   const { register, isLoading: authLoading, user, refetchUser } = useAuth();
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const mobileTurnstileRef = useRef<TurnstileInstance>(null);
+  const desktopTurnstileRef = useRef<TurnstileInstance>(null);
 
   // Verifica se é para completar cadastro
   const isCompletingProfile = modalData?.completeProfile === true && !!user;
@@ -66,6 +72,9 @@ export function RegisterModal() {
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
+      setTurnstileToken(null);
+      mobileTurnstileRef.current?.reset();
+      desktopTurnstileRef.current?.reset();
     }
   }, [isOpen]);
 
@@ -677,10 +686,21 @@ export function RegisterModal() {
         </div>
 
         {/* Mobile: step 2 = último passo, botão Criar conta / Finalizar cadastro */}
-        <div className="flex flex-col items-start relative shrink-0 w-full">
+        <div className="flex flex-col items-start relative shrink-0 w-full gap-4">
+          {!isCompletingProfile && TURNSTILE_SITE_KEY && (
+            <Turnstile
+              ref={mobileTurnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={setTurnstileToken}
+              onError={() => setTurnstileToken(null)}
+              onExpire={() => setTurnstileToken(null)}
+              options={{ theme: "auto", size: "flexible" }}
+              className="w-full"
+            />
+          )}
           <Button
             onClick={handleNext}
-            disabled={isSubmitting || authLoading}
+            disabled={isSubmitting || authLoading || (!isCompletingProfile && !!TURNSTILE_SITE_KEY && !turnstileToken)}
             className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting || authLoading
@@ -929,10 +949,21 @@ export function RegisterModal() {
         </div>
 
         {/* Desktop: step 2 = último passo, botão Criar conta / Finalizar cadastro */}
-        <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full">
+        <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full gap-4">
+          {!isCompletingProfile && TURNSTILE_SITE_KEY && (
+            <Turnstile
+              ref={desktopTurnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={setTurnstileToken}
+              onError={() => setTurnstileToken(null)}
+              onExpire={() => setTurnstileToken(null)}
+              options={{ theme: "auto", size: "flexible" }}
+              className="w-full"
+            />
+          )}
           <Button
             onClick={handleNext}
-            disabled={isSubmitting || authLoading}
+            disabled={isSubmitting || authLoading || (!isCompletingProfile && !!TURNSTILE_SITE_KEY && !turnstileToken)}
             className="px-8 font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting || authLoading

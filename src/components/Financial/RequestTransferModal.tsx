@@ -11,6 +11,7 @@ import { Input } from "../Input";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
+import { ChooseAccountModal } from "./ChooseAccountModal";
 
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
@@ -19,6 +20,7 @@ export function RequestTransferModal() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showChooseAccount, setShowChooseAccount] = useState(false);
 
   // API pode enviar em centavos; normalizar para exibição em reais
   const rawBalance = data?.availableBalance ?? 125000;
@@ -139,6 +141,7 @@ export function RequestTransferModal() {
   const formatBalance = (val: number) => val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(".", ",");
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <>
@@ -247,6 +250,7 @@ export function RequestTransferModal() {
                         </div>
                         <button
                           type="button"
+                          onClick={() => setShowChooseAccount(true)}
                           className="text-sm font-family-dm-sans font-semibold text-blue-10 hover:text-blue-11 text-left"
                         >
                           Precisa alterar conta?
@@ -378,7 +382,11 @@ export function RequestTransferModal() {
                             <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Chave: {maskedPixKey}</p>
                           </div>
                         </div>
-                        <button type="button" className="text-[16px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3]">
+                        <button
+                          type="button"
+                          onClick={() => setShowChooseAccount(true)}
+                          className="text-[16px] text-blue-10 hover:text-blue-11 transition-colors font-family-dm-sans font-semibold leading-[1.3]"
+                        >
                           Trocar conta
                         </button>
                       </div>
@@ -421,5 +429,11 @@ export function RequestTransferModal() {
         </>
       )}
     </AnimatePresence>
+    <ChooseAccountModal
+      isOpen={showChooseAccount}
+      onClose={() => setShowChooseAccount(false)}
+      onSelect={() => setShowChooseAccount(false)}
+    />
+    </>
   );
 }

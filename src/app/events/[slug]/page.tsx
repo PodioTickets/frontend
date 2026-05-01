@@ -12,7 +12,7 @@ import { useEventBySlug } from "@/hooks/useEvent";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
-import { Fragment, useState, useEffect, useMemo } from "react";
+import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
@@ -77,14 +77,18 @@ export default function EventPage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [showFixedButton, setShowFixedButton] = useState(false);
+  const topButtonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setShowFixedButton((window.scrollY || document.documentElement.scrollTop) > 200);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const el = topButtonRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowFixedButton(!entry.isIntersecting),
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [event?.id]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -359,8 +363,8 @@ export default function EventPage() {
               })()}
             </div>
 
-            {/* Action Buttons — ocultos quando o fixo de baixo estiver visível */}
-            <div className={showFixedButton ? "hidden" : ""}>
+            <div ref={topButtonRef} className="h-px w-full" aria-hidden />
+            <div>
               {eventRealizationPassed ? (
                 <>
                   <Button

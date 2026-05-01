@@ -16,6 +16,7 @@ import { Tooltip } from "@/components/Tooltip";
 import { Button } from "@/components/Button";
 import { BookIcon } from "@/components/Icons/BookIcon";
 import { cn } from "@/utils/cn";
+import Image from "next/image";
 
 const KIT_DESC =
   "Essencial para sua participação. Inclui a inscrição, a camiseta oficial, a sacochila, a necessaire e a medalha pós-prova — tudo leve, prático e com a identidade do evento.";
@@ -41,114 +42,16 @@ function QtyStepper() {
 
 function PreviewNosIngressos() {
   return (
-    <div className="rounded-xl border border-gray-6 bg-gray-1 p-3">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <p className="font-manrope text-sm font-bold leading-[1.1] text-gray-12">Kit inscrição</p>
-        <div className="flex shrink-0 items-center gap-1">
-          <p className="text-right font-family-dm-sans text-[11px] leading-[1.3] text-gray-11">
-            A partir de: <span className="font-semibold text-gray-12">R$ 205,75</span>
-          </p>
-          <ChevronDown className="size-4 shrink-0 text-gray-11" strokeWidth={2} aria-hidden />
-        </div>
-      </div>
-      <p className="mb-3 font-family-dm-sans text-[11px] leading-[1.35] text-gray-11">{KIT_DESC}</p>
-
-      {[
-        {
-          title: "3K - Caminhada",
-          price: "R$ 50,00",
-          badge: "Limite de idade: de 9 a 11 anos",
-        },
-        { title: "5K - Ciclismo", price: "R$ 60,00", badge: null },
-      ].map((row) => (
-        <div
-          key={row.title}
-          className="mb-3 flex gap-2 border-t border-gray-6 pt-3 last:mb-0"
-        >
-          <div className="flex shrink-0 gap-1.5">
-            <div className="size-14 shrink-0 rounded-md border border-gray-6 bg-gray-3" />
-            <div className="flex flex-col items-center gap-0.5">
-              <ChevronUp className="size-3 text-gray-9" strokeWidth={2} aria-hidden />
-              <div className="flex flex-col gap-0.5">
-                <div className="size-6 rounded border border-gray-6 bg-gray-3" />
-                <div className="size-6 rounded border border-gray-6 bg-gray-3" />
-                <div className="size-6 rounded border border-gray-6 bg-gray-3" />
-              </div>
-              <ChevronDown className="size-3 text-gray-9" strokeWidth={2} aria-hidden />
-            </div>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-family-dm-sans text-xs font-semibold text-gray-12">{row.title}</p>
-            <p className="mt-0.5 font-family-dm-sans text-[10px] text-gray-11">0.3 Km</p>
-            {row.badge ? (
-              <span className="mt-1 inline-block rounded-full bg-yellow-3 px-2 py-0.5 font-family-dm-sans text-[9px] font-medium leading-tight text-yellow-12">
-                {row.badge}
-              </span>
-            ) : null}
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="font-manrope text-xs font-bold text-gray-12">{row.price}</p>
-              <QtyStepper />
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="">
+      <Image src="/images/card-compra-ticket.png" alt="Card de compra de ticket" width={10000000} height={10000000} className="w-full h-full object-cover" draggable={false} unoptimized />
     </div>
   );
 }
 
 function PreviewNasCategorias() {
   return (
-    <div className="rounded-xl border border-gray-6 bg-gray-1 p-3">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <p className="font-manrope text-sm font-bold leading-[1.1] text-gray-12">Kit - Ultimate</p>
-        <div className="flex shrink-0 items-center gap-1">
-          <p className="text-right font-family-dm-sans text-[11px] leading-[1.3] text-gray-11">
-            A partir de: <span className="font-semibold text-gray-12">R$ 205,75</span>
-          </p>
-          <ChevronDown className="size-4 shrink-0 text-gray-11" strokeWidth={2} aria-hidden />
-        </div>
-      </div>
-      <p className="mb-3 font-family-dm-sans text-[11px] leading-[1.35] text-gray-11">{KIT_DESC}</p>
-
-      <div className="mb-3 flex items-center gap-1">
-        <ChevronLeft className="size-4 shrink-0 text-gray-11" strokeWidth={2} aria-hidden />
-        <div className="flex flex-1 items-center justify-center gap-1.5 overflow-hidden py-1">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className={cn(
-                "h-12 w-10 shrink-0 rounded-md border bg-gray-3",
-                i === 2
-                  ? "scale-110 border-2 border-primary-11 shadow-sm"
-                  : "border-gray-6",
-              )}
-            />
-          ))}
-        </div>
-        <ChevronRight className="size-4 shrink-0 text-gray-11" strokeWidth={2} aria-hidden />
-      </div>
-
-      {[
-        { title: "3K - Caminhada", price: "R$ 50,00" },
-        { title: "3K - Caminhada", price: "R$ 50,00" },
-      ].map((row, idx) => (
-        <div
-          key={`${row.title}-${idx}`}
-          className="mb-3 flex flex-col gap-2 border-t border-gray-6 pt-3 last:mb-0"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-family-dm-sans text-xs font-semibold text-gray-12">{row.title}</p>
-              <p className="mt-0.5 font-family-dm-sans text-[10px] text-gray-11">0.3 Km</p>
-              <span className="mt-1 inline-block rounded-full bg-yellow-3 px-2 py-0.5 font-family-dm-sans text-[9px] font-medium text-yellow-12">
-                Limite de idade: de 9 a 11 anos
-              </span>
-            </div>
-            <QtyStepper />
-          </div>
-          <p className="font-manrope text-xs font-bold text-gray-12">{row.price}</p>
-        </div>
-      ))}
+    <div className="">
+      <Image src="/images/card-compra-ticket-2.png" alt="Card de compra de ticket" width={10000000} height={10000000} className="w-full h-full object-cover" draggable={false} unoptimized />
     </div>
   );
 }
