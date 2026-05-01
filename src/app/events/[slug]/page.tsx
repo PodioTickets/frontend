@@ -251,7 +251,7 @@ export default function EventPage() {
               <div className="flex items-center gap-2 text-gray-12">
                 <LocationIcon className="size-5 text-gray-12 shrink-0" />
                 <span className="text-sm">
-                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location, event.zipCode].filter(Boolean).join(", ")}
+                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-gray-12">
@@ -535,6 +535,7 @@ export default function EventPage() {
             }`}
         >
           <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
+            <h1 className="font-semibold font-family-manrope truncate">{event.name}</h1>
             <div className="flex w-full justify-between gap-1">
               <div className="flex items-center gap-1 text-gray-12">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
@@ -684,7 +685,7 @@ export default function EventPage() {
                         <h1 className="flex items-center gap-2 text-gray-12 font-medium">
                           <LocationIcon className="size-5 shrink-0" />{" "}
                           <span className="text-sm">
-                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location, event.zipCode].filter(Boolean).join(", ")}
+                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
                           </span>
                         </h1>
                         <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
@@ -978,7 +979,7 @@ export default function EventPage() {
                     <h1 className="flex items-center gap-2 text-gray-12 font-medium">
                       <LocationIcon className="size-5 shrink-0" />{" "}
                       <span className="text-sm">
-                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location, event.zipCode].filter(Boolean).join(", ")}
+                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
                       </span>
                     </h1>
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
