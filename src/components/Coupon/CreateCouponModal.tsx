@@ -570,16 +570,16 @@ export function CreateCouponModal() {
               transition={{ duration: 0.15 }}
               className="fixed inset-0 z-[61] flex items-center justify-center p-4"
             >
-              <div className="bg-gray-1 rounded-xl w-full max-w-[480px] flex flex-col overflow-hidden shadow-xl">
+              <div className="bg-gray-1 rounded-xl w-full max-w-[569px] flex flex-col overflow-hidden shadow-xl">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6">
-                  <span className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]">Importar lista de CPF</span>
+                  <span className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[26px]">Importar lista de CPF</span>
                   <button
                     type="button"
                     onClick={() => setShowImportModal(false)}
-                    className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
                   >
-                    <img src="/images/remove.svg" alt="Fechar" className="size-[18px]" />
+                    <img src="/images/remove.svg" alt="Fechar" className="w-[18px] h-[18px]" />
                   </button>
                 </div>
 
@@ -587,48 +587,51 @@ export function CreateCouponModal() {
                 <div className="flex flex-col gap-9 px-5 pt-5 pb-8 overflow-y-auto">
                   {/* Formato esperado */}
                   <div className="flex flex-col gap-4">
-                    <h3 className="text-gray-12 text-lg font-semibold font-family-manrope leading-[1.1]">Formato esperado do arquivo</h3>
-                    <div className="w-[290px] bg-gray-2 rounded-lg border border-gray-6 overflow-hidden flex flex-col">
+                    <h3 className="text-gray-12 text-[18px] font-semibold font-family-manrope leading-[19.8px]">Formato esperado do arquivo</h3>
+                    <div className="w-[290px] bg-gray-2 rounded-lg overflow-hidden flex flex-col" style={{ outline: '1px solid #D9D9D9' }}>
                       {["111.111.111-11", "111.111.111-11", "111.111.111-11"].map((cpf, i) => (
-                        <div key={i} className="flex items-center gap-3 h-8 border-b border-gray-6">
-                          <div className="w-8 h-8 flex items-center justify-center border-r border-gray-6 shrink-0">
-                            <span className="text-gray-11 text-sm font-family-dm-sans">{i + 1}</span>
+                        <div key={i} className="flex items-center h-8 border-b border-gray-6">
+                          <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ outline: '1px solid #D9D9D9' }}>
+                            <span className="text-gray-11 text-[14px] font-normal font-family-dm-sans leading-[18.2px]">{i + 1}</span>
                           </div>
-                          <span className="text-green-11 text-sm font-semibold font-family-dm-sans">{cpf}</span>
+                          <span className="text-green-11 text-[14px] font-semibold font-family-dm-sans leading-[18.2px] ml-3">111.111.111-11</span>
                         </div>
                       ))}
-                      <div className="flex items-center gap-3 h-8 border-b border-gray-6">
-                        <div className="w-8 h-8 flex items-center justify-center border-r border-gray-6 shrink-0">
-                          <span className="text-gray-11 text-sm font-family-dm-sans">4</span>
+                      <div className="flex items-center h-8 border-b border-gray-6">
+                        <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ outline: '1px solid #D9D9D9' }}>
+                          <span className="text-gray-11 text-[14px] font-normal font-family-dm-sans leading-[18.2px]">4</span>
                         </div>
-                        <span className="text-gray-11 text-sm font-semibold font-family-dm-sans">...</span>
+                        <span className="text-gray-11 text-[14px] font-semibold font-family-dm-sans leading-[18.2px] ml-3">...</span>
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <svg className="size-6 shrink-0 mt-0.5" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-6 h-6 shrink-0" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="7" r="1" fill="#646464"/>
                         <path d="M11 10H12V17M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#646464" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
-                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">1 CPF por linha. Pode usar apenas números, com pontuação ou sem pontuação. Duplicadas serão ignoradas automaticamente.</p>
+                      <p className="flex-1 text-gray-11 text-[16px] font-normal font-family-dm-sans leading-[20.8px]">1 CPF por linha. Pode usar apenas números, com pontuação ou sem pontuação. Duplicadas serão ignoradas automaticamente.</p>
                     </div>
                   </div>
 
                   {/* Drop zone */}
                   <div className="flex flex-col gap-4">
-                    <h3 className="text-gray-12 text-lg font-semibold font-family-manrope leading-[1.1]">Arquivo CSV</h3>
+                    <h3 className="text-gray-12 text-[18px] font-semibold font-family-manrope leading-[19.8px]">Arquivo CSV</h3>
                     <div
                       onClick={() => csvInputRef.current?.click()}
                       onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
                       onDragLeave={() => setIsDraggingCsv(false)}
                       onDrop={handleDropzoneDrop}
-                      className={`flex items-center gap-4 p-6 rounded-xl border-2 cursor-pointer transition-colors ${isDraggingCsv ? "border-green-8 bg-green-2" : "border-gray-6 hover:border-gray-8 hover:bg-gray-2"}`}
+                      className={`flex items-center gap-4 p-6 rounded-xl cursor-pointer transition-colors ${isDraggingCsv ? "bg-green-2" : "hover:bg-gray-2"}`}
+                      style={{ outline: isDraggingCsv ? '2px solid #46A758' : '2px solid #D9D9D9' }}
                     >
-                      <div className="size-16 flex items-center justify-center shrink-0">
-                        <img src="/images/plus.svg" alt="" className="size-16" />
+                      <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+                        <img src="/images/plus.svg" alt="" className="w-16 h-16" />
                       </div>
-                      <div className="flex flex-col gap-4">
-                        <p className="text-green-11 text-base font-bold font-family-dm-sans leading-[1.3] text-center">Clique para selecionar ou arraste o arquivo aqui</p>
-                        <p className="text-gray-12 text-base font-semibold font-family-manrope leading-[1.1]">Formato aceito: .CSV e .TXT</p>
+                      <div className="flex-1 flex flex-col gap-6">
+                        <div className="flex flex-col gap-4">
+                          <p className="text-center text-green-11 text-[16px] font-bold font-family-dm-sans leading-[20.8px]">Clique para selecionar ou arraste o arquivo aqui</p>
+                          <p className="text-gray-12 text-[16px] font-semibold font-family-manrope leading-[17.6px]">Formato aceito: .CSV e .TXT</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -639,14 +642,16 @@ export function CreateCouponModal() {
                   <button
                     type="button"
                     onClick={() => setShowImportModal(false)}
-                    className="h-11 px-5 rounded-lg border border-gray-6 text-gray-12 text-base font-bold font-family-manrope hover:bg-gray-3 transition-colors"
+                    className="h-11 px-5 rounded-lg text-gray-12 text-[16px] font-bold font-family-manrope leading-[17.6px] hover:bg-gray-3 transition-colors"
+                    style={{ outline: '1px solid #D9D9D9' }}
                   >
                     Cancelar
                   </button>
                   <button
                     type="button"
                     onClick={() => csvInputRef.current?.click()}
-                    className="h-11 px-5 rounded-lg bg-green-9 text-green-2 text-base font-bold font-family-manrope hover:bg-green-10 transition-colors"
+                    className="h-11 px-5 rounded-lg text-[16px] font-bold font-family-manrope leading-[17.6px] transition-colors"
+                    style={{ background: '#59E373', color: '#141A15' }}
                   >
                     Importar lista
                   </button>
