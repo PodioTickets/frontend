@@ -589,19 +589,19 @@ export function CreateCouponModal() {
                   <div className="flex flex-col gap-4">
                     <h3 className="text-gray-12 text-[18px] font-semibold font-family-manrope leading-[19.8px]">Formato esperado do arquivo</h3>
                     <div className="w-[290px] bg-gray-2 rounded-lg overflow-hidden flex flex-col" style={{ outline: '1px solid #D9D9D9' }}>
-                      {["111.111.111-11", "111.111.111-11", "111.111.111-11"].map((cpf, i) => (
-                        <div key={i} className="flex items-center h-8 border-b border-gray-6">
+                      {[1, 2, 3].map((n) => (
+                        <div key={n} className="flex items-center h-8 border-b border-gray-6">
                           <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ outline: '1px solid #D9D9D9' }}>
-                            <span className="text-gray-11 text-[14px] font-normal font-family-dm-sans leading-[18.2px]">{i + 1}</span>
+                            <span className="text-[14px] font-normal font-family-dm-sans leading-[18.2px]" style={{ color: '#646464' }}>{n}</span>
                           </div>
-                          <span className="text-green-11 text-[14px] font-semibold font-family-dm-sans leading-[18.2px] ml-3">111.111.111-11</span>
+                          <span className="text-[14px] font-semibold font-family-dm-sans leading-[18.2px] ml-3" style={{ color: '#308737' }}>111.111.111-11</span>
                         </div>
                       ))}
                       <div className="flex items-center h-8 border-b border-gray-6">
                         <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ outline: '1px solid #D9D9D9' }}>
-                          <span className="text-gray-11 text-[14px] font-normal font-family-dm-sans leading-[18.2px]">4</span>
+                          <span className="text-[14px] font-normal font-family-dm-sans leading-[18.2px]" style={{ color: '#646464' }}>4</span>
                         </div>
-                        <span className="text-gray-11 text-[14px] font-semibold font-family-dm-sans leading-[18.2px] ml-3">...</span>
+                        <span className="text-[14px] font-semibold font-family-dm-sans leading-[18.2px] ml-3" style={{ color: '#646464' }}>...</span>
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
@@ -627,10 +627,10 @@ export function CreateCouponModal() {
                       <div className="w-16 h-16 shrink-0 flex items-center justify-center">
                         <img src="/images/plus.svg" alt="" className="w-16 h-16" />
                       </div>
-                      <div className="flex-1 flex flex-col gap-6">
-                        <div className="flex flex-col gap-4">
-                          <p className="text-center text-green-11 text-[16px] font-bold font-family-dm-sans leading-[20.8px]">Clique para selecionar ou arraste o arquivo aqui</p>
-                          <p className="text-gray-12 text-[16px] font-semibold font-family-manrope leading-[17.6px]">Formato aceito: .CSV e .TXT</p>
+                      <div className="flex-1 flex flex-col justify-center items-start gap-6">
+                        <div className="flex flex-col gap-4 w-full">
+                          <p className="w-full text-[16px] font-bold font-family-dm-sans leading-[20.8px]" style={{ color: '#308737' }}>Clique para selecionar ou arraste o arquivo aqui</p>
+                          <p className="w-full text-[16px] font-semibold font-family-manrope leading-[17.6px]" style={{ color: '#202020' }}>Formato aceito: .CSV e .TXT</p>
                         </div>
                       </div>
                     </div>
