@@ -76,13 +76,11 @@ function FieldChip({
           : "bg-gray-2 border border-gray-6 text-gray-11 hover:border-gray-8"
       }`}
     >
-      <span className="size-4 flex items-center justify-center shrink-0">
-        {selected ? (
+      {selected && (
+        <span className="size-4 flex items-center justify-center shrink-0">
           <Check className="size-3" strokeWidth={2.5} />
-        ) : (
-          <span className="size-2.5 rounded-sm bg-neutral-11 block" />
-        )}
-      </span>
+        </span>
+      )}
       {label}
     </button>
   );
