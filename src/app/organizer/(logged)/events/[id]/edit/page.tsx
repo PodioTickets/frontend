@@ -354,6 +354,11 @@ export default function EditInformationPage() {
     if (wouldRegistrationEndBeforeStart(formData)) {
       newErrors.registrationPeriod = REGISTRATION_END_BEFORE_START_TOAST;
     }
+    if (!formData.contactEmail?.trim()) {
+      newErrors.contactEmail = "Email de atendimento é obrigatório";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail.trim())) {
+      newErrors.contactEmail = "Email inválido";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -787,16 +792,21 @@ export default function EditInformationPage() {
                   Utilizado para receber dúvidas dos participantes
                 </p>
               </div>
-              <div className="relative w-full md:w-1/2">
-                <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
-                <Input
-                  type="email"
-                  name="contactEmail"
-                  value={formData.contactEmail}
-                  onChange={handleInputChange}
-                  placeholder="atendimento@seuevento.com.br"
-                  className="h-12 pl-10"
-                />
+              <div className="flex flex-col gap-2 w-full md:w-1/2">
+                <div className="relative">
+                  <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
+                  <Input
+                    type="email"
+                    name="contactEmail"
+                    value={formData.contactEmail}
+                    onChange={handleInputChange}
+                    placeholder="atendimento@seuevento.com.br"
+                    className={`h-12 pl-10 ${errors.contactEmail ? "border-red-10" : ""}`}
+                  />
+                </div>
+                {errors.contactEmail && (
+                  <p className="text-red-10 text-sm">{errors.contactEmail}</p>
+                )}
               </div>
             </div>
 
