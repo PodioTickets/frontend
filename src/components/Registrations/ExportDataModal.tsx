@@ -142,7 +142,7 @@ function AdvancedFields({
 export function ExportDataModal() {
   const { isOpen, closeExportDataModal, data } = useExportDataModal();
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("txt");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(DEFAULT_SELECTED));
   const [isExporting, setIsExporting] = useState(false);
 
