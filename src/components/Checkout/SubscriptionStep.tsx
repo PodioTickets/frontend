@@ -1185,9 +1185,6 @@ export function SubscriptionStep({
               <div className="flex flex-col gap-2">
                 <p className="text-base text-gray-11">Seu pedido:</p>
                 <h1 className="text-xl font-bold text-gray-12 leading-tight">{event.name}</h1>
-                <p className="text-base font-medium text-gray-12">
-                  Do dia {formatDate(event.eventDate)}
-                </p>
               </div>
             </div>
 

@@ -1989,6 +1989,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         {/* Coluna Direita - Resumo do Pedido */}
         <div className="max-w-1/3 w-full">
           <OrderSummary
+            event={event}
             items={orderItems}
             groupedTickets={groupedTickets}
             serviceFee={serviceFee}

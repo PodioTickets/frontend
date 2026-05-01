@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ArrowButton } from "../ArrowButton";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { StarIcon } from "../Icons/StarIcon";
+import type { Event } from "@/interfaces/event";
 
 interface OrderItem {
   name: string;
@@ -75,6 +76,7 @@ interface OrderSummaryProps {
   voucher?: OrderSummaryVoucher;
   participantsData?: ParticipantData[];
   onParticipantClick?: (participantIndex: number) => void;
+  event: Event;
 }
 
 export function OrderSummary({
@@ -87,6 +89,7 @@ export function OrderSummary({
   voucher,
   participantsData = [],
   onParticipantClick,
+  event,
 }: OrderSummaryProps) {
   const {
     code: externalCouponCode = "",
@@ -173,6 +176,9 @@ export function OrderSummary({
       {/* Seção de Valores */}
       <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] p-6">
         <div className="flex flex-col gap-3 pb-6">
+          <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12 mb-2">{event.name}</p>
+
+
           {/* Itens adicionais */}
           {items.length > 0 && (
             <div className="flex gap-8 items-center">

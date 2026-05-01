@@ -1148,9 +1148,6 @@ export function InformationStep({
                   <h1 className="text-xl font-bold text-gray-12 h-[36px] leading-tight">
                     {event.name}
                   </h1>
-                  <p className="text-base font-medium text-gray-12">
-                    Do dia {formatDate(event.eventDate)}
-                  </p>
                 </div>
               </div>
 

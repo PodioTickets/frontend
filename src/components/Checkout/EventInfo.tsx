@@ -168,10 +168,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
 
       <div className="p-4">
         <p className="text-sm text-gray-11">Seu pedido:</p>
-        <h1 className="text-lg font-bold">{event.name}</h1>
-        <p className="text-sm font-medium text-gray-12 mb-2">
-          Do dia {formatDate(event.eventDate)}
-        </p>
+        <h1 className="text-lg font-bold mb-2">{event.name}</h1>
 
         {(() => {
           const organizer = getEventOrganizer(event);
