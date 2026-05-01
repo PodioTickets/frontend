@@ -41,10 +41,19 @@ const EVENT_NAME_MAX_LENGTH = 100;
 const SOCIAL_NETWORKS = [
   { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/seuevento", Icon: InstagramIcon },
   { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/seuevento", Icon: FacebookIcon },
-  { key: "youtube", label: "Youtube", placeholder: "https://youtube.com/@seuevento", Icon: YoutubeIcon },
-  { key: "tiktok", label: "Tiktok", placeholder: "https://tiktok.com/@seuevento", Icon: TiktokIcon },
+  { key: "youtube", label: "Youtube", placeholder: "https://youtube.com/seuevento", Icon: YoutubeIcon },
+  { key: "tiktok", label: "Tiktok", placeholder: "https://tiktok.com/seuevento", Icon: TiktokIcon },
   { key: "website", label: "Site oficial", placeholder: "https://seusite.com.br", Icon: Globe },
 ];
+
+function isValidUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 interface ViaCEPResponse {
   cep: string;
@@ -71,6 +80,7 @@ export default function EditInformationPage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>(formData.regulationUrl || "");
   const [openSocials, setOpenSocials] = useState<Set<string>>(new Set());
+  const [socialErrors, setSocialErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getCurrentDatePlaceholder = () => {
@@ -823,28 +833,43 @@ export default function EditInformationPage() {
                 {SOCIAL_NETWORKS.some(({ key }) => openSocials.has(key) || !!(formData as any)[key]) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {SOCIAL_NETWORKS.filter(({ key }) => openSocials.has(key) || !!(formData as any)[key]).map(({ key, label, placeholder, Icon }) => (
-                      <div key={key} className="flex gap-4 items-center">
-                        <div className="flex flex-1 gap-4 items-center min-w-0">
-                          <Icon className="size-8 shrink-0 text-gray-12" />
-                          <Input
-                            type="url"
-                            value={(formData as any)[key] || ""}
-                            onChange={(e) => updateFormData({ [key]: e.target.value } as any)}
-                            placeholder={placeholder}
-                            className="h-12 flex-1"
-                          />
+                      <div key={key} className="flex flex-col gap-1">
+                        <div className="flex gap-4 items-center">
+                          <div className="flex flex-1 gap-4 items-center min-w-0">
+                            <Icon className="size-8 shrink-0 text-gray-12" />
+                            <Input
+                              type="url"
+                              value={(formData as any)[key] || ""}
+                              onChange={(e) => {
+                                updateFormData({ [key]: e.target.value } as any);
+                                if (socialErrors[key]) setSocialErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+                              }}
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (val && !isValidUrl(val)) {
+                                  setSocialErrors((prev) => ({ ...prev, [key]: "URL inválida. Use o formato https://..." }));
+                                }
+                              }}
+                              placeholder={placeholder}
+                              className={`h-12 flex-1 ${socialErrors[key] ? "border-red-10" : ""}`}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateFormData({ [key]: "" } as any);
+                              setOpenSocials((prev) => { const s = new Set(prev); s.delete(key); return s; });
+                              setSocialErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+                            }}
+                            className="size-8 flex items-center justify-center rounded-lg bg-red-2 border-[1.5px] border-red-6 shrink-0 hover:bg-red-3 transition-colors"
+                            aria-label={`Remover ${label}`}
+                          >
+                            <TrashIcon className="size-5" />
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            updateFormData({ [key]: "" } as any);
-                            setOpenSocials((prev) => { const s = new Set(prev); s.delete(key); return s; });
-                          }}
-                          className="size-8 flex items-center justify-center rounded-lg bg-red-2 border-[1.5px] border-red-6 shrink-0 hover:bg-red-3 transition-colors"
-                          aria-label={`Remover ${label}`}
-                        >
-                          <TrashIcon className="size-5" />
-                        </button>
+                        {socialErrors[key] && (
+                          <p className="text-red-10 text-sm pl-12">{socialErrors[key]}</p>
+                        )}
                       </div>
                     ))}
                   </div>
