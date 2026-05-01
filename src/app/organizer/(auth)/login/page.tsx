@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Mail, Lock, Building2, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
@@ -14,6 +14,9 @@ import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { HotelsIcon } from "@/components/Icons/Organizer/HotelsIcon";
 import { publicSiteHref } from "@/lib/organizerHostNavigation";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 function translateLoginError(msg: string): string {
   const m = msg.toLowerCase();
@@ -40,6 +43,8 @@ export default function OrganizerLoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -63,6 +68,7 @@ export default function OrganizerLoginPage() {
         emailOrCpf: validatedData.email,
         password: validatedData.password,
         accountType: "ORGANIZER",
+        ...(turnstileToken ? { turnstileToken } : {}),
       });
 
       toast.success("Login realizado com sucesso!");
@@ -79,15 +85,16 @@ export default function OrganizerLoginPage() {
           }
         });
         setErrors(newErrors);
-        // Show first error as toast
         const firstError = error.issues[0];
         if (firstError) {
           toast.error(firstError.message);
         }
       } else {
-        // Erro da API ou do contexto
         const raw = error instanceof Error ? error.message : "";
         toast.error(translateLoginError(raw));
+        // Reseta o captcha para exigir nova resolução após erro de credenciais
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
       }
     } finally {
       setIsSubmitting(false);
@@ -209,10 +216,23 @@ export default function OrganizerLoginPage() {
               </Link>
             </div>
 
+            {/* Captcha Turnstile */}
+            {TURNSTILE_SITE_KEY && (
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={TURNSTILE_SITE_KEY}
+                onSuccess={setTurnstileToken}
+                onError={() => setTurnstileToken(null)}
+                onExpire={() => setTurnstileToken(null)}
+                options={{ theme: "auto", size: "flexible" }}
+                className="w-full"
+              />
+            )}
+
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isSubmitting || authLoading}
+              disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
             >
               {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
             </Button>

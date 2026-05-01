@@ -104,12 +104,12 @@ export function buildCreateEventBodyFromForm(
     eventData.regulationUrl = reg;
   }
 
-  if (formData.contactEmail?.trim()) eventData.contactEmail = formData.contactEmail.trim();
-  if (formData.instagram?.trim()) eventData.instagram = formData.instagram.trim();
-  if (formData.facebook?.trim()) eventData.facebook = formData.facebook.trim();
-  if (formData.youtube?.trim()) eventData.youtube = formData.youtube.trim();
-  if (formData.tiktok?.trim()) eventData.tiktok = formData.tiktok.trim();
-  if (formData.website?.trim()) eventData.website = formData.website.trim();
+  eventData.contactEmail = formData.contactEmail?.trim() || null;
+  eventData.instagram = formData.instagram?.trim() || null;
+  eventData.facebook = formData.facebook?.trim() || null;
+  eventData.youtube = formData.youtube?.trim() || null;
+  eventData.tiktok = formData.tiktok?.trim() || null;
+  eventData.website = formData.website?.trim() || null;
 
   return eventData;
 }

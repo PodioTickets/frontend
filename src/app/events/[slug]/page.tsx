@@ -4,12 +4,11 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { ArrowLeft, GlobeIcon, Phone, ShoppingCart } from "lucide-react";
+import { ArrowLeft, GlobeIcon, Phone } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
-import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
@@ -85,6 +84,14 @@ export default function EventPage() {
   const [showFixedButton, setShowFixedButton] = useState(false);
 
   useEffect(() => {
+    const handleScroll = () => {
+      setShowFixedButton((window.scrollY || document.documentElement.scrollTop) > 200);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [eventSlug]);
 
@@ -123,17 +130,6 @@ export default function EventPage() {
   };
 
 
-  useEffect(() => {
-    const handleScroll = () => {
-      // Mostrar botão quando scrollar mais de 200px
-      const scrollPosition =
-        window.scrollY || document.documentElement.scrollTop;
-      setShowFixedButton(scrollPosition > 200);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Mostrar loading enquanto está carregando (incluindo quando ainda não tem dados)
   if (isLoading || (event === undefined && !error)) {
@@ -268,9 +264,9 @@ export default function EventPage() {
 
             <div className="flex flex-col gap-3 mb-4">
               <div className="flex items-center gap-2 text-gray-12">
-                <LocationIcon className="size-5 text-gray-12" />
+                <LocationIcon className="size-5 text-gray-12 shrink-0" />
                 <span className="text-sm">
-                  {event.location || `${event.city}, ${event.state}`}
+                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-gray-12">
@@ -369,11 +365,7 @@ export default function EventPage() {
                     <Button
                       variant="outline"
                       className="w-full text-gray-12 border-gray-6"
-                      onClick={() => {
-                        if (organizer.email) {
-                          window.location.href = `mailto:${organizer.email}?subject=Contato sobre ${event.name}`;
-                        }
-                      }}
+                      onClick={() => setIsContactModalOpen(true)}
                     >
                       Falar com o organizador
                     </Button>
@@ -382,7 +374,8 @@ export default function EventPage() {
               })()}
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons — ocultos quando o fixo de baixo estiver visível */}
+            <div className={showFixedButton ? "hidden" : ""}>
             {eventRealizationPassed ? (
               <>
                 <Button
@@ -449,6 +442,7 @@ export default function EventPage() {
                 Inscreva-se
               </Button>
             )}
+            </div>
           </div>
         </div>
 
@@ -567,9 +561,9 @@ export default function EventPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <LocationIcon className="size-5" />
+                  <LocationIcon className="size-5 shrink-0" />
                   <span className="text-sm">
-                    {event.location || `${event.city}, ${event.state}`}
+                    {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
                   </span>
                 </div>
               </div>
@@ -648,16 +642,18 @@ export default function EventPage() {
       {/* Desktop Layout - Original */}
       <div className="hidden md:block">
         {event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError && (
-          <div
-            className="absolute top-0 left-0 w-full max-h-[600px] h-full blur-sm scale-105"
-            style={{
-              backgroundImage: `url(${event?.bannerUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "top",
-              backgroundRepeat: "no-repeat",
-            }}
-          >
-            <div className="absolute bottom-0 left-0 w-full h-[40%] bg-linear-to-b from-transparent to-white" />
+          <div className="absolute top-0 left-0 w-full max-h-[600px] h-full overflow-hidden">
+            <div
+              className="w-full h-full blur-sm scale-105"
+              style={{
+                backgroundImage: `url(${event?.bannerUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "top",
+                backgroundRepeat: "no-repeat",
+              }}
+            >
+              <div className="absolute bottom-0 left-0 w-full h-[40%] bg-linear-to-b from-transparent to-white" />
+            </div>
           </div>
         )}
 
@@ -698,15 +694,27 @@ export default function EventPage() {
                       <h1 className="text-lg font-bold mb-4">{event.name}</h1>
                       <div className="flex flex-col gap-4">
                         <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-                          <LocationIcon className="size-5" />{" "}
+                          <LocationIcon className="size-5 shrink-0" />{" "}
                           <span className="text-sm">
-                            {event.city}, {event.state}
+                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
                           </span>
                         </h1>
                         <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
                           <CalendarIcon className="size-5" />{" "}
-                          <span>{formatDateLong(new Date(event.eventDate))}</span>
+                          <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
                         </h1>
+                        {event.registrationEndDate && (
+                          <div className="flex items-center gap-2 text-sm text-gray-12 font-medium">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                              <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                              <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                            </svg>
+                            <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
+                          </div>
+                        )}
                         {event.modalities
                           ?.filter((modality) => modality.isActive)
                           .map((modality) => {
@@ -980,15 +988,27 @@ export default function EventPage() {
                   <h1 className="text-lg font-bold mb-4">{event.name}</h1>
                   <div className="flex flex-col gap-4">
                     <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-                      <LocationIcon className="size-5" />{" "}
+                      <LocationIcon className="size-5 shrink-0" />{" "}
                       <span className="text-sm">
-                        {event.city}, {event.state}
+                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
                       </span>
                     </h1>
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
                       <CalendarIcon className="size-5" />{" "}
-                      <span>{formatDateLong(new Date(event.eventDate))}</span>
+                      <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
                     </h1>
+                    {event.registrationEndDate && (
+                      <div className="flex items-center gap-2 text-sm text-gray-12 font-medium">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                          <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                          <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                        </svg>
+                        <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
+                      </div>
+                    )}
                     {event.modalities
                       ?.filter((modality) => modality.isActive)
                       .map((modality) => {
@@ -1024,25 +1044,38 @@ export default function EventPage() {
                       const organizer = getEventOrganizer(event);
                       if (!organizer) return null;
 
+                      const socialLinks = [
+                        { url: event.instagram, icon: InstagramIcon },
+                        { url: event.facebook, icon: FacebookIcon },
+                        { url: event.youtube, icon: YoutubeIcon },
+                        { url: event.tiktok, icon: TiktokIcon },
+                        { url: event.website, icon: GlobeIcon },
+                      ];
+
                       return (
                         <div className="space-y-3">
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-center gap-3">
                             <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 flex flex-col gap-1">
                               <p className="text-sm font-semibold text-gray-12 truncate">
                                 {organizer.name}
                               </p>
-                              {organizer.phone && (
-                                <div className="flex items-center gap-1.5 mt-1">
-                                  <Phone className="size-3.5 text-gray-11 shrink-0" />
-                                  <a
-                                    href={`tel:${phoneDigitsForTel(organizer.phone) || organizer.phone.replace(/\D/g, "")}`}
-                                    className="text-xs text-gray-11 hover:text-primary-11 transition-colors"
-                                  >
-                                    {formatBrazilianPhone(organizer.phone)}
-                                  </a>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-1">
+                                {socialLinks.map(({ url, icon: Icon }, index) => {
+                                  if (!url) return null;
+                                  return (
+                                    <Link
+                                      key={index}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
+                                    >
+                                      <Icon className="size-4" />
+                                    </Link>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
 

@@ -26,6 +26,7 @@ interface Coupon {
   couponType: "AGE" | "QUANTITY" | "DISCOUNT";
   type: "PERCENTAGE" | "FIXED";
   value: number;
+  maxUsage?: number;
   expiryDate: string;
   status: "ACTIVE" | "INACTIVE" | "EXPIRED";
   eventId: string;
@@ -40,7 +41,6 @@ export default function CouponsPage() {
   const params = useParams();
   const eventId = params.id as string;
   useEventPermissionGuard("coupons");
-  const { isAuthenticated } = useAuth();
   const { copyToClipboard } = useClipboard();
   const { openCreateCouponModal, setOnModalSave } = useCreateCouponModal();
   const { openDeleteCouponModal } = useDeleteCouponModal();
@@ -363,7 +363,7 @@ export default function CouponsPage() {
                               </td>
                               <td className="py-4 px-5 text-center">
                                 <span className="text-sm text-gray-12 font-semibold font-family-dm-sans">
-                                  {coupon.usageCount}
+                                  {coupon.usageCount}{coupon.maxUsage && `/${coupon.maxUsage}`}
                                 </span>
                               </td>
                               <td className="py-4 px-5 text-center">

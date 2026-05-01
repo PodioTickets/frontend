@@ -513,7 +513,7 @@ export default function EventRegistrationsPage() {
       { label: string; className: string; icon: LucideIcon }
     > = {
       CONFIRMED: {
-        label: "Confirmada",
+        label: "Pago",
         className: "bg-green-10/20 text-green-11",
         icon: CheckCircle,
       },
@@ -523,7 +523,7 @@ export default function EventRegistrationsPage() {
         icon: XCircle,
       },
       COMPLETED: {
-        label: "Concluída",
+        label: "Pago",
         className: "bg-blue-10/20 text-blue-11",
         icon: CheckCircle,
       },
@@ -845,7 +845,7 @@ export default function EventRegistrationsPage() {
                   PENDING: "Status: Pendente",
                   CONFIRMED: "Status: Pago",
                   CANCELLED: "Status: Cancelado",
-                  COMPLETED: "Status: Concluída",
+                  COMPLETED: "Status: Pago",
                   CHARGEBACK: "Status: ChargeBack",
                   REFUNDED: "Status: Estornado",
                 };

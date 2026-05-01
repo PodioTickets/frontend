@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useLoginModal, useRegisterModal } from "@/stores/modalStore";
 import { useAuth } from "@/hooks/useAuth";
 import { useForgotPassword } from "@/hooks/useForgotPassword";
@@ -19,6 +19,9 @@ import {
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 function ForgotPasswordPanel({
   email,
@@ -408,6 +411,11 @@ export function LoginModal() {
 
   const [showPassword, setShowPassword] = useState(false);
 
+  // Turnstile
+  const mobileTurnstileRef = useRef<TurnstileInstance>(null);
+  const desktopTurnstileRef = useRef<TurnstileInstance>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
   // Validation errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -427,6 +435,9 @@ export function LoginModal() {
       setResetPasswordFieldErrors({});
       setForgotResendCooldown(0);
       setCredentialsError(false);
+      setTurnstileToken(null);
+      mobileTurnstileRef.current?.reset();
+      desktopTurnstileRef.current?.reset();
     }
   }, [isOpen]);
 
@@ -482,19 +493,17 @@ export function LoginModal() {
     try {
       const validatedData: LoginFormData = loginSchema.parse(formData);
 
-      // Chama a função de login do contexto
       await login({
         emailOrCpf: validatedData.email,
         password: validatedData.password,
+        ...(turnstileToken ? { turnstileToken } : {}),
       });
 
       toast.success("Login realizado com sucesso!");
       closeLoginModal();
-      // Limpa o formulário
       setFormData({ email: "", password: "" });
       setErrors({});
     } catch (error) {
-      console.log("error", error);
       if (error instanceof ZodError) {
         const newErrors: Record<string, string> = {};
         error.issues.forEach((err) => {
@@ -502,15 +511,17 @@ export function LoginModal() {
             newErrors[err.path[0] as string] = err.message;
           }
         });
-        console.log("newErrors", newErrors);
         setErrors(newErrors);
-        // Show first error as toast
         const firstError = error.issues[0];
         if (firstError) {
           toast.error(firstError.message);
         }
       } else {
         setCredentialsError(true);
+        // Reseta o captcha para exigir nova resolução após erro de credenciais
+        setTurnstileToken(null);
+        mobileTurnstileRef.current?.reset();
+        desktopTurnstileRef.current?.reset();
       }
     } finally {
       setIsSubmitting(false);
@@ -871,10 +882,23 @@ export function LoginModal() {
                         </button>
                       </div>
 
+                      {/* Captcha Turnstile */}
+                      {TURNSTILE_SITE_KEY && (
+                        <Turnstile
+                          ref={mobileTurnstileRef}
+                          siteKey={TURNSTILE_SITE_KEY}
+                          onSuccess={setTurnstileToken}
+                          onError={() => setTurnstileToken(null)}
+                          onExpire={() => setTurnstileToken(null)}
+                          options={{ theme: "auto", size: "flexible" }}
+                          className="w-full"
+                        />
+                      )}
+
                       {/* Login button */}
                       <Button
                         type="submit"
-                        disabled={isSubmitting || authLoading}
+                        disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
                         className="w-full h-11 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading
@@ -1116,10 +1140,23 @@ export function LoginModal() {
                         </button>
                       </div>
 
+                      {/* Captcha Turnstile */}
+                      {TURNSTILE_SITE_KEY && (
+                        <Turnstile
+                          ref={desktopTurnstileRef}
+                          siteKey={TURNSTILE_SITE_KEY}
+                          onSuccess={setTurnstileToken}
+                          onError={() => setTurnstileToken(null)}
+                          onExpire={() => setTurnstileToken(null)}
+                          options={{ theme: "auto", size: "flexible" }}
+                          className="w-full"
+                        />
+                      )}
+
                       {/* Login button */}
                       <Button
                         type="submit"
-                        disabled={isSubmitting || authLoading}
+                        disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
                         className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading

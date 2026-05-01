@@ -13,6 +13,7 @@ import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
+import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import { useEventPermissionGuard } from "@/hooks/useEventPermissionGuard";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
@@ -48,6 +49,11 @@ function EditProgressBar() {
       currentStepIndex = 3;
     } else if (isQuestionnaireStep) {
       currentStepIndex = 4;
+    }
+
+    const isFinancialStep = pathname.includes("/edit/financial");
+    if (isFinancialStep) {
+      currentStepIndex = 5;
     }
 
     if (currentStepIndex === -1) return "default";
@@ -87,6 +93,12 @@ function EditProgressBar() {
       label: "Questionário",
       icon: QuestionIcon,
       href: `/organizer/events/${eventId}/edit/questionnaire`,
+    },
+    {
+      step: 6,
+      label: "Financeiro",
+      icon: FinancialStepIcon,
+      href: `/organizer/events/${eventId}/edit/financial`,
     },
   ];
 

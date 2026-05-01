@@ -17,7 +17,6 @@ import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import toast from "react-hot-toast";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
-import { Dropdown } from "@/components/Dropdown";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { BRAZIL_STATES } from "@/utils/locationFacets";
 import { useCitiesByState } from "@/hooks/useCitiesByState";
@@ -418,12 +417,12 @@ export default function EditInformationPage() {
         eventData.googleMapsLink = formData.googleMapsLink;
       }
 
-      if (formData.contactEmail?.trim()) eventData.contactEmail = formData.contactEmail.trim();
-      if (formData.instagram?.trim()) eventData.instagram = formData.instagram.trim();
-      if (formData.facebook?.trim()) eventData.facebook = formData.facebook.trim();
-      if (formData.youtube?.trim()) eventData.youtube = formData.youtube.trim();
-      if (formData.tiktok?.trim()) eventData.tiktok = formData.tiktok.trim();
-      if (formData.website?.trim()) eventData.website = formData.website.trim();
+      eventData.contactEmail = formData.contactEmail?.trim() || null;
+      eventData.instagram = formData.instagram?.trim() || null;
+      eventData.facebook = formData.facebook?.trim() || null;
+      eventData.youtube = formData.youtube?.trim() || null;
+      eventData.tiktok = formData.tiktok?.trim() || null;
+      eventData.website = formData.website?.trim() || null;
 
       if (registrationStartDateTime) {
         eventData.registrationStartDate = registrationStartDateTime;
@@ -733,24 +732,21 @@ export default function EditInformationPage() {
                   <label className="text-gray-12 text-base font-family-dm-sans">
                     Estado
                   </label>
-                  <Dropdown
-                    dataAttribute="state-edit"
-                    options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${uf} — ${name}` }))}
-                    selectedIds={formData.state ? [formData.state] : []}
-                    onSelect={(option) => updateFormData({ state: option.id ?? "", city: "" })}
-                    width="w-full"
-                    maxHeight="max-h-[240px]"
-                    className="top-14"
-                    trigger={() => (
-                      <div className="border-gray-6 flex h-12 w-full items-center rounded-md border bg-transparent px-3 md:text-base cursor-pointer hover:bg-gray-3 transition-colors">
-                        <span className={formData.state ? "text-gray-12" : "text-gray-11"}>
-                          {formData.state
-                            ? `${formData.state} — ${BRAZIL_STATES.find((s) => s.uf === formData.state)?.name ?? ""}`
-                            : "Selecione o estado"}
-                        </span>
-                      </div>
-                    )}
+                  <SearchableSelect
+                    options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${name} - ${uf}` }))}
+                    value={formData.state ?? ""}
+                    onChange={(val) => {
+                      updateFormData({ state: val, city: "" });
+                      if (errors.state) setErrors((prev) => ({ ...prev, state: "" }));
+                      if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
+                    }}
+                    placeholder="Selecione o estado"
+                    searchPlaceholder="Pesquisar estado..."
+                    emptyText="Nenhum estado encontrado"
                   />
+                  {errors.state && (
+                    <p className="text-red-10 text-sm">{errors.state}</p>
+                  )}
                 </div>
               </div>
 

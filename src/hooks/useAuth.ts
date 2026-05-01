@@ -34,7 +34,7 @@ interface AuthContextType {
   refetchUser: () => Promise<User | null>;
   isLoading: boolean;
   error: any;
-  login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }) => Promise<void>;
+  login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER"; turnstileToken?: string }) => Promise<void>;
   register: (data: RegisterData) => Promise<{ id: string; email: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -212,7 +212,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const login = async (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }) => {
+  const login = async (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER"; turnstileToken?: string }) => {
     setIsLoading(true);
     setError(null);
     try {

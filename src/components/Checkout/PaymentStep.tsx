@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { io, Socket } from "socket.io-client";
 import { OrderSummary } from "./OrderSummary";
 import { ParticipantSummaryModal } from "./ParticipantSummaryModal";
 import {
@@ -270,6 +271,8 @@ function CreditCardForm({
   );
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+
 function PixModal({
   isOpen,
   onClose,
@@ -285,75 +288,82 @@ function PixModal({
 }) {
   const [timeLeft, setTimeLeft] = useState(30 * 60);
   const expirationDate = pixData ? new Date(pixData.expiresAt) : null;
-  const [status, setStatus] = useState<"PENDING" | "PAID" | "CANCELLED" | null>(
-    null,
-  );
-  const { getPaymentStatus } = useCheckoutReservation();
+  const [status, setStatus] = useState<"PENDING" | "PAID" | "CANCELLED" | null>(null);
 
-  // Polling de status do pagamento via novo endpoint.
+  // Refs estáveis — nunca mudam de referência, evitam re-execução dos effects
+  const confirmedRef = useRef(false);
+  const onPaymentConfirmedRef = useRef(onPaymentConfirmed);
+  onPaymentConfirmedRef.current = onPaymentConfirmed;
+
+  // Callback estável (deps vazias) — lê o callback atual via ref
+  const handleConfirmed = useCallback(() => {
+    if (confirmedRef.current) return;
+    confirmedRef.current = true;
+    setStatus("PAID");
+    toast.success("Pagamento confirmado!");
+    onPaymentConfirmedRef.current?.();
+  }, []);
+
+  // WebSocket — canal primário; só roda quando isOpen/orderId mudam
   useEffect(() => {
-    if (!isOpen || !orderId) return;
-    let stopped = false;
+    if (!isOpen || !orderId || !API_URL) return;
 
-    const tick = async () => {
-      try {
-        const res = await getPaymentStatus(orderId);
-        if (stopped) return;
-        setStatus(res.status);
-        if (res.status === "PAID") {
-          toast.success("Pagamento confirmado!");
-          onPaymentConfirmed?.();
-          stopped = true;
-        } else if (res.status === "CANCELLED") {
-          toast.error("Pagamento não foi confirmado.");
-          stopped = true;
-        }
-      } catch {
-        /* swallow polling errors */
-      }
-    };
+    const socket: Socket = io(`${API_URL}/payments`, {
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+    });
 
-    void tick();
-    const interval = setInterval(() => {
-      if (stopped) {
-        clearInterval(interval);
-        return;
+    socket.on("connect", () => {
+      socket.emit("subscribe:order", { orderId });
+    });
+
+    socket.on("payment:confirmed", (data: { orderId: string; status: string }) => {
+      if (data.orderId === orderId && data.status === "PAID") {
+        handleConfirmed();
       }
-      void tick();
-    }, 5000);
+    });
+
+    socket.on("connect_error", () => {
+      // polling continua como fallback — não fatal
+    });
 
     return () => {
-      stopped = true;
-      clearInterval(interval);
+      socket.disconnect();
     };
-  }, [isOpen, orderId, getPaymentStatus, onPaymentConfirmed]);
+  }, [isOpen, orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+
+  // Countdown baseado no expiresAt vindo do servidor
   useEffect(() => {
     if (!isOpen || !expirationDate) return;
 
     const updateTimeLeft = () => {
-      const now = new Date();
-      const diff = Math.max(0, Math.floor((expirationDate.getTime() - now.getTime()) / 1000));
+      const diff = Math.max(0, Math.floor((expirationDate.getTime() - Date.now()) / 1000));
       setTimeLeft(diff);
-
-      if (diff <= 0) {
-        onClose();
-      }
+      if (diff <= 0) onClose();
     };
 
     updateTimeLeft();
     const timer = setInterval(updateTimeLeft, 1000);
-
     return () => clearInterval(timer);
   }, [isOpen, expirationDate, onClose]);
+
+  // Reset ao fechar/abrir
+  useEffect(() => {
+    if (isOpen) {
+      confirmedRef.current = false;
+      setStatus(null);
+    }
+  }, [isOpen]);
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
 
   const copyPixCode = () => {
-    if (pixData?.qrCode) {
-      navigator.clipboard.writeText(pixData.qrCode);
-      toast.success('Código PIX copiado!');
+    const code = pixData?.pixCode ?? pixData?.qrCode;
+    if (code) {
+      navigator.clipboard.writeText(code);
+      toast.success("Código PIX copiado!");
     }
   };
 
@@ -391,7 +401,7 @@ function PixModal({
             <div className="bg-gray-2 p-8 rounded-lg mx-auto max-w-xs">
               {pixData?.qrCodeBase64 ? (
                 <Image
-                  src={pixData.qrCodeBase64}
+                  src={`data:image/png;base64,${pixData.qrCodeBase64}`}
                   alt="QR Code PIX"
                   width={192}
                   height={192}
@@ -905,12 +915,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     [categories]
   );
 
-  // Mapa ticketId → reservedTicket para desconto por ingresso.
-  const reservedTicketsMap = useMemo(() => {
+  // Agrupa reservas por ticketId como array (preserva ordem do servidor).
+  // Múltiplos participantes do mesmo tipo de ingresso podem ter cupom aplicado de forma independente.
+  const reservedTicketsByTicketId = useMemo(() => {
     type ReservedTicket = NonNullable<typeof currentOrder>["tickets"][0];
-    if (!currentOrder) return {} as Record<string, ReservedTicket>;
-    const map: Record<string, ReservedTicket> = {};
-    currentOrder.tickets.forEach((t) => { map[t.ticketId] = t; });
+    if (!currentOrder) return {} as Record<string, ReservedTicket[]>;
+    const map: Record<string, ReservedTicket[]> = {};
+    currentOrder.tickets.forEach((t) => {
+      if (!map[t.ticketId]) map[t.ticketId] = [];
+      map[t.ticketId].push(t);
+    });
     return map;
   }, [currentOrder]);
 
@@ -942,17 +956,24 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
     const orderCoupon = currentOrder?.coupon;
     const orderVoucher = currentOrder?.voucher;
+    // Contador posicional por ticketId — o nth participante pega a nth reserva do ticket.
+    const ticketCounters: Record<string, number> = {};
 
     participantsWithTickets.forEach(({ ticket, participantIndex }) => {
       const participant = participants[participantIndex];
       if (participant && (participant.name || participant.cpf)) {
         const products = getParticipantProducts(participantIndex);
-        const reservedTicket = reservedTicketsMap[ticket.id];
-        const unitDiscount = reservedTicket?.unitDiscount ?? 0;
 
-        // Exibe badge de cupom para qualquer cupom aplicado (manual ou automático).
-        const hasCoupon = !!orderCoupon && unitDiscount > 0;
-        // Voucher sempre exibe quando aplicado.
+        const reservations = reservedTicketsByTicketId[ticket.id] ?? [];
+        const reservationIdx = ticketCounters[ticket.id] ?? 0;
+        ticketCounters[ticket.id] = reservationIdx + 1;
+        const reservedTicket = reservations[reservationIdx];
+
+        const unitDiscount = reservedTicket?.unitDiscount ?? 0;
+        // couponApplied vem do servidor por reserva; fallback para presença do cupom + desconto.
+        const couponApplied = reservedTicket?.couponApplied ?? (!!orderCoupon && unitDiscount > 0);
+
+        const hasCoupon = !!orderCoupon && couponApplied && unitDiscount > 0;
         const hasVoucher = !!orderVoucher && !orderCoupon && unitDiscount > 0;
 
         data.push({
@@ -978,7 +999,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     });
 
     return data;
-  }, [participantsWithTickets, participants, productsData, currentOrder, reservedTicketsMap]);
+  }, [participantsWithTickets, participants, productsData, currentOrder, reservedTicketsByTicketId]);
 
   // Calcular produtos selecionados a partir do contexto (productVariations de cada participante)
   const orderItems = useMemo((): Array<{

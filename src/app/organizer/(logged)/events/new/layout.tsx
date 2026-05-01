@@ -13,6 +13,7 @@ import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
 import { QuestionIcon } from "@/components/Icons/QuestionIcon";
 import { TopicsIcon } from "@/components/Icons/TopicsIcon";
 import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
+import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import { saveLastCreateEventWizardPath } from "@/lib/createEventWizardPersistence";
 
 export const dynamic = 'force-dynamic';
@@ -43,6 +44,7 @@ function ProgressBar() {
     )
       return 3;
     if (pathname.startsWith("/organizer/events/new/questionnaire")) return 4;
+    if (pathname.startsWith("/organizer/events/new/financial")) return 5;
     return -1;
   };
 
@@ -57,7 +59,7 @@ function ProgressBar() {
   const getProgressWidth = (): string => {
     const currentStepIndex = resolveStepIndex();
     if (currentStepIndex <= 0) return "0%";
-    return `${(currentStepIndex / 4) * 100}%`;
+    return `${(currentStepIndex / 5) * 100}%`;
   };
 
   const stepLinkClass =
@@ -265,6 +267,45 @@ function ProgressBar() {
                 </div>
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
                   Questionário
+                </p>
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const status = getStepStatus(6);
+            return (
+              <div
+                className={stepLinkClass}
+              >
+                <div
+                  className={`rounded-[52px] size-12 p-1 flex items-center justify-center shrink-0 relative ${status === "completed"
+                    ? "border border-[#3e7949]"
+                    : status === "active"
+                      ? "border border-[#3a3a3a]"
+                      : ""
+                    }`}
+                >
+                  <div
+                    className={`rounded-[32px] size-full p-2 flex items-center justify-center ${status === "completed"
+                      ? "bg-[#3e7949]"
+                      : status === "active"
+                        ? "bg-[#3a3a3a]"
+                        : "bg-gray-6"
+                      }`}
+                  >
+                    {status === "completed" ? (
+                      <CheckIcon className="size-5 text-white" />
+                    ) : (
+                      <FinancialStepIcon
+                        className={`size-5 ${status === "active" ? "text-white" : "text-gray-12"
+                          }`}
+                      />
+                    )}
+                  </div>
+                </div>
+                <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
+                  Financeiro
                 </p>
               </div>
             );

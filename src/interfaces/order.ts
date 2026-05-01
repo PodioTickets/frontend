@@ -18,6 +18,7 @@ export type OrderPaymentMethod = "CREDIT_CARD" | "PIX";
 export type OrderPaymentStatus = "pending" | "approved" | "refused";
 
 export interface OrderTicket {
+  id?: string;
   ticketId: string;
   batchId: string;
   batchName?: string;
@@ -27,6 +28,7 @@ export interface OrderTicket {
   totalDiscount?: number;
   finalUnitPrice?: number;
   finalTotalPrice?: number;
+  couponApplied?: boolean;
 }
 
 export interface OrderCoupon {
@@ -56,6 +58,7 @@ export interface OrderPricing {
 export interface OrderPixInfo {
   qrCode: string;
   qrCodeBase64: string;
+  pixCode: string;
   expiresAt: string;
 }
 

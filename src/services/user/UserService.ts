@@ -121,7 +121,7 @@ export interface UserItem {
 export class UserService {
   constructor(private apiClient: ApiClient) {}
 
-  async login(data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" }): Promise<{
+  async login(data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER"; turnstileToken?: string }): Promise<{
     success: boolean;
     data?: {
       access_token: string;
@@ -142,10 +142,10 @@ export class UserService {
         ? "/api/v1/auth/login/organizer"
         : "/api/v1/auth/login";
       
-      // Remover accountType do payload se usar endpoint específico
+      // Remover accountType do payload; incluir turnstileToken se presente
       const payload = data.accountType === "ORGANIZER"
-        ? { emailOrCpf: data.emailOrCpf, password: data.password }
-        : data;
+        ? { emailOrCpf: data.emailOrCpf, password: data.password, ...(data.turnstileToken ? { turnstileToken: data.turnstileToken } : {}) }
+        : { emailOrCpf: data.emailOrCpf, password: data.password, ...(data.turnstileToken ? { turnstileToken: data.turnstileToken } : {}) };
       
       const response = await this.apiClient.post<LoginResponse>(
         endpoint,

@@ -82,6 +82,7 @@ function toOrderResponse(data: any): OrderResponse {
     expiresAt: data.expiresAt ?? "",
     serverTime: data.serverTime ?? new Date().toISOString(),
     tickets: (data.tickets ?? data.reservedTickets ?? []).map((t: any) => ({
+      id: t.id,
       ticketId: t.ticketId,
       batchId: t.batchId,
       batchName: t.ticketName ?? t.batchName,
@@ -91,6 +92,7 @@ function toOrderResponse(data: any): OrderResponse {
       totalDiscount: t.totalDiscount ?? 0,
       finalUnitPrice: t.finalUnitPrice ?? t.unitPrice ?? 0,
       finalTotalPrice: t.finalTotalPrice ?? 0,
+      couponApplied: t.couponApplied ?? false,
     })),
     pricing: {
       subtotal: data.pricing?.subtotal ?? data.totalAmount ?? 0,

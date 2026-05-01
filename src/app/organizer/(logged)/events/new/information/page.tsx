@@ -24,7 +24,6 @@ import { organizerNewEventClientPage } from "@/lib/organizerAudit";
 import { Loading } from "@/components/Loading";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
 import { ContactEmailHelpTooltip } from "@/components/Organizer/ContactEmailHelpTooltip";
-import { Dropdown } from "@/components/Dropdown";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { BRAZIL_STATES } from "@/utils/locationFacets";
 import { useCitiesByState } from "@/hooks/useCitiesByState";
@@ -925,28 +924,18 @@ export default function InformacoesPage() {
                       <label className="text-gray-12 text-base font-family-dm-sans">
                         Estado
                       </label>
-                      <Dropdown
-                        dataAttribute="state-new"
-                        options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${uf} — ${name}` }))}
-                        selectedIds={formData.state ? [formData.state] : []}
-                        onSelect={(option) => {
-                          updateFormData({ state: option.id ?? "", city: "" });
+                      <SearchableSelect
+                        options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${name} - ${uf}` }))}
+                        value={formData.state ?? ""}
+                        onChange={(val) => {
+                          updateFormData({ state: val, city: "" });
                           if (errors.state) setErrors((prev) => ({ ...prev, state: "" }));
                           if (errors.city) setErrors((prev) => ({ ...prev, city: "" }));
                         }}
-                        width="w-full"
-                        maxHeight="max-h-[240px]"
-                        className="top-14"
-                        menuInPortal
-                        trigger={() => (
-                          <div className={`border-gray-6 flex h-12 w-full items-center rounded-md border bg-transparent px-3 md:text-base cursor-pointer hover:bg-gray-3 transition-colors ${errors.state ? "border-red-10" : ""}`}>
-                            <span className={formData.state ? "text-gray-12" : "text-gray-11"}>
-                              {formData.state
-                                ? `${formData.state} — ${BRAZIL_STATES.find((s) => s.uf === formData.state)?.name ?? ""}`
-                                : "Selecione o estado"}
-                            </span>
-                          </div>
-                        )}
+                        placeholder="Selecione o estado"
+                        searchPlaceholder="Pesquisar estado..."
+                        emptyText="Nenhum estado encontrado"
+                        error={!!errors.state}
                       />
                       {errors.state && (
                         <p className="text-red-10 text-sm">{errors.state}</p>

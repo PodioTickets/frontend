@@ -18,7 +18,13 @@
       "Bash(curl -s \"http://localhost:3333/api/v1/payments/order/55b6bb92-7e49-48e3-8f20-79a27e045fea/details\")",
       "Bash(git log *)",
       "Bash(grep *)",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(powershell -Command \"Get-Content 'C:\\\\Users\\\\muril\\\\.claude\\\\projects\\\\C--Users-muril-Projects-PodioTickets-frontend\\\\a034753d-903e-49d5-9eb6-56d5838902ad\\\\tool-results\\\\toolu_018CLV9U2y3ToqAuYpNYvaL9.json' -Raw | Select-String -Pattern '.' | Select-Object -First 1\")",
+      "WebFetch(domain:www.figma.com)",
+      "Bash(npm install *)",
+      "Bash(pnpm add *)",
+      "Bash(xargs ls *)",
+      "Bash(pnpm tsc *)"
     ]
   },
   "disabledMcpjsonServers": [

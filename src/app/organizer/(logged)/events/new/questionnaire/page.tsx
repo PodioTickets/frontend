@@ -9,7 +9,7 @@ import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { ensureCreateEventSyncedFromDraft } from "@/lib/createEventDraftSync";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
-import { useCreateQuestionModal, useDeleteQuestionModal, usePublishEventModal } from "@/stores/modalStore";
+import { useCreateQuestionModal, useDeleteQuestionModal } from "@/stores/modalStore";
 import toast from "react-hot-toast";
 import { Plus, Pencil } from "lucide-react";
 import type { Question } from "@/services/organizer/OrganizerService";
@@ -22,7 +22,6 @@ export default function QuestionnairePage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
   const { formData, updateFormData } = useCreateEvent();
-  const { openPublishEventModal } = usePublishEventModal();
   const { openCreateQuestionModal, setOnModalSave } = useCreateQuestionModal();
   const { openDeleteQuestionModal } = useDeleteQuestionModal();
   const [authChecked, setAuthChecked] = useState(false);
@@ -114,14 +113,8 @@ export default function QuestionnairePage() {
     toast.success("Evento salvo como rascunho com sucesso!");
   };
 
-  const goPublicarEvento = () => {
-    if (!formData.createdEventId) {
-      toast.error("Evento não encontrado");
-      return;
-    }
-    openPublishEventModal({
-      eventId: formData.createdEventId,
-    });
+  const goFinanceiro = () => {
+    orgNav.push("/organizer/events/new/financial");
   };
 
   const handleOpenQuestionnairePreview = useCallback(() => {
@@ -303,14 +296,14 @@ export default function QuestionnairePage() {
           </Button>
           <Button
             type="button"
-            onClick={goPublicarEvento}
+            onClick={goFinanceiro}
             variant="default"
             className={cn(
               "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12",
               "max-md:h-12 max-md:w-full max-md:px-4",
             )}
           >
-            Públicar evento
+            Próximo
           </Button>
         </div>
       </div>

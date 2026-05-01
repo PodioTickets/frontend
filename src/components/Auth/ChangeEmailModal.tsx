@@ -93,9 +93,28 @@ export function ChangeEmailModal() {
       setResendCooldown(60);
       setStep("code");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Erro ao solicitar troca de e-mail.";
-      if (typeof msg === "string" && msg.toLowerCase().includes("em uso")) {
-        setFormErrors((p) => ({ ...p, newEmail: msg }));
+      const msg: string = err?.message || "Erro ao solicitar troca de e-mail.";
+      const msgLower = msg.toLowerCase();
+
+      // UserService.handleError sets formFieldErrors.email for 409 email-in-use responses
+      const isEmailInUse =
+        !!err?.formFieldErrors?.email ||
+        (msgLower.includes("email") &&
+          (msgLower.includes("uso") || msgLower.includes("cadastrad") || msgLower.includes("already") || msgLower.includes("exist")));
+
+      // Any AuthError that isn't email-in-use is a wrong password on this form
+      const isWrongPassword =
+        !isEmailInUse &&
+        (err?.name === "AuthError" ||
+          msgLower.includes("senha") ||
+          msgLower.includes("password") ||
+          msgLower.includes("incorrect") ||
+          msgLower.includes("invalid"));
+
+      if (isEmailInUse) {
+        setFormErrors((p) => ({ ...p, newEmail: err?.formFieldErrors?.email ?? msg }));
+      } else if (isWrongPassword) {
+        setFormErrors((p) => ({ ...p, currentPassword: "Senha incorreta." }));
       } else {
         toast.error(msg);
       }
