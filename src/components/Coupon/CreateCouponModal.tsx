@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { useCreateCouponModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -55,6 +55,9 @@ export function CreateCouponModal() {
 
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
   const advancedPanelRef = useRef<HTMLDivElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [isAddingCpf, setIsAddingCpf] = useState(false);
+  const [newCpfInput, setNewCpfInput] = useState("");
 
   const minSelectableExpiryDate = useMemo(() => {
     const d = new Date();
@@ -255,13 +258,64 @@ export function CreateCouponModal() {
   }, [showAdvanced]);
 
   const handleAddCPF = () => {
-    // TODO: Implementar adição de CPF individual
-    toast.success("Funcionalidade de adicionar CPF individual em desenvolvimento");
+    setIsAddingCpf(true);
+    setNewCpfInput("");
+  };
+
+  const handleConfirmAddCPF = () => {
+    const digits = newCpfInput.replace(/\D/g, "");
+    if (digits.length !== 11) {
+      toast.error("CPF inválido. Digite 11 dígitos.");
+      return;
+    }
+    if (cpfList.includes(digits)) {
+      toast.error("CPF já está na lista.");
+      return;
+    }
+    setCpfList([...cpfList, digits]);
+    setIsAddingCpf(false);
+    setNewCpfInput("");
+  };
+
+  const handleNewCpfInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
+    let formatted = raw;
+    if (raw.length > 9) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`;
+    else if (raw.length > 6) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6)}`;
+    else if (raw.length > 3) formatted = `${raw.slice(0, 3)}.${raw.slice(3)}`;
+    setNewCpfInput(formatted);
   };
 
   const handleImportCSV = () => {
-    // TODO: Implementar importação de CSV
-    toast.success("Funcionalidade de importar CSV em desenvolvimento");
+    csvInputRef.current?.click();
+  };
+
+  const handleCSVFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split(/[\r\n,;]+/);
+      const newCpfs: string[] = [];
+      let duplicates = 0;
+      let invalid = 0;
+      for (const line of lines) {
+        const digits = line.replace(/\D/g, "");
+        if (digits.length !== 11) { if (digits.length > 0) invalid++; continue; }
+        if (cpfList.includes(digits) || newCpfs.includes(digits)) { duplicates++; continue; }
+        newCpfs.push(digits);
+      }
+      if (newCpfs.length > 0) setCpfList((prev) => [...prev, ...newCpfs]);
+      const parts: string[] = [];
+      if (newCpfs.length > 0) parts.push(`${newCpfs.length} CPF(s) importado(s)`);
+      if (duplicates > 0) parts.push(`${duplicates} duplicado(s) ignorado(s)`);
+      if (invalid > 0) parts.push(`${invalid} inválido(s) ignorado(s)`);
+      if (parts.length > 0) toast.success(parts.join(", "));
+      else toast.error("Nenhum CPF válido encontrado no arquivo.");
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const handleRemoveCPF = (index: number) => {
@@ -455,6 +509,13 @@ export function CreateCouponModal() {
 
   return (
     <>
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv,.txt"
+        className="hidden"
+        onChange={handleCSVFileChange}
+      />
       <AnimatePresence>
         {isOpen && (
           <>
@@ -997,6 +1058,37 @@ export function CreateCouponModal() {
                                             );
                                           })()}
                                         </div>
+                                        {/* Inline add CPF row */}
+                                        {isAddingCpf && (
+                                          <div className="px-4 py-2 border-t border-gray-6 flex items-center gap-2">
+                                            <input
+                                              type="text"
+                                              value={newCpfInput}
+                                              onChange={handleNewCpfInputChange}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") { e.preventDefault(); handleConfirmAddCPF(); }
+                                                if (e.key === "Escape") { setIsAddingCpf(false); setNewCpfInput(""); }
+                                              }}
+                                              autoFocus
+                                              placeholder="000.000.000-00"
+                                              className="flex-1 h-9 px-3 rounded-lg border border-gray-6 bg-gray-1 text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none focus:border-green-8"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={handleConfirmAddCPF}
+                                              className="h-9 px-3 rounded-lg bg-green-9 text-white text-sm font-semibold font-family-dm-sans hover:bg-green-10 transition-colors"
+                                            >
+                                              Confirmar
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => { setIsAddingCpf(false); setNewCpfInput(""); }}
+                                              className="h-9 px-3 rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-11 hover:bg-gray-3 transition-colors"
+                                            >
+                                              Cancelar
+                                            </button>
+                                          </div>
+                                        )}
                                         {/* Footer actions */}
                                         <div className="px-4 py-3 border-t border-gray-6 flex items-center justify-between">
                                           <div className="flex items-center gap-2">
