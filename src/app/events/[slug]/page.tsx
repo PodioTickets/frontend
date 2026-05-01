@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { ArrowLeft, GlobeIcon, Phone } from "lucide-react";
+import { ArrowLeft, GlobeIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
@@ -17,9 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
 import {
-  formatBrazilianPhone,
   getEventOrganizer,
-  phoneDigitsForTel,
 } from "@/utils/organization";
 import { cn } from "@/utils/cn";
 import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
@@ -78,9 +76,6 @@ export default function EventPage() {
   const [imageError, setImageError] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<
-    Record<string, boolean>
-  >({});
   const [showFixedButton, setShowFixedButton] = useState(false);
 
   useEffect(() => {
@@ -120,16 +115,6 @@ export default function EventPage() {
       year: "numeric",
     }).format(new Date(date));
   };
-
-  const formatDateLong = (date: Date) => {
-    return new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(date));
-  };
-
-
 
   // Mostrar loading enquanto está carregando (incluindo quando ainda não tem dados)
   if (isLoading || (event === undefined && !error)) {
@@ -266,7 +251,7 @@ export default function EventPage() {
               <div className="flex items-center gap-2 text-gray-12">
                 <LocationIcon className="size-5 text-gray-12 shrink-0" />
                 <span className="text-sm">
-                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
+                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location, event.zipCode].filter(Boolean).join(", ")}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-gray-12">
@@ -376,72 +361,72 @@ export default function EventPage() {
 
             {/* Action Buttons — ocultos quando o fixo de baixo estiver visível */}
             <div className={showFixedButton ? "hidden" : ""}>
-            {eventRealizationPassed ? (
-              <>
-                <Button
-                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Evento realizado
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Este evento já foi realizado.
-                </p>
-              </>
-            ) : registrationPeriodEnded ? (
-              <>
-                <Button className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
-                  Inscrições encerradas!
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  O prazo de inscrições para este evento foi encerrado.
-                </p>
-              </>
-            ) : eventSuspendedByOrganizer ? (
-              <>
-                <Button
-                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
+              {eventRealizationPassed ? (
+                <>
+                  <Button
+                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                    disabled
+                    variant="outline"
+                  >
+                    Evento realizado
+                  </Button>
+                  <p className="text-sm text-gray-11 text-center mt-2">
+                    Este evento já foi realizado.
+                  </p>
+                </>
+              ) : registrationPeriodEnded ? (
+                <>
+                  <Button className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
+                    Inscrições encerradas!
+                  </Button>
+                  <p className="text-sm text-gray-11 text-center mt-2">
+                    O prazo de inscrições para este evento foi encerrado.
+                  </p>
+                </>
+              ) : eventSuspendedByOrganizer ? (
+                <>
+                  <Button
+                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                    disabled
+                    variant="outline"
+                  >
+                    Inscreva-se
+                  </Button>
+                  <p className="text-sm text-gray-11 text-center mt-2">
+                    As inscrições para este evento não estão disponíveis no momento.
+                  </p>
+                </>
+              ) : registrationSlotsSoldOut ? (
+                <>
+                  <Button
+                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                    disabled
+                    variant="outline"
+                  >
+                    Esgotado
+                  </Button>
+                  <p className="text-sm text-gray-11 text-center mt-2">
+                    Este evento não possui mais vagas disponíveis.
+                  </p>
+                </>
+              ) : registrationsNotOpenYet ? (
+                <>
+                  <Button
+                    className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
+                    disabled
+                    variant="outline"
+                  >
+                    Em breve!
+                  </Button>
+                  <p className="text-sm text-gray-11 text-center mt-2">
+                    Inscrições abrem em {registrationOpensDateText}
+                  </p>
+                </>
+              ) : (
+                <Button onClick={handleCheckoutClick} className="w-full mb-3">
                   Inscreva-se
                 </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  As inscrições para este evento não estão disponíveis no momento.
-                </p>
-              </>
-            ) : registrationSlotsSoldOut ? (
-              <>
-                <Button
-                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Esgotado
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Este evento não possui mais vagas disponíveis.
-                </p>
-              </>
-            ) : registrationsNotOpenYet ? (
-              <>
-                <Button
-                  className="w-full mb-3 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                  disabled
-                  variant="outline"
-                >
-                  Em breve!
-                </Button>
-                <p className="text-sm text-gray-11 text-center mt-2">
-                  Inscrições abrem em {registrationOpensDateText}
-                </p>
-              </>
-            ) : (
-              <Button onClick={handleCheckoutClick} className="w-full mb-3">
-                Inscreva-se
-              </Button>
-            )}
+              )}
             </div>
           </div>
         </div>
@@ -550,22 +535,25 @@ export default function EventPage() {
             }`}
         >
           <div className="flex flex-col gap-4 max-w-[1280px] mx-auto">
-            <div className="flex flex-col w-full gap-2">
-              <h1 className="text-gray-12 font-extrabold">{event.name}</h1>
-
-              <div className="flex items-center w-full justify-between gap-2 text-gray-11">
-                <div className="flex items-center gap-1">
-                  <CalendarIcon className="size-5" />
-                  <span className="text-sm">
-                    {formatDate(new Date(event.eventDate))}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <LocationIcon className="size-5 shrink-0" />
-                  <span className="text-sm">
-                    {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
-                  </span>
-                </div>
+            <div className="flex w-full justify-between gap-1">
+              <div className="flex items-center gap-1 text-gray-12">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                  <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                </svg>
+                <span className="text-xs">Acontece em {formatDate(new Date(event.eventDate))}</span>
+              </div>
+              <div className="flex items-center gap-1 text-gray-12">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                  <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                </svg>
+                <span className="text-xs">Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
               </div>
             </div>
 
@@ -696,7 +684,7 @@ export default function EventPage() {
                         <h1 className="flex items-center gap-2 text-gray-12 font-medium">
                           <LocationIcon className="size-5 shrink-0" />{" "}
                           <span className="text-sm">
-                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
+                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location, event.zipCode].filter(Boolean).join(", ")}
                           </span>
                         </h1>
                         <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
@@ -990,7 +978,7 @@ export default function EventPage() {
                     <h1 className="flex items-center gap-2 text-gray-12 font-medium">
                       <LocationIcon className="size-5 shrink-0" />{" "}
                       <span className="text-sm">
-                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}
+                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location, event.zipCode].filter(Boolean).join(", ")}
                       </span>
                     </h1>
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
