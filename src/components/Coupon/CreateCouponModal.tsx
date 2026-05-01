@@ -314,6 +314,7 @@ export function CreateCouponModal() {
       if (parts.length > 0) toast.success(parts.join(", "));
       else toast.error("Nenhum CPF válido encontrado no arquivo.");
     };
+    reader.onerror = () => toast.error("Erro ao ler o arquivo.");
     reader.readAsText(file);
     e.target.value = "";
   };
