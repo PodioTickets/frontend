@@ -404,7 +404,7 @@ export function ExportDataModal() {
               </div>
 
               {/* Advanced toggle + section */}
-              <div className="flex flex-col rounded-lg overflow-hidden">
+              <div className="flex flex-col rounded-lg">
                 <AdvancedToggle />
                 {showAdvanced && (
                   <AdvancedFields
