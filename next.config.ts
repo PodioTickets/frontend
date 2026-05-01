@@ -42,7 +42,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com",
-      `img-src 'self' data: https: blob: ${apiConnectOrigin} https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
+      `img-src 'self' data: https: blob: ${apiConnectOrigin} https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
       "font-src 'self' data: https://fonts.gstatic.com https://*.google.com",
       "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://challenges.cloudflare.com",
       `connect-src 'self' ${apiConnectOrigin} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com https://challenges.cloudflare.com`,
