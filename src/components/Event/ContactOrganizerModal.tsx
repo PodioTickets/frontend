@@ -131,7 +131,7 @@ export function ContactOrganizerModal({
 
     const nameParts = form.name.trim().split(/\s+/).filter(Boolean);
     if (!form.name.trim()) next.name = "Nome é obrigatório";
-    else if (nameParts.length < 2) next.name = "Informe o nome completo (nome e sobrenome)";
+    else if (nameParts.length < 2) next.name = "Informe o nome completo";
 
     const cpfDigits = form.cpf.replace(/\D/g, "");
     if (!cpfDigits) {
