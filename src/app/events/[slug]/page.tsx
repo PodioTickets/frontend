@@ -18,6 +18,7 @@ import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
 import {
   getEventOrganizer,
+  getEventOrganizationId,
 } from "@/utils/organization";
 import { cn } from "@/utils/cn";
 import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
@@ -1182,6 +1183,8 @@ export default function EventPage() {
         onClose={() => setIsContactModalOpen(false)}
         organizerEmail={getEventOrganizer(event)?.email ?? ""}
         eventName={event.name}
+        organizationId={getEventOrganizationId(event) ?? undefined}
+        eventId={event.id}
       />
     </>
   );

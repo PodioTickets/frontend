@@ -2444,4 +2444,22 @@ export class OrganizerService {
     }>(`/api/v1/registrations/${registrationId}`);
     return response.data.registration;
   }
+
+  async contactOrganizer(
+    organizationId: string,
+    data: {
+      name: string;
+      email: string;
+      phone?: string;
+      cpf?: string;
+      subject?: string;
+      message: string;
+      eventId?: string;
+    }
+  ): Promise<void> {
+    await this.apiClient.post(
+      `/api/v1/organizers/${organizationId}/contact`,
+      data
+    );
+  }
 }

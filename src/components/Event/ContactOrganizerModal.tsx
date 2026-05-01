@@ -9,6 +9,8 @@ import { Dropdown } from "@/components/Dropdown";
 import { useAuth } from "@/hooks/useAuth";
 import { isValidCPF } from "@/utils/cpf";
 import { cn } from "@/utils/cn";
+import { organizerService } from "@/services";
+import toast from "react-hot-toast";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -41,6 +43,8 @@ interface ContactOrganizerModalProps {
   onClose: () => void;
   organizerEmail: string;
   eventName: string;
+  organizationId?: string;
+  eventId?: string;
 }
 
 interface FormState {
@@ -66,8 +70,11 @@ export function ContactOrganizerModal({
   onClose,
   organizerEmail,
   eventName,
+  organizationId,
+  eventId,
 }: ContactOrganizerModalProps) {
   const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const mobileTurnstileRef = useRef<TurnstileInstance>(null);
   const desktopTurnstileRef = useRef<TurnstileInstance>(null);
@@ -152,28 +159,51 @@ export function ContactOrganizerModal({
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const body = [
-      `Nome: ${form.name}`,
-      `CPF: ${form.cpf}`,
-      `Email: ${form.email}`,
-      form.phone ? `Telefone: ${form.phone}` : null,
-      `Assunto: ${form.subject}`,
-      ``,
-      form.message,
-    ]
-      .filter((l) => l !== null)
-      .join("\n");
+    // Prefere envio via API (com template de email bonito); fallback para mailto: se não tiver organizationId
+    if (!organizationId) {
+      const body = [
+        `Nome: ${form.name}`,
+        `CPF: ${form.cpf}`,
+        `Email: ${form.email}`,
+        form.phone ? `Telefone: ${form.phone}` : null,
+        `Assunto: ${form.subject}`,
+        ``,
+        form.message,
+      ]
+        .filter((l) => l !== null)
+        .join("\n");
 
-    const mailtoUrl = `mailto:${organizerEmail}?subject=${encodeURIComponent(
-      `[${form.subject}] ${eventName}`
-    )}&body=${encodeURIComponent(body)}`;
+      const mailtoUrl = `mailto:${organizerEmail}?subject=${encodeURIComponent(
+        `[${form.subject}] ${eventName}`
+      )}&body=${encodeURIComponent(body)}`;
 
-    window.location.href = mailtoUrl;
-    onClose();
+      window.location.href = mailtoUrl;
+      onClose();
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await organizerService.contactOrganizer(organizationId, {
+        name: form.name,
+        email: form.email,
+        phone: form.phone || undefined,
+        cpf: form.cpf || undefined,
+        subject: form.subject || undefined,
+        message: form.message,
+        eventId: eventId || undefined,
+      });
+      toast.success("Mensagem enviada com sucesso!");
+      onClose();
+    } catch {
+      toast.error("Erro ao enviar mensagem. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const fieldClass = (error?: string) =>
@@ -394,11 +424,11 @@ export function ContactOrganizerModal({
                 </Button>
                 <button
                   type="submit"
-                  disabled={!!TURNSTILE_SITE_KEY && !turnstileToken}
+                  disabled={(!!TURNSTILE_SITE_KEY && !turnstileToken) || isSubmitting}
                   className="flex-1 h-11 rounded-lg font-semibold text-base font-family-dm-sans transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: "#59e373", color: "#141a15" }}
                 >
-                  Enviar
+                  {isSubmitting ? "Enviando..." : "Enviar"}
                 </button>
               </div>
             </div>
@@ -461,8 +491,8 @@ export function ContactOrganizerModal({
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={!!TURNSTILE_SITE_KEY && !turnstileToken}>
-                  Enviar mensagem
+                <Button type="submit" disabled={(!!TURNSTILE_SITE_KEY && !turnstileToken) || isSubmitting}>
+                  {isSubmitting ? "Enviando..." : "Enviar mensagem"}
                 </Button>
               </div>
             </div>
