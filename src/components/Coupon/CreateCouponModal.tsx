@@ -579,7 +579,7 @@ export function CreateCouponModal() {
                     onClick={() => setShowImportModal(false)}
                     className="size-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
                   >
-                    <X className="size-4 text-gray-11" />
+                    <img src="/images/remove.svg" alt="Fechar" className="size-[18px]" />
                   </button>
                 </div>
 
@@ -605,10 +605,9 @@ export function CreateCouponModal() {
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <svg className="size-6 shrink-0 text-gray-11 mt-0.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
-                        <circle cx="12" cy="8" r="1" fill="currentColor"/>
-                        <line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <svg className="size-6 shrink-0 mt-0.5" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="7" r="1" fill="#646464"/>
+                        <path d="M11 10H12V17M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#646464" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">1 CPF por linha. Pode usar apenas números, com pontuação ou sem pontuação. Duplicadas serão ignoradas automaticamente.</p>
                     </div>
@@ -625,10 +624,7 @@ export function CreateCouponModal() {
                       className={`flex items-center gap-4 p-6 rounded-xl border-2 cursor-pointer transition-colors ${isDraggingCsv ? "border-green-8 bg-green-2" : "border-gray-6 hover:border-gray-8 hover:bg-gray-2"}`}
                     >
                       <div className="size-16 flex items-center justify-center shrink-0">
-                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="16" y="8" width="32" height="40" rx="3" stroke="#203C25" strokeWidth="3"/>
-                          <path d="M22 24h20M22 30h14M22 36h8" stroke="#203C25" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
+                        <img src="/images/plus.svg" alt="" className="size-16" />
                       </div>
                       <div className="flex flex-col gap-4">
                         <p className="text-green-11 text-base font-bold font-family-dm-sans leading-[1.3] text-center">Clique para selecionar ou arraste o arquivo aqui</p>
