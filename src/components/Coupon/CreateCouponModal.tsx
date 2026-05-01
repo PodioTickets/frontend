@@ -577,9 +577,9 @@ export function CreateCouponModal() {
                   <button
                     type="button"
                     onClick={() => setShowImportModal(false)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
+                    className="w-9 h-9 rounded-lg hover:bg-gray-3 transition-colors inline-flex items-center justify-center overflow-hidden"
                   >
-                    <img src="/images/remove.svg" alt="Fechar" className="w-[18px] h-[18px]" />
+                    <img src="https://podioticket.com.br/images/remove.svg" alt="Fechar" className="w-9 h-9 object-contain" />
                   </button>
                 </div>
 
