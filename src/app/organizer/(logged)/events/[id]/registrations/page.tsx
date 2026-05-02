@@ -1080,7 +1080,18 @@ export default function EventRegistrationsPage() {
                 )}
                 <Button
                   className="w-full h-12 rounded-lg font-manrope font-bold"
-                  onClick={() => openExportDataModal({ registrations: registrations, eventId, eventName: event?.name })}
+                  onClick={() => openExportDataModal({
+                    registrations: registrations,
+                    eventId,
+                    eventName: event?.name,
+                    filters: {
+                      search: searchTerm || undefined,
+                      status: statusFilter !== "all" ? statusFilter : undefined,
+                      ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
+                      startDate: appliedDateRange?.from?.toISOString(),
+                      endDate: appliedDateRange?.to?.toISOString(),
+                    },
+                  })}
                 >
                   Exportar CSV
                 </Button>
@@ -1212,6 +1223,13 @@ export default function EventRegistrationsPage() {
                       registrations: registrations,
                       eventId,
                       eventName: event?.name,
+                      filters: {
+                        search: searchTerm || undefined,
+                        status: statusFilter !== "all" ? statusFilter : undefined,
+                        ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
+                        startDate: appliedDateRange?.from?.toISOString(),
+                        endDate: appliedDateRange?.to?.toISOString(),
+                      },
                     });
                   }}
                 >

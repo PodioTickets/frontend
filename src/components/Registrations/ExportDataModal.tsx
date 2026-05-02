@@ -146,6 +146,13 @@ export function ExportDataModal() {
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
+  const exportFilters = data?.filters as {
+    search?: string;
+    status?: string;
+    ticketIds?: string[];
+    startDate?: string;
+    endDate?: string;
+  } | undefined;
   const { hasPermission } = useOrganizerPermissions();
   const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
@@ -176,6 +183,7 @@ export function ExportDataModal() {
         eventId,
         selectedFormat,
         ALL_FIELDS.filter((f) => selectedFields.has(f.id)).map((f) => f.id),
+        exportFilters,
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
