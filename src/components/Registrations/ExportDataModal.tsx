@@ -175,7 +175,7 @@ export function ExportDataModal() {
       const { blob, filename } = await organizerService.exportEventRegistrations(
         eventId,
         selectedFormat,
-        Array.from(selectedFields),
+        ALL_FIELDS.filter((f) => selectedFields.has(f.id)).map((f) => f.id),
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -186,8 +186,7 @@ export function ExportDataModal() {
       a.remove();
       URL.revokeObjectURL(url);
       closeExportDataModal();
-    } catch (err) {
-      console.error("Erro ao exportar:", err);
+    } catch {
       toast.error("Erro ao exportar. Tente novamente.");
     } finally {
       setIsExporting(false);
