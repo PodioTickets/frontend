@@ -271,6 +271,19 @@ export default function EventPage() {
                   Acontece em {formatDate(new Date(event.eventDate))}
                 </span>
               </div>
+              <div className="flex items-center gap-2 text-gray-12">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                  <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 7.5H17.5" stroke="#202020" stroke-width="1" strokeLinecap="round" />
+                </svg>
+
+                <span className="text-sm">
+                  Inscrições até {formatDate(new Date(event.registrationEndDate))}
+                </span>
+              </div>
               {event.modalities
                 ?.filter((m) => m.isActive)
                 .map((modality) => {
@@ -538,6 +551,16 @@ export default function EventPage() {
                 </svg>
                 <span className="text-xs">Acontece em {formatDate(new Date(event.eventDate))}</span>
               </div>
+              <div className="flex items-center gap-1 text-gray-12">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                  <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                  <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                </svg>
+                <span className="text-xs">Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
+              </div>
             </div>
 
             {eventRealizationPassed ? (
@@ -674,6 +697,18 @@ export default function EventPage() {
                           <CalendarIcon className="size-5" />{" "}
                           <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
                         </h1>
+                        {event.registrationEndDate && (
+                          <div className="flex items-center gap-2 text-sm text-gray-12 font-medium">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                              <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                              <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                            </svg>
+                            <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
+                          </div>
+                        )}
                         {event.modalities
                           ?.filter((modality) => modality.isActive)
                           .map((modality) => {
@@ -956,6 +991,18 @@ export default function EventPage() {
                       <CalendarIcon className="size-5" />{" "}
                       <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
                     </h1>
+                    {event.registrationEndDate && (
+                      <div className="flex items-center gap-2 text-sm text-gray-12 font-medium">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                          <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
+                          <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
+                        </svg>
+                        <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
+                      </div>
+                    )}
                     {event.modalities
                       ?.filter((modality) => modality.isActive)
                       .map((modality) => {
