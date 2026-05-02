@@ -15,6 +15,7 @@ import { organizerService } from "@/services";
 import { ArrowButton } from "../ArrowButton";
 import { SelectTicketsModal } from "./SelectTicketsModal";
 import { cn } from "@/utils/cn";
+import { isValidCPF } from "@/utils/cpf";
 
 type CouponType = "DISCOUNT" | "QUANTITY" | "AGE";
 type DiscountType = "PERCENTAGE" | "FIXED";
@@ -59,6 +60,7 @@ export function CreateCouponModal() {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [isAddingCpf, setIsAddingCpf] = useState(false);
   const [newCpfInput, setNewCpfInput] = useState("");
+  const [newCpfError, setNewCpfError] = useState("");
   const [showImportModal, setShowImportModal] = useState(false);
   const [isDraggingCsv, setIsDraggingCsv] = useState(false);
   const [cpfListError, setCpfListError] = useState("");
@@ -269,17 +271,18 @@ export function CreateCouponModal() {
 
   const handleConfirmAddCPF = () => {
     const digits = newCpfInput.replace(/\D/g, "");
-    if (digits.length !== 11) {
-      toast.error("CPF inválido. Digite 11 dígitos.");
+    if (digits.length !== 11 || !isValidCPF(digits)) {
+      setNewCpfError("CPF inválido.");
       return;
     }
     if (cpfList.includes(digits)) {
-      toast.error("CPF já está na lista.");
+      setNewCpfError("CPF já está na lista.");
       return;
     }
     setCpfList([...cpfList, digits]);
     setIsAddingCpf(false);
     setNewCpfInput("");
+    setNewCpfError("");
   };
 
   const handleNewCpfInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,6 +292,7 @@ export function CreateCouponModal() {
     else if (raw.length > 6) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6)}`;
     else if (raw.length > 3) formatted = `${raw.slice(0, 3)}.${raw.slice(3)}`;
     setNewCpfInput(formatted);
+    if (newCpfError) setNewCpfError("");
   };
 
   const handleImportCSV = () => {
@@ -305,7 +309,7 @@ export function CreateCouponModal() {
       let invalid = 0;
       for (const line of lines) {
         const digits = line.replace(/\D/g, "");
-        if (digits.length !== 11) { if (digits.length > 0) invalid++; continue; }
+        if (digits.length !== 11 || !isValidCPF(digits)) { if (digits.length > 0) invalid++; continue; }
         if (cpfList.includes(digits) || newCpfs.includes(digits)) { duplicates++; continue; }
         newCpfs.push(digits);
       }
@@ -1214,18 +1218,19 @@ export function CreateCouponModal() {
                                         </div>
                                         {/* Inline add CPF row */}
                                         {isAddingCpf && (
-                                          <div className="px-4 py-2 border-t border-gray-6 flex items-center gap-2">
+                                          <div className="px-4 py-2 border-t border-gray-6 flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
                                             <input
                                               type="text"
                                               value={newCpfInput}
                                               onChange={handleNewCpfInputChange}
                                               onKeyDown={(e) => {
                                                 if (e.key === "Enter") { e.preventDefault(); handleConfirmAddCPF(); }
-                                                if (e.key === "Escape") { setIsAddingCpf(false); setNewCpfInput(""); }
+                                                if (e.key === "Escape") { setIsAddingCpf(false); setNewCpfInput(""); setNewCpfError(""); }
                                               }}
                                               autoFocus
                                               placeholder="000.000.000-00"
-                                              className="flex-1 h-9 px-3 rounded-lg border border-gray-6 bg-gray-1 text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none focus:border-green-8"
+                                              className={cn("flex-1 h-9 px-3 rounded-lg border bg-gray-1 text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none", newCpfError ? "border-red-8 focus:border-red-8" : "border-gray-6 focus:border-green-8")}
                                             />
                                             <button
                                               type="button"
@@ -1236,11 +1241,15 @@ export function CreateCouponModal() {
                                             </button>
                                             <button
                                               type="button"
-                                              onClick={() => { setIsAddingCpf(false); setNewCpfInput(""); }}
+                                              onClick={() => { setIsAddingCpf(false); setNewCpfInput(""); setNewCpfError(""); }}
                                               className="h-9 px-3 rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-11 hover:bg-gray-3 transition-colors"
                                             >
                                               Cancelar
                                             </button>
+                                            </div>
+                                            {newCpfError && (
+                                              <p className="text-xs text-red-9 px-1">{newCpfError}</p>
+                                            )}
                                           </div>
                                         )}
                                         {/* Footer actions */}
