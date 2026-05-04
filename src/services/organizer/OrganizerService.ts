@@ -1683,9 +1683,21 @@ export class OrganizerService {
     eventId: string,
     format: "txt" | "excel" | "pdf",
     fields?: string[],
+    filters?: {
+      search?: string;
+      status?: string;
+      ticketIds?: string[];
+      startDate?: string;
+      endDate?: string;
+    },
   ): Promise<{ blob: Blob; filename: string }> {
     const params: Record<string, string> = { format };
     if (fields && fields.length > 0) params.fields = fields.join(",");
+    if (filters?.search) params.search = filters.search;
+    if (filters?.status && filters.status !== "all") params.status = filters.status;
+    if (filters?.ticketIds?.length) params.ticketIds = filters.ticketIds.join(",");
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
 
     const response = await this.apiClient.get<Blob>(
       `/api/v1/events/${eventId}/registrations/export`,
@@ -2483,5 +2495,23 @@ export class OrganizerService {
       };
     }>(`/api/v1/registrations/${registrationId}`);
     return response.data.registration;
+  }
+
+  async contactOrganizer(
+    organizationId: string,
+    data: {
+      name: string;
+      email: string;
+      phone?: string;
+      cpf?: string;
+      subject?: string;
+      message: string;
+      eventId?: string;
+    }
+  ): Promise<void> {
+    await this.apiClient.post(
+      `/api/v1/organizers/${organizationId}/contact`,
+      data
+    );
   }
 }

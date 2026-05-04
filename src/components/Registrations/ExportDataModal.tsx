@@ -146,6 +146,13 @@ export function ExportDataModal() {
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
+  const exportFilters = data?.filters as {
+    search?: string;
+    status?: string;
+    ticketIds?: string[];
+    startDate?: string;
+    endDate?: string;
+  } | undefined;
   const { hasPermission } = useOrganizerPermissions();
   const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
 
@@ -175,7 +182,8 @@ export function ExportDataModal() {
       const { blob, filename } = await organizerService.exportEventRegistrations(
         eventId,
         selectedFormat,
-        Array.from(selectedFields),
+        ALL_FIELDS.filter((f) => selectedFields.has(f.id)).map((f) => f.id),
+        exportFilters,
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -186,8 +194,7 @@ export function ExportDataModal() {
       a.remove();
       URL.revokeObjectURL(url);
       closeExportDataModal();
-    } catch (err) {
-      console.error("Erro ao exportar:", err);
+    } catch {
       toast.error("Erro ao exportar. Tente novamente.");
     } finally {
       setIsExporting(false);
