@@ -3,15 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { FileText, Megaphone, Menu, TrendingUp } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { LogOutIcon } from "@/components/Icons/LogOutIcon";
+import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
+import { adminExternalHref } from "@/lib/adminPathPresentation";
+import { useAdminPathname } from "@/hooks/useAdminPathname";
 
-const navItems = [
+const NAV_ITEMS = [
   { label: "Eventos", href: "/admin/events", icon: TicketIcon },
   { label: "Repasse", href: "/admin/repasse", icon: TrendingUp },
   { label: "Anúncios", href: "/admin/anuncios", icon: Megaphone },
@@ -19,23 +22,26 @@ const navItems = [
 ] as const;
 
 export function AdminMobileNav() {
-  const pathname = usePathname();
+  const adminPath = useAdminPathname();
+  const adminSurface = useAdminAppSurface();
   const router = useRouter();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
 
+  const navHref = (internal: string) => adminExternalHref(internal, adminSurface);
+
   const handleLogout = async () => {
     setOpen(false);
     await logout();
-    router.push("/");
+    router.push(navHref("/admin/login"));
   };
 
-  const isActive = (href: string) => pathname.startsWith(href);
+  const isActive = (href: string) => adminPath.startsWith(href);
 
   return (
     <>
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 bg-linear-to-b from-[#191919] to-[#222222] shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)]">
-        <Link href="/admin" className="flex items-center shrink-0 h-6 w-[120px] relative">
+        <Link href={navHref("/admin")} className="flex items-center shrink-0 h-6 w-[120px] relative">
           <ImageWithInitialFallback
             src="/images/logo_horizontal.png"
             alt="PódioTicket"
@@ -117,13 +123,13 @@ export function AdminMobileNav() {
               </p>
             </div>
             <div className="flex-1 overflow-y-auto bg-linear-to-b from-[#191919] to-[#222222] px-4 py-4 flex flex-col gap-2">
-              {navItems.map((item) => {
+              {NAV_ITEMS.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={navHref(item.href)}
                     onClick={() => setOpen(false)}
                     className={`flex items-center gap-3 h-12 px-4 rounded-lg border border-[#3A3A3A] bg-white/5 transition-colors ${active ? "bg-[#25482D] border-[#25482D] text-[#C2F0C2]" : "text-white hover:bg-white/10 font-family-dm-sans"}`}
                   >

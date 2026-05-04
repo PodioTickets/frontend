@@ -205,6 +205,50 @@ export class UserService {
     }
   }
 
+  async checkEmailAvailability(
+    email: string
+  ): Promise<DocumentAvailabilityResult> {
+    if (!email || !email.includes("@")) {
+      return { available: true };
+    }
+    try {
+      const { data } = await this.apiClient.get("/api/v1/auth/email/availability", {
+        params: { email },
+      });
+      const raw = (data as { data?: unknown })?.data ?? data;
+      const r = raw as Record<string, unknown>;
+
+      let available = true;
+      if (typeof r?.available === "boolean") available = r.available;
+      else if (typeof r?.inUse === "boolean") available = !r.inUse;
+      else if (typeof r?.exists === "boolean") available = !r.exists;
+
+      if (!available) {
+        return { available: false, message: "Este e-mail já está cadastrado." };
+      }
+      return { available: true };
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: unknown } };
+      const status = err.response?.status;
+      if (status === 404) {
+        return { available: true };
+      }
+      const data = err.response?.data as Record<string, unknown> | undefined;
+      if (status === 409 || status === 400) {
+        const m = data?.message ?? data?.error ?? "Este e-mail já está cadastrado.";
+        const text = Array.isArray(m)
+          ? m.filter((x) => typeof x === "string").join(" ")
+          : String(m);
+        return {
+          available: false,
+          message: this.mapAuthErrorMessageToPtBr(text, status),
+        };
+      }
+      // Em caso de erro de rede ou servidor, deixa passar (não bloqueia o fluxo)
+      return { available: true };
+    }
+  }
+
   async checkDocumentNumberAvailability(
     documentNumber: string,
     options?: { excludeUserId?: string }

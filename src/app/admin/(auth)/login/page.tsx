@@ -60,6 +60,7 @@ export default function AdminLoginPage() {
       await login({
         emailOrCpf: validatedData.email,
         password: validatedData.password,
+        accountType: "ADMIN_PODIO_STAFF",
       });
 
       // Verifica se o usuário tem permissão de admin

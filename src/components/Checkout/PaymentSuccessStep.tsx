@@ -73,7 +73,7 @@ function formatAnswer(answer: any): string {
     try {
       const parsed = JSON.parse(answer);
       if (Array.isArray(parsed)) return parsed.join(", ");
-    } catch {}
+    } catch { }
   }
   return String(answer) || "—";
 }
@@ -391,7 +391,7 @@ export function PaymentSuccessStep({
               <div className="flex flex-col gap-5 items-start w-full">
                 {displayParticipants.map((participantData, index) => {
                   const participant = participants[participantData.participantIndex] || {};
-                  console.log(participant);
+                  const qrCode = `$${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderNumber}`;
                   const isExpanded = expandedParticipants[index] || false;
 
                   return (
@@ -407,19 +407,11 @@ export function PaymentSuccessStep({
                         <div className="flex flex-col gap-5 items-start px-4 py-6 w-full">
                           <div className="flex gap-3 items-start w-full">
                             <div className="relative shrink-0 size-[120px]">
-                              {participantData.qrCode ? (
-                                <RegistrationQRCode
-                                  qrCodeData={participantData.qrCode}
-                                  size={120}
-                                  className="w-full h-full"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center">
-                                  <span className="text-xs text-gray-11">
-                                    QR Code
-                                  </span>
-                                </div>
-                              )}
+                              <RegistrationQRCode
+                                qrCodeData={qrCode}
+                                size={120}
+                                className="w-full h-full"
+                              />
                             </div>
                             <div className="flex-1 flex flex-col gap-4 items-start px-0 py-3 text-gray-12 text-start">
                               <p className="font-normal text-base leading-[1.3] font-family-dm-sans">
@@ -930,6 +922,7 @@ export function PaymentSuccessStep({
               <div className="flex flex-col gap-[20px] items-center w-full">
                 {displayParticipants.map((participantData, index) => {
                   const participant = participants[participantData.participantIndex] || {};
+                  const qrCode = `$${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderNumber}`;
                   const isExpanded = expandedParticipants[index] || false;
 
                   return (
@@ -977,19 +970,11 @@ export function PaymentSuccessStep({
                           {/* QR Code */}
                           <div className="flex flex-row items-center">
                             <div className="aspect-square h-full relative">
-                              {participantData.qrCode ? (
-                                <RegistrationQRCode
-                                  qrCodeData={participantData.qrCode}
-                                  size={128}
-                                  className="w-full h-full"
-                                />
-                              ) : (
-                                <div className="w-[128px] h-[128px] bg-gray-2 border-2 border-gray-6 rounded-lg flex items-center justify-center">
-                                  <span className="text-xs text-gray-11">
-                                    QR Code
-                                  </span>
-                                </div>
-                              )}
+                              <RegistrationQRCode
+                                qrCodeData={qrCode}
+                                size={128}
+                                className="w-full h-full"
+                              />
                             </div>
                           </div>
                         </div>

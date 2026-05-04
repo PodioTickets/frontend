@@ -10,6 +10,7 @@ import { Suspense } from "react";
 import { Loading } from "@/components/Loading";
 import { ContentWrapper } from "@/components/ContentWrapper";
 import { OrganizerAppSurfaceProvider } from "@/contexts/OrganizerAppSurfaceContext";
+import { AdminAppSurfaceProvider } from "@/contexts/AdminAppSurfaceContext";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -62,7 +63,10 @@ export default async function RootLayout({
   const host = headersList.get("host")?.split(":")[0]?.toLowerCase() ?? "";
   const appHost =
     process.env.ORGANIZER_APP_HOST?.split(":")[0]?.trim().toLowerCase() ?? "";
+  const adminHost =
+    process.env.ADMIN_APP_HOST?.split(":")[0]?.trim().toLowerCase() ?? "";
   const isAppOrganizerSurface = Boolean(appHost && host === appHost);
+  const isAdminSurface = Boolean(adminHost && host === adminHost);
 
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
@@ -71,20 +75,22 @@ export default async function RootLayout({
       </head>
 
       <body suppressHydrationWarning className="scroll-smooth antialiased">
-        <OrganizerAppSurfaceProvider value={isAppOrganizerSurface}>
-          <ToasterWrapper />
-          <Providers>
-            <div className="flex flex-col min-h-screen bg-gray-2">
-              <Header />
+        <AdminAppSurfaceProvider value={isAdminSurface}>
+          <OrganizerAppSurfaceProvider value={isAppOrganizerSurface}>
+            <ToasterWrapper />
+            <Providers>
+              <div className="flex flex-col min-h-screen bg-gray-2">
+                <Header />
 
-              <Suspense fallback={<Loading />}>
-                <ContentWrapper>{children}</ContentWrapper>
-              </Suspense>
+                <Suspense fallback={<Loading />}>
+                  <ContentWrapper>{children}</ContentWrapper>
+                </Suspense>
 
-              <Footer />
-            </div>
-          </Providers>
-        </OrganizerAppSurfaceProvider>
+                <Footer />
+              </div>
+            </Providers>
+          </OrganizerAppSurfaceProvider>
+        </AdminAppSurfaceProvider>
       </body>
     </html>
   );

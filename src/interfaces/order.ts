@@ -13,7 +13,7 @@ export type OrderCancelledReason =
   | "PAYMENT_RECONCILIATION_FAILED"
   | "USER_CANCELLED";
 
-export type OrderPaymentMethod = "CREDIT_CARD" | "PIX";
+export type OrderPaymentMethod = "CREDIT_CARD" | "DEBIT_CARD" | "PIX";
 
 export type OrderPaymentStatus = "pending" | "approved" | "refused";
 
@@ -69,6 +69,7 @@ export interface OrderPaymentInfo {
   installments?: number;
   installmentValue?: number;
   pix?: OrderPixInfo;
+  redirectUrl?: string;
   paidAt?: string;
 }
 
@@ -172,13 +173,25 @@ export interface PayOrderCardRequest {
   voucherCode?: string;
 }
 
+export interface PayOrderDebitCardRequest {
+  method: "DEBIT_CARD";
+  card: {
+    name: string;
+    number: string;
+    expiry: string;
+    cvv: string;
+  };
+  couponCode?: string;
+  voucherCode?: string;
+}
+
 export interface PayOrderPixRequest {
   method: "PIX";
   couponCode?: string;
   voucherCode?: string;
 }
 
-export type PayOrderRequest = PayOrderCardRequest | PayOrderPixRequest;
+export type PayOrderRequest = PayOrderCardRequest | PayOrderDebitCardRequest | PayOrderPixRequest;
 
 export interface OrderPaymentStatusResponse {
   orderId: string;

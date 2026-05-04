@@ -13,6 +13,7 @@ import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CREDIT_CARD: "Cartão de crédito",
   PIX: "Pix",
+  DEBIT_CARD: "Cartão de débito",
 };
 
 function CheckoutSucessoContent() {

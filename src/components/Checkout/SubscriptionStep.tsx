@@ -699,8 +699,11 @@ export function SubscriptionStep({
   };
 
   const hasAllRequiredVariations = (participantIndex: number): boolean => {
-    const participantRequiredProducts = getRequiredProductsForParticipant(participantIndex);
-    const productsNeedingSelection = participantRequiredProducts.filter(
+    const allParticipantProducts = [
+      ...getRequiredProductsForParticipant(participantIndex),
+      ...getAdditionalProductsForParticipant(participantIndex),
+    ];
+    const productsNeedingSelection = allParticipantProducts.filter(
       (p) => p.variations.length > 1
     );
     if (productsNeedingSelection.length === 0) return true;

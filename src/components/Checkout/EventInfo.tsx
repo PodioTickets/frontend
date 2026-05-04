@@ -169,65 +169,6 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       <div className="p-4">
         <p className="text-sm text-gray-11">Seu pedido:</p>
         <h1 className="text-lg font-bold mb-2">{event.name}</h1>
-
-        {(() => {
-          const organizer = getEventOrganizer(event);
-          if (!organizer) return null;
-
-          const socialLinks = [
-            { url: event.instagram, icon: InstagramIcon },
-            { url: event.facebook, icon: FacebookIcon },
-            { url: event.youtube, icon: YoutubeIcon },
-            { url: event.tiktok, icon: TiktokIcon },
-            { url: event.website, icon: GlobeIcon },
-          ];
-
-          return (
-            <div className="bg-gray-3 border border-gray-6 rounded-lg p-3">
-              <div className="flex items-center gap-3 mb-3">
-                <ImageWithInitialFallback
-                  src={getAvatarUrl(organizer.logoUrl)}
-                  alt={organizer.name}
-                  name={organizer.name}
-                  width={40}
-                  height={40}
-                  className="rounded-full size-10 shrink-0"
-                  imgClassName="object-cover"
-                  letterClassName="text-xs"
-                />
-                <div className="flex-1 min-w-0 flex flex-col gap-1">
-                  <p className="text-sm font-semibold text-gray-12 truncate">
-                    {organizer.name}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    {socialLinks.map(({ url, icon: Icon }, index) => {
-                      if (!url) return null;
-                      return (
-                        <Link
-                          key={index}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="border border-gray-6 size-7 rounded-full text-gray-12 flex items-center justify-center"
-                        >
-                          <Icon className="size-3.5" />
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full text-gray-12 border-gray-6"
-                onClick={() => setIsContactModalOpen(true)}
-              >
-                Falar com o organizador
-              </Button>
-            </div>
-          );
-        })()}
-
         <div className="flex flex-col w-full mt-4 gap-2">
           {groupedTickets.length > 0 ? (
             <>

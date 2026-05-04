@@ -452,7 +452,7 @@ export function TicketForm({
                   ? `R$${(b.price / 100).toFixed(2).replace(".", ",")}`
                   : "",
                 quantitySold,
-                startType: (b as any).triggerType === "AFTER_PREVIOUS_SOLD_OUT" ? "previous" : b.startDate ? "date" : "previous",
+                startType: (b as any).triggerType === "AFTER_PREVIOUS_SOLD_OUT" ? "previous" : "date",
                 startDate: b.startDate ? b.startDate.split("T")[0] : undefined,
                 startTime: b.startDate
                   ? new Date(b.startDate).toTimeString().slice(0, 5)

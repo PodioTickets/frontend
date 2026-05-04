@@ -37,6 +37,8 @@ export function CreateCouponModal() {
   const [usageLimitEnabled, setUsageLimitEnabled] = useState(false);
   const [usageLimitError, setUsageLimitError] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [valueError, setValueError] = useState("");
+  const [apiError, setApiError] = useState("");
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
   const [cpfSearch, setCpfSearch] = useState("");
@@ -180,6 +182,8 @@ export function CreateCouponModal() {
         setUsageLimitEnabled(false);
         setUsageLimitError("");
         setCodeError("");
+        setValueError("");
+        setApiError("");
         setCpfListStatus("DISABLED");
         setCpfList([]);
         setMinQuantity("");
@@ -371,7 +375,7 @@ export function CreateCouponModal() {
     }
 
     if (!value.trim()) {
-      toast.error("Digite um valor para o desconto");
+      setValueError("Digite um valor para o desconto");
       return;
     }
 
@@ -476,7 +480,7 @@ export function CreateCouponModal() {
       if (message.includes("already exists")) {
         setCodeError("Esse código já existe para este evento");
       } else {
-        toast.error(message || "Erro ao salvar cupom");
+        setApiError(message || "Erro ao salvar cupom");
       }
     } finally {
       setIsSubmitting(false);
@@ -705,31 +709,36 @@ export function CreateCouponModal() {
                                   O cupom será aplicado automaticamente para participantes dentro da faixa de idade definida. Preencha ao menos um campo.
                                 </p>
                               </div>
-                              <div className="flex gap-4">
-                                <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
-                                  <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                    Idade mínima
-                                  </label>
-                                  <Input
-                                    type="text"
-                                    placeholder="Ex: 18"
-                                    value={minAge}
-                                    onChange={(e) => setMinAge(e.target.value.replace(/[^0-9]/g, ""))}
-                                    className="h-12"
-                                  />
+                              <div className="flex flex-col gap-2">
+                                <div className="flex gap-4">
+                                  <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                      Idade mínima
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      placeholder="Ex: 18"
+                                      value={minAge}
+                                      onChange={(e) => { setMinAge(e.target.value.replace(/[^0-9]/g, "")); if (apiError) setApiError(""); }}
+                                      className={cn("h-12", apiError && "border-red-9 focus-visible:border-red-9")}
+                                    />
+                                  </div>
+                                  <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
+                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                      Idade máxima
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      placeholder="Ex: 65"
+                                      value={maxAge}
+                                      onChange={(e) => { setMaxAge(e.target.value.replace(/[^0-9]/g, "")); if (apiError) setApiError(""); }}
+                                      className={cn("h-12", apiError && "border-red-9 focus-visible:border-red-9")}
+                                    />
+                                  </div>
                                 </div>
-                                <div className="flex flex-col gap-2 flex-1 max-w-[130px]">
-                                  <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                    Idade máxima
-                                  </label>
-                                  <Input
-                                    type="text"
-                                    placeholder="Ex: 65"
-                                    value={maxAge}
-                                    onChange={(e) => setMaxAge(e.target.value.replace(/[^0-9]/g, ""))}
-                                    className="h-12"
-                                  />
-                                </div>
+                                {apiError && (
+                                  <p className="text-sm text-red-11 font-family-dm-sans leading-[1.3]">{apiError}</p>
+                                )}
                               </div>
                             </div>
                           )}
@@ -785,9 +794,14 @@ export function CreateCouponModal() {
                                       setValue(`R$ ${raw}`);
                                     }
                                   }
+                                  if (valueError) setValueError("");
+                                  if (apiError) setApiError("");
                                 }}
-                                className="h-12"
+                                className={cn("h-12", valueError && "border-red-9 focus-visible:border-red-9")}
                               />
+                              {valueError && (
+                                <p className="text-sm text-red-11 font-family-dm-sans">{valueError}</p>
+                              )}
                             </div>
                           </div>
 

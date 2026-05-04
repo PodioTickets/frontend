@@ -1121,8 +1121,7 @@ export function InformationStep({
                 <p className="text-2xl font-bold">Informações básicas</p>
               </div>
               <p className="text-sm text-gray-11 md:mt-4">
-                Para quem serão os ingressos? Preencha os dados principais de cada
-                participante.
+                Quem vai participar? Preencha os dados de cada participante.
               </p>
             </div>
           )}

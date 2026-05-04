@@ -29,6 +29,7 @@ ChartJS.register(
 );
 
 const MAX_LABELS_MOBILE = 6;
+const MAX_LABELS_DESKTOP = 8;
 
 /** Um ponto do tooltip: valores em reais e quantidade inteira. */
 type RevenueChartTooltipBucket = {
@@ -593,33 +594,38 @@ export function RevenueChart({ data }: RevenueChartProps) {
 
         {/* X-axis labels - distribuídos uniformemente */}
         <div className="absolute -bottom-5 md:-bottom-[22px] left-0 right-0 flex justify-between px-0">
-          {displayData.labels.map((label, index) => {
+          {(() => {
             const totalLabels = displayData.labels.length;
-            const position = totalLabels > 1
-              ? (index / (totalLabels - 1)) * 100
-              : 50;
+            const maxLabels = isMobile ? MAX_LABELS_MOBILE : MAX_LABELS_DESKTOP;
+            const step = totalLabels > maxLabels ? Math.ceil(totalLabels / maxLabels) : 1;
+            const shouldShow = (i: number) =>
+              step === 1 || i % step === 0 || i === totalLabels - 1;
 
-            // Verificar se é label mensal (formato "Fev/2026", "Set/2025", "set de 2025" ou "09/25") antes de formatar
-            const isMonthlyLabel =
-              /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i.test(label.trim()) ||
-              /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) ||
-              /^\d{2}\/\d{2}$/.test(label.trim());
-            const formattedLabel = isMonthlyLabel ? label.trim() : formatDateLabel(label);
+            return displayData.labels.map((label, index) => {
+              if (!shouldShow(index)) return null;
 
-            return (
-              <span
-                key={`${label}-${index}`}
-                className="text-xs md:text-sm text-gray-11 font-family-dm-sans"
-                style={{
-                  position: 'absolute',
-                  left: `${position}%`,
-                  transform: 'translateX(-50%)',
-                }}
-              >
-                {formattedLabel}
-              </span>
-            );
-          })}
+              const position = totalLabels > 1 ? (index / (totalLabels - 1)) * 100 : 50;
+              const isMonthlyLabel =
+                /^[a-záàâãéêíóôõúç]{3,4}\/\d{4}$/i.test(label.trim()) ||
+                /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) ||
+                /^\d{2}\/\d{2}$/.test(label.trim());
+              const formattedLabel = isMonthlyLabel ? label.trim() : formatDateLabel(label);
+
+              return (
+                <span
+                  key={`${label}-${index}`}
+                  className="text-xs md:text-sm text-gray-11 font-family-dm-sans"
+                  style={{
+                    position: "absolute",
+                    left: `${position}%`,
+                    transform: "translateX(-50%)",
+                  }}
+                >
+                  {formattedLabel}
+                </span>
+              );
+            });
+          })()}
         </div>
       </div>
 

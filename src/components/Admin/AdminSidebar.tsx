@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { FileText, Megaphone, TrendingUp } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -11,8 +11,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { LogOutIcon } from "@/components/Icons/LogOutIcon";
 import Image from "next/image";
+import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
+import { adminExternalHref } from "@/lib/adminPathPresentation";
+import { useAdminPathname } from "@/hooks/useAdminPathname";
 
-const navItems = [
+const NAV_ITEMS = [
   { label: "Eventos", href: "/admin/events", icon: TicketIcon },
   { label: "Repasse", href: "/admin/repasse", icon: TrendingUp },
   { label: "Anúncios", href: "/admin/anuncios", icon: Megaphone },
@@ -20,22 +23,25 @@ const navItems = [
 ] as const;
 
 export function AdminSidebar() {
-  const pathname = usePathname();
+  const adminPath = useAdminPathname();
+  const adminSurface = useAdminAppSurface();
   const router = useRouter();
   const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  const navHref = (internal: string) => adminExternalHref(internal, adminSurface);
+
   const handleLogout = async () => {
     await logout();
-    router.push("/");
+    router.push(navHref("/admin/login"));
   };
 
-  const isActive = (href: string) => pathname.startsWith(href);
+  const isActive = (href: string) => adminPath.startsWith(href);
 
   return (
     <aside className="hidden md:flex bg-linear-to-b from-[#191919] to-[#222222] w-[218px] h-screen flex-col items-start justify-between px-4 py-8 shadow-[0px_4px_12px_0px_rgba(17,17,17,0.15)] fixed left-0 top-0 z-40">
       <div className="flex flex-col gap-10 items-start w-full">
-        <Link href="/admin" className="flex items-center gap-2 min-w-0">
+        <Link href={navHref("/admin")} className="flex items-center gap-2 min-w-0">
           <Image
             src="/images/logo_admin.png"
             alt="PódioTicket"
@@ -47,7 +53,7 @@ export function AdminSidebar() {
         </Link>
 
         <nav className="flex flex-col gap-1 w-full">
-          {navItems.map((item) => {
+          {NAV_ITEMS.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
 
@@ -59,7 +65,7 @@ export function AdminSidebar() {
                 className="relative rounded"
               >
                 <Link
-                  href={item.href}
+                  href={navHref(item.href)}
                   className="content-center flex gap-2 h-10 items-center px-3 py-3 relative rounded"
                 >
                   <motion.div

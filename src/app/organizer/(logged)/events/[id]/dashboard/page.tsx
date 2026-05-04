@@ -40,6 +40,7 @@ import { Tooltip } from "@/components/Tooltip";
 import { cn } from "@/utils/cn";
 
 const LOTS_NEAR_DEPLETION_PAGE_SIZE = 4;
+const TICKET_RANKING_PAGE_SIZE = 4;
 
 function LotsNearDepletionPaginationBar({
   page,
@@ -190,6 +191,7 @@ export default function EventDashboardPage() {
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
   const [lotsNearDepletionPage, setLotsNearDepletionPage] = useState(1);
+  const [ticketRankingPage, setTicketRankingPage] = useState(1);
   const { tickets } = useTickets(eventId, true);
 
   // Mock data - substituir com dados reais da API
@@ -553,6 +555,26 @@ export default function EventDashboardPage() {
       lotsNearDepletionSliceStart + LOTS_NEAR_DEPLETION_PAGE_SIZE,
     );
   }, [lotsNearDepletionList, lotsNearDepletionSliceStart]);
+
+  const ticketRankingList = dashboardData.ticketRanking;
+  const ticketRankingTotalPages = Math.max(
+    1,
+    Math.ceil(ticketRankingList.length / TICKET_RANKING_PAGE_SIZE),
+  );
+
+  useEffect(() => {
+    setTicketRankingPage(1);
+  }, [ticketRankingList]);
+
+  const ticketRankingSliceStart = (ticketRankingPage - 1) * TICKET_RANKING_PAGE_SIZE;
+  const paginatedTicketRanking = useMemo(
+    () =>
+      ticketRankingList.slice(
+        ticketRankingSliceStart,
+        ticketRankingSliceStart + TICKET_RANKING_PAGE_SIZE,
+      ),
+    [ticketRankingList, ticketRankingSliceStart],
+  );
 
   // Um item por produto (soma de todas as variações)
   const bestSellingVariations = useMemo((): BestSellingVariationItem[] => {
@@ -965,7 +987,7 @@ export default function EventDashboardPage() {
             </div>
             <div>
               {/* Header */}
-              <div className="grid grid-cols-[199px_81px_112px] border-b border-t border-gray-6 bg-gray-4">
+              <div className="grid grid-cols-[199px_81px_112px] border-b border-gray-6 bg-gray-4">
                 <div className="px-4 py-4">
                   <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">Nome</p>
                 </div>
@@ -977,9 +999,9 @@ export default function EventDashboardPage() {
                 </div>
               </div>
               {/* Rows */}
-              {dashboardData.ticketRanking.map((ticket, index) => (
+              {paginatedTicketRanking.map((ticket, index) => (
                 <div
-                  key={index}
+                  key={ticketRankingSliceStart + index}
                   className="grid grid-cols-[199px_81px_112px] border-b border-gray-6 last:border-b-0 bg-gray-1"
                 >
                   <div className="px-4 py-3 flex flex-col gap-2 justify-center">
@@ -997,6 +1019,11 @@ export default function EventDashboardPage() {
                 </div>
               ))}
             </div>
+            <LotsNearDepletionPaginationBar
+              page={ticketRankingPage}
+              totalPages={ticketRankingTotalPages}
+              onPageChange={setTicketRankingPage}
+            />
           </div>
         </div>
 
@@ -1310,8 +1337,8 @@ export default function EventDashboardPage() {
             <p className="font-family-dm-sans font-normal text-base text-gray-11">Ranking de ingressos</p>
           </div>
           <div className="divide-y divide-gray-6">
-            {dashboardData.ticketRanking.map((ticket, index) => (
-              <div key={index} className="px-4 py-3 flex items-center justify-between">
+            {paginatedTicketRanking.map((ticket, index) => (
+              <div key={ticketRankingSliceStart + index} className="px-4 py-3 flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <DashboardRankingCategoryLabel category={ticket.category} />
                   <DashboardRankingTicketNameLabel name={ticket.name} size="sm" />
@@ -1325,6 +1352,12 @@ export default function EventDashboardPage() {
               </div>
             ))}
           </div>
+          <LotsNearDepletionPaginationBar
+            page={ticketRankingPage}
+            totalPages={ticketRankingTotalPages}
+            onPageChange={setTicketRankingPage}
+            compact
+          />
         </div>
 
         {/* Variações mais vendidas - mobile */}

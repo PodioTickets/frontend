@@ -40,7 +40,7 @@ export function useAdminAccess() {
       return;
     }
     if (!isAdmin) {
-      router.replace("/");
+      router.replace("/admin/login");
     }
   }, [loading, user, isAdmin, router]);
 

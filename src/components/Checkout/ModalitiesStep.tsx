@@ -12,6 +12,8 @@ import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { Loading } from "../Loading";
 import type { Ticket } from "@/hooks/useTickets";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoginModal } from "@/stores/modalStore";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -21,6 +23,16 @@ interface ModalitiesStepProps {
 
 export function ModalitiesStep({ event, onNext, isSubmitting = false }: ModalitiesStepProps) {
   const { raceQuantities } = useCheckout();
+  const { isAuthenticated } = useAuth();
+  const { openLoginModal } = useLoginModal();
+
+  const handleNext = () => {
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    onNext();
+  };
   const eventId = event?.id;
 
   // Buscar tickets e categorias do servidor
@@ -262,7 +274,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                 <span className="font-bold">{formatPrice(totalPrice)}</span>
               </p>
             </div>
-            <Button onClick={onNext} disabled={totalParticipants === 0} isLoading={isSubmitting}>
+            <Button onClick={handleNext} disabled={totalParticipants === 0} isLoading={isSubmitting}>
               Selecionar
             </Button>
           </div>
@@ -330,7 +342,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
           <div className="w-[400px] shrink-0">
             <EventInfo
               event={event}
-              onNext={onNext}
+              onNext={handleNext}
               isSubmitting={isSubmitting}
               tickets={tickets}
               categorizedTickets={categorizedTickets}

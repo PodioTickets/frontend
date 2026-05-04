@@ -226,7 +226,9 @@ export default function TicketDetailsPage() {
             {participants.map((participant: any, index: number) => {
               const isExpanded = expandedParticipants[index] || false;
               const tab = activeTab[index] || "info";
+              const qrCode = `$${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderId}`;
               const ticket = participant.ticket || {};
+
               const distance = ticket.distance
                 ? `${ticket.distance} ${ticket.distanceUnit || "Km"}`
                 : null;
@@ -284,13 +286,7 @@ export default function TicketDetailsPage() {
                     </div>
                     {/* QR Code */}
                     <div className="shrink-0">
-                      {participant.qrCode ? (
-                        <RegistrationQRCode qrCodeData={participant.qrCode} size={120} />
-                      ) : (
-                        <div className="size-[120px] bg-gray-5 rounded-lg flex items-center justify-center">
-                          <span className="text-xs text-gray-11">QR Code</span>
-                        </div>
-                      )}
+                      <RegistrationQRCode qrCodeData={qrCode} size={120} />
                     </div>
                   </button>
 
@@ -346,17 +342,15 @@ export default function TicketDetailsPage() {
                     <div className="flex gap-3 items-start px-4 pt-5">
                       <button
                         onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "info" }))}
-                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${
-                          tab === "info" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
-                        }`}
+                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "info" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                          }`}
                       >
                         Informações
                       </button>
                       <button
                         onClick={() => setActiveTab((prev) => ({ ...prev, [index]: "products" }))}
-                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${
-                          tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
-                        }`}
+                        className={`px-4 py-3 rounded-[32px] font-semibold text-base font-manrope leading-[1.1] transition-colors ${tab === "products" ? "bg-primary-11 text-primary-2" : "bg-gray-5 text-gray-11"
+                          }`}
                       >
                         Produtos
                       </button>
@@ -587,8 +581,8 @@ export default function TicketDetailsPage() {
                     {payment.method === "CREDIT_CARD"
                       ? "Cartão de crédito"
                       : payment.method === "PIX"
-                      ? "PIX"
-                      : payment.method || "N/A"}
+                        ? "PIX"
+                        : payment.method || "N/A"}
                   </p>
                 </div>
 

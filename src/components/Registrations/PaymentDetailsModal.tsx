@@ -207,7 +207,7 @@ export function PaymentDetailsModal() {
       { label: "Cidade", value: billingAddress.city || "—" },
       { label: "Bairro", value: billingAddress.neighborhood || "—" },
       { label: "Número", value: billingAddress.number || "—" },
-      { label: "Logradouro", value: billingAddress.street || "—" },
+      { label: "Rua", value: billingAddress.street || "—" },
       {
         label: "Complemento",
         value: billingAddress.complement?.trim() || "—",
@@ -724,7 +724,7 @@ export function PaymentDetailsModal() {
                             </div>
                             <div className="col-span-2 flex flex-col py-2">
                               <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                                Logradouro
+                                Rua
                               </p>
                               <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
                                 {billingAddress.street || "—"}

@@ -22,9 +22,22 @@ interface Voucher {
   [key: string]: any;
 }
 
+interface VoucherGroupInfo {
+  name: string;
+  status: "ACTIVE" | "INACTIVE" | "USED" | "EXPIRED";
+  totalCount: number;
+  availableCount: number;
+  usedCount: number;
+  expiredCount: number;
+  inactiveCount: number;
+  expiryDate?: string;
+  appliesTo?: "all" | Array<string | { id: string }>;
+}
+
 interface VoucherGroupData {
   groupName: string;
   vouchers: Voucher[];
+  group?: VoucherGroupInfo;
   pagination: {
     page: number;
     limit: number;
@@ -39,7 +52,7 @@ export function ViewVoucherModal() {
   const [loading, setLoading] = useState(false);
   const [voucherData, setVoucherData] = useState<VoucherGroupData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [groupInfo, setGroupInfo] = useState<any>(null);
+  const [groupInfo, setGroupInfo] = useState<VoucherGroupInfo | null>(null);
 
   const eventId = data?.eventId;
   const groupName = data?.groupName;
@@ -50,6 +63,29 @@ export function ViewVoucherModal() {
 
   // Mapear categorias por ID
   const categoryMap = new Map(categories.map((cat) => [cat.id, cat.name]));
+
+  const groupStatus: "ACTIVE" | "USED" | "EXPIRED" | "INACTIVE" = (() => {
+    if (!groupInfo) return "INACTIVE";
+    const { availableCount = 0, usedCount = 0, expiredCount = 0, totalCount = 0 } = groupInfo;
+    if (availableCount > 0) return "ACTIVE";
+    if (totalCount > 0 && usedCount >= totalCount) return "USED";
+    if (totalCount > 0 && expiredCount >= totalCount) return "EXPIRED";
+    return "INACTIVE";
+  })();
+
+  const groupStatusLabel: Record<typeof groupStatus, string> = {
+    ACTIVE: "Ativo",
+    USED: "Usado",
+    EXPIRED: "Expirado",
+    INACTIVE: "Inativo",
+  };
+
+  const groupStatusClass: Record<typeof groupStatus, string> = {
+    ACTIVE: "bg-primary-5 text-primary-12",
+    USED: "bg-gray-5 text-gray-12",
+    EXPIRED: "bg-red-4 text-red-11",
+    INACTIVE: "bg-gray-5 text-gray-12",
+  };
 
   // Encontrar tickets vinculados ao voucher
   const getLinkedTickets = () => {
@@ -95,18 +131,8 @@ export function ViewVoucherModal() {
       });
       setVoucherData(data);
 
-      // Buscar informações do grupo para mostrar estatísticas apenas na primeira vez
-      if (data?.groupName && !groupInfo) {
-        try {
-          const groups = await organizerService.getVouchers(eventId);
-          const group = groups.groups.find((g: any) => g.name === data.groupName);
-          if (group) {
-            setGroupInfo(group);
-          }
-        } catch (err) {
-          // Ignorar erro ao buscar informações do grupo
-          console.warn("Could not load group info:", err);
-        }
+      if (data?.group) {
+        setGroupInfo(data.group);
       }
     } catch (error: any) {
       console.error("Error loading voucher group:", error);
@@ -203,62 +229,9 @@ export function ViewVoucherModal() {
                 ) : voucherData ? (
                   <div className="flex flex-col gap-8">
                     {/* Top Section - Group Info */}
-                    <div className="flex gap-6 items-start">
-                      {/* Ticket Card */}
-                      {linkedTickets.length > 0 ? (
-                        linkedTickets.map((ticket) => (
-                          <div key={ticket.id} className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 shrink-0 w-[343px]">
-                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                              {categoryMap.get(ticket.groupId) || "Sem categoria"}
-                            </p>
-                            <div className="flex gap-1.5 items-center">
-                              <TicketIcon className="size-5 text-gray-12" />
-                              <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                                {ticket.name}
-                              </p>
-                            </div>
-                            <div className="border-t border-gray-6 pt-4 mt-2">
-                              <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                                {ticket.price}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : groupInfo?.appliesTo === "all" ? (
-                        <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 shrink-0 w-[343px]">
-                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                            Todos os ingressos
-                          </p>
-                          <div className="flex gap-1.5 items-center">
-                            <TicketIcon className="size-5 text-gray-12" />
-                            <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                              Aplicável a todos
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 shrink-0 w-[343px]">
-                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                            Nome da categoria
-                          </p>
-                          <div className="flex gap-1.5 items-center">
-                            <TicketIcon className="size-5 text-gray-12" />
-                            <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                              {groupInfo?.name || groupName}
-                            </p>
-                          </div>
-                          {groupInfo && (
-                            <div className="border-t border-gray-6 pt-4 mt-2">
-                              <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                                R$ {groupInfo.price || "0,00"}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
+                    <div className="flex flex-col gap-5">
                       {/* Group Details */}
-                      <div className="flex flex-col gap-4 flex-1">
+                      <div className="flex flex-col gap-4">
                         <div>
                           <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] mb-2">
                             {groupInfo?.name || groupName}
@@ -268,7 +241,7 @@ export function ViewVoucherModal() {
                               <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Totais:
                               </span>
-                              <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                              <span className="text-gray-12 text-base font-semibold font-manrope">
                                 {groupInfo?.totalCount || voucherData.pagination.total}
                               </span>
                             </div>
@@ -277,8 +250,8 @@ export function ViewVoucherModal() {
                               <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Disponíveis:
                               </span>
-                              <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                                {groupInfo?.activeCount || voucherData.vouchers.filter((v) => v.status === "ACTIVE").length}
+                              <span className="text-gray-12 text-base font-semibold font-manrope">
+                                {groupInfo?.availableCount ?? voucherData.vouchers.filter((v) => v.status === "ACTIVE").length}
                               </span>
                             </div>
                             <div className="size-1.5 rounded-full bg-gray-11" />
@@ -286,7 +259,7 @@ export function ViewVoucherModal() {
                               <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                                 Usados:
                               </span>
-                              <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                              <span className="text-gray-12 text-base font-semibold font-manrope">
                                 {groupInfo?.usedCount || voucherData.vouchers.filter((v) => v.status === "USED").length}
                               </span>
                             </div>
@@ -298,29 +271,74 @@ export function ViewVoucherModal() {
                             <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Status:
                             </span>
-                            <span className={`px-3 py-2 rounded-full text-sm font-semibold font-family-dm-sans leading-[1.3] ${groupInfo?.expiryDate && new Date(groupInfo.expiryDate) > new Date() ? "bg-primary-5 text-primary-12" : "bg-gray-5 text-gray-12"}`}>
-                              {groupInfo?.expiryDate && new Date(groupInfo.expiryDate) > new Date() ? "Ativo" : "Inativo"}
+                            <span className={`px-2 py-1 rounded-full text-sm font-semibold font-family-dm-sans ${groupStatusClass[groupStatus]}`}>
+                              {groupStatusLabel[groupStatus]}
                             </span>
                           </div>
-                          <div className="size-1.5 rounded-full bg-gray-11" />
-                          <div className="flex gap-1 items-center">
-                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Validade:
-                            </span>
-                            <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
-                              {formatDate(groupInfo?.expiryDate)}
-                            </span>
-                          </div>
+                          {groupInfo?.expiryDate && (
+                            <>
+                              <div className="size-1.5 rounded-full bg-gray-11" />
+                              <div className="flex gap-1 items-center">
+                                <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                  Validade:
+                                </span>
+                                <span className="text-gray-12 text-base font-semibold font-manrope">
+                                  {formatDate(groupInfo.expiryDate)}
+                                </span>
+                              </div>
+                            </>
+                          )}
                           <div className="size-1.5 rounded-full bg-gray-11" />
                           <div className="flex gap-1 items-center">
                             <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                               Benefício:
                             </span>
-                            <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                            <span className="text-gray-12 text-base font-semibold font-manrope">
                               100% cortesia
                             </span>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Ingressos aplicáveis */}
+                      <div className="flex flex-col gap-2">
+                        <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
+                          Ingressos aplicáveis:
+                        </p>
+                        {groupInfo?.appliesTo === "all" || (linkedTickets.length === 0 && !groupInfo) ? (
+                          <div className="flex items-center gap-1.5 bg-gray-3 border border-gray-6 rounded-lg px-3 py-2 w-fit">
+                            <TicketIcon className="size-4 text-gray-12 shrink-0" />
+                            <span className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3]">
+                              Todos os ingressos
+                            </span>
+                          </div>
+                        ) : linkedTickets.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {linkedTickets.map((ticket) => (
+                              <div
+                                key={ticket.id}
+                                className="flex items-center gap-1.5 bg-gray-3 border border-gray-6 rounded-lg px-3 py-2"
+                              >
+                                <TicketIcon className="size-4 text-gray-12 shrink-0" />
+                                <span className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3]">
+                                  {ticket.name}
+                                </span>
+                                {categoryMap.get(ticket.groupId) && (
+                                  <span className="text-gray-10 text-xs font-family-dm-sans leading-[1.3]">
+                                    · {categoryMap.get(ticket.groupId)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 bg-gray-3 border border-gray-6 rounded-lg px-3 py-2 w-fit">
+                            <TicketIcon className="size-4 text-gray-12 shrink-0" />
+                            <span className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3]">
+                              {groupInfo?.name || groupName}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -418,7 +436,7 @@ export function ViewVoucherModal() {
                 <Button
                   variant="outline"
                   onClick={closeViewVoucherModal}
-                  className="border-[1.5px] border-gray-6 text-gray-12 h-11 px-5 font-bold text-base font-manrope"
+                  className="border border-gray-6 text-gray-12 h-11 px-5"
                 >
                   Fechar
                 </Button>

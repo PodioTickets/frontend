@@ -257,9 +257,22 @@ export function RegisterModal() {
   };
 
   const handleNext = async () => {
-    // Step 1: email + senha → só valida e avança, sem chamada de API
+    // Step 1: email + senha → valida, verifica disponibilidade do email, avança
     if (currentStep === 1) {
       if (!validateStep2()) return;
+      if (!isCompletingProfile) {
+        setIsSubmitting(true);
+        try {
+          const result = await userService.checkEmailAvailability(formData.email);
+          if (!result.available) {
+            setErrors((prev) => ({ ...prev, email: result.message || "Este e-mail já está cadastrado." }));
+            toast.error(result.message || "Este e-mail já está cadastrado.");
+            return;
+          }
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
       setCurrentStep(2);
       return;
     }
@@ -1094,7 +1107,7 @@ export function RegisterModal() {
             disabled={isSubmitting || authLoading}
             className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting || authLoading ? "Criando conta..." : "Próximo"}
+            {isSubmitting || authLoading ? "Verificando..." : "Próximo"}
           </Button>
         </div>
       </div>
@@ -1221,7 +1234,7 @@ export function RegisterModal() {
             disabled={isSubmitting || authLoading}
             className="px-8 font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting || authLoading ? "Criando conta..." : "Próximo"}
+            {isSubmitting || authLoading ? "Verificando..." : "Próximo"}
           </Button>
         </div>
       </div>

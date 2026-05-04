@@ -20,7 +20,6 @@ import {
   getEventOrganizer,
 } from "@/utils/organization";
 import { cn } from "@/utils/cn";
-import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
 import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
@@ -104,11 +103,6 @@ export default function EventPage() {
   const handleCheckoutClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!event) return;
-
-    if (!isAuthenticated) {
-      openLoginModal();
-      return;
-    }
     router.push(`/checkout/ingressos?eventId=${event.id}`);
   };
 
@@ -191,6 +185,10 @@ export default function EventPage() {
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
 
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    [event.location, event.neighborhood, `${event.city} - ${event.state}`, event.zipCode].filter(Boolean).join(", ")
+  )}`;
+
   return (
     <>
       {/* Mobile Layout */}
@@ -252,12 +250,7 @@ export default function EventPage() {
             </h1>
 
             <div className="flex flex-col gap-3 mb-4">
-              <div className="flex items-center gap-2 text-gray-12">
-                <LocationIcon className="size-5 text-gray-12 shrink-0" />
-                <span className="text-sm">
-                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
-                </span>
-              </div>
+
               <div className="flex items-center gap-2 text-gray-12">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
@@ -283,30 +276,12 @@ export default function EventPage() {
                   Inscrições até {formatDate(new Date(event.registrationEndDate))}
                 </span>
               </div>
-              {event.modalities
-                ?.filter((m) => m.isActive)
-                .map((modality) => {
-                  const icon = resolveCheckoutModalityIconSrc(
-                    modality.template?.icon,
-                  );
-                  const label = modality.template?.label;
-                  if (!icon || !label) return null;
-                  return (
-                    <div
-                      key={modality.id}
-                      className="flex items-center gap-2 text-gray-11"
-                    >
-                      <Image
-                        src={icon}
-                        alt={label}
-                        width={20}
-                        height={20}
-                        draggable={false}
-                      />
-                      <span className="text-sm">{label}</span>
-                    </div>
-                  );
-                })}
+              <div className="flex items-center gap-2 text-gray-12">
+                <LocationIcon className="size-5 text-gray-12 shrink-0" />
+                <Link href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
+                  {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
+                </Link>
+              </div>
             </div>
 
             <div className="bg-gray-3 border border-gray-6 rounded-lg p-4 mb-4">
@@ -686,12 +661,6 @@ export default function EventPage() {
                     <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full">
                       <h1 className="text-lg font-bold mb-4">{event.name}</h1>
                       <div className="flex flex-col gap-4">
-                        <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-                          <LocationIcon className="size-5 shrink-0" />{" "}
-                          <span className="text-sm">
-                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
-                          </span>
-                        </h1>
                         <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
                           <CalendarIcon className="size-5" />{" "}
                           <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
@@ -708,30 +677,12 @@ export default function EventPage() {
                             <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
                           </div>
                         )}
-                        {event.modalities
-                          ?.filter((modality) => modality.isActive)
-                          .map((modality) => {
-                            const icon = resolveCheckoutModalityIconSrc(
-                              modality.template?.icon,
-                            );
-                            const label = modality.template?.label;
-                            if (!icon || !label) return null;
-                            return (
-                              <h1
-                                key={modality.id}
-                                className="flex items-center gap-2 text-sm text-gray-12 font-medium"
-                              >
-                                <Image
-                                  src={icon}
-                                  alt={label}
-                                  width={20}
-                                  height={20}
-                                  draggable={false}
-                                />
-                                <span className="text-sm">{label}</span>
-                              </h1>
-                            );
-                          })}
+                        <h1 className="flex items-center gap-2 text-gray-12 font-medium">
+                          <LocationIcon className="size-5 shrink-0" />{" "}
+                          <Link href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
+                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
+                          </Link>
+                        </h1>
                       </div>
 
                       <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
@@ -980,12 +931,6 @@ export default function EventPage() {
                 <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] sticky top-24">
                   <h1 className="text-lg font-bold mb-4">{event.name}</h1>
                   <div className="flex flex-col gap-4">
-                    <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-                      <LocationIcon className="size-5 shrink-0" />{" "}
-                      <span className="text-sm">
-                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
-                      </span>
-                    </h1>
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
                       <CalendarIcon className="size-5" />{" "}
                       <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
@@ -1002,30 +947,12 @@ export default function EventPage() {
                         <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
                       </div>
                     )}
-                    {event.modalities
-                      ?.filter((modality) => modality.isActive)
-                      .map((modality) => {
-                        const icon = resolveCheckoutModalityIconSrc(
-                          modality.template?.icon,
-                        );
-                        const label = modality.template?.label;
-                        if (!icon || !label) return null;
-                        return (
-                          <h1
-                            key={modality.id}
-                            className="flex items-center gap-2 text-sm text-gray-12 font-medium"
-                          >
-                            <Image
-                              src={icon}
-                              alt={label}
-                              width={20}
-                              height={20}
-                              draggable={false}
-                            />
-                            <span className="text-sm">{label}</span>
-                          </h1>
-                        );
-                      })}
+                    <h1 className="flex items-center gap-2 text-gray-12 font-medium">
+                      <LocationIcon className="size-5 shrink-0" />{" "}
+                      <Link href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
+                        {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
+                      </Link>
+                    </h1>
                   </div>
 
                   <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">

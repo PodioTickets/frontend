@@ -43,6 +43,7 @@ import {
   type OrderResponse,
   type PatchBillingAddressRequest,
   type PayOrderRequest,
+  type PayOrderDebitCardRequest,
 } from "@/interfaces/order";
 
 const COUPON_ERROR_MESSAGES: Record<string, string> = {
@@ -64,7 +65,7 @@ interface PaymentStepProps {
   onSuccess?: (orderId: string) => void;
 }
 
-type PaymentMethod = "credit" | "pix" | "boleto";
+type PaymentMethod = "credit" | "debit" | "pix" | "boleto";
 
 interface PaymentOption {
   id: PaymentMethod;
@@ -271,7 +272,230 @@ function CreditCardForm({
   );
 }
 
+function DebitCardForm({
+  cardName,
+  setCardName,
+  cardNumber,
+  setCardNumber,
+  cardExpiry,
+  setCardExpiry,
+  cardCVV,
+  setCardCVV,
+  isMobile = false,
+  errors,
+}: {
+  cardName?: string;
+  setCardName?: (value: string) => void;
+  cardNumber?: string;
+  setCardNumber?: (value: string) => void;
+  cardExpiry?: string;
+  setCardExpiry?: (value: string) => void;
+  cardCVV?: string;
+  setCardCVV?: (value: string) => void;
+  isMobile?: boolean;
+  errors?: CardErrors;
+}) {
+  const formatCardNumber = (value: string) => {
+    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+    const matches = v.match(/\d{4,16}/g);
+    const match = (matches && matches[0]) || "";
+    const parts = [];
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+    return parts.length ? parts.join(" ") : v;
+  };
+
+  const formatExpiry = (value: string) => {
+    const v = value.replace(/\D/g, "");
+    if (v.length >= 2) return v.substring(0, 2) + "/" + v.substring(2, 4);
+    return v;
+  };
+
+  const isAmex = cardNumber ? getCardBrand(cardNumber) === "AMEX" : false;
+  const cvvMaxLength = isAmex ? 4 : 3;
+
+  return (
+    <div className={`${isMobile ? "flex flex-col gap-4" : "space-y-4"}`}>
+      <div className="flex flex-col gap-2 w-full">
+        <label className="text-base text-gray-12 font-family-dm-sans">
+          Nome impresso no cartão
+        </label>
+        <Input
+          type="text"
+          value={cardName || ""}
+          onChange={(e) => setCardName && setCardName(e.target.value)}
+          className="bg-gray-2"
+          placeholder="Ex: João Ribeiro"
+          aria-invalid={!!errors?.cardName}
+        />
+        {errors?.cardName && <p className="text-sm text-red-11">{errors.cardName}</p>}
+      </div>
+
+      <div className="flex flex-col gap-2 w-full">
+        <label className="text-base text-gray-12 font-family-dm-sans">
+          Número do cartão
+        </label>
+        <Input
+          type="text"
+          value={cardNumber || ""}
+          onChange={(e) => setCardNumber && setCardNumber(formatCardNumber(e.target.value))}
+          className="bg-gray-2"
+          maxLength={19}
+          placeholder="Ex: 5400 7975 6026 4737"
+          aria-invalid={!!errors?.cardNumber}
+        />
+        {errors?.cardNumber && <p className="text-sm text-red-11">{errors.cardNumber}</p>}
+      </div>
+
+      <div className={`flex ${isMobile ? "flex-col gap-4" : "justify-between gap-4"} w-full`}>
+        <div className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}>
+          <label className="text-base text-gray-12 font-family-dm-sans">
+            Data de validade
+          </label>
+          <Input
+            type="text"
+            value={cardExpiry || ""}
+            onChange={(e) => setCardExpiry && setCardExpiry(formatExpiry(e.target.value))}
+            className="bg-gray-2"
+            maxLength={5}
+            placeholder="MM/AA"
+            aria-invalid={!!errors?.cardExpiry}
+          />
+          {errors?.cardExpiry && <p className="text-sm text-red-11">{errors.cardExpiry}</p>}
+        </div>
+        <div className={`${isMobile ? "w-full" : "flex-1"} flex flex-col gap-2`}>
+          <div className="flex items-center gap-2">
+            <label className="text-base text-gray-12 font-family-dm-sans">CVV</label>
+            <Tooltip
+              content={<CVVTooltip />}
+              position="topRight"
+              trigger="hover"
+              className="cursor-help"
+            >
+              <button type="button" className="text-gray-11 hover:text-gray-12 transition-colors">
+                <HelpIcon className="size-4" />
+              </button>
+            </Tooltip>
+          </div>
+          <Input
+            type="text"
+            value={cardCVV || ""}
+            onChange={(e) => setCardCVV && setCardCVV(e.target.value.replace(/\D/g, "").substring(0, cvvMaxLength))}
+            maxLength={cvvMaxLength}
+            className="bg-gray-2"
+            placeholder={isAmex ? "4 dígitos" : "3 dígitos"}
+            aria-invalid={!!errors?.cardCVV}
+          />
+          {errors?.cardCVV && <p className="text-sm text-red-11">{errors.cardCVV}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+
+function ThreeDSModal({
+  isOpen,
+  onClose,
+  redirectUrl,
+  orderId,
+  onPaymentConfirmed,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  redirectUrl: string | null;
+  orderId: string | null;
+  onPaymentConfirmed?: () => void;
+}) {
+  const confirmedRef = useRef(false);
+  const onPaymentConfirmedRef = useRef(onPaymentConfirmed);
+  onPaymentConfirmedRef.current = onPaymentConfirmed;
+
+  const handleConfirmed = useCallback(() => {
+    if (confirmedRef.current) return;
+    confirmedRef.current = true;
+    toast.success("Pagamento confirmado!");
+    onPaymentConfirmedRef.current?.();
+  }, []);
+
+  // Canal primário: WebSocket
+  useEffect(() => {
+    if (!isOpen || !orderId || !API_URL) return;
+
+    const socket: Socket = io(`${API_URL}/payments`, {
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      socket.emit("subscribe", { orderId });
+    });
+
+    socket.on("payment:confirmed", (data: { orderId: string; status: string }) => {
+      if (data.orderId === orderId && data.status === "PAID") {
+        handleConfirmed();
+      }
+    });
+
+    return () => { socket.disconnect(); };
+  }, [isOpen, orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fallback: postMessage vindo da página /checkout/3ds-result carregada no iframe
+  useEffect(() => {
+    if (!isOpen || !orderId) return;
+
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== "3DS_RESULT" || e.data?.orderId !== orderId) return;
+      const result = e.data.result as "success" | "failed" | "error";
+      if (result === "success") {
+        handleConfirmed();
+      } else if (result === "failed") {
+        onClose();
+        toast.error("Pagamento recusado pelo banco.");
+      } else {
+        onClose();
+        toast.error("Erro na autenticação 3DS. Tente novamente.");
+      }
+    };
+
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isOpen, orderId, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isOpen) confirmedRef.current = false;
+  }, [isOpen]);
+
+  if (!isOpen || !redirectUrl) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl mx-4 shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
+        <div className="text-[20px] font-bold text-gray-12 flex items-center justify-between border-b border-gray-6 p-4">
+          <p>Autenticação do banco</p>
+          <button className="cursor-pointer" onClick={onClose}>
+            <RemoveIcon className="size-4" />
+          </button>
+        </div>
+        <div className="p-4 space-y-3">
+          <p className="text-sm text-gray-11">
+            Complete a autenticação no ambiente do seu banco para finalizar o pagamento com cartão de débito.
+          </p>
+          <div className="w-full h-[500px] rounded-lg overflow-hidden border border-gray-6 bg-gray-2 flex items-center justify-center">
+            <iframe
+              src={redirectUrl}
+              className="w-full h-full"
+              title="Autenticação 3DS"
+              sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PixModal({
   isOpen,
@@ -619,6 +843,21 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+
+  // Debit card states
+  const [debitCardName, setDebitCardName] = useState("");
+  const [debitCardNumber, setDebitCardNumber] = useState("");
+  const [debitCardExpiry, setDebitCardExpiry] = useState("");
+  const [debitCardCVV, setDebitCardCVV] = useState("");
+  const [debitCardErrors, setDebitCardErrors] = useState<CardErrors>({});
+  const [is3DSModalOpen, setIs3DSModalOpen] = useState(false);
+  const [threeDSRedirectUrl, setThreeDSRedirectUrl] = useState<string | null>(null);
+  const [debitLoading, setDebitLoading] = useState(false);
+
+  const handleSetDebitCardName = (v: string) => { setDebitCardName(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardName; return n; }); };
+  const handleSetDebitCardNumber = (v: string) => { setDebitCardNumber(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardNumber; return n; }); };
+  const handleSetDebitCardExpiry = (v: string) => { setDebitCardExpiry(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardExpiry; return n; }); };
+  const handleSetDebitCardCVV = (v: string) => { setDebitCardCVV(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardCVV; return n; }); };
 
   // PIX states
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
@@ -1082,32 +1321,35 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }).format(price);
   };
 
+  const cardIcons = (
+    <div className="flex gap-2 items-center">
+      <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+        <VisaIcon />
+      </div>
+      <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+        <EloIcon />
+      </div>
+      <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+        <Image src="/images/american_express.png" alt="American Express" width={24} height={24} />
+      </div>
+      <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+        <MasterCardIcon />
+      </div>
+    </div>
+  );
+
   const paymentOptions: PaymentOption[] = [
     {
       id: "credit",
       name: "Cartão de crédito",
       description: "",
-      icons: (
-        <div className="flex gap-2 items-center">
-          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-            <VisaIcon />
-          </div>
-          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-            <EloIcon />
-          </div>
-          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-            <Image
-              src="/images/american_express.png"
-              alt="Mastercard"
-              width={24}
-              height={24}
-            />
-          </div>
-          <div className="bg-gray-2 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-            <MasterCardIcon />
-          </div>
-        </div>
-      ),
+      icons: cardIcons,
+    },
+    {
+      id: "debit",
+      name: "Cartão de débito",
+      description: "",
+      icons: cardIcons,
     },
     {
       id: "pix",
@@ -1471,6 +1713,91 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
+  // Processar checkout Cartão de Débito (3DS)
+  const handleProcessDebitCardCheckout = async () => {
+    if (checkoutLoadingRef.current) return;
+
+    const newErrors: CardErrors = {};
+    if (!debitCardName.trim()) newErrors.cardName = "Informe o nome impresso no cartão.";
+    if (!debitCardNumber) {
+      newErrors.cardNumber = "Informe o número do cartão.";
+    } else if (!validateCardNumber(debitCardNumber)) {
+      newErrors.cardNumber = "Número do cartão inválido.";
+    }
+    if (!debitCardExpiry) {
+      newErrors.cardExpiry = "Informe a data de validade.";
+    } else if (!validateExpiry(debitCardExpiry)) {
+      newErrors.cardExpiry = "Cartão expirado ou data inválida.";
+    }
+    if (!debitCardCVV) {
+      newErrors.cardCVV = "Informe o CVV.";
+    } else if (!validateCVV(debitCardCVV)) {
+      newErrors.cardCVV = "CVV inválido.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setDebitCardErrors(newErrors);
+      toast.error("Por favor, corrija os campos do cartão.");
+      return;
+    }
+    setDebitCardErrors({});
+
+    if (!orderId) {
+      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      return;
+    }
+    if (!billingAddressConfirmed) {
+      toast.error("Confirme o endereço de cobrança antes de pagar.");
+      return;
+    }
+
+    checkoutLoadingRef.current = true;
+    setDebitLoading(true);
+    setCheckoutLoading(true);
+    try {
+      const payload: PayOrderDebitCardRequest = {
+        method: "DEBIT_CARD",
+        card: {
+          name: debitCardName.toUpperCase().trim(),
+          number: debitCardNumber.replace(/\D/g, ""),
+          expiry: debitCardExpiry.replace(/\s/g, ""),
+          cvv: debitCardCVV,
+        },
+        couponCode: isCouponApplied && couponCode ? couponCode : undefined,
+      };
+      const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
+
+      if (result.status === "PAID") {
+        saveOrderForSuccess(result);
+        clearTimer();
+        toast.success("Pagamento aprovado!");
+        onSuccess?.(result.orderId);
+        return;
+      }
+
+      // 3DS necessário — redirecionar no iframe
+      const redirectUrl = result.payment?.redirectUrl;
+      if (redirectUrl) {
+        syncFromOrder(result);
+        saveOrderForSuccess(result);
+        pauseVisibilityRefresh();
+        setThreeDSRedirectUrl(redirectUrl);
+        setIs3DSModalOpen(true);
+        return;
+      }
+
+      syncFromOrder(result);
+      toast.error("Pagamento não aprovado. Tente novamente.");
+      regenerateIdempotencyKey();
+    } catch (err) {
+      handlePayError(err);
+    } finally {
+      checkoutLoadingRef.current = false;
+      setDebitLoading(false);
+      setCheckoutLoading(false);
+    }
+  };
+
   const pixValue = calculatePixValue();
   const additionalProductsCount = orderItems.length;
 
@@ -1593,6 +1920,23 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           resumeVisibilityRefresh();
         }}
       />
+      <ThreeDSModal
+        isOpen={is3DSModalOpen}
+        onClose={() => {
+          setIs3DSModalOpen(false);
+          setThreeDSRedirectUrl(null);
+          resumeVisibilityRefresh();
+          regenerateIdempotencyKey();
+        }}
+        redirectUrl={threeDSRedirectUrl}
+        orderId={orderId ?? null}
+        onPaymentConfirmed={() => {
+          setIs3DSModalOpen(false);
+          setThreeDSRedirectUrl(null);
+          clearTimer();
+          onSuccess?.(orderId!);
+        }}
+      />
 
       {/* Mobile Layout */}
       <div className="w-full md:hidden flex flex-col pb-24">
@@ -1689,6 +2033,62 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       onClick={handleProcessCreditCardCheckout}
                       disabled={checkoutLoading || !billingAddressConfirmed}
                       isLoading={checkoutLoading}
+                      className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Finalizar compra
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Debit Card Option */}
+              <div
+                className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "debit"
+                  ? "border-blue-8 bg-blue-3"
+                  : "border-gray-6 bg-gray-3"
+                  }`}
+                onClick={() => setSelectedPaymentMethod("debit")}
+              >
+                <div className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "debit"
+                        ? "bg-primary-11 border-primary-11"
+                        : "bg-transparent border-gray-6"
+                        }`}
+                    />
+                    <span className="text-base font-semibold text-primary-12 font-manrope">
+                      Cartão de débito
+                    </span>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center"><VisaIcon /></div>
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center"><EloIcon /></div>
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
+                      <Image src="/images/american_express.png" alt="American Express" width={24} height={24} />
+                    </div>
+                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center"><MasterCardIcon /></div>
+                  </div>
+                </div>
+
+                {selectedPaymentMethod === "debit" && (
+                  <div className="mt-4">
+                    <DebitCardForm
+                      cardName={debitCardName}
+                      setCardName={handleSetDebitCardName}
+                      cardNumber={debitCardNumber}
+                      setCardNumber={handleSetDebitCardNumber}
+                      cardExpiry={debitCardExpiry}
+                      setCardExpiry={handleSetDebitCardExpiry}
+                      cardCVV={debitCardCVV}
+                      setCardCVV={handleSetDebitCardCVV}
+                      isMobile={true}
+                      errors={debitCardErrors}
+                    />
+                    <Button
+                      onClick={handleProcessDebitCardCheckout}
+                      disabled={checkoutLoading || !billingAddressConfirmed}
+                      isLoading={debitLoading}
                       className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Finalizar compra
@@ -1856,6 +2256,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               onClick={() => {
                 if (selectedPaymentMethod === "credit") {
                   handleProcessCreditCardCheckout();
+                } else if (selectedPaymentMethod === "debit") {
+                  handleProcessDebitCardCheckout();
                 } else if (selectedPaymentMethod === "pix") {
                   handleProcessPixCheckout();
                 }
@@ -1961,6 +2363,30 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               onClick={handleProcessCreditCardCheckout}
                               disabled={checkoutLoading}
                               isLoading={checkoutLoading}
+                              className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Finalizar compra
+                            </Button>
+                          </>
+                        )}
+                        {option.id === "debit" && (
+                          <>
+                            <DebitCardForm
+                              cardName={debitCardName}
+                              setCardName={handleSetDebitCardName}
+                              cardNumber={debitCardNumber}
+                              setCardNumber={handleSetDebitCardNumber}
+                              cardExpiry={debitCardExpiry}
+                              setCardExpiry={handleSetDebitCardExpiry}
+                              cardCVV={debitCardCVV}
+                              setCardCVV={handleSetDebitCardCVV}
+                              isMobile={false}
+                              errors={debitCardErrors}
+                            />
+                            <Button
+                              onClick={handleProcessDebitCardCheckout}
+                              disabled={checkoutLoading}
+                              isLoading={debitLoading}
                               className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               Finalizar compra
@@ -2325,6 +2751,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       </p>
                       <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                         -{formatPrice(couponDiscount)}
+                      </p>
+                    </div>
+                  )}
+                  {isVoucherApplied && voucherDiscount > 0 && (
+                    <div className="flex gap-1 items-center">
+                      <p className="text-sm text-gray-12 font-family-dm-sans">
+                        Voucher:
+                      </p>
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                        -{formatPrice(voucherDiscount)}
                       </p>
                     </div>
                   )}

@@ -4,6 +4,7 @@ import {
   type OrganizationAuditLogItem,
   type OrganizationAuditLogsPagination,
 } from "../organizer/OrganizerService";
+import type { LoginResponse } from "../user/UserService";
 
 const ADMIN_AUDIT_LOGS_PATH =
   "/api/v1/organizations/admin/audit-logs";
@@ -197,7 +198,7 @@ function normalizeAdminAuditLogItem(
     typeof raw.kind === "string"
       ? raw.kind
       : base.metadata &&
-          typeof base.metadata.kind === "string"
+        typeof base.metadata.kind === "string"
         ? base.metadata.kind
         : null;
 
@@ -232,8 +233,8 @@ function unwrapAuditLogsPayload(body: Record<string, unknown>): {
 } {
   const nested =
     body.data != null &&
-    typeof body.data === "object" &&
-    !Array.isArray(body.data)
+      typeof body.data === "object" &&
+      !Array.isArray(body.data)
       ? (body.data as Record<string, unknown>)
       : null;
 
@@ -273,8 +274,8 @@ function unwrapOrganizationsPayload(body: Record<string, unknown>): {
 } {
   const nested =
     body.data != null &&
-    typeof body.data === "object" &&
-    !Array.isArray(body.data)
+      typeof body.data === "object" &&
+      !Array.isArray(body.data)
       ? (body.data as Record<string, unknown>)
       : null;
 
@@ -323,7 +324,86 @@ export interface AdminProfile {
 }
 
 export class AdminService {
-  constructor(private apiClient: ApiClient) {}
+  constructor(private apiClient: ApiClient) { }
+
+
+  async login(data: { emailOrCpf: string; password: string; }): Promise<{
+    success: boolean;
+    data?: {
+      access_token: string;
+      refresh_token: string;
+      user: {
+        id: string;
+        email: string;
+        firstName?: string;
+        lastName?: string;
+        documentNumber?: string;
+        role: string;
+      };
+    };
+    error?: string;
+  }> {
+    try {
+      const endpoint = "/api/v1/auth/login/admin";
+      const payload = {
+        emailOrCpf: data.emailOrCpf,
+        password: data.password,
+      };
+      const response = await this.apiClient.post<LoginResponse>(
+        endpoint,
+        payload
+      );
+      const responseBody = response.data as LoginResponse;
+      let loginData: {
+        access_token: string;
+        refresh_token: string;
+        user: {
+          id: string;
+          email: string;
+          firstName?: string;
+          lastName?: string;
+          documentNumber?: string;
+          role: string;
+        };
+      } | null = null;
+
+      if (responseBody?.data?.access_token && responseBody?.data?.user) {
+        loginData = {
+          access_token: responseBody.data.access_token,
+          refresh_token: responseBody.data.refresh_token,
+          user: responseBody.data.user,
+        };
+      } else if (responseBody?.access_token && responseBody?.user) {
+        loginData = {
+          access_token: responseBody.access_token,
+          refresh_token: responseBody.refresh_token || "",
+          user: responseBody.user,
+        };
+      }
+
+      if (!loginData || !loginData.access_token || !loginData.user) {
+        throw new Error(
+          "Resposta do servidor não contém dados de login válidos"
+        );
+      }
+
+      return {
+        success: true,
+        data: loginData,
+      };
+    } catch (error: any) {
+      const fallback = "Erro ao fazer login. Tente novamente.";
+      return {
+        success: false,
+        error:
+          error?.message && !String(error.message).includes("No refresh token")
+            ? error.message
+            : fallback,
+        data: undefined,
+      };
+    }
+  }
+
 
   async getMe(): Promise<AdminProfile> {
     const res = await this.apiClient.get<{ data: AdminProfile } | AdminProfile>(

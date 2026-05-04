@@ -24,7 +24,12 @@
       "Bash(npm install *)",
       "Bash(pnpm add *)",
       "Bash(xargs ls *)",
-      "Bash(pnpm tsc *)"
+      "Bash(pnpm tsc *)",
+      "Bash(xargs wc *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\organizer\\\\\\(logged\\)\\\\events\\\\[id]\\\\edit\" -Recurse -Filter \"page.tsx\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(echo \"EXIT:$?\")"
     ]
   },
   "disabledMcpjsonServers": [

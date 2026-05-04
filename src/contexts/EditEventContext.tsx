@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { organizerService } from "@/services";
 
@@ -32,6 +32,7 @@ interface EditEventFormData {
 
 interface EditEventContextType {
   formData: EditEventFormData;
+  initialFormData: EditEventFormData;
   updateFormData: (data: Partial<EditEventFormData>) => void;
   errors: Record<string, string>;
   setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -72,6 +73,8 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
   const params = useParams();
   const eventId = params.id as string;
   const [formData, setFormData] = useState<EditEventFormData>({ ...defaultFormData, eventId });
+  const [initialFormData, setInitialFormData] = useState<EditEventFormData>({ ...defaultFormData, eventId });
+  const initialLoadDone = useRef(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<any>(null);
@@ -116,7 +119,7 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
         ev.logo_url,
       ].find((u) => typeof u === "string" && u.trim().length > 0);
 
-      setFormData({
+      const loaded: EditEventFormData = {
         eventId,
         name: eventData.name || "",
         eventDate: formatDateForInput(eventData.eventDate),
@@ -140,7 +143,12 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
         youtube: (eventData as any).youtube || "",
         tiktok: (eventData as any).tiktok || "",
         website: (eventData as any).website || "",
-      });
+      };
+      setFormData(loaded);
+      if (!initialLoadDone.current) {
+        setInitialFormData(loaded);
+        initialLoadDone.current = true;
+      }
     } catch (error) {
       console.error("Error loading event:", error);
     } finally {
@@ -164,6 +172,7 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
     <EditEventContext.Provider
       value={{
         formData,
+        initialFormData,
         updateFormData,
         errors,
         setErrors,

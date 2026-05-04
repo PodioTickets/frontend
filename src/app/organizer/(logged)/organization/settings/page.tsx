@@ -12,7 +12,7 @@ import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
-import { Plus, ChevronLeft, MapPinIcon, MessageCircleIcon, Phone } from "lucide-react";
+import { Plus, ChevronLeft, MapPinIcon, MessageCircleIcon, Phone, XCircle } from "lucide-react";
 import type { Organization } from "@/services/organizer/OrganizerService";
 import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -25,6 +25,7 @@ import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
 import { HotelsIcon } from "@/components/Icons/Organizer/HotelsIcon";
 import { FinanceIcon } from "@/components/Icons/Organizer/FinanceIcon";
+import { TrashIcon } from "@/components/Icons/TrashIcon";
 
 const BRAZIL_STATES = [
   { id: "AC", label: "Acre" },
@@ -56,16 +57,7 @@ const BRAZIL_STATES = [
   { id: "TO", label: "Tocantins" },
 ];
 
-const PIX_KEY_TYPES = [
-  { id: "CPF", label: "CPF" },
-  { id: "CNPJ", label: "CNPJ" },
-  { id: "EMAIL", label: "E-mail" },
-  { id: "TELEFONE", label: "Telefone" },
-  { id: "ALEATORIA", label: "Chave Aleatória" },
-];
-
 export default function OrganizationSettingsPage() {
-  const router = useRouter();
   const orgNav = useOrganizerNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -106,6 +98,8 @@ export default function OrganizationSettingsPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pixOpen, setPixOpen] = useState(false);
+  const [showRemovePixModal, setShowRemovePixModal] = useState(false);
 
   const loadOrganization = useCallback(async () => {
     const uid = user?.id;
@@ -341,523 +335,636 @@ export default function OrganizationSettingsPage() {
   }));
   const selectedState = BRAZIL_STATES.find((s) => s.id === formData.state);
   return (
-    <div className="min-h-screen bg-gray-2">
-      {/* Desktop: fixed header com offset da sidebar. Mobile: barra com voltar + título (Figma) */}
-      <div className="md:fixed top-0 left-0 md:left-[218px] right-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center h-[73px] md:h-[73px] shrink-0 px-4 md:px-8">
-        <div className="flex items-center gap-2 min-w-0 w-full md:w-auto">
-          <Link
-            href="/organizer/events"
-            className="md:hidden size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
-            aria-label="Voltar"
-          >
-            <ArrowButton isOpen={false} />
-          </Link>
-          <p className="font-manrope font-extrabold text-gray-12 text-base md:text-2xl truncate">
-            Configurações da organização
-          </p>
+    <>
+      <div className="min-h-screen bg-gray-2">
+        {/* Desktop: fixed header com offset da sidebar. Mobile: barra com voltar + título (Figma) */}
+        <div className="md:fixed top-0 left-0 md:left-[218px] right-0 z-10 bg-gray-1 border-b border-gray-6 flex items-center h-[73px] md:h-[73px] shrink-0 px-4 md:px-8">
+          <div className="flex items-center gap-2 min-w-0 w-full md:w-auto">
+            <Link
+              href="/organizer/events"
+              className="md:hidden size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors rotate-180"
+              aria-label="Voltar"
+            >
+              <ArrowButton isOpen={false} />
+            </Link>
+            <p className="font-manrope font-extrabold text-gray-12 text-base md:text-2xl truncate">
+              Configurações da organização
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Content: padding mobile 16px, desktop 32px */}
-      <div className="md:pt-[73px] pb-8 px-4 md:px-8">
-        <div className="max-w-[1158px] mx-auto flex flex-col gap-6 md:gap-8 mt-6 md:mt-8">
-          {/* Personal Info Section - Organização (Figma: card com logo, nome, CNPJ, botões) */}
-          <div className="bg-gray-1 flex flex-col gap-4 md:gap-4 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
-            <div className="flex flex-col gap-4 items-start justify-end relative shrink-0 w-full">
-              {/* First Row: Logo + Organization Info; Owner Info só no desktop */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0 relative shrink-0 w-full">
-                {/* Logo and Organization Info */}
-                <div className="flex gap-3 md:gap-4 items-center relative shrink-0 w-full md:w-auto">
-                  {/* Logo - menor no mobile (Figma ~40px) */}
-                  <div className="relative shrink-0 size-10 md:size-24 rounded-full bg-gray-6">
-                    <ImageWithInitialFallback
-                      src={
-                        organizer.logoUrl?.trim()
-                          ? getAvatarUrl(organizer.logoUrl)
-                          : null
-                      }
-                      alt={organizer.name || "Organização"}
-                      name={organizer.name || "Organização"}
-                      fallbackId={organizer.id}
-                      fill
-                      sizes="96px"
-                      className="size-full rounded-full"
-                      imgClassName="object-cover"
-                      letterClassName="text-xl md:text-3xl font-medium text-gray-11"
-                    />
-                  </div>
-
-                  {/* Organization Details - texto menor no mobile (Figma) */}
-                  <div className="flex flex-col gap-1 md:gap-2 items-start justify-center relative shrink-0 min-w-0">
-                    <p className="font-family-dm-sans font-semibold leading-[1.3] md:font-manrope md:font-bold md:leading-[1.1] text-base md:text-2xl text-gray-12 truncate w-full">
-                      {organizer.name || "Nome da organização"}
-                    </p>
-                    <p className="font-family-dm-sans leading-[1.3] text-sm md:text-xl text-gray-11">
-                      CNPJ: {organizer.document ? maskCNPJ(organizer.document.replace(/\D/g, "")) : "00.000.000/0000-00"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Owner Info - só no desktop */}
-                <div className="hidden md:flex flex-col gap-3 items-start relative shrink-0">
-                  <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-base text-gray-11">
-                    Dono da organização
-                  </p>
-                  <div className="flex gap-2 items-center relative shrink-0">
-                    <div className="relative shrink-0 size-10 rounded-full overflow-hidden bg-gray-6">
+        {/* Content: padding mobile 16px, desktop 32px */}
+        <div className="md:pt-[73px] pb-8 px-4 md:px-8">
+          <div className="max-w-[1158px] mx-auto flex flex-col gap-6 md:gap-8 mt-6 md:mt-8">
+            {/* Personal Info Section - Organização (Figma: card com logo, nome, CNPJ, botões) */}
+            <div className="bg-gray-1 flex flex-col gap-4 md:gap-4 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
+              <div className="flex flex-col gap-4 items-start justify-end relative shrink-0 w-full">
+                {/* First Row: Logo + Organization Info; Owner Info só no desktop */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0 relative shrink-0 w-full">
+                  {/* Logo and Organization Info */}
+                  <div className="flex gap-3 md:gap-4 items-center relative shrink-0 w-full md:w-auto">
+                    {/* Logo - menor no mobile (Figma ~40px) */}
+                    <div className="relative shrink-0 size-10 md:size-24 rounded-full bg-gray-6">
                       <ImageWithInitialFallback
                         src={
-                          user?.avatarUrl?.trim()
-                            ? getAvatarUrl(user.avatarUrl)
+                          organizer.logoUrl?.trim()
+                            ? getAvatarUrl(organizer.logoUrl)
                             : null
                         }
-                        alt={
-                          user?.firstName && user?.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user?.email || "Dono"
-                        }
-                        name={
-                          user?.firstName && user?.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user?.email || "Dono"
-                        }
-                        fallbackId={user?.id}
+                        alt={organizer.name || "Organização"}
+                        name={organizer.name || "Organização"}
+                        fallbackId={organizer.id}
                         fill
-                        sizes="40px"
+                        sizes="96px"
                         className="size-full rounded-full"
                         imgClassName="object-cover"
-                        letterClassName="text-sm font-medium text-gray-11"
+                        letterClassName="text-xl md:text-3xl font-medium text-gray-11"
                       />
                     </div>
-                    <div className="flex flex-col items-start justify-center relative shrink-0">
-                      <p className="font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-lg text-gray-12">
-                        {user?.firstName} {user?.lastName}
+
+                    {/* Organization Details - texto menor no mobile (Figma) */}
+                    <div className="flex flex-col gap-1 md:gap-2 items-start justify-center relative shrink-0 min-w-0">
+                      <p className="font-family-dm-sans font-semibold leading-[1.3] md:font-manrope md:font-bold md:leading-[1.1] text-base md:text-2xl text-gray-12 truncate w-full">
+                        {organizer.name || "Nome da organização"}
+                      </p>
+                      <p className="font-family-dm-sans leading-[1.3] text-sm md:text-xl text-gray-11">
+                        CNPJ: {organizer.document ? maskCNPJ(organizer.document.replace(/\D/g, "")) : "00.000.000/0000-00"}
                       </p>
                     </div>
                   </div>
+
+                  {/* Owner Info - só no desktop */}
+                  <div className="hidden md:flex flex-col gap-3 items-start relative shrink-0">
+                    <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-base text-gray-11">
+                      Dono da organização
+                    </p>
+                    <div className="flex gap-2 items-center relative shrink-0">
+                      <div className="relative shrink-0 size-10 rounded-full overflow-hidden bg-gray-6">
+                        <ImageWithInitialFallback
+                          src={
+                            user?.avatarUrl?.trim()
+                              ? getAvatarUrl(user.avatarUrl)
+                              : null
+                          }
+                          alt={
+                            user?.firstName && user?.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user?.email || "Dono"
+                          }
+                          name={
+                            user?.firstName && user?.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user?.email || "Dono"
+                          }
+                          fallbackId={user?.id}
+                          fill
+                          sizes="40px"
+                          className="size-full rounded-full"
+                          imgClassName="object-cover"
+                          letterClassName="text-sm font-medium text-gray-11"
+                        />
+                      </div>
+                      <div className="flex flex-col items-start justify-center relative shrink-0">
+                        <p className="font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-lg text-gray-12">
+                          {user?.firstName} {user?.lastName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Second Row: Support text + Buttons (mobile: full width, Figma) */}
+                <div className="flex flex-col gap-3 md:gap-4 w-full">
+                  <p className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-11">
+                    Suportamos imagens em PNGs, JPEGs até 10MB
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full">
+                    <Button
+                      onClick={() => logoCropRef.current?.open()}
+                      disabled={uploadingImage}
+                      size="default"
+                      className="w-full sm:w-auto px-6 py-3 h-11 font-manrope font-bold text-base"
+                    >
+                      <Plus className="size-5" />
+                      {uploadingImage ? "Enviando..." : "Alterar imagem"}
+                    </Button>
+                    <Button
+                      onClick={handleRemoveImage}
+                      disabled={uploadingImage || !organizer.logoUrl}
+                      variant="outline"
+                      className="w-full sm:w-auto px-6 py-3 h-11 border-gray-6 text-gray-12 font-manrope font-bold text-base"
+                    >
+                      Remover imagem
+                    </Button>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Second Row: Support text + Buttons (mobile: full width, Figma) */}
-              <div className="flex flex-col gap-3 md:gap-4 w-full">
-                <p className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-11">
-                  Suportamos imagens em PNGs, JPEGs até 10MB
+            {/* Detalhes da organização */}
+            <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
+              <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
+                <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
+                  <HotelsIcon className="size-6 text-gray-12" /> Detalhes da organização
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full">
-                  <Button
-                    onClick={() => logoCropRef.current?.open()}
-                    disabled={uploadingImage}
-                    size="default"
-                    className="w-full sm:w-auto px-6 py-3 h-11 font-manrope font-bold text-base"
-                  >
-                    <Plus className="size-5" />
-                    {uploadingImage ? "Enviando..." : "Alterar imagem"}
-                  </Button>
-                  <Button
-                    onClick={handleRemoveImage}
-                    disabled={uploadingImage || !organizer.logoUrl}
-                    variant="outline"
-                    className="w-full sm:w-auto px-6 py-3 h-11 border-gray-6 text-gray-12 font-manrope font-bold text-base"
-                  >
-                    Remover imagem
-                  </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                {/* CNPJ */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    CNPJ
+                  </label>
+                  <Input
+                    type="text"
+                    name="document"
+                    value={maskCNPJ(formData.document)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "");
+                      setFormData((prev) => ({ ...prev, document: value }));
+                    }}
+                    placeholder="00.000.000/0000-00"
+                    disabled
+                    className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                  />
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Detalhes da organização */}
-          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
-            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
-                <HotelsIcon className="size-6 text-gray-12" /> Detalhes da organização
-              </p>
-            </div>
+                {/* Nome fantasia (Razão social) */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Nome fantasia (Razão social)
+                  </label>
+                  <Input
+                    type="text"
+                    name="tradeName"
+                    value={formData.tradeName}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome fantasia"
+                    disabled
+                    className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-              {/* CNPJ */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  CNPJ
-                </label>
-                <Input
-                  type="text"
-                  name="document"
-                  value={maskCNPJ(formData.document)}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "");
-                    setFormData((prev) => ({ ...prev, document: value }));
-                  }}
-                  placeholder="00.000.000/0000-00"
-                  disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
-                />
-              </div>
+                {/* Nome do responsável */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Nome do responsável
+                  </label>
+                  <Input
+                    type="text"
+                    name="ownerName"
+                    value={organizer.members?.find((member) => member.role === "OWNER")?.user?.firstName || ""}
+                    onChange={handleInputChange}
+                    placeholder="Nome do responsável"
+                    disabled
+                    className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                  />
+                </div>
 
-              {/* Nome fantasia (Razão social) */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Nome fantasia (Razão social)
-                </label>
-                <Input
-                  type="text"
-                  name="tradeName"
-                  value={formData.tradeName}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome fantasia"
-                  disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
-                />
-              </div>
+                {/* CPF do responsável */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    CPF do responsável
+                  </label>
+                  <Input
+                    type="text"
+                    name="ownerName"
+                    value={maskCPF((organizer.members?.find((member) => member.role === "OWNER")?.user?.documentNumber || "").replace(/\D/g, ""))}
+                    onChange={handleInputChange}
+                    placeholder="CPF do responsável"
+                    disabled
+                    className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                  />
+                </div>
 
-              {/* Nome do responsável */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Nome do responsável
-                </label>
-                <Input
-                  type="text"
-                  name="ownerName"
-                  value={organizer.members?.find((member) => member.role === "OWNER")?.user?.firstName || ""}
-                  onChange={handleInputChange}
-                  placeholder="Nome do responsável"
-                  disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
-                />
-              </div>
-
-              {/* CPF do responsável */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  CPF do responsável
-                </label>
-                <Input
-                  type="text"
-                  name="ownerName"
-                  value={maskCPF((organizer.members?.find((member) => member.role === "OWNER")?.user?.documentNumber || "").replace(/\D/g, ""))}
-                  onChange={handleInputChange}
-                  placeholder="CPF do responsável"
-                  disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  E-mail fiscal
-                </label>
-                <Input
-                  type="text"
-                  name="emailFiscal"
-                  value={organizer.email}
-                  onChange={handleInputChange}
-                  placeholder="E-mail fiscal"
-                  disabled
-                  className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Endereço */}
-          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
-            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
-                <MapPinIcon className="size-6 text-gray-12" />
-                Endereço
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-              {/* CEP */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  CEP
-                </label>
-                <Input
-                  type="text"
-                  name="zipCode"
-                  value={maskCEP(formData.zipCode)}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "");
-                    setFormData((prev) => ({ ...prev, zipCode: value }));
-                  }}
-                  placeholder="00000-000"
-                  maxLength={9}
-                />
-              </div>
-
-              {/* Rua */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Rua
-                </label>
-                <Input
-                  type="text"
-                  name="street"
-                  value={formData.street}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome da sua rua"
-
-                />
-              </div>
-
-              {/* Número */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Número
-                </label>
-                <Input
-                  type="text"
-                  name="number"
-                  value={formData.number}
-                  onChange={handleInputChange}
-                  placeholder="Ex: 123"
-
-                />
-              </div>
-
-              {/* Bairro */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Bairro
-                </label>
-                <Input
-                  type="text"
-                  name="neighborhood"
-                  value={formData.neighborhood}
-                  onChange={handleInputChange}
-                  placeholder="Digite o nome do seu bairro"
-
-                />
-              </div>
-
-              {/* Cidade */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Cidade
-                </label>
-                <Input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  placeholder="Nome da cidade"
-
-                />
-              </div>
-
-              {/* Estado */}
-              <div className="flex flex-col gap-2 items-start w-full">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Estado
-                </label>
-                <div className="w-full">
-                  <Dropdown
-                    options={stateOptions}
-                    width="w-full"
-                    trigger={(isOpen) => (
-                      <button className="border border-gray-6 rounded-lg h-[42px] flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
-                        <span
-                          className={`text-base flex-1 text-left font-family-dm-sans ${formData.state ? "text-gray-12" : "text-gray-11"
-                            }`}
-                        >
-                          {selectedState?.label || "Selecione o estado"}
-                        </span>
-                        <ArrowButton isOpen={isOpen} />
-                      </button>
-                    )}
-                    onSelect={(option) =>
-                      setFormData((prev) => ({ ...prev, state: option.id || "" }))
-                    }
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    E-mail fiscal
+                  </label>
+                  <Input
+                    type="text"
+                    name="emailFiscal"
+                    value={organizer.email}
+                    onChange={handleInputChange}
+                    placeholder="E-mail fiscal"
+                    disabled
+                    className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
                   />
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Contatos da organização */}
-          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
-            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
-                <Phone className="size-5 text-gray-12" />
-                Contatos da organização
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-              {/* E-mail para Atendimento */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  E-mail para Atendimento
-                </label>
-                <Input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="contato@meuevento.com.br"
-
-                />
+            {/* Endereço */}
+            <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
+              <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
+                <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
+                  <MapPinIcon className="size-6 text-gray-12" />
+                  Endereço
+                </p>
               </div>
 
-              {/* WhatsApp */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  WhatsApp
-                </label>
-                <Input
-                  type="text"
-                  name="whatsapp"
-                  value={maskWhatsApp(formData.whatsapp)}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "");
-                    setFormData((prev) => ({ ...prev, whatsapp: value }));
-                  }}
-                  placeholder="(00) 00000-0000"
-                  maxLength={15}
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                {/* CEP */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    CEP
+                  </label>
+                  <Input
+                    type="text"
+                    name="zipCode"
+                    value={maskCEP(formData.zipCode)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "");
+                      setFormData((prev) => ({ ...prev, zipCode: value }));
+                    }}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                </div>
 
-              {/* Telefone */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Telefone
-                </label>
-                <Input
-                  type="text"
-                  name="phone"
-                  value={maskPhone(formData.phone)}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "");
-                    setFormData((prev) => ({ ...prev, phone: value }));
-                  }}
-                  placeholder="(00) 0000-0000"
-                  maxLength={14}
-                />
-              </div>
-            </div>
-          </div>
+                {/* Rua */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Rua
+                  </label>
+                  <Input
+                    type="text"
+                    name="street"
+                    value={formData.street}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome da sua rua"
 
-          {/* Chave PIX */}
-          <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
-            <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-              <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
-                <FinanceIcon className="size-6 text-gray-12" />
-                Chave PIX
-              </p>
-            </div>
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-              {/* Tipo de Chave */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Tipo de Chave
-                </label>
+                {/* Número */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Número
+                  </label>
+                  <Input
+                    type="text"
+                    name="number"
+                    value={formData.number}
+                    onChange={handleInputChange}
+                    placeholder="Ex: 123"
 
-                <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
-                >
-                  {formData.pixKeyType || "Tipo de chave"}
-                </span>
-              </div>
+                  />
+                </div>
 
-              {/* Chave cadastrada */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Chave cadastrada
-                </label>
-                <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
-                >
-                  {formData.pix || "Chave cadastrada"}
-                </span>
-              </div>
+                {/* Bairro */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Bairro
+                  </label>
+                  <Input
+                    type="text"
+                    name="neighborhood"
+                    value={formData.neighborhood}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome do seu bairro"
 
-              {/* CPF/CNPJ do titular */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  CPF/CNPJ do titular
-                </label>
+                  />
+                </div>
 
-                <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
-                >
-                  {formData.accountHolderDocument ? maskCPForCNPJ(formData.accountHolderDocument) : "CPF/CNPJ do titular"}
-                </span>
-              </div>
+                {/* Cidade */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Cidade
+                  </label>
+                  <Input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Nome da cidade"
 
-              {/* Nome do titular */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Nome do titular
-                </label>
+                  />
+                </div>
 
-                <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
-                >
-                  {formData.accountHolderName || "Nome do titular"}
-                </span>
-              </div>
-
-              {/* Banco */}
-              <div className="flex flex-col gap-2 items-start">
-                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                  Banco
-                </label>
-                <span
-                  className="border-gray-6 h-10 w-full min-w-0 rounded-md border bg-gray-6 px-3 py-5 md:text-base shadow-xs transition-[color,box-shadow] outline-none flex items-center justify-start opacity-50 text-black"
-                >
-                  {formData.bankName || "Banco"}
-                </span>
+                {/* Estado */}
+                <div className="flex flex-col gap-2 items-start w-full">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Estado
+                  </label>
+                  <div className="w-full">
+                    <Dropdown
+                      options={stateOptions}
+                      width="w-full"
+                      trigger={(isOpen) => (
+                        <button className="border border-gray-6 rounded-lg h-[42px] flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
+                          <span
+                            className={`text-base flex-1 text-left font-family-dm-sans ${formData.state ? "text-gray-12" : "text-gray-11"
+                              }`}
+                          >
+                            {selectedState?.label || "Selecione o estado"}
+                          </span>
+                          <ArrowButton isOpen={isOpen} />
+                        </button>
+                      )}
+                      onSelect={(option) =>
+                        setFormData((prev) => ({ ...prev, state: option.id || "" }))
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="hidden md:flex justify-end w-full mt-4">
+
+            {/* Contatos da organização */}
+            <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
+              <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
+                <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
+                  <Phone className="size-5 text-gray-12" />
+                  Contatos da organização
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                {/* E-mail para Atendimento */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    E-mail
+                  </label>
+                  <Input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="contato@meuevento.com.br"
+
+                  />
+                </div>
+
+                {/* WhatsApp */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    WhatsApp
+                  </label>
+                  <Input
+                    type="text"
+                    name="whatsapp"
+                    value={maskWhatsApp(formData.whatsapp)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "");
+                      setFormData((prev) => ({ ...prev, whatsapp: value }));
+                    }}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                  />
+                </div>
+
+                {/* Telefone */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Telefone
+                  </label>
+                  <Input
+                    type="text"
+                    name="phone"
+                    value={maskPhone(formData.phone)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "");
+                      setFormData((prev) => ({ ...prev, phone: value }));
+                    }}
+                    placeholder="(00) 0000-0000"
+                    maxLength={14}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Chave PIX */}
+            <div className="bg-gray-1 flex flex-col gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
+              {/* Header */}
+              <div className="flex items-center gap-2 w-full">
+                <FinanceIcon className="size-6 text-gray-12 shrink-0" />
+                <p className="font-manrope font-bold leading-[1.1] text-xl text-gray-12">
+                  Chave PIX
+                </p>
+              </div>
+
+              {/* Accordion item */}
+              {(formData.pix || formData.bankName) ? (
+                <div className="w-full border border-gray-6 rounded-lg overflow-hidden">
+                  {/* Accordion header */}
+                  <button
+                    type="button"
+                    onClick={() => setPixOpen((v) => !v)}
+                    className="w-full flex items-center justify-between p-5 transition-colors text-left"
+                  >
+                    <div className="flex flex-col gap-2 items-start min-w-0">
+                      <p className="font-manrope font-bold leading-[1.1] text-lg text-gray-12 truncate">
+                        {formData.bankName || "Banco"}
+                      </p>
+                      <div className="flex items-center gap-1 text-base leading-[1.3]">
+                        <span className="font-family-dm-sans font-normal text-gray-11">Chave pix:</span>
+                        <span className="font-family-dm-sans font-medium text-gray-12">{formData.pix || "—"}</span>
+                      </div>
+                    </div>
+                    <div className={`shrink-0 transition-transform duration-200`}>
+                      <ArrowButton isOpen={pixOpen} />
+                    </div>
+                  </button>
+
+                  {/* Expanded content */}
+                  {pixOpen && (
+                    <div className="px-5 pb-5 flex flex-col gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+                        {/* Tipo de Chave */}
+                        <div className="flex flex-col gap-2 items-start">
+                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                            Tipo de Chave
+                          </label>
+                          <Input
+                            type="text"
+                            value={formData.pixKeyType || "—"}
+                            onChange={() => {}}
+                            disabled
+                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                          />
+                        </div>
+
+                        {/* Chave cadastrada */}
+                        <div className="flex flex-col gap-2 items-start">
+                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                            Chave cadastrada
+                          </label>
+                          <Input
+                            type="text"
+                            value={formData.pix || "—"}
+                            onChange={() => {}}
+                            disabled
+                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                          />
+                        </div>
+
+                        {/* Nome do titular */}
+                        <div className="flex flex-col gap-2 items-start">
+                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                            Nome do titular
+                          </label>
+                          <Input
+                            type="text"
+                            value={formData.accountHolderName || "—"}
+                            onChange={() => {}}
+                            disabled
+                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                          />
+                        </div>
+
+                        {/* CPF/CNPJ do titular */}
+                        <div className="flex flex-col gap-2 items-start">
+                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                            CPF/CNPJ do titular
+                          </label>
+                          <Input
+                            type="text"
+                            value={formData.accountHolderDocument ? maskCPForCNPJ(formData.accountHolderDocument) : "—"}
+                            onChange={() => {}}
+                            disabled
+                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                          />
+                        </div>
+
+                        {/* Banco */}
+                        <div className="flex flex-col gap-2 items-start">
+                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                            Banco
+                          </label>
+                          <Input
+                            type="text"
+                            value={formData.bankName || "—"}
+                            onChange={() => {}}
+                            disabled
+                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Remover button */}
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowRemovePixModal(true)}
+                          className="flex items-center gap-2 h-9 px-3 border border-red-6 rounded-lg text-red-12 hover:bg-red-2 transition-colors font-manrope font-semibold text-base leading-[1.1]"
+                        >
+                          <TrashIcon className="size-5 shrink-0" />
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="font-family-dm-sans text-sm text-gray-11">
+                  Nenhuma chave PIX cadastrada.
+                </p>
+              )}
+
+              {/* Solicitar alteração */}
+              <div className="flex justify-end w-full">
+                <Button
+                  onClick={handleRequestChange}
+                  variant="outline"
+                  className="flex items-center gap-2 border-gray-6 text-gray-12 font-manrope font-bold"
+                >
+                  <ChatIcon className="size-5" />
+                  Solicitar alteração
+                </Button>
+              </div>
+            </div>
+
+            {/* Action Buttons - mobile: full width stacked (Figma); desktop: à direita */}
+            <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 w-full pb-8 md:pb-0">
               <Button
                 onClick={handleRequestChange}
                 variant="outline"
-                className="flex items-center gap-2 border-gray-6 text-gray-12 font-manrope font-bold"
+                className="md:hidden w-full h-11 flex items-center justify-center gap-2 border-gray-6 text-gray-12 font-manrope font-bold"
               >
                 <ChatIcon className="size-5" />
                 Solicitar alteração
               </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={saving}
+                size="lg"
+                className="w-full sm:w-auto h-11 font-manrope font-bold text-base"
+              >
+                {saving ? "Salvando..." : "Salvar alteração"}
+              </Button>
             </div>
-          </div>
 
-          {/* Action Buttons - mobile: full width stacked (Figma); desktop: à direita */}
-          <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 w-full pb-8 md:pb-0">
-            <Button
-              onClick={handleRequestChange}
-              variant="outline"
-              className="md:hidden w-full h-11 flex items-center justify-center gap-2 border-gray-6 text-gray-12 font-manrope font-bold"
-            >
-              <ChatIcon className="size-5" />
-              Solicitar alteração
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={saving}
-              size="lg"
-              className="w-full sm:w-auto h-11 font-manrope font-bold text-base"
-            >
-              {saving ? "Salvando..." : "Salvar alteração"}
-            </Button>
+            <ImageUploadWithCrop
+              ref={logoCropRef}
+              spec={EVENT_IMAGE_SPECS.organizationLogo}
+              outputBaseName="organization-logo"
+              cropShape="round"
+              maxFileSizeMb={10}
+              accept="image/jpeg,image/jpg,image/png"
+              modalTitle="Ajustar logo da organização"
+              onCropped={(file) => void uploadOrganizationLogo(file)}
+              onInvalidFile={(msg) => toast.error(msg)}
+              onCropFailed={(msg) => toast.error(msg)}
+            />
           </div>
-
-          <ImageUploadWithCrop
-            ref={logoCropRef}
-            spec={EVENT_IMAGE_SPECS.organizationLogo}
-            outputBaseName="organization-logo"
-            cropShape="round"
-            maxFileSizeMb={10}
-            accept="image/jpeg,image/jpg,image/png"
-            modalTitle="Ajustar logo da organização"
-            onCropped={(file) => void uploadOrganizationLogo(file)}
-            onInvalidFile={(msg) => toast.error(msg)}
-            onCropFailed={(msg) => toast.error(msg)}
-          />
         </div>
       </div>
-    </div>
+
+      {/* Modal: Remover chave PIX */}
+
+      {showRemovePixModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={() => setShowRemovePixModal(false)}
+        >
+          <div
+            className="bg-gray-1 rounded-xl p-5 w-full max-w-[442px] flex flex-col gap-11 items-center shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Topo */}
+            <div className="flex flex-col gap-6 items-center w-full">
+              {/* Ícone */}
+              <div className="size-[88px] rounded-full bg-gradient-to-b from-red-2 to-red-5 flex items-center justify-center shrink-0">
+                <XCircle className="size-[52px] text-red-11" strokeWidth={1.5} />
+              </div>
+
+              {/* Conteúdo */}
+              <div className="flex flex-col gap-4 items-center w-full">
+                <p className="font-family-dm-sans font-semibold leading-[1.3] text-xl text-gray-12 text-center">
+                  Remover esta chave Pix?
+                </p>
+                <p className="font-family-dm-sans font-normal leading-[1.3] text-base text-gray-11 text-center">
+                  A chave{" "}
+                  <span className="font-medium text-gray-12">{formData.pix}</span>{" "}
+                  será removida da sua organização.
+                </p>
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setShowRemovePixModal(false)}
+                className="flex-1 h-12 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-2 transition-colors"
+              >
+                Tentar novamente
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleRequestChange();
+                  setShowRemovePixModal(false);
+                }}
+                className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors"
+              >
+                Sim, remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

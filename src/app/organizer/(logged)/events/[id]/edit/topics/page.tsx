@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
-import { userService, organizerService } from "@/services";
+import { organizerService } from "@/services";
+import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
@@ -27,30 +28,17 @@ import {
 import { cn } from "@/utils/cn";
 
 export default function EditTopicsPage() {
-  const router = useRouter();
   const orgNav = useOrganizerNavigate();
   const params = useParams();
   const eventId = params.id as string;
+  const { authChecked } = useWizardAuth();
   const { openTopicModal, setOnModalSave, setOnModalDelete } = useTopicModal();
-  const [authChecked, setAuthChecked] = useState(false);
   const [sections, setSections] = useState<TopicSectionRow[]>([]);
   const defaultTopicApiIdRef = useRef<string | null>(null);
   const editingTopicRef = useRef<{ topicId?: string; isEditing: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [committedSectionsJson, setCommittedSectionsJson] = useState<string | null>(null);
-
-  useEffect(() => {
-    const hasToken = userService.isAuthenticated();
-    if (!hasToken) {
-      orgNav.push("/organizer/login");
-      return;
-    }
-    const timer = setTimeout(() => {
-      setAuthChecked(true);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [router]);
 
   useEffect(() => {
     const loadTopics = async () => {

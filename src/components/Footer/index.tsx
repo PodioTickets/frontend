@@ -8,14 +8,17 @@ import { useModalStore } from "@/stores/modalStore";
 import { usePathname } from "next/navigation";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
+import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
+import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 
 export function Footer() {
-  const { openModal } = useModalStore();
   const pathname = usePathname();
   const appSurface = useOrganizerAppSurface();
+  const adminSurface = useAdminAppSurface()
   const organizerPath = withOrganizerPathPrefix(pathname, appSurface);
+  const adminPath = withAdminPathPrefix(pathname, adminSurface)
   const isOrganizer = organizerPath.startsWith("/organizer");
-  const isAdmin = pathname.startsWith("/admin");
+  const isAdmin = adminPath.includes("/admin");
 
   if (isOrganizer || isAdmin) {
     return null;
@@ -26,7 +29,8 @@ export function Footer() {
   return (
     <footer className="w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] border-t border-gray-6 px-4 py-6 md:p-20 md:pt-[52px]">
       {/* Mobile Layout */}
-      <div className="w-full flex flex-col md:hidden">
+      {/* pb accounts for the fixed CTA button on event pages */}
+      <div className={`w-full flex flex-col md:hidden${pathname.startsWith("/events/") ? " pb-44" : ""}`}>
         {/* Logo */}
         <div className="mb-4 flex items-center justify-center gap-2">
           <Image

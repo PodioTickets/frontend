@@ -25,6 +25,8 @@ import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { UserIcon } from "../Icons/UserIcon";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
+import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 
 function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
   const { language, setLanguage } = useLanguage();
@@ -73,9 +75,11 @@ export function Header() {
   const [search, setSearch] = useState("");
   const pathname = usePathname();
   const appSurface = useOrganizerAppSurface();
+  const adminSurface = useAdminAppSurface()
   const organizerPath = withOrganizerPathPrefix(pathname, appSurface);
+  const adminPath = withAdminPathPrefix(pathname, adminSurface)
   const isOrganizer = organizerPath.startsWith("/organizer");
-  const isAdmin = pathname.includes("/admin");
+  const isAdmin = adminPath.includes("/admin");
   const { push } = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { openModal } = useModalStore();

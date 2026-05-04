@@ -98,7 +98,7 @@ function toOrderResponse(data: any): OrderResponse {
       subtotal: data.pricing?.subtotal ?? data.totalAmount ?? 0,
       serviceFee: data.pricing?.serviceFee ?? data.serviceFee ?? 0,
       couponDiscount: data.pricing?.couponDiscount ?? data.discount ?? 0,
-      voucherDiscount: data.pricing?.voucherDiscount ?? 0,
+      voucherDiscount: data.pricing?.voucherDiscount ?? (data.appliedDiscount?.type === "voucher" ? data.appliedDiscount.discount : 0),
       // Sempre usa finalAmount da raiz — pricing.total pode ser o bruto sem desconto
       total: data.finalAmount ?? data.pricing?.total ?? data.totalAmount ?? 0,
       currency: "BRL" as const,

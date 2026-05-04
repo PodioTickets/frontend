@@ -13,10 +13,7 @@ import { cn } from "@/utils/cn";
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 const SUBJECTS = [
-  "Dúvidas sobre a inscrição",
   "Kit do atleta e produtos",
-  "Pagamento e reembolso",
-  "Local e logística do evento",
   "Regulamento e regras",
   "Outro assunto",
 ];
@@ -121,10 +118,10 @@ export function ContactOrganizerModal({
 
   const handleField =
     (field: keyof FormState) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((prev) => ({ ...prev, [field]: e.target.value }));
-      if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
-    };
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setForm((prev) => ({ ...prev, [field]: e.target.value }));
+        if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+      };
 
   const validate = (): boolean => {
     const next: FormErrors = {};

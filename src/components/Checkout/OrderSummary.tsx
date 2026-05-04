@@ -225,12 +225,12 @@ export function OrderSummary({
           )}
 
           {/* Voucher aplicado */}
-          {voucherCode && voucherDiscount > 0 && voucherName && (
+          {voucherCode && voucherDiscount > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
-              <p className="font-manrope font-semibold w-[241px] whitespace-pre-wrap">
-                Voucher {voucherName}:
+              <p className="font-manrope font-semibold">
+                {voucherName ? `Voucher ${voucherName}` : "Voucher aplicado"}:
               </p>
-              <p className="font-manrope font-bold">{formatPrice(voucherDiscount)}</p>
+              <p className="font-manrope font-bold">-{formatPrice(voucherDiscount)}</p>
             </div>
           )}
         </div>

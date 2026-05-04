@@ -46,7 +46,9 @@ export function useTickets(eventId: string | null, enabled: boolean = true, incl
     error,
     refetch: loadTickets,
   } = useQuery<Ticket[]>({
-    queryKey: [...queryKeys.events.tickets(eventId || ""), { includeInactive }],
+    queryKey: includeInactive
+      ? [...queryKeys.events.tickets(eventId || ""), { includeInactive }]
+      : queryKeys.events.tickets(eventId || ""),
     queryFn: async () => {
       if (!eventId) return [];
       const response = await organizerService.getTickets(eventId, {

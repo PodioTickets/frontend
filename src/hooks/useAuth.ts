@@ -7,7 +7,7 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { userService } from "@/services";
+import { adminService, userService } from "@/services";
 
 interface User {
   id: string;
@@ -34,7 +34,7 @@ interface AuthContextType {
   refetchUser: () => Promise<User | null>;
   isLoading: boolean;
   error: any;
-  login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER"; turnstileToken?: string }) => Promise<void>;
+  login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" | "ADMIN_PODIO_STAFF"; turnstileToken?: string }) => Promise<void>;
   register: (data: RegisterData) => Promise<{ id: string; email: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const checkAuth = async () => {
       const hasToken = userService.isAuthenticated();
-      
+
       // Se não há token, tenta restaurar do cache
       if (!hasToken) {
         try {
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(profile);
       } catch (profileError: any) {
         console.error("Profile fetch failed:", profileError);
-        
+
         // Se o erro não for 401/403, tenta usar cache
         if (profileError?.response?.status !== 401 && profileError?.response?.status !== 403) {
           try {
@@ -126,7 +126,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             console.warn("Failed to restore from cache after profile error");
           }
         }
-        
+
         // Erro de autenticação no /auth/profile (ex.: JWT só de organizador)
         if ((profileError?.response?.status === 401 || profileError?.response?.status === 403)) {
           const apiClient = (userService as any).apiClient;
@@ -191,7 +191,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return data;
     } catch (error: any) {
       console.error("Error refetching user:", error);
-      
+
       // Só limpa dados se for erro de autenticação (401/403)
       if (error?.response?.status === 401 || error?.response?.status === 403) {
         clearAuthData();
@@ -212,11 +212,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const login = async (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER"; turnstileToken?: string }) => {
+  const login = async (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" | "ADMIN_PODIO_STAFF"; turnstileToken?: string }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await userService.login(data);
+      let response = null;
+      if (data.accountType === "ADMIN_PODIO_STAFF") {
+        response = await adminService.login({ emailOrCpf: data.emailOrCpf, password: data.password });
+      } else {
+        response = await userService.login({ emailOrCpf: data.emailOrCpf, password: data.password, accountType: data.accountType, turnstileToken: data.turnstileToken });
+      }
       if (response.success && response.data?.user) {
         const user = response.data.user;
         if (response.data.access_token) {
@@ -304,7 +309,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(userObj as any);
 
       // Busca o perfil completo em background para popular todos os campos do User
-      refetchUser().catch(() => {});
+      refetchUser().catch(() => { });
 
       return { id: createdUser.id, email: createdUser.email };
     } catch (err: unknown) {

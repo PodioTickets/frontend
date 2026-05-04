@@ -1436,6 +1436,24 @@ export class OrganizerService {
     return response.data.event;
   }
 
+  async getFinancialSettings(eventId: string): Promise<{ organizerFeePercent: number; maxInstallments: 1 | 2 | 3 }> {
+    const { data } = await this.apiClient.get<{ data: { organizerFeePercent: number; maxInstallments: 1 | 2 | 3 } }>(
+      `/api/v1/events/${eventId}/financial-settings`,
+    );
+    return data.data;
+  }
+
+  async saveFinancialSettings(
+    eventId: string,
+    organizerFeePercent: number,
+    maxInstallments: 1 | 2 | 3,
+  ): Promise<void> {
+    await this.apiClient.patch(`/api/v1/events/${eventId}/financial-settings`, {
+      organizerFeePercent,
+      maxInstallments,
+    });
+  }
+
   async deleteEvent(id: string): Promise<void> {
     await this.apiClient.delete(`/api/v1/events/${id}`);
   }
@@ -2058,6 +2076,17 @@ export class OrganizerService {
   ): Promise<{
     groupName: string;
     vouchers: any[];
+    group?: {
+      name: string;
+      status: "ACTIVE" | "INACTIVE" | "USED" | "EXPIRED";
+      totalCount: number;
+      availableCount: number;
+      usedCount: number;
+      expiredCount: number;
+      inactiveCount: number;
+      expiryDate?: string;
+      appliesTo?: "all" | Array<string | { id: string }>;
+    };
     pagination: { page: number; limit: number; total: number; totalPages: number };
   }> {
     const { data: response } = await this.apiClient.get<{
@@ -2065,6 +2094,17 @@ export class OrganizerService {
       data: {
         groupName: string;
         vouchers: any[];
+        group?: {
+          name: string;
+          status: "ACTIVE" | "INACTIVE" | "USED" | "EXPIRED";
+          totalCount: number;
+          availableCount: number;
+          usedCount: number;
+          expiredCount: number;
+          inactiveCount: number;
+          expiryDate?: string;
+          appliesTo?: "all" | Array<string | { id: string }>;
+        };
         pagination: { page: number; limit: number; total: number; totalPages: number };
       };
     }>(`/api/v1/vouchers/events/${eventId}/groups/${groupName}`, { params });

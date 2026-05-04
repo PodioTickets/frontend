@@ -26,6 +26,8 @@ export interface CreateEventFormData {
   youtube: string;
   tiktok: string;
   website: string;
+  organizerFeePercent: number;
+  maxInstallments: 1 | 2 | 3;
 }
 
 interface CreateEventContextType {
@@ -64,6 +66,8 @@ const initialFormData: CreateEventFormData = {
   youtube: "",
   tiktok: "",
   website: "",
+  organizerFeePercent: 0,
+  maxInstallments: 1,
 };
 
 // Helper function to load initial data from localStorage
