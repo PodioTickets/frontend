@@ -41,6 +41,7 @@ import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
+import { Tooltip } from "@/components/Tooltip";
 
 const REG_API_STATUSES = [
   "PENDING",
@@ -244,9 +245,19 @@ function RegistrationRow({
     >
       {/* ID do pedido */}
       <div className="flex h-full items-center p-4 w-[136px]">
-        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-          #{registration.id?.slice(0, 6)}...{registration.id?.slice(-4)}
-        </p>
+        <Tooltip
+          contentClassName="w-auto px-3 py-2 gap-0"
+          position="topRight"
+          content={
+            <p className="font-inter font-normal text-sm text-gray-11 leading-[1.3] whitespace-nowrap">
+              {registration.id}
+            </p>
+          }
+        >
+          <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 cursor-default">
+            #{registration.id?.slice(0, 6)}...{registration.id?.slice(-4)}
+          </p>
+        </Tooltip>
       </div>
 
       {/* Cliente */}
@@ -1014,9 +1025,19 @@ export default function EventRegistrationsPage() {
                           </div>
                           <div className="flex items-center justify-between">
                             <p className="font-manrope font-extrabold text-xl text-gray-12">R$ {price}</p>
-                            <p className="font-family-dm-sans font-medium text-sm text-gray-12">
-                              ID inscrição: {registration.id?.length > 10 ? `${registration.id.slice(0, 4)}-${registration.id.slice(-4)}` : registration.id}
-                            </p>
+                            <Tooltip
+                              contentClassName="w-auto px-3 py-2 gap-0"
+                              position="topRight"
+                              content={
+                                <p className="font-inter font-normal text-sm text-gray-11 leading-[1.3] whitespace-nowrap">
+                                  {registration.id}
+                                </p>
+                              }
+                            >
+                              <p className="font-family-dm-sans font-medium text-sm text-gray-12 cursor-default">
+                                ID inscrição: {registration.id?.length > 10 ? `${registration.id.slice(0, 4)}-${registration.id.slice(-4)}` : registration.id}
+                              </p>
+                            </Tooltip>
                           </div>
                         </div>
                         {!isCancelled && (
