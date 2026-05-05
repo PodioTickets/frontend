@@ -8,4 +8,5 @@ services:
     environment:
       NODE_ENV: production
       ORGANIZER_APP_HOST: ${ORGANIZER_APP_HOST}
+      ADMIN_APP_HOST: ${ADMIN_APP_HOST}
       ROOT_SITE_URL: ${ROOT_SITE_URL}
