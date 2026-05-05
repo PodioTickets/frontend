@@ -13,7 +13,6 @@ import {
   Phone,
   Mail,
   Lock,
-  Shield,
   ChevronDown,
   Plus,
   Search,
@@ -35,6 +34,7 @@ import {
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { TwoFASection } from "@/components/TwoFASection";
 
 /** Alinha valores antigos da API («Brasileira», etc.) ao nome do país da lista de cadastro. */
 function mapStoredCountryToPickerValue(raw: string | null | undefined): string {
@@ -282,14 +282,6 @@ export default function UserProfilePage() {
   const [nationalitySearch, setNationalitySearch] = useState("");
   const nationalityDropdownRef = useRef<HTMLDivElement>(null);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [show2FAInput, setShow2FAInput] = useState(false);
-  const [pendingAction2FA, setPendingAction2FA] = useState<'enable' | 'disable' | null>(null);
-  const [codeDigits, setCodeDigits] = useState(['', '', '', '', '', '']);
-  const [code2FAError, setCode2FAError] = useState('');
-  const [sending2FACode, setSending2FACode] = useState(false);
-  const [confirming2FA, setConfirming2FA] = useState(false);
-  const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const nationalityOptions = useMemo(
     () =>
@@ -329,107 +321,6 @@ export default function UserProfilePage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNationalityDropdown]);
-
-  // Sincroniza estado do 2FA com o perfil carregado
-  useEffect(() => {
-    if (user) {
-      setTwoFactorEnabled(!!user.mfaEnabled);
-    }
-  }, [user]);
-
-  const handleToggle2FA = async () => {
-    const action = twoFactorEnabled ? 'disable' : 'enable';
-    setSending2FACode(true);
-    setCode2FAError('');
-    try {
-      await userService.send2FACode();
-      setPendingAction2FA(action);
-      setShow2FAInput(true);
-      setCodeDigits(['', '', '', '', '', '']);
-      setTimeout(() => codeInputRefs.current[0]?.focus(), 100);
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao enviar código. Tente novamente.');
-    } finally {
-      setSending2FACode(false);
-    }
-  };
-
-  const handleResend2FACode = async () => {
-    setSending2FACode(true);
-    setCode2FAError('');
-    try {
-      await userService.send2FACode();
-      toast.success('Novo código enviado para o seu e-mail.');
-      setCodeDigits(['', '', '', '', '', '']);
-      setTimeout(() => codeInputRefs.current[0]?.focus(), 100);
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao reenviar código.');
-    } finally {
-      setSending2FACode(false);
-    }
-  };
-
-  const handleConfirm2FA = async () => {
-    if (!pendingAction2FA) return;
-    const code = codeDigits.join('');
-    if (code.length < 6) {
-      setCode2FAError('Preencha todos os 6 dígitos do código.');
-      return;
-    }
-    setConfirming2FA(true);
-    setCode2FAError('');
-    try {
-      if (pendingAction2FA === 'enable') {
-        await userService.enable2FA(code);
-        setTwoFactorEnabled(true);
-        toast.success('2FA ativado com sucesso!');
-      } else {
-        await userService.disable2FA(code);
-        setTwoFactorEnabled(false);
-        toast.success('2FA desativado com sucesso!');
-      }
-      setShow2FAInput(false);
-      setPendingAction2FA(null);
-      setCodeDigits(['', '', '', '', '', '']);
-      // Sincroniza o perfil no contexto para refletir mfaEnabled atualizado
-      await refetchUser();
-    } catch (error: any) {
-      setCode2FAError('Código incorreto ou expirado. Tente novamente ou reenvie um novo código.');
-    } finally {
-      setConfirming2FA(false);
-    }
-  };
-
-  const handleCodeDigitChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const newDigits = [...codeDigits];
-    newDigits[index] = digit;
-    setCodeDigits(newDigits);
-    setCode2FAError('');
-    if (digit && index < 5) {
-      codeInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleCodeDigitKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !codeDigits[index] && index > 0) {
-      codeInputRefs.current[index - 1]?.focus();
-    }
-    if (e.key === 'Enter') {
-      void handleConfirm2FA();
-    }
-  };
-
-  const handleCodeDigitPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pasted) return;
-    const newDigits = Array(6).fill('');
-    for (let i = 0; i < pasted.length; i++) newDigits[i] = pasted[i];
-    setCodeDigits(newDigits);
-    const nextEmpty = Math.min(pasted.length, 5);
-    codeInputRefs.current[nextEmpty]?.focus();
-  };
 
   const uploadUserAvatar = async (file: File) => {
     setIsUploadingAvatar(true);
@@ -1125,106 +1016,12 @@ export default function UserProfilePage() {
 
           {/* Security Section */}
           <div className="flex flex-col gap-8 px-4 py-8 md:gap-10">
-            <div className="flex flex-col gap-4 items-start w-full">
-              <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
-                Segurança
-              </h2>
-              <p className="text-base text-gray-11 font-family-dm-sans">
-                Ative o 2FA para adicionar uma camada extra de segurança à sua conta. Sempre que fizer login em um novo dispositivo, você precisará informar um código enviado para o seu e-mail.
-              </p>
-
-              {/* Toggle 2FA */}
-              <button
-                type="button"
-                onClick={!sending2FACode && !confirming2FA ? handleToggle2FA : undefined}
-                disabled={sending2FACode || confirming2FA}
-                className="flex h-12 w-full max-w-[462px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3 hover:bg-gray-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center gap-2.5 flex-1">
-                  <Shield className="size-6 shrink-0 text-gray-12" />
-                  <span className="text-sm text-gray-12 font-family-dm-sans font-medium text-left">
-                    {sending2FACode ? 'Enviando código...' : 'Ligar dois fatores de segurança'}
-                  </span>
-                </div>
-                <div
-                  className={cn(
-                    "relative h-5 w-[37px] rounded-full transition-colors shrink-0",
-                    twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-                      twoFactorEnabled ? "translate-x-[19px]" : "translate-x-0.5"
-                    )}
-                  />
-                </div>
-              </button>
-
-              {/* Painel de confirmação com código */}
-              {show2FAInput && (
-                <div className="flex flex-col gap-6 w-full max-w-[462px] rounded-lg border border-gray-6 bg-gray-2 p-6 mt-2">
-                  <p className="text-sm text-gray-11 font-family-dm-sans">
-                    Digite o código de 6 dígitos enviado para o seu e-mail <strong className="text-gray-12">{user?.email}</strong>.
-                  </p>
-
-                  {/* 6 caixas de código */}
-                  <div className="flex gap-2 items-center">
-                    {codeDigits.map((digit, i) => (
-                      <input
-                        key={i}
-                        ref={(el) => { codeInputRefs.current[i] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleCodeDigitChange(i, e.target.value)}
-                        onKeyDown={(e) => handleCodeDigitKeyDown(i, e)}
-                        onPaste={i === 0 ? handleCodeDigitPaste : undefined}
-                        className={cn(
-                          "w-[52px] h-[64px] text-center text-2xl font-extrabold font-manrope rounded-lg border-2 bg-gray-1 outline-none transition-colors",
-                          code2FAError ? "border-red-500" : "border-gray-6 focus:border-primary-11",
-                        )}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Mensagem de erro */}
-                  {code2FAError && (
-                    <p className="text-sm text-red-500 font-family-dm-sans -mt-2">
-                      {code2FAError}
-                    </p>
-                  )}
-
-                  {/* Botões de ação */}
-                  <div className="flex flex-wrap gap-3 items-center">
-                    <button
-                      type="button"
-                      onClick={handleResend2FACode}
-                      disabled={sending2FACode || confirming2FA}
-                      className="h-11 px-6 rounded-lg border border-gray-6 text-sm font-bold font-manrope text-gray-12 bg-transparent hover:bg-gray-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {sending2FACode ? 'Reenviando...' : 'Reenviar código'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleConfirm2FA}
-                      disabled={sending2FACode || confirming2FA || codeDigits.join('').length < 6}
-                      className="h-11 px-6 rounded-lg bg-primary-11 text-sm font-bold font-manrope text-primary-2 hover:bg-primary-10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {confirming2FA ? 'Confirmando...' : 'Confirmar código'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShow2FAInput(false); setPendingAction2FA(null); setCodeDigits(['', '', '', '', '', '']); setCode2FAError(''); }}
-                      className="text-sm text-gray-11 font-family-dm-sans hover:text-gray-12 underline"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <TwoFASection
+              userEmail={user?.email ?? ""}
+              initialEnabled={!!user?.mfaEnabled}
+              onToggled={refetchUser}
+              variant="user"
+            />
           </div>
         </div>
 

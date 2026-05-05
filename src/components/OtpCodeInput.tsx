@@ -8,9 +8,11 @@ interface OtpCodeInputProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   error?: boolean;
+  /** Foca o primeiro campo automaticamente ao montar */
+  autoFocus?: boolean;
 }
 
-export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputProps) {
+export function OtpCodeInput({ value, onChange, disabled, error, autoFocus }: OtpCodeInputProps) {
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -56,6 +58,7 @@ export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputP
             type="text"
             inputMode="numeric"
             autoComplete={index === 0 ? "one-time-code" : "off"}
+            autoFocus={autoFocus && index === 0}
             aria-label={`Dígito ${index + 1} de 6`}
             maxLength={1}
             value={digit}
