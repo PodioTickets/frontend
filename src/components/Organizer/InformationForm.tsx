@@ -489,8 +489,9 @@ export function InformationForm({
                 </div>
                 <div className="relative">
                   <LocationIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-12 pointer-events-none" />
-                  <Input id={`${formId}-google-maps`} type="url" name="googleMapsLink" value={values.googleMapsLink} onChange={handleInputChange} placeholder="www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP" className="h-12 pl-10" />
+                  <Input id={`${formId}-google-maps`} type="url" name="googleMapsLink" value={values.googleMapsLink} onChange={handleInputChange} placeholder="www.google.com/maps/search/?api=1&query=Av.+Paulista+2084+S%C3%A3o+Paulo+SP" className={`h-12 pl-10 ${errors.googleMapsLink ? "border-red-10" : ""}`} />
                 </div>
+                {errors.googleMapsLink && <p className="text-red-10 text-sm">{errors.googleMapsLink}</p>}
               </div>
             </div>
           </div>

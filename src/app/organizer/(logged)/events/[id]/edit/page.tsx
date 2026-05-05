@@ -55,6 +55,7 @@ export default function EditInformationPage() {
       if (!formData.street?.trim()) newErrors.street = "Rua é obrigatória";
       if (!formData.city?.trim()) newErrors.city = "Cidade é obrigatória";
       if (!formData.state?.trim()) newErrors.state = "Estado é obrigatório";
+      if (!formData.googleMapsLink?.trim()) newErrors.googleMapsLink = "URL do Google Maps é obrigatória";
     }
     if (!formData.contactEmail?.trim()) {
       newErrors.contactEmail = "Email de atendimento é obrigatório";

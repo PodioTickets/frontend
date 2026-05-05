@@ -6,12 +6,10 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   Title,
   Tooltip,
   Legend,
   Filler,
-  TooltipItem,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
@@ -21,7 +19,6 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -150,13 +147,15 @@ export function RevenueChart({ data }: RevenueChartProps) {
     confirmadas: RevenueChartTooltipBucket;
     cancelados: RevenueChartTooltipBucket;
     estornados: RevenueChartTooltipBucket;
-    x: number;
-    y: number;
+    chartX: number;
+    chartY: number;
   } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const chartRef = useRef<ChartJS<"line">>(null);
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastTooltipDataRef = useRef<string | null>(null);
+  const lastTooltipKeyRef = useRef<string | null>(null);
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  const tooltipDivRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(typeof window !== "undefined" && window.innerWidth < 768);
@@ -273,48 +272,15 @@ export function RevenueChart({ data }: RevenueChartProps) {
     return calculateYAxisScale();
   }, [displayData]);
 
-  // Criar mais pontos para suavizar a linha (usa displayData)
-  const generateSmoothData = useCallback(() => {
-    if (!displayData.revenue || displayData.revenue.length === 0) {
-      return { points: [], labels: [], originalIndices: [] };
-    }
-
-    const points: number[] = [];
-    const labels: string[] = [];
-    const originalIndices: number[] = [];
-
-    displayData.revenue.forEach((value, index) => {
-      if (index === 0) {
-        points.push(value);
-        labels.push("");
-        originalIndices.push(0);
-      } else {
-        const prevValue = displayData.revenue[index - 1];
-        const steps = 20; // Reduzido de 40 para 20 para melhor performance
-        for (let i = 1; i <= steps; i++) {
-          const interpolated = prevValue + (value - prevValue) * (i / steps);
-          points.push(interpolated);
-          labels.push("");
-          // Mapear para o índice original mais próximo
-          originalIndices.push(i === steps ? index : index - 1);
-        }
-      }
-    });
-
-    return { points, labels, originalIndices };
-  }, [displayData]);
-
-  // Usar useMemo para evitar recálculo desnecessário
-  const { points, labels, originalIndices } = useMemo(() => generateSmoothData(), [generateSmoothData]);
-
-  // Dados para a linha principal (faturamento)
-  const lineData = {
-    labels: labels,
+  // Dados para a linha principal — tension nativo do Chart.js garante curva suave
+  // sem precisar de interpolação manual (que causava 20 disparos de tooltip por ponto)
+  const lineData = useMemo(() => ({
+    labels: displayData.labels,
     datasets: [
       {
         label: "Faturamento",
-        data: points,
-        borderColor: "#308737", // primary-11
+        data: displayData.revenue,
+        borderColor: "#308737",
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
           const h = context.chart?.height ?? 300;
@@ -325,83 +291,48 @@ export function RevenueChart({ data }: RevenueChartProps) {
           return gradient;
         },
         fill: true,
-        tension: 0.5, // Aumentado para linha mais suave
+        tension: 0.4,
         borderWidth: 2,
         pointRadius: 0,
-        pointHoverRadius: 6,
-        pointHoverBackgroundColor: "#308737",
-        pointHoverBorderColor: "#fff",
-        pointHoverBorderWidth: 2,
+        pointHoverRadius: 0,
       },
     ],
-  };
+  }), [displayData]);
 
-  // Handler do tooltip usando useCallback para evitar recriação
   const handleTooltip = useCallback((context: any) => {
-    // Limpar timeout anterior se existir
-    if (tooltipTimeoutRef.current) {
-      clearTimeout(tooltipTimeoutRef.current);
-      tooltipTimeoutRef.current = null;
-    }
-
-    // Verificar se o tooltip está realmente ativo (hover)
-    // O tooltip só deve aparecer quando há interação ativa
-    if (!context.tooltip ||
+    if (
+      !context.tooltip ||
       context.tooltip.opacity === 0 ||
-      !context.tooltip.dataPoints?.length ||
-      context.tooltip.dataPoints.length === 0) {
-      setTooltipData((prev) => {
-        if (prev !== null) {
-          lastTooltipDataRef.current = null;
-          return null;
-        }
-        return prev;
-      });
+      !context.tooltip.dataPoints?.length
+    ) {
+      if (lastTooltipKeyRef.current !== null) {
+        lastTooltipKeyRef.current = null;
+        setTooltipData(null);
+      }
       return;
     }
 
-    const tooltip = context.tooltip;
-    const dataPoint = tooltip.dataPoints[0];
-
-    // Verificar se o elemento realmente existe e está sendo hovered
-    if (!dataPoint || !dataPoint.element) {
-      setTooltipData((prev) => {
-        if (prev !== null) {
-          lastTooltipDataRef.current = null;
-          return null;
-        }
-        return prev;
-      });
+    const dataPoint = context.tooltip.dataPoints[0];
+    if (!dataPoint?.element || !chartRef.current) {
+      if (lastTooltipKeyRef.current !== null) {
+        lastTooltipKeyRef.current = null;
+        setTooltipData(null);
+      }
       return;
     }
 
-    const chart = chartRef.current;
-    if (!chart) {
-      setTooltipData((prev) => {
-        if (prev !== null) {
-          lastTooltipDataRef.current = null;
-          return null;
-        }
-        return prev;
-      });
-      return;
-    }
-
-    const x = dataPoint.element.x;
-    const y = dataPoint.element.y;
-
-    // Encontrar o mês correspondente baseado no índice
-    const index = dataPoint.dataIndex;
-    const originalIndex = originalIndices[index] ?? Math.floor(index / 21);
+    const { x, y } = dataPoint.element;
     const idxSafe = Math.min(
-      Math.max(0, originalIndex),
-      Math.max(0, displayData.labels.length - 1),
+      Math.max(0, dataPoint.dataIndex),
+      displayData.labels.length - 1,
     );
-    const monthLabel = displayData.labels[idxSafe] || displayData.labels[0] || "";
 
-    // Formatar data corretamente - manter formato mensal se já estiver no formato "Fev/2026"
+    // Chave por ponto original — não muda enquanto o mouse está no mesmo ponto
+    const tooltipKey = String(idxSafe);
+    if (lastTooltipKeyRef.current === tooltipKey) return;
+
+    const monthLabel = displayData.labels[idxSafe] || "";
     const formattedDate = monthLabel ? formatDateLabel(monthLabel) : "Data";
-
     const rawDay = displayData.dailyData?.[idxSafe];
     const parsed = normalizeDailyPoint(rawDay);
 
@@ -410,77 +341,20 @@ export function RevenueChart({ data }: RevenueChartProps) {
     let estornados: RevenueChartTooltipBucket = { revenueReais: 0, quantity: 0 };
 
     if (parsed) {
-      confirmadas = {
-        revenueReais: parsed.confirmedRevenueReais,
-        quantity: parsed.confirmedQty,
-      };
-      cancelados = {
-        revenueReais: parsed.canceledRevenueReais,
-        quantity: parsed.canceledQty,
-      };
-      estornados = {
-        revenueReais: parsed.refundedRevenueReais,
-        quantity: parsed.refundedQty,
-      };
-      if (
-        confirmadas.revenueReais === 0 &&
-        typeof displayData.revenue[idxSafe] === "number"
-      ) {
-        confirmadas = {
-          ...confirmadas,
-          revenueReais: displayData.revenue[idxSafe],
-        };
+      confirmadas = { revenueReais: parsed.confirmedRevenueReais, quantity: parsed.confirmedQty };
+      cancelados = { revenueReais: parsed.canceledRevenueReais, quantity: parsed.canceledQty };
+      estornados = { revenueReais: parsed.refundedRevenueReais, quantity: parsed.refundedQty };
+      if (confirmadas.revenueReais === 0 && typeof displayData.revenue[idxSafe] === "number") {
+        confirmadas = { ...confirmadas, revenueReais: displayData.revenue[idxSafe] };
       }
     } else if (typeof displayData.revenue[idxSafe] === "number") {
-      confirmadas = {
-        revenueReais: displayData.revenue[idxSafe],
-        quantity: 0,
-      };
+      confirmadas = { revenueReais: displayData.revenue[idxSafe], quantity: 0 };
     }
 
-    // Criar uma chave única para este tooltip para evitar atualizações desnecessárias
-    const tooltipKey = [
-      index,
-      Math.round(x),
-      Math.round(y),
-      formattedDate,
-      confirmadas.revenueReais,
-      confirmadas.quantity,
-      cancelados.revenueReais,
-      cancelados.quantity,
-      estornados.revenueReais,
-      estornados.quantity,
-    ].join("|");
+    lastTooltipKeyRef.current = tooltipKey;
+    setTooltipData({ date: formattedDate, confirmadas, cancelados, estornados, chartX: x, chartY: y });
+  }, [displayData]);
 
-    // Só atualizar se os dados realmente mudaram
-    if (lastTooltipDataRef.current === tooltipKey) {
-      return;
-    }
-
-    // Usar timeout para debounce e evitar atualizações muito frequentes
-    tooltipTimeoutRef.current = setTimeout(() => {
-      setTooltipData({
-        date: formattedDate,
-        confirmadas,
-        cancelados,
-        estornados,
-        x: x,
-        y: y,
-      });
-      lastTooltipDataRef.current = tooltipKey;
-    }, 0);
-  }, [displayData, originalIndices]);
-
-  // Limpar timeout ao desmontar
-  useEffect(() => {
-    return () => {
-      if (tooltipTimeoutRef.current) {
-        clearTimeout(tooltipTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Usar useMemo para options para evitar recriação a cada render
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
@@ -489,47 +363,48 @@ export function RevenueChart({ data }: RevenueChartProps) {
       intersect: false,
     },
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
         enabled: false,
         external: handleTooltip,
       },
     },
     scales: {
-      x: {
-        display: false,
-        grid: {
-          display: false,
-        },
-      },
+      x: { display: false, grid: { display: false } },
       y: {
         display: false,
-        grid: {
-          display: false,
-        },
+        grid: { display: false },
         min: 0,
         max: yAxisScale.max,
-        ticks: {
-          stepSize: yAxisScale.stepSize,
-        },
+        ticks: { stepSize: yAxisScale.stepSize },
       },
     },
-    onHover: (event: any, activeElements: any[]) => {
-      if (activeElements.length === 0) {
-        setTooltipData(null);
-      }
-    },
-    events: ['mousemove', 'mouseout'] as ('mousemove' | 'mouseout')[],
+    events: ["mousemove", "mouseout"] as ("mousemove" | "mouseout")[],
   }), [yAxisScale, handleTooltip]);
 
   const handleMouseLeave = () => {
     setTooltipData(null);
   };
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    mousePosRef.current = { x: mx, y: my };
+    if (tooltipDivRef.current) {
+      const maxLeft = rect.width - 210;
+      tooltipDivRef.current.style.left = `${Math.min(mx + 14, maxLeft)}px`;
+      tooltipDivRef.current.style.top = `${Math.max(4, my - 130)}px`;
+    }
+  };
+
   return (
-    <div className="relative h-[260px] md:h-[341px] w-full min-w-0" onMouseLeave={handleMouseLeave}>
+    <div
+      ref={containerRef}
+      className="relative h-[260px] md:h-[341px] w-full min-w-0"
+      onMouseLeave={handleMouseLeave}
+      onMouseMove={handleMouseMove}
+    >
       {/* Y-axis labels */}
       <div className="absolute left-0 top-0 bottom-6 md:bottom-8 flex flex-col justify-between pr-2 md:pr-3 pt-2 md:pt-3 pb-4 md:pb-6 z-10">
         {yAxisScale.ticks.map((tick, index) => {
@@ -564,7 +439,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
           return (
             <div
               key={`grid-${index}`}
-              className="absolute left-0 right-0 h-px bg-gray-6 z-0"
+              className="absolute left-0 right-0 h-px bg-gray-6 z-0 pointer-events-none"
               style={{
                 bottom: `${percentage}%`,
                 transform: 'translateY(50%)',
@@ -573,33 +448,29 @@ export function RevenueChart({ data }: RevenueChartProps) {
           );
         })}
 
-        {/* Vertical line indicator (when hovering) */}
-        {tooltipData && (
-          <div
-            className="absolute top-0 bottom-4 md:bottom-4 w-px bg-gray-6 z-10"
-            style={{ left: `${tooltipData.x}px` }}
-          />
-        )}
-
         {/* Hover point indicator */}
         {tooltipData && (
           <div
-            className="absolute w-2.5 h-2.5 md:w-3 md:h-3 bg-primary-11 rounded-full border-2 border-white z-20"
+            className="absolute w-2.5 h-2.5 md:w-3 md:h-3 bg-primary-11 rounded-full border-2 border-white z-20 pointer-events-none"
             style={{
-              left: `${tooltipData.x - 5}px`,
-              top: `${tooltipData.y - 5}px`,
+              left: `${tooltipData.chartX - 5}px`,
+              top: `${tooltipData.chartY - 5}px`,
             }}
           />
         )}
 
         {/* X-axis labels - distribuídos uniformemente */}
-        <div className="absolute -bottom-5 md:-bottom-[22px] left-0 right-0 flex justify-between px-0">
+        <div className="absolute -bottom-5 md:-bottom- left-0 right-0 flex justify-between px-0">
           {(() => {
             const totalLabels = displayData.labels.length;
             const maxLabels = isMobile ? MAX_LABELS_MOBILE : MAX_LABELS_DESKTOP;
-            const step = totalLabels > maxLabels ? Math.ceil(totalLabels / maxLabels) : 1;
-            const shouldShow = (i: number) =>
-              step === 1 || i % step === 0 || i === totalLabels - 1;
+            const count = Math.min(maxLabels, totalLabels);
+            const shownIndices = new Set(
+              Array.from({ length: count }, (_, k) =>
+                count === 1 ? 0 : Math.round((k * (totalLabels - 1)) / (count - 1))
+              )
+            );
+            const shouldShow = (i: number) => shownIndices.has(i);
 
             return displayData.labels.map((label, index) => {
               if (!shouldShow(index)) return null;
@@ -611,6 +482,10 @@ export function RevenueChart({ data }: RevenueChartProps) {
                 /^\d{2}\/\d{2}$/.test(label.trim());
               const formattedLabel = isMonthlyLabel ? label.trim() : formatDateLabel(label);
 
+              const isFirst = index === 0;
+              const isLast = index === totalLabels - 1;
+              const translate = isFirst ? "0%" : isLast ? "-100%" : "-50%";
+
               return (
                 <span
                   key={`${label}-${index}`}
@@ -618,7 +493,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                   style={{
                     position: "absolute",
                     left: `${position}%`,
-                    transform: "translateX(-50%)",
+                    transform: `translateX(${translate})`,
                   }}
                 >
                   {formattedLabel}
@@ -632,10 +507,11 @@ export function RevenueChart({ data }: RevenueChartProps) {
       {/* Tooltip - compacto no mobile */}
       {tooltipData && (
         <div
+          ref={tooltipDivRef}
           className="absolute bg-gray-2 border border-gray-6 rounded p-2 md:p-[10px] shadow-lg max-w-[min(260px,calc(100vw-2rem))] md:max-w-[280px] w-max min-w-0 z-30 pointer-events-none"
           style={{
-            left: `min(${tooltipData.x + 12}px, calc(100% - 12rem))`,
-            top: `${Math.max(8, tooltipData.y - 72)}px`,
+            left: `${Math.min(mousePosRef.current.x + 14, (containerRef.current?.clientWidth ?? 600) - 210)}px`,
+            top: `${Math.max(4, mousePosRef.current.y - 130)}px`,
           }}
         >
           <p className="font-family-dm-sans font-normal text-xs md:text-sm leading-[1.3] text-gray-11 mb-2 md:mb-3 truncate">

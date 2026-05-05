@@ -186,9 +186,7 @@ export default function EventPage() {
   const eventSuspendedByOrganizer =
     event.status === "SUSPENDED" || event.isSuspended === true;
 
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    [event.location, event.neighborhood, `${event.city} - ${event.state}`, event.zipCode].filter(Boolean).join(", ")
-  )}`;
+  const mapsUrl = event.googleMapsLink?.trim() ?? ""
 
   return (
     <>

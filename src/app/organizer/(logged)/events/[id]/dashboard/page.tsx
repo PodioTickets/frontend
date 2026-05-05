@@ -969,15 +969,13 @@ export default function EventDashboardPage() {
                 </div>
               ) : null}
             </div>
-            <div className="h-[316px]">
-              <RevenueChart
-                data={{
-                  labels: dashboardData.registrationsTrend.chartData?.labels ?? [],
-                  revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) ?? [],
-                  dailyData: dashboardData.registrationsTrend.chartData?.dailyData,
-                }}
-              />
-            </div>
+            <RevenueChart
+              data={{
+                labels: dashboardData.registrationsTrend.chartData?.labels ?? [],
+                revenue: dashboardData.registrationsTrend.chartData?.revenue?.map((val: number) => val / 100) ?? [],
+                dailyData: dashboardData.registrationsTrend.chartData?.dailyData,
+              }}
+            />
           </div>
 
           {/* Ranking de Ingressos */}

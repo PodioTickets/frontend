@@ -59,6 +59,7 @@ export default function InformacoesPage() {
     !!formData.street?.trim() &&
     !!formData.city?.trim() &&
     !!formData.state?.trim() &&
+    !!formData.googleMapsLink?.trim() &&
     !!formData.contactEmail?.trim();
 
   const validateForm = (): boolean => {
@@ -77,6 +78,7 @@ export default function InformacoesPage() {
       if (!formData.street?.trim()) newErrors.street = "Rua é obrigatória";
       if (!formData.city?.trim()) newErrors.city = "Cidade é obrigatória";
       if (!formData.state?.trim()) newErrors.state = "Estado é obrigatório";
+      if (!formData.googleMapsLink?.trim()) newErrors.googleMapsLink = "URL do Google Maps é obrigatória";
     }
     if (!formData.contactEmail?.trim()) {
       newErrors.contactEmail = "Email de atendimento é obrigatório";

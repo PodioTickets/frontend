@@ -22,14 +22,6 @@ interface Voucher {
   [key: string]: any;
 }
 
-interface AppliedTicket {
-  id: string;
-  name?: string;
-  categoryId?: string;
-  categoryName?: string;
-  price?: number;
-}
-
 interface VoucherGroupInfo {
   name: string;
   status: "ACTIVE" | "INACTIVE" | "USED" | "EXPIRED";
@@ -39,7 +31,13 @@ interface VoucherGroupInfo {
   expiredCount: number;
   inactiveCount: number;
   expiryDate?: string;
-  appliesTo?: "all" | Array<string | AppliedTicket>;
+  appliesTo?: "all" | Array<string | { id: string }>;
+  linkedTicket?: {
+    id: string;
+    name: string;
+    price: number;
+    category?: { id: string; name: string };
+  };
 }
 
 interface VoucherGroupData {
@@ -112,35 +110,12 @@ export function ViewVoucherModal() {
 
   const linkedTickets = getLinkedTickets();
 
-  // Dados do ingresso vinculado: prioriza useTickets, cai no objeto de appliesTo se não carregou
-  const getFirstLinkedTicketInfo = () => {
-    if (linkedTickets.length > 0) {
-      const t = linkedTickets[0];
-      return {
-        name: t.name,
-        categoryName: categoryMap.get(t.groupId) || null,
-        price: t.price,
-      };
-    }
-    if (
-      groupInfo &&
-      Array.isArray(groupInfo.appliesTo) &&
-      groupInfo.appliesTo.length > 0
-    ) {
-      const item = groupInfo.appliesTo[0];
-      if (typeof item !== "string") {
-        return {
-          name: item.name || null,
-          categoryName: item.categoryName || (item.categoryId ? categoryMap.get(item.categoryId) : null) || null,
-          price: item.price != null ? `R$ ${(item.price / 100).toFixed(2).replace(".", ",")}` : null,
-        };
-      }
-    }
-    return null;
-  };
+  const formatPrice = (cents: number) =>
+    `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 
-  const firstTicketInfo = getFirstLinkedTicketInfo();
-  const isSpecificTicket = groupInfo?.appliesTo !== "all" && Array.isArray(groupInfo?.appliesTo) && groupInfo.appliesTo.length > 0;
+  // Dados do ingresso vinculado: usa linkedTicket da API diretamente
+  const linkedTicket = groupInfo?.linkedTicket ?? null;
+  const isSpecificTicket = !!linkedTicket;
 
   useEffect(() => {
     if (isOpen && eventId && groupName) {
@@ -267,22 +242,22 @@ export function ViewVoucherModal() {
                     <div className="flex gap-6 items-center">
                       {/* Card do ingresso vinculado */}
                       <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col shrink-0 w-[343px]">
-                        {isSpecificTicket && firstTicketInfo ? (
+                        {linkedTicket ? (
                           <>
                             <div className="flex flex-col gap-2 p-4 w-full">
-                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                {firstTicketInfo.categoryName || "Ingresso avulso"}
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3] truncate">
+                                {linkedTicket.category?.name || "Ingresso avulso"}
                               </p>
                               <div className="flex gap-1.5 items-center">
                                 <TicketIcon className="size-5 text-gray-12 shrink-0" />
                                 <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                                  {firstTicketInfo.name || "—"}
+                                  {linkedTicket.name}
                                 </p>
                               </div>
                             </div>
                             <div className="border-t border-gray-6 flex items-center px-5 py-4 w-full">
                               <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
-                                {firstTicketInfo.price || "100% cortesia"}
+                                {formatPrice(linkedTicket.price)}
                               </p>
                             </div>
                           </>
