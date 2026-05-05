@@ -333,7 +333,7 @@ export default function UserProfilePage() {
   // Sincroniza estado do 2FA com o perfil carregado
   useEffect(() => {
     if (user) {
-      setTwoFactorEnabled(!!(user as any).mfaEnabled);
+      setTwoFactorEnabled(!!user.mfaEnabled);
     }
   }, [user]);
 
@@ -370,6 +370,7 @@ export default function UserProfilePage() {
   };
 
   const handleConfirm2FA = async () => {
+    if (!pendingAction2FA) return;
     const code = codeDigits.join('');
     if (code.length < 6) {
       setCode2FAError('Preencha todos os 6 dígitos do código.');
@@ -390,6 +391,8 @@ export default function UserProfilePage() {
       setShow2FAInput(false);
       setPendingAction2FA(null);
       setCodeDigits(['', '', '', '', '', '']);
+      // Sincroniza o perfil no contexto para refletir mfaEnabled atualizado
+      await refetchUser();
     } catch (error: any) {
       setCode2FAError('Código incorreto ou expirado. Tente novamente ou reenvie um novo código.');
     } finally {

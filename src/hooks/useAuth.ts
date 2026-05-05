@@ -25,6 +25,7 @@ interface User {
   role: string;
   avatarUrl: string;
   hasPassword?: boolean;
+  mfaEnabled?: boolean;
 }
 
 interface AuthContextType {
