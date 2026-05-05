@@ -2097,7 +2097,7 @@ export class OrganizerService {
       expiredCount: number;
       inactiveCount: number;
       expiryDate?: string;
-      appliesTo?: "all" | Array<string | { id: string }>;
+      appliesTo?: "all" | Array<string | { id: string; name?: string; categoryId?: string; categoryName?: string; price?: number }>;
     };
     pagination: { page: number; limit: number; total: number; totalPages: number };
   }> {
@@ -2115,7 +2115,7 @@ export class OrganizerService {
           expiredCount: number;
           inactiveCount: number;
           expiryDate?: string;
-          appliesTo?: "all" | Array<string | { id: string }>;
+          appliesTo?: "all" | Array<string | { id: string; name?: string; categoryId?: string; categoryName?: string; price?: number }>;
         };
         pagination: { page: number; limit: number; total: number; totalPages: number };
       };

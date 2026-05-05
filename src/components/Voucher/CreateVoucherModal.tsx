@@ -105,23 +105,25 @@ export function CreateVoucherModal() {
   };
 
   const handleSave = async () => {
-    // Validação do nome
-    if (!name.trim()) {
-      toast.error("Digite um nome para o voucher");
-      return;
+    if (!isEditing) {
+      if (!name.trim()) {
+        toast.error("Digite um nome para o voucher");
+        return;
+      }
+
+      if (!quantity.trim()) {
+        toast.error("Digite a quantidade de vouchers");
+        return;
+      }
+
+      const quantityNum = parseInt(quantity);
+      if (isNaN(quantityNum) || quantityNum <= 0) {
+        toast.error("Digite uma quantidade válida");
+        return;
+      }
     }
 
-    // Validação da quantidade
-    if (!quantity.trim()) {
-      toast.error("Digite a quantidade de vouchers");
-      return;
-    }
-
-    const quantityNum = parseInt(quantity);
-    if (isNaN(quantityNum) || quantityNum <= 0) {
-      toast.error("Digite uma quantidade válida");
-      return;
-    }
+    const quantityNum = isEditing ? 0 : parseInt(quantity);
 
     if (!eventId) {
       toast.error("Evento não encontrado");
@@ -133,7 +135,7 @@ export function CreateVoucherModal() {
     try {
       const voucherData: any = {
         name: name.trim(),
-        quantity: quantityNum,
+        ...(!isEditing && { quantity: quantityNum }),
         appliesTo: appliesTo === "all" ? "all" : selectedTicketIds.length > 0 ? selectedTicketIds : "all",
         expiryDate: expiryStatus === "ENABLED" && expiryDate ? expiryDate : undefined,
         cpfListStatus,
@@ -220,6 +222,7 @@ export function CreateVoucherModal() {
                             value={name}
                             maxLength={30}
                             onChange={(e) => setName(e.target.value)}
+                            disabled={isEditing}
                             className="h-12"
                           />
                         </div>
@@ -239,6 +242,7 @@ export function CreateVoucherModal() {
                               const val = e.target.value.replace(/[^0-9]/g, "");
                               setQuantity(val);
                             }}
+                            disabled={isEditing}
                             className="h-12"
                           />
                         </div>
@@ -257,8 +261,9 @@ export function CreateVoucherModal() {
                         </label>
                         <button
                           type="button"
-                          onClick={() => setShowSelectTicketsModal(true)}
-                          className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 cursor-pointer hover:bg-gray-3 transition-colors text-left"
+                          onClick={() => !isEditing && setShowSelectTicketsModal(true)}
+                          disabled={isEditing}
+                          className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:bg-gray-3"
                         >
                           <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                             {appliesTo === "all"
@@ -501,6 +506,7 @@ export function CreateVoucherModal() {
         }}
         eventId={eventId}
         selectedTicketIds={appliesTo === "specific" ? selectedTicketIds : []}
+        singleSelect
       />
     </>
   );

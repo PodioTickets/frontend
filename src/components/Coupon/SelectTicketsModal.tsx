@@ -14,6 +14,7 @@ interface SelectTicketsModalProps {
   onConfirm: (selectedTicketIds: string[]) => void;
   eventId: string | null;
   selectedTicketIds?: string[];
+  singleSelect?: boolean;
 }
 
 export function SelectTicketsModal({
@@ -22,6 +23,7 @@ export function SelectTicketsModal({
   onConfirm,
   eventId,
   selectedTicketIds = [],
+  singleSelect = false,
 }: SelectTicketsModalProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(selectedTicketIds);
   const { tickets, loading } = useTickets(eventId, isOpen);
@@ -37,11 +39,15 @@ export function SelectTicketsModal({
   }, [isOpen, selectedTicketIds]);
 
   const handleToggleTicket = (ticketId: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(ticketId)
-        ? prev.filter((id) => id !== ticketId)
-        : [...prev, ticketId]
-    );
+    if (singleSelect) {
+      setSelectedIds((prev) => (prev.includes(ticketId) ? [] : [ticketId]));
+    } else {
+      setSelectedIds((prev) =>
+        prev.includes(ticketId)
+          ? prev.filter((id) => id !== ticketId)
+          : [...prev, ticketId]
+      );
+    }
   };
 
   const handleConfirm = () => {
@@ -88,7 +94,9 @@ export function SelectTicketsModal({
             {/* Info bar */}
             <div className="flex items-center justify-between mb-7">
               <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                Selecione os ingressos que deseja vincular a este cupom
+                {singleSelect
+                  ? "Selecione o ingresso que deseja vincular a este voucher"
+                  : "Selecione os ingressos que deseja vincular a este cupom"}
               </p>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-1">

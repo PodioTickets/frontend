@@ -22,6 +22,14 @@ interface Voucher {
   [key: string]: any;
 }
 
+interface AppliedTicket {
+  id: string;
+  name?: string;
+  categoryId?: string;
+  categoryName?: string;
+  price?: number;
+}
+
 interface VoucherGroupInfo {
   name: string;
   status: "ACTIVE" | "INACTIVE" | "USED" | "EXPIRED";
@@ -31,7 +39,7 @@ interface VoucherGroupInfo {
   expiredCount: number;
   inactiveCount: number;
   expiryDate?: string;
-  appliesTo?: "all" | Array<string | { id: string }>;
+  appliesTo?: "all" | Array<string | AppliedTicket>;
 }
 
 interface VoucherGroupData {
@@ -90,13 +98,10 @@ export function ViewVoucherModal() {
   // Encontrar tickets vinculados ao voucher
   const getLinkedTickets = () => {
     if (!groupInfo || !tickets.length) return [];
-
-    if (groupInfo.appliesTo === "all") {
-      return tickets;
-    }
+    if (groupInfo.appliesTo === "all") return tickets;
 
     if (Array.isArray(groupInfo.appliesTo)) {
-      const ticketIds = groupInfo.appliesTo.map((item: any) =>
+      const ticketIds = groupInfo.appliesTo.map((item) =>
         typeof item === "string" ? item : item.id
       );
       return tickets.filter((ticket) => ticketIds.includes(ticket.id));
@@ -106,6 +111,36 @@ export function ViewVoucherModal() {
   };
 
   const linkedTickets = getLinkedTickets();
+
+  // Dados do ingresso vinculado: prioriza useTickets, cai no objeto de appliesTo se não carregou
+  const getFirstLinkedTicketInfo = () => {
+    if (linkedTickets.length > 0) {
+      const t = linkedTickets[0];
+      return {
+        name: t.name,
+        categoryName: categoryMap.get(t.groupId) || null,
+        price: t.price,
+      };
+    }
+    if (
+      groupInfo &&
+      Array.isArray(groupInfo.appliesTo) &&
+      groupInfo.appliesTo.length > 0
+    ) {
+      const item = groupInfo.appliesTo[0];
+      if (typeof item !== "string") {
+        return {
+          name: item.name || null,
+          categoryName: item.categoryName || (item.categoryId ? categoryMap.get(item.categoryId) : null) || null,
+          price: item.price != null ? `R$ ${(item.price / 100).toFixed(2).replace(".", ",")}` : null,
+        };
+      }
+    }
+    return null;
+  };
+
+  const firstTicketInfo = getFirstLinkedTicketInfo();
+  const isSpecificTicket = groupInfo?.appliesTo !== "all" && Array.isArray(groupInfo?.appliesTo) && groupInfo.appliesTo.length > 0;
 
   useEffect(() => {
     if (isOpen && eventId && groupName) {
@@ -205,7 +240,7 @@ export function ViewVoucherModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[916px] max-h-[90vh] flex flex-col shadow-2xl"
+              className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[916px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
             >
               {/* Header */}
               <div className="border-b border-gray-6 flex items-center justify-between px-5 py-3 shrink-0">
@@ -228,117 +263,108 @@ export function ViewVoucherModal() {
                   </div>
                 ) : voucherData ? (
                   <div className="flex flex-col gap-8">
-                    {/* Top Section - Group Info */}
-                    <div className="flex flex-col gap-5">
-                      {/* Group Details */}
+                    {/* Top Section - Ticket card + Group info */}
+                    <div className="flex gap-6 items-center">
+                      {/* Card do ingresso vinculado */}
+                      <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col shrink-0 w-[343px]">
+                        {isSpecificTicket && firstTicketInfo ? (
+                          <>
+                            <div className="flex flex-col gap-2 p-4 w-full">
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                {firstTicketInfo.categoryName || "Ingresso avulso"}
+                              </p>
+                              <div className="flex gap-1.5 items-center">
+                                <TicketIcon className="size-5 text-gray-12 shrink-0" />
+                                <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
+                                  {firstTicketInfo.name || "—"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="border-t border-gray-6 flex items-center px-5 py-4 w-full">
+                              <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
+                                {firstTicketInfo.price || "100% cortesia"}
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex flex-col gap-2 p-4 w-full">
+                              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                Todos os ingressos
+                              </p>
+                              <div className="flex gap-1.5 items-center">
+                                <TicketIcon className="size-5 text-gray-12 shrink-0" />
+                                <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
+                                  Qualquer ingresso do evento
+                                </p>
+                              </div>
+                            </div>
+                            <div className="border-t border-gray-6 flex items-center px-5 py-4 w-full">
+                              <p className="text-gray-12 text-base font-bold font-manrope leading-[1.1]">
+                                100% cortesia
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Informações do grupo */}
                       <div className="flex flex-col gap-4">
-                        <div>
-                          <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3] mb-2">
-                            {groupInfo?.name || groupName}
-                          </p>
-                          <div className="flex gap-2.5 items-center flex-wrap">
-                            <div className="flex gap-1 items-center">
-                              <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Totais:
-                              </span>
-                              <span className="text-gray-12 text-base font-semibold font-manrope">
-                                {groupInfo?.totalCount || voucherData.pagination.total}
-                              </span>
-                            </div>
-                            <div className="size-1.5 rounded-full bg-gray-11" />
-                            <div className="flex gap-1 items-center">
-                              <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Disponíveis:
-                              </span>
-                              <span className="text-gray-12 text-base font-semibold font-manrope">
-                                {groupInfo?.availableCount ?? voucherData.vouchers.filter((v) => v.status === "ACTIVE").length}
-                              </span>
-                            </div>
-                            <div className="size-1.5 rounded-full bg-gray-11" />
-                            <div className="flex gap-1 items-center">
-                              <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                Usados:
-                              </span>
-                              <span className="text-gray-12 text-base font-semibold font-manrope">
-                                {groupInfo?.usedCount || voucherData.vouchers.filter((v) => v.status === "USED").length}
-                              </span>
-                            </div>
+                        <p className="text-gray-12 text-lg font-semibold font-family-dm-sans leading-[1.3]">
+                          {groupInfo?.name || groupName}
+                        </p>
+
+                        {/* Tags row 1: totais / disponíveis / usados */}
+                        <div className="flex gap-2.5 items-center flex-wrap">
+                          <div className="flex gap-1 items-center">
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">Totais:</span>
+                            <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                              {groupInfo?.totalCount || voucherData.pagination.total}
+                            </span>
+                          </div>
+                          <div className="size-1.5 rounded-full bg-gray-11 shrink-0" />
+                          <div className="flex gap-1 items-center">
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">Disponíveis:</span>
+                            <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                              {groupInfo?.availableCount ?? voucherData.vouchers.filter((v) => v.status === "ACTIVE").length}
+                            </span>
+                          </div>
+                          <div className="size-1.5 rounded-full bg-gray-11 shrink-0" />
+                          <div className="flex gap-1 items-center">
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">Usados:</span>
+                            <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
+                              {groupInfo?.usedCount || voucherData.vouchers.filter((v) => v.status === "USED").length}
+                            </span>
                           </div>
                         </div>
 
+                        {/* Tags row 2: status / validade / benefício */}
                         <div className="flex gap-2.5 items-center flex-wrap">
                           <div className="flex gap-1 items-center">
-                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Status:
-                            </span>
-                            <span className={`px-2 py-1 rounded-full text-sm font-semibold font-family-dm-sans ${groupStatusClass[groupStatus]}`}>
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">Status:</span>
+                            <span className={`px-3 py-1.5 rounded-full text-sm font-semibold font-family-dm-sans leading-[1.3] ${groupStatusClass[groupStatus]}`}>
                               {groupStatusLabel[groupStatus]}
                             </span>
                           </div>
                           {groupInfo?.expiryDate && (
                             <>
-                              <div className="size-1.5 rounded-full bg-gray-11" />
+                              <div className="size-1.5 rounded-full bg-gray-11 shrink-0" />
                               <div className="flex gap-1 items-center">
-                                <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                  Validade:
-                                </span>
-                                <span className="text-gray-12 text-base font-semibold font-manrope">
+                                <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">Validade:</span>
+                                <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                                   {formatDate(groupInfo.expiryDate)}
                                 </span>
                               </div>
                             </>
                           )}
-                          <div className="size-1.5 rounded-full bg-gray-11" />
+                          <div className="size-1.5 rounded-full bg-gray-11 shrink-0" />
                           <div className="flex gap-1 items-center">
-                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                              Benefício:
-                            </span>
-                            <span className="text-gray-12 text-base font-semibold font-manrope">
+                            <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">Benefício:</span>
+                            <span className="text-gray-12 text-base font-semibold font-manrope leading-[1.1]">
                               100% cortesia
                             </span>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Ingressos aplicáveis */}
-                      <div className="flex flex-col gap-2">
-                        <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                          Ingressos aplicáveis:
-                        </p>
-                        {groupInfo?.appliesTo === "all" || (linkedTickets.length === 0 && !groupInfo) ? (
-                          <div className="flex items-center gap-1.5 bg-gray-3 border border-gray-6 rounded-lg px-3 py-2 w-fit">
-                            <TicketIcon className="size-4 text-gray-12 shrink-0" />
-                            <span className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3]">
-                              Todos os ingressos
-                            </span>
-                          </div>
-                        ) : linkedTickets.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {linkedTickets.map((ticket) => (
-                              <div
-                                key={ticket.id}
-                                className="flex items-center gap-1.5 bg-gray-3 border border-gray-6 rounded-lg px-3 py-2"
-                              >
-                                <TicketIcon className="size-4 text-gray-12 shrink-0" />
-                                <span className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3]">
-                                  {ticket.name}
-                                </span>
-                                {categoryMap.get(ticket.groupId) && (
-                                  <span className="text-gray-10 text-xs font-family-dm-sans leading-[1.3]">
-                                    · {categoryMap.get(ticket.groupId)}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 bg-gray-3 border border-gray-6 rounded-lg px-3 py-2 w-fit">
-                            <TicketIcon className="size-4 text-gray-12 shrink-0" />
-                            <span className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3]">
-                              {groupInfo?.name || groupName}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
 
