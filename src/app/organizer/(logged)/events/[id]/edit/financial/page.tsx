@@ -17,7 +17,6 @@ export default function EditFinancialPage() {
   const orgNav = useOrganizerNavigate();
   const { authChecked } = useWizardAuth();
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [organizerPercent, setOrganizerPercent] = useState(0);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
 
@@ -37,18 +36,6 @@ export default function EditFinancialPage() {
 
   const handleBack = () => {
     orgNav.push(`/organizer/events/${eventId}/edit/questionnaire`);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await organizerService.saveFinancialSettings(eventId, organizerPercent, maxInstallments);
-      toast.success("Configurações financeiras salvas com sucesso!");
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Erro ao salvar configurações financeiras");
-    } finally {
-      setSaving(false);
-    }
   };
 
   return (

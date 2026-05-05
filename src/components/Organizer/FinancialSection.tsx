@@ -80,7 +80,7 @@ export function FinancialSection({
 
             <div className="flex items-center gap-20">
               <span className="font-manrope text-xl font-bold leading-[1.1] text-gray-12 w-14 shrink-0 text-left">
-                {organizerPercent.toFixed(0)}%
+                {organizerPercent.toFixed(1)}%
               </span>
               <div
                 ref={trackRef}
@@ -113,7 +113,7 @@ export function FinancialSection({
                 </div>
               </div>
               <span className="font-manrope text-xl font-bold leading-[1.1] text-gray-12 w-14 shrink-0 text-right">
-                {participantPercent.toFixed(0)}%
+                {participantPercent.toFixed(1)}%
               </span>
             </div>
 
