@@ -61,20 +61,7 @@ export default function EditFinancialPage() {
       description="Configure a divisão da taxa da plataforma e as formas de pagamento aceitas. Estes dados ficam travados após a publicação."
       showDescriptionOnMobile
       isLoading={!authChecked || !dataLoaded}
-      actions={
-        <Button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={saving}
-          variant="default"
-          className={cn(
-            "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50",
-            "max-md:h-12 max-md:w-full max-md:px-4",
-          )}
-        >
-          {saving ? "Salvando..." : "Salvar alterações"}
-        </Button>
-      }
+      actions={undefined}
     >
       <FinancialSection
         organizerPercent={organizerPercent}
