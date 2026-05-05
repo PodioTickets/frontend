@@ -295,6 +295,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 0,
+        clip: false,
       },
     ],
   }), [displayData]);
@@ -358,6 +359,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: { top: 4, bottom: 8, left: 0, right: 0 },
+    },
     interaction: {
       mode: "index" as const,
       intersect: false,

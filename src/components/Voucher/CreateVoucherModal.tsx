@@ -22,7 +22,7 @@ export function CreateVoucherModal() {
   const { isOpen, closeCreateVoucherModal, data, onModalSave } = useCreateVoucherModal();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [appliesTo, setAppliesTo] = useState<"all" | "specific">("all");
+  const [appliesTo, setAppliesTo] = useState<"all" | "specific">("specific");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [showSelectTicketsModal, setShowSelectTicketsModal] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -74,7 +74,7 @@ export function CreateVoucherModal() {
         // Create mode - reset form
         setName("");
         setQuantity("");
-        setAppliesTo("all");
+        setAppliesTo("specific");
         setSelectedTicketIds([]);
         setShowAdvanced(false);
         setExpiryStatus("DISABLED");
@@ -218,7 +218,7 @@ export function CreateVoucherModal() {
                           </label>
                           <Input
                             type="text"
-                            placeholder="Ex: Corrida paranense"
+                            placeholder="Ex: CONVIDADOS2026"
                             value={name}
                             maxLength={30}
                             onChange={(e) => setName(e.target.value)}
@@ -479,8 +479,8 @@ export function CreateVoucherModal() {
                   <Button
                     onClick={handleSave}
                     variant="default"
-                    className="h-11 px-5"
-                    disabled={isSubmitting}
+                    className="h-11 px-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting || (!isEditing && selectedTicketIds.length === 0)}
                   >
                     {isSubmitting ? "Salvando..." : isEditing ? "Editar voucher" : "Criar voucher"}
                   </Button>
