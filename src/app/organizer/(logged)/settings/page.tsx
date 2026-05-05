@@ -21,6 +21,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { cn } from "@/utils/cn";
 
 export default function OrganizerSettingsPage() {
   const router = useRouter();
@@ -33,6 +34,13 @@ export default function OrganizerSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [show2FAInput, setShow2FAInput] = useState(false);
+  const [pendingAction2FA, setPendingAction2FA] = useState<'enable' | 'disable' | null>(null);
+  const [codeDigits, setCodeDigits] = useState(['', '', '', '', '', '']);
+  const [code2FAError, setCode2FAError] = useState('');
+  const [sending2FACode, setSending2FACode] = useState(false);
+  const [confirming2FA, setConfirming2FA] = useState(false);
+  const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -142,6 +150,104 @@ export default function OrganizerSettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Sincroniza estado do 2FA com o perfil carregado
+  useEffect(() => {
+    if (user) {
+      setTwoFactorEnabled(!!(user as any).mfaEnabled);
+    }
+  }, [user]);
+
+  const handleToggle2FA = async () => {
+    const action = twoFactorEnabled ? 'disable' : 'enable';
+    setSending2FACode(true);
+    setCode2FAError('');
+    try {
+      await userService.send2FACode();
+      setPendingAction2FA(action);
+      setShow2FAInput(true);
+      setCodeDigits(['', '', '', '', '', '']);
+      setTimeout(() => codeInputRefs.current[0]?.focus(), 100);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao enviar código. Tente novamente.');
+    } finally {
+      setSending2FACode(false);
+    }
+  };
+
+  const handleResend2FACode = async () => {
+    setSending2FACode(true);
+    setCode2FAError('');
+    try {
+      await userService.send2FACode();
+      toast.success('Novo código enviado para o seu e-mail.');
+      setCodeDigits(['', '', '', '', '', '']);
+      setTimeout(() => codeInputRefs.current[0]?.focus(), 100);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao reenviar código.');
+    } finally {
+      setSending2FACode(false);
+    }
+  };
+
+  const handleConfirm2FA = async () => {
+    const code = codeDigits.join('');
+    if (code.length < 6) {
+      setCode2FAError('Preencha todos os 6 dígitos do código.');
+      return;
+    }
+    setConfirming2FA(true);
+    setCode2FAError('');
+    try {
+      if (pendingAction2FA === 'enable') {
+        await userService.enable2FA(code);
+        setTwoFactorEnabled(true);
+        toast.success('2FA ativado com sucesso!');
+      } else {
+        await userService.disable2FA(code);
+        setTwoFactorEnabled(false);
+        toast.success('2FA desativado com sucesso!');
+      }
+      setShow2FAInput(false);
+      setPendingAction2FA(null);
+      setCodeDigits(['', '', '', '', '', '']);
+    } catch {
+      setCode2FAError('Código incorreto ou expirado. Tente novamente ou reenvie um novo código.');
+    } finally {
+      setConfirming2FA(false);
+    }
+  };
+
+  const handleCodeDigitChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    const newDigits = [...codeDigits];
+    newDigits[index] = digit;
+    setCodeDigits(newDigits);
+    setCode2FAError('');
+    if (digit && index < 5) {
+      codeInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleCodeDigitKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !codeDigits[index] && index > 0) {
+      codeInputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'Enter') {
+      void handleConfirm2FA();
+    }
+  };
+
+  const handleCodeDigitPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    const newDigits = Array(6).fill('');
+    for (let i = 0; i < pasted.length; i++) newDigits[i] = pasted[i];
+    setCodeDigits(newDigits);
+    const nextEmpty = Math.min(pasted.length, 5);
+    codeInputRefs.current[nextEmpty]?.focus();
   };
 
   const handleChangePassword = () => {
@@ -320,29 +426,88 @@ export default function OrganizerSettingsPage() {
                 </p>
               </div>
 
-              {/* 2FA Toggle Button */}
+              {/* Toggle 2FA */}
               <button
-                onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                className="border border-gray-6 flex gap-[10px] h-[44px] items-center justify-center overflow-clip px-[12px] py-[16px] relative rounded-[8px] shrink-0 w-[462px] hover:bg-gray-3 transition-colors"
+                onClick={!sending2FACode && !confirming2FA ? handleToggle2FA : undefined}
+                disabled={sending2FACode || confirming2FA}
+                className="border border-gray-6 flex gap-[10px] h-[44px] items-center justify-center overflow-clip px-[12px] py-[16px] relative rounded-[8px] shrink-0 w-[462px] hover:bg-gray-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex flex-1 gap-2 items-center relative shrink-0">
                   <ShieldCheck className="size-6 text-gray-12 shrink-0" />
                   <p className="flex-1 font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-[14px] text-gray-12 text-left whitespace-pre-wrap">
-                    Ligar dois fatores de segurança
+                    {sending2FACode ? 'Enviando código...' : 'Ligar dois fatores de segurança'}
                   </p>
                 </div>
                 <div className="flex gap-1 h-[20px] items-center justify-center relative rounded-[1.667px] shrink-0">
-                  <div
-                    className={`h-[20px] relative shrink-0 w-[37px] rounded-full transition-all ${twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
-                      }`}
-                  >
-                    <div
-                      className={`absolute top-0.5 size-4 rounded-full bg-white transition-all ${twoFactorEnabled ? "right-0.5" : "left-0.5"
-                        }`}
-                    />
+                  <div className={cn("h-[20px] relative shrink-0 w-[37px] rounded-full transition-all", twoFactorEnabled ? "bg-primary-11" : "bg-gray-6")}>
+                    <div className={cn("absolute top-0.5 size-4 rounded-full bg-white transition-all", twoFactorEnabled ? "right-0.5" : "left-0.5")} />
                   </div>
                 </div>
               </button>
+
+              {/* Painel de confirmação com código */}
+              {show2FAInput && (
+                <div className="flex flex-col gap-6 w-full max-w-[462px] rounded-[8px] border border-gray-6 bg-gray-1 p-6">
+                  <p className="font-family-dm-sans text-[14px] text-gray-11">
+                    Digite o código de 6 dígitos enviado para o seu e-mail <strong className="text-gray-12">{user?.email}</strong>.
+                  </p>
+
+                  {/* 6 caixas de código */}
+                  <div className="flex gap-2 items-center">
+                    {codeDigits.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => { codeInputRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleCodeDigitChange(i, e.target.value)}
+                        onKeyDown={(e) => handleCodeDigitKeyDown(i, e)}
+                        onPaste={i === 0 ? handleCodeDigitPaste : undefined}
+                        className={cn(
+                          "w-[52px] h-[64px] text-center text-2xl font-extrabold font-manrope rounded-[8px] border-2 bg-gray-2 outline-none transition-colors",
+                          code2FAError ? "border-red-500" : "border-gray-6 focus:border-primary-11",
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Mensagem de erro */}
+                  {code2FAError && (
+                    <p className="font-family-dm-sans text-[14px] text-red-500 -mt-2">
+                      {code2FAError}
+                    </p>
+                  )}
+
+                  {/* Botões de ação */}
+                  <div className="flex flex-wrap gap-3 items-center">
+                    <button
+                      type="button"
+                      onClick={handleResend2FACode}
+                      disabled={sending2FACode || confirming2FA}
+                      className="h-[44px] px-6 rounded-[8px] border border-gray-6 font-manrope font-bold text-[14px] text-gray-12 bg-transparent hover:bg-gray-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {sending2FACode ? 'Reenviando...' : 'Reenviar código'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirm2FA}
+                      disabled={sending2FACode || confirming2FA || codeDigits.join('').length < 6}
+                      className="h-[44px] px-6 rounded-[8px] bg-primary-11 font-manrope font-bold text-[14px] text-primary-2 hover:bg-primary-10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {confirming2FA ? 'Confirmando...' : 'Confirmar código'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShow2FAInput(false); setPendingAction2FA(null); setCodeDigits(['', '', '', '', '', '']); setCode2FAError(''); }}
+                      className="font-family-dm-sans text-[14px] text-gray-11 hover:text-gray-12 underline"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

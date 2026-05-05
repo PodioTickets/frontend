@@ -892,6 +892,30 @@ export class UserService {
     };
   }
 
+  async send2FACode(): Promise<void> {
+    try {
+      await this.apiClient.post('/api/v1/auth/2fa/send-code', {});
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async enable2FA(code: string): Promise<void> {
+    try {
+      await this.apiClient.post('/api/v1/auth/2fa/enable', { code });
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  async disable2FA(code: string): Promise<void> {
+    try {
+      await this.apiClient.post('/api/v1/auth/2fa/disable', { code });
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
   private handleError(error: any): never {
     const p = this.parseAuthErrorPayload(error);
     const err = new Error(p.message) as Error & AuthError;
