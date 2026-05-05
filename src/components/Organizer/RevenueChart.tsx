@@ -295,7 +295,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 0,
-        clip: false,
+        clip: { top: 10, bottom: 10, left: 0, right: 0 },
       },
     ],
   }), [displayData]);
