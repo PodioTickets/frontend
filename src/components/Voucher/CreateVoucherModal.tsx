@@ -207,6 +207,9 @@ export function CreateVoucherModal() {
                     <div className="flex flex-col gap-9 max-w-full">
                       {/* Nome do voucher */}
                       <div className="flex flex-col gap-2.5">
+                        <label className="text-gray-11 font-semibold text-base font-family-dm-sans leading-[1.3] mb-4">
+                          Este voucher garante uma inscrição gratuita (cortesia) para o evento.
+                        </label>
                         <div className="flex flex-col gap-2">
                           <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
                             Nome do voucher
