@@ -183,10 +183,7 @@ export function TwoFASection({
         {showInput && (
           <div
             ref={otpPanelRef}
-            className={cn(
-              "flex flex-col items-start w-full gap-[36px]",
-              isOrganizer ? "max-w-[462px]" : "max-w-[462px]"
-            )}
+            className="flex flex-col items-start w-full gap-[36px]"
           >
             {/* Título e subtítulo */}
             <div className="flex flex-col items-start w-full gap-[28px]">
