@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Shield, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
@@ -41,11 +41,19 @@ export function TwoFASection({
   const [codeError, setCodeError] = useState("");
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const otpPanelRef = useRef<HTMLDivElement>(null);
 
   // Sincroniza quando initialEnabled muda (ex: refetchUser no pai)
   useEffect(() => {
     setEnabled(initialEnabled);
   }, [initialEnabled]);
+
+  // Rola para o painel OTP quando ele aparece (evita que fique fora da viewport)
+  useEffect(() => {
+    if (showInput && otpPanelRef.current) {
+      otpPanelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [showInput]);
 
   const handleToggle = async () => {
     const action = enabled ? "disable" : "enable";
@@ -192,6 +200,7 @@ export function TwoFASection({
         {/* Painel de confirmação com código */}
         {showInput && (
           <div
+            ref={otpPanelRef}
             className={cn(
               "flex flex-col gap-6 w-full max-w-[462px] border border-gray-6 p-6",
               isOrganizer ? "rounded-[8px] bg-gray-1" : "rounded-lg bg-gray-2"
