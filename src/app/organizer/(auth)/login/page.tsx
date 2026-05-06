@@ -6,6 +6,7 @@ import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
+import { OtpCodeInput } from "@/components/OtpCodeInput";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,7 +36,7 @@ function translateLoginError(msg: string): string {
 export default function OrganizerLoginPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, finishLoginMfa, isLoading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -45,6 +46,12 @@ export default function OrganizerLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  // Estado do passo MFA
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState("");
+  const [mfaConfirming, setMfaConfirming] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -64,12 +71,19 @@ export default function OrganizerLoginPage() {
 
     try {
       const validatedData: LoginFormData = loginSchema.parse(formData);
-      await login({
+      const result = await login({
         emailOrCpf: validatedData.email,
         password: validatedData.password,
         accountType: "ORGANIZER",
         ...(turnstileToken ? { turnstileToken } : {}),
       });
+
+      if (result?.mfaRequired) {
+        setMfaToken(result.mfaToken);
+        setMfaCode("");
+        setMfaError("");
+        return;
+      }
 
       toast.success("Login realizado com sucesso!");
       router.refresh();
@@ -92,12 +106,31 @@ export default function OrganizerLoginPage() {
       } else {
         const raw = error instanceof Error ? error.message : "";
         toast.error(translateLoginError(raw));
-        // Reseta o captcha para exigir nova resolução após erro de credenciais
         setTurnstileToken(null);
         turnstileRef.current?.reset();
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleMfaConfirm = async () => {
+    if (!mfaToken) return;
+    if (mfaCode.length < 6) {
+      setMfaError("Preencha todos os 6 dígitos do código.");
+      return;
+    }
+    setMfaConfirming(true);
+    setMfaError("");
+    try {
+      await finishLoginMfa(mfaToken, mfaCode, "ORGANIZER");
+      toast.success("Login realizado com sucesso!");
+      router.refresh();
+      orgNav.push("/organizer/events");
+    } catch (err: any) {
+      setMfaError(err?.message || "Código inválido. Tente novamente.");
+    } finally {
+      setMfaConfirming(false);
     }
   };
 
@@ -119,6 +152,49 @@ export default function OrganizerLoginPage() {
 
         {/* Form Content */}
         <div className="flex flex-col gap-8 w-full max-w-[470px] flex-1 justify-center min-h-0">
+          {mfaToken ? (
+            /* Passo de verificação MFA */
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                  Verificação em duas etapas
+                </h1>
+                <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
+                  Para continuar com a verificação em duas etapas em nossa plataforma, por favor, insira abaixo o código recebido por e-mail em sua caixa de entrada
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <OtpCodeInput
+                  value={mfaCode}
+                  onChange={(v) => { setMfaCode(v); setMfaError(""); }}
+                  disabled={mfaConfirming}
+                  error={!!mfaError}
+                  autoFocus
+                  showSeparator={false}
+                />
+                {mfaError && (
+                  <p className="text-sm text-red-11 font-family-dm-sans">{mfaError}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button
+                  type="button"
+                  onClick={handleMfaConfirm}
+                  disabled={mfaConfirming || mfaCode.length < 6}
+                >
+                  {mfaConfirming ? "Verificando..." : "Confirmar código"}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => { setMfaToken(null); setMfaCode(""); setMfaError(""); }}
+                  className="text-sm text-gray-11 hover:text-gray-12 underline text-center"
+                >
+                  Voltar ao login
+                </button>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Header */}
           <div className="flex flex-col gap-8 items-center shrink-0">
             {/* Building Icon */}
@@ -237,6 +313,8 @@ export default function OrganizerLoginPage() {
               {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
             </Button>
           </form>
+          </>
+          )}
         </div>
 
         {/* Terms and Privacy */}

@@ -123,6 +123,8 @@ export class UserService {
 
   async login(data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER"; turnstileToken?: string }): Promise<{
     success: boolean;
+    mfaRequired?: boolean;
+    mfaToken?: string;
     data?: {
       access_token: string;
       refresh_token: string;
@@ -138,20 +140,24 @@ export class UserService {
     error?: string;
   }> {
     try {
-      const endpoint = data.accountType === "ORGANIZER" 
+      const endpoint = data.accountType === "ORGANIZER"
         ? "/api/v1/auth/login/organizer"
         : "/api/v1/auth/login";
-      
-      // Remover accountType do payload; incluir turnstileToken se presente
-      const payload = data.accountType === "ORGANIZER"
-        ? { emailOrCpf: data.emailOrCpf, password: data.password, ...(data.turnstileToken ? { turnstileToken: data.turnstileToken } : {}) }
-        : { emailOrCpf: data.emailOrCpf, password: data.password, ...(data.turnstileToken ? { turnstileToken: data.turnstileToken } : {}) };
-      
-      const response = await this.apiClient.post<LoginResponse>(
-        endpoint,
-        payload
-      );
-      const responseBody = response.data as LoginResponse;
+
+      const payload = {
+        emailOrCpf: data.emailOrCpf,
+        password: data.password,
+        ...(data.turnstileToken ? { turnstileToken: data.turnstileToken } : {}),
+      };
+
+      const response = await this.apiClient.post<any>(endpoint, payload);
+      const responseBody = response.data as any;
+
+      // Verificação em duas etapas requerida
+      if (responseBody?.mfaRequired === true && responseBody?.mfaToken) {
+        return { success: true, mfaRequired: true, mfaToken: responseBody.mfaToken };
+      }
+
       let loginData: {
         access_token: string;
         refresh_token: string;
@@ -180,15 +186,10 @@ export class UserService {
       }
 
       if (!loginData || !loginData.access_token || !loginData.user) {
-        throw new Error(
-          "Resposta do servidor não contém dados de login válidos"
-        );
+        throw new Error("Resposta do servidor não contém dados de login válidos");
       }
 
-      return {
-        success: true,
-        data: loginData,
-      };
+      return { success: true, data: loginData };
     } catch (error: any) {
       const handled = this.parseAuthErrorPayload(error);
       const fallback = "Erro ao fazer login. Tente novamente.";
@@ -201,6 +202,54 @@ export class UserService {
               ? error.message
               : fallback,
         data: undefined,
+      };
+    }
+  }
+
+  async verifyLoginMfa(mfaToken: string, code: string): Promise<{
+    success: boolean;
+    data?: {
+      access_token: string;
+      refresh_token: string;
+      user: {
+        id: string;
+        email: string;
+        firstName?: string;
+        lastName?: string;
+        documentNumber?: string;
+        role: string;
+      };
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await this.apiClient.post<any>("/api/v1/auth/2fa/verify-login", { mfaToken, code });
+      const responseBody = response.data as any;
+
+      let loginData: {
+        access_token: string;
+        refresh_token: string;
+        user: { id: string; email: string; firstName?: string; lastName?: string; documentNumber?: string; role: string };
+      } | null = null;
+
+      if (responseBody?.data?.access_token && responseBody?.data?.user) {
+        loginData = {
+          access_token: responseBody.data.access_token,
+          refresh_token: responseBody.data.refresh_token,
+          user: responseBody.data.user,
+        };
+      }
+
+      if (!loginData) throw new Error("Resposta inválida do servidor");
+
+      return { success: true, data: loginData };
+    } catch (error: any) {
+      const handled = this.parseAuthErrorPayload(error);
+      return {
+        success: false,
+        error: handled.message && handled.message !== "An error occurred"
+          ? handled.message
+          : error?.message || "Código inválido. Tente novamente.",
       };
     }
   }
@@ -395,6 +444,8 @@ export class UserService {
 
   async validateGoogleCode(code: string, redirectUri: string): Promise<{
     success: boolean;
+    mfaRequired?: boolean;
+    mfaToken?: string;
     data?: {
       access_token: string;
       refresh_token: string;
@@ -410,11 +461,17 @@ export class UserService {
     error?: string;
   }> {
     try {
-      const response = await this.apiClient.post<LoginResponse>(
+      const response = await this.apiClient.post<any>(
         "/api/v1/auth/google/validate",
         { code, redirectUri }
       );
-      const responseBody = response.data as LoginResponse;
+      const responseBody = response.data as any;
+
+      // Verificação em duas etapas requerida
+      if (responseBody?.mfaRequired === true && responseBody?.mfaToken) {
+        return { success: true, mfaRequired: true, mfaToken: responseBody.mfaToken };
+      }
+
       let loginData: {
         access_token: string;
         refresh_token: string;
