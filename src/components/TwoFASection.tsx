@@ -197,9 +197,7 @@ export function TwoFASection({
                 </p>
                 <p className="font-family-dm-sans font-medium text-gray-11 w-full"
                   style={{ fontSize: 16, lineHeight: "20.8px" }}>
-                  Para continuar com a verificação em duas etapas, insira abaixo o
-                  código recebido por e-mail em{" "}
-                  <strong className="text-gray-12">{userEmail}</strong>.
+                  Para continuar com a verificação em duas etapas em nossa plataforma, por favor, insira abaixo o código recebido por e-mail em sua caixa de entrada
                 </p>
               </div>
             </div>
@@ -220,7 +218,7 @@ export function TwoFASection({
                 />
 
                 {codeError && (
-                  <p className="font-family-dm-sans text-red-500 text-center w-full"
+                  <p className="font-family-dm-sans text-red-500 whitespace-nowrap"
                     style={{ fontSize: 16, lineHeight: "20.8px" }}>
                     {codeError}
                   </p>
