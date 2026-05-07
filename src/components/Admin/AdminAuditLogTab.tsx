@@ -199,7 +199,7 @@ export function AdminAuditLogTab() {
           await adminService.getAdminOrganizations({
             page: orgListPage,
             limit: ORG_PICKER_PAGE_SIZE,
-            q: debouncedOrgSearch || undefined,
+            search: debouncedOrgSearch || undefined,
           });
         if (cancelled) return;
         setOrgListItems(next);
