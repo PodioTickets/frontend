@@ -9,7 +9,7 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { OrganizerSidebar } from "@/components/Organizer/OrganizerSidebar";
 import { useChangeEmailModal, useChangePasswordModal } from "@/stores/modalStore";
-import { Download, Mail, Lock, ShieldCheck, User, ArrowRight, Plus } from "lucide-react";
+import { Mail, Lock, User, Plus } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -21,6 +21,7 @@ import {
   type ImageUploadWithCropRef,
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
+import { TwoFASection } from "@/components/TwoFASection";
 
 export default function OrganizerSettingsPage() {
   const router = useRouter();
@@ -32,7 +33,6 @@ export default function OrganizerSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -308,42 +308,12 @@ export default function OrganizerSettingsPage() {
 
           {/* Security Section */}
           <div className="bg-gray-2 flex flex-col gap-[24px] items-start pb-[32px] pt-[24px] px-[16px] relative rounded-[12px] shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] shrink-0 w-full">
-            <div className="flex flex-col gap-[32px] items-start relative shrink-0 w-full">
-              <div className="flex flex-col gap-[16px] items-start relative shrink-0 w-full">
-                <div className="flex items-center relative shrink-0 w-full">
-                  <p className="font-manrope font-bold leading-[1.1] relative shrink-0 text-[20px] text-gray-12">
-                    Segurança
-                  </p>
-                </div>
-                <p className="font-family-dm-sans font-normal leading-[1.3] relative shrink-0 text-[16px] text-gray-11 w-full whitespace-pre-wrap">
-                  Ative o 2FA para adicionar uma camada extra de segurança à sua conta. Sempre que fizer login em um novo dispositivo, você precisará informar um código enviado para o seu e-mail.
-                </p>
-              </div>
-
-              {/* 2FA Toggle Button */}
-              <button
-                onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                className="border border-gray-6 flex gap-[10px] h-[44px] items-center justify-center overflow-clip px-[12px] py-[16px] relative rounded-[8px] shrink-0 w-[462px] hover:bg-gray-3 transition-colors"
-              >
-                <div className="flex flex-1 gap-2 items-center relative shrink-0">
-                  <ShieldCheck className="size-6 text-gray-12 shrink-0" />
-                  <p className="flex-1 font-family-dm-sans font-medium leading-[1.3] relative shrink-0 text-[14px] text-gray-12 text-left whitespace-pre-wrap">
-                    Ligar dois fatores de segurança
-                  </p>
-                </div>
-                <div className="flex gap-1 h-[20px] items-center justify-center relative rounded-[1.667px] shrink-0">
-                  <div
-                    className={`h-[20px] relative shrink-0 w-[37px] rounded-full transition-all ${twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
-                      }`}
-                  >
-                    <div
-                      className={`absolute top-0.5 size-4 rounded-full bg-white transition-all ${twoFactorEnabled ? "right-0.5" : "left-0.5"
-                        }`}
-                    />
-                  </div>
-                </div>
-              </button>
-            </div>
+            <TwoFASection
+              userEmail={user?.email ?? ""}
+              initialEnabled={!!user?.mfaEnabled}
+              onToggled={refetchUser}
+              variant="organizer"
+            />
           </div>
 
           <ImageUploadWithCrop

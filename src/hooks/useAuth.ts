@@ -25,6 +25,7 @@ interface User {
   role: string;
   avatarUrl: string;
   hasPassword?: boolean;
+  mfaEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -34,7 +35,8 @@ interface AuthContextType {
   refetchUser: () => Promise<User | null>;
   isLoading: boolean;
   error: any;
-  login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" | "ADMIN_PODIO_STAFF"; turnstileToken?: string }) => Promise<void>;
+  login: (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" | "ADMIN_PODIO_STAFF"; turnstileToken?: string }) => Promise<{ mfaRequired: true; mfaToken: string } | void>;
+  finishLoginMfa: (mfaToken: string, code: string, accountType?: "USER" | "ORGANIZER") => Promise<void>;
   register: (data: RegisterData) => Promise<{ id: string; email: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -212,7 +214,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const login = async (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" | "ADMIN_PODIO_STAFF"; turnstileToken?: string }) => {
+  const login = async (data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER" | "ADMIN_PODIO_STAFF"; turnstileToken?: string }): Promise<{ mfaRequired: true; mfaToken: string } | void> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -220,8 +222,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data.accountType === "ADMIN_PODIO_STAFF") {
         response = await adminService.login({ emailOrCpf: data.emailOrCpf, password: data.password });
       } else {
-        response = await userService.login({ emailOrCpf: data.emailOrCpf, password: data.password, accountType: data.accountType, turnstileToken: data.turnstileToken });
+        response = await userService.login({ emailOrCpf: data.emailOrCpf, password: data.password, accountType: data.accountType as any, turnstileToken: data.turnstileToken });
       }
+
+      // 2FA requerido: repassa ao caller para exibir o passo OTP
+      if (response.success && (response as any).mfaRequired) {
+        return { mfaRequired: true, mfaToken: (response as any).mfaToken };
+      }
+
       if (response.success && response.data?.user) {
         const user = response.data.user;
         if (response.data.access_token) {
@@ -248,9 +256,43 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error(errorMessage);
       }
     } catch (err: any) {
-      console.error("Login error:", err);
       const errorMessage =
         err.message || "Erro ao fazer login. Tente novamente.";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const finishLoginMfa = async (mfaToken: string, code: string, accountType?: "USER" | "ORGANIZER") => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await userService.verifyLoginMfa(mfaToken, code);
+      if (response.success && response.data?.user) {
+        const user = response.data.user;
+        const apiClient = (userService as any).apiClient;
+        if (apiClient && apiClient.setAccessToken) {
+          apiClient.setAccessToken(response.data.access_token!);
+          if (response.data.refresh_token) {
+            apiClient.setRefreshToken(response.data.refresh_token);
+          }
+        }
+        const userWithCache = { ...user, _cachedAt: Date.now() };
+        localStorage.setItem("user", JSON.stringify(userWithCache));
+        if (accountType === "ORGANIZER") {
+          setUser(user as User);
+        } else {
+          await refetchUser();
+        }
+      } else {
+        const errorMessage = response.error || "Código inválido. Tente novamente.";
+        setError(errorMessage as any);
+        throw new Error(errorMessage);
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || "Código inválido. Tente novamente.";
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -345,6 +387,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isLoading,
     error,
     login,
+    finishLoginMfa,
     register,
     logout,
     clearError,

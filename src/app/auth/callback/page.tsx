@@ -50,6 +50,13 @@ function CallbackContent() {
               redirectUri
             );
 
+            // 2FA requerido: redireciona para home com parâmetro mfaToken no sessionStorage
+            if (response.mfaRequired && response.mfaToken) {
+              sessionStorage.setItem("googleMfaToken", response.mfaToken);
+              router.replace("/?googleMfa=1");
+              return;
+            }
+
             if (!response.success || !response.data) {
               const errorMessage =
                 response.error ||

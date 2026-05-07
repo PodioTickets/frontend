@@ -8,9 +8,26 @@ interface OtpCodeInputProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   error?: boolean;
+  /** Foca o primeiro campo automaticamente ao montar */
+  autoFocus?: boolean;
+  /** Classe extra aplicada a cada input individual */
+  inputClassName?: string;
+  /** Classe extra aplicada ao container flex */
+  containerClassName?: string;
+  /** Exibe o separador visual entre os dígitos 3 e 4 (padrão: false) */
+  showSeparator?: boolean;
 }
 
-export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputProps) {
+export function OtpCodeInput({
+  value,
+  onChange,
+  disabled,
+  error,
+  autoFocus,
+  inputClassName,
+  containerClassName,
+  showSeparator = false,
+}: OtpCodeInputProps) {
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -48,7 +65,7 @@ export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputP
   };
 
   return (
-    <div className="flex gap-2 items-center justify-center w-full">
+    <div className={cn("flex gap-2 items-center justify-start w-full", containerClassName)}>
       {digits.map((digit, index) => (
         <React.Fragment key={index}>
           <input
@@ -56,6 +73,7 @@ export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputP
             type="text"
             inputMode="numeric"
             autoComplete={index === 0 ? "one-time-code" : "off"}
+            autoFocus={autoFocus && index === 0}
             aria-label={`Dígito ${index + 1} de 6`}
             maxLength={1}
             value={digit}
@@ -64,14 +82,15 @@ export function OtpCodeInput({ value, onChange, disabled, error }: OtpCodeInputP
             onPaste={index === 0 ? handlePaste : undefined}
             disabled={disabled}
             className={cn(
-              "w-[52px] h-[52px] sm:w-[62px] sm:h-[62px] aspect-square bg-gray-2 border-2 rounded-lg text-center",
-              "font-semibold text-[24px] sm:text-[28px] leading-[1.1] text-gray-11 font-manrope",
+              "w-[64px] h-[64px] aspect-square bg-gray-2 border-2 rounded-lg text-center",
+              "font-extrabold text-[24px] leading-[1.1] text-gray-11 font-manrope",
               "focus:outline-none focus:border-primary-10 focus:ring-2 focus:ring-primary-10/20",
               "transition-all duration-200 disabled:opacity-50",
-              error ? "border-red-9" : "border-gray-6"
+              error ? "border-red-9" : "border-gray-6",
+              inputClassName
             )}
           />
-          {index === 2 && (
+          {showSeparator && index === 2 && (
             <div className="bg-gray-6 h-1 rounded-full w-2 shrink-0" />
           )}
         </React.Fragment>

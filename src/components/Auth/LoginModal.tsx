@@ -374,7 +374,7 @@ export function LoginModal() {
   const { isOpen, closeLoginModal, openLoginModal, data: loginModalData } =
     useLoginModal();
   const { openRegisterModal } = useRegisterModal();
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, finishLoginMfa, isLoading: authLoading } = useAuth();
   const {
     forgotPassword,
     resendCode,
@@ -390,6 +390,12 @@ export function LoginModal() {
     email: "",
     password: "",
   });
+
+  // Estado do passo MFA de login
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState("");
+  const [mfaConfirming, setMfaConfirming] = useState(false);
 
   const [forgotFlow, setForgotFlow] = useState<ForgotFlow>("idle");
   const [forgotEmail, setForgotEmail] = useState("");
@@ -436,10 +442,33 @@ export function LoginModal() {
       setForgotResendCooldown(0);
       setCredentialsError(false);
       setTurnstileToken(null);
+      setMfaToken(null);
+      setMfaCode("");
+      setMfaError("");
       mobileTurnstileRef.current?.reset();
       desktopTurnstileRef.current?.reset();
+    } else {
+      // Verifica se há um token MFA do Google OAuth pendente
+      const googleMfaToken = sessionStorage.getItem("googleMfaToken");
+      if (googleMfaToken) {
+        sessionStorage.removeItem("googleMfaToken");
+        setMfaToken(googleMfaToken);
+        setMfaCode("");
+        setMfaError("");
+      }
     }
   }, [isOpen]);
+
+  // Auto-abre o modal quando redireccionado do Google OAuth com MFA pendente
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("googleMfa") === "1") {
+      window.history.replaceState(null, "", window.location.pathname);
+      openLoginModal();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const forgotResendTimerActive = forgotResendCooldown > 0;
   useEffect(() => {
@@ -493,11 +522,18 @@ export function LoginModal() {
     try {
       const validatedData: LoginFormData = loginSchema.parse(formData);
 
-      await login({
+      const result = await login({
         emailOrCpf: validatedData.email,
         password: validatedData.password,
         ...(turnstileToken ? { turnstileToken } : {}),
       });
+
+      if (result?.mfaRequired) {
+        setMfaToken(result.mfaToken);
+        setMfaCode("");
+        setMfaError("");
+        return;
+      }
 
       toast.success("Login realizado com sucesso!");
       closeLoginModal();
@@ -656,6 +692,73 @@ export function LoginModal() {
     }
   };
 
+  const handleMfaConfirm = async () => {
+    if (!mfaToken) return;
+    if (mfaCode.length < 6) {
+      setMfaError("Preencha todos os 6 dígitos do código.");
+      return;
+    }
+    setMfaConfirming(true);
+    setMfaError("");
+    try {
+      await finishLoginMfa(mfaToken, mfaCode);
+      toast.success("Login realizado com sucesso!");
+      closeLoginModal();
+      setFormData({ email: "", password: "" });
+      setErrors({});
+    } catch (err: any) {
+      setMfaError(err?.message || "Código inválido. Tente novamente.");
+    } finally {
+      setMfaConfirming(false);
+    }
+  };
+
+  const mfaStepContent = mfaToken ? (
+    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
+        <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
+          Verificação em duas etapas
+        </h2>
+        <button
+          type="button"
+          onClick={() => { setMfaToken(null); setMfaCode(""); setMfaError(""); }}
+          className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+          aria-label="Cancelar verificação"
+        >
+          <X className="size-[18px] text-gray-12" />
+        </button>
+      </div>
+      <div className="flex flex-col gap-6 pt-4 pb-6 px-6">
+        <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+          Para continuar com a verificação em duas etapas em nossa plataforma, por favor, insira abaixo o código recebido por e-mail em sua caixa de entrada
+        </p>
+        <div className="flex flex-col gap-3">
+          <OtpCodeInput
+            value={mfaCode}
+            onChange={(v) => { setMfaCode(v); setMfaError(""); }}
+            disabled={mfaConfirming}
+            error={!!mfaError}
+            autoFocus
+            showSeparator={false}
+          />
+          {mfaError && (
+            <p className="text-sm text-red-9 font-family-dm-sans">{mfaError}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex px-6 pt-2 pb-8">
+        <Button
+          type="button"
+          onClick={handleMfaConfirm}
+          disabled={mfaConfirming || mfaCode.length < 6}
+          className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {mfaConfirming ? "Verificando..." : "Confirmar código"}
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
   const showForgotFlow = forgotFlow !== "idle";
 
   const forgotStepContent =
@@ -715,7 +818,11 @@ export function LoginModal() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="bg-gray-1 rounded-t-[12px] min-h-full relative overflow-hidden"
             >
-              {showForgotFlow ? (
+              {mfaToken ? (
+                <div className="flex flex-col min-h-full p-4 pt-6 pb-8">
+                  {mfaStepContent}
+                </div>
+              ) : showForgotFlow ? (
                 <div className="flex flex-col min-h-full p-4 pt-6 pb-8">
                   {forgotStepContent}
                 </div>
@@ -982,12 +1089,14 @@ export function LoginModal() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden ${showForgotFlow
+              className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden ${mfaToken || showForgotFlow
                   ? "max-w-[460px] bg-transparent"
                   : "max-w-[600px] bg-gray-1"
                 }`}
             >
-              {showForgotFlow ? (
+              {mfaToken ? (
+                mfaStepContent
+              ) : showForgotFlow ? (
                 forgotStepContent
               ) : (
                 <>

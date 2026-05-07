@@ -13,7 +13,6 @@ import {
   Phone,
   Mail,
   Lock,
-  Shield,
   ChevronDown,
   Plus,
   Search,
@@ -35,6 +34,7 @@ import {
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { TwoFASection } from "@/components/TwoFASection";
 
 /** Alinha valores antigos da API («Brasileira», etc.) ao nome do país da lista de cadastro. */
 function mapStoredCountryToPickerValue(raw: string | null | undefined): string {
@@ -282,7 +282,6 @@ export default function UserProfilePage() {
   const [nationalitySearch, setNationalitySearch] = useState("");
   const nationalityDropdownRef = useRef<HTMLDivElement>(null);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   const nationalityOptions = useMemo(
     () =>
@@ -322,16 +321,6 @@ export default function UserProfilePage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNationalityDropdown]);
-
-  const handleToggle2FA = () => {
-    const newValue = !twoFactorEnabled;
-    setTwoFactorEnabled(newValue);
-    if (newValue) {
-      toast.success("2FA ativado com sucesso!");
-    } else {
-      toast.success("2FA desativado com sucesso!");
-    }
-  };
 
   const uploadUserAvatar = async (file: File) => {
     setIsUploadingAvatar(true);
@@ -1027,72 +1016,12 @@ export default function UserProfilePage() {
 
           {/* Security Section */}
           <div className="flex flex-col gap-8 px-4 py-8 md:gap-10">
-            <div className="flex flex-col gap-4 items-start w-full md:flex-col md:gap-4">
-              <h2 className="text-lg font-bold leading-[1.1] text-gray-12 font-manrope md:text-xl md:font-bold">
-                Segurança
-              </h2>
-
-              <button
-                type="button"
-                onClick={handleToggle2FA}
-                className="flex h-12 w-full items-center justify-between gap-2.5 rounded-lg border-[1.5px] border-gray-6 bg-transparent px-3 md:hidden"
-              >
-                <div className="flex items-center gap-1 flex-1">
-                  <Shield className="size-6 shrink-0 text-gray-12" />
-                  <span className="text-sm text-gray-12 font-family-dm-sans text-left">
-                    Ligar dois fatores de segurança
-                  </span>
-                </div>
-                <div
-                  className={cn(
-                    "relative h-5 w-[37px] rounded-full transition-colors shrink-0 cursor-pointer",
-                    twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-                      twoFactorEnabled
-                        ? "translate-x-[17px]"
-                        : "translate-x-0.5"
-                    )}
-                  />
-                </div>
-              </button>
-
-              <p className="text-base text-gray-11 font-family-dm-sans">
-                Ative o 2FA para adicionar uma camada extra de segurança à sua
-                conta. Sempre que fizer login em um novo dispositivo, você
-                precisará informar um código enviado para o seu e-mail.
-              </p>
-              <button
-                type="button"
-                className="hidden md:flex h-12 w-full max-w-[400px] items-center justify-between gap-2.5 rounded-lg border border-gray-6 bg-transparent px-3"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Shield className="size-6 shrink-0 text-gray-12" />
-                  <span className="text-base text-gray-12">
-                    Ligar dois fatores de segurança
-                  </span>
-                </div>
-                <div
-                  onClick={handleToggle2FA}
-                  className={cn(
-                    "relative h-5 w-[37px] rounded-full transition-colors cursor-pointer",
-                    twoFactorEnabled ? "bg-primary-11" : "bg-gray-6"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-                      twoFactorEnabled
-                        ? "translate-x-[19px]"
-                        : "translate-x-0.5"
-                    )}
-                  />
-                </div>
-              </button>
-            </div>
+            <TwoFASection
+              userEmail={user?.email ?? ""}
+              initialEnabled={!!user?.mfaEnabled}
+              onToggled={refetchUser}
+              variant="user"
+            />
           </div>
         </div>
 

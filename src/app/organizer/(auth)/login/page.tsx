@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Mail, Lock, Eye, EyeOff, Info } from "lucide-react";
+import { OtpCodeInput } from "@/components/OtpCodeInput";
 import Image from "next/image";
 import Link from "next/link";
 import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
@@ -14,6 +15,7 @@ import { ZodError } from "zod";
 import { HotelsIcon } from "@/components/Icons/Organizer/HotelsIcon";
 import { publicSiteHref } from "@/lib/organizerHostNavigation";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import toast from "react-hot-toast";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -39,7 +41,7 @@ function classifyLoginError(msg: string): { kind: LoginErrorKind; text: string }
 export default function OrganizerLoginPage() {
   const router = useRouter();
   const orgNav = useOrganizerNavigate();
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, finishLoginMfa, isLoading: authLoading } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState<{ kind: LoginErrorKind; text: string } | null>(null);
@@ -47,6 +49,12 @@ export default function OrganizerLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  // Estado do passo MFA
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState("");
+  const [mfaConfirming, setMfaConfirming] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -65,12 +73,21 @@ export default function OrganizerLoginPage() {
     setIsSubmitting(true);
     try {
       const validatedData: LoginFormData = loginSchema.parse(formData);
-      await login({
+      const result = await login({
         emailOrCpf: validatedData.email,
         password: validatedData.password,
         accountType: "ORGANIZER",
         ...(turnstileToken ? { turnstileToken } : {}),
       });
+
+      if (result?.mfaRequired) {
+        setMfaToken(result.mfaToken);
+        setMfaCode("");
+        setMfaError("");
+        return;
+      }
+
+      toast.success("Login realizado com sucesso!");
       router.refresh();
       orgNav.push("/organizer/events");
       setFormData({ email: "", password: "" });
@@ -105,6 +122,26 @@ export default function OrganizerLoginPage() {
       </Link>
     </p>
   );
+
+  const handleMfaConfirm = async () => {
+    if (!mfaToken) return;
+    if (mfaCode.length < 6) {
+      setMfaError("Preencha todos os 6 dígitos do código.");
+      return;
+    }
+    setMfaConfirming(true);
+    setMfaError("");
+    try {
+      await finishLoginMfa(mfaToken, mfaCode, "ORGANIZER");
+      toast.success("Login realizado com sucesso!");
+      router.refresh();
+      orgNav.push("/organizer/events");
+    } catch (err: any) {
+      setMfaError(err?.message || "Código inválido. Tente novamente.");
+    } finally {
+      setMfaConfirming(false);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-gray-2 flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden">
@@ -153,6 +190,49 @@ export default function OrganizerLoginPage() {
         {/* Center block */}
         <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:justify-center lg:min-h-0 lg:gap-8">
 
+          {mfaToken ? (
+            /* Passo de verificação MFA */
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                  Verificação em duas etapas
+                </h1>
+                <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
+                  Para continuar com a verificação em duas etapas em nossa plataforma, por favor, insira abaixo o código recebido por e-mail em sua caixa de entrada
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <OtpCodeInput
+                  value={mfaCode}
+                  onChange={(v) => { setMfaCode(v); setMfaError(""); }}
+                  disabled={mfaConfirming}
+                  error={!!mfaError}
+                  autoFocus
+                  showSeparator={false}
+                />
+                {mfaError && (
+                  <p className="text-sm text-red-11 font-family-dm-sans">{mfaError}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button
+                  type="button"
+                  onClick={handleMfaConfirm}
+                  disabled={mfaConfirming || mfaCode.length < 6}
+                >
+                  {mfaConfirming ? "Verificando..." : "Confirmar código"}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => { setMfaToken(null); setMfaCode(""); setMfaError(""); }}
+                  className="text-sm text-gray-11 hover:text-gray-12 underline text-center"
+                >
+                  Voltar ao login
+                </button>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Identity */}
           <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-8">
             <div className="size-[72px] lg:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3 lg:p-4">
@@ -265,6 +345,8 @@ export default function OrganizerLoginPage() {
               {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
             </Button>
           </form>
+          </>
+          )}
         </div>
 
         {/* Footer */}
