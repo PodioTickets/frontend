@@ -618,9 +618,8 @@ export default function EventPage() {
                 backgroundPosition: "top",
                 backgroundRepeat: "no-repeat",
               }}
-            >
-              <div className="absolute bottom-0 left-0 w-full h-[40%] bg-linear-to-b from-transparent to-white" />
-            </div>
+            />
+            <div className="absolute bottom-0 left-0 w-full h-[40%] bg-linear-to-b from-transparent to-gray-2" />
           </div>
         )}
 

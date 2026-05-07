@@ -356,7 +356,7 @@ export interface CreateEventRequest {
   bannerUrl?: string;
   /** Imagem do card na listagem; API pode persistir como `logoUrl` na resposta GET. */
   cardImageUrl?: string;
-  status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" | "SUSPENDED";
+  status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" | "SUSPENDED" | "REVISION";
   /** Quando true, inscrições/vendas do evento ficam pausadas (reativar com false). */
   isSuspended?: boolean;
   /**
@@ -1459,7 +1459,11 @@ export class OrganizerService {
   }
 
   async publishEvent(id: string): Promise<Event> {
-    return this.updateEvent(id, { status: "PUBLISHED" });
+    const { data: body } = await this.apiClient.post<{
+      message?: string;
+      data: { event: Event };
+    }>(`/api/v1/events/${id}/publish`);
+    return body.data.event
   }
 
   /** PUBLISHED → SUSPENDED. Ver EVENT_SUSPEND_ORGANIZER_API.md */

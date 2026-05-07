@@ -140,6 +140,10 @@ export default function OrganizerEventsPage() {
         label: "Públicado",
         className: "bg-[#21835D] text-[#FBFEFB]",
       },
+      REVISION: {
+        label: "Em revisão",
+        className: "bg-yellow-11 text-yellow-1",
+      },
       CANCELLED: { label: "Cancelado", className: "bg-red-10/20 text-red-11" },
       COMPLETED: {
         label: "Concluído",
@@ -303,6 +307,7 @@ export default function OrganizerEventsPage() {
                       const statusBadge = getStatusBadge(event);
                       const registrations = getEventRegistrations(event);
                       const isCreationDraft = event.status === "DRAFT";
+                      const isRevision = event.status === "REVISION"
 
                       return (
                         <tr
@@ -354,34 +359,34 @@ export default function OrganizerEventsPage() {
                                   <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
                                 </Link>
                               ) : null
-                            ) : (
+                            ) : isRevision ? null : (
                               <div className="flex items-center gap-1 justify-center">
                                 {canViewDashboard && (
-                                <Link
-                                  href={`/organizer/events/${event.id}/dashboard`}
-                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                  title="Dashboard"
-                                >
-                                  <DashboardIcon className="size-4 text-gray-11" />
-                                </Link>
+                                  <Link
+                                    href={`/organizer/events/${event.id}/dashboard`}
+                                    className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                    title="Dashboard"
+                                  >
+                                    <DashboardIcon className="size-4 text-gray-11" />
+                                  </Link>
                                 )}
                                 {(canEditEvent || canViewEvent) && (
-                                <Link
-                                  href={`/organizer/events/${event.id}/edit`}
-                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                  title={canEditEvent ? "Editar" : "Visualizar"}
-                                >
-                                  <PencilIcon className="size-4 text-gray-11" />
-                                </Link>
+                                  <Link
+                                    href={`/organizer/events/${event.id}/edit`}
+                                    className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                    title={canEditEvent ? "Editar" : "Visualizar"}
+                                  >
+                                    <PencilIcon className="size-4 text-gray-11" />
+                                  </Link>
                                 )}
                                 {canViewFinancial && (
-                                <Link
-                                  href={`/organizer/events/${event.id}/financial`}
-                                  className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                  title="Ver financeiro"
-                                >
-                                  <MoneyIcon className="size-5 text-gray-11" />
-                                </Link>
+                                  <Link
+                                    href={`/organizer/events/${event.id}/financial`}
+                                    className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                    title="Ver financeiro"
+                                  >
+                                    <MoneyIcon className="size-5 text-gray-11" />
+                                  </Link>
                                 )}
                                 <Link
                                   href={`/organizer/events/${event.id}/registrations`}
@@ -414,56 +419,56 @@ export default function OrganizerEventsPage() {
                                   >
                                     <div className="flex flex-col gap-0.5">
                                       {canViewCoupons && (
-                                      <Link
-                                        href={`/organizer/events/${event.id}/discount/cupom`}
-                                        onClick={() => setMenuOpenForId(null)}
-                                        className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                      >
-                                        Cupom
-                                      </Link>
+                                        <Link
+                                          href={`/organizer/events/${event.id}/discount/cupom`}
+                                          onClick={() => setMenuOpenForId(null)}
+                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                        >
+                                          Cupom
+                                        </Link>
                                       )}
                                       {canViewCoupons && (
-                                      <Link
-                                        href={`/organizer/events/${event.id}/discount/voucher`}
-                                        onClick={() => setMenuOpenForId(null)}
-                                        className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                      >
-                                        Voucher
-                                      </Link>
+                                        <Link
+                                          href={`/organizer/events/${event.id}/discount/voucher`}
+                                          onClick={() => setMenuOpenForId(null)}
+                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                        >
+                                          Voucher
+                                        </Link>
                                       )}
                                       {canViewPixel && (
-                                      <Link
-                                        href={`/organizer/events/${event.id}/ads`}
-                                        onClick={() => setMenuOpenForId(null)}
-                                        className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                      >
-                                        ADS
-                                      </Link>
+                                        <Link
+                                          href={`/organizer/events/${event.id}/ads`}
+                                          onClick={() => setMenuOpenForId(null)}
+                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                        >
+                                          ADS
+                                        </Link>
                                       )}
                                       {canEditEvent && (
-                                      <button
-                                        type="button"
-                                        disabled={
-                                          suspendingId === event.id ||
-                                          (isEventSuspended(event)
-                                            ? event.status !== "SUSPENDED"
-                                            : event.status !== "PUBLISHED")
-                                        }
-                                        onClick={() =>
-                                          isEventSuspended(event)
-                                            ? openResumeModal(event)
-                                            : openSuspendModal(event)
-                                        }
-                                        className={cn(
-                                          "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
-                                          "hover:bg-gray-3 text-gray-12",
-                                          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                                        )}
-                                      >
-                                        {isEventSuspended(event)
-                                          ? "Reativar evento"
-                                          : "Suspender evento"}
-                                      </button>
+                                        <button
+                                          type="button"
+                                          disabled={
+                                            suspendingId === event.id ||
+                                            (isEventSuspended(event)
+                                              ? event.status !== "SUSPENDED"
+                                              : event.status !== "PUBLISHED")
+                                          }
+                                          onClick={() =>
+                                            isEventSuspended(event)
+                                              ? openResumeModal(event)
+                                              : openSuspendModal(event)
+                                          }
+                                          className={cn(
+                                            "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
+                                            "hover:bg-gray-3 text-gray-12",
+                                            "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                          )}
+                                        >
+                                          {isEventSuspended(event)
+                                            ? "Reativar evento"
+                                            : "Suspender evento"}
+                                        </button>
                                       )}
                                     </div>
                                   </PopoverContent>

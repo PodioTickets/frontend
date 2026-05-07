@@ -5,11 +5,12 @@ import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { FileText, Megaphone, TrendingUp } from "lucide-react";
+import { FileText, Send, TrendingUp, Users, File } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { LogOutIcon } from "@/components/Icons/LogOutIcon";
+import { AuditRetencaoIcon } from "@/components/Icons/AuditRetencaoIcon";
 import Image from "next/image";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { adminExternalHref } from "@/lib/adminPathPresentation";
@@ -17,8 +18,11 @@ import { useAdminPathname } from "@/hooks/useAdminPathname";
 
 const NAV_ITEMS = [
   { label: "Eventos", href: "/admin/events", icon: TicketIcon },
+  { label: "Organizadores", href: "/admin/organizers", icon: Users },
   { label: "Repasse", href: "/admin/repasse", icon: TrendingUp },
-  { label: "Anúncios", href: "/admin/anuncios", icon: Megaphone },
+  { label: "Aud. Retenção", href: "/admin/auditoria-retencao", icon: AuditRetencaoIcon },
+  { label: "Aud. Evento", href: "/admin/auditoria-evento", icon: File },
+  { label: "Anúncios", href: "/admin/anuncios", icon: Send },
   { label: "Logs", href: "/admin/logs", icon: FileText },
 ] as const;
 

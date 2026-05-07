@@ -9,11 +9,8 @@ import type { LoginResponse } from "../user/UserService";
 const ADMIN_AUDIT_LOGS_PATH =
   "/api/v1/organizations/admin/audit-logs";
 
-/** Listagem paginada de organizações para filtros do admin (ex.: log de auditoria). */
-const ADMIN_ORGANIZATIONS_PATH =
-  "/api/v1/organizations/admin/organizations";
+const ADMIN_ORGANIZATIONS_PATH = "/api/v1/admin/organizations";
 
-/** Item enxuto de `GET /api/v1/organizations/admin/organizations` (+ aninhado em audit log). */
 export interface AdminAuditOrganization {
   id: string;
   name?: string;
@@ -24,6 +21,7 @@ export interface AdminAuditOrganization {
   phone?: string | null;
   city?: string | null;
   state?: string | null;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
   memberCount?: number;
@@ -114,6 +112,8 @@ function parseOrganization(
         ? o.updated_at
         : undefined;
 
+  const isActive = typeof o.isActive === "boolean" ? o.isActive : undefined;
+
   let memberCount: number | undefined;
   let eventCount: number | undefined;
   const rawCount = o._count;
@@ -133,6 +133,7 @@ function parseOrganization(
     phone,
     city,
     state,
+    isActive,
     createdAt,
     updatedAt,
     memberCount,
@@ -416,12 +417,13 @@ export class AdminService {
   async getAdminOrganizations(params?: {
     page?: number;
     limit?: number;
-    q?: string;
+    search?: string;
+    isActive?: boolean;
   }): Promise<{
     items: AdminAuditOrganization[];
     pagination: OrganizationAuditLogsPagination;
   }> {
-    const { page = 1, limit = 20, q } = params || {};
+    const { page = 1, limit = 20, search, isActive } = params || {};
     const safeLimit = Math.min(100, Math.max(1, limit));
 
     const res = await this.apiClient.get<Record<string, unknown>>(
@@ -430,7 +432,8 @@ export class AdminService {
         params: {
           page,
           limit: safeLimit,
-          ...(q?.trim() ? { q: q.trim() } : {}),
+          ...(search?.trim() ? { search: search.trim() } : {}),
+          ...(isActive !== undefined ? { isActive } : {}),
         },
       }
     );

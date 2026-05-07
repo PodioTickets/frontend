@@ -31,7 +31,9 @@
       "Bash(echo \"TSC_EXIT:$?\")",
       "Bash(echo \"EXIT:$?\")",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\" -Filter \"middleware*\" -Recurse -Depth 2)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "mcp__claude_ai_Figma__get_screenshot",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\organizer\\\\\\(logged\\)\\\\events\\\\[id]\" -Recurse | Where-Object { $_.Extension -eq '.tsx' } | ForEach-Object { $_.FullName -replace [regex]::Escape\\('C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\'\\), '' } | Sort-Object)"
     ]
   },
   "disabledMcpjsonServers": [

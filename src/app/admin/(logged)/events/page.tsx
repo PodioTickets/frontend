@@ -11,7 +11,21 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
+import { organizerService } from "@/services";
 import toast from "react-hot-toast";
+import { Button } from "@/components/Button";
+import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { MoneyIcon } from "@/components/Icons/MoneyIcon";
+import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
+import { UsersIcon } from "@/components/Icons/Organizer/UsersIcon";
+import { ThreePointsIcon } from "@/components/Icons/Organizer/ThreePointsIcon";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
+import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,7 +77,7 @@ function formatDate(iso?: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]}, ${d.getFullYear()}`;
 }
 
@@ -76,11 +90,11 @@ function getInitials(name: string): string {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<EventStatus, { label: string; bg: string; text: string }> = {
-  DRAFT:     { label: "Rascunho",  bg: "bg-gray-4",    text: "text-gray-12" },
+  DRAFT: { label: "Rascunho", bg: "bg-gray-4", text: "text-gray-12" },
   PUBLISHED: { label: "Publicado", bg: "bg-primary-11", text: "text-primary-1" },
-  SUSPENDED: { label: "Suspenso",  bg: "bg-red-11",    text: "text-red-1" },
-  CANCELLED: { label: "Cancelado", bg: "bg-red-3",     text: "text-red-11" },
-  COMPLETED: { label: "Concluído", bg: "bg-gray-6",    text: "text-gray-12" },
+  SUSPENDED: { label: "Suspenso", bg: "bg-red-11", text: "text-red-1" },
+  CANCELLED: { label: "Cancelado", bg: "bg-red-3", text: "text-red-11" },
+  COMPLETED: { label: "Concluído", bg: "bg-gray-6", text: "text-gray-12" },
 };
 
 function StatusBadge({ status }: { status: EventStatus }) {
@@ -89,6 +103,20 @@ function StatusBadge({ status }: { status: EventStatus }) {
     <span className={cn("inline-flex items-center rounded px-2.5 py-1 text-xs font-normal font-family-dm-sans whitespace-nowrap", cfg.bg, cfg.text)}>
       {cfg.label}
     </span>
+  );
+}
+
+// ─── Action icon button ───────────────────────────────────────────────────────
+
+function ActionIconLink({ href, title, children }: { href: string; title: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      title={title}
+      className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors shrink-0"
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -141,20 +169,20 @@ function PaginationBar({
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS = [
-  { value: "",          label: "Todos os status" },
+  { value: "", label: "Todos os status" },
   { value: "PUBLISHED", label: "Publicado" },
-  { value: "DRAFT",     label: "Rascunho" },
+  { value: "DRAFT", label: "Rascunho" },
   { value: "SUSPENDED", label: "Suspenso" },
   { value: "CANCELLED", label: "Cancelado" },
   { value: "COMPLETED", label: "Concluído" },
 ];
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: "createdAt",     label: "Data de criação" },
-  { value: "eventDate",     label: "Data do evento" },
-  { value: "name",          label: "Nome" },
+  { value: "createdAt", label: "Data de criação" },
+  { value: "eventDate", label: "Data do evento" },
+  { value: "name", label: "Nome" },
   { value: "registrations", label: "Inscritos" },
-  { value: "revenue",       label: "Receita" },
+  { value: "revenue", label: "Receita" },
 ];
 
 const inputShell =
@@ -175,14 +203,18 @@ export default function AdminEventsPage() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
+  const [fetchKey, setFetchKey] = useState(0);
 
-  // Debounce search
+  const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
+  const [suspendingId, setSuspendingId] = useState<string | null>(null);
+  const [suspendModalEvent, setSuspendModalEvent] = useState<AdminEvent | null>(null);
+  const [resumeModalEvent, setResumeModalEvent] = useState<AdminEvent | null>(null);
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset page on filter change
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
@@ -216,13 +248,140 @@ export default function AdminEventsPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [page, debouncedSearch, statusFilter, sortBy, sortOrder]);
+  }, [page, debouncedSearch, statusFilter, sortBy, sortOrder, fetchKey]);
+
+  const openSuspendModal = (ev: AdminEvent) => {
+    if (ev.status !== "PUBLISHED") {
+      toast.error("Somente eventos publicados podem ser suspensos.");
+      setMenuOpenForId(null);
+      return;
+    }
+    setMenuOpenForId(null);
+    setSuspendModalEvent(ev);
+  };
+
+  const openResumeModal = (ev: AdminEvent) => {
+    if (ev.status !== "SUSPENDED") {
+      toast.error("Somente eventos suspensos podem ser reativados desta forma.");
+      setMenuOpenForId(null);
+      return;
+    }
+    setMenuOpenForId(null);
+    setResumeModalEvent(ev);
+  };
+
+  const handleSuspendConfirm = async () => {
+    if (!suspendModalEvent) return;
+    setSuspendingId(suspendModalEvent.id);
+    try {
+      const { message } = await organizerService.suspendEvent(suspendModalEvent.id);
+      toast.success(message || "Evento suspenso com sucesso.");
+      setFetchKey((k) => k + 1);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? "Não foi possível suspender o evento.");
+    } finally {
+      setSuspendingId(null);
+      setSuspendModalEvent(null);
+    }
+  };
+
+  const handleResumeConfirm = async () => {
+    if (!resumeModalEvent) return;
+    setSuspendingId(resumeModalEvent.id);
+    try {
+      const { message } = await organizerService.resumeEvent(resumeModalEvent.id);
+      toast.success(message || "Evento reativado com sucesso.");
+      setFetchKey((k) => k + 1);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? "Não foi possível reativar o evento.");
+    } finally {
+      setSuspendingId(null);
+      setResumeModalEvent(null);
+    }
+  };
 
   const toggleSortOrder = () => setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
   const filtersActive = Boolean(debouncedSearch) || Boolean(statusFilter);
 
+  // ─── Mobile actions ───────────────────────────────────────────────────────
+
+  const renderMobileActions = (ev: AdminEvent) => {
+    if (ev.status === "DRAFT") {
+      return (
+        <Link href={`/organizer/events/new?resume=${ev.id}`} className="block">
+          <Button variant="outline" className="h-10 w-full border-gray-6 text-gray-12 font-semibold font-family-dm-sans">
+            Continuar criação
+          </Button>
+        </Link>
+      );
+    }
+
+    return (
+      <div className="flex gap-2">
+        <ActionIconLink href={`/admin/events/${ev.id}/dashboard`} title="Dashboard">
+          <DashboardIcon className="size-4 text-gray-11" />
+        </ActionIconLink>
+        <ActionIconLink href={`/admin/events/${ev.id}/edit`} title="Editar">
+          <PencilIcon className="size-4 text-gray-11" />
+        </ActionIconLink>
+        <ActionIconLink href={`/admin/events/${ev.id}/financial`} title="Financeiro">
+          <MoneyIcon className="size-5 text-gray-11" />
+        </ActionIconLink>
+        <ActionIconLink href={`/admin/events/${ev.id}/registrations`} title="Inscritos">
+          <UsersIcon className="size-5 text-gray-11" />
+        </ActionIconLink>
+        <Popover
+          open={menuOpenForId === ev.id}
+          onOpenChange={(open) => setMenuOpenForId(open ? ev.id : null)}
+        >
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
+              aria-label="Mais opções"
+            >
+              <ThreePointsIcon className="size-5 text-gray-11" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" sideOffset={6} className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg">
+            <div className="flex flex-col gap-0.5">
+              <Link href={`/admin/events/${ev.id}/discount/cupom`} onClick={() => setMenuOpenForId(null)} className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12">Cupom</Link>
+              <Link href={`/admin/events/${ev.id}/discount/voucher`} onClick={() => setMenuOpenForId(null)} className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12">Voucher</Link>
+              <Link href={`/admin/events/${ev.id}/ads`} onClick={() => setMenuOpenForId(null)} className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12">ADS</Link>
+              {(ev.status === "PUBLISHED" || ev.status === "SUSPENDED") && (
+                <button
+                  type="button"
+                  disabled={suspendingId === ev.id}
+                  onClick={() => ev.status === "SUSPENDED" ? openResumeModal(ev) : openSuspendModal(ev)}
+                  className="w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {ev.status === "SUSPENDED" ? "Reativar evento" : "Suspender evento"}
+                </button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-2 pb-10">
+      <SuspendEventModal
+        open={!!suspendModalEvent}
+        onClose={() => setSuspendModalEvent(null)}
+        event={suspendModalEvent}
+        onConfirm={handleSuspendConfirm}
+        loading={suspendingId === suspendModalEvent?.id}
+      />
+      <ResumeEventModal
+        open={!!resumeModalEvent}
+        onClose={() => setResumeModalEvent(null)}
+        event={resumeModalEvent}
+        onConfirm={handleResumeConfirm}
+        loading={suspendingId === resumeModalEvent?.id}
+      />
+
       <div className="max-w-[1222px] mx-auto w-full">
 
         {/* Header */}
@@ -238,7 +397,6 @@ export default function AdminEventsPage() {
         {/* Filters */}
         <div className="rounded-xl border border-gray-6 bg-gray-1 p-3 md:p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)] mb-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:flex-wrap">
-            {/* Search */}
             <div className="relative flex-1 min-w-0 sm:min-w-[240px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-11 pointer-events-none" />
               <input
@@ -249,8 +407,6 @@ export default function AdminEventsPage() {
                 className={cn(inputShell, "pl-11")}
               />
             </div>
-
-            {/* Status */}
             <div className="w-full sm:w-[min(100%,200px)] shrink-0">
               <select
                 value={statusFilter}
@@ -263,8 +419,6 @@ export default function AdminEventsPage() {
                 ))}
               </select>
             </div>
-
-            {/* Sort by */}
             <div className="w-full sm:w-[min(100%,190px)] shrink-0">
               <select
                 value={sortBy}
@@ -277,8 +431,6 @@ export default function AdminEventsPage() {
                 ))}
               </select>
             </div>
-
-            {/* Sort order toggle */}
             <button
               type="button"
               onClick={toggleSortOrder}
@@ -327,15 +479,7 @@ export default function AdminEventsPage() {
                     <StatusBadge status={ev.status} />
                   </div>
 
-                  {ev.slug && (
-                    <Link
-                      href={`/events/${ev.slug}`}
-                      target="_blank"
-                      className="h-10 w-full border border-gray-6 rounded-lg flex items-center justify-center text-sm font-semibold text-gray-12 font-family-dm-sans hover:bg-gray-3 transition-colors"
-                    >
-                      Ver evento
-                    </Link>
-                  )}
+                  {renderMobileActions(ev)}
                 </div>
               );
             })
@@ -349,7 +493,7 @@ export default function AdminEventsPage() {
         {/* Desktop table */}
         <div className="hidden md:block rounded-xl border border-gray-6 bg-gray-1 overflow-hidden shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px]">
+            <table className="w-full min-w-[900px]">
               <thead>
                 <tr className="bg-gray-3 border-b border-gray-6">
                   {["Evento", "Organização", "Data", "Inscritos", "Receita", "Status"].map((col) => (
@@ -382,19 +526,21 @@ export default function AdminEventsPage() {
                     </td>
                   </tr>
                 ) : (
-                  events.map((ev) => {
-                    const eventImg = ev.logoUrl ?? ev.bannerUrl;
-                    const orgImg = ev.organization.logoUrl;
+                  events.map((event) => {
+                    const eventImg = event.logoUrl ?? event.bannerUrl;
+                    const orgImg = event.organization.logoUrl;
+                    const isCreationDraft = event.status === "DRAFT";
+
                     return (
-                      <tr key={ev.id} className="hover:bg-gray-2/80 transition-colors">
+                      <tr key={event.id} className="hover:bg-gray-2/80 transition-colors">
                         {/* Evento */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
                             <div className="size-10 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative bg-gray-4 flex items-center justify-center text-xs font-bold text-gray-11">
-                              {eventImg ? <Image src={eventImg} alt={ev.name} fill className="object-cover" /> : getInitials(ev.name)}
+                              {eventImg ? <Image src={eventImg} alt={event.name} fill className="object-cover" /> : getInitials(event.name)}
                             </div>
                             <span className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2 max-w-[200px]">
-                              {ev.name}
+                              {event.name}
                             </span>
                           </div>
                         </td>
@@ -403,10 +549,10 @@ export default function AdminEventsPage() {
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
                             <div className="size-8 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative bg-gray-4 flex items-center justify-center text-xs font-bold text-gray-11">
-                              {orgImg ? <Image src={orgImg} alt={ev.organization.name} fill className="object-cover" /> : getInitials(ev.organization.name)}
+                              {orgImg ? <Image src={orgImg} alt={event.organization.name} fill className="object-cover" /> : getInitials(event.organization.name)}
                             </div>
                             <span className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate max-w-[140px]">
-                              {ev.organization.name}
+                              {event.organization.name}
                             </span>
                           </div>
                         </td>
@@ -414,41 +560,138 @@ export default function AdminEventsPage() {
                         {/* Data */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {formatDate(ev.eventDate)}
+                            {formatDate(event.eventDate)}
                           </span>
                         </td>
 
                         {/* Inscritos */}
                         <td className="py-3.5 px-4 text-center">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {ev._count?.registrations ?? 0}
+                            {event._count?.registrations ?? 0}
                           </span>
                         </td>
 
                         {/* Receita */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {formatCurrency(ev.totalSales ?? ev.totalRevenue ?? 0)}
+                            {formatCurrency(event.totalSales ?? event.totalRevenue ?? 0)}
                           </span>
                         </td>
 
                         {/* Status */}
                         <td className="py-3.5 px-4 text-center">
-                          <StatusBadge status={ev.status} />
+                          <StatusBadge status={event.status} />
                         </td>
 
                         {/* Ações */}
-                        <td className="py-3 px-4 text-right">
-                          {ev.slug ? (
+                        <td className="py-4 px-5 text-center max-w-[200px]">
+                          {isCreationDraft ? (
                             <Link
-                              href={`/events/${ev.slug}`}
-                              target="_blank"
-                              className="inline-flex h-9 items-center px-3 rounded-lg border border-gray-6 text-sm font-semibold text-gray-12 font-family-dm-sans hover:bg-gray-3 transition-colors"
+                              href={`/events/new?resume=${event.id}`}
                             >
-                              Ver evento
+                              <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
                             </Link>
                           ) : (
-                            <span className="text-sm text-gray-11 font-family-dm-sans">—</span>
+                            <div className="flex items-center gap-1 justify-center justify-evenly">
+                              <Link
+                                href={`/admin/events/${event.id}/dashboard`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title="Dashboard"
+                              >
+                                <DashboardIcon className="size-4 text-gray-11" />
+                              </Link>
+                              <Link
+                                href={`/admin/events/${event.id}/edit`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title={"Editar"}
+                              >
+                                <PencilIcon className="size-4 text-gray-11" />
+                              </Link>
+                              <Link
+                                href={`/admin/events/${event.id}/financial`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title="Ver financeiro"
+                              >
+                                <MoneyIcon className="size-5 text-gray-11" />
+                              </Link>
+                              <Link
+                                href={`/admin/events/${event.id}/registrations`}
+                                className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                title="Ver inscritos"
+                              >
+                                <UsersIcon className="size-5 text-gray-11" />
+                              </Link>
+
+                              <Popover
+                                open={menuOpenForId === event.id}
+                                onOpenChange={(open) =>
+                                  setMenuOpenForId(open ? event.id : null)
+                                }
+                              >
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                    title="Mais opções"
+                                    aria-label="Mais opções"
+                                  >
+                                    <ThreePointsIcon className="size-5 text-gray-11" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  align="end"
+                                  sideOffset={6}
+                                  className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg"
+                                >
+                                  <div className="flex flex-col gap-0.5">
+                                    <Link
+                                      href={`/admin/events/${event.id}/discount/cupom`}
+                                      onClick={() => setMenuOpenForId(null)}
+                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    >
+                                      Cupom
+                                    </Link>
+                                    <Link
+                                      href={`/admin/events/${event.id}/discount/voucher`}
+                                      onClick={() => setMenuOpenForId(null)}
+                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    >
+                                      Voucher
+                                    </Link>
+                                    <Link
+                                      href={`/admin/events/${event.id}/ads`}
+                                      onClick={() => setMenuOpenForId(null)}
+                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    >
+                                      ADS
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        suspendingId === event.id ||
+                                        (event.status === "SUSPENDED"
+                                          ? event.status !== "SUSPENDED"
+                                          : event.status !== "PUBLISHED")
+                                      }
+                                      onClick={() =>
+                                        event.status === "SUSPENDED"
+                                          ? openResumeModal(event)
+                                          : openSuspendModal(event)
+                                      }
+                                      className={cn(
+                                        "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
+                                        "hover:bg-gray-3 text-gray-12",
+                                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                      )}
+                                    >
+                                      {event.status === "SUSPENDED"
+                                        ? "Reativar evento"
+                                        : "Suspender evento"}
+                                    </button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                           )}
                         </td>
                       </tr>
