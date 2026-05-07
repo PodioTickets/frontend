@@ -156,12 +156,12 @@ export default function OrganizerLoginPage() {
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[44%] to-[rgba(32,32,32,0.7)]" />
-        <div className="absolute top-10 inset-x-0 flex justify-center">
+        <div className="absolute top-4 left-4 flex justify-center">
           <Image
-            src="/images/logo_organizers_mobile.png"
+            src="/images/logo.png"
             alt="Pódio Ticket"
-            width={164}
-            height={28}
+            width={44}
+            height={44}
             className="object-contain"
             priority
           />
@@ -232,120 +232,120 @@ export default function OrganizerLoginPage() {
               </div>
             </div>
           ) : (
-          <>
-          {/* Identity */}
-          <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-8">
-            <div className="size-[72px] lg:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3 lg:p-4">
-              <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-4">
-                <HotelsIcon className="size-9 lg:size-[52px] text-gray-12" />
-              </div>
-            </div>
-            <div className="flex flex-col gap-1 lg:gap-3 lg:items-center lg:text-center">
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                Conecte sua conta
-              </h1>
-              <p className="text-sm lg:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
-                Plataforma dedicada a organizadores
-              </p>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="w-full h-px bg-gray-6" />
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
-            {/* Email */}
-            <div className="flex flex-col gap-2">
-              <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Mail className="size-5 text-gray-11" />
+            <>
+              {/* Identity */}
+              <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-8">
+                <div className="size-[72px] lg:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3 lg:p-4">
+                  <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-4">
+                    <HotelsIcon className="size-9 lg:size-[52px] text-gray-12" />
+                  </div>
                 </div>
-                <Input
-                  type="email"
-                  placeholder="Digite seu email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className={`pl-10 h-12 ${errors.email ? "border-red-11" : ""}`}
-                  disabled={isSubmitting || authLoading}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-red-11 font-family-dm-sans">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-2">
-              <label className="text-base text-gray-12 font-family-dm-sans">Senha</label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Lock className="size-5 text-gray-11" />
+                <div className="flex flex-col gap-1 lg:gap-3 lg:items-center lg:text-center">
+                  <h1 className="text-xl lg:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                    Conecte sua conta
+                  </h1>
+                  <p className="text-sm lg:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
+                    Plataforma exclusiva para organizadores
+                  </p>
                 </div>
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Digite sua senha"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  className={`pl-10 pr-10 h-12 ${errors.password ? "border-red-11" : ""}`}
-                  disabled={isSubmitting || authLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              </div>
+
+              {/* Divider */}
+              <div className="w-full h-px bg-gray-6" />
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+                {/* Email */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Mail className="size-5 text-gray-11" />
+                    </div>
+                    <Input
+                      type="email"
+                      placeholder="Digite seu email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      className={`pl-10 h-12 ${errors.email ? "border-red-11" : ""}`}
+                      disabled={isSubmitting || authLoading}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-red-11 font-family-dm-sans">{errors.email}</p>
+                  )}
+                </div>
+
+                {/* Password */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-base text-gray-12 font-family-dm-sans">Senha</label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Lock className="size-5 text-gray-11" />
+                    </div>
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Digite sua senha"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      className={`pl-10 pr-10 h-12 ${errors.password ? "border-red-11" : ""}`}
+                      disabled={isSubmitting || authLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((p) => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-red-11 font-family-dm-sans">{errors.password}</p>
+                  )}
+                </div>
+
+                {/* Error banner */}
+                {loginError && (
+                  <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
+                    <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
+                    <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
+                      {loginError.text}
+                    </p>
+                  </div>
+                )}
+
+                {/* Forgot password */}
+                <div className="flex justify-end w-full">
+                  <Link
+                    href="/organizer/forgot-password"
+                    className="text-sm lg:text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors underline"
+                  >
+                    Esqueci minha senha
+                  </Link>
+                </div>
+
+                {/* Captcha */}
+                {TURNSTILE_SITE_KEY && (
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setTurnstileToken}
+                    onError={() => setTurnstileToken(null)}
+                    onExpire={() => setTurnstileToken(null)}
+                    options={{ theme: "auto", size: "flexible" }}
+                    className="w-full"
+                  />
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
                 >
-                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-red-11 font-family-dm-sans">{errors.password}</p>
-              )}
-            </div>
-
-            {/* Error banner */}
-            {loginError && (
-              <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
-                <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
-                <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
-                  {loginError.text}
-                </p>
-              </div>
-            )}
-
-            {/* Forgot password */}
-            <div className="flex justify-end w-full">
-              <Link
-                href="/organizer/forgot-password"
-                className="text-sm lg:text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors underline"
-              >
-                Esqueci minha senha
-              </Link>
-            </div>
-
-            {/* Captcha */}
-            {TURNSTILE_SITE_KEY && (
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={TURNSTILE_SITE_KEY}
-                onSuccess={setTurnstileToken}
-                onError={() => setTurnstileToken(null)}
-                onExpire={() => setTurnstileToken(null)}
-                options={{ theme: "auto", size: "flexible" }}
-                className="w-full"
-              />
-            )}
-
-            <Button
-              type="submit"
-              disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
-            >
-              {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
-            </Button>
-          </form>
-          </>
+                  {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
+                </Button>
+              </form>
+            </>
           )}
         </div>
 
