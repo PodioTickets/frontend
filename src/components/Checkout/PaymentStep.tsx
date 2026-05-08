@@ -1297,10 +1297,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     ? currentOrder.pricing.total / 100
     : participantsWithTickets.reduce((sum, { ticket }) => sum + getTicketPrice(ticket), 0);
 
-  // Usa valores do servidor quando disponíveis (authoritative), senão fallback local.
-  const serviceFee = currentOrder
-    ? currentOrder.pricing.serviceFee / 100
-    : (event.serviceFee || 0);
+  // Usa o valor do servidor quando > 0, senão calcula do participantFeePercent
+  const ticketSubtotalLocal = participantsWithTickets.reduce(
+    (sum, { ticket }) => sum + getTicketPrice(ticket),
+    0
+  );
+  const serverServiceFee = currentOrder?.pricing.serviceFee ?? 0;
+  const serviceFee = serverServiceFee > 0
+    ? serverServiceFee / 100
+    : ticketSubtotalLocal * ((event.participantFeePercent ?? 0) / 100);
   const additionalProductsTotal = orderItems.reduce(
     (sum, item) => sum + item.price / 100,
     0
@@ -1308,7 +1313,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   // Subtotal e desconto de cupom vêm direto do backend — não recalcular no frontend
   const subtotalValue = currentOrder
     ? currentOrder.pricing.subtotal / 100
-    : totalPrice + (event.serviceFee || 0) + additionalProductsTotal;
+    : totalPrice + serviceFee + additionalProductsTotal;
 
   const couponDiscount = currentOrder?.pricing.couponDiscount
     ? currentOrder.pricing.couponDiscount / 100
@@ -1339,10 +1344,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return undefined;
   }, [currentOrder]);
 
-  // Calcular opções de parcelamento baseado no valor total
+  // Calcular opções de parcelamento baseado no valor total e no máximo permitido pelo evento
   const installmentOptions = useMemo(() => {
+    const maxInstallments = event.maxInstallments ?? 1;
     const options: DropdownOption[] = [];
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= maxInstallments; i++) {
       const installmentValue = totalValue / i;
       const label =
         i === 1
@@ -1351,7 +1357,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       options.push({ id: String(i), label });
     }
     return options;
-  }, [totalValue]);
+  }, [totalValue, event.maxInstallments]);
 
   const calculatePixValue = () => {
     const discount = totalValue * 0.05;

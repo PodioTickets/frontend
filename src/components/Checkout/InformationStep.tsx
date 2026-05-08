@@ -333,6 +333,8 @@ export function InformationStep({
     return { totalParticipants: participants, totalPrice: total };
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
+  const serviceFee = totalPrice * ((event.participantFeePercent ?? 0) / 100);
+
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
@@ -1195,13 +1197,13 @@ export function InformationStep({
                   <div className="flex items-center justify-between text-base text-gray-12">
                     <p className="font-semibold">Taxa de serviço:</p>
                     <p className="font-bold">
-                      {formatPrice(event.serviceFee || 0)}
+                      {formatPrice(serviceFee)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xl font-bold text-gray-12 border-t border-gray-6 pt-6">
                   <p>Total:</p>
-                  <p>{formatPrice(totalPrice + (event.serviceFee || 0))}</p>
+                  <p>{formatPrice(totalPrice + (serviceFee))}</p>
                 </div>
               </div>
             </div>
@@ -1345,7 +1347,7 @@ export function InformationStep({
                               </button>
                             </div>
                             <h1 className="hidden md:block text-xl font-bold text-gray-12">
-                              {formatPrice(getTicketPrice(ticket) + (event.serviceFee || 0))}
+                              {formatPrice(getTicketPrice(ticket) + (serviceFee))}
                             </h1>
                           </div>
                         </div>
@@ -1874,13 +1876,13 @@ export function InformationStep({
             <p className="text-sm">
               Taxa de serviço:{" "}
               <span className="font-semibold">
-                {formatPrice(event.serviceFee || 0)}
+                {formatPrice(serviceFee)}
               </span>
             </p>
             <p className="text-base">
               Valor total:{" "}
               <span className="font-bold">
-                {formatPrice(totalPrice + (event.serviceFee || 0))}
+                {formatPrice(totalPrice + (serviceFee))}
               </span>
             </p>
           </div>
@@ -1977,12 +1979,12 @@ export function InformationStep({
                     <div className="flex items-center justify-between text-base text-gray-12">
                       <p className="font-semibold">Taxa de serviço:</p>
                       <p className="font-bold">
-                        {formatPrice(event.serviceFee || 0)}
+                        {formatPrice(serviceFee)}
                       </p>
                     </div>
                     <div className="flex items-center justify-between text-xl font-bold text-gray-12 pt-4 border-t border-gray-6">
                       <p>Total:</p>
-                      <p>{formatPrice(totalPrice + (event.serviceFee || 0))}</p>
+                      <p>{formatPrice(totalPrice + (serviceFee))}</p>
                     </div>
                   </div>
                 </div>

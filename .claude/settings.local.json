@@ -37,7 +37,8 @@
       "Bash(npx eslint *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\admin\" -Recurse -File)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\" -Recurse -Filter \"*members*\" -ErrorAction SilentlyContinue)",
-      "Bash(auditoria\")"
+      "Bash(auditoria\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\checkout\" -Recurse -ErrorAction SilentlyContinue)"
     ]
   },
   "disabledMcpjsonServers": [

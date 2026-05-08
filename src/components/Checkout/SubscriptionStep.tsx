@@ -828,6 +828,8 @@ export function SubscriptionStep({
     }, 0);
   }, [participantsWithTickets, selectedVariations, allProducts]);
 
+  const serviceFee = (totalPrice + totalProductsPrice) * ((event.participantFeePercent ?? 0) / 100);
+
   if (loading) return <Loading />;
 
   const currentParticipant = participants[selectedParticipant];
@@ -1056,12 +1058,12 @@ export function SubscriptionStep({
             ))}
             <p className="text-sm">
               Taxa de serviço:{" "}
-              <span className="font-semibold">{formatPrice(event.serviceFee || 0)}</span>
+              <span className="font-semibold">{formatPrice(serviceFee)}</span>
             </p>
             <p className="text-base">
               Valor total:{" "}
               <span className="font-bold">
-                {formatPrice(totalPrice + totalProductsPrice + (event.serviceFee || 0))}
+                {formatPrice(totalPrice + totalProductsPrice + (serviceFee))}
               </span>
             </p>
           </div>
@@ -1289,13 +1291,13 @@ export function SubscriptionStep({
               <div className="flex flex-col gap-2 mt-6">
                 <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
                   Taxa de serviço:
-                  <span className="text-gray-12">{formatPrice(event.serviceFee || 0)}</span>
+                  <span className="text-gray-12">{formatPrice(serviceFee)}</span>
                 </p>
               </div>
 
               <div className="flex items-center justify-between text-xl font-bold text-gray-12 mt-4 border-t border-gray-6 pt-4">
                 <p>Total:</p>
-                <p>{formatPrice((event.serviceFee || 0) + totalPrice + totalProductsPrice)}</p>
+                <p>{formatPrice((serviceFee) + totalPrice + totalProductsPrice)}</p>
               </div>
 
               <Button

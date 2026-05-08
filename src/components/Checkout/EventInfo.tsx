@@ -192,7 +192,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
               <p className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full">
                 Taxa de serviço:{" "}
                 <span className="text-gray-12">
-                  {formatPrice(event.serviceFee || 0)}
+                  {formatPrice(totalPrice * ((event.participantFeePercent ?? 0) / 100))}
                 </span>
               </p>
             </>
@@ -207,7 +207,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
             Total:{" "}
             <span className="text-gray-12">
-              {formatPrice(totalPrice + (event.serviceFee || 0))}
+              {formatPrice(totalPrice + totalPrice * ((event.participantFeePercent ?? 0) / 100))}
             </span>
           </h1>
         )}

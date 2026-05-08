@@ -17,6 +17,8 @@ export interface Event {
   country: string;
   price: number;
   serviceFee: number;
+  participantFeePercent?: number;
+  maxInstallments?: 1 | 2 | 3;
   googleMapsLink: string;
   stravaRouteId?: string;
   /** URL do regulamento do evento (ex.: PDF) */
