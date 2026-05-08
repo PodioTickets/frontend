@@ -108,16 +108,16 @@ export default function AdminLoginPage() {
           src="/images/admin-login.png"
           alt=""
           fill
-          className="object-cover object-center"
+          className="object-cover object-top"
           priority
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[44%] to-[rgba(32,32,32,0.7)]" />
-        <div className="absolute top-10 inset-x-0 flex justify-center">
+        <div className="absolute top-4 left-4 flex justify-center">
           <Image
-            src="/images/logo_admin_black.png"
+            src="/images/logo.png"
             alt="PódioTicket"
-            width={164}
-            height={28}
+            width={44}
+            height={44}
             className="object-contain"
             priority
           />

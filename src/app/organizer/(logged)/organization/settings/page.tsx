@@ -13,7 +13,7 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Plus, ChevronLeft, MapPinIcon, MessageCircleIcon, Phone, XCircle } from "lucide-react";
-import type { Organization } from "@/services/organizer/OrganizerService";
+import type { Organization, PixKey } from "@/services/organizer/OrganizerService";
 import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
@@ -98,8 +98,9 @@ export default function OrganizationSettingsPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [pixOpen, setPixOpen] = useState(false);
-  const [showRemovePixModal, setShowRemovePixModal] = useState(false);
+  const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
+  const [openPixId, setOpenPixId] = useState<string | null>(null);
+  const [removingPixId, setRemovingPixId] = useState<string | null>(null);
 
   const loadOrganization = useCallback(async () => {
     const uid = user?.id;
@@ -114,6 +115,7 @@ export default function OrganizationSettingsPage() {
       }
 
       setOrganizer(org);
+      setPixKeys(org.pixKeys ?? []);
       setFormData({
         document: org.document || "",
         tradeName: org.tradeName || "",
@@ -744,117 +746,121 @@ export default function OrganizationSettingsPage() {
                 </p>
               </div>
 
-              {/* Accordion item */}
-              {(formData.pix || formData.bankName) ? (
-                <div className="w-full border border-gray-6 rounded-lg overflow-hidden">
-                  {/* Accordion header */}
-                  <button
-                    type="button"
-                    onClick={() => setPixOpen((v) => !v)}
-                    className="w-full flex items-center justify-between p-5 transition-colors text-left"
-                  >
-                    <div className="flex flex-col gap-2 items-start min-w-0">
-                      <p className="font-manrope font-bold leading-[1.1] text-lg text-gray-12 truncate">
-                        {formData.bankName || "Banco"}
-                      </p>
-                      <div className="flex items-center gap-1 text-base leading-[1.3]">
-                        <span className="font-family-dm-sans font-normal text-gray-11">Chave pix:</span>
-                        <span className="font-family-dm-sans font-medium text-gray-12">{formData.pix || "—"}</span>
-                      </div>
-                    </div>
-                    <div className={`shrink-0 transition-transform duration-200`}>
-                      <ArrowButton isOpen={pixOpen} />
-                    </div>
-                  </button>
-
-                  {/* Expanded content */}
-                  {pixOpen && (
-                    <div className="px-5 pb-5 flex flex-col gap-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
-                        {/* Tipo de Chave */}
-                        <div className="flex flex-col gap-2 items-start">
-                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                            Tipo de Chave
-                          </label>
-                          <Input
-                            type="text"
-                            value={formData.pixKeyType || "—"}
-                            onChange={() => {}}
-                            disabled
-                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
-                          />
-                        </div>
-
-                        {/* Chave cadastrada */}
-                        <div className="flex flex-col gap-2 items-start">
-                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                            Chave cadastrada
-                          </label>
-                          <Input
-                            type="text"
-                            value={formData.pix || "—"}
-                            onChange={() => {}}
-                            disabled
-                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
-                          />
-                        </div>
-
-                        {/* Nome do titular */}
-                        <div className="flex flex-col gap-2 items-start">
-                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                            Nome do titular
-                          </label>
-                          <Input
-                            type="text"
-                            value={formData.accountHolderName || "—"}
-                            onChange={() => {}}
-                            disabled
-                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
-                          />
-                        </div>
-
-                        {/* CPF/CNPJ do titular */}
-                        <div className="flex flex-col gap-2 items-start">
-                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                            CPF/CNPJ do titular
-                          </label>
-                          <Input
-                            type="text"
-                            value={formData.accountHolderDocument ? maskCPForCNPJ(formData.accountHolderDocument) : "—"}
-                            onChange={() => {}}
-                            disabled
-                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
-                          />
-                        </div>
-
-                        {/* Banco */}
-                        <div className="flex flex-col gap-2 items-start">
-                          <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                            Banco
-                          </label>
-                          <Input
-                            type="text"
-                            value={formData.bankName || "—"}
-                            onChange={() => {}}
-                            disabled
-                            className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Remover button */}
-                      <div className="flex justify-end">
+              {/* PIX keys list */}
+              {pixKeys.length > 0 ? (
+                <div className="w-full flex flex-col gap-3">
+                  {pixKeys.map((pixKey) => {
+                    const isOpen = openPixId === pixKey.id;
+                    return (
+                      <div key={pixKey.id} className="w-full border border-gray-6 rounded-lg overflow-hidden">
                         <button
                           type="button"
-                          onClick={() => setShowRemovePixModal(true)}
-                          className="flex items-center gap-2 h-9 px-3 border border-red-6 rounded-lg text-red-12 hover:bg-red-2 transition-colors font-manrope font-semibold text-base leading-[1.1]"
+                          onClick={() => setOpenPixId(isOpen ? null : pixKey.id)}
+                          className="w-full flex items-center justify-between p-5 transition-colors text-left"
                         >
-                          <TrashIcon className="size-5 shrink-0" />
-                          Remover
+                          <div className="flex flex-col gap-2 items-start min-w-0">
+                            <div className="flex items-center gap-1">
+                              <p className="font-manrope font-bold leading-[1.1] text-lg text-gray-12 truncate">
+                                {pixKey.keyType || ""} -
+                              </p>
+                              <p className="font-manrope font-bold leading-[1.1] text-lg text-gray-12 truncate">
+                                {pixKey.bankName || "Banco"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 text-base leading-[1.3]">
+                              <span className="font-family-dm-sans font-normal text-gray-11">Chave pix:</span>
+                              <span className="font-family-dm-sans font-medium text-gray-12 truncate">{pixKey.key || "—"}</span>
+                            </div>
+                          </div>
+                          <div className="shrink-0 ml-3">
+                            <ArrowButton isOpen={isOpen} />
+                          </div>
                         </button>
+
+                        {isOpen && (
+                          <div className="px-5 pb-5 flex flex-col gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+                              <div className="flex flex-col gap-2 items-start">
+                                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                                  Tipo de Chave
+                                </label>
+                                <Input
+                                  type="text"
+                                  value={pixKey.keyType || "—"}
+                                  onChange={() => { }}
+                                  disabled
+                                  className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-2 items-start">
+                                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                                  Chave cadastrada
+                                </label>
+                                <Input
+                                  type="text"
+                                  value={pixKey.key || "—"}
+                                  onChange={() => { }}
+                                  disabled
+                                  className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-2 items-start">
+                                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                                  Nome do titular
+                                </label>
+                                <Input
+                                  type="text"
+                                  value={pixKey.accountHolderName || "—"}
+                                  onChange={() => { }}
+                                  disabled
+                                  className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-2 items-start">
+                                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                                  CPF/CNPJ do titular
+                                </label>
+                                <Input
+                                  type="text"
+                                  value={pixKey.accountHolderDocument ? maskCPForCNPJ(pixKey.accountHolderDocument) : "—"}
+                                  onChange={() => { }}
+                                  disabled
+                                  className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-2 items-start">
+                                <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                                  Banco
+                                </label>
+                                <Input
+                                  type="text"
+                                  value={pixKey.bankName || "—"}
+                                  onChange={() => { }}
+                                  disabled
+                                  className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setRemovingPixId(pixKey.id)}
+                                className="flex items-center gap-2 h-9 px-3 border border-red-6 rounded-lg text-red-12 hover:bg-red-2 transition-colors font-manrope font-semibold text-base leading-[1.1]"
+                              >
+                                <TrashIcon className="size-5 shrink-0" />
+                                Remover
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="font-family-dm-sans text-sm text-gray-11">
@@ -912,59 +918,55 @@ export default function OrganizationSettingsPage() {
       </div>
 
       {/* Modal: Remover chave PIX */}
-
-      {showRemovePixModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          onClick={() => setShowRemovePixModal(false)}
-        >
+      {removingPixId && (() => {
+        const pixKey = pixKeys.find((p) => p.id === removingPixId);
+        return (
           <div
-            className="bg-gray-1 rounded-xl p-5 w-full max-w-[442px] flex flex-col gap-11 items-center shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+            onClick={() => setRemovingPixId(null)}
           >
-            {/* Topo */}
-            <div className="flex flex-col gap-6 items-center w-full">
-              {/* Ícone */}
-              <div className="size-[88px] rounded-full bg-gradient-to-b from-red-2 to-red-5 flex items-center justify-center shrink-0">
-                <XCircle className="size-[52px] text-red-11" strokeWidth={1.5} />
+            <div
+              className="bg-gray-1 rounded-xl p-5 w-full max-w-[442px] flex flex-col gap-11 items-center shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col gap-6 items-center w-full">
+                <div className="size-[88px] rounded-full bg-gradient-to-b from-red-2 to-red-5 flex items-center justify-center shrink-0">
+                  <XCircle className="size-[52px] text-red-11" strokeWidth={1.5} />
+                </div>
+                <div className="flex flex-col gap-4 items-center w-full">
+                  <p className="font-family-dm-sans font-semibold leading-[1.3] text-xl text-gray-12 text-center">
+                    Remover esta chave Pix?
+                  </p>
+                  <p className="font-family-dm-sans font-normal leading-[1.3] text-base text-gray-11 text-center">
+                    A chave{" "}
+                    <span className="font-medium text-gray-12">{pixKey?.key}</span>{" "}
+                    será removida da sua organização.
+                  </p>
+                </div>
               </div>
-
-              {/* Conteúdo */}
-              <div className="flex flex-col gap-4 items-center w-full">
-                <p className="font-family-dm-sans font-semibold leading-[1.3] text-xl text-gray-12 text-center">
-                  Remover esta chave Pix?
-                </p>
-                <p className="font-family-dm-sans font-normal leading-[1.3] text-base text-gray-11 text-center">
-                  A chave{" "}
-                  <span className="font-medium text-gray-12">{formData.pix}</span>{" "}
-                  será removida da sua organização.
-                </p>
+              <div className="flex gap-2 w-full">
+                <button
+                  type="button"
+                  onClick={() => setRemovingPixId(null)}
+                  className="flex-1 h-12 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-2 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRequestChange();
+                    setRemovingPixId(null);
+                  }}
+                  className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors"
+                >
+                  Sim, remover
+                </button>
               </div>
-            </div>
-
-            {/* Botões */}
-            <div className="flex gap-2 w-full">
-              <button
-                type="button"
-                onClick={() => setShowRemovePixModal(false)}
-                className="flex-1 h-12 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-2 transition-colors"
-              >
-                Tentar novamente
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleRequestChange();
-                  setShowRemovePixModal(false);
-                }}
-                className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors"
-              >
-                Sim, remover
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }

@@ -115,6 +115,18 @@ export interface Organization {
   updatedAt: string;
   members?: OrganizationMember[];
   events?: Event[];
+  pixKeys?: PixKey[];
+}
+
+export interface PixKey {
+  id: string;
+  key: string;
+  keyType: string;
+  isDefault: boolean;
+  accountHolderName?: string;
+  accountHolderDocument?: string;
+  bankName?: string;
+  createdAt: string;
 }
 
 export interface UserOrganization {
