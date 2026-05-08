@@ -652,6 +652,15 @@ export default function AdminEventsPage() {
                                         ADS
                                       </Link>
                                     </DropdownMenu.Item>
+                                    <DropdownMenu.Item asChild>
+                                      <Link
+                                        href={`/admin/events/${event.id}/notifications`}
+                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                      >
+                                        Notificação
+                                      </Link>
+                                    </DropdownMenu.Item>
+
                                     {(event.status === "PUBLISHED" || event.status === "SUSPENDED") && (
                                       <DropdownMenu.Item
                                         disabled={suspendingId === event.id}

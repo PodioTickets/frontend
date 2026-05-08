@@ -30,7 +30,8 @@ declare global {
     ReturnMessage: string;
   }
 
-  var bpmpi_config: {
+  // O SDK invoca bpmpi_config() como função para ler a configuração.
+  var bpmpi_config: () => {
     onReady?: () => void;
     onSuccess?: (e: CustomEvent<BpmpiSuccessDetail>) => void;
     onFailure?: (e: CustomEvent<BpmpiFailureDetail>) => void;

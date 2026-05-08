@@ -30,6 +30,7 @@ interface TicketCategoryCardProps {
 }
 
 const formatPrice = (price: number) => {
+  if (price === 0) return "Gratuito";
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -620,7 +621,11 @@ export function TicketCategoryCard({
     [raceQuantities],
   );
 
-  const validTickets = useMemo(() => tickets.filter((t) => getTicketPrice(t) > 0), [tickets]);
+  // Aceita preço 0 (ingresso gratuito/cortesia). Só descarta preços inválidos.
+  const validTickets = useMemo(
+    () => tickets.filter((t) => getTicketPrice(t) >= 0),
+    [tickets],
+  );
 
   const minPrice = useMemo(() => {
     if (validTickets.length === 0) return 0;

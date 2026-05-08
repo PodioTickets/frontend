@@ -91,6 +91,17 @@ function showDashboardWeekOverWeek(change: number): boolean {
   return dashboardWeekOverWeekPercent(change) !== 0;
 }
 
+function periodComparisonLabel(period: string): string | null {
+  switch (period) {
+    case "24h": return "vs. ontem";
+    case "7d": return "vs. semana passada";
+    case "15d": return "vs. 15 dias atrás";
+    case "1m": return "vs. mês passado";
+    case "2m": return "vs. 2 meses atrás";
+    default: return null;
+  }
+}
+
 function DashboardRankingTruncatedLabel({
   text,
   emptyDisplay = "—",
@@ -830,7 +841,7 @@ export default function EventDashboardPage() {
                 R$ {(dashboardData.netRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.netRevenueChange) ? (
+            {showDashboardWeekOverWeek(dashboardData.netRevenueChange) && periodComparisonLabel(periodFilter) ? (
               <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
                 {dashboardData.netRevenueChange >= 0 ? (
                   <ArrowUpIcon className="size-3 text-primary-11" />
@@ -838,7 +849,7 @@ export default function EventDashboardPage() {
                   <ArrowDown className="size-6 text-red-11" />
                 )}
                 <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.netRevenueChange)}% vs. semana passada
+                  {dashboardWeekOverWeekPercent(dashboardData.netRevenueChange)}% {periodComparisonLabel(periodFilter)}
                 </span>
               </div>
             ) : null}
@@ -857,7 +868,7 @@ export default function EventDashboardPage() {
                 R$ {(dashboardData.averageTicket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.averageTicketChange) ? (
+            {showDashboardWeekOverWeek(dashboardData.averageTicketChange) && periodComparisonLabel(periodFilter) ? (
               <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
                 {dashboardData.averageTicketChange >= 0 ? (
                   <ArrowUpIcon className="size-3 text-primary-11" />
@@ -865,7 +876,7 @@ export default function EventDashboardPage() {
                   <ArrowDown className="size-6 text-red-11" />
                 )}
                 <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.averageTicketChange)}% vs. semana passada
+                  {dashboardWeekOverWeekPercent(dashboardData.averageTicketChange)}% {periodComparisonLabel(periodFilter)}
                 </span>
               </div>
             ) : null}
@@ -884,7 +895,7 @@ export default function EventDashboardPage() {
                 {dashboardData.totalRegistrations.toLocaleString("pt-BR")}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.totalRegistrationsChange) ? (
+            {showDashboardWeekOverWeek(dashboardData.totalRegistrationsChange) && periodComparisonLabel(periodFilter) ? (
               <div className="px-4 pb-3 pt-1 h-[40px] flex items-center gap-2">
                 {dashboardData.totalRegistrationsChange >= 0 ? (
                   <ArrowUpIcon className="size-3 text-primary-11" />
@@ -892,7 +903,7 @@ export default function EventDashboardPage() {
                   <ArrowDown className="size-6 text-red-11" />
                 )}
                 <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.totalRegistrationsChange)}% vs. semana passada
+                  {dashboardWeekOverWeekPercent(dashboardData.totalRegistrationsChange)}% {periodComparisonLabel(periodFilter)}
                 </span>
               </div>
             ) : null}
@@ -946,7 +957,7 @@ export default function EventDashboardPage() {
               <p className="font-manrope font-bold text-[24px] leading-[1.1] text-gray-12">
                 R$ {(dashboardData.registrationsTrend.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              {showDashboardWeekOverWeek(dashboardData.registrationsTrend.change) ? (
+              {showDashboardWeekOverWeek(dashboardData.registrationsTrend.change) && periodComparisonLabel(periodFilter) ? (
                 <div className="flex items-center gap-1">
                   {dashboardData.registrationsTrend.change >= 0 ? (
                     <ArrowUpIcon className="size-3 text-primary-11" />
@@ -954,7 +965,7 @@ export default function EventDashboardPage() {
                     <ArrowDown className="size-6 text-red-11" />
                   )}
                   <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-primary-11">
-                    {dashboardWeekOverWeekPercent(dashboardData.registrationsTrend.change)}% vs. semana passada
+                    {dashboardWeekOverWeekPercent(dashboardData.registrationsTrend.change)}% {periodComparisonLabel(periodFilter)}
                   </span>
                 </div>
               ) : null}
@@ -1221,11 +1232,11 @@ export default function EventDashboardPage() {
                 R$ {(dashboardData.netRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.netRevenueChange) ? (
+            {showDashboardWeekOverWeek(dashboardData.netRevenueChange) && periodComparisonLabel(periodFilter) ? (
               <div className="px-3 pb-3 pt-1 flex items-center gap-2">
                 {dashboardData.netRevenueChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
                 <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.netRevenueChange)}% vs. semana passada
+                  {dashboardWeekOverWeekPercent(dashboardData.netRevenueChange)}% {periodComparisonLabel(periodFilter)}
                 </span>
               </div>
             ) : null}
@@ -1242,11 +1253,11 @@ export default function EventDashboardPage() {
                 R$ {(dashboardData.averageTicket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.averageTicketChange) ? (
+            {showDashboardWeekOverWeek(dashboardData.averageTicketChange) && periodComparisonLabel(periodFilter) ? (
               <div className="px-3 pb-3 pt-1 flex items-center gap-2">
                 {dashboardData.averageTicketChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
                 <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.averageTicketChange)}% vs. semana passada
+                  {dashboardWeekOverWeekPercent(dashboardData.averageTicketChange)}% {periodComparisonLabel(periodFilter)}
                 </span>
               </div>
             ) : null}
@@ -1263,11 +1274,11 @@ export default function EventDashboardPage() {
                 {dashboardData.totalRegistrations.toLocaleString("pt-BR")}
               </p>
             </div>
-            {showDashboardWeekOverWeek(dashboardData.totalRegistrationsChange) ? (
+            {showDashboardWeekOverWeek(dashboardData.totalRegistrationsChange) && periodComparisonLabel(periodFilter) ? (
               <div className="px-3 pb-3 pt-1 flex items-center gap-2">
                 {dashboardData.totalRegistrationsChange >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
                 <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.totalRegistrationsChange)}% vs. semana passada
+                  {dashboardWeekOverWeekPercent(dashboardData.totalRegistrationsChange)}% {periodComparisonLabel(periodFilter)}
                 </span>
               </div>
             ) : null}
@@ -1299,11 +1310,11 @@ export default function EventDashboardPage() {
             <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
               R$ {(dashboardData.registrationsTrend.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            {showDashboardWeekOverWeek(dashboardData.registrationsTrend.change) ? (
+            {showDashboardWeekOverWeek(dashboardData.registrationsTrend.change) && periodComparisonLabel(periodFilter) ? (
               <div className="flex items-center gap-1">
                 {dashboardData.registrationsTrend.change >= 0 ? <ArrowUpIcon className="size-3 text-primary-11" /> : <ArrowDown className="size-4 text-red-11" />}
                 <span className="font-family-dm-sans font-normal text-sm text-primary-11">
-                  {dashboardWeekOverWeekPercent(dashboardData.registrationsTrend.change)}% vs. semana passada
+                  {dashboardWeekOverWeekPercent(dashboardData.registrationsTrend.change)}% {periodComparisonLabel(periodFilter)}
                 </span>
               </div>
             ) : null}

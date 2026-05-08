@@ -420,18 +420,33 @@ export async function proxy(request: NextRequest) {
 
   if (isDev) trustedDomains.push("http://localhost:*", "https://localhost:*");
 
+  // Braspag MPI 3DS 2.0: SDK carrega script de mpi(sandbox).braspag.com.br,
+  // faz fetch para Cardinal Commerce (backend do MPI) e abre iframe do ACS do banco.
+  const braspag3DSDomains = [
+    "https://mpi.braspag.com.br",
+    "https://mpisandbox.braspag.com.br",
+    "https://*.cardinalcommerce.com",
+  ];
+  const braspag3DSCsp = braspag3DSDomains.join(" ");
+
+  // Telemetria/log do SDK Braspag (API Gateway AWS dinâmico). Apenas connect-src.
+  const braspag3DSConnectExtras = "https://*.execute-api.us-east-1.amazonaws.com";
+
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
     `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
-    } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com`,
+    } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com ${braspag3DSCsp}`,
     `style-src ${trustedDomains.join(
       " "
     )} 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com`,
     `font-src ${trustedDomains.join(" ")} data: https://fonts.gstatic.com https://*.google.com`,
     `connect-src ${trustedDomains.join(
       " "
-    )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com https://challenges.cloudflare.com`,
-    `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com`,
+    )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com https://challenges.cloudflare.com ${braspag3DSCsp} ${braspag3DSConnectExtras}`,
+    // 3DS challenge abre iframe do ACS do banco emissor (Itaú, Bradesco, Nubank, etc).
+    // Cada banco usa seu próprio domínio — `https:` é a recomendação prática
+    // p/ 3DS, evita ter que manter allowlist de cada emissor.
+    `frame-src 'self' https: https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com ${braspag3DSCsp}`,
     `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://*.strava.com https://strava-embeds.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
@@ -439,7 +454,7 @@ export async function proxy(request: NextRequest) {
     `child-src 'self' blob: https://challenges.cloudflare.com`,
     `object-src 'none'`,
     `base-uri 'self'`,
-    `form-action 'self' https://challenges.cloudflare.com`,
+    `form-action 'self' https://challenges.cloudflare.com ${braspag3DSCsp}`,
     `frame-ancestors 'none'`,
     `upgrade-insecure-requests`,
   ];

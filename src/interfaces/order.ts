@@ -181,7 +181,7 @@ export interface PayOrderDebitCardRequest {
     expiry: string;
     cvv: string;
   };
-  externalAuthentication: {
+  threeDs: {
     cavv: string;
     eci: string;
     xid?: string;

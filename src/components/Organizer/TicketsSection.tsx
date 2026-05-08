@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
-import { useTickets, type Ticket } from "@/hooks/useTickets";
+import { useTickets, formatRawTicket, type Ticket } from "@/hooks/useTickets";
 import { organizerService } from "@/services";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -446,18 +446,40 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
         }
         setDuplicatingTicketId(ticketId);
         try {
-          await organizerService.duplicateTicket(eventId, ticketId);
-          await queryClient.refetchQueries({ queryKey: queryKeys.events.tickets(eventId) });
-          window.dispatchEvent(new CustomEvent("ticketCreated"));
+          // API retorna o ticket recém-criado — usamos para optimistic update
+          // no cache do React Query, evitando o round-trip de um refetch e
+          // garantindo que a UI reflita a duplicação instantaneamente.
+          const rawTicket = await organizerService.duplicateTicket(eventId, ticketId);
+          const newTicket = formatRawTicket(rawTicket);
+          // Fallback de sortOrder: se o backend não retornar, posiciona no fim
+          // (será reconciliado pelo invalidate em background).
+          if (newTicket.sortOrder === undefined) {
+            newTicket.sortOrder = Number.MAX_SAFE_INTEGER;
+          }
+
+          const ticketsKey = queryKeys.events.tickets(eventId);
+          queryClient.setQueryData<Ticket[]>(ticketsKey, (prev) => {
+            if (!prev) return [newTicket];
+            // Idempotência: evita duplicata caso um refetch concorrente já tenha inserido.
+            if (prev.some((t) => t.id === newTicket.id)) return prev;
+            return [...prev, newTicket];
+          });
+
           if (persistMode === "immediate") {
-            const dupTickets =
-              queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ?? [];
-            const dupCats =
+            const list = queryClient.getQueryData<Ticket[]>(ticketsKey) ?? [];
+            const cats =
               queryClient.getQueryData<ModalityGroup[]>(
                 queryKeys.events.ticketCategories(eventId),
               ) ?? categories;
-            committedAssignmentRef.current = buildCommittedAssignmentsMap(dupTickets, dupCats);
+            committedAssignmentRef.current = buildCommittedAssignmentsMap(list, cats);
           }
+
+          // NÃO invalidamos a query nem disparamos "ticketCreated" aqui:
+          // o payload do POST contém o ticket completo (mesmo shape do queryFn),
+          // então o cache já está consistente. Forçar refetch imediato corre o
+          // risco de ler do backend antes da escrita propagar (eventual consistency)
+          // e sobrescrever o registro recém-inserido. A reconciliação acontece
+          // naturalmente nos listeners de focus/visibilitychange/pageshow.
           toast.success("Ingresso duplicado com sucesso!");
         } catch (error: any) {
           toast.error(error.response?.data?.message || "Erro ao duplicar ingresso");

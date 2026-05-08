@@ -177,7 +177,7 @@ export function InformationStep({
           tickets: categoryTickets.filter((ticket) => {
             try {
               const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
-              return !isNaN(price) && price > 0;
+              return !isNaN(price) && price >= 0;
             } catch {
               return false;
             }
@@ -190,7 +190,7 @@ export function InformationStep({
     const validUncategorized = uncategorized.filter((ticket) => {
       try {
         const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
-        return !isNaN(price) && price > 0;
+        return !isNaN(price) && price >= 0;
       } catch {
         return false;
       }

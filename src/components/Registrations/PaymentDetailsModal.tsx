@@ -164,6 +164,9 @@ export function PaymentDetailsModal() {
   const voucher = paymentDetails?.voucher ?? null;
   const totalDiscount = paymentDetails?.totalDiscount ?? null;
   const hasDiscount = !!(coupon || voucher);
+  // Pedido gratuito (cortesia / voucher 100%): esconder método de pagamento e
+  // detalhes de transação, que não fazem sentido sem cobrança real.
+  const isFreeOrder = (paymentInfo.totalAmount ?? 0) === 0;
 
   // Usar dados reais do buyer (paymentDetails tem buyer, registration tem user)
   // Combinar dados do buyer com dados do user da registration para campos que podem estar faltando
@@ -442,76 +445,90 @@ export function PaymentDetailsModal() {
                       </p>
                     )}
                   </div>
-                  {/* Payment method card */}
-                  <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
-                    <div className="flex gap-3 items-center justify-between">
-                      <div className="flex gap-3 items-center">
-                        {paymentInfo.paymentMethod !== "PIX" ? (
-                          <div className="size-10 shrink-0 flex items-center justify-center">
-                            <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
+                  {!isFreeOrder ? (
+                    <>
+                      {/* Payment method card */}
+                      <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
+                        <div className="flex gap-3 items-center justify-between">
+                          <div className="flex gap-3 items-center">
+                            {paymentInfo.paymentMethod !== "PIX" ? (
+                              <div className="size-10 shrink-0 flex items-center justify-center">
+                                <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
+                              </div>
+                            ) : (
+                              <div className="size-10 shrink-0 flex items-center justify-center">
+                                <PixIcon className="size-6 text-gray-12" />
+                              </div>
+                            )}
+                            <div className="flex flex-col gap-0">
+                              <p className="font-family-dm-sans font-semibold text-lg text-gray-12">{paymentInfo.cardBrand && paymentInfo.cardLast4 ? `${paymentInfo.cardBrand} **** ${paymentInfo.cardLast4}` : paymentInfo.paymentMethod}</p>
+                              <p className="font-family-dm-sans font-normal text-base text-gray-11">{paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}</p>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="size-10 shrink-0 flex items-center justify-center">
-                            <PixIcon className="size-6 text-gray-12" />
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-0">
-                          <p className="font-family-dm-sans font-semibold text-lg text-gray-12">{paymentInfo.cardBrand && paymentInfo.cardLast4 ? `${paymentInfo.cardBrand} **** ${paymentInfo.cardLast4}` : paymentInfo.paymentMethod}</p>
-                          <p className="font-family-dm-sans font-normal text-base text-gray-11">{paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}</p>
+                          <span className={`flex gap-1 items-center justify-center px-4 py-2 rounded ${getPaymentStatusColor(paymentDetails?.payment?.status)}`}>
+                            <CheckIcon className="size-5" />
+                            <span className="font-family-dm-sans font-normal text-base">{getPaymentStatusLabel(paymentDetails?.payment?.status)}</span>
+                          </span>
                         </div>
                       </div>
-                      <span className={`flex gap-1 items-center justify-center px-4 py-2 rounded ${getPaymentStatusColor(paymentDetails?.payment?.status)}`}>
-                        <CheckIcon className="size-5" />
-                        <span className="font-family-dm-sans font-normal text-base">{getPaymentStatusLabel(paymentDetails?.payment?.status)}</span>
-                      </span>
+                      {/* Transaction details card */}
+                      <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
+                        {[
+                          { label: "Valor total", value: formatPrice(paymentInfo.totalAmount / 100) },
+                          { label: "Data da compra", value: formatDate(paymentInfo.purchaseDate) || "—" },
+                          { label: "Gateway", value: paymentInfo.gateway },
+                          { label: "ID da transação", value: paymentInfo.transactionId, copy: true },
+                          { label: "TxID", value: paymentInfo.nsu },
+                          { label: "E2E ID (Pix)", value: paymentInfo.transactionId },
+                          { label: "IP", value: paymentInfo.ip },
+                          ...(coupon ? [{
+                            label: "Cupom utilizado",
+                            value: [
+                              coupon.code,
+                              coupon.couponType === "AGE" ? "Por faixa etária" : coupon.couponType === "QUANTITY" ? "Por quantidade" : null,
+                              coupon.discountType === "PERCENTAGE" && coupon.discountPercentage != null
+                                ? `${coupon.discountPercentage}% de desconto`
+                                : coupon.discountValue != null
+                                  ? `${formatPrice(coupon.discountValue / 100)} de desconto`
+                                  : null,
+                            ].filter(Boolean).join(" — "),
+                            couponIcon: true,
+                          }] : []),
+                          ...(voucher ? [{
+                            label: "Voucher utilizado",
+                            value: [voucher.code, voucher.name].filter(Boolean).join(" — "),
+                          }] : []),
+                        ].map(({ label, value, copy, couponIcon }: any) => (
+                          <div key={label} className="flex flex-col gap-1 py-2">
+                            <p className="font-family-dm-sans font-normal text-base text-gray-12">{label}</p>
+                            <div className="flex items-center gap-2">
+                              {couponIcon && (
+                                <svg className="size-4 text-yellow-12 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                              )}
+                              <p className={`font-family-dm-sans font-medium text-base text-gray-12 ${couponIcon ? "text-yellow-12" : ""}`}>{value || "—"}</p>
+                              {copy && (
+                                <button type="button" onClick={() => handleCopy(value)} className="size-5 flex items-center justify-center shrink-0 rounded hover:bg-gray-3">
+                                  {copied ? <CheckCircle className="size-4 text-primary-11" /> : <Copy className="size-4 text-gray-11" />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : voucher ? (
+                    /* Pedido gratuito com voucher: mostra só a info do voucher */
+                    <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-1">
+                      <p className="font-family-dm-sans font-normal text-base text-gray-12">
+                        Voucher utilizado
+                      </p>
+                      <p className="font-family-dm-sans font-medium text-base text-gray-12">
+                        {[voucher.code, voucher.name].filter(Boolean).join(" — ")}
+                      </p>
                     </div>
-                  </div>
-                  {/* Transaction details card */}
-                  <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
-                    {[
-                      { label: "Valor total", value: formatPrice(paymentInfo.totalAmount / 100) },
-                      { label: "Data da compra", value: formatDate(paymentInfo.purchaseDate) || "—" },
-                      { label: "Gateway", value: paymentInfo.gateway },
-                      { label: "ID da transação", value: paymentInfo.transactionId, copy: true },
-                      { label: "TxID", value: paymentInfo.nsu },
-                      { label: "E2E ID (Pix)", value: paymentInfo.transactionId },
-                      { label: "IP", value: paymentInfo.ip },
-                      ...(coupon ? [{
-                        label: "Cupom utilizado",
-                        value: [
-                          coupon.code,
-                          coupon.couponType === "AGE" ? "Por faixa etária" : coupon.couponType === "QUANTITY" ? "Por quantidade" : null,
-                          coupon.discountType === "PERCENTAGE" && coupon.discountPercentage != null
-                            ? `${coupon.discountPercentage}% de desconto`
-                            : coupon.discountValue != null
-                              ? `${formatPrice(coupon.discountValue / 100)} de desconto`
-                              : null,
-                        ].filter(Boolean).join(" — "),
-                        couponIcon: true,
-                      }] : []),
-                      ...(voucher ? [{
-                        label: "Voucher utilizado",
-                        value: [voucher.code, voucher.name].filter(Boolean).join(" — "),
-                      }] : []),
-                    ].map(({ label, value, copy, couponIcon }: any) => (
-                      <div key={label} className="flex flex-col gap-1 py-2">
-                        <p className="font-family-dm-sans font-normal text-base text-gray-12">{label}</p>
-                        <div className="flex items-center gap-2">
-                          {couponIcon && (
-                            <svg className="size-4 text-yellow-12 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                            </svg>
-                          )}
-                          <p className={`font-family-dm-sans font-medium text-base text-gray-12 ${couponIcon ? "text-yellow-12" : ""}`}>{value || "—"}</p>
-                          {copy && (
-                            <button type="button" onClick={() => handleCopy(value)} className="size-5 flex items-center justify-center shrink-0 rounded hover:bg-gray-3">
-                              {copied ? <CheckCircle className="size-4 text-primary-11" /> : <Copy className="size-4 text-gray-11" />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  ) : null}
                   {/* Ingressos vinculados */}
                   <div className="flex flex-col gap-4">
                     <h3 className="font-manrope font-bold text-lg text-gray-12">Ingressos vinculados a este pedido</h3>
@@ -758,6 +775,7 @@ export function PaymentDetailsModal() {
                       </div>
 
                       {/* Payment Information */}
+                      {!isFreeOrder ? (
                       <div className="flex flex-col gap-3">
                         {/* Payment Method Card */}
                         <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between">
@@ -909,6 +927,17 @@ export function PaymentDetailsModal() {
                           )}
                         </div>
                       </div>
+                      ) : voucher ? (
+                        /* Pedido gratuito com voucher: mostra só a info do voucher */
+                        <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex flex-col gap-[15px]">
+                          <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                            Voucher utilizado
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                            {[voucher.code, voucher.name].filter(Boolean).join(" - ")}
+                          </p>
+                        </div>
+                      ) : null}
 
                       {/* Tickets List */}
                       <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg flex flex-col">

@@ -448,9 +448,11 @@ export function TicketForm({
               return {
                 id: b.id || `batch-${index}`,
                 quantity: b.quantity?.toString() || "",
-                price: b.price
-                  ? `R$${(b.price / 100).toFixed(2).replace(".", ",")}`
-                  : "",
+                // Aceita 0 como valor válido (lote gratuito/cortesia).
+                price:
+                  typeof b.price === "number"
+                    ? `R$${(b.price / 100).toFixed(2).replace(".", ",")}`
+                    : "",
                 quantitySold,
                 startType: (b as any).triggerType === "AFTER_PREVIOUS_SOLD_OUT" ? "previous" : "date",
                 startDate: b.startDate ? b.startDate.split("T")[0] : undefined,

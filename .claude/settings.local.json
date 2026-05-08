@@ -38,7 +38,10 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\admin\" -Recurse -File)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\" -Recurse -Filter \"*members*\" -ErrorAction SilentlyContinue)",
       "Bash(auditoria\")",
-      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\checkout\" -Recurse -ErrorAction SilentlyContinue)"
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\checkout\" -Recurse -ErrorAction SilentlyContinue)",
+      "WebFetch(domain:docs.cielo.com.br)",
+      "Bash(Select-String -Pattern \"useTickets|TicketsSection\" -SimpleMatch)",
+      "Bash(Select-Object -First 30)"
     ]
   },
   "disabledMcpjsonServers": [

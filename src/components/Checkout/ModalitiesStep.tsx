@@ -86,7 +86,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
           tickets: categoryTickets.filter((ticket) => {
             try {
               const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
-              return !isNaN(price) && price > 0;
+              return !isNaN(price) && price >= 0;
             } catch {
               return false;
             }
@@ -99,7 +99,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     const validUncategorized = uncategorized.filter((ticket) => {
       try {
         const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
-        return !isNaN(price) && price > 0;
+        return !isNaN(price) && price >= 0;
       } catch {
         return false;
       }

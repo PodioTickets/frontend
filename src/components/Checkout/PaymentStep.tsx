@@ -926,7 +926,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           tickets: categoryTickets.filter((ticket) => {
             try {
               const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
-              return !isNaN(price) && price > 0;
+              return !isNaN(price) && price >= 0;
             } catch {
               return false;
             }
@@ -938,7 +938,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     const validUncategorized = uncategorized.filter((ticket) => {
       try {
         const price = parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
-        return !isNaN(price) && price > 0;
+        return !isNaN(price) && price >= 0;
       } catch {
         return false;
       }
@@ -1726,6 +1726,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     try {
       // 2. Autenticar via SDK 3DS client-side (Braspag/Cielo)
       //    O SDK abre o desafio do banco internamente (popup/modal)
+      console.log("[debit] chamando threeDS.authenticate()");
       const auth = await threeDS.authenticate({
         orderId,
         totalAmountCents: Math.round(totalValue * 100),
@@ -1735,6 +1736,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           expiry: debitCardExpiry,
         },
       });
+      console.log("[debit] threeDS.authenticate() resolveu", auth);
 
       // 3. Enviar pagamento com os dados de autenticação retornados pelo SDK
       const payload: PayOrderDebitCardRequest = {
@@ -1745,7 +1747,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           expiry: debitCardExpiry.replace(/\s/g, ""),
           cvv: debitCardCVV,
         },
-        externalAuthentication: {
+        threeDs: {
           cavv: auth.cavv,
           eci: auth.eci,
           xid: auth.xid,
@@ -1755,7 +1757,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         couponCode: isCouponApplied && couponCode ? couponCode : undefined,
       };
 
+      console.log("[debit] enviando POST /pay", {
+        orderId,
+        threeDs: payload.threeDs,
+        idempotencyKey: idempotencyKeyRef.current,
+      });
       const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
+      console.log("[debit] resposta /pay", { status: result.status, orderId: result.orderId });
 
       if (result.status === "PAID") {
         saveOrderForSuccess(result);
@@ -1770,6 +1778,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       regenerateIdempotencyKey();
     } catch (err) {
       if (err instanceof ThreeDSError) {
+        // Log estruturado pra investigar falhas vindas do SDK Braspag
+        console.error("[3DS] erro de autenticação", {
+          code: err.code,
+          returnCode: err.returnCode,
+          message: err.message,
+        });
         switch (err.code) {
           case "FAILURE":
             toast.error(`Autenticação recusada pelo banco. ${err.message}`);
@@ -1779,6 +1793,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             break;
           case "TOKEN_ERROR":
             toast.error("Erro ao iniciar autenticação 3DS. Tente novamente.");
+            break;
+          case "DISABLED":
+            toast.error("Autenticação 3DS desabilitada para este estabelecimento.");
+            break;
+          case "SDK_ERROR":
+            toast.error(
+              `Erro no 3DS: ${err.message}${err.returnCode ? ` (cod. ${err.returnCode})` : ""}`,
+            );
             break;
           default:
             toast.error("Erro na autenticação 3DS. Tente novamente.");

@@ -36,6 +36,66 @@ export interface Ticket {
 
 const EMPTY_TICKETS: Ticket[] = [];
 
+/**
+ * Normaliza o payload bruto de um ticket vindo da API para o shape interno `Ticket`.
+ * Exportado para permitir optimistic updates (ex.: duplicação) reutilizando a mesma
+ * transformação usada pelo `queryFn`, garantindo cache consistente.
+ */
+export function formatRawTicket(ticket: any): Ticket {
+  return {
+    id: ticket.id,
+    name: ticket.name,
+    isActive: ticket.isActive ?? true,
+    groupId: ticket.categoryId || "uncategorized",
+    sortOrder:
+      typeof ticket.sortOrder === "number" ? ticket.sortOrder : undefined,
+    modality: ticket.modality || "",
+    distance: ticket.distance || "",
+    distanceUnit: ticket.distanceUnit || "KM",
+    price: (() => {
+      const raw = ticket.activeBatch?.price ?? ticket.batches?.[0]?.price;
+      return raw != null
+        ? `R$ ${(Number(raw) / 100).toFixed(2).replace(".", ",")}`
+        : "R$ 0,00";
+    })(),
+    description: ticket.description ?? undefined,
+    ageLimit: ticket.ageLimit,
+    gender: ticket.gender,
+    activeBatch: ticket.activeBatch
+      ? {
+          id: ticket.activeBatch.id,
+          price: ticket.activeBatch.price,
+          label: ticket.activeBatchLabel,
+          status: ticket.activeBatchStatus,
+        }
+      : undefined,
+    activeBatchStatus: ticket.activeBatchStatus ?? undefined,
+    products: ticket.productIds || [],
+    productImages: (ticket.products || []).map((tp: any) => ({
+      id: tp.productId,
+      name: tp.product?.name ?? "Produto",
+      images:
+        Array.isArray(tp.product?.images) && tp.product.images.length > 0
+          ? tp.product.images
+          : tp.product?.image
+            ? [tp.product.image]
+            : [],
+      primaryImageIndex:
+        typeof tp.product?.primaryImageIndex === "number"
+          ? tp.product.primaryImageIndex
+          : undefined,
+    })),
+    batches: (ticket.batches || []).map((b: any) => ({
+      id: b.id ?? b.batchId ?? "",
+      quantity: String(b.quantity ?? ""),
+      price: String(b.price ?? ""),
+    })),
+    availableQuantity: ticket.availableQuantity ?? null,
+    isSoldOut: ticket.isSoldOut ?? false,
+    createdAt: ticket.createdAt,
+  };
+}
+
 export function useTickets(eventId: string | null, enabled: boolean = true, includeInactive: boolean = false) {
   const queryClient = useQueryClient();
 
@@ -56,55 +116,7 @@ export function useTickets(eventId: string | null, enabled: boolean = true, incl
         limit: 500,
         ...(includeInactive && { includeInactive: true }),
       });
-      const formattedTickets: Ticket[] = response.tickets.map((ticket: any) => ({
-        id: ticket.id,
-        name: ticket.name,
-        isActive: ticket.isActive ?? true,
-        groupId: ticket.categoryId || "uncategorized",
-        sortOrder:
-          typeof ticket.sortOrder === "number" ? ticket.sortOrder : undefined,
-        modality: ticket.modality || "",
-        distance: ticket.distance || "",
-        distanceUnit: ticket.distanceUnit || "KM",
-        price: (() => {
-          const raw = ticket.activeBatch?.price ?? ticket.batches?.[0]?.price;
-          return raw != null
-            ? `R$ ${(Number(raw) / 100).toFixed(2).replace(".", ",")}`
-            : "R$ 0,00";
-        })(),
-        description: ticket.description ?? undefined,
-        ageLimit: ticket.ageLimit,
-        gender: ticket.gender,
-        activeBatch: ticket.activeBatch
-          ? {
-            id: ticket.activeBatch.id,
-            price: ticket.activeBatch.price,
-            label: ticket.activeBatchLabel,
-            status: ticket.activeBatchStatus,
-          }
-          : undefined,
-        activeBatchStatus: ticket.activeBatchStatus ?? undefined,
-        products: ticket.productIds || [],
-        productImages: (ticket.products || []).map((tp: any) => ({
-          id: tp.productId,
-          name: tp.product?.name ?? "Produto",
-          images: Array.isArray(tp.product?.images) && tp.product.images.length > 0
-            ? tp.product.images
-            : tp.product?.image ? [tp.product.image] : [],
-          primaryImageIndex: typeof tp.product?.primaryImageIndex === "number"
-            ? tp.product.primaryImageIndex
-            : undefined,
-        })),
-        batches: (ticket.batches || []).map((b: any) => ({
-          id: b.id ?? b.batchId ?? "",
-          quantity: String(b.quantity ?? ""),
-          price: String(b.price ?? ""),
-        })),
-        availableQuantity: ticket.availableQuantity ?? null,
-        isSoldOut: ticket.isSoldOut ?? false,
-        createdAt: ticket.createdAt,
-      }));
-      return formattedTickets;
+      return response.tickets.map(formatRawTicket);
     },
     enabled: enabled && !!eventId,
     /** Lista precisa refletir criação/edição ao voltar do formulário (defaults globais: refetchOnMount: false, staleTime longo). */

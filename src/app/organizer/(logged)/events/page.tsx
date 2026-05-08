@@ -48,6 +48,7 @@ export default function OrganizerEventsPage() {
   const canViewFinancial = hasPermission("financial");
   const canViewCoupons = hasPermission("coupons");
   const canViewPixel = hasPermission("pixel");
+  const canViewNotification = hasPermission("notify");
   const [authChecked, setAuthChecked] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -443,6 +444,15 @@ export default function OrganizerEventsPage() {
                                           className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                         >
                                           ADS
+                                        </Link>
+                                      )}
+                                      {canViewNotification && (
+                                        <Link
+                                          href={`/organizer/events/${event.id}/notifications`}
+                                          onClick={() => setMenuOpenForId(null)}
+                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                        >
+                                          Notificação
                                         </Link>
                                       )}
                                       {canEditEvent && (
