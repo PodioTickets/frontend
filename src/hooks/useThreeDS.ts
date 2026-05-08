@@ -92,8 +92,13 @@ function parseExpiry(expiry: string): { month: string; year: string } {
 // envolver em CustomEvent (e.detail.Cavv). Aceitar os dois evita bug silencioso
 // (TypeError dentro do callback é engolido pelo SDK → Promise nunca resolve).
 
-function pickDetail<T extends object>(e: T | { detail: T }): T {
-  if (e && typeof e === "object" && "detail" in e && (e as { detail: unknown }).detail) {
+function pickDetail<T>(e: unknown): T {
+  if (
+    e &&
+    typeof e === "object" &&
+    "detail" in e &&
+    (e as { detail: unknown }).detail
+  ) {
     return (e as { detail: T }).detail;
   }
   return e as T;
@@ -224,7 +229,7 @@ export function useThreeDS() {
           onReady: () => {},
 
           onSuccess: (e) => {
-            const d = pickDetail(e as never);
+            const d = pickDetail<BpmpiSuccessDetail>(e);
             if (!IS_PROD) console.warn("[3DS] onSuccess raw", d);
             if (!IS_PROD) console.warn("[3DS] settled antes do finish?", settled);
             finish(() => {
@@ -243,7 +248,7 @@ export function useThreeDS() {
 
           // Banco recusou a autenticação
           onFailure: (e) => {
-            const d = pickDetail(e as never);
+            const d = pickDetail<BpmpiFailureDetail>(e);
             if (!IS_PROD) console.warn("[3DS] onFailure raw", d);
             finish(() =>
               reject(
@@ -258,7 +263,7 @@ export function useThreeDS() {
 
           // Cartão não cadastrado no 3DS: passa Eci sem Cavv, backend decide
           onUnenrolled: (e) => {
-            const d = pickDetail(e as never);
+            const d = pickDetail<BpmpiUnenrolledDetail>(e);
             if (!IS_PROD) console.warn("[3DS] onUnenrolled raw", d);
             finish(() => resolve({ cavv: "", eci: d.Eci }));
           },
@@ -274,7 +279,7 @@ export function useThreeDS() {
             ),
 
           onError: (e) => {
-            const d = pickDetail(e as never);
+            const d = pickDetail<BpmpiErrorDetail>(e);
             // Em dev, loga TODO evento de erro (mesmo após settled) — o SDK
             // pode disparar onError várias vezes (ex.: race do Cardinal +
             // 401 real do /v2/3ds/init) e o primeiro nem sempre é a raiz.
