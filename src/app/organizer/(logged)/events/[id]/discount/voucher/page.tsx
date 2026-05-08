@@ -28,6 +28,7 @@ interface VoucherGroup {
   usedCount: number;
   appliesTo: string[] | "all";
   cpfListStatus: "DISABLED" | "ENABLED";
+  cpfList?: string[];
   createdAt: string;
   updatedAt: string;
   expiryDate?: string;
