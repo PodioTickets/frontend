@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { io, Socket } from "socket.io-client";
+import { useThreeDS, ThreeDSError } from "@/hooks/useThreeDS";
 import { OrderSummary } from "./OrderSummary";
 import { ParticipantSummaryModal } from "./ParticipantSummaryModal";
 import {
@@ -58,6 +59,7 @@ import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@
 import { isValidCPF } from "@/utils/cpf";
 import toast from "react-hot-toast";
 import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
+import { Checkbox } from "@/components/CheckBox";
 
 interface PaymentStepProps {
   event: Event;
@@ -82,7 +84,7 @@ type CardErrors = {
   cardCVV?: string;
 };
 
-function CreditCardForm({
+const CreditCardForm = memo(function CreditCardForm({
   installmentOptions,
   selectedInstallments,
   setSelectedInstallments,
@@ -270,9 +272,9 @@ function CreditCardForm({
       </div>
     </div>
   );
-}
+});
 
-function DebitCardForm({
+const DebitCardForm = memo(function DebitCardForm({
   cardName,
   setCardName,
   cardNumber,
@@ -392,110 +394,9 @@ function DebitCardForm({
       </div>
     </div>
   );
-}
+});
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
-function ThreeDSModal({
-  isOpen,
-  onClose,
-  redirectUrl,
-  orderId,
-  onPaymentConfirmed,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  redirectUrl: string | null;
-  orderId: string | null;
-  onPaymentConfirmed?: () => void;
-}) {
-  const confirmedRef = useRef(false);
-  const onPaymentConfirmedRef = useRef(onPaymentConfirmed);
-  onPaymentConfirmedRef.current = onPaymentConfirmed;
-
-  const handleConfirmed = useCallback(() => {
-    if (confirmedRef.current) return;
-    confirmedRef.current = true;
-    toast.success("Pagamento confirmado!");
-    onPaymentConfirmedRef.current?.();
-  }, []);
-
-  // Canal primário: WebSocket
-  useEffect(() => {
-    if (!isOpen || !orderId || !API_URL) return;
-
-    const socket: Socket = io(`${API_URL}/payments`, {
-      withCredentials: true,
-      transports: ["websocket", "polling"],
-    });
-
-    socket.on("connect", () => {
-      socket.emit("subscribe", { orderId });
-    });
-
-    socket.on("payment:confirmed", (data: { orderId: string; status: string }) => {
-      if (data.orderId === orderId && data.status === "PAID") {
-        handleConfirmed();
-      }
-    });
-
-    return () => { socket.disconnect(); };
-  }, [isOpen, orderId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fallback: postMessage vindo da página /checkout/3ds-result carregada no iframe
-  useEffect(() => {
-    if (!isOpen || !orderId) return;
-
-    const handler = (e: MessageEvent) => {
-      if (e.data?.type !== "3DS_RESULT" || e.data?.orderId !== orderId) return;
-      const result = e.data.result as "success" | "failed" | "error";
-      if (result === "success") {
-        handleConfirmed();
-      } else if (result === "failed") {
-        onClose();
-        toast.error("Pagamento recusado pelo banco.");
-      } else {
-        onClose();
-        toast.error("Erro na autenticação 3DS. Tente novamente.");
-      }
-    };
-
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [isOpen, orderId, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (isOpen) confirmedRef.current = false;
-  }, [isOpen]);
-
-  if (!isOpen || !redirectUrl) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl mx-4 shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
-        <div className="text-[20px] font-bold text-gray-12 flex items-center justify-between border-b border-gray-6 p-4">
-          <p>Autenticação do banco</p>
-          <button className="cursor-pointer" onClick={onClose}>
-            <RemoveIcon className="size-4" />
-          </button>
-        </div>
-        <div className="p-4 space-y-3">
-          <p className="text-sm text-gray-11">
-            Complete a autenticação no ambiente do seu banco para finalizar o pagamento com cartão de débito.
-          </p>
-          <div className="w-full h-[500px] rounded-lg overflow-hidden border border-gray-6 bg-gray-2 flex items-center justify-center">
-            <iframe
-              src={redirectUrl}
-              className="w-full h-full"
-              title="Autenticação 3DS"
-              sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function PixModal({
   isOpen,
@@ -830,10 +731,35 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [cardErrors, setCardErrors] = useState<CardErrors>({});
   const [cardErrorModalOpen, setCardErrorModalOpen] = useState(false);
 
-  const handleSetCardName = (v: string) => { setCardName(v); setCardErrors((p) => { const n = { ...p }; delete n.cardName; return n; }); };
-  const handleSetCardNumber = (v: string) => { setCardNumber(v); setCardErrors((p) => { const n = { ...p }; delete n.cardNumber; return n; }); };
-  const handleSetCardExpiry = (v: string) => { setCardExpiry(v); setCardErrors((p) => { const n = { ...p }; delete n.cardExpiry; return n; }); };
-  const handleSetCardCVV = (v: string) => { setCardCVV(v); setCardErrors((p) => { const n = { ...p }; delete n.cardCVV; return n; }); };
+  // Identidade estável + bailout quando não há erro a limpar — preserva memo() de CreditCardForm.
+  const handleSetCardName = useCallback((v: string) => {
+    setCardName(v);
+    setCardErrors((p) => {
+      if (!p.cardName) return p;
+      const n = { ...p }; delete n.cardName; return n;
+    });
+  }, []);
+  const handleSetCardNumber = useCallback((v: string) => {
+    setCardNumber(v);
+    setCardErrors((p) => {
+      if (!p.cardNumber) return p;
+      const n = { ...p }; delete n.cardNumber; return n;
+    });
+  }, []);
+  const handleSetCardExpiry = useCallback((v: string) => {
+    setCardExpiry(v);
+    setCardErrors((p) => {
+      if (!p.cardExpiry) return p;
+      const n = { ...p }; delete n.cardExpiry; return n;
+    });
+  }, []);
+  const handleSetCardCVV = useCallback((v: string) => {
+    setCardCVV(v);
+    setCardErrors((p) => {
+      if (!p.cardCVV) return p;
+      const n = { ...p }; delete n.cardCVV; return n;
+    });
+  }, []);
 
   // Order state from server (authoritative for pricing, coupon, voucher)
   const [currentOrder, setCurrentOrder] = useState<OrderResponse | null>(null);
@@ -850,14 +776,38 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [debitCardExpiry, setDebitCardExpiry] = useState("");
   const [debitCardCVV, setDebitCardCVV] = useState("");
   const [debitCardErrors, setDebitCardErrors] = useState<CardErrors>({});
-  const [is3DSModalOpen, setIs3DSModalOpen] = useState(false);
-  const [threeDSRedirectUrl, setThreeDSRedirectUrl] = useState<string | null>(null);
+  const threeDS = useThreeDS();
   const [debitLoading, setDebitLoading] = useState(false);
 
-  const handleSetDebitCardName = (v: string) => { setDebitCardName(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardName; return n; }); };
-  const handleSetDebitCardNumber = (v: string) => { setDebitCardNumber(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardNumber; return n; }); };
-  const handleSetDebitCardExpiry = (v: string) => { setDebitCardExpiry(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardExpiry; return n; }); };
-  const handleSetDebitCardCVV = (v: string) => { setDebitCardCVV(v); setDebitCardErrors((p) => { const n = { ...p }; delete n.cardCVV; return n; }); };
+  // Idem para débito — identidade estável + bailout para preservar memo() de DebitCardForm.
+  const handleSetDebitCardName = useCallback((v: string) => {
+    setDebitCardName(v);
+    setDebitCardErrors((p) => {
+      if (!p.cardName) return p;
+      const n = { ...p }; delete n.cardName; return n;
+    });
+  }, []);
+  const handleSetDebitCardNumber = useCallback((v: string) => {
+    setDebitCardNumber(v);
+    setDebitCardErrors((p) => {
+      if (!p.cardNumber) return p;
+      const n = { ...p }; delete n.cardNumber; return n;
+    });
+  }, []);
+  const handleSetDebitCardExpiry = useCallback((v: string) => {
+    setDebitCardExpiry(v);
+    setDebitCardErrors((p) => {
+      if (!p.cardExpiry) return p;
+      const n = { ...p }; delete n.cardExpiry; return n;
+    });
+  }, []);
+  const handleSetDebitCardCVV = useCallback((v: string) => {
+    setDebitCardCVV(v);
+    setDebitCardErrors((p) => {
+      if (!p.cardCVV) return p;
+      const n = { ...p }; delete n.cardCVV; return n;
+    });
+  }, []);
 
   // PIX states
   const [isPixModalOpen, setIsPixModalOpen] = useState(false);
@@ -1338,27 +1288,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     </div>
   );
 
-  const paymentOptions: PaymentOption[] = [
-    {
-      id: "credit",
-      name: "Cartão de crédito",
-      description: "",
-      icons: cardIcons,
-    },
-    {
-      id: "debit",
-      name: "Cartão de débito",
-      description: "",
-      icons: cardIcons,
-    },
-    {
-      id: "pix",
-      name: "PIX",
-      description: "",
-      badge: "",
-    },
-  ];
-
   // Totais — usa servidor quando disponível
   const totalParticipants = currentOrder
     ? currentOrder.tickets.reduce((sum, t) => sum + t.quantity, 0)
@@ -1391,6 +1320,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const totalValue = currentOrder
     ? currentOrder.pricing.total / 100
     : subtotalValue - couponDiscount - voucherDiscount;
+
+  const isFreeOrder = totalValue <= 0;
+  const isCardSelected = selectedPaymentMethod === "credit" || selectedPaymentMethod === "debit";
 
   const isCouponApplied = !!currentOrder?.coupon;
   const isVoucherApplied = !!currentOrder?.voucher;
@@ -1631,6 +1563,36 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
+  const handleProcessFreeCheckout = async () => {
+    if (checkoutLoadingRef.current) return;
+    if (!orderId) {
+      toast.error("Sua reserva expirou. Volte para selecionar os ingressos.");
+      return;
+    }
+    if (!billingAddressConfirmed) {
+      toast.error("Confirme o endereço de cobrança antes de finalizar.");
+      return;
+    }
+    checkoutLoadingRef.current = true;
+    setCheckoutLoading(true);
+    try {
+      const payload: PayOrderRequest = {
+        method: "PIX",
+        couponCode: isCouponApplied && couponCode ? couponCode : undefined,
+      };
+      const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
+      saveOrderForSuccess(result);
+      clearTimer();
+      toast.success("Pedido finalizado!");
+      onSuccess?.(result.orderId);
+    } catch (err) {
+      handlePayError(err);
+    } finally {
+      checkoutLoadingRef.current = false;
+      setCheckoutLoading(false);
+    }
+  };
+
   // Processar checkout Cartão de Crédito
   const handleProcessCreditCardCheckout = async () => {
     if (checkoutLoadingRef.current) return;
@@ -1713,10 +1675,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }
   };
 
-  // Processar checkout Cartão de Débito (3DS)
+  // Processar checkout Cartão de Débito com autenticação 3DS client-side (Braspag/Cielo SDK)
   const handleProcessDebitCardCheckout = async () => {
     if (checkoutLoadingRef.current) return;
 
+    // 1. Validar campos do cartão
     const newErrors: CardErrors = {};
     if (!debitCardName.trim()) newErrors.cardName = "Informe o nome impresso no cartão.";
     if (!debitCardNumber) {
@@ -1755,6 +1718,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     setDebitLoading(true);
     setCheckoutLoading(true);
     try {
+      // 2. Autenticar via SDK 3DS client-side (Braspag/Cielo)
+      //    O SDK abre o desafio do banco internamente (popup/modal)
+      const auth = await threeDS.authenticate({
+        orderId,
+        totalAmountCents: Math.round(totalValue * 100),
+        card: {
+          number: debitCardNumber,
+          name: debitCardName,
+          expiry: debitCardExpiry,
+        },
+      });
+
+      // 3. Enviar pagamento com os dados de autenticação retornados pelo SDK
       const payload: PayOrderDebitCardRequest = {
         method: "DEBIT_CARD",
         card: {
@@ -1763,8 +1739,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           expiry: debitCardExpiry.replace(/\s/g, ""),
           cvv: debitCardCVV,
         },
+        externalAuthentication: {
+          cavv: auth.cavv,
+          eci: auth.eci,
+          xid: auth.xid,
+          referenceId: auth.referenceId,
+          version: auth.version,
+        },
         couponCode: isCouponApplied && couponCode ? couponCode : undefined,
       };
+
       const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
 
       if (result.status === "PAID") {
@@ -1775,21 +1759,27 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         return;
       }
 
-      // 3DS necessário — redirecionar no iframe
-      const redirectUrl = result.payment?.redirectUrl;
-      if (redirectUrl) {
-        syncFromOrder(result);
-        saveOrderForSuccess(result);
-        pauseVisibilityRefresh();
-        setThreeDSRedirectUrl(redirectUrl);
-        setIs3DSModalOpen(true);
-        return;
-      }
-
       syncFromOrder(result);
       toast.error("Pagamento não aprovado. Tente novamente.");
       regenerateIdempotencyKey();
     } catch (err) {
+      if (err instanceof ThreeDSError) {
+        switch (err.code) {
+          case "FAILURE":
+            toast.error(`Autenticação recusada pelo banco. ${err.message}`);
+            break;
+          case "UNSUPPORTED_BRAND":
+            toast.error("Bandeira do cartão não suportada para autenticação de débito.");
+            break;
+          case "TOKEN_ERROR":
+            toast.error("Erro ao iniciar autenticação 3DS. Tente novamente.");
+            break;
+          default:
+            toast.error("Erro na autenticação 3DS. Tente novamente.");
+        }
+        regenerateIdempotencyKey();
+        return;
+      }
       handlePayError(err);
     } finally {
       checkoutLoadingRef.current = false;
@@ -1920,23 +1910,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           resumeVisibilityRefresh();
         }}
       />
-      <ThreeDSModal
-        isOpen={is3DSModalOpen}
-        onClose={() => {
-          setIs3DSModalOpen(false);
-          setThreeDSRedirectUrl(null);
-          resumeVisibilityRefresh();
-          regenerateIdempotencyKey();
-        }}
-        redirectUrl={threeDSRedirectUrl}
-        orderId={orderId ?? null}
-        onPaymentConfirmed={() => {
-          setIs3DSModalOpen(false);
-          setThreeDSRedirectUrl(null);
-          clearTimer();
-          onSuccess?.(orderId!);
-        }}
-      />
 
       {/* Mobile Layout */}
       <div className="w-full md:hidden flex flex-col pb-24">
@@ -1969,96 +1942,37 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         {/* Payment Methods + cupom (só após endereço confirmado) */}
         {billingAddressConfirmed ? (
           <>
-            <div className="pb-6 flex flex-col gap-3">
-              {/* Credit Card Option */}
-              <div
-                className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "credit"
-                  ? "border-blue-8 bg-blue-3"
-                  : "border-gray-6 bg-gray-3"
-                  }`}
-                onClick={() => setSelectedPaymentMethod("credit")}
-              >
-                <div className="flex items-center justify-between cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "credit"
-                        ? "bg-primary-11 border-primary-11"
-                        : "bg-transparent border-gray-6"
-                        }`}
-                    ></div>
-                    <span className="text-base font-semibold text-primary-12 font-manrope">
-                      Cartão de crédito
-                    </span>
-                  </div>
-                  <div className="flex gap-1 items-center">
-                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                      <VisaIcon />
-                    </div>
-                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                      <EloIcon />
-                    </div>
-                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                      <Image
-                        src="/images/american_express.png"
-                        alt="American Express"
-                        width={24}
-                        height={24}
-                      />
-                    </div>
-                    <div className="bg-gray-1 border border-gray-6 rounded h-6 w-[42px] flex items-center justify-center">
-                      <MasterCardIcon />
-                    </div>
-                  </div>
-                </div>
-
-                {selectedPaymentMethod === "credit" && (
-                  <div className="mt-4">
-                    <CreditCardForm
-                      installmentOptions={installmentOptions}
-                      selectedInstallments={selectedInstallments}
-                      setSelectedInstallments={setSelectedInstallments}
-                      onSuccess={onSuccess}
-                      cardName={cardName}
-                      setCardName={handleSetCardName}
-                      cardNumber={cardNumber}
-                      setCardNumber={handleSetCardNumber}
-                      cardExpiry={cardExpiry}
-                      setCardExpiry={handleSetCardExpiry}
-                      cardCVV={cardCVV}
-                      setCardCVV={handleSetCardCVV}
-                      isMobile={true}
-                      errors={cardErrors}
-                    />
-                    <Button
-                      onClick={handleProcessCreditCardCheckout}
-                      disabled={checkoutLoading || !billingAddressConfirmed}
-                      isLoading={checkoutLoading}
-                      className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Finalizar compra
-                    </Button>
-                  </div>
-                )}
+            {isFreeOrder && (
+              <div className="pb-6">
+                <Button
+                  onClick={handleProcessFreeCheckout}
+                  disabled={checkoutLoading || totalParticipants === 0}
+                  isLoading={checkoutLoading}
+                  className="w-full bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Finalizar pedido
+                </Button>
               </div>
-
-              {/* Debit Card Option */}
+            )}
+            {!isFreeOrder && <div className="pb-6 flex flex-col gap-3">
+              {/* Card Option (crédito + débito unificados) */}
               <div
-                className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "debit"
+                className={`border rounded-lg p-4 transition-colors ${isCardSelected
                   ? "border-blue-8 bg-blue-3"
                   : "border-gray-6 bg-gray-3"
                   }`}
-                onClick={() => setSelectedPaymentMethod("debit")}
+                onClick={() => { if (!isCardSelected) setSelectedPaymentMethod("credit"); }}
               >
                 <div className="flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${selectedPaymentMethod === "debit"
+                      className={`rounded-full size-4 border-[1.5px] flex items-center justify-center ${isCardSelected
                         ? "bg-primary-11 border-primary-11"
                         : "bg-transparent border-gray-6"
                         }`}
                     />
                     <span className="text-base font-semibold text-primary-12 font-manrope">
-                      Cartão de débito
+                      Cartão
                     </span>
                   </div>
                   <div className="flex gap-1 items-center">
@@ -2071,28 +1985,79 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   </div>
                 </div>
 
-                {selectedPaymentMethod === "debit" && (
-                  <div className="mt-4">
-                    <DebitCardForm
-                      cardName={debitCardName}
-                      setCardName={handleSetDebitCardName}
-                      cardNumber={debitCardNumber}
-                      setCardNumber={handleSetDebitCardNumber}
-                      cardExpiry={debitCardExpiry}
-                      setCardExpiry={handleSetDebitCardExpiry}
-                      cardCVV={debitCardCVV}
-                      setCardCVV={handleSetDebitCardCVV}
-                      isMobile={true}
-                      errors={debitCardErrors}
-                    />
-                    <Button
-                      onClick={handleProcessDebitCardCheckout}
-                      disabled={checkoutLoading || !billingAddressConfirmed}
-                      isLoading={debitLoading}
-                      className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Finalizar compra
-                    </Button>
+                {isCardSelected && (
+                  <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+                    {/* Seleção crédito / débito */}
+                    <div className="flex gap-6 mb-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={selectedPaymentMethod === "credit"}
+                          onCheckedChange={() => setSelectedPaymentMethod("credit")}
+                        />
+                        <span className="text-sm font-semibold text-gray-12 font-manrope">Crédito</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={selectedPaymentMethod === "debit"}
+                          onCheckedChange={() => setSelectedPaymentMethod("debit")}
+                        />
+                        <span className="text-sm font-semibold text-gray-12 font-manrope">Débito</span>
+                      </label>
+                    </div>
+
+                    {selectedPaymentMethod === "credit" && (
+                      <>
+                        <CreditCardForm
+                          installmentOptions={installmentOptions}
+                          selectedInstallments={selectedInstallments}
+                          setSelectedInstallments={setSelectedInstallments}
+                          onSuccess={onSuccess}
+                          cardName={cardName}
+                          setCardName={handleSetCardName}
+                          cardNumber={cardNumber}
+                          setCardNumber={handleSetCardNumber}
+                          cardExpiry={cardExpiry}
+                          setCardExpiry={handleSetCardExpiry}
+                          cardCVV={cardCVV}
+                          setCardCVV={handleSetCardCVV}
+                          isMobile={true}
+                          errors={cardErrors}
+                        />
+                        <Button
+                          onClick={handleProcessCreditCardCheckout}
+                          disabled={checkoutLoading || !billingAddressConfirmed}
+                          isLoading={checkoutLoading}
+                          className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Finalizar compra
+                        </Button>
+                      </>
+                    )}
+
+                    {selectedPaymentMethod === "debit" && (
+                      <>
+                        <DebitCardForm
+                          cardName={debitCardName}
+                          setCardName={handleSetDebitCardName}
+                          cardNumber={debitCardNumber}
+                          setCardNumber={handleSetDebitCardNumber}
+                          cardExpiry={debitCardExpiry}
+                          setCardExpiry={handleSetDebitCardExpiry}
+                          cardCVV={debitCardCVV}
+                          setCardCVV={handleSetDebitCardCVV}
+                          isMobile={true}
+                          errors={debitCardErrors}
+                        />
+                        <Button
+                          onClick={handleProcessDebitCardCheckout}
+                          disabled={checkoutLoading || !billingAddressConfirmed}
+                          isLoading={debitLoading}
+                          className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Finalizar compra
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -2140,7 +2105,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   </div>
                 )}
               </div>
-            </div>
+            </div>}
 
             {/* Coupon Section */}
             <div className="pt-6 border-t border-gray-8">
@@ -2254,7 +2219,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             </div>
             <Button
               onClick={() => {
-                if (selectedPaymentMethod === "credit") {
+                if (isFreeOrder) {
+                  handleProcessFreeCheckout();
+                } else if (selectedPaymentMethod === "credit") {
                   handleProcessCreditCardCheckout();
                 } else if (selectedPaymentMethod === "debit") {
                   handleProcessDebitCardCheckout();
@@ -2270,7 +2237,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               isLoading={checkoutLoading}
               className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Finalizar compra
+              {isFreeOrder ? "Finalizar pedido" : "Finalizar compra"}
             </Button>
           </div>
         </div>
@@ -2294,9 +2261,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </h1>
               </div>
               <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
-                {billingAddressConfirmed
-                  ? "Escolha cartão ou Pix para concluir. Os ingressos são liberados após aprovação."
-                  : "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."}
+                {!billingAddressConfirmed
+                  ? "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."
+                  : isFreeOrder
+                  ? "Clique em Finalizar pedido para confirmar. Os ingressos serão liberados imediatamente."
+                  : "Escolha cartão ou Pix para concluir. Os ingressos são liberados após aprovação."}
               </p>
             </div>
 
@@ -2316,97 +2285,122 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             )}
 
             {/* Métodos de Pagamento */}
-            {billingAddressConfirmed ? (
+            {billingAddressConfirmed && isFreeOrder && (
+              <Button
+                onClick={handleProcessFreeCheckout}
+                disabled={checkoutLoading || totalParticipants === 0}
+                isLoading={checkoutLoading}
+                className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Finalizar pedido
+              </Button>
+            )}
+            {billingAddressConfirmed && !isFreeOrder ? (
               <div className="space-y-6">
-                {paymentOptions.map((option) => {
-                  const isNotSelected = selectedPaymentMethod !== option.id;
-
-                  if (isNotSelected) {
-                    return (
-                      <PaymentMethodOption
-                        key={option.id}
-                        option={option}
-                        isSelected={false}
-                        onSelect={() => setSelectedPaymentMethod(option.id)}
-                      />
-                    );
-                  }
-
-                  return (
-                    <div key={option.id}>
-                      <PaymentMethodOption
-                        option={option}
-                        isSelected={true}
-                        onSelect={() => setSelectedPaymentMethod(option.id)}
-                      />
-
-                      <div className="mt-4">
-                        {option.id === "credit" && (
-                          <>
-                            <CreditCardForm
-                              installmentOptions={installmentOptions}
-                              selectedInstallments={selectedInstallments}
-                              setSelectedInstallments={setSelectedInstallments}
-                              onSuccess={onSuccess}
-                              cardName={cardName}
-                              setCardName={handleSetCardName}
-                              cardNumber={cardNumber}
-                              setCardNumber={handleSetCardNumber}
-                              cardExpiry={cardExpiry}
-                              setCardExpiry={handleSetCardExpiry}
-                              cardCVV={cardCVV}
-                              setCardCVV={handleSetCardCVV}
-                              isMobile={false}
-                              errors={cardErrors}
-                            />
-                            <Button
-                              onClick={handleProcessCreditCardCheckout}
-                              disabled={checkoutLoading}
-                              isLoading={checkoutLoading}
-                              className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              Finalizar compra
-                            </Button>
-                          </>
-                        )}
-                        {option.id === "debit" && (
-                          <>
-                            <DebitCardForm
-                              cardName={debitCardName}
-                              setCardName={handleSetDebitCardName}
-                              cardNumber={debitCardNumber}
-                              setCardNumber={handleSetDebitCardNumber}
-                              cardExpiry={debitCardExpiry}
-                              setCardExpiry={handleSetDebitCardExpiry}
-                              cardCVV={debitCardCVV}
-                              setCardCVV={handleSetDebitCardCVV}
-                              isMobile={false}
-                              errors={debitCardErrors}
-                            />
-                            <Button
-                              onClick={handleProcessDebitCardCheckout}
-                              disabled={checkoutLoading}
-                              isLoading={debitLoading}
-                              className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              Finalizar compra
-                            </Button>
-                          </>
-                        )}
-                        {option.id === "pix" && (
-                          <PixForm
-                            onSuccess={onSuccess}
-                            pixValue={pixValue}
-                            isMobile={false}
-                            onProcessCheckout={handleProcessPixCheckout}
-                            loading={checkoutLoading}
-                            submitDisabled={!billingAddressConfirmed}
+                {/* Cartão (crédito + débito unificados) */}
+                <div>
+                  <PaymentMethodOption
+                    option={{ id: "credit", name: "Cartão", description: "", icons: cardIcons }}
+                    isSelected={isCardSelected}
+                    onSelect={() => { if (!isCardSelected) setSelectedPaymentMethod("credit"); }}
+                  />
+                  {isCardSelected && (
+                    <div className="mt-4">
+                      {/* Seleção crédito / débito */}
+                      <div className="flex gap-6 mb-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={selectedPaymentMethod === "credit"}
+                            onCheckedChange={() => setSelectedPaymentMethod("credit")}
                           />
-                        )}
+                          <span className="text-sm font-semibold text-gray-12 font-manrope">Crédito</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={selectedPaymentMethod === "debit"}
+                            onCheckedChange={() => setSelectedPaymentMethod("debit")}
+                          />
+                          <span className="text-sm font-semibold text-gray-12 font-manrope">Débito</span>
+                        </label>
                       </div>
+
+                      {selectedPaymentMethod === "credit" && (
+                        <>
+                          <CreditCardForm
+                            installmentOptions={installmentOptions}
+                            selectedInstallments={selectedInstallments}
+                            setSelectedInstallments={setSelectedInstallments}
+                            onSuccess={onSuccess}
+                            cardName={cardName}
+                            setCardName={handleSetCardName}
+                            cardNumber={cardNumber}
+                            setCardNumber={handleSetCardNumber}
+                            cardExpiry={cardExpiry}
+                            setCardExpiry={handleSetCardExpiry}
+                            cardCVV={cardCVV}
+                            setCardCVV={handleSetCardCVV}
+                            isMobile={false}
+                            errors={cardErrors}
+                          />
+                          <Button
+                            onClick={handleProcessCreditCardCheckout}
+                            disabled={checkoutLoading}
+                            isLoading={checkoutLoading}
+                            className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Finalizar compra
+                          </Button>
+                        </>
+                      )}
+
+                      {selectedPaymentMethod === "debit" && (
+                        <>
+                          <DebitCardForm
+                            cardName={debitCardName}
+                            setCardName={handleSetDebitCardName}
+                            cardNumber={debitCardNumber}
+                            setCardNumber={handleSetDebitCardNumber}
+                            cardExpiry={debitCardExpiry}
+                            setCardExpiry={handleSetDebitCardExpiry}
+                            cardCVV={debitCardCVV}
+                            setCardCVV={handleSetDebitCardCVV}
+                            isMobile={false}
+                            errors={debitCardErrors}
+                          />
+                          <Button
+                            onClick={handleProcessDebitCardCheckout}
+                            disabled={checkoutLoading}
+                            isLoading={debitLoading}
+                            className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Finalizar compra
+                          </Button>
+                        </>
+                      )}
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+
+                {/* PIX */}
+                <div>
+                  <PaymentMethodOption
+                    option={{ id: "pix", name: "PIX", description: "" }}
+                    isSelected={selectedPaymentMethod === "pix"}
+                    onSelect={() => setSelectedPaymentMethod("pix")}
+                  />
+                  {selectedPaymentMethod === "pix" && (
+                    <div className="mt-4">
+                      <PixForm
+                        onSuccess={onSuccess}
+                        pixValue={pixValue}
+                        isMobile={false}
+                        onProcessCheckout={handleProcessPixCheckout}
+                        loading={checkoutLoading}
+                        submitDisabled={!billingAddressConfirmed}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             ) : null}
           </div>
@@ -2777,7 +2771,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   <Button
                     onClick={() => {
                       closeModal();
-                      if (selectedPaymentMethod === "credit") {
+                      if (isFreeOrder) {
+                        handleProcessFreeCheckout();
+                      } else if (selectedPaymentMethod === "credit") {
                         handleProcessCreditCardCheckout();
                       } else if (selectedPaymentMethod === "pix") {
                         handleProcessPixCheckout();
@@ -2791,7 +2787,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     isLoading={checkoutLoading}
                     className="bg-primary-11 text-primary-2 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Finalizar compra
+                    {isFreeOrder ? "Finalizar pedido" : "Finalizar compra"}
                   </Button>
                 </div>
               </div>

@@ -845,10 +845,34 @@ export interface PaymentDetails {
   coupon: {
     id: string;
     code: string | null;
-    type: string;
+    couponType: string | null;
+    discountType: string | null;
     discountValue: number | null;
     discountPercentage: number | null;
+    discountAmount: number | null;
+    note: string | null;
+    appliesTo: string | null;
+    minCartValue: number | null;
+    minQuantity: number | null;
+    minAge: number | null;
+    maxAge: number | null;
+    maxUsage: number | null;
+    usageCount: number | null;
+    expiryDate: string | null;
+    // backward compat
+    type?: string;
   } | null;
+  voucher: {
+    id: string;
+    code: string;
+    name: string | null;
+    status: string;
+    usedAt: string | null;
+    expiryDate: string | null;
+    appliesTo: string | null;
+    discountAmount: number;
+  } | null;
+  totalDiscount: number | null;
   transactionId: string;
   orderId: string;
   registrations?: Array<{
@@ -889,6 +913,7 @@ export interface EventNotification {
   channels: EventNotificationChannel[];
   status: EventNotificationStatus;
   messageHtml?: string;
+  deniedReason?: string | null;
 }
 
 export interface EventNotificationsPagination {
@@ -942,6 +967,11 @@ function normalizeEventNotification(raw: Record<string, unknown>): EventNotifica
     (typeof raw.message_html === "string" && raw.message_html) ||
     undefined;
 
+  const deniedReason =
+    (typeof raw.deniedReason === "string" && raw.deniedReason) ||
+    (typeof raw.denied_reason === "string" && raw.denied_reason) ||
+    null;
+
   return {
     id: String(raw.id ?? ""),
     occurredAt,
@@ -949,6 +979,7 @@ function normalizeEventNotification(raw: Record<string, unknown>): EventNotifica
     channels,
     status,
     messageHtml,
+    deniedReason,
   };
 }
 
@@ -1436,21 +1467,28 @@ export class OrganizerService {
     return response.data.event;
   }
 
-  async getFinancialSettings(eventId: string): Promise<{ organizerFeePercent: number; maxInstallments: 1 | 2 | 3 }> {
-    const { data } = await this.apiClient.get<{ data: { organizerFeePercent: number; maxInstallments: 1 | 2 | 3 } }>(
+  async getFinancialSettings(eventId: string): Promise<{ organizerFeePercent: number; participantFeePercent: number; maxInstallments: 1 | 2 | 3; totalFee: number }> {
+    const { data } = await this.apiClient.get<{ data: { organizerFeePercent: number; participantFeePercent?: number; maxInstallments: 1 | 2 | 3; totalFee?: number } }>(
       `/api/v1/events/${eventId}/financial-settings`,
     );
-    return data.data;
+    const raw = data.data;
+    const participantFeePercent = raw.participantFeePercent ?? 0;
+    const totalFee = raw.totalFee ?? parseFloat((raw.organizerFeePercent + participantFeePercent).toFixed(2));
+    return { ...raw, participantFeePercent, totalFee };
   }
 
   async saveFinancialSettings(
     eventId: string,
     organizerFeePercent: number,
+    participantFeePercent: number,
     maxInstallments: 1 | 2 | 3,
+    totalFee?: number,
   ): Promise<void> {
     await this.apiClient.patch(`/api/v1/events/${eventId}/financial-settings`, {
       organizerFeePercent,
+      participantFeePercent,
       maxInstallments,
+      ...(totalFee !== undefined && { totalFee }),
     });
   }
 

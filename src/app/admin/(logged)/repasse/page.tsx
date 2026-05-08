@@ -10,9 +10,11 @@ import {
   XCircle,
   Percent,
 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/Button";
 import { getApiClient } from "@/services/base/ApiClient";
+import { queryKeys } from "@/services/cache/QueryClient";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import {
@@ -229,28 +231,21 @@ const ITEMS_PER_PAGE = 20;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const EMPTY_REPASSE_STATS: WithdrawalStats = {
+  pending: { count: 0, totalAmount: 0, totalNetAmount: 0 },
+  completed: { count: 0, totalAmount: 0, totalNetAmount: 0 },
+  cancelled: { count: 0, totalAmount: 0, totalNetAmount: 0 },
+  fees: { totalCollected: 0, avgFeeRate: 0, effectiveFeePercent: 0 },
+  overview: { totalEventsWithWithdrawals: 0, totalWithdrawals: 0, totalGrossRequested: 0 },
+};
+
 export default function AdminRepassePage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  const [stats, setStats] = useState<WithdrawalStats>({
-    pending: { count: 0, totalAmount: 0, totalNetAmount: 0 },
-    completed: { count: 0, totalAmount: 0, totalNetAmount: 0 },
-    cancelled: { count: 0, totalAmount: 0, totalNetAmount: 0 },
-    fees: { totalCollected: 0, avgFeeRate: 0, effectiveFeePercent: 0 },
-    overview: { totalEventsWithWithdrawals: 0, totalWithdrawals: 0, totalGrossRequested: 0 },
-  });
-  const [items, setItems] = useState<WithdrawalItem[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: ITEMS_PER_PAGE,
-    total: 0,
-    totalPages: 1,
-  });
-  const [loading, setLoading] = useState(true);
-  const [fetchKey, setFetchKey] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selected, setSelected] = useState<WithdrawalItem | null>(null);
 
@@ -263,54 +258,62 @@ export default function AdminRepassePage() {
     setPage(1);
   }, [debouncedSearch, statusFilter]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const api = getApiClient();
-        const params = new URLSearchParams({
-          page: String(page),
-          limit: String(ITEMS_PER_PAGE),
-        });
-        if (debouncedSearch) params.set("search", debouncedSearch);
-        if (statusFilter) params.set("status", statusFilter);
+  const listQuery = useQuery({
+    queryKey: queryKeys.admin.repasse.list({
+      page,
+      search: debouncedSearch,
+      status: statusFilter,
+    }),
+    queryFn: async () => {
+      const api = getApiClient();
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(ITEMS_PER_PAGE),
+      });
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (statusFilter) params.set("status", statusFilter);
 
-        const [statsRes, listRes] = await Promise.all([
-          api.get<{ data: WithdrawalStats }>("/api/v1/admin/withdrawals/stats"),
-          api.get<{ data: { withdrawals: WithdrawalItem[]; pagination: Pagination } }>(
-            `/api/v1/admin/withdrawals?${params.toString()}`
-          ),
-        ]);
+      const [statsRes, listRes] = await Promise.all([
+        api.get<{ data: WithdrawalStats }>("/api/v1/admin/withdrawals/stats"),
+        api.get<{ data: { withdrawals: WithdrawalItem[]; pagination: Pagination } }>(
+          `/api/v1/admin/withdrawals?${params.toString()}`,
+        ),
+      ]);
 
-        if (cancelled) return;
-        setStats(statsRes.data.data);
-        setItems(listRes.data.data.withdrawals ?? []);
-        setPagination(
+      return {
+        stats: statsRes.data.data,
+        items: listRes.data.data.withdrawals ?? [],
+        pagination:
           listRes.data.data.pagination ?? {
             page,
             limit: ITEMS_PER_PAGE,
             total: 0,
             totalPages: 1,
-          }
-        );
-      } catch (e: any) {
-        if (cancelled) return;
-        toast.error(
-          e?.response?.data?.message ?? e?.message ?? "Erro ao carregar repasses."
-        );
-        setItems([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [page, debouncedSearch, statusFilter, fetchKey]);
+          },
+      };
+    },
+    placeholderData: (prev) => prev,
+  });
+
+  useEffect(() => {
+    if (listQuery.error) {
+      const e = listQuery.error as any;
+      toast.error(
+        e?.response?.data?.message ?? e?.message ?? "Erro ao carregar repasses.",
+      );
+    }
+  }, [listQuery.error]);
+
+  const stats = listQuery.data?.stats ?? EMPTY_REPASSE_STATS;
+  const items = listQuery.data?.items ?? [];
+  const pagination =
+    listQuery.data?.pagination ?? { page, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 };
+  const loading = listQuery.isLoading;
 
   const handleStatusChange = (_id: string, _newStatus: WithdrawalStatus) => {
-    setFetchKey((k) => k + 1);
+    // Mutação de status precisa ressincronizar valores agregados (stats);
+    // refetch da listagem cobre tudo.
+    queryClient.invalidateQueries({ queryKey: queryKeys.admin.repasse.all() });
   };
 
   const filtersActive = Boolean(debouncedSearch) || Boolean(statusFilter);

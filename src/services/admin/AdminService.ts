@@ -541,4 +541,8 @@ export class AdminService {
       },
     };
   }
+
+  async publishEvent(eventId: string): Promise<void> {
+    await this.apiClient.post(`/api/v1/admin/events/${eventId}/publish`);
+  }
 }

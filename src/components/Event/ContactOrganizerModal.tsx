@@ -11,6 +11,7 @@ import { isValidCPF } from "@/utils/cpf";
 import { cn } from "@/utils/cn";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
+import { MessageSentModal } from "./MessageSentModal";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -72,6 +73,7 @@ export function ContactOrganizerModal({
 }: ContactOrganizerModalProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const mobileTurnstileRef = useRef<TurnstileInstance>(null);
   const desktopTurnstileRef = useRef<TurnstileInstance>(null);
@@ -105,6 +107,7 @@ export function ContactOrganizerModal({
 
     setErrors({});
     setTurnstileToken(null);
+    setSent(false);
     mobileTurnstileRef.current?.reset();
     desktopTurnstileRef.current?.reset();
   }, [isOpen, user]);
@@ -194,8 +197,7 @@ export function ContactOrganizerModal({
         message: form.message,
         eventId: eventId || undefined,
       });
-      toast.success("Mensagem enviada com sucesso!");
-      onClose();
+      setSent(true);
     } catch {
       toast.error("Erro ao enviar mensagem. Tente novamente.");
     } finally {
@@ -395,41 +397,41 @@ export function ContactOrganizerModal({
 
           {/* Scrollable body */}
           <form onSubmit={handleSubmit} noValidate className="flex flex-col flex-1 overflow-y-auto">
-            {formFields(true)}
+              {formFields(true)}
 
-            {/* Footer */}
-            <div className="flex flex-col gap-3 px-4 py-5 border-t border-gray-6 shrink-0">
-              {TURNSTILE_SITE_KEY && (
-                <Turnstile
-                  ref={mobileTurnstileRef}
-                  siteKey={TURNSTILE_SITE_KEY}
-                  onSuccess={setTurnstileToken}
-                  onError={() => setTurnstileToken(null)}
-                  onExpire={() => setTurnstileToken(null)}
-                  options={{ theme: "auto", size: "flexible" }}
-                  className="w-full"
-                />
-              )}
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-gray-6 text-gray-12 h-11"
-                  onClick={onClose}
-                >
-                  Cancelar
-                </Button>
-                <button
-                  type="submit"
-                  disabled={(!!TURNSTILE_SITE_KEY && !turnstileToken) || isSubmitting}
-                  className="flex-1 h-11 rounded-lg font-semibold text-base font-family-dm-sans transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: "#59e373", color: "#141a15" }}
-                >
-                  {isSubmitting ? "Enviando..." : "Enviar"}
-                </button>
+              {/* Footer */}
+              <div className="flex flex-col gap-3 px-4 py-5 border-t border-gray-6 shrink-0">
+                {TURNSTILE_SITE_KEY && (
+                  <Turnstile
+                    ref={mobileTurnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setTurnstileToken}
+                    onError={() => setTurnstileToken(null)}
+                    onExpire={() => setTurnstileToken(null)}
+                    options={{ theme: "auto", size: "flexible" }}
+                    className="w-full"
+                  />
+                )}
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 border-gray-6 text-gray-12 h-11"
+                    onClick={onClose}
+                  >
+                    Cancelar
+                  </Button>
+                  <button
+                    type="submit"
+                    disabled={(!!TURNSTILE_SITE_KEY && !turnstileToken) || isSubmitting}
+                    className="flex-1 h-11 rounded-lg font-semibold text-base font-family-dm-sans transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: "#59e373", color: "#141a15" }}
+                  >
+                    {isSubmitting ? "Enviando..." : "Enviar"}
+                  </button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
         </div>
       </div>
 
@@ -459,43 +461,45 @@ export function ContactOrganizerModal({
 
           {/* Body */}
           <form onSubmit={handleSubmit} noValidate>
-            <div className="pt-4 pb-4">
-              <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans px-6 mb-8">
-                Preencha os campos abaixo para enviar sua mensagem.
-              </p>
-              {formFields(false)}
-            </div>
-
-            {/* Footer */}
-            <div className="flex flex-col items-end gap-3 px-6 pb-8">
-              {TURNSTILE_SITE_KEY && (
-                <Turnstile
-                  ref={desktopTurnstileRef}
-                  siteKey={TURNSTILE_SITE_KEY}
-                  onSuccess={setTurnstileToken}
-                  onError={() => setTurnstileToken(null)}
-                  onExpire={() => setTurnstileToken(null)}
-                  options={{ theme: "auto", size: "flexible" }}
-                  className="w-full"
-                />
-              )}
-              <div className="flex items-center justify-end gap-3 w-full">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-gray-6 text-gray-12"
-                  onClick={onClose}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={(!!TURNSTILE_SITE_KEY && !turnstileToken) || isSubmitting}>
-                  {isSubmitting ? "Enviando..." : "Enviar mensagem"}
-                </Button>
+              <div className="pt-4 pb-4">
+                <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans px-6 mb-8">
+                  Preencha os campos abaixo para enviar sua mensagem.
+                </p>
+                {formFields(false)}
               </div>
-            </div>
-          </form>
+
+              {/* Footer */}
+              <div className="flex flex-col items-end gap-3 px-6 pb-8">
+                {TURNSTILE_SITE_KEY && (
+                  <Turnstile
+                    ref={desktopTurnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setTurnstileToken}
+                    onError={() => setTurnstileToken(null)}
+                    onExpire={() => setTurnstileToken(null)}
+                    options={{ theme: "auto", size: "flexible" }}
+                    className="w-full"
+                  />
+                )}
+                <div className="flex items-center justify-end gap-3 w-full">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-gray-6 text-gray-12"
+                    onClick={onClose}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={(!!TURNSTILE_SITE_KEY && !turnstileToken) || isSubmitting}>
+                    {isSubmitting ? "Enviando..." : "Enviar mensagem"}
+                  </Button>
+                </div>
+              </div>
+            </form>
         </div>
       </div>
+
+      <MessageSentModal isOpen={sent} onClose={() => { setSent(false); onClose(); }} />
     </>
   );
 }

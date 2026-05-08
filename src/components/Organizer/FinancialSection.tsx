@@ -6,7 +6,7 @@ import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { InfoIcon } from "@/components/Icons/InfoIcon";
 
-const TOTAL_FEE = 6;
+const DEFAULT_TOTAL_FEE = 6;
 const BASE_SIMULATION = 100;
 
 interface FinancialSectionProps {
@@ -16,6 +16,9 @@ interface FinancialSectionProps {
   onMaxInstallmentsChange: (value: 1 | 2 | 3) => void;
   /** When true, slider and installment buttons are read-only */
   readOnly?: boolean;
+  /** Total platform fee — editable when onTotalFeeChange is provided (admin only) */
+  totalFee?: number;
+  onTotalFeeChange?: (value: number) => void;
 }
 
 export function FinancialSection({
@@ -24,20 +27,23 @@ export function FinancialSection({
   onOrganizerPercentChange,
   onMaxInstallmentsChange,
   readOnly = false,
+  totalFee,
+  onTotalFeeChange,
 }: FinancialSectionProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
-  const participantPercent = parseFloat((TOTAL_FEE - organizerPercent).toFixed(2));
+  const totalFeeValue = totalFee ?? DEFAULT_TOTAL_FEE;
+  const participantPercent = parseFloat((totalFeeValue - organizerPercent).toFixed(2));
   const participantPays = parseFloat((BASE_SIMULATION + participantPercent).toFixed(2));
   const organizerReceives = parseFloat((BASE_SIMULATION - organizerPercent).toFixed(2));
-  const sliderPosition = (organizerPercent / TOTAL_FEE) * 100;
+  const sliderPosition = totalFeeValue > 0 ? (organizerPercent / totalFeeValue) * 100 : 0;
 
   const updateFromPointer = useCallback((clientX: number) => {
     if (!trackRef.current) return;
     const { left, width } = trackRef.current.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - left) / width));
-    onOrganizerPercentChange(Math.round(ratio * TOTAL_FEE * 10) / 10);
-  }, [onOrganizerPercentChange]);
+    onOrganizerPercentChange(Math.round(ratio * totalFeeValue * 10) / 10);
+  }, [onOrganizerPercentChange, totalFeeValue]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (readOnly) return;
@@ -50,6 +56,18 @@ export function FinancialSection({
     updateFromPointer(e.clientX);
   }, [readOnly, updateFromPointer]);
 
+  const handleTotalFeeInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!onTotalFeeChange) return;
+    const raw = parseFloat(e.target.value);
+    if (isNaN(raw)) return;
+    const clamped = Math.min(100, Math.max(0, raw));
+    onTotalFeeChange(clamped);
+    // clamp organizerPercent so it never exceeds the new total
+    if (organizerPercent > clamped) {
+      onOrganizerPercentChange(clamped);
+    }
+  }, [onTotalFeeChange, organizerPercent, onOrganizerPercentChange]);
+
   return (
     <>
       {/* Card 1 — Divisão da taxa */}
@@ -60,8 +78,8 @@ export function FinancialSection({
           </h2>
           <p className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
             {readOnly
-              ? `A taxa total é de ${TOTAL_FEE}%. Confira como a taxa está dividida entre você e os participantes.`
-              : `A taxa total é de ${TOTAL_FEE}%. Você decide quanto absorve e quanto repassa ao participante`}
+              ? `A taxa total é de ${totalFeeValue}%. Confira como a taxa está dividida entre você e os participantes.`
+              : `A taxa total é de ${totalFeeValue}%. Você decide quanto absorve e quanto repassa ao participante`}
           </p>
         </div>
 
@@ -71,9 +89,25 @@ export function FinancialSection({
             <div className="flex items-center justify-between">
               <span className="font-family-dm-sans text-base leading-[1.3] text-gray-11">Organizador absorve</span>
               <div className="rounded-lg bg-gray-3 px-4 py-2">
-                <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12">
-                  Total: {TOTAL_FEE},0%
-                </span>
+                {onTotalFeeChange ? (
+                  <div className="flex items-center gap-1">
+                    <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12">Total:</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      value={totalFeeValue}
+                      onChange={handleTotalFeeInput}
+                      className="w-14 bg-transparent text-center font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
+                    <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12">%</span>
+                  </div>
+                ) : (
+                  <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12">
+                    Total: {totalFeeValue.toFixed(1).replace(".", ",")}%
+                  </span>
+                )}
               </div>
               <span className="font-family-dm-sans text-base leading-[1.3] text-gray-11">Participante paga</span>
             </div>
@@ -119,7 +153,7 @@ export function FinancialSection({
 
             {!readOnly && (
               <p className="text-center font-family-dm-sans text-base leading-[1.3] text-gray-11">
-                Arraste o controle ou digite os valores acima. Os campos se ajustam automaticamente para somar {TOTAL_FEE}%
+                Arraste o controle ou digite os valores acima. Os campos se ajustam automaticamente para somar {totalFeeValue}%
               </p>
             )}
           </div>

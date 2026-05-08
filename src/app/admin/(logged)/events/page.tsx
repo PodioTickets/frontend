@@ -19,11 +19,7 @@ import { MoneyIcon } from "@/components/Icons/MoneyIcon";
 import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
 import { UsersIcon } from "@/components/Icons/Organizer/UsersIcon";
 import { ThreePointsIcon } from "@/components/Icons/Organizer/ThreePointsIcon";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
 
@@ -205,7 +201,6 @@ export default function AdminEventsPage() {
   const [loading, setLoading] = useState(true);
   const [fetchKey, setFetchKey] = useState(0);
 
-  const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspendModalEvent, setSuspendModalEvent] = useState<AdminEvent | null>(null);
   const [resumeModalEvent, setResumeModalEvent] = useState<AdminEvent | null>(null);
@@ -251,22 +246,10 @@ export default function AdminEventsPage() {
   }, [page, debouncedSearch, statusFilter, sortBy, sortOrder, fetchKey]);
 
   const openSuspendModal = (ev: AdminEvent) => {
-    if (ev.status !== "PUBLISHED") {
-      toast.error("Somente eventos publicados podem ser suspensos.");
-      setMenuOpenForId(null);
-      return;
-    }
-    setMenuOpenForId(null);
     setSuspendModalEvent(ev);
   };
 
   const openResumeModal = (ev: AdminEvent) => {
-    if (ev.status !== "SUSPENDED") {
-      toast.error("Somente eventos suspensos podem ser reativados desta forma.");
-      setMenuOpenForId(null);
-      return;
-    }
-    setMenuOpenForId(null);
     setResumeModalEvent(ev);
   };
 
@@ -330,37 +313,43 @@ export default function AdminEventsPage() {
         <ActionIconLink href={`/admin/events/${ev.id}/registrations`} title="Inscritos">
           <UsersIcon className="size-5 text-gray-11" />
         </ActionIconLink>
-        <Popover
-          open={menuOpenForId === ev.id}
-          onOpenChange={(open) => setMenuOpenForId(open ? ev.id : null)}
-        >
-          <PopoverTrigger asChild>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
             <button
               type="button"
-              className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
+              className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Mais opções"
             >
-              <ThreePointsIcon className="size-5 text-gray-11" />
+              <ThreePointsIcon className="size-5 text-gray-11 pointer-events-none" />
             </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" sideOffset={6} className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg">
-            <div className="flex flex-col gap-0.5">
-              <Link href={`/admin/events/${ev.id}/discount/cupom`} onClick={() => setMenuOpenForId(null)} className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12">Cupom</Link>
-              <Link href={`/admin/events/${ev.id}/discount/voucher`} onClick={() => setMenuOpenForId(null)} className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12">Voucher</Link>
-              <Link href={`/admin/events/${ev.id}/ads`} onClick={() => setMenuOpenForId(null)} className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12">ADS</Link>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={6}
+              className="z-50 w-52 rounded-md border border-gray-6 bg-gray-1 p-1 shadow-lg outline-none"
+            >
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/discount/cupom`} className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">Cupom</Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/discount/voucher`} className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">Voucher</Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/ads`} className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">ADS</Link>
+              </DropdownMenu.Item>
               {(ev.status === "PUBLISHED" || ev.status === "SUSPENDED") && (
-                <button
-                  type="button"
+                <DropdownMenu.Item
                   disabled={suspendingId === ev.id}
-                  onClick={() => ev.status === "SUSPENDED" ? openResumeModal(ev) : openSuspendModal(ev)}
-                  className="w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onSelect={() => ev.status === "SUSPENDED" ? openResumeModal(ev) : openSuspendModal(ev)}
+                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
                 >
                   {ev.status === "SUSPENDED" ? "Reativar evento" : "Suspender evento"}
-                </button>
+                </DropdownMenu.Item>
               )}
-            </div>
-          </PopoverContent>
-        </Popover>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
     );
   };
@@ -592,105 +581,99 @@ export default function AdminEventsPage() {
                               <Button variant="outline" size="default" className="border-gray-6 text-gray-12 font-semibold font-family-dm-sans h-10 w-full"> Continuar criação</Button>
                             </Link>
                           ) : (
-                            <div className="flex items-center gap-1 justify-center justify-evenly">
+                            <div className="flex items-center gap-1 justify-center">
                               <Link
                                 href={`/admin/events/${event.id}/dashboard`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
                                 title="Dashboard"
                               >
-                                <DashboardIcon className="size-4 text-gray-11" />
+                                <DashboardIcon className="size-4 text-gray-11 pointer-events-none" />
                               </Link>
                               <Link
                                 href={`/admin/events/${event.id}/edit`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                title={"Editar"}
+                                title="Editar"
                               >
-                                <PencilIcon className="size-4 text-gray-11" />
+                                <PencilIcon className="size-4 text-gray-11 pointer-events-none" />
                               </Link>
                               <Link
                                 href={`/admin/events/${event.id}/financial`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
                                 title="Ver financeiro"
                               >
-                                <MoneyIcon className="size-5 text-gray-11" />
+                                <MoneyIcon className="size-5 text-gray-11 pointer-events-none" />
                               </Link>
                               <Link
                                 href={`/admin/events/${event.id}/registrations`}
                                 className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors"
                                 title="Ver inscritos"
                               >
-                                <UsersIcon className="size-5 text-gray-11" />
+                                <UsersIcon className="size-5 text-gray-11 pointer-events-none" />
                               </Link>
 
-                              <Popover
-                                open={menuOpenForId === event.id}
-                                onOpenChange={(open) =>
-                                  setMenuOpenForId(open ? event.id : null)
-                                }
-                              >
-                                <PopoverTrigger asChild>
+                              <DropdownMenu.Root>
+                                <DropdownMenu.Trigger asChild>
                                   <button
                                     type="button"
-                                    className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
+                                    className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors cursor-pointer"
                                     title="Mais opções"
                                     aria-label="Mais opções"
                                   >
-                                    <ThreePointsIcon className="size-5 text-gray-11" />
+                                    <ThreePointsIcon className="size-5 text-gray-11 pointer-events-none" />
                                   </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  align="end"
-                                  sideOffset={6}
-                                  className="w-52 p-1 border-gray-6 bg-gray-1 shadow-lg"
-                                >
-                                  <div className="flex flex-col gap-0.5">
-                                    <Link
-                                      href={`/admin/events/${event.id}/discount/cupom`}
-                                      onClick={() => setMenuOpenForId(null)}
-                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                    >
-                                      Cupom
-                                    </Link>
-                                    <Link
-                                      href={`/admin/events/${event.id}/discount/voucher`}
-                                      onClick={() => setMenuOpenForId(null)}
-                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                    >
-                                      Voucher
-                                    </Link>
-                                    <Link
-                                      href={`/admin/events/${event.id}/ads`}
-                                      onClick={() => setMenuOpenForId(null)}
-                                      className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
-                                    >
-                                      ADS
-                                    </Link>
-                                    <button
-                                      type="button"
-                                      disabled={
-                                        suspendingId === event.id ||
-                                        (event.status === "SUSPENDED"
-                                          ? event.status !== "SUSPENDED"
-                                          : event.status !== "PUBLISHED")
-                                      }
-                                      onClick={() =>
-                                        event.status === "SUSPENDED"
-                                          ? openResumeModal(event)
-                                          : openSuspendModal(event)
-                                      }
-                                      className={cn(
-                                        "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
-                                        "hover:bg-gray-3 text-gray-12",
-                                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                                      )}
-                                    >
-                                      {event.status === "SUSPENDED"
-                                        ? "Reativar evento"
-                                        : "Suspender evento"}
-                                    </button>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Portal>
+                                  <DropdownMenu.Content
+                                    align="end"
+                                    sideOffset={6}
+                                    className="z-50 w-52 rounded-md border border-gray-6 bg-gray-1 p-1 shadow-lg outline-none"
+                                  >
+                                    <DropdownMenu.Item asChild>
+                                      <Link
+                                        href={`/admin/events/${event.id}/discount/cupom`}
+                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                      >
+                                        Cupom
+                                      </Link>
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item asChild>
+                                      <Link
+                                        href={`/admin/events/${event.id}/discount/voucher`}
+                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                      >
+                                        Voucher
+                                      </Link>
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item asChild>
+                                      <Link
+                                        href={`/admin/events/${event.id}/ads`}
+                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                      >
+                                        ADS
+                                      </Link>
+                                    </DropdownMenu.Item>
+                                    {(event.status === "PUBLISHED" || event.status === "SUSPENDED") && (
+                                      <DropdownMenu.Item
+                                        disabled={suspendingId === event.id}
+                                        onSelect={() =>
+                                          event.status === "SUSPENDED"
+                                            ? openResumeModal(event)
+                                            : openSuspendModal(event)
+                                        }
+                                        className={cn(
+                                          "px-3 py-2.5 text-sm font-family-dm-sans rounded-md cursor-pointer outline-none",
+                                          "hover:bg-gray-3 text-gray-12",
+                                          "data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
+                                        )}
+                                      >
+                                        {event.status === "SUSPENDED"
+                                          ? "Reativar evento"
+                                          : "Suspender evento"}
+                                      </DropdownMenu.Item>
+                                    )}
+                                  </DropdownMenu.Content>
+                                </DropdownMenu.Portal>
+                              </DropdownMenu.Root>
                             </div>
                           )}
                         </td>

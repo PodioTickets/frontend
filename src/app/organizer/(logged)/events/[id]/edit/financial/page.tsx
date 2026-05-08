@@ -5,11 +5,8 @@ import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
-import { Button } from "@/components/Button";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { FinancialSection } from "@/components/Organizer/FinancialSection";
-import toast from "react-hot-toast";
-import { cn } from "@/utils/cn";
 
 export default function EditFinancialPage() {
   const params = useParams();
@@ -19,18 +16,18 @@ export default function EditFinancialPage() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [organizerPercent, setOrganizerPercent] = useState(0);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
+  const [totalFee, setTotalFee] = useState<number>(6);
 
   useEffect(() => {
     if (!authChecked || !eventId) return;
     organizerService
       .getFinancialSettings(eventId)
-      .then(({ organizerFeePercent, maxInstallments: mi }) => {
+      .then(({ organizerFeePercent, maxInstallments: mi, totalFee: tf }) => {
         setOrganizerPercent(organizerFeePercent);
         setMaxInstallments(mi);
+        setTotalFee(tf);
       })
-      .catch(() => {
-        // endpoint may not exist yet — fall back to defaults
-      })
+      .catch(() => {})
       .finally(() => setDataLoaded(true));
   }, [authChecked, eventId]);
 
@@ -45,7 +42,7 @@ export default function EditFinancialPage() {
       className="flex-1 bg-gray-2 px-5 pt-[52px] pb-[176px] max-md:pb-40"
       maxWidth="max-w-7xl"
       gutter="5"
-      description="Configure a divisão da taxa da plataforma e as formas de pagamento aceitas. Estes dados ficam travados após a publicação."
+      description="Confira a divisão da taxa da plataforma e as formas de pagamento aceitas."
       showDescriptionOnMobile
       isLoading={!authChecked || !dataLoaded}
       actions={undefined}
@@ -55,6 +52,8 @@ export default function EditFinancialPage() {
         maxInstallments={maxInstallments}
         onOrganizerPercentChange={setOrganizerPercent}
         onMaxInstallmentsChange={setMaxInstallments}
+        totalFee={totalFee}
+        readOnly
       />
     </WizardStepLayout>
   );

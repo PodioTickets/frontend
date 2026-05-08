@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
+import { queryKeys } from "@/services/cache/QueryClient";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import Link from "next/link";
 
@@ -163,10 +165,6 @@ export default function AuditoriaEventoPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const [items, setItems] = useState<AuditEvent[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
     return () => clearTimeout(t);
@@ -176,49 +174,50 @@ export default function AuditoriaEventoPage() {
     setPage(1);
   }, [debouncedSearch]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const api = getApiClient();
-        const res = await api.get<Record<string, unknown>>("/api/v1/admin/events/revision", {
-          params: {
-            page,
-            limit: ITEMS_PER_PAGE,
-            ...(debouncedSearch ? { search: debouncedSearch } : {}),
-          },
-        });
-        if (cancelled) return;
+  const listQuery = useQuery({
+    queryKey: queryKeys.admin.auditEvent.list({ page, search: debouncedSearch }),
+    queryFn: async () => {
+      const api = getApiClient();
+      const res = await api.get<Record<string, unknown>>("/api/v1/admin/events/revision", {
+        params: {
+          page,
+          limit: ITEMS_PER_PAGE,
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        },
+      });
+      const body = res.data as any;
+      const source = body?.data ?? body;
+      const rawItems: unknown[] = Array.isArray(source?.events)
+        ? source.events
+        : Array.isArray(source?.items)
+          ? source.items
+          : [];
+      const p = source?.pagination ?? {};
 
-        const body = res.data as any;
-        const source = body?.data ?? body;
-        const rawItems: unknown[] = Array.isArray(source?.events) ? source.events : Array.isArray(source?.items) ? source.items : [];
-        const p = source?.pagination ?? {};
+      const parsed: AuditEvent[] = [];
+      for (const raw of rawItems) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+        const norm = normalizeEvent(raw as Record<string, unknown>);
+        if (norm) parsed.push(norm);
+      }
 
-        const parsed: AuditEvent[] = [];
-        for (const raw of rawItems) {
-          if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
-          const norm = normalizeEvent(raw as Record<string, unknown>);
-          if (norm) parsed.push(norm);
-        }
-
-        setItems(parsed);
-        setPagination({
+      return {
+        items: parsed,
+        pagination: {
           page: typeof p.page === "number" ? p.page : page,
           limit: typeof p.limit === "number" ? p.limit : ITEMS_PER_PAGE,
           total: typeof p.total === "number" ? p.total : 0,
           totalPages: Math.max(1, typeof p.totalPages === "number" ? p.totalPages : 1),
-        });
-      } catch {
-        if (cancelled) return;
-        setItems([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [page, debouncedSearch]);
+        } as Pagination,
+      };
+    },
+    placeholderData: (prev) => prev,
+  });
+
+  const items = listQuery.data?.items ?? [];
+  const pagination =
+    listQuery.data?.pagination ?? { page, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 };
+  const loading = listQuery.isLoading;
 
   const filtersActive = Boolean(debouncedSearch);
 
@@ -299,7 +298,7 @@ export default function AuditoriaEventoPage() {
                   </div>
 
                   <Link
-                    href={`/admin/events/${event.id}/edit/information`}
+                    href={`/admin/events/${event.id}/review/information`}
                     className="flex h-11 w-full items-center justify-center rounded-lg border border-gray-6 text-sm font-bold font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
                   >
                     Revisar
@@ -409,7 +408,7 @@ export default function AuditoriaEventoPage() {
                   {/* Ações */}
                   <div className="flex items-center justify-end px-4 py-4">
                     <Link
-                      href={`/admin/events/${event.id}/edit/information`}
+                      href={`/admin/events/${event.id}/review/information`}
                       className="flex h-10 items-center justify-center rounded-lg border border-gray-6 px-5 text-sm font-bold font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors whitespace-nowrap"
                     >
                       Revisar

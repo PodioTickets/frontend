@@ -143,16 +143,6 @@ export function PaymentDetailsModal() {
       : "À vista",
     authorizationCode: paymentDetails.payment?.authorizationCode || "—",
     transactionId: paymentDetails.transactionId || "—",
-    coupon: (() => {
-      const c = paymentDetails.coupon;
-      if (!c) return "—";
-      if (c.code) return c.code;
-      if (c.type === "PERCENTAGE" && c.discountPercentage != null)
-        return `${c.discountPercentage}% de desconto`;
-      if (c.discountValue != null)
-        return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(c.discountValue / 100);
-      return "—";
-    })(),
     nsu: paymentDetails.payment?.nsu || "—",
     ip: paymentDetails.payment?.transactionIp || "—",
   } : {
@@ -169,6 +159,11 @@ export function PaymentDetailsModal() {
     nsu: "—",
     ip: "—",
   };
+
+  const coupon = paymentDetails?.coupon ?? null;
+  const voucher = paymentDetails?.voucher ?? null;
+  const totalDiscount = paymentDetails?.totalDiscount ?? null;
+  const hasDiscount = !!(coupon || voucher);
 
   // Usar dados reais do buyer (paymentDetails tem buyer, registration tem user)
   // Combinar dados do buyer com dados do user da registration para campos que podem estar faltando
@@ -478,20 +473,36 @@ export function PaymentDetailsModal() {
                       { label: "Data da compra", value: formatDate(paymentInfo.purchaseDate) || "—" },
                       { label: "Gateway", value: paymentInfo.gateway },
                       { label: "ID da transação", value: paymentInfo.transactionId, copy: true },
-                      { label: "Voucher utilizado", value: paymentInfo.coupon, coupon: true },
                       { label: "TxID", value: paymentInfo.nsu },
                       { label: "E2E ID (Pix)", value: paymentInfo.transactionId },
                       { label: "IP", value: paymentInfo.ip },
-                    ].map(({ label, value, copy, coupon }) => (
+                      ...(coupon ? [{
+                        label: "Cupom utilizado",
+                        value: [
+                          coupon.code,
+                          coupon.couponType === "AGE" ? "Por faixa etária" : coupon.couponType === "QUANTITY" ? "Por quantidade" : null,
+                          coupon.discountType === "PERCENTAGE" && coupon.discountPercentage != null
+                            ? `${coupon.discountPercentage}% de desconto`
+                            : coupon.discountValue != null
+                              ? `${formatPrice(coupon.discountValue / 100)} de desconto`
+                              : null,
+                        ].filter(Boolean).join(" — "),
+                        couponIcon: true,
+                      }] : []),
+                      ...(voucher ? [{
+                        label: "Voucher utilizado",
+                        value: [voucher.code, voucher.name].filter(Boolean).join(" — "),
+                      }] : []),
+                    ].map(({ label, value, copy, couponIcon }: any) => (
                       <div key={label} className="flex flex-col gap-1 py-2">
                         <p className="font-family-dm-sans font-normal text-base text-gray-12">{label}</p>
                         <div className="flex items-center gap-2">
-                          {coupon && (
+                          {couponIcon && (
                             <svg className="size-4 text-yellow-12 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                             </svg>
                           )}
-                          <p className={`font-family-dm-sans font-medium text-base text-gray-12 ${coupon ? "text-yellow-12" : ""}`}>{value || "—"}</p>
+                          <p className={`font-family-dm-sans font-medium text-base text-gray-12 ${couponIcon ? "text-yellow-12" : ""}`}>{value || "—"}</p>
                           {copy && (
                             <button type="button" onClick={() => handleCopy(value)} className="size-5 flex items-center justify-center shrink-0 rounded hover:bg-gray-3">
                               {copied ? <CheckCircle className="size-4 text-primary-11" /> : <Copy className="size-4 text-gray-11" />}
@@ -849,31 +860,6 @@ export function PaymentDetailsModal() {
                           </div>
                           <div className="flex flex-col gap-[15px] py-4">
                             <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              Cupom utilizado
-                            </p>
-                            <div className="flex items-center gap-1">
-                              <div className="size-6 flex items-center justify-center">
-                                <svg
-                                  className="size-6 text-yellow-12"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-                                  />
-                                </svg>
-                              </div>
-                              <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-yellow-12">
-                                {paymentInfo.coupon}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-[15px] py-4">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
                               NSU
                             </p>
                             <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
@@ -888,6 +874,39 @@ export function PaymentDetailsModal() {
                               {paymentInfo.ip}
                             </p>
                           </div>
+                          {coupon && (
+                            <div className="flex flex-col gap-[15px] py-4">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Cupom utilizado
+                              </p>
+                              <div className="flex items-center gap-1">
+                                <svg className="size-5 text-yellow-12 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                                <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-yellow-12">
+                                  {[
+                                    coupon.code,
+                                    coupon.couponType === "AGE" ? "Por faixa etária" : coupon.couponType === "QUANTITY" ? "Por quantidade" : null,
+                                    coupon.discountType === "PERCENTAGE" && coupon.discountPercentage != null
+                                      ? `${coupon.discountPercentage}% de desconto`
+                                      : coupon.discountValue != null
+                                        ? `${formatPrice(coupon.discountValue / 100)} de desconto`
+                                        : null,
+                                  ].filter(Boolean).join(" - ")}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {voucher && (
+                            <div className="flex flex-col gap-[15px] py-4">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Voucher utilizado
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {[voucher.code, voucher.name].filter(Boolean).join(" - ")}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
 

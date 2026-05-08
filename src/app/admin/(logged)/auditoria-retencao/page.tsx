@@ -9,9 +9,11 @@ import {
   Lock,
   LockOpen,
 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/Button";
 import { getApiClient } from "@/services/base/ApiClient";
+import { queryKeys } from "@/services/cache/QueryClient";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import { RetencaoReleaseModal } from "@/components/Admin/RetencaoReleaseModal";
@@ -222,26 +224,51 @@ const ITEMS_PER_PAGE = 20;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+interface RetentionResult {
+  stats: RetentionStats;
+  events: RetentionEvent[];
+  pagination: Pagination;
+}
+
+async function fetchRetentionList(params: {
+  page: number;
+  search: string;
+}): Promise<RetentionResult> {
+  const api = getApiClient();
+  const qs = new URLSearchParams({
+    page: String(params.page),
+    limit: String(ITEMS_PER_PAGE),
+  });
+  if (params.search) qs.set("search", params.search);
+  const res = await api.get<RetentionListResponse>(
+    `/api/v1/admin/retention?${qs.toString()}`,
+  );
+  return {
+    stats: res.data.data.stats,
+    events: res.data.data.events ?? [],
+    pagination:
+      res.data.data.pagination ?? {
+        page: params.page,
+        limit: ITEMS_PER_PAGE,
+        total: 0,
+        totalPages: 1,
+      },
+  };
+}
+
+const EMPTY_STATS: RetentionStats = {
+  pendingCount: 0,
+  totalPendingVolume: 0,
+  totalProcessedThisMonth: 0,
+};
+
 export default function AdminAuditoriaRetencaoPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  const [stats, setStats] = useState<RetentionStats>({
-    pendingCount: 0,
-    totalPendingVolume: 0,
-    totalProcessedThisMonth: 0,
-  });
-  const [items, setItems] = useState<RetentionEvent[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: ITEMS_PER_PAGE,
-    total: 0,
-    totalPages: 1,
-  });
-  const [loading, setLoading] = useState(true);
-  const [fetchKey, setFetchKey] = useState(0);
   const [modalEvent, setModalEvent] = useState<RetentionEvent | null>(null);
 
   useEffect(() => {
@@ -253,60 +280,45 @@ export default function AdminAuditoriaRetencaoPage() {
     setPage(1);
   }, [debouncedSearch, statusFilter]);
 
+  const listKey = queryKeys.admin.retention.list({ page, search: debouncedSearch });
+  const listQuery = useQuery({
+    queryKey: listKey,
+    queryFn: () => fetchRetentionList({ page, search: debouncedSearch }),
+    placeholderData: (prev) => prev,
+  });
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const api = getApiClient();
-        const params = new URLSearchParams({
-          page: String(page),
-          limit: String(ITEMS_PER_PAGE),
-        });
-        if (debouncedSearch) params.set("search", debouncedSearch);
+    if (listQuery.error) {
+      const err = listQuery.error as any;
+      toast.error(
+        err?.response?.data?.message ?? err?.message ?? "Erro ao carregar auditoria.",
+      );
+    }
+  }, [listQuery.error]);
 
-        const res = await api.get<RetentionListResponse>(
-          `/api/v1/admin/retention?${params.toString()}`
-        );
-
-        if (cancelled) return;
-        setStats(res.data.data.stats);
-        setItems(res.data.data.events ?? []);
-        setPagination(
-          res.data.data.pagination ?? {
-            page,
-            limit: ITEMS_PER_PAGE,
-            total: 0,
-            totalPages: 1,
-          }
-        );
-      } catch (e: any) {
-        if (cancelled) return;
-        toast.error(
-          e?.response?.data?.message ?? e?.message ?? "Erro ao carregar auditoria."
-        );
-        setItems([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [page, debouncedSearch, fetchKey]);
+  const stats = listQuery.data?.stats ?? EMPTY_STATS;
+  const items = listQuery.data?.events ?? [];
+  const pagination =
+    listQuery.data?.pagination ?? { page, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 };
+  const loading = listQuery.isLoading;
 
   const handleReleaseSuccess = (releasedId: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === releasedId ? { ...item, status: "released" as const } : item
-      )
-    );
-    setStats((prev) => ({
-      ...prev,
-      pendingCount: Math.max(0, prev.pendingCount - 1),
-      totalProcessedThisMonth:
-        prev.totalProcessedThisMonth +
-        (items.find((i) => i.id === releasedId)?.retainedAmount ?? 0),
-    }));
-    setTimeout(() => setFetchKey((k) => k + 1), 1500);
+    queryClient.setQueryData<RetentionResult>(listKey, (old) => {
+      if (!old) return old;
+      const released = old.events.find((i) => i.id === releasedId);
+      return {
+        ...old,
+        events: old.events.map((item) =>
+          item.id === releasedId ? { ...item, status: "released" as const } : item,
+        ),
+        stats: {
+          ...old.stats,
+          pendingCount: Math.max(0, old.stats.pendingCount - 1),
+          totalProcessedThisMonth:
+            old.stats.totalProcessedThisMonth + (released?.retainedAmount ?? 0),
+        },
+      };
+    });
   };
 
   const visibleItems = statusFilter

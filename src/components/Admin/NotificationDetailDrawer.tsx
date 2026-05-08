@@ -19,10 +19,12 @@ interface NotificationDetail {
   messageHtml: string;
   occurredAt: string;
   createdAt: string;
+  deniedReason?: string | null;
   event: {
     id: string;
     name: string;
     slug?: string;
+    totalRegistrations?: number;
     organization: { id: string; name: string; tradeName?: string | null; logoUrl?: string | null };
   };
   createdBy: { id: string; firstName: string; lastName: string; email: string };
@@ -243,6 +245,10 @@ export function NotificationDetailDrawer({ notificationId, open, onOpenChange, o
                     <span className="text-sm text-gray-11 font-family-dm-sans shrink-0">Data do pedido:</span>
                     <span className="text-sm font-semibold text-gray-12 font-family-dm-sans text-right">{formatDateShort(detail.occurredAt)}</span>
                   </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-gray-11 font-family-dm-sans shrink-0">Total inscritos:</span>
+                    <span className="text-sm font-semibold text-gray-12 font-family-dm-sans text-right">{detail.event.totalRegistrations}</span>
+                  </div>
                 </div>
               </section>
 
@@ -275,6 +281,18 @@ export function NotificationDetailDrawer({ notificationId, open, onOpenChange, o
                   />
                 </div>
               </section>
+
+              {detail.status === "denied" && detail.deniedReason && (
+                <section>
+                  <SectionLabel>Motivo da negação</SectionLabel>
+                  <div className="flex items-start gap-3 rounded-xl border border-red-6 bg-red-3 px-4 py-3">
+                    <Info className="size-4 shrink-0 text-red-11 mt-0.5" strokeWidth={2} />
+                    <p className="text-sm text-red-12 font-family-dm-sans leading-[1.4]">
+                      {detail.deniedReason}
+                    </p>
+                  </div>
+                </section>
+              )}
             </div>
           ) : null}
         </div>

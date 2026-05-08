@@ -16,16 +16,19 @@ export default function EditFinancialPage() {
   const router = useRouter();
   const { authChecked } = useWizardAuth();
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [organizerPercent, setOrganizerPercent] = useState(0);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
+  const [totalFee, setTotalFee] = useState<number>(6);
 
   useEffect(() => {
     if (!authChecked || !eventId) return;
     organizerService
       .getFinancialSettings(eventId)
-      .then(({ organizerFeePercent, maxInstallments: mi }) => {
+      .then(({ organizerFeePercent, maxInstallments: mi, totalFee: tf }) => {
         setOrganizerPercent(organizerFeePercent);
         setMaxInstallments(mi);
+        setTotalFee(tf);
       })
       .catch(() => {
         // endpoint may not exist yet — fall back to defaults
@@ -35,6 +38,20 @@ export default function EditFinancialPage() {
 
   const handleBack = () => {
     router.push(`/admin/events/${eventId}/edit/questionnaire`);
+  };
+
+  const handleSave = async () => {
+    if (!eventId) return;
+    setSaving(true);
+    try {
+      const participantFeePercent = parseFloat((totalFee - organizerPercent).toFixed(2));
+      await organizerService.saveFinancialSettings(eventId, organizerPercent, participantFeePercent, maxInstallments, totalFee);
+      toast.success("Configurações financeiras salvas!");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao salvar configurações financeiras");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -47,13 +64,25 @@ export default function EditFinancialPage() {
       description="Configure a divisão da taxa da plataforma e as formas de pagamento aceitas. Estes dados ficam travados após a publicação."
       showDescriptionOnMobile
       isLoading={!authChecked || !dataLoaded}
-      actions={undefined}
+      actions={
+        <Button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          variant="default"
+          className={cn("h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
+        >
+          {saving ? "Salvando..." : "Salvar alterações"}
+        </Button>
+      }
     >
       <FinancialSection
         organizerPercent={organizerPercent}
         maxInstallments={maxInstallments}
         onOrganizerPercentChange={setOrganizerPercent}
         onMaxInstallmentsChange={setMaxInstallments}
+        totalFee={totalFee}
+        onTotalFeeChange={setTotalFee}
       />
     </WizardStepLayout>
   );

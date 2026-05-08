@@ -70,6 +70,19 @@ export class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
+        // Organização inativa — deslogar imediatamente sem tentar refresh
+        if (
+          error.response?.status === 401 &&
+          originalRequest.url?.includes("/organizations/me") &&
+          error.response?.data?.message === "Organization is inactive"
+        ) {
+          this.clearTokens();
+          if (typeof window !== "undefined") {
+            window.location.href = "/organizer/login";
+          }
+          return Promise.reject(error);
+        }
+
         const isAuthRoute =
           originalRequest.url?.includes("/auth/login") ||
           originalRequest.url?.includes("/auth/register") ||

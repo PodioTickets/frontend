@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { cn } from "@/utils/cn";
 import { adminService } from "@/services";
+import { queryKeys } from "@/services/cache/QueryClient";
 import type { AdminAuditOrganization } from "@/services/admin/AdminService";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { OrganizerEditDrawer } from "@/components/Admin/OrganizerEditDrawer";
+import { Button } from "@/components/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -132,20 +136,12 @@ const ITEMS_PER_PAGE = 20;
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminOrganizersPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  const [items, setItems] = useState<AdminAuditOrganization[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: ITEMS_PER_PAGE,
-    total: 0,
-    totalPages: 1,
-  });
-  const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<AdminAuditOrganization | null>(null);
 
@@ -158,38 +154,41 @@ export default function AdminOrganizersPage() {
     setPage(1);
   }, [debouncedSearch, statusFilter]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const isActive =
-      statusFilter === "ativo" ? true :
+  const isActive =
+    statusFilter === "ativo" ? true :
       statusFilter === "inativo" ? false :
-      undefined;
-    (async () => {
-      setLoading(true);
-      try {
-        const result = await adminService.getAdminOrganizations({
-          page,
-          limit: ITEMS_PER_PAGE,
-          search: debouncedSearch || undefined,
-          isActive,
-        });
-        if (cancelled) return;
-        setItems(result.items);
-        setPagination({
+        undefined;
+
+  const listQuery = useQuery({
+    queryKey: queryKeys.admin.organizations.list({
+      page,
+      search: debouncedSearch,
+      status: statusFilter,
+    }),
+    queryFn: async () => {
+      const result = await adminService.getAdminOrganizations({
+        page,
+        limit: ITEMS_PER_PAGE,
+        search: debouncedSearch || undefined,
+        isActive,
+      });
+      return {
+        items: result.items,
+        pagination: {
           page: result.pagination.page,
           limit: result.pagination.limit,
           total: result.pagination.total,
           totalPages: result.pagination.totalPages,
-        });
-      } catch {
-        if (cancelled) return;
-        setItems([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [page, debouncedSearch, statusFilter, refreshKey]);
+        } as Pagination,
+      };
+    },
+    placeholderData: (prev) => prev,
+  });
+
+  const items = listQuery.data?.items ?? [];
+  const pagination =
+    listQuery.data?.pagination ?? { page, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 };
+  const loading = listQuery.isLoading;
 
   const filtered = items;
   const filtersActive = Boolean(debouncedSearch) || Boolean(statusFilter);
@@ -205,7 +204,9 @@ export default function AdminOrganizersPage() {
         isOpen={drawerOpen}
         onClose={() => { setDrawerOpen(false); setSelectedOrg(null); }}
         org={selectedOrg}
-        onUpdated={() => setRefreshKey((k) => k + 1)}
+        onUpdated={() =>
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.organizations.all() })
+        }
       />
       <div className="max-w-[1222px] mx-auto w-full">
         {/* Header */}
@@ -311,13 +312,23 @@ export default function AdminOrganizersPage() {
                     <StatusBadge active={active} />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => openDrawer(org)}
-                    className="flex h-11 w-full items-center justify-center rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
-                  >
-                    Editar
-                  </button>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/admin/organizers/${org.id}/members`}
+                      className="flex h-11"
+                    >
+                      <Button variant="outline" className="border-gray-6 text-gray-12">
+                        Ver membros
+                      </Button>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => openDrawer(org)}
+                      className="flex h-11 flex-1 items-center justify-center rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
+                    >
+                      Editar
+                    </button>
+                  </div>
                 </div>
               );
             })
@@ -423,13 +434,22 @@ export default function AdminOrganizersPage() {
 
                         {/* Ações */}
                         <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => openDrawer(org)}
-                            className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-6 px-3 text-sm font-semibold font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
-                          >
-                            Editar
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/admin/organizers/${org.id}/members`}
+                            >
+                              <Button variant="outline" className="border-gray-6 text-gray-12 h-10">
+                                Ver membros
+                              </Button>
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => openDrawer(org)}
+                              className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-6 px-3 text-sm font-semibold font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
+                            >
+                              Editar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

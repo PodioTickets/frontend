@@ -601,7 +601,8 @@ export function InformationStep({
   // Retorna erros de validação por campo para um participante (para exibir no formulário)
   const getParticipantValidationErrors = (
     index: number,
-    ageLimit?: { min?: number; max?: number }
+    ageLimit?: { min?: number; max?: number },
+    ticketGender?: string
   ): Record<string, string> => {
     const participant = participants[index];
     const errors: Record<string, string> = {};
@@ -657,6 +658,18 @@ export function InformationStep({
 
     if (!gender) {
       errors.gender = "Selecione o sexo";
+    } else if (ticketGender && ticketGender.toLowerCase() !== "all") {
+      const tg = ticketGender.toLowerCase();
+      const pg = gender.toLowerCase();
+      const isMaleTicket = tg.startsWith("m");
+      const isFemaleTicket = tg.startsWith("f");
+      const participantIsMale = pg.startsWith("m");
+      const participantIsFemale = pg.startsWith("f");
+      if (isMaleTicket && !participantIsMale) {
+        errors.gender = "Este ingresso é exclusivo para participantes do sexo masculino";
+      } else if (isFemaleTicket && !participantIsFemale) {
+        errors.gender = "Este ingresso é exclusivo para participantes do sexo feminino";
+      }
     }
 
     // Perguntas obrigatórias
@@ -1728,7 +1741,7 @@ export function InformationStep({
                           </h1>
                           <Button
                             onClick={async () => {
-                              const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit);
+                              const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
                               if (Object.keys(errors).length > 0) {
                                 setFieldErrors((prev) => ({ ...prev, [participantIndex]: errors }));
                                 setExpandedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
@@ -1804,8 +1817,8 @@ export function InformationStep({
                 if (participantsWithRaces.length === 0) return;
                 const allErrors: Record<number, Record<string, string>> = {};
                 let firstInvalidIndex: number | null = null;
-                participantsWithRaces.forEach(({ participantIndex }) => {
-                  const errors = getParticipantValidationErrors(participantIndex);
+                participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+                  const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
                   if (Object.keys(errors).length > 0) {
                     allErrors[participantIndex] = errors;
                     if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
@@ -1876,8 +1889,8 @@ export function InformationStep({
               if (participantsWithRaces.length === 0) return;
               const allErrors: Record<number, Record<string, string>> = {};
               let firstInvalidIndex: number | null = null;
-              participantsWithRaces.forEach(({ participantIndex }) => {
-                const errors = getParticipantValidationErrors(participantIndex);
+              participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+                const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
                 if (Object.keys(errors).length > 0) {
                   allErrors[participantIndex] = errors;
                   if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;

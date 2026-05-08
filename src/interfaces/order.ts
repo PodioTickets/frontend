@@ -181,6 +181,13 @@ export interface PayOrderDebitCardRequest {
     expiry: string;
     cvv: string;
   };
+  externalAuthentication: {
+    cavv: string;
+    eci: string;
+    xid?: string;
+    referenceId?: string;
+    version?: string;
+  };
   couponCode?: string;
   voucherCode?: string;
 }

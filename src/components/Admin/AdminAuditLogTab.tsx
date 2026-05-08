@@ -10,10 +10,12 @@ import {
   UserRound,
   ChevronDown,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { DatePicker } from "@/components/DatePicker";
 import { Button } from "@/components/Button";
 import { adminService } from "@/services";
+import { queryKeys } from "@/services/cache/QueryClient";
 import type {
   AdminAuditLogItem,
   AdminAuditOrganization,
@@ -153,10 +155,6 @@ export function AdminAuditLogTab() {
   const [dateFilter, setDateFilter] = useState("");
   const [kindFilter, setKindFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<AdminAuditLogItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selected, setSelected] = useState<AdminAuditLogItem | null>(null);
 
@@ -226,71 +224,62 @@ export function AdminAuditLogTab() {
     setOrgListPage((p) => Math.min(p, orgListTotalPages));
   }, [orgListTotalPages]);
 
+  const auditLogsQuery = useQuery({
+    queryKey: queryKeys.admin.auditLogs.list({
+      page,
+      search: debouncedSearch,
+      organizationId: selectedOrganizationId ?? "",
+      userFilter: debouncedUserFilter,
+      dateFilter,
+      kindFilter,
+    }),
+    queryFn: async () => {
+      const from = dateFilter || undefined;
+      const organizationId = selectedOrganizationId ?? undefined;
+      const userId = isValidUuidParam(debouncedUserFilter)
+        ? debouncedUserFilter.trim()
+        : undefined;
+      const userSearch =
+        !userId && debouncedUserFilter.trim() ? debouncedUserFilter.trim() : undefined;
+      const { items: nextItems, pagination } = await adminService.getAuditLogs({
+        page,
+        limit: ITEMS_PER_PAGE,
+        q: debouncedSearch || undefined,
+        from,
+        to: from,
+        kind: kindFilter.trim() || undefined,
+        organizationId,
+        userId,
+        userSearch,
+      });
+      return {
+        items: nextItems,
+        total: pagination.total,
+        totalPages: Math.max(1, pagination.totalPages),
+      };
+    },
+    placeholderData: (prev) => prev,
+  });
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const from = dateFilter || undefined;
-        const organizationId = selectedOrganizationId ?? undefined;
-        const userId = isValidUuidParam(debouncedUserFilter)
-          ? debouncedUserFilter.trim()
-          : undefined;
-        const userSearch =
-          !userId && debouncedUserFilter.trim()
-            ? debouncedUserFilter.trim()
-            : undefined;
-        const { items: nextItems, pagination } =
-          await adminService.getAuditLogs({
-            page,
-            limit: ITEMS_PER_PAGE,
-            q: debouncedSearch || undefined,
-            from,
-            to: from,
-            kind: kindFilter.trim() || undefined,
-            organizationId,
-            userId,
-            userSearch,
-          });
-        if (cancelled) return;
-        setItems(nextItems);
-        setTotal(pagination.total);
-        setTotalPages(Math.max(1, pagination.totalPages));
-      } catch (e: any) {
-        if (cancelled) return;
-        if (e?.response?.status === 403) {
-          toast.error(
-            e?.response?.data?.message ||
-            "Você não tem permissão para visualizar o log global."
-          );
-          setItems([]);
-          setTotal(0);
-          setTotalPages(1);
-        } else {
-          toast.error(
-            e?.response?.data?.message ||
-            e?.message ||
-            "Erro ao carregar o log do sistema."
-          );
-          setItems([]);
-          setTotal(0);
-          setTotalPages(1);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    page,
-    debouncedSearch,
-    selectedOrganizationId,
-    debouncedUserFilter,
-    dateFilter,
-    kindFilter,
-  ]);
+    if (!auditLogsQuery.error) return;
+    const e = auditLogsQuery.error as any;
+    if (e?.response?.status === 403) {
+      toast.error(
+        e?.response?.data?.message ||
+          "Você não tem permissão para visualizar o log global.",
+      );
+    } else {
+      toast.error(
+        e?.response?.data?.message || e?.message || "Erro ao carregar o log do sistema.",
+      );
+    }
+  }, [auditLogsQuery.error]);
+
+  const items = auditLogsQuery.data?.items ?? [];
+  const total = auditLogsQuery.data?.total ?? 0;
+  const totalPages = auditLogsQuery.data?.totalPages ?? 1;
+  const loading = auditLogsQuery.isLoading;
 
   const safePage = Math.min(page, totalPages);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { adminService } from "@/services";
@@ -10,7 +10,10 @@ import { Mail, Lock, Star, Eye, EyeOff, Info } from "lucide-react";
 import Image from "next/image";
 import { ZodError } from "zod";
 import { loginSchema, type LoginFormData } from "@/validators/Auth.validator";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import toast from "react-hot-toast";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 function classifyLoginError(msg: string): string {
   const m = msg.toLowerCase();
@@ -35,6 +38,8 @@ export default function AdminLoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -57,6 +62,7 @@ export default function AdminLoginPage() {
         emailOrCpf: validatedData.email,
         password: validatedData.password,
         accountType: "ADMIN_PODIO_STAFF",
+        ...(turnstileToken ? { turnstileToken } : {}),
       });
       try {
         await adminService.getMe();
@@ -85,6 +91,8 @@ export default function AdminLoginPage() {
       } else {
         const raw = error instanceof Error ? error.message : "";
         setLoginError(classifyLoginError(raw));
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
       }
     } finally {
       setIsSubmitting(false);
@@ -106,7 +114,7 @@ export default function AdminLoginPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[44%] to-[rgba(32,32,32,0.7)]" />
         <div className="absolute top-10 inset-x-0 flex justify-center">
           <Image
-            src="/images/logo_admin.png"
+            src="/images/logo_admin_black.png"
             alt="PódioTicket"
             width={164}
             height={28}
@@ -223,10 +231,23 @@ export default function AdminLoginPage() {
               </div>
             )}
 
+            {/* Captcha */}
+            {TURNSTILE_SITE_KEY && (
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={TURNSTILE_SITE_KEY}
+                onSuccess={setTurnstileToken}
+                onError={() => setTurnstileToken(null)}
+                onExpire={() => setTurnstileToken(null)}
+                options={{ theme: "auto", size: "flexible" }}
+                className="w-full"
+              />
+            )}
+
             <Button
               type="submit"
               className="w-full h-[52px] font-bold text-lg mt-1"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
               isLoading={isSubmitting}
             >
               Entrar na plataforma

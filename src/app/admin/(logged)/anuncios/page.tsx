@@ -9,9 +9,11 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/Button";
 import { getApiClient } from "@/services/base/ApiClient";
+import { queryKeys } from "@/services/cache/QueryClient";
 import toast from "react-hot-toast";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { NotificationDetailDrawer } from "@/components/Admin/NotificationDetailDrawer";
@@ -266,77 +268,117 @@ const ITEMS_PER_PAGE = 20;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+interface ListResult {
+  items: Notification[];
+  pagination: Pagination;
+}
+
+async function fetchNotificationsList(params: {
+  page: number;
+  search: string;
+  status: string;
+}): Promise<ListResult> {
+  const api = getApiClient();
+  const qs = new URLSearchParams({
+    page: String(params.page),
+    limit: String(ITEMS_PER_PAGE),
+  });
+  if (params.search) qs.set("search", params.search);
+  if (params.status) qs.set("status", params.status);
+
+  const res = await api.get<NotificationListResponse>(
+    `/api/v1/admin/notifications?${qs.toString()}`,
+  );
+  const raw = res.data.data;
+  const items = (Array.isArray(raw.items) ? raw.items : [])
+    .map((a) => normalizeNotification(a as Record<string, unknown>))
+    .filter((a): a is Notification => a !== null);
+  return {
+    items,
+    pagination: raw.pagination ?? {
+      page: params.page,
+      limit: ITEMS_PER_PAGE,
+      total: 0,
+      totalPages: 1,
+    },
+  };
+}
+
+async function fetchNotificationCount(
+  status: "review" | "sent" | "denied",
+): Promise<number> {
+  try {
+    const api = getApiClient();
+    const res = await api.get<NotificationListResponse>(
+      `/api/v1/admin/notifications?status=${status}&limit=1&page=1`,
+    );
+    return res.data.data.pagination?.total ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export default function AdminAnunciosPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  const [reviewCount, setReviewCount] = useState(0);
-  const [sentCount, setSentCount] = useState(0);
-  const [deniedCount, setDeniedCount] = useState(0);
-
-  const [items, setItems] = useState<Notification[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // fetch counts once on mount
-  useEffect(() => {
-    const api = getApiClient();
-    const fetchCount = async (status: string): Promise<number> => {
-      try {
-        const res = await api.get<NotificationListResponse>(
-          `/api/v1/admin/notifications?status=${status}&limit=1&page=1`
-        );
-        return res.data.data.pagination?.total ?? 0;
-      } catch {
-        return 0;
-      }
-    };
-    void Promise.all([fetchCount("review"), fetchCount("sent"), fetchCount("denied")]).then(
-      ([r, s, d]) => { setReviewCount(r); setSentCount(s); setDeniedCount(d); }
-    );
-  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter]);
+
+  // Stat counts: queries independentes, cache compartilhado entre navegações.
+  const reviewCountQuery = useQuery({
+    queryKey: queryKeys.admin.notifications.count("review"),
+    queryFn: () => fetchNotificationCount("review"),
+  });
+  const sentCountQuery = useQuery({
+    queryKey: queryKeys.admin.notifications.count("sent"),
+    queryFn: () => fetchNotificationCount("sent"),
+  });
+  const deniedCountQuery = useQuery({
+    queryKey: queryKeys.admin.notifications.count("denied"),
+    queryFn: () => fetchNotificationCount("denied"),
+  });
+  const reviewCount = reviewCountQuery.data ?? 0;
+  const sentCount = sentCountQuery.data ?? 0;
+  const deniedCount = deniedCountQuery.data ?? 0;
+
+  // Listagem paginada — voltar pra esta página dentro de staleTime usa cache.
+  const listKey = queryKeys.admin.notifications.list({
+    page,
+    search: debouncedSearch,
+    status: statusFilter,
+  });
+  const listQuery = useQuery({
+    queryKey: listKey,
+    queryFn: () => fetchNotificationsList({ page, search: debouncedSearch, status: statusFilter }),
+    placeholderData: (prev) => prev,
+  });
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const api = getApiClient();
-        const params = new URLSearchParams({ page: String(page), limit: String(ITEMS_PER_PAGE) });
-        if (debouncedSearch) params.set("search", debouncedSearch);
-        if (statusFilter) params.set("status", statusFilter);
+    if (listQuery.error) {
+      const err = listQuery.error as any;
+      toast.error(
+        err?.response?.data?.message ?? err?.message ?? "Erro ao carregar anúncios.",
+      );
+    }
+  }, [listQuery.error]);
 
-        const res = await api.get<NotificationListResponse>(`/api/v1/admin/notifications?${params.toString()}`);
-        if (cancelled) return;
-
-        const raw = res.data.data;
-        const normalized = (Array.isArray(raw.items) ? raw.items : [])
-          .map((a) => normalizeNotification(a as Record<string, unknown>))
-          .filter((a): a is Notification => a !== null);
-
-        setItems(normalized);
-        setPagination(raw.pagination ?? { page, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 });
-      } catch (e: any) {
-        if (cancelled) return;
-        toast.error(e?.response?.data?.message ?? e?.message ?? "Erro ao carregar anúncios.");
-        setItems([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [page, debouncedSearch, statusFilter]);
+  const items = listQuery.data?.items ?? [];
+  const pagination =
+    listQuery.data?.pagination ?? { page, limit: ITEMS_PER_PAGE, total: 0, totalPages: 1 };
+  const loading = listQuery.isLoading;
 
   const openDrawer = (id: string) => {
     setSelectedId(id);
@@ -344,11 +386,29 @@ export default function AdminAnunciosPage() {
   };
 
   const handleReviewed = (id: string, newStatus: NotificationStatus) => {
-    setItems((prev) => prev.map((n) => n.id === id ? { ...n, status: newStatus } : n));
-    // update stat counts
-    setReviewCount((c) => Math.max(0, c - 1));
-    if (newStatus === "sent") setSentCount((c) => c + 1);
-    if (newStatus === "denied") setDeniedCount((c) => c + 1);
+    // Atualiza apenas o cache da lista atual (key inclui page/search/status).
+    queryClient.setQueryData<ListResult>(listKey, (old) =>
+      old
+        ? { ...old, items: old.items.map((n) => (n.id === id ? { ...n, status: newStatus } : n)) }
+        : old,
+    );
+    // Stat counts: ajusta cache local (sem refetch).
+    queryClient.setQueryData<number>(
+      queryKeys.admin.notifications.count("review"),
+      (c) => Math.max(0, (c ?? 0) - 1),
+    );
+    if (newStatus === "sent") {
+      queryClient.setQueryData<number>(
+        queryKeys.admin.notifications.count("sent"),
+        (c) => (c ?? 0) + 1,
+      );
+    }
+    if (newStatus === "denied") {
+      queryClient.setQueryData<number>(
+        queryKeys.admin.notifications.count("denied"),
+        (c) => (c ?? 0) + 1,
+      );
+    }
   };
 
   const filtersActive = Boolean(debouncedSearch) || Boolean(statusFilter);

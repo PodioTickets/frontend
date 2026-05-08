@@ -10,6 +10,7 @@ export interface EventNotificationRow {
   channels: NotificationChannel[];
   status: NotificationRowStatus;
   messageHtml?: string;
+  deniedReason?: string | null;
 }
 
 export const CHANNEL_META: Record<

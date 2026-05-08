@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { Info, X } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { cn } from "@/utils/cn";
 import type {
@@ -209,6 +209,20 @@ export function NotificationDetailsDrawer({
                     }}
                   />
                 </div>
+
+                {notification.status === "denied" && notification.deniedReason && (
+                  <div className="flex items-start gap-3 rounded-xl border border-red-6 bg-red-3 px-4 py-3">
+                    <Info className="size-4 shrink-0 text-red-11 mt-0.5" strokeWidth={2} />
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-semibold text-red-12 font-family-dm-sans leading-[1.3]">
+                        Motivo da negação
+                      </p>
+                      <p className="text-sm text-red-12 font-family-dm-sans leading-[1.4]">
+                        {notification.deniedReason}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : null}

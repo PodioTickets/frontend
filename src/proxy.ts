@@ -388,7 +388,7 @@ export async function proxy(request: NextRequest) {
   );
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()"
+    "camera=(), microphone=(), geolocation=(), payment=(), xr-spatial-tracking=(self \"https://challenges.cloudflare.com\")"
   );
 
   if (pathname.startsWith("/api/")) {
@@ -434,9 +434,12 @@ export async function proxy(request: NextRequest) {
     `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://challenges.cloudflare.com`,
     `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
+    // worker-src e child-src: workers internos do Turnstile usam blob URLs
+    `worker-src 'self' blob: https://challenges.cloudflare.com`,
+    `child-src 'self' blob: https://challenges.cloudflare.com`,
     `object-src 'none'`,
     `base-uri 'self'`,
-    `form-action 'self'`,
+    `form-action 'self' https://challenges.cloudflare.com`,
     `frame-ancestors 'none'`,
     `upgrade-insecure-requests`,
   ];

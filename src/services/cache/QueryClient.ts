@@ -71,8 +71,43 @@ export const queryKeys = {
   },
   user: {
     all: ["user"] as const,
-    tickets: (params?: { page?: number; limit?: number; status?: string }) => 
+    tickets: (params?: { page?: number; limit?: number; status?: string }) =>
       [...queryKeys.user.all, "tickets", params] as const,
+  },
+  admin: {
+    all: ["admin"] as const,
+    notifications: {
+      all: () => [...queryKeys.admin.all, "notifications"] as const,
+      list: (params: { page: number; search: string; status: string }) =>
+        [...queryKeys.admin.notifications.all(), "list", params] as const,
+      count: (status: "review" | "sent" | "denied") =>
+        [...queryKeys.admin.notifications.all(), "count", status] as const,
+    },
+    retention: {
+      all: () => [...queryKeys.admin.all, "retention"] as const,
+      list: (params: { page: number; search: string }) =>
+        [...queryKeys.admin.retention.all(), "list", params] as const,
+    },
+    organizations: {
+      all: () => [...queryKeys.admin.all, "organizations"] as const,
+      list: (params: { page: number; search: string; status: string }) =>
+        [...queryKeys.admin.organizations.all(), "list", params] as const,
+    },
+    auditLogs: {
+      all: () => [...queryKeys.admin.all, "auditLogs"] as const,
+      list: (params: Record<string, unknown>) =>
+        [...queryKeys.admin.auditLogs.all(), "list", params] as const,
+    },
+    auditEvent: {
+      all: () => [...queryKeys.admin.all, "auditEvent"] as const,
+      list: (params: Record<string, unknown>) =>
+        [...queryKeys.admin.auditEvent.all(), "list", params] as const,
+    },
+    repasse: {
+      all: () => [...queryKeys.admin.all, "repasse"] as const,
+      list: (params: Record<string, unknown>) =>
+        [...queryKeys.admin.repasse.all(), "list", params] as const,
+    },
   },
 };
 

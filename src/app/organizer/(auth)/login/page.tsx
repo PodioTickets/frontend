@@ -176,14 +176,12 @@ export default function OrganizerLoginPage() {
         lg:bg-gray-2 lg:rounded-none lg:mt-0 lg:px-[124px] lg:py-8 lg:h-full lg:overflow-hidden lg:gap-0
       ">
         {/* Desktop logo */}
-        <div className="hidden lg:block w-[258px] h-11 relative self-start">
-          <Image
-            src="/images/logo_horizontal_black.png"
+        <div className="hidden lg:flex items-center self-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/org-login-dark.svg"
             alt="Pódio Ticket"
-            width={258}
-            height={44}
-            className="object-contain"
-            priority
+            className="h-11 w-auto"
           />
         </div>
 
