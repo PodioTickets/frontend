@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Mail, Lock, Eye, EyeOff, Info } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Info, ArrowLeft, X } from "lucide-react";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
 import Image from "next/image";
 import Link from "next/link";
@@ -55,6 +55,19 @@ export default function OrganizerLoginPage() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState("");
   const [mfaConfirming, setMfaConfirming] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Inicia o cooldown de reenvio quando o modal MFA abre
+  useEffect(() => {
+    if (mfaToken) { setResendCooldown(60); }
+  }, [mfaToken]);
+
+  // Countdown de reenvio
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -123,6 +136,18 @@ export default function OrganizerLoginPage() {
     </p>
   );
 
+  const fecharModal = () => {
+    setMfaToken(null);
+    setMfaCode("");
+    setMfaError("");
+    setResendCooldown(0);
+  };
+
+  const handleResend = () => {
+    setResendCooldown(60);
+    toast.success("Código reenviado para seu e-mail.");
+  };
+
   const handleMfaConfirm = async () => {
     if (!mfaToken) return;
     if (mfaCode.length < 6) {
@@ -138,6 +163,7 @@ export default function OrganizerLoginPage() {
       orgNav.push("/organizer/events");
     } catch (err: any) {
       setMfaError(err?.message || "Código inválido. Tente novamente.");
+      setResendCooldown(60);
     } finally {
       setMfaConfirming(false);
     }
@@ -188,163 +214,118 @@ export default function OrganizerLoginPage() {
         {/* Center block */}
         <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:justify-center lg:min-h-0 lg:gap-8">
 
-          {mfaToken ? (
-            /* Passo de verificação MFA */
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                  Verificação em duas etapas
+          {/* Identity */}
+            <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-8">
+              <div className="size-[72px] lg:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3 lg:p-4">
+                <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-4">
+                  <HotelsIcon className="size-9 lg:size-[52px] text-gray-12" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 lg:gap-3 lg:items-center lg:text-center">
+                <h1 className="text-xl lg:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                  Conecte sua conta
                 </h1>
-                <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
-                  Para continuar com a verificação em duas etapas em nossa plataforma, por favor, insira abaixo o código recebido por e-mail em sua caixa de entrada
+                <p className="text-sm lg:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
+                  Plataforma exclusiva para organizadores
                 </p>
               </div>
-              <div className="flex flex-col gap-3">
-                <OtpCodeInput
-                  value={mfaCode}
-                  onChange={(v) => { setMfaCode(v); setMfaError(""); }}
-                  disabled={mfaConfirming}
-                  error={!!mfaError}
-                  autoFocus
-                  showSeparator={false}
-                />
-                {mfaError && (
-                  <p className="text-sm text-red-11 font-family-dm-sans">{mfaError}</p>
+            </div>
+
+            {/* Divider */}
+            <div className="w-full h-px bg-gray-6" />
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+              {/* Email */}
+              <div className="flex flex-col gap-2">
+                <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Mail className="size-5 text-gray-11" />
+                  </div>
+                  <Input
+                    type="email"
+                    placeholder="Digite seu email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className={`pl-10 h-12 ${errors.email ? "border-red-11" : ""}`}
+                    disabled={isSubmitting || authLoading}
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-sm text-red-11 font-family-dm-sans">{errors.email}</p>
                 )}
               </div>
-              <div className="flex flex-col gap-3">
-                <Button
-                  type="button"
-                  onClick={handleMfaConfirm}
-                  disabled={mfaConfirming || mfaCode.length < 6}
-                >
-                  {mfaConfirming ? "Verificando..." : "Confirmar código"}
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => { setMfaToken(null); setMfaCode(""); setMfaError(""); }}
-                  className="text-sm text-gray-11 hover:text-gray-12 underline text-center"
-                >
-                  Voltar ao login
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Identity */}
-              <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-8">
-                <div className="size-[72px] lg:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3 lg:p-4">
-                  <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-4">
-                    <HotelsIcon className="size-9 lg:size-[52px] text-gray-12" />
+
+              {/* Password */}
+              <div className="flex flex-col gap-2">
+                <label className="text-base text-gray-12 font-family-dm-sans">Senha</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Lock className="size-5 text-gray-11" />
                   </div>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Digite sua senha"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    className={`pl-10 pr-10 h-12 ${errors.password ? "border-red-11" : ""}`}
+                    disabled={isSubmitting || authLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  </button>
                 </div>
-                <div className="flex flex-col gap-1 lg:gap-3 lg:items-center lg:text-center">
-                  <h1 className="text-xl lg:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                    Conecte sua conta
-                  </h1>
-                  <p className="text-sm lg:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
-                    Plataforma exclusiva para organizadores
+                {errors.password && (
+                  <p className="text-sm text-red-11 font-family-dm-sans">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Error banner */}
+              {loginError && (
+                <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
+                  <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
+                  <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
+                    {loginError.text}
                   </p>
                 </div>
+              )}
+
+              {/* Forgot password */}
+              <div className="flex justify-end w-full">
+                <Link
+                  href="/organizer/forgot-password"
+                  className="text-sm lg:text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors underline"
+                >
+                  Esqueci minha senha
+                </Link>
               </div>
 
-              {/* Divider */}
-              <div className="w-full h-px bg-gray-6" />
+              {/* Captcha */}
+              {TURNSTILE_SITE_KEY && (
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onSuccess={setTurnstileToken}
+                  onError={() => setTurnstileToken(null)}
+                  onExpire={() => setTurnstileToken(null)}
+                  options={{ theme: "auto", size: "flexible" }}
+                  className="w-full"
+                />
+              )}
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
-                {/* Email */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-base text-gray-12 font-family-dm-sans">Email</label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Mail className="size-5 text-gray-11" />
-                    </div>
-                    <Input
-                      type="email"
-                      placeholder="Digite seu email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      className={`pl-10 h-12 ${errors.email ? "border-red-11" : ""}`}
-                      disabled={isSubmitting || authLoading}
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-sm text-red-11 font-family-dm-sans">{errors.email}</p>
-                  )}
-                </div>
-
-                {/* Password */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-base text-gray-12 font-family-dm-sans">Senha</label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Lock className="size-5 text-gray-11" />
-                    </div>
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Digite sua senha"
-                      value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
-                      className={`pl-10 pr-10 h-12 ${errors.password ? "border-red-11" : ""}`}
-                      disabled={isSubmitting || authLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((p) => !p)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-11 hover:text-gray-12 transition-colors"
-                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    >
-                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-sm text-red-11 font-family-dm-sans">{errors.password}</p>
-                  )}
-                </div>
-
-                {/* Error banner */}
-                {loginError && (
-                  <div className="flex items-center gap-2 w-full rounded-lg border border-red-6 bg-gradient-to-r from-red-4 to-red-3 p-3">
-                    <Info className="size-5 shrink-0 text-red-12" strokeWidth={1.75} aria-hidden />
-                    <p className="font-medium text-sm leading-[1.3] text-red-12 font-family-dm-sans">
-                      {loginError.text}
-                    </p>
-                  </div>
-                )}
-
-                {/* Forgot password */}
-                <div className="flex justify-end w-full">
-                  <Link
-                    href="/organizer/forgot-password"
-                    className="text-sm lg:text-base font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 transition-colors underline"
-                  >
-                    Esqueci minha senha
-                  </Link>
-                </div>
-
-                {/* Captcha */}
-                {TURNSTILE_SITE_KEY && (
-                  <Turnstile
-                    ref={turnstileRef}
-                    siteKey={TURNSTILE_SITE_KEY}
-                    onSuccess={setTurnstileToken}
-                    onError={() => setTurnstileToken(null)}
-                    onExpire={() => setTurnstileToken(null)}
-                    options={{ theme: "auto", size: "flexible" }}
-                    className="w-full"
-                  />
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
-                >
-                  {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
-                </Button>
-              </form>
-            </>
-          )}
+              <Button
+                type="submit"
+                disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+              >
+                {isSubmitting || authLoading ? "Entrando..." : "Entrar na plataforma"}
+              </Button>
+            </form>
         </div>
 
         {/* Footer */}
@@ -365,6 +346,107 @@ export default function OrganizerLoginPage() {
           <div className="absolute inset-0 bg-linear-to-b from-transparent from-[30.647%] to-[rgba(32,32,32,0.7)] rounded-xl" />
         </div>
       </div>
+
+      {/* ─── Modal de verificação MFA ─── */}
+      {mfaToken && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-[rgba(32,32,32,0.90)]" onClick={fecharModal} />
+
+          {/* Card do modal */}
+          <div className="relative w-[492px] max-w-[calc(100vw-32px)] bg-[#FCFCFC] rounded-xl overflow-hidden flex flex-col shadow-xl">
+
+            {/* Cabeçalho */}
+            <div className="flex justify-between items-center px-4 py-3 border-b border-[#D9D9D9]">
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={fecharModal}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-3 transition-colors"
+                  aria-label="Voltar"
+                >
+                  <ArrowLeft className="size-[18px] text-[#646464]" strokeWidth={1.5} />
+                </button>
+                <span className="font-family-dm-sans font-semibold text-xl text-[#202020] leading-[1.3]">
+                  Verifique sua identidade
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={fecharModal}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-3 transition-colors"
+                aria-label="Fechar"
+              >
+                <X className="size-[18px] text-[#646464]" strokeWidth={1.5} />
+              </button>
+            </div>
+
+            {/* Corpo */}
+            <div className="p-6 flex flex-col gap-6">
+              <p className="font-family-dm-sans text-base text-[#646464] leading-[1.3]">
+                Enviamos um código de 6 dígitos para o seu e-mail. Digite ou cole abaixo para entrar.
+              </p>
+
+              <OtpCodeInput
+                value={mfaCode}
+                onChange={(v) => { setMfaCode(v); setMfaError(""); }}
+                disabled={mfaConfirming}
+                error={!!mfaError}
+                autoFocus
+              />
+
+              {/* Banner de erro */}
+              {mfaError && (
+                <div
+                  className="flex items-center gap-2 p-3 rounded-lg border border-[#FDBDBE]"
+                  style={{ background: "linear-gradient(90deg, #FFDBDC 0%, #FEEBEC 100%)" }}
+                >
+                  <Info className="size-5 shrink-0 text-[#641723]" strokeWidth={1.5} aria-hidden />
+                  <p className="font-family-dm-sans font-medium text-sm text-[#641723]">
+                    Código inválido. Verifique e tente novamente
+                  </p>
+                </div>
+              )}
+
+              {/* Reenviar código */}
+              <div className="flex justify-end">
+                {resendCooldown > 0 ? (
+                  <span className="text-base font-semibold text-[#3E9B4F] font-family-dm-sans">
+                    Aguarde ({resendCooldown} seg) para reenviar
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    className="text-base font-semibold text-[#3E9B4F] font-family-dm-sans hover:underline transition-all"
+                  >
+                    Enviar código
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Rodapé */}
+            <div className="px-6 pb-8 pt-4 flex justify-between items-center">
+              <button
+                type="button"
+                onClick={fecharModal}
+                className="font-family-dm-sans font-semibold text-base text-[#646464] hover:text-[#202020] transition-colors"
+              >
+                Tentar outra forma
+              </button>
+              <button
+                type="button"
+                onClick={handleMfaConfirm}
+                disabled={mfaConfirming || mfaCode.length < 6}
+                className="h-12 px-8 bg-[#59E373] rounded-lg font-manrope font-bold text-lg text-[#141A15] disabled:opacity-50 hover:bg-[#4fd066] transition-colors"
+              >
+                {mfaConfirming ? "Verificando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
