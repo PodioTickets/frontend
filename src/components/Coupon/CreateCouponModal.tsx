@@ -168,6 +168,8 @@ export function CreateCouponModal() {
         setUsageLimitEnabled(!!c.maxUsage);
         setCpfListStatus(c.cpfListStatus || "DISABLED");
         setCpfList(c.cpfList || []);
+        // Abre painel avançado automaticamente se houver configurações ativas
+        setShowAdvanced(!!(c.expiryDate || c.maxUsage || c.cpfListStatus === "ENABLED" || c.minQuantity || c.minAge || c.maxAge));
         setMinQuantity(c.minQuantity?.toString() || "");
         setMinAge(c.minAge?.toString() || "");
         setMaxAge(c.maxAge?.toString() || "");

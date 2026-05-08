@@ -94,6 +94,8 @@ export function CreateVoucherModal() {
         setExpiryDate(v.expiryDate || null);
         setCpfListStatus(v.cpfListStatus || "DISABLED");
         setCpfList(v.cpfList || []);
+        // Abre painel avançado automaticamente se houver configurações ativas
+        setShowAdvanced(!!(v.expiryDate || v.cpfListStatus === "ENABLED"));
       } else {
         setName("");
         setQuantity("");
