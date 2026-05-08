@@ -9,6 +9,8 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
+import { useQueryClient } from "@tanstack/react-query";
+import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
@@ -67,6 +69,16 @@ export default function EventPage() {
   const router = useRouter();
   const eventSlug = params.slug as string;
   const { event, loading: isLoading, error } = useEventBySlug(eventSlug);
+  const queryClient = useQueryClient();
+
+  /**
+   * Disparado pelo `RegistrationCountdown` no momento em que a contagem chega
+   * a zero. Invalida a query do evento para que `registrationsNotOpenYet` seja
+   * re-avaliado e a UI mude do estado "Em breve!" para "Inscreva-se".
+   */
+  const handleRegistrationCountdownExpire = () => {
+    void queryClient.invalidateQueries({ queryKey: ["event", "slug", eventSlug] });
+  };
 
   const topicSections = useMemo(() => {
     if (!event) return [];
@@ -398,7 +410,13 @@ export default function EventPage() {
                     Em breve!
                   </Button>
                   <p className="text-sm text-gray-11 text-center mt-2">
-                    Inscrições abrem em {registrationOpensDateText}
+                    Inscrições abrem em{" "}
+                    <br /> <RegistrationCountdown
+                      targetDate={registrationOpensAt}
+                      fallbackText={registrationOpensDateText}
+                      onExpire={handleRegistrationCountdownExpire}
+                      className="font-semibold"
+                    />
                   </p>
                 </>
               ) : (
@@ -593,7 +611,13 @@ export default function EventPage() {
                   Em breve!
                 </Button>
                 <p className="text-sm text-gray-11 text-center mt-2">
-                  Inscrições abrem em {registrationOpensDateText}
+                  Inscrições abrem em{" "}
+                  <br /> <RegistrationCountdown
+                    targetDate={registrationOpensAt}
+                    fallbackText={registrationOpensDateText}
+                    onExpire={handleRegistrationCountdownExpire}
+                    className="font-semibold"
+                  />
                 </p>
               </>
             ) : (
@@ -803,7 +827,13 @@ export default function EventPage() {
                             Em breve!
                           </Button>
                           <p className="text-sm text-gray-11 text-center mt-2">
-                            Inscrições abrem em {registrationOpensDateText}
+                            Inscrições abrem em{" "}
+                            <br /> <RegistrationCountdown
+                              targetDate={registrationOpensAt}
+                              fallbackText={registrationOpensDateText}
+                              onExpire={handleRegistrationCountdownExpire}
+                              className="font-semibold"
+                            />
                           </p>
                         </>
                       ) : (
@@ -1064,7 +1094,13 @@ export default function EventPage() {
                         Em breve!
                       </Button>
                       <p className="text-sm text-gray-11 text-center mt-2">
-                        Inscrições abrem em {registrationOpensDateText}
+                        Inscrições abrem em{" "}
+                        <br /> <RegistrationCountdown
+                          targetDate={registrationOpensAt}
+                          fallbackText={registrationOpensDateText}
+                          onExpire={handleRegistrationCountdownExpire}
+                          className="font-semibold"
+                        />
                       </p>
                     </>
                   ) : (
