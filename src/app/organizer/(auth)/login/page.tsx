@@ -202,7 +202,7 @@ export default function OrganizerLoginPage() {
         lg:bg-gray-2 lg:rounded-none lg:mt-0 lg:px-[124px] lg:py-8 lg:h-full lg:overflow-hidden lg:gap-0
       ">
         {/* Desktop logo */}
-        <div className="hidden lg:flex items-center self-center">
+        <div className="hidden lg:flex items-center self-center shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/org-login-dark.svg"
@@ -211,8 +211,8 @@ export default function OrganizerLoginPage() {
           />
         </div>
 
-        {/* Center block */}
-        <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:justify-center lg:min-h-0 lg:gap-8">
+        {/* Center block — scrollável para não sobrepor o footer em telas baixas */}
+        <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:min-h-0 lg:gap-8 lg:overflow-y-auto lg:py-6">
 
           {/* Identity */}
             <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-8">
@@ -329,7 +329,7 @@ export default function OrganizerLoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-center mt-2 lg:mt-0">{footer}</div>
+        <div className="flex justify-center mt-2 lg:mt-0 lg:shrink-0">{footer}</div>
       </div>
 
       {/* ─── Desktop: right image ─── */}
