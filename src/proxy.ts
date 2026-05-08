@@ -423,7 +423,7 @@ export async function proxy(request: NextRequest) {
   const cspDirectives = [
     `default-src ${trustedDomains.join(" ")}`,
     `script-src ${trustedDomains.join(" ")} ${isDev ? "'unsafe-eval'" : ""
-    } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com`,
+    } 'unsafe-inline' blob: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://challenges.cloudflare.com https://www.instagram.com https://connect.facebook.net https://platform.twitter.com https://www.tiktok.com https://strava-embeds.com`,
     `style-src ${trustedDomains.join(
       " "
     )} 'unsafe-inline' https://fonts.googleapis.com https://*.googleapis.com`,
@@ -431,8 +431,8 @@ export async function proxy(request: NextRequest) {
     `connect-src ${trustedDomains.join(
       " "
     )} wss: ws: https://www.google.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://www.google-analytics.com https://*.google-analytics.com https://challenges.cloudflare.com`,
-    `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://challenges.cloudflare.com`,
-    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com`,
+    `frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://*.google.com https://*.googleapis.com https://www.strava.com https://*.strava.com https://strava-embeds.com https://challenges.cloudflare.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://www.tiktok.com`,
+    `img-src ${trustedDomains.join(" ")} data: blob: https://cdn.podioticket.com.br https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://www.instagram.com https://*.cdninstagram.com https://*.fbcdn.net https://*.strava.com https://strava-embeds.com`,
     `media-src ${trustedDomains.join(" ")} data: blob:`,
     // worker-src e child-src: workers internos do Turnstile usam blob URLs
     `worker-src 'self' blob: https://challenges.cloudflare.com`,

@@ -23,6 +23,7 @@ import {
 import { cn } from "@/utils/cn";
 import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
+import { TopicRichContent } from "@/components/TopicRichContent";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
@@ -433,11 +434,9 @@ export default function EventPage() {
                   <h2 className="text-lg font-bold text-gray-12 mb-3">
                     {section.title}
                   </h2>
-                  <div
-                    className={`topic-rich-html text-sm text-gray-11 mb-3 prose prose-sm max-w-none`}
-                    dangerouslySetInnerHTML={{
-                      __html: normalizeTopicHtmlAnchorHrefs(section.content),
-                    }}
+                  <TopicRichContent
+                    html={normalizeTopicHtmlAnchorHrefs(section.content)}
+                    className="topic-rich-html text-sm text-gray-11 mb-3 prose prose-sm max-w-none"
                   />
 
                 </div>
@@ -851,11 +850,9 @@ export default function EventPage() {
                     <h1 className="text-2xl font-bold text-gray-12">
                       {section.title}
                     </h1>
-                    <div
+                    <TopicRichContent
+                      html={normalizeTopicHtmlAnchorHrefs(section.content)}
                       className="topic-rich-html text-gray-11 text-sm prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: normalizeTopicHtmlAnchorHrefs(section.content),
-                      }}
                     />
                   </div>
                   <div className="w-full h-px bg-gray-6" />

@@ -173,21 +173,21 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           {groupedTickets.length > 0 ? (
             <>
               {groupedTickets.map((ticket, index) => (
-                <p
+                <div
                   key={index}
                   className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full"
                 >
-                  <p className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                     ({ticket.quantity}x){" "}
-                    <p className="flex flex-col items-start">
-                      <span className="text-gray-11 text-xs truncate"> {ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
+                    <div className="flex flex-col items-start">
+                      <span className="text-gray-11 text-xs truncate">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
                       <span className="text-gray-12 text-sm truncate">{ticket.ticketName}:{" "}</span>
-                    </p>
-                  </p>
+                    </div>
+                  </div>
                   <span className="text-gray-12">
                     {formatPrice(ticket.total)}
                   </span>
-                </p>
+                </div>
               ))}
               <p className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full">
                 Taxa de serviço:{" "}
