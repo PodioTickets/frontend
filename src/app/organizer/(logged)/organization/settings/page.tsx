@@ -741,7 +741,7 @@ export default function OrganizationSettingsPage() {
               {/* Header */}
               <div className="flex items-center gap-2 w-full">
                 <FinanceIcon className="size-6 text-gray-12 shrink-0" />
-                <p className="font-manrope font-bold leading-[1.1] text-xl text-gray-12">
+                <p className="font-manrope font-bold leading-[1.1] text-lg text-gray-12">
                   Chave PIX
                 </p>
               </div>
@@ -761,14 +761,11 @@ export default function OrganizationSettingsPage() {
                           <div className="flex flex-col gap-2 items-start min-w-0">
                             <div className="flex items-center gap-1">
                               <p className="font-manrope font-bold leading-[1.1] text-lg text-gray-12 truncate">
-                                {pixKey.keyType || ""} -
-                              </p>
-                              <p className="font-manrope font-bold leading-[1.1] text-lg text-gray-12 truncate">
                                 {pixKey.bankName || "Banco"}
                               </p>
                             </div>
                             <div className="flex items-center gap-1 text-base leading-[1.3]">
-                              <span className="font-family-dm-sans font-normal text-gray-11">Chave pix:</span>
+                              <span className="font-family-dm-sans font-normal text-gray-11">Chave pix ({pixKey.keyType || ""}):</span>
                               <span className="font-family-dm-sans font-medium text-gray-12 truncate">{pixKey.key || "—"}</span>
                             </div>
                           </div>

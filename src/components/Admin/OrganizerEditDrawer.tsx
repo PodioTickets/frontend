@@ -280,10 +280,10 @@ function PixKeyCard({
       >
         <div className="flex flex-col gap-4">
           <p className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
-            {typeLabel} {pixKey.bankName}
+            {pixKey.bankName}
           </p>
           <div className="flex items-center gap-1 text-base leading-[1.3]">
-            <span className="font-normal font-family-dm-sans text-gray-11">Chave pix:</span>
+            <span className="font-normal font-family-dm-sans text-gray-11">Chave pix ({typeLabel}):</span>
             <span className="font-medium font-family-dm-sans text-gray-12">{pixKey.key}</span>
           </div>
         </div>
