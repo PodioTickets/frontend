@@ -396,6 +396,7 @@ export function LoginModal() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState("");
   const [mfaConfirming, setMfaConfirming] = useState(false);
+  const [mfaResendCooldown, setMfaResendCooldown] = useState(0);
 
   const [forgotFlow, setForgotFlow] = useState<ForgotFlow>("idle");
   const [forgotEmail, setForgotEmail] = useState("");
@@ -445,6 +446,7 @@ export function LoginModal() {
       setMfaToken(null);
       setMfaCode("");
       setMfaError("");
+      setMfaResendCooldown(0);
       mobileTurnstileRef.current?.reset();
       desktopTurnstileRef.current?.reset();
     } else {
@@ -478,6 +480,18 @@ export function LoginModal() {
     }, 1000);
     return () => clearInterval(id);
   }, [forgotResendTimerActive]);
+
+  // Inicia cooldown de reenvio MFA quando token aparece
+  useEffect(() => {
+    if (mfaToken) { setMfaResendCooldown(60); }
+  }, [mfaToken]);
+
+  // Countdown do reenvio MFA
+  useEffect(() => {
+    if (mfaResendCooldown <= 0) return;
+    const timer = setTimeout(() => setMfaResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [mfaResendCooldown]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -692,6 +706,18 @@ export function LoginModal() {
     }
   };
 
+  const fecharMfa = () => {
+    setMfaToken(null);
+    setMfaCode("");
+    setMfaError("");
+    setMfaResendCooldown(0);
+  };
+
+  const handleMfaResend = () => {
+    setMfaResendCooldown(60);
+    toast.success("Código reenviado para seu e-mail.");
+  };
+
   const handleMfaConfirm = async () => {
     if (!mfaToken) return;
     if (mfaCode.length < 6) {
@@ -708,53 +734,101 @@ export function LoginModal() {
       setErrors({});
     } catch (err: any) {
       setMfaError(err?.message || "Código inválido. Tente novamente.");
+      setMfaResendCooldown(60);
     } finally {
       setMfaConfirming(false);
     }
   };
 
   const mfaStepContent = mfaToken ? (
-    <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
-      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
-        <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
-          Verificação em duas etapas
-        </h2>
+    <div className="bg-[#FCFCFC] rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
+      {/* Cabeçalho */}
+      <div className="flex justify-between items-center px-4 py-3 border-b border-[#D9D9D9]">
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={fecharMfa}
+            className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="size-[18px] text-[#646464]" strokeWidth={1.5} />
+          </button>
+          <span className="font-family-dm-sans font-semibold text-xl text-[#202020] leading-[1.3]">
+            Verifique sua identidade
+          </span>
+        </div>
         <button
           type="button"
-          onClick={() => { setMfaToken(null); setMfaCode(""); setMfaError(""); }}
+          onClick={fecharMfa}
           className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-          aria-label="Cancelar verificação"
+          aria-label="Fechar"
         >
-          <X className="size-[18px] text-gray-12" />
+          <X className="size-[18px] text-[#646464]" strokeWidth={1.5} />
         </button>
       </div>
-      <div className="flex flex-col gap-6 pt-4 pb-6 px-6">
-        <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-          Para continuar com a verificação em duas etapas em nossa plataforma, por favor, insira abaixo o código recebido por e-mail em sua caixa de entrada
+
+      {/* Corpo */}
+      <div className="flex flex-col gap-6 p-6">
+        <p className="font-family-dm-sans text-base text-[#646464] leading-[1.3]">
+          Enviamos um código de 6 dígitos para o seu e-mail. Digite ou cole abaixo para entrar.
         </p>
-        <div className="flex flex-col gap-3">
-          <OtpCodeInput
-            value={mfaCode}
-            onChange={(v) => { setMfaCode(v); setMfaError(""); }}
-            disabled={mfaConfirming}
-            error={!!mfaError}
-            autoFocus
-            showSeparator={false}
-          />
-          {mfaError && (
-            <p className="text-sm text-red-9 font-family-dm-sans">{mfaError}</p>
+
+        <OtpCodeInput
+          value={mfaCode}
+          onChange={(v) => { setMfaCode(v); setMfaError(""); }}
+          disabled={mfaConfirming}
+          error={!!mfaError}
+          autoFocus
+        />
+
+        {/* Banner de erro */}
+        {mfaError && (
+          <div
+            className="flex items-center gap-2 p-3 rounded-lg border border-[#FDBDBE]"
+            style={{ background: "linear-gradient(90deg, #FFDBDC 0%, #FEEBEC 100%)" }}
+          >
+            <Info className="size-5 shrink-0 text-[#641723]" strokeWidth={1.5} aria-hidden />
+            <p className="font-family-dm-sans font-medium text-sm text-[#641723]">
+              Código inválido. Verifique e tente novamente
+            </p>
+          </div>
+        )}
+
+        {/* Reenviar código */}
+        <div className="flex justify-end">
+          {mfaResendCooldown > 0 ? (
+            <span className="text-base font-semibold text-[#3E9B4F] font-family-dm-sans">
+              Aguarde ({mfaResendCooldown} seg) para reenviar
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleMfaResend}
+              className="text-base font-semibold text-[#3E9B4F] font-family-dm-sans hover:underline transition-all"
+            >
+              Enviar código
+            </button>
           )}
         </div>
       </div>
-      <div className="flex px-6 pt-2 pb-8">
-        <Button
+
+      {/* Rodapé */}
+      <div className="px-6 pb-8 pt-4 flex justify-between items-center">
+        <button
+          type="button"
+          onClick={fecharMfa}
+          className="font-family-dm-sans font-semibold text-base text-[#646464] hover:text-[#202020] transition-colors"
+        >
+          Tentar outra forma
+        </button>
+        <button
           type="button"
           onClick={handleMfaConfirm}
           disabled={mfaConfirming || mfaCode.length < 6}
-          className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-12 px-8 bg-[#59E373] rounded-lg font-manrope font-bold text-lg text-[#141A15] disabled:opacity-50 hover:bg-[#4fd066] transition-colors"
         >
-          {mfaConfirming ? "Verificando..." : "Confirmar código"}
-        </Button>
+          {mfaConfirming ? "Verificando..." : "Confirmar"}
+        </button>
       </div>
     </div>
   ) : null;
