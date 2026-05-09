@@ -544,46 +544,6 @@ export default function EventDashboardPage() {
     }
   };
 
-  // Lazy fetch: text answers only when a text/number question drawer is opened
-  useEffect(() => {
-    if (!selectedQuestionId) {
-      setTextAnswerRows(undefined);
-      return;
-    }
-    const qType = selectedQuestion?.type;
-    if (qType !== "text" && qType !== "number") {
-      setTextAnswerRows(undefined);
-      return;
-    }
-    let cancelled = false;
-    setTextAnswerRows(undefined);
-    setTextAnswersLoading(true);
-    organizerService
-      .getQuestionTextAnswers(eventId, selectedQuestionId)
-      .then((res) => {
-        if (cancelled) return;
-        setTextAnswerRows(
-          res.answers.map((a) => ({
-            id: a.id,
-            userName: a.userName ?? "Participante",
-            userEmail: a.userEmail ?? undefined,
-            userAvatarUrl: a.userAvatarUrl ?? undefined,
-            answer: a.answer,
-            answeredAt: a.answeredAt,
-          }))
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setTextAnswerRows([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTextAnswersLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedQuestionId, selectedQuestion?.type, eventId]);
-
   const lotsNearDepletionList = dashboardData.lotsNearDepletion;
   const lotsNearDepletionTotalPages = Math.max(
     1,
@@ -790,6 +750,46 @@ export default function EventDashboardPage() {
       count: a.count,
     }));
   }, [selectedQuestionFromApi, selectedQuestion?.type]);
+
+  // Lazy fetch: text answers only when a text/number question drawer is opened
+  useEffect(() => {
+    if (!selectedQuestionId) {
+      setTextAnswerRows(undefined);
+      return;
+    }
+    const qType = selectedQuestion?.type;
+    if (qType !== "text" && qType !== "number") {
+      setTextAnswerRows(undefined);
+      return;
+    }
+    let cancelled = false;
+    setTextAnswerRows(undefined);
+    setTextAnswersLoading(true);
+    organizerService
+      .getQuestionTextAnswers(eventId, selectedQuestionId)
+      .then((res) => {
+        if (cancelled) return;
+        setTextAnswerRows(
+          res.answers.map((a) => ({
+            id: a.id,
+            userName: a.userName ?? "Participante",
+            userEmail: a.userEmail ?? undefined,
+            userAvatarUrl: a.userAvatarUrl ?? undefined,
+            answer: a.answer,
+            answeredAt: a.answeredAt,
+          }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setTextAnswerRows([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTextAnswersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedQuestionId, selectedQuestion?.type, eventId]);
 
   const selectedQuestionIndex = selectedQuestionId
     ? (apiQuestions.length > 0
