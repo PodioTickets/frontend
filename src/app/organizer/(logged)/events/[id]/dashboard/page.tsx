@@ -752,14 +752,17 @@ export default function EventDashboardPage() {
   const selectedQuestionTextAnswerRows = useMemo((): TextAnswerRow[] | undefined => {
     if (selectedQuestion?.type !== "text" && selectedQuestion?.type !== "number") return undefined;
     if (!selectedQuestionFromApi?.answersRanking) return [];
-    return selectedQuestionFromApi.answersRanking.map((a, i) => ({
-      id: String(i),
-      userName: (a as any).userName ?? (a as any).participantName ?? "Participante",
-      userEmail: (a as any).userEmail ?? (a as any).participantEmail ?? undefined,
-      userAvatarUrl: (a as any).avatarUrl ?? undefined,
-      answer: a.answer,
-      answeredAt: (a as any).answeredAt ?? (a as any).createdAt ?? undefined,
-    }));
+    return selectedQuestionFromApi.answersRanking.map((a, i) => {
+      const raw = a as any;
+      return {
+        id: raw.id ?? String(i),
+        userName: raw.participantName ?? raw.userName ?? "Participante",
+        userEmail: raw.participantEmail ?? raw.userEmail ?? undefined,
+        userAvatarUrl: raw.avatarUrl ?? undefined,
+        answer: a.answer,
+        answeredAt: raw.answeredAt ?? raw.createdAt ?? undefined,
+      };
+    });
   }, [selectedQuestionFromApi, selectedQuestion?.type]);
 
   const selectedQuestionIndex = selectedQuestionId
