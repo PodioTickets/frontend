@@ -8,7 +8,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Question } from "@/interfaces/event";
 import { ArrowButton } from "../ArrowButton";
 
@@ -39,7 +39,7 @@ interface QuestionDetailsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   question: Question | null;
-  /** Index (1-based) and total for "Pergunta X de Y" */
+  /** Index (1-based) e total para "Pergunta X de Y" */
   questionIndex?: number;
   totalQuestions?: number;
   /** Respostas: opção + % + quantidade. Se não informado, usa options da pergunta com dados placeholder. */
@@ -113,12 +113,10 @@ export function QuestionDetailsDrawer({
   onPrevious,
   onNext,
 }: QuestionDetailsDrawerProps) {
-  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Reset search/page when question changes
+  // Resetar página quando a pergunta mudar
   useEffect(() => {
-    setSearchQuery("");
     setCurrentPage(1);
   }, [question?.id]);
 
@@ -138,21 +136,9 @@ export function QuestionDetailsDrawer({
               : 0,
         })));
 
-  // Text answers filtering + pagination
-  const filteredTextAnswers = useMemo(() => {
-    if (!textAnswerRows) return [];
-    const q = searchQuery.toLowerCase();
-    if (!q) return textAnswerRows;
-    return textAnswerRows.filter(
-      (r) =>
-        r.userName.toLowerCase().includes(q) ||
-        (r.userEmail?.toLowerCase().includes(q) ?? false) ||
-        r.answer.toLowerCase().includes(q)
-    );
-  }, [textAnswerRows, searchQuery]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredTextAnswers.length / TEXT_ANSWERS_PAGE_SIZE));
-  const pagedAnswers = filteredTextAnswers.slice(
+  const totalTextAnswers = textAnswerRows?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalTextAnswers / TEXT_ANSWERS_PAGE_SIZE));
+  const pagedAnswers = (textAnswerRows ?? []).slice(
     (currentPage - 1) * TEXT_ANSWERS_PAGE_SIZE,
     currentPage * TEXT_ANSWERS_PAGE_SIZE
   );
@@ -219,7 +205,7 @@ export function QuestionDetailsDrawer({
           <div className="p-5 flex flex-col gap-6">
             {question && (
               <>
-                {/* Top: Pergunta X de Y + nav */}
+                {/* Topo: Pergunta X de Y + navegação */}
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between w-full">
                     <p className="font-family-dm-sans font-normal text-base text-gray-11">
@@ -272,43 +258,20 @@ export function QuestionDetailsDrawer({
                   </div>
                 </div>
 
-                {/* Content: texto livre vs opções */}
+                {/* Conteúdo: texto livre vs opções */}
                 {isTextQuestion && textAnswerRows !== undefined ? (
-                  /* ── Texto livre: lista de respostas individuais ── */
-                  <div className="flex flex-col gap-4">
-                    {/* Cabeçalho da seção */}
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-manrope font-extrabold text-[18px] leading-[1.1] text-gray-12">
+                  /* ── Texto livre: card com header, lista e footer ── */
+                  <div className="w-full bg-[#F9F9F9] rounded-lg border border-[#D9D9D9] flex flex-col overflow-hidden">
+
+                    {/* Header do card */}
+                    <div className="h-11 bg-[#F0F0F0] border-b border-[#D9D9D9] px-4 flex items-center shrink-0">
+                      <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
                         Respostas de todos os usuários
                       </p>
-                      <button
-                        type="button"
-                        onClick={handleExportCsv}
-                        className="h-9 px-4 bg-[#59E373] rounded-lg font-manrope font-bold text-sm text-[#141A15] hover:bg-[#4fd066] transition-colors shrink-0"
-                      >
-                        Exportar CSV
-                      </button>
                     </div>
 
-                    {/* Busca */}
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <Search className="size-4 text-gray-11" />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Palavras-chaves, nome..."
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="w-full h-10 pl-9 pr-3 border border-gray-6 rounded-lg bg-gray-1 text-sm text-gray-12 font-family-dm-sans placeholder:text-gray-10 focus:outline-none focus:border-primary-10 focus:ring-1 focus:ring-primary-10/20 transition-all"
-                      />
-                    </div>
-
-                    {/* Cards de resposta */}
-                    <div className="flex flex-col gap-3">
+                    {/* Lista de cards */}
+                    <div className="px-3 py-4 flex flex-col gap-2">
                       {pagedAnswers.length === 0 ? (
                         <p className="text-sm text-gray-11 font-family-dm-sans text-center py-8">
                           Nenhuma resposta encontrada.
@@ -319,13 +282,14 @@ export function QuestionDetailsDrawer({
                           return (
                             <div
                               key={row.id ?? i}
-                              className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex flex-col gap-3"
+                              className="w-full bg-[#FCFCFC] rounded-lg border border-[#D9D9D9] flex flex-col"
                             >
-                              {/* Info do usuário + data */}
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2 min-w-0">
+                              {/* Cabeçalho do card: usuário | data */}
+                              <div className="w-full border-b border-[#D9D9D9] flex justify-between">
+                                {/* Esquerda: avatar + nome/email */}
+                                <div className="flex-1 px-4 py-3 flex items-center gap-2">
                                   <UserAvatar name={row.userName} avatarUrl={row.userAvatarUrl} />
-                                  <div className="flex flex-col min-w-0">
+                                  <div className="flex-1 min-w-0 flex flex-col gap-2">
                                     <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate">
                                       {row.userName}
                                     </p>
@@ -336,39 +300,51 @@ export function QuestionDetailsDrawer({
                                     )}
                                   </div>
                                 </div>
+
+                                {/* Direita: data · hora */}
                                 {dt && (
-                                  <p className="font-inter font-semibold text-sm leading-[1.3] text-gray-11 shrink-0 whitespace-nowrap">
-                                    {dt.date} · {dt.time}
-                                  </p>
+                                  <div className="flex-1 px-4 py-3 flex items-center justify-end gap-2 shrink-0">
+                                    <p className="font-inter font-semibold text-sm leading-[1.3] text-gray-12 whitespace-nowrap">
+                                      {dt.date}
+                                    </p>
+                                    <div className="size-1 rounded-full bg-gray-11 shrink-0" />
+                                    <p className="font-inter font-semibold text-sm leading-[1.3] text-gray-11 whitespace-nowrap">
+                                      {dt.time}
+                                    </p>
+                                  </div>
                                 )}
                               </div>
-                              {/* Texto da resposta */}
-                              <p className="font-inter font-medium text-sm leading-[1.5] text-gray-12">
-                                {row.answer}
-                              </p>
+
+                              {/* Corpo: texto da resposta */}
+                              <div className="px-4 pt-4 pb-5">
+                                <p className="font-inter font-medium text-sm leading-[1.3] text-black">
+                                  {row.answer}
+                                </p>
+                              </div>
                             </div>
                           );
                         })
                       )}
                     </div>
 
-                    {/* Paginação */}
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-1">
+                    {/* Footer: paginação + CSV */}
+                    <div className="p-4 flex justify-between items-center border-t border-[#D9D9D9]">
+                      {/* Paginação */}
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                           disabled={currentPage <= 1}
-                          className="size-9 flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                          className="size-8 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none transition-colors"
                           aria-label="Página anterior"
                         >
-                          <ChevronLeft className="size-4 text-gray-12" />
+                          <ChevronLeft className="size-5 text-gray-11" />
                         </button>
                         {pageNumbers.map((p, i) =>
                           p === "..." ? (
                             <span
                               key={`ellipsis-${i}`}
-                              className="size-9 flex items-center justify-center text-sm text-gray-11"
+                              className="size-8 flex items-center justify-center text-sm text-gray-11 font-family-dm-sans"
                             >
                               ...
                             </span>
@@ -377,10 +353,10 @@ export function QuestionDetailsDrawer({
                               key={p}
                               type="button"
                               onClick={() => setCurrentPage(p as number)}
-                              className={`size-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                              className={`size-8 flex items-center justify-center rounded-lg text-sm font-medium font-family-dm-sans transition-colors ${
                                 currentPage === p
-                                  ? "bg-primary-11 text-white"
-                                  : "border border-gray-6 text-gray-12 hover:bg-gray-3"
+                                  ? "bg-[#308737] text-[#FBFEFB]"
+                                  : "bg-[#E8E8E8] text-gray-12 hover:bg-gray-5"
                               }`}
                             >
                               {p}
@@ -391,13 +367,22 @@ export function QuestionDetailsDrawer({
                           type="button"
                           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                           disabled={currentPage >= totalPages}
-                          className="size-9 flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                          className="size-8 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none transition-colors"
                           aria-label="Próxima página"
                         >
-                          <ChevronRight className="size-4 text-gray-12" />
+                          <ChevronRight className="size-5 text-gray-11" />
                         </button>
                       </div>
-                    )}
+
+                      {/* Botão exportar CSV */}
+                      <button
+                        type="button"
+                        onClick={handleExportCsv}
+                        className="h-11 px-5 bg-[#59E373] rounded-lg font-manrope font-bold text-base text-[#141A15] hover:bg-[#4fd066] transition-colors shrink-0"
+                      >
+                        Exportar CSV
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   /* ── Perguntas de opção: tabela ── */
