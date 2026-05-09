@@ -8,7 +8,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import type { Question } from "@/interfaces/event";
 import { ArrowButton } from "../ArrowButton";
 
@@ -114,10 +114,12 @@ export function QuestionDetailsDrawer({
   onNext,
 }: QuestionDetailsDrawerProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Resetar página quando a pergunta mudar
+  // Resetar página e busca quando a pergunta mudar
   useEffect(() => {
     setCurrentPage(1);
+    setSearchQuery("");
   }, [question?.id]);
 
   const typeLabel = question ? QUESTION_TYPE_LABELS[question.type] ?? question.type : "—";
@@ -136,9 +138,20 @@ export function QuestionDetailsDrawer({
               : 0,
         })));
 
-  const totalTextAnswers = textAnswerRows?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalTextAnswers / TEXT_ANSWERS_PAGE_SIZE));
-  const pagedAnswers = (textAnswerRows ?? []).slice(
+  const filteredTextAnswers = useMemo(() => {
+    if (!textAnswerRows) return [];
+    const q = searchQuery.toLowerCase();
+    if (!q) return textAnswerRows;
+    return textAnswerRows.filter(
+      (r) =>
+        r.userName.toLowerCase().includes(q) ||
+        (r.userEmail?.toLowerCase().includes(q) ?? false) ||
+        r.answer.toLowerCase().includes(q)
+    );
+  }, [textAnswerRows, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTextAnswers.length / TEXT_ANSWERS_PAGE_SIZE));
+  const pagedAnswers = filteredTextAnswers.slice(
     (currentPage - 1) * TEXT_ANSWERS_PAGE_SIZE,
     currentPage * TEXT_ANSWERS_PAGE_SIZE
   );
@@ -260,7 +273,21 @@ export function QuestionDetailsDrawer({
 
                 {/* Conteúdo: texto livre vs opções */}
                 {isTextQuestion && textAnswerRows !== undefined ? (
-                  /* ── Texto livre: card com header, lista e footer ── */
+                  /* ── Texto livre: busca + card com header, lista e footer ── */
+                  <div className="w-full flex flex-col gap-4 items-end">
+
+                    {/* Campo de busca */}
+                    <div className="w-full h-12 px-3 border border-[#D9D9D9] rounded-lg flex items-center gap-2 bg-gray-1">
+                      <Search className="size-5 text-gray-11 shrink-0" strokeWidth={1.5} />
+                      <input
+                        type="text"
+                        placeholder="Palavras-chaves, nome..."
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                        className="flex-1 text-sm font-family-dm-sans text-gray-12 placeholder:text-gray-11 bg-transparent focus:outline-none"
+                      />
+                    </div>
+
                   <div className="w-full bg-[#F9F9F9] rounded-lg border border-[#D9D9D9] flex flex-col overflow-hidden">
 
                     {/* Header do card */}
@@ -383,6 +410,7 @@ export function QuestionDetailsDrawer({
                         Exportar CSV
                       </button>
                     </div>
+                  </div>
                   </div>
                 ) : (
                   /* ── Perguntas de opção: tabela ── */
