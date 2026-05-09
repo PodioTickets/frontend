@@ -8,14 +8,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
 import { getEventOrganizer } from "@/utils/organization";
-import { getAvatarUrl } from "@/utils/avatar";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
-import { InstagramIcon } from "@/components/Icons/InstagramIcon";
-import { FacebookIcon } from "@/components/Icons/FacebookIcon";
-import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
-import { TiktokIcon } from "@/components/Icons/TiktokIcon";
-import { GlobeIcon } from "lucide-react";
-import Link from "next/link";
 
 interface EventInfoProps {
   event: Event;
@@ -29,14 +22,6 @@ interface EventInfoProps {
 export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [] }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-
-  const formatDate = (date: string) => {
-    return new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(date));
-  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -189,12 +174,6 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                   </span>
                 </div>
               ))}
-              <p className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full">
-                Taxa de serviço:{" "}
-                <span className="text-gray-12">
-                  {formatPrice(totalPrice * ((event.participantFeePercent ?? 0) / 100))}
-                </span>
-              </p>
             </>
           ) : (
             <p className="text-sm text-gray-11 text-center py-2">
