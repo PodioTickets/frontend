@@ -2210,6 +2210,7 @@ export class OrganizerService {
       id: string;
       userName: string | null;
       userEmail: string | null;
+      userAvatarUrl: string | null;
       answer: string;
       answeredAt: string;
     }>;
@@ -2220,6 +2221,7 @@ export class OrganizerService {
           id: string;
           userName: string | null;
           userEmail: string | null;
+          userAvatarUrl: string | null;
           answer: string;
           answeredAt: string;
         }>;

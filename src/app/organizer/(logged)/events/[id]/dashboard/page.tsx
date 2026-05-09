@@ -567,6 +567,7 @@ export default function EventDashboardPage() {
             id: a.id,
             userName: a.userName ?? "Participante",
             userEmail: a.userEmail ?? undefined,
+            userAvatarUrl: a.userAvatarUrl ?? undefined,
             answer: a.answer,
             answeredAt: a.answeredAt,
           }))
