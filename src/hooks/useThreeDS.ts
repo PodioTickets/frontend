@@ -5,13 +5,28 @@ import { apiClient } from "@/services";
 
 // ─── URLs do SDK ──────────────────────────────────────────────────────────────
 
-const IS_PROD = process.env.NODE_ENV === "production";
+/**
+ * Ambiente Braspag explícito — desacoplado de NODE_ENV.
+ *
+ * Por que: builds de staging/homolog rodam com NODE_ENV=production mas precisam
+ * mirar SANDBOX (`SDB`). Se o SDK URL apontar pra PRD enquanto o backend gerou
+ * token em SDB (ou vice-versa), a Braspag retorna 401 MPI900 ("Invalid Access
+ * Token"). Esta env var tem que ser idêntica em backend e frontend.
+ *
+ * Valores: "PRD" | "SDB". Fallback ao NODE_ENV mantém retrocompatibilidade.
+ */
+const BRASPAG_ENV: "PRD" | "SDB" =
+  process.env.NEXT_PUBLIC_BRASPAG_3DS_ENV === "PRD"
+    ? "PRD"
+    : process.env.NEXT_PUBLIC_BRASPAG_3DS_ENV === "SDB"
+      ? "SDB"
+      : process.env.NODE_ENV === "development"
+        ? "SDB"
+        : "PRD";
 
-const SDK_URL =
-  process.env.NEXT_PUBLIC_BRASPAG_3DS_URL ??
-  (IS_PROD
-    ? "https://mpi.braspag.com.br/Scripts/BP.Mpi.3ds20.min.js"
-    : "https://mpisandbox.braspag.com.br/Scripts/BP.Mpi.3ds20.min.js");
+const IS_PROD = BRASPAG_ENV === "PRD";
+
+const SDK_URL = "https://mpisandbox.braspag.com.br/Scripts/BP.Mpi.3ds20.min.js"
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
@@ -226,7 +241,7 @@ export function useThreeDS() {
           // DOMContentLoaded. Como o SDK é carregado sob demanda (página já
           // pronta), não dependemos dele — chamamos bpmpi_authenticate() direto
           // após loadSDK() resolver. Mantido como no-op pra evitar warnings.
-          onReady: () => {},
+          onReady: () => { },
 
           onSuccess: (e) => {
             const d = pickDetail<BpmpiSuccessDetail>(e);
@@ -362,9 +377,9 @@ export function useThreeDS() {
                 err instanceof ThreeDSError
                   ? err
                   : new ThreeDSError(
-                      "SDK_ERROR",
-                      err instanceof Error ? err.message : "Erro ao carregar SDK 3DS",
-                    ),
+                    "SDK_ERROR",
+                    err instanceof Error ? err.message : "Erro ao carregar SDK 3DS",
+                  ),
               ),
             );
           });
