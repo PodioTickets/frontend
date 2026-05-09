@@ -522,12 +522,18 @@ export default function EventDashboardPage() {
                 answer: a.answer ?? a.label ?? "",
                 count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
                 percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
+                participantName: a.participantName ?? null,
+                participantEmail: a.participantEmail ?? null,
+                answeredAt: a.answeredAt ?? null,
               }))
               : Array.isArray(q.answers_ranking)
                 ? (q.answers_ranking as any[]).map((a: any) => ({
                   answer: a.answer ?? a.label ?? "",
                   count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
                   percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
+                  participantName: a.participantName ?? null,
+                  participantEmail: a.participantEmail ?? null,
+                  answeredAt: a.answeredAt ?? null,
                 }))
                 : [],
           }));
