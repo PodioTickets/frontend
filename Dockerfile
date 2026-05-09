@@ -28,7 +28,8 @@ ENV NEXT_PUBLIC_ADMIN_APP_HOST=$NEXT_PUBLIC_ADMIN_APP_HOST
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN pnpm build
+RUN --mount=type=cache,id=nextjs-cache-frontend,target=/app/.next/cache \
+    pnpm build
 
 # ── 3. Runner mínimo (standalone) ─────────────────────────────────────────────
 FROM node:20-alpine AS runner
