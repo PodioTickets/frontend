@@ -201,6 +201,8 @@ export default function EventDashboardPage() {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
+  const [textAnswerRows, setTextAnswerRows] = useState<TextAnswerRow[] | undefined>(undefined);
+  const [textAnswersLoading, setTextAnswersLoading] = useState(false);
   const [lotsNearDepletionPage, setLotsNearDepletionPage] = useState(1);
   const [ticketRankingPage, setTicketRankingPage] = useState(1);
   const { tickets } = useTickets(eventId, true);
@@ -522,18 +524,12 @@ export default function EventDashboardPage() {
                 answer: a.answer ?? a.label ?? "",
                 count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
                 percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
-                participantName: a.participantName ?? null,
-                participantEmail: a.participantEmail ?? null,
-                answeredAt: a.answeredAt ?? null,
               }))
               : Array.isArray(q.answers_ranking)
                 ? (q.answers_ranking as any[]).map((a: any) => ({
                   answer: a.answer ?? a.label ?? "",
                   count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
                   percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
-                  participantName: a.participantName ?? null,
-                  participantEmail: a.participantEmail ?? null,
-                  answeredAt: a.answeredAt ?? null,
                 }))
                 : [],
           }));
@@ -755,21 +751,45 @@ export default function EventDashboardPage() {
     }));
   }, [selectedQuestionFromApi, selectedQuestion?.type]);
 
-  const selectedQuestionTextAnswerRows = useMemo((): TextAnswerRow[] | undefined => {
-    if (selectedQuestion?.type !== "text" && selectedQuestion?.type !== "number") return undefined;
-    if (!selectedQuestionFromApi?.answersRanking) return [];
-    return selectedQuestionFromApi.answersRanking.map((a, i) => {
-      const raw = a as any;
-      return {
-        id: raw.id ?? String(i),
-        userName: raw.participantName ?? raw.userName ?? "Participante",
-        userEmail: raw.participantEmail ?? raw.userEmail ?? undefined,
-        userAvatarUrl: raw.avatarUrl ?? undefined,
-        answer: a.answer,
-        answeredAt: raw.answeredAt ?? raw.createdAt ?? undefined,
-      };
-    });
-  }, [selectedQuestionFromApi, selectedQuestion?.type]);
+  // Lazy fetch: text answers only when a text/number question drawer is opened
+  useEffect(() => {
+    if (!selectedQuestionId) {
+      setTextAnswerRows(undefined);
+      return;
+    }
+    const qType = selectedQuestion?.type;
+    if (qType !== "text" && qType !== "number") {
+      setTextAnswerRows(undefined);
+      return;
+    }
+    let cancelled = false;
+    setTextAnswerRows(undefined);
+    setTextAnswersLoading(true);
+    organizerService
+      .getQuestionTextAnswers(eventId, selectedQuestionId)
+      .then((res) => {
+        if (cancelled) return;
+        setTextAnswerRows(
+          res.answers.map((a) => ({
+            id: a.id,
+            userName: a.userName ?? "Participante",
+            userEmail: a.userEmail ?? undefined,
+            userAvatarUrl: a.userAvatarUrl ?? undefined,
+            answer: a.answer,
+            answeredAt: a.answeredAt,
+          }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setTextAnswerRows([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTextAnswersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedQuestionId, selectedQuestion?.type, eventId]);
 
   const selectedQuestionIndex = selectedQuestionId
     ? (apiQuestions.length > 0
@@ -1083,7 +1103,8 @@ export default function EventDashboardPage() {
           questionIndex={selectedQuestionIndex}
           totalQuestions={totalQuestions}
           answerRows={selectedQuestionAnswerRows}
-          textAnswerRows={selectedQuestionTextAnswerRows}
+          textAnswerRows={textAnswerRows}
+          textAnswersLoading={textAnswersLoading}
           totalParticipants={selectedQuestionFromApi?.participantCount ?? 0}
           responseRate={
             dashboardData.totalRegistrations > 0 && selectedQuestionFromApi

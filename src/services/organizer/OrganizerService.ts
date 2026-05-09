@@ -2202,6 +2202,32 @@ export class OrganizerService {
     return response.data;
   }
 
+  async getQuestionTextAnswers(
+    eventId: string,
+    questionId: string,
+  ): Promise<{
+    answers: Array<{
+      id: string;
+      userName: string | null;
+      userEmail: string | null;
+      userAvatarUrl: string | null;
+      answer: string;
+      answeredAt: string;
+    }>;
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      answers: Array<{
+        id: string;
+        userName: string | null;
+        userEmail: string | null;
+        userAvatarUrl: string | null;
+        answer: string;
+        answeredAt: string;
+      }>;
+    }>(`/api/v1/events/${eventId}/questions/${questionId}/text-answers`);
+    return response;
+  }
+
   // Financial methods
   async getEventFinancial(
     eventId: string,

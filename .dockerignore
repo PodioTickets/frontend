@@ -1,6 +1,5 @@
 .git
 .github
-.next
 node_modules
 .env
 .env.*
@@ -8,3 +7,5 @@ node_modules
 README.md
 Dockerfile
 .dockerignore
+src
+.next/cache

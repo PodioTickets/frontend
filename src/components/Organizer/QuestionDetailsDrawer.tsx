@@ -50,6 +50,8 @@ interface QuestionDetailsDrawerProps {
   totalParticipants?: number;
   /** Respostas individuais para perguntas de texto livre */
   textAnswerRows?: TextAnswerRow[];
+  /** Exibe estado de carregamento das respostas de texto */
+  textAnswersLoading?: boolean;
   onPrevious?: () => void;
   onNext?: () => void;
 }
@@ -110,6 +112,7 @@ export function QuestionDetailsDrawer({
   answerRows,
   totalParticipants = 0,
   textAnswerRows,
+  textAnswersLoading = false,
   onPrevious,
   onNext,
 }: QuestionDetailsDrawerProps) {
@@ -272,7 +275,7 @@ export function QuestionDetailsDrawer({
                 </div>
 
                 {/* Conteúdo: texto livre vs opções */}
-                {isTextQuestion && textAnswerRows !== undefined ? (
+                {isTextQuestion && (textAnswerRows !== undefined || textAnswersLoading) ? (
                   /* ── Texto livre: busca + card com header, lista e footer ── */
                   <div className="w-full flex flex-col gap-4 items-end">
 
@@ -299,7 +302,11 @@ export function QuestionDetailsDrawer({
 
                     {/* Lista de cards */}
                     <div className="px-3 py-4 flex flex-col gap-2">
-                      {pagedAnswers.length === 0 ? (
+                      {textAnswersLoading ? (
+                        <p className="text-sm text-gray-11 font-family-dm-sans text-center py-8">
+                          Carregando respostas...
+                        </p>
+                      ) : pagedAnswers.length === 0 ? (
                         <p className="text-sm text-gray-11 font-family-dm-sans text-center py-8">
                           Nenhuma resposta encontrada.
                         </p>
