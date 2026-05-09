@@ -32,7 +32,7 @@ import { CheckIcon } from "@/components/Icons/Organizer/CheckIcon";
 import { DolarIcon } from "@/components/Icons/Organizer/DolarIcon";
 import { BestSellingVariations } from "@/components/Organizer/BestSellingVariations";
 import { QuestionsListing } from "@/components/Organizer/QuestionsListing";
-import { QuestionDetailsDrawer } from "@/components/Organizer/QuestionDetailsDrawer";
+import { QuestionDetailsDrawer, type TextAnswerRow } from "@/components/Organizer/QuestionDetailsDrawer";
 import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawer";
 import type { Question } from "@/interfaces/event";
 import type { BestSellingVariationItem } from "@/components/Organizer/BestSellingVariations";
@@ -741,12 +741,26 @@ export default function EventDashboardPage() {
 
   const selectedQuestionAnswerRows = useMemo((): { label: string; percentage: number; count: number }[] | undefined => {
     if (!selectedQuestionFromApi?.answersRanking?.length) return undefined;
+    if (selectedQuestion?.type === "text" || selectedQuestion?.type === "number") return undefined;
     return selectedQuestionFromApi.answersRanking.map((a) => ({
       label: a.answer,
       percentage: a.percentage,
       count: a.count,
     }));
-  }, [selectedQuestionFromApi]);
+  }, [selectedQuestionFromApi, selectedQuestion?.type]);
+
+  const selectedQuestionTextAnswerRows = useMemo((): TextAnswerRow[] | undefined => {
+    if (selectedQuestion?.type !== "text" && selectedQuestion?.type !== "number") return undefined;
+    if (!selectedQuestionFromApi?.answersRanking) return [];
+    return selectedQuestionFromApi.answersRanking.map((a, i) => ({
+      id: String(i),
+      userName: (a as any).userName ?? (a as any).participantName ?? "Participante",
+      userEmail: (a as any).userEmail ?? (a as any).participantEmail ?? undefined,
+      userAvatarUrl: (a as any).avatarUrl ?? undefined,
+      answer: a.answer,
+      answeredAt: (a as any).answeredAt ?? (a as any).createdAt ?? undefined,
+    }));
+  }, [selectedQuestionFromApi, selectedQuestion?.type]);
 
   const selectedQuestionIndex = selectedQuestionId
     ? (apiQuestions.length > 0
@@ -1060,6 +1074,7 @@ export default function EventDashboardPage() {
           questionIndex={selectedQuestionIndex}
           totalQuestions={totalQuestions}
           answerRows={selectedQuestionAnswerRows}
+          textAnswerRows={selectedQuestionTextAnswerRows}
           totalParticipants={selectedQuestionFromApi?.participantCount ?? 0}
           responseRate={
             dashboardData.totalRegistrations > 0 && selectedQuestionFromApi

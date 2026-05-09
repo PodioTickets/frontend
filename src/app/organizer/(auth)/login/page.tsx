@@ -199,7 +199,7 @@ export default function OrganizerLoginPage() {
         relative z-10 flex flex-col gap-6
         bg-gray-1 rounded-t-[24px] -mt-6 px-4 pt-5 pb-8
         lg:flex-1 lg:flex lg:flex-col lg:items-center lg:justify-between
-        lg:bg-gray-2 lg:rounded-none lg:mt-0 lg:px-[124px] lg:py-8 lg:h-full lg:overflow-hidden lg:gap-0
+        lg:bg-gray-2 lg:rounded-none lg:mt-0 lg:px-[124px] lg:py-6 xl:py-8 lg:h-full lg:overflow-hidden lg:gap-0
       ">
         {/* Desktop logo */}
         <div className="hidden lg:flex items-center self-center shrink-0">
@@ -211,21 +211,21 @@ export default function OrganizerLoginPage() {
           />
         </div>
 
-        {/* Center block — scrollável para não sobrepor o footer em telas baixas */}
-        <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:min-h-0 lg:gap-8 lg:overflow-y-auto lg:py-6">
+        {/* Center block */}
+        <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:min-h-0 lg:gap-6 xl:gap-8">
 
           {/* Identity */}
-            <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-8">
-              <div className="size-[72px] lg:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3 lg:p-4">
-                <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-4">
-                  <HotelsIcon className="size-9 lg:size-[52px] text-gray-12" />
+            <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-4 xl:gap-8">
+              <div className="size-[72px] lg:size-20 xl:size-24 rounded-full flex items-center justify-center shrink-0 bg-linear-to-t from-gray-1 to-gray-8 p-3">
+                <div className="size-full flex items-center justify-center bg-white rounded-full p-2.5 lg:p-3 xl:p-4">
+                  <HotelsIcon className="size-9 lg:size-11 xl:size-[52px] text-gray-12" />
                 </div>
               </div>
-              <div className="flex flex-col gap-1 lg:gap-3 lg:items-center lg:text-center">
-                <h1 className="text-xl lg:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
+              <div className="flex flex-col gap-1 lg:gap-2 xl:gap-3 lg:items-center lg:text-center">
+                <h1 className="text-xl xl:text-2xl font-bold text-gray-12 font-manrope leading-[1.1]">
                   Conecte sua conta
                 </h1>
-                <p className="text-sm lg:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
+                <p className="text-sm xl:text-lg text-gray-11 font-family-dm-sans leading-[1.3]">
                   Plataforma exclusiva para organizadores
                 </p>
               </div>
