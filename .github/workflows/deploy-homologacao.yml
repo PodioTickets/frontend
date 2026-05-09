@@ -31,7 +31,15 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
+      - name: Cache node_modules
+        id: nm-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: nm-homolog-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Instalar dependências
+        if: steps.nm-cache.outputs.cache-hit != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Restaurar cache do Next.js
@@ -51,6 +59,13 @@ jobs:
           NEXT_PUBLIC_ROOT_SITE_URL: ${{ secrets.HOMOLOG_NEXT_PUBLIC_ROOT_SITE_URL }}
           NEXT_PUBLIC_ADMIN_APP_HOST: ${{ secrets.HOMOLOG_NEXT_PUBLIC_ADMIN_APP_HOST }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.HOMOLOG_NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+
+      - name: Upload docker-compose
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-compose-homolog
+          path: docker-compose.yml
+          retention-days: 1
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -76,6 +91,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -88,8 +104,10 @@ jobs:
     environment: homologacao
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download docker-compose
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-compose-homolog
 
       - name: Copy docker-compose to VPS
         uses: appleboy/scp-action@v0.1.7
