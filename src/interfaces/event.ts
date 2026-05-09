@@ -50,6 +50,13 @@ export interface Event {
     registrations?: number;
     modalities?: number;
   };
+  /**
+   * Total de inscrições confirmadas. Backend só retorna esse campo quando o
+   * caller é organizador/admin do evento — undefined em chamadas públicas.
+   * Usado, por ex., na criação de notificações para indicar quantos
+   * participantes receberão a mensagem.
+   */
+  registrationsCount?: number;
   /** Exibição do kit na escolha de ingressos (organizer). Opcional até o backend expor o campo. */
   kitSelectionDisplay?: EventKitSelectionDisplay | null;
 }

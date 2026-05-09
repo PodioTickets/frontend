@@ -162,12 +162,16 @@ export function CreateNotificationDrawer({
   onOpenChange,
   eventId,
   eventName,
+  registrationsCount,
   onSuccess,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   eventId: string;
   eventName?: string;
+  /** Total de inscrições confirmadas — exibido no banner do drawer para o
+   *  organizador saber quantos participantes receberão a mensagem. */
+  registrationsCount?: number;
   /** Chamado após criar com sucesso (ex.: recarregar lista). */
   onSuccess?: () => void;
 }) {
@@ -286,6 +290,19 @@ export function CreateNotificationDrawer({
             <ChevronRight className="size-3.5 shrink-0 opacity-70" />
             <span className="text-gray-12">Nova notificação</span>
           </nav>
+
+          {/* Total de inscritos que receberão a mensagem — vindo da rota
+              do evento quando consultada por organizador. */}
+          {typeof registrationsCount === "number" && (
+            <div className="mb-6 flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-11 font-family-dm-sans">
+                Inscritos que receberão a mensagem:
+              </span>
+              <span className="text-base font-medium text-gray-12 font-family-dm-sans leading-none">
+                {registrationsCount.toLocaleString("pt-BR")}
+              </span>
+            </div>
+          )}
 
           {/* 1 — Canais */}
           <section className="mb-8">

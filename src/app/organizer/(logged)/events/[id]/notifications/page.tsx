@@ -23,7 +23,11 @@ export default function EventNotificationsPage() {
   useEventPermissionGuard("notify");
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [event, setEvent] = useState<{ name?: string; slug?: string } | null>(null);
+  const [event, setEvent] = useState<{
+    name?: string;
+    slug?: string;
+    registrationsCount?: number;
+  } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [listRefreshKey, setListRefreshKey] = useState(0);
 
@@ -115,6 +119,7 @@ export default function EventNotificationsPage() {
         onOpenChange={setCreateOpen}
         eventId={eventId}
         eventName={event?.name}
+        registrationsCount={event?.registrationsCount}
         onSuccess={() => setListRefreshKey((k) => k + 1)}
       />
     </div>
