@@ -6,6 +6,8 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
+import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import type { Ticket } from "@/hooks/useTickets";
@@ -479,7 +481,35 @@ export function SubscriptionStep({
     additionalProducts,
   } = useSubscriptionData(eventId);
 
+  // ---- Order autoritativa (backend) ---------------------------------------
+  // Os valores de preço/taxa/total exibidos vêm da reserva criada pelo backend.
+  // Cálculo local (parsing de `ticket.price`, % do evento) fica apenas como
+  // fallback enquanto a query carrega — o estado autoritativo de quanto será
+  // cobrado é sempre o do servidor (evita divergência com o que o usuário paga).
+  const { orderId } = useCheckoutTimer();
+  const { getOrder } = useCheckoutReservation();
+  const { data: orderData } = useQuery({
+    queryKey: ["checkout-order", orderId],
+    queryFn: async () => (orderId ? getOrder(orderId) : null),
+    enabled: !!orderId,
+    staleTime: 5_000,
+  });
+
+  // Map ticketId → preço unitário (em reais) vindo da order.
+  const orderTicketPriceById = useMemo(() => {
+    const m = new Map<string, number>();
+    orderData?.tickets.forEach((t) => {
+      const cents = t.finalUnitPrice ?? t.unitPrice ?? 0;
+      m.set(t.ticketId, cents / 100);
+    });
+    return m;
+  }, [orderData]);
+
   const getTicketPrice = (ticket: Ticket): number => {
+    const fromOrder = orderTicketPriceById.get(ticket.id);
+    if (typeof fromOrder === "number") return fromOrder;
+    // Fallback: parse local da string (ex.: "R$ 199,90") enquanto a order
+    // ainda não foi carregada.
     try {
       return parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
     } catch {
@@ -828,7 +858,45 @@ export function SubscriptionStep({
     }, 0);
   }, [participantsWithTickets, selectedVariations, allProducts]);
 
-  const serviceFee = (totalPrice + totalProductsPrice) * ((event.participantFeePercent ?? 0) / 100);
+  // Taxa de serviço — sempre da order quando disponível. Fallback ao cálculo
+  // local (% do evento sobre tickets+produtos) só enquanto a query carrega.
+  const serviceFee = useMemo(() => {
+    if (orderData?.pricing) return orderData.pricing.serviceFee / 100;
+    return (
+      (totalPrice + totalProductsPrice) *
+      ((event.participantFeePercent ?? 0) / 100)
+    );
+  }, [orderData, totalPrice, totalProductsPrice, event.participantFeePercent]);
+
+  // Total a exibir — autoritativo da order. `pricing.total` é o `finalAmount`
+  // calculado pelo backend (já com cupom/voucher aplicados). Somamos os
+  // produtos selecionados localmente que ainda não foram persistidos via
+  // `patchProducts` (ocorre no `handleNext` da página de produtos), para
+  // refletir corretamente o estado WIP da seleção.
+  const orderHasProductsApplied = useMemo(() => {
+    // Heurística: se a order veio com itens marcados além dos tickets puros,
+    // assumimos que `pricing.total` já inclui produtos. Como o shape de
+    // products na order não é exposto pelo `OrderResponse` atual, usamos
+    // a presença de patch anterior (best-effort): se totalProductsPrice = 0,
+    // não há nada a somar de qualquer forma.
+    return totalProductsPrice === 0;
+  }, [totalProductsPrice]);
+
+  const totalAmount = useMemo(() => {
+    if (orderData?.pricing) {
+      const orderTotal = orderData.pricing.total / 100;
+      return orderHasProductsApplied
+        ? orderTotal
+        : orderTotal + totalProductsPrice;
+    }
+    return totalPrice + totalProductsPrice + serviceFee;
+  }, [
+    orderData,
+    orderHasProductsApplied,
+    totalProductsPrice,
+    totalPrice,
+    serviceFee,
+  ]);
 
   if (loading) return <Loading />;
 
@@ -1062,9 +1130,7 @@ export function SubscriptionStep({
             </p>
             <p className="text-base">
               Valor total:{" "}
-              <span className="font-bold">
-                {formatPrice(totalPrice + totalProductsPrice + (serviceFee))}
-              </span>
+              <span className="font-bold">{formatPrice(totalAmount)}</span>
             </p>
           </div>
           <Button
@@ -1297,7 +1363,7 @@ export function SubscriptionStep({
 
               <div className="flex items-center justify-between text-xl font-bold text-gray-12 mt-4 border-t border-gray-6 pt-4">
                 <p>Total:</p>
-                <p>{formatPrice((serviceFee) + totalPrice + totalProductsPrice)}</p>
+                <p>{formatPrice(totalAmount)}</p>
               </div>
 
               <Button

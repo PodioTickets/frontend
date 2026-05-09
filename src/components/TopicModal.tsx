@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useTopicModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { DeleteTopicModal } from "@/components/Topic/DeleteTopicModal";
@@ -15,6 +15,11 @@ import {
   replaceDataUrlImagesInContainer,
   uploadOrganizerImage,
 } from "@/lib/uploadOrganizerImage";
+import {
+  decodeStoredEmbedsToRenderable,
+  encodeRenderableToStoredEmbeds,
+  buildSourceViewHtml,
+} from "@/lib/topicHtmlSourceMode";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -184,15 +189,50 @@ function applyQuillEditorMediaStyles(editor: HTMLElement | null) {
   });
 }
 
+/**
+ * Set módulo-level com os src de scripts já injetados nesta página, para evitar
+ * duplicar `<script>` quando vários embeds compartilham o mesmo provedor (ex.:
+ * Instagram em tópicos diferentes).
+ */
+const injectedEmbedScriptSrcs = new Set<string>();
+
+/**
+ * Injeta o `<script>` de embed (Instagram, Twitter, etc.) no `<head>` se ainda
+ * não estiver presente; quando já está, força reprocessamento (`process()`)
+ * para que o blockquote recém-inserido vire iframe.
+ */
+function injectEmbedScript(src: string) {
+  if (injectedEmbedScriptSrcs.has(src)) {
+    if (
+      src.includes("instagram.com/embed") &&
+      (window as unknown as { instgrm?: { Embeds: { process: () => void } } }).instgrm
+    ) {
+      (window as unknown as { instgrm: { Embeds: { process: () => void } } }).instgrm.Embeds.process();
+    }
+    return;
+  }
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = src.startsWith("//") ? `https:${src}` : src;
+  script.onload = () => injectedEmbedScriptSrcs.add(src);
+  document.head.appendChild(script);
+}
+
 export function TopicModal() {
   const { isOpen, closeTopicModal, data, onModalSave, onModalDelete } = useTopicModal();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [isCodeMode, setIsCodeMode] = useState(false);
   const quillRef = useRef<HTMLDivElement>(null);
   const quillInstanceRef = useRef<QuillInstance | null>(null);
   const quillLoadedRef = useRef(false);
   const quillToolbarMousedownCleanupRef = useRef<(() => void) | null>(null);
+  // Scripts de embed extraídos do conteúdo — re-anexados ao salvar e exibidos no source view.
+  const embedScriptSrcsRef = useRef<string[]>([]);
+  // Textarea do "view source" e ref para a função toggle (acessada pelo handler do Quill).
+  const codeTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const toggleCodeModeRef = useRef<() => void>(() => {});
 
   const initialTitle = data?.title || "";
   const initialContent = data?.content || "";
@@ -301,6 +341,13 @@ export function TopicModal() {
                   ['clean']
                 ],
                 handlers: {
+                  // Sobrescreve o comportamento padrão do botão `code-block`.
+                  // Em vez de formatar a linha selecionada como bloco de código,
+                  // alterna a área de edição inteira para um <textarea> com o
+                  // HTML cru — incluindo as `<script>` dos embeds.
+                  "code-block": function () {
+                    toggleCodeModeRef.current();
+                  },
                   topicLayoutLeft: function (this: {
                     quill: InstanceType<typeof import("quill").default>;
                   }) {
@@ -656,15 +703,23 @@ export function TopicModal() {
             applyTopicQuillLayoutSizes(root);
           }, 150);
 
-          // Set initial content if provided
+          // Set initial content if provided.
+          // Decodificamos `ql-code-block-container` para os elementos reais
+          // (blockquote/script) antes de injetar no Quill, e injetamos o
+          // `embed.js` correspondente — assim o Instagram processa o blockquote
+          // como iframe DENTRO do editor (modo WYSIWYG real).
           if (initialContent) {
-            quill.root.innerHTML = initialContent;
-            setContent(initialContent);
-            // Style images for initial content
+            const { html: renderable, scriptSrcs } =
+              decodeStoredEmbedsToRenderable(initialContent);
+            embedScriptSrcsRef.current = scriptSrcs;
+            quill.root.innerHTML = renderable;
+            setContent(renderable);
+            scriptSrcs.forEach(injectEmbedScript);
             setTimeout(() => {
               styleMedia();
             }, 300);
           } else {
+            embedScriptSrcsRef.current = [];
             setContent("");
           }
         }, 100);
@@ -690,9 +745,13 @@ export function TopicModal() {
       // Update Quill content if it's already initialized
       if (quillInstanceRef.current && initialContent !== undefined) {
         const currentContent = quillInstanceRef.current.root.innerHTML;
-        if (currentContent !== initialContent) {
-          quillInstanceRef.current.root.innerHTML = initialContent || "";
-          setContent(initialContent || "");
+        const { html: renderable, scriptSrcs } =
+          decodeStoredEmbedsToRenderable(initialContent || "");
+        if (currentContent !== renderable) {
+          embedScriptSrcsRef.current = scriptSrcs;
+          quillInstanceRef.current.root.innerHTML = renderable;
+          setContent(renderable);
+          scriptSrcs.forEach(injectEmbedScript);
 
           // Apply image alignment after loading saved content
           setTimeout(() => {
@@ -707,6 +766,8 @@ export function TopicModal() {
       // Clean up when modal closes
       setTitle("");
       setContent("");
+      setIsCodeMode(false);
+      embedScriptSrcsRef.current = [];
       if (quillInstanceRef.current) {
         // Clear content
         quillInstanceRef.current.root.innerHTML = "";
@@ -732,41 +793,114 @@ export function TopicModal() {
     };
   }, [isOpen]);
 
-  const handleSave = async () => {
-    if (onModalSave) {
-      try {
-        // Get the current HTML from Quill
-        let htmlToSave = content;
+  /**
+   * Alterna entre o editor WYSIWYG do Quill e um <textarea> com o HTML cru.
+   * Apenas prepara o conteúdo e flipa a flag — feedback visual da toolbar é
+   * feito no `useLayoutEffect` abaixo. Crítico: a altura da toolbar precisa
+   * ser medida ANTES de `setIsCodeMode(true)` para que o primeiro render do
+   * textarea já tenha o `top` correto (senão, fica com `top: 0` e cobre a
+   * toolbar até o segundo render). Os `setState` no mesmo handler são
+   * batched pelo React → uma única render com os valores certos.
+   */
+  const toggleCodeMode = () => {
+    const quill = quillInstanceRef.current;
+    if (!quill) return;
 
-        if (quillInstanceRef.current) {
-          htmlToSave = quillInstanceRef.current.root.innerHTML;
-
-          const tempDiv = document.createElement("div");
-          tempDiv.innerHTML = htmlToSave;
-          const hadDataUrls = tempDiv.querySelector('img[src^="data:"]') != null;
-          if (hadDataUrls) {
-            const uploadToast = toast.loading(
-              "Otimizando imagens (upload)…",
-            );
-            try {
-              await replaceDataUrlImagesInContainer(tempDiv);
-            } finally {
-              toast.dismiss(uploadToast);
-            }
-          }
-          applyQuillEditorMediaStyles(tempDiv);
-
-          htmlToSave = tempDiv.innerHTML;
-        }
-
-        await onModalSave({ title, content: htmlToSave });
-        closeTopicModal();
-      } catch (error) {
-        // Error is already handled in the callback
-        // Don't close modal on error
-      }
+    if (!isCodeMode) {
+      const sourceHtml = buildSourceViewHtml(
+        quill.root.innerHTML,
+        embedScriptSrcsRef.current,
+      );
+      setContent(sourceHtml);
+      setIsCodeMode(true);
     } else {
+      // Voltando ao WYSIWYG: parsear textarea, extrair scripts e re-injetar
+      const raw = codeTextareaRef.current?.value ?? "";
+      const { html: renderable, scriptSrcs } =
+        decodeStoredEmbedsToRenderable(raw);
+      embedScriptSrcsRef.current = scriptSrcs;
+      quill.root.innerHTML = renderable;
+      setContent(renderable);
+      scriptSrcs.forEach(injectEmbedScript);
+      setIsCodeMode(false);
+      setTimeout(() => {
+        const editor = quillRef.current?.querySelector(
+          ".ql-editor",
+        ) as HTMLElement | null;
+        applyQuillEditorMediaStyles(editor);
+      }, 100);
+    }
+  };
+
+  // Mantém a ref atualizada — o handler `code-block` registrado no Quill
+  // (criado uma vez na inicialização) acessa a função via ref.
+  useEffect(() => {
+    toggleCodeModeRef.current = toggleCodeMode;
+  });
+
+  /**
+   * Em modo código, oculta o Quill inteiro (toolbar + conteúdo) — o usuário
+   * vê apenas o textarea com seu próprio header de "voltar". Quando volta ao
+   * WYSIWYG, restauramos `display: flex` (valor que o Quill aplica no init).
+   * O conteúdo Quill permanece no modelo interno, só não é renderizado.
+   */
+  useLayoutEffect(() => {
+    const root = quillRef.current;
+    if (!root) return;
+    root.style.display = isCodeMode ? "none" : "flex";
+  }, [isCodeMode]);
+
+  const handleSave = async () => {
+    if (!onModalSave) {
       closeTopicModal();
+      return;
+    }
+
+    try {
+      // Decide a fonte do HTML conforme o modo atual:
+      // - Code mode: textarea (HTML cru, scripts inclusos).
+      // - Normal: quill.root.innerHTML + scripts armazenados na ref.
+      let renderableHtml: string;
+      let scriptSrcs: string[];
+
+      if (isCodeMode && codeTextareaRef.current) {
+        const decoded = decodeStoredEmbedsToRenderable(
+          codeTextareaRef.current.value,
+        );
+        renderableHtml = decoded.html;
+        scriptSrcs = decoded.scriptSrcs;
+      } else if (quillInstanceRef.current) {
+        renderableHtml = quillInstanceRef.current.root.innerHTML;
+        scriptSrcs = embedScriptSrcsRef.current;
+      } else {
+        renderableHtml = content;
+        scriptSrcs = embedScriptSrcsRef.current;
+      }
+
+      // Imagens em data: URL (coladas pelo usuário) — fazer upload antes de salvar.
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = renderableHtml;
+      const hadDataUrls = tempDiv.querySelector('img[src^="data:"]') != null;
+      if (hadDataUrls) {
+        const uploadToast = toast.loading("Otimizando imagens (upload)…");
+        try {
+          await replaceDataUrlImagesInContainer(tempDiv);
+        } finally {
+          toast.dismiss(uploadToast);
+        }
+      }
+      applyQuillEditorMediaStyles(tempDiv);
+
+      // Re-encapsula embeds em ql-code-block-container para o backend / TopicRichContent.
+      const htmlToSave = encodeRenderableToStoredEmbeds(
+        tempDiv.innerHTML,
+        scriptSrcs,
+      );
+
+      await onModalSave({ title, content: htmlToSave });
+      closeTopicModal();
+    } catch (error) {
+      // Error is already handled in the callback — don't close modal on error
     }
   };
 
@@ -868,6 +1002,41 @@ export function TopicModal() {
                       ref={quillRef}
                       className="[&_.ql-tooltip]:z-200 flex min-h-[inherit] flex-1 flex-col"
                     />
+                    {isCodeMode && (
+                      <div className="flex min-h-[inherit] flex-1 flex-col border border-gray-6 overflow-hidden">
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-6 bg-gray-2 px-4 py-2">
+                          <span
+                            className="text-xs font-semibold uppercase tracking-wide text-gray-11"
+                            style={{
+                              fontFamily:
+                                'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
+                            }}
+                          >
+                            Código fonte
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleCodeModeRef.current()}
+                            className="flex items-center gap-1.5 rounded-md border border-gray-6 bg-gray-1 px-3 py-1 font-manrope text-xs font-semibold text-gray-12 transition-colors hover:bg-gray-3"
+                          >
+                            <ArrowButton isOpen={false} className="rotate-180 size-3" />
+                            Voltar ao editor
+                          </button>
+                        </div>
+                        <textarea
+                          ref={codeTextareaRef}
+                          defaultValue={content}
+                          spellCheck={false}
+                          style={{
+                            fontFamily:
+                              'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace',
+                          }}
+                          className="flex min-h-0 flex-1 w-full resize-none bg-gray-1 px-5 py-4 text-[13px] leading-[1.5] text-gray-12 focus:outline-none"
+                          placeholder='<p>HTML cru aqui...</p>&#10;<blockquote class="instagram-media">...</blockquote>&#10;<script async src="//www.instagram.com/embed.js"></script>'
+                          aria-label="Código fonte do tópico"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

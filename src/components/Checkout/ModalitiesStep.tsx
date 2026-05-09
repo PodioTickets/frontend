@@ -6,6 +6,9 @@ import type { Event } from "@/interfaces/event";
 import { Fragment } from "react/jsx-runtime";
 import { useMemo } from "react";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
+import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "../Button";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
@@ -111,7 +114,34 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     };
   }, [tickets, categories]);
 
+  // ---- Order autoritativa (quando existe) ----------------------------------
+  // Esta é a primeira etapa do checkout — a `order` só existe quando o usuário
+  // já tinha uma reserva ativa em sessão anterior (orderId persistido em
+  // localStorage). Quando existe, usamos o `finalUnitPrice` do backend para
+  // o preço unitário do ticket; quando não, parsing local do `ticket.price`.
+  // O total geral continua sendo cálculo local pois depende da seleção atual
+  // de quantidades, que ainda não foi enviada via `reserveOrder`.
+  const { orderId } = useCheckoutTimer();
+  const { getOrder } = useCheckoutReservation();
+  const { data: orderData } = useQuery({
+    queryKey: ["checkout-order", orderId],
+    queryFn: async () => (orderId ? getOrder(orderId) : null),
+    enabled: !!orderId,
+    staleTime: 5_000,
+  });
+
+  const orderTicketPriceById = useMemo(() => {
+    const m = new Map<string, number>();
+    orderData?.tickets.forEach((t) => {
+      const cents = t.finalUnitPrice ?? t.unitPrice ?? 0;
+      m.set(t.ticketId, cents / 100);
+    });
+    return m;
+  }, [orderData]);
+
   const getTicketPrice = (ticket: Ticket): number => {
+    const fromOrder = orderTicketPriceById.get(ticket.id);
+    if (typeof fromOrder === "number") return fromOrder;
     try {
       return parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
     } catch {

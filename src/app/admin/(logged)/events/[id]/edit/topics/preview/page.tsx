@@ -14,6 +14,7 @@ import {
   topicSectionRowsToPreviewSections,
 } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
+import { TopicRichContent } from "@/components/TopicRichContent";
 import type { Event } from "@/interfaces/event";
 import {
   EventPublicInfoCardDesktop,
@@ -167,11 +168,9 @@ export default function EditFlowEventPreviewPage() {
                     <h2 className="font-manrope text-2xl font-bold leading-[1.1] text-gray-12">
                       {section.title}
                     </h2>
-                    <div
-                      className="topic-rich-html max-w-none font-family-dm-sans text-base leading-[1.3] text-gray-11 prose prose-sm"
-                      dangerouslySetInnerHTML={{
-                        __html: normalizeTopicHtmlAnchorHrefs(section.content),
-                      }}
+                    <TopicRichContent
+                      html={normalizeTopicHtmlAnchorHrefs(section.content)}
+                      className="topic-rich-html w-full text-gray-11 text-sm prose prose-sm max-w-none"
                     />
                   </div>
                 </div>

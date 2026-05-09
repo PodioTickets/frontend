@@ -276,18 +276,25 @@ input[type="number"] {
  * centraliza o iframe quando ele tem largura fixa (resize) e ignora o alinhamento
  * do parágrafo (.ql-align-left/center/right). Imagens usam inline-block + text-align;
  * vídeos sem data-layout seguem o mesmo modelo para alinhar e permitir texto na mesma linha.
+ *
+ * As regras de "estilo de vídeo" (aspect-ratio 16/9, fundo preto) ficam restritas a
+ * `iframe.ql-video`. Iframes de outras fontes (Instagram, Twitter, Facebook) têm
+ * proporções verticais/quadradas e altura dinâmica via postMessage — forçá-los em
+ * 16/9 corta o conteúdo.
  */
-.topic-rich-html iframe,
-.topic-rich-html iframe.ql-video,
-.ql-editor iframe.ql-video {
+.topic-rich-html iframe {
   max-width: 100%;
   border: 0;
-  border-radius: 8px;
-  background: #000;
   box-sizing: border-box;
 }
 
-.topic-rich-html iframe:not([data-layout]),
+.topic-rich-html iframe.ql-video,
+.ql-editor iframe.ql-video {
+  border-radius: 8px;
+  background: #000;
+}
+
+.topic-rich-html iframe.ql-video:not([data-layout]),
 .ql-editor iframe.ql-video:not([data-layout]) {
   display: inline-block;
   vertical-align: top;
@@ -295,10 +302,10 @@ input[type="number"] {
 }
 
 /*
- * Sem tamanho explícito: largura total 16:9 (comportamento padrão).
+ * Sem tamanho explícito: largura total 16:9 (comportamento padrão para vídeos do Quill).
  * `.ql-editor iframe.ql-video[...]` bate especificidade (0,3,1) > Quill Snow (0,3,0).
  */
-.topic-rich-html iframe:not([width]):not([data-layout]),
+.topic-rich-html iframe.ql-video:not([width]):not([data-layout]),
 .ql-editor iframe.ql-video:not([width]):not([data-layout]) {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -307,7 +314,7 @@ input[type="number"] {
 }
 
 /* Justificar = bloco em largura total (igual imagens em .ql-align-justify) */
-.topic-rich-html .ql-align-justify iframe:not([data-layout]),
+.topic-rich-html .ql-align-justify iframe.ql-video:not([data-layout]),
 .ql-editor .ql-align-justify iframe.ql-video:not([data-layout]) {
   display: block;
   width: 100%;
@@ -315,6 +322,48 @@ input[type="number"] {
   height: auto;
   margin-left: 0;
   margin-right: 0;
+}
+
+/*
+ * Embeds de redes sociais (Instagram, Twitter/X, Facebook): respeitam a altura
+ * calculada dinamicamente pelo script oficial via postMessage. Aqui apenas
+ * centralizamos e impomos limites de largura razoáveis. Não setar `height` —
+ * o iframe interno reporta a altura correta após carregar o conteúdo.
+ */
+.topic-rich-html .instagram-media,
+.topic-rich-html iframe.instagram-media,
+.topic-rich-html iframe.instagram-media-rendered {
+  display: block !important;
+  margin: 1rem auto !important;
+  max-width: 540px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.topic-rich-html .twitter-tweet,
+.topic-rich-html .fb-post {
+  display: block !important;
+  margin: 1rem auto !important;
+}
+
+/*
+ * Tailwind Typography (`prose`) aplica `font-style: italic`, `font-weight: 500`
+ * e injeta aspas decorativas via `blockquote p::before/::after`. Em embeds de
+ * redes sociais isso desfigura o placeholder oficial — anulamos para o blockquote
+ * ser substituído pelo iframe real sem ruído visual.
+ */
+.topic-rich-html blockquote.instagram-media,
+.topic-rich-html blockquote.twitter-tweet {
+  font-style: normal !important;
+  font-weight: normal !important;
+  color: inherit !important;
+}
+
+.topic-rich-html blockquote.instagram-media p::before,
+.topic-rich-html blockquote.instagram-media p::after,
+.topic-rich-html blockquote.twitter-tweet p::before,
+.topic-rich-html blockquote.twitter-tweet p::after {
+  content: none !important;
 }
 
 /*

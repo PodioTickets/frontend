@@ -65,7 +65,7 @@ export function InformationStep({
 
   const eventId = event?.id;
   const { clearTimer, orderId } = useCheckoutTimer();
-  const { patchParticipants } = useCheckoutReservation();
+  const { patchParticipants, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
 
   // Buscar tickets e categorias do servidor
@@ -202,7 +202,29 @@ export function InformationStep({
     };
   }, [tickets, categories]);
 
+  // ---- Order autoritativa (backend) ---------------------------------------
+  // Mesmo princípio aplicado no SubscriptionStep: preço/taxa/total exibidos
+  // vêm da reserva criada pelo backend. Cálculo local fica só como fallback
+  // enquanto a query carrega — evita divergir do que o usuário pagará.
+  const { data: orderData } = useQuery({
+    queryKey: ["checkout-order", orderId],
+    queryFn: async () => (orderId ? getOrder(orderId) : null),
+    enabled: !!orderId,
+    staleTime: 5_000,
+  });
+
+  const orderTicketPriceById = useMemo(() => {
+    const m = new Map<string, number>();
+    orderData?.tickets.forEach((t) => {
+      const cents = t.finalUnitPrice ?? t.unitPrice ?? 0;
+      m.set(t.ticketId, cents / 100);
+    });
+    return m;
+  }, [orderData]);
+
   const getTicketPrice = (ticket: Ticket): number => {
+    const fromOrder = orderTicketPriceById.get(ticket.id);
+    if (typeof fromOrder === "number") return fromOrder;
     try {
       return parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
     } catch {
@@ -333,7 +355,19 @@ export function InformationStep({
     return { totalParticipants: participants, totalPrice: total };
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
-  const serviceFee = totalPrice * ((event.participantFeePercent ?? 0) / 100);
+  // Taxa de serviço — autoritativa da order. Fallback ao cálculo local
+  // (% do evento sobre tickets) só enquanto a query carrega.
+  const serviceFee = useMemo(() => {
+    if (orderData?.pricing) return orderData.pricing.serviceFee / 100;
+    return totalPrice * ((event.participantFeePercent ?? 0) / 100);
+  }, [orderData, totalPrice, event.participantFeePercent]);
+
+  // Total a exibir — `pricing.total` (= `finalAmount`) já considera
+  // tickets + serviceFee + descontos aplicados. Fallback é a soma local.
+  const totalAmount = useMemo(() => {
+    if (orderData?.pricing) return orderData.pricing.total / 100;
+    return totalPrice + serviceFee;
+  }, [orderData, totalPrice, serviceFee]);
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
@@ -1203,7 +1237,7 @@ export function InformationStep({
                 </div>
                 <div className="flex items-center justify-between text-xl font-bold text-gray-12 border-t border-gray-6 pt-6">
                   <p>Total:</p>
-                  <p>{formatPrice(totalPrice + (serviceFee))}</p>
+                  <p>{formatPrice(totalAmount)}</p>
                 </div>
               </div>
             </div>
@@ -1347,7 +1381,7 @@ export function InformationStep({
                               </button>
                             </div>
                             <h1 className="hidden md:block text-xl font-bold text-gray-12">
-                              {formatPrice(getTicketPrice(ticket) + (serviceFee))}
+                              {formatPrice(getTicketPrice(ticket))}
                             </h1>
                           </div>
                         </div>
@@ -1882,7 +1916,7 @@ export function InformationStep({
             <p className="text-base">
               Valor total:{" "}
               <span className="font-bold">
-                {formatPrice(totalPrice + (serviceFee))}
+                {formatPrice(totalAmount)}
               </span>
             </p>
           </div>
@@ -1984,7 +2018,7 @@ export function InformationStep({
                     </div>
                     <div className="flex items-center justify-between text-xl font-bold text-gray-12 pt-4 border-t border-gray-6">
                       <p>Total:</p>
-                      <p>{formatPrice(totalPrice + (serviceFee))}</p>
+                      <p>{formatPrice(totalAmount)}</p>
                     </div>
                   </div>
                 </div>

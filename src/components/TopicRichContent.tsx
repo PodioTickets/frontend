@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TopicRichContentProps {
   html: string;
@@ -14,6 +14,12 @@ export function TopicRichContent({ html, className }: TopicRichContentProps) {
   // The useEffect below replaces Quill code blocks with real HTML on the client.
   const [renderedHtml, setRenderedHtml] = useState(html);
 
+  // Scripts pendentes que precisam ser injetados/processados *depois* que o React
+  // commitar o novo `renderedHtml`. Ver explicação no segundo effect.
+  const pendingScriptSrcsRef = useRef<string[]>([]);
+
+  // Etapa 1 — processa o HTML cru: decodifica blocos de código do Quill,
+  // extrai scripts externos e enfileira o re-render com o HTML "real".
   useEffect(() => {
     const doc = new DOMParser().parseFromString(html, "text/html");
     const scriptSrcs: string[] = [];
@@ -54,16 +60,34 @@ export function TopicRichContent({ html, className }: TopicRichContentProps) {
       s.remove();
     });
 
+    // Guarda os scripts para serem processados após o commit. Atribuir ao ref
+    // sobrescreve qualquer pendência anterior (correto: o conteúdo mudou).
+    pendingScriptSrcsRef.current = scriptSrcs;
     // Commit the processed HTML — blockquotes/iframes are now real DOM nodes
     setRenderedHtml(doc.body.innerHTML);
+  }, [html]);
 
-    // Inject external scripts after state update queues (scripts load async so
-    // by the time embed.js fetches and runs, React will have committed the new HTML)
+  // Etapa 2 — depende de `renderedHtml` para garantir que o React já commitou
+  // o subtree antes de mexer com scripts de embed.
+  //
+  // BUG histórico (corrigido aqui): chamar `instgrm.Embeds.process()` no mesmo
+  // tick do `setRenderedHtml` faz o Instagram criar o iframe no DOM antigo,
+  // que é descartado quando o React commita o novo HTML — resultado: o usuário
+  // vê apenas o blockquote placeholder ("post cortado ao meio"). Postergando
+  // para um effect dependente de `renderedHtml`, o `process()` opera no DOM
+  // já estabilizado e o iframe sobrevive.
+  useEffect(() => {
+    const scriptSrcs = pendingScriptSrcsRef.current;
+    if (scriptSrcs.length === 0) return;
+
     scriptSrcs.forEach((src) => {
       if (injectedScriptSrcs.has(src)) {
-        // Script already in document — trigger reprocessing
-        if (src.includes("instagram.com/embed") && (window as any).instgrm) {
-          (window as any).instgrm.Embeds.process();
+        // Script já presente no documento — pedir reprocessamento manual.
+        const w = window as unknown as {
+          instgrm?: { Embeds: { process: () => void } };
+        };
+        if (src.includes("instagram.com/embed") && w.instgrm) {
+          w.instgrm.Embeds.process();
         }
         return;
       }
@@ -74,7 +98,9 @@ export function TopicRichContent({ html, className }: TopicRichContentProps) {
       script.onload = () => injectedScriptSrcs.add(src);
       document.head.appendChild(script);
     });
-  }, [html]);
+
+    pendingScriptSrcsRef.current = [];
+  }, [renderedHtml]);
 
   return (
     <div

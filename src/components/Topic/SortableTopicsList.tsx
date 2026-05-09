@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Plus } from "lucide-react";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
+import { TopicRichContent } from "@/components/TopicRichContent";
 import { cn } from "@/utils/cn";
 import type { TopicSectionRow } from "@/lib/eventTopicSections";
 
@@ -93,12 +94,12 @@ function SortableTopicCard({
       {/* Mobile Figma: título no corpo + colapsável + «Ver mais» */}
       <div className="hidden min-h-0 flex-col md:flex">
         <div className="flex min-h-0 flex-col gap-4 p-5">
-          <div
+          <TopicRichContent
+            html={html}
             className={cn(
               richClass,
               "max-h-[min(42vh,360px)] overflow-y-auto",
             )}
-            dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
       </div>
@@ -108,14 +109,14 @@ function SortableTopicCard({
           <p className="font-manrope text-lg font-bold leading-[1.1] text-gray-12">
             {topic.title}
           </p>
-          <div
+          <TopicRichContent
+            html={html}
             className={cn(
               richClass,
               "overflow-hidden",
               !mobileExpanded && "max-h-[min(45vh,280px)]",
               mobileExpanded && "max-h-[min(70vh,520px)] overflow-y-auto",
             )}
-            dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
         <div className="flex items-center justify-center border-t border-gray-6 bg-gray-1 px-5 py-2">
