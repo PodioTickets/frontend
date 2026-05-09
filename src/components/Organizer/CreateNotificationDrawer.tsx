@@ -273,7 +273,7 @@ export function CreateNotificationDrawer({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-5">
           <nav
-            className="mb-6 flex flex-wrap items-center gap-1 text-xs text-gray-11 font-family-dm-sans"
+            className="mb-6 flex flex-wrap items-center gap-1 text-base text-gray-11 font-family-dm-sans"
             aria-label="Navegação"
           >
             <Link href="/organizer/events" className="hover:text-gray-12">
@@ -295,11 +295,8 @@ export function CreateNotificationDrawer({
               do evento quando consultada por organizador. */}
           {typeof registrationsCount === "number" && (
             <div className="mb-6 flex items-center justify-between gap-3">
-              <span className="text-sm text-gray-11 font-family-dm-sans">
-                Inscritos que receberão a mensagem:
-              </span>
-              <span className="text-base font-medium text-gray-12 font-family-dm-sans leading-none">
-                {registrationsCount.toLocaleString("pt-BR")}
+              <span className="text-base text-gray-11 font-family-dm-sans">
+                Inscritos que receberão a mensagem: {registrationsCount.toLocaleString("pt-BR")}
               </span>
             </div>
           )}
