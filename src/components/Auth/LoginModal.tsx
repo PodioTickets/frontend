@@ -8,7 +8,7 @@ import { useResetPassword } from "@/hooks/useResetPassword";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { OtpCodeInput } from "@/components/OtpCodeInput";
-import { Mail, Lock, X, ArrowLeft, Eye, EyeOff, Info } from "lucide-react";
+import { Mail, Lock, X, ArrowLeft, Eye, EyeOff, Info, Shield } from "lucide-react";
 import Image from "next/image";
 import {
   loginSchema,
@@ -744,15 +744,8 @@ export function LoginModal() {
     <div className="bg-[#FCFCFC] rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
       {/* Cabeçalho */}
       <div className="flex justify-between items-center px-4 py-3 border-b border-[#D9D9D9]">
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={fecharMfa}
-            className="flex items-center justify-center size-8 rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="size-[18px] text-[#646464]" strokeWidth={1.5} />
-          </button>
+        <div className="flex items-center gap-2">
+          <Shield className="size-5 text-[#646464] shrink-0" strokeWidth={1.5} />
           <span className="font-family-dm-sans font-semibold text-xl text-[#202020] leading-[1.3]">
             Verifique sua identidade
           </span>
@@ -770,7 +763,7 @@ export function LoginModal() {
       {/* Corpo */}
       <div className="flex flex-col gap-6 p-6">
         <p className="font-family-dm-sans text-base text-[#646464] leading-[1.3]">
-          Enviamos um código de 6 dígitos para o seu e-mail. Digite ou cole abaixo para entrar.
+          Enviamos um código de 6 dígitos para o seu e-mail. Digite ou cole o código abaixo para acessar sua conta.
         </p>
 
         <OtpCodeInput
@@ -797,14 +790,14 @@ export function LoginModal() {
         {/* Reenviar código */}
         <div className="flex justify-end">
           {mfaResendCooldown > 0 ? (
-            <span className="text-base font-semibold text-[#3E9B4F] font-family-dm-sans">
+            <span className="font-family-dm-sans font-semibold text-sm text-[#646464]">
               Aguarde ({mfaResendCooldown} seg) para reenviar
             </span>
           ) : (
             <button
               type="button"
               onClick={handleMfaResend}
-              className="text-base font-semibold text-[#3E9B4F] font-family-dm-sans hover:underline transition-all"
+              className="font-family-dm-sans font-semibold text-sm text-[#646464] hover:text-[#202020] transition-colors"
             >
               Enviar código
             </button>
@@ -813,14 +806,7 @@ export function LoginModal() {
       </div>
 
       {/* Rodapé */}
-      <div className="px-6 pb-8 pt-4 flex justify-between items-center">
-        <button
-          type="button"
-          onClick={fecharMfa}
-          className="font-family-dm-sans font-semibold text-base text-[#646464] hover:text-[#202020] transition-colors"
-        >
-          Tentar outra forma
-        </button>
+      <div className="px-6 pb-8 pt-4 flex justify-end items-center">
         <button
           type="button"
           onClick={handleMfaConfirm}

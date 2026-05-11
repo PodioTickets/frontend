@@ -323,7 +323,7 @@ export function QuestionDetailsDrawer({
                                 {/* Esquerda: avatar + nome/email */}
                                 <div className="flex-1 px-4 py-3 flex items-center gap-2">
                                   <UserAvatar name={row.userName} avatarUrl={row.userAvatarUrl} />
-                                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                                     <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate">
                                       {row.userName}
                                     </p>
