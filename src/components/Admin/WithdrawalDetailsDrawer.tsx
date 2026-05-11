@@ -20,6 +20,19 @@ import { Button } from "../Button";
 
 export type WithdrawalStatus = "PENDING" | "COMPLETED" | "CANCELLED";
 
+export interface WithdrawalPixSnapshot {
+  key: string;
+  keyType: string;
+  bankName?: string | null;
+  accountHolderName?: string | null;
+  accountHolderDocument?: string | null;
+}
+
+export interface WithdrawalPixKey extends WithdrawalPixSnapshot {
+  id: string;
+  isDefault?: boolean;
+}
+
 export interface WithdrawalItem {
   id: string;
   eventId: string;
@@ -34,6 +47,9 @@ export interface WithdrawalItem {
   completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  pixKeyId?: string | null;
+  pixKeySnapshot?: WithdrawalPixSnapshot | null;
+  pixKey?: WithdrawalPixKey | null;
   event: {
     id: string;
     name: string;
@@ -122,7 +138,7 @@ function SectionRow({ label, value }: { label: string; value: React.ReactNode })
       <p className="text-base font-normal leading-[1.3] text-gray-11 font-family-dm-sans shrink-0">
         {label}
       </p>
-      <div className="text-base font-semibold leading-[1.3] text-gray-12 font-family-dm-sans text-right min-w-0 break-words">
+      <div className="text-base font-semibold leading-[1.3] text-gray-12 font-family-dm-sans text-right min-w-0 wrap-break-word">
         {value}
       </div>
     </div>
@@ -133,36 +149,67 @@ function DrawerSeparator() {
   return <div className="w-full h-px bg-gray-6 shrink-0" />;
 }
 
+function formatPixKey(key?: string | null, keyType?: string | null): string {
+  if (!key) return "—";
+  const type = keyType?.toUpperCase();
+  if (type === "CPF" || type === "CNPJ") return formatDocument(key);
+  if (type === "PHONE" || type === "TELEFONE") return formatPhone(key);
+  return key;
+}
+
+function formatPixKeyType(keyType?: string | null): string {
+  if (!keyType) return "—";
+  const map: Record<string, string> = {
+    CPF: "CPF",
+    CNPJ: "CNPJ",
+    EMAIL: "E-mail",
+    PHONE: "Telefone",
+    TELEFONE: "Telefone",
+    RANDOM: "Chave aleatória",
+    EVP: "Chave aleatória",
+  };
+  return map[keyType.toUpperCase()] ?? keyType;
+}
+
 function BankGrid({ item }: { item: WithdrawalItem }) {
+  // Fonte de verdade: pixKeySnapshot (imutável no momento do saque) → pixKey (live) → org (fallback legado)
+  const snapshot = item.pixKeySnapshot ?? item.pixKey ?? null;
   const org = item.event.organization;
-  const banco = [org.bankName, org.bankCode ? `(${org.bankCode})` : null].filter(Boolean).join(" ");
+
+  const bankName = snapshot?.bankName ?? org.bankName ?? "";
+  const banco = [bankName, org.bankCode ? `(${org.bankCode})` : null]
+    .filter(Boolean)
+    .join(" ");
+  const pixKeyValue = formatPixKey(snapshot?.key, snapshot?.keyType);
+  const pixKeyTypeLabel = formatPixKeyType(snapshot?.keyType);
+  const holderName = snapshot?.accountHolderName ?? org.accountHolderName ?? "—";
+  const holderDocument = snapshot?.accountHolderDocument ?? org.accountHolderDocument;
+
   const fields = [
     { label: "Banco", value: banco || "—" },
-    { label: "PIX", value: org.pix ?? "—" },
-    { label: "Titular", value: org.accountHolderName ?? "—" },
-    { label: "CPF/CNPJ", value: formatDocument(org.accountHolderDocument) },
+    { label: "Tipo da chave", value: pixKeyTypeLabel },
+    { label: "Chave PIX", value: pixKeyValue },
+    { label: "Titular", value: holderName },
+    { label: "CPF/CNPJ", value: formatDocument(holderDocument) },
   ];
 
   return (
     <div className="border border-gray-6 rounded-lg w-full flex flex-wrap">
-      {fields.map((f, i) => {
-        const cols = 2;
-        return (
-          <div
-            key={f.label}
-            className={cn(
-              "flex flex-col gap-3 p-4 flex-[1_0_0] min-w-[175px] border-r border-gray-6 last:border-0"
-            )}
-          >
-            <p className="text-base font-normal leading-[1.3] text-gray-11 font-family-dm-sans">
-              {f.label}
-            </p>
-            <p className="text-base font-semibold leading-[1.3] text-gray-12 font-family-dm-sans">
-              {f.value}
-            </p>
-          </div>
-        );
-      })}
+      {fields.map((f) => (
+        <div
+          key={f.label}
+          className={cn(
+            "flex flex-col gap-3 p-4 flex-[1_0_0] min-w-[175px] border-r border-gray-6 last:border-0"
+          )}
+        >
+          <p className="text-base font-normal leading-[1.3] text-gray-11 font-family-dm-sans">
+            {f.label}
+          </p>
+          <p className="text-base font-semibold leading-[1.3] text-gray-12 font-family-dm-sans wrap-break-word">
+            {f.value}
+          </p>
+        </div>
+      ))}
     </div>
   );
 }

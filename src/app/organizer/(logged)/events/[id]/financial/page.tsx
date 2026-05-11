@@ -18,16 +18,18 @@ import { Loading } from "@/components/Loading";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { RevenueChart } from "@/components/Organizer/RevenueChart";
+import { PaymentMethodsCard } from "@/components/Organizer/PaymentMethodsCard";
 import { ArrowButton } from "@/components/ArrowButton";
 import { TransferHistoryDrawer } from "@/components/Financial/TransferHistoryDrawer";
 import { InstallmentsDrawer } from "@/components/Financial/InstallmentsDrawer";
 import { AwaitingReleaseDrawer } from "@/components/Financial/AwaitingReleaseDrawer";
 import { RefundedDrawer } from "@/components/Financial/RefundedDrawer";
 import { ChargebackDrawer } from "@/components/Financial/ChargebackDrawer";
+import { FiscalExportDrawer } from "@/components/Financial/FiscalExportDrawer";
 import { useRequestTransferModal } from "@/stores/modalStore";
 import { RepasseIcon } from "@/components/Icons/RepasseIcon";
 import { PaymentIcon } from "@/components/Icons/PaymentIcon";
-import type { FinancialTicket } from "@/services/organizer/OrganizerService";
+import type { FinancialTicket, PaymentMethodStats } from "@/services/organizer/OrganizerService";
 import { RemoveIcon } from "@/components/Icons/RemoveIcon";
 import { ChargeBackIcon } from "@/components/Icons/ChargeBackIcon";
 import { TimerIcon } from "@/components/Icons/Organizer/TimerIcon";
@@ -101,6 +103,7 @@ export default function EventFinancialPage() {
   const [isAwaitingReleaseOpen, setIsAwaitingReleaseOpen] = useState(false);
   const [isRefundedOpen, setIsRefundedOpen] = useState(false);
   const [isChargebackOpen, setIsChargebackOpen] = useState(false);
+  const [isFiscalExportOpen, setIsFiscalExportOpen] = useState(false);
   const { openRequestTransferModal } = useRequestTransferModal();
 
   // Financial data
@@ -117,6 +120,7 @@ export default function EventFinancialPage() {
       labels: string[];
       revenue: number[];
     };
+    paymentMethodStats?: PaymentMethodStats;
   }>({
     availableBalance: 1240,
     installmentsToReceive: 1240,
@@ -183,6 +187,7 @@ export default function EventFinancialPage() {
         grossRevenue: financialDataResponse.summary.grossRevenue,
         revenueChange: 0,
         revenueChart: financialDataResponse.revenueChart,
+        paymentMethodStats: financialDataResponse.summary.paymentMethodStats,
       });
 
       const rawTickets: any[] = financialDataResponse.tickets.data.tickets;
@@ -281,7 +286,14 @@ export default function EventFinancialPage() {
               Acompanhe o faturamento, repasses e valores em processamento deste evento
             </p>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              className="border-gray-6 text-gray-12"
+              onClick={() => setIsFiscalExportOpen(true)}
+            >
+              Exportar dados fiscais
+            </Button>
             <Button onClick={() => openRequestTransferModal({
               eventId,
               availableBalance: financialData.availableBalance,
@@ -426,6 +438,13 @@ export default function EventFinancialPage() {
             >
               Solicitar repasse
             </Button>
+            <Button
+              variant="outline"
+              className="w-full border-gray-6 text-gray-12"
+              onClick={() => setIsFiscalExportOpen(true)}
+            >
+              Exportar dados fiscais
+            </Button>
           </div>
 
           {/* Cards Section - 3x2 Grid (Desktop only) */}
@@ -555,6 +574,8 @@ export default function EventFinancialPage() {
             </div>
           </div>
 
+
+          <PaymentMethodsCard stats={financialData.paymentMethodStats} />
 
           {/* ========== MOBILE: Ingressos de lotes (cards) ========== */}
           <div className="lg:hidden w-full flex flex-col gap-2">
@@ -895,6 +916,14 @@ export default function EventFinancialPage() {
           setIsRefundedOpen(true);
         }}
         onNavigateNext={undefined} // Último drawer, não tem próximo
+      />
+
+      {/* Fiscal Export Drawer */}
+      <FiscalExportDrawer
+        isOpen={isFiscalExportOpen}
+        onClose={() => setIsFiscalExportOpen(false)}
+        eventId={eventId}
+        eventName={event?.name}
       />
     </div>
   );

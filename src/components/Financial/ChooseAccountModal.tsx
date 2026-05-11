@@ -1,23 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, X } from "lucide-react";
 import { Button } from "@/components/Button";
 import { cn } from "@/utils/cn";
+import type { PixKey } from "@/services/organizer/OrganizerService";
 
-interface PixAccount {
+export interface PixAccount {
   id: string;
   bank: string;
   holder: string;
   pixKey: string;
+  pixKeyType: string;
+  raw: PixKey;
 }
 
-const MOCK_ACCOUNTS: PixAccount[] = [
-  { id: "1", bank: "Banco Nubank", holder: "Nome do usuário", pixKey: "119.241.929-21" },
-  { id: "2", bank: "Banco Nubank", holder: "Nome do usuário", pixKey: "000.000.000-00" },
-  { id: "3", bank: "Banco Nubank", holder: "Nome do usuário", pixKey: "000.000.000-01" },
-];
+const formatDocument = (doc: string) => {
+  const d = doc.replace(/\D/g, "");
+  if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  return doc;
+};
+
+const formatPhone = (raw: string) => {
+  const d = raw.replace(/\D/g, "");
+  if (d.length === 11) return d.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+  if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+  return raw;
+};
+
+const formatPixKey = (key: string, keyType: string) => {
+  const type = keyType?.toUpperCase();
+  if (type === "CPF" || type === "CNPJ") return formatDocument(key);
+  if (type === "PHONE" || type === "TELEFONE") return formatPhone(key);
+  return key;
+};
+
+export const mapPixKeyToAccount = (pix: PixKey): PixAccount => ({
+  id: pix.id,
+  bank: pix.bankName?.trim() || "Conta PIX",
+  holder: pix.accountHolderName?.trim() || "—",
+  pixKey: formatPixKey(pix.key, pix.keyType),
+  pixKeyType: pix.keyType,
+  raw: pix,
+});
 
 function Checkbox({ checked }: { checked: boolean }) {
   return (
@@ -78,6 +105,8 @@ interface ChooseAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (account: PixAccount) => void;
+  accounts: PixAccount[];
+  loading?: boolean;
   initialSelectedId?: string;
 }
 
@@ -85,15 +114,27 @@ export function ChooseAccountModal({
   isOpen,
   onClose,
   onSelect,
+  accounts,
+  loading = false,
   initialSelectedId,
 }: ChooseAccountModalProps) {
-  const [selectedId, setSelectedId] = useState(initialSelectedId ?? MOCK_ACCOUNTS[0].id);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialSelectedId ?? accounts[0]?.id ?? null,
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedId(initialSelectedId ?? accounts[0]?.id ?? null);
+  }, [isOpen, initialSelectedId, accounts]);
 
   const handleConfirm = () => {
-    const account = MOCK_ACCOUNTS.find((a) => a.id === selectedId);
+    const account = accounts.find((a) => a.id === selectedId);
     if (account) onSelect(account);
     onClose();
   };
+
+  const hasAccounts = accounts.length > 0;
+  const confirmDisabled = !selectedId || !hasAccounts || loading;
 
   return (
     <AnimatePresence>
@@ -139,14 +180,24 @@ export function ChooseAccountModal({
                 Selecione uma das suas chaves PIX cadastradas
               </p>
               <div className="flex flex-col gap-3">
-                {MOCK_ACCOUNTS.map((account) => (
-                  <AccountItem
-                    key={account.id}
-                    account={account}
-                    selected={selectedId === account.id}
-                    onSelect={() => setSelectedId(account.id)}
-                  />
-                ))}
+                {loading ? (
+                  <p className="text-center text-sm text-gray-11 font-family-dm-sans py-8">
+                    Carregando contas...
+                  </p>
+                ) : !hasAccounts ? (
+                  <p className="text-center text-sm text-gray-11 font-family-dm-sans py-8">
+                    Nenhuma chave PIX cadastrada.
+                  </p>
+                ) : (
+                  accounts.map((account) => (
+                    <AccountItem
+                      key={account.id}
+                      account={account}
+                      selected={selectedId === account.id}
+                      onSelect={() => setSelectedId(account.id)}
+                    />
+                  ))
+                )}
               </div>
             </div>
             <div className="shrink-0 flex gap-2 px-4 py-4 border-t border-gray-6 bg-gray-1">
@@ -159,6 +210,7 @@ export function ChooseAccountModal({
               </Button>
               <Button
                 onClick={handleConfirm}
+                disabled={confirmDisabled}
                 className="flex-1 h-11 font-manrope font-bold text-base"
               >
                 Selecionar conta
@@ -214,14 +266,24 @@ export function ChooseAccountModal({
                   Selecione uma das suas chaves PIX cadastradas
                 </p>
                 <div className="flex flex-col gap-3">
-                  {MOCK_ACCOUNTS.map((account) => (
-                    <AccountItem
-                      key={account.id}
-                      account={account}
-                      selected={selectedId === account.id}
-                      onSelect={() => setSelectedId(account.id)}
-                    />
-                  ))}
+                  {loading ? (
+                    <p className="text-center text-sm text-gray-11 font-family-dm-sans py-8">
+                      Carregando contas...
+                    </p>
+                  ) : !hasAccounts ? (
+                    <p className="text-center text-sm text-gray-11 font-family-dm-sans py-8">
+                      Nenhuma chave PIX cadastrada.
+                    </p>
+                  ) : (
+                    accounts.map((account) => (
+                      <AccountItem
+                        key={account.id}
+                        account={account}
+                        selected={selectedId === account.id}
+                        onSelect={() => setSelectedId(account.id)}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -236,6 +298,7 @@ export function ChooseAccountModal({
                 </Button>
                 <Button
                   onClick={handleConfirm}
+                  disabled={confirmDisabled}
                   className="h-[44px] px-8 font-bold text-base font-manrope"
                 >
                   Selecionar conta

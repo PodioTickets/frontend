@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
 import { X, Building2, Ticket } from "lucide-react";
@@ -11,7 +11,8 @@ import { Input } from "../Input";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
 import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
-import { ChooseAccountModal } from "./ChooseAccountModal";
+import { ChooseAccountModal, mapPixKeyToAccount, type PixAccount } from "./ChooseAccountModal";
+import { organizerService } from "@/services";
 
 export function RequestTransferModal() {
   const { isOpen, closeRequestTransferModal, data } = useRequestTransferModal();
@@ -21,6 +22,36 @@ export function RequestTransferModal() {
   const [transferAmount, setTransferAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showChooseAccount, setShowChooseAccount] = useState(false);
+  const [pixAccounts, setPixAccounts] = useState<PixAccount[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<PixAccount | null>(null);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoadingAccounts(true);
+        const { organization } = await organizerService.getOrganization();
+        if (cancelled) return;
+        const accounts = (organization.pixKeys ?? []).map(mapPixKeyToAccount);
+        setPixAccounts(accounts);
+        const defaultAccount =
+          accounts.find((a) => a.raw.isDefault) ?? accounts[0] ?? null;
+        setSelectedAccount(defaultAccount);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error loading pix keys:", error);
+        setPixAccounts([]);
+        setSelectedAccount(null);
+      } finally {
+        if (!cancelled) setLoadingAccounts(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // API pode enviar em centavos; normalizar para exibição em reais
   const rawBalance = data?.availableBalance ?? 125000;
@@ -29,7 +60,8 @@ export function RequestTransferModal() {
   const processingAmount = data?.processingAmount != null
     ? (data.processingAmount > 10000 && Number.isInteger(data.processingAmount) ? data.processingAmount / 100 : data.processingAmount)
     : null;
-  const maskedPixKey = data?.pixKey || "119.241.929-21";
+  const displayBankName = selectedAccount?.bank || "Conta PIX";
+  const displayPixKey = selectedAccount?.pixKey || data?.pixKey || "—";
   const organizationName = data?.organizationName || "Grupo Max atacadista";
   const organizationCnpj = data?.organizationCnpj || "27.912.458/0001-73";
   const organizationAvatar = data?.organizationAvatar || null;
@@ -102,11 +134,19 @@ export function RequestTransferModal() {
       return;
     }
 
+    if (!selectedAccount?.id) {
+      toast.error("Selecione uma conta PIX para recebimento");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await getApiClient().post(
         `/api/v1/events/${eventId}/repasse/withdrawals`,
-        { amount: Math.round(numericAmount * 100) }
+        {
+          amount: Math.round(numericAmount * 100),
+          pixKeyId: selectedAccount.id,
+        }
       );
       setTransferAmount(formatAmount(amount));
       setShowSuccess(true);
@@ -241,10 +281,10 @@ export function RequestTransferModal() {
                           </div>
                           <div className="flex flex-col gap-1 min-w-0">
                             <p className="font-family-dm-sans font-semibold text-base text-gray-12">
-                              Banco Nubank
+                              {displayBankName}
                             </p>
                             <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                              Chave: {maskedPixKey}
+                              Chave: {displayPixKey}
                             </p>
                           </div>
                         </div>
@@ -284,7 +324,7 @@ export function RequestTransferModal() {
                     <Button
                       type="button"
                       onClick={handleConfirm}
-                      disabled={!isValidAmount || isSubmitting}
+                      disabled={!isValidAmount || isSubmitting || !selectedAccount}
                       className="flex-1 h-11 bg-primary-11 text-primary-2 font-manrope font-bold text-base hover:bg-primary-10 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? "Aguarde..." : "Confirmar"}
@@ -378,8 +418,8 @@ export function RequestTransferModal() {
                             <FinanceIcon className="size-6 text-gray-12" />
                           </div>
                           <div className="flex flex-col">
-                            <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">Banco Nubank</p>
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Chave: {maskedPixKey}</p>
+                            <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">{displayBankName}</p>
+                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">Chave: {displayPixKey}</p>
                           </div>
                         </div>
                         <button
@@ -396,7 +436,7 @@ export function RequestTransferModal() {
                     <Button variant="outline" onClick={handleClose} className="h-[44px] px-8 border-[1.5px] border-gray-6 text-gray-12 font-bold text-[16px] font-manrope hover:bg-gray-2">
                       Cancelar
                     </Button>
-                    <Button variant="default" onClick={handleConfirm} disabled={!isValidAmount || isSubmitting} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Button variant="default" onClick={handleConfirm} disabled={!isValidAmount || isSubmitting || !selectedAccount} className="h-[44px] px-8 text-[16px] font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed">
                       {isSubmitting ? "Aguarde..." : "Confirmar"}
                     </Button>
                   </div>
@@ -432,7 +472,13 @@ export function RequestTransferModal() {
     <ChooseAccountModal
       isOpen={showChooseAccount}
       onClose={() => setShowChooseAccount(false)}
-      onSelect={() => setShowChooseAccount(false)}
+      onSelect={(account) => {
+        setSelectedAccount(account);
+        setShowChooseAccount(false);
+      }}
+      accounts={pixAccounts}
+      loading={loadingAccounts}
+      initialSelectedId={selectedAccount?.id}
     />
     </>
   );

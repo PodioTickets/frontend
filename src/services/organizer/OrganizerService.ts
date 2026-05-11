@@ -686,6 +686,43 @@ export interface FinancialSummary {
   totalChargebacks: number;
   grossRevenue: number;
   isAudited: boolean;
+  paymentMethodStats?: PaymentMethodStats;
+}
+
+export interface PaymentMethodBreakdown {
+  sales: number;
+  netRevenue: number;
+}
+
+export interface FiscalOrder {
+  id: string;
+  displayId: string;
+  paymentId: string;
+  paymentMethod: string;
+  buyer: {
+    name: string;
+    email: string;
+    cpf: string;
+    avatarUrl: string | null;
+  };
+  purchaseDate: string;
+  amount: number;
+}
+
+export interface FiscalOrdersData {
+  orders: FiscalOrder[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface PaymentMethodStats {
+  pix: PaymentMethodBreakdown;
+  creditCard: PaymentMethodBreakdown;
+  debitCard: PaymentMethodBreakdown;
 }
 
 export interface RevenueChartData {
@@ -2253,6 +2290,49 @@ export class OrganizerService {
       },
     });
     return response.data;
+  }
+
+  async getEventFiscalOrders(
+    eventId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      period?: "7d" | "15d" | "30d" | "60d" | "all";
+      valueRange?: "all" | "lt100" | "100to500" | "500to1000" | "gt1000";
+    }
+  ): Promise<FiscalOrdersData> {
+    const { data: response } = await this.apiClient.get<{
+      data: FiscalOrdersData;
+    }>(`/api/v1/events/${eventId}/financial/fiscal-orders`, {
+      params,
+    });
+    return response.data;
+  }
+
+  async exportEventFiscalData(
+    eventId: string,
+    params?: {
+      search?: string;
+      period?: "7d" | "15d" | "30d" | "60d" | "all";
+      valueRange?: "all" | "lt100" | "100to500" | "500to1000" | "gt1000";
+      orderIds?: string[];
+      format?: "txt" | "xlsx" | "pdf";
+      fields?: string[];
+    }
+  ): Promise<Blob> {
+    const { data } = await this.apiClient.get<Blob>(
+      `/api/v1/events/${eventId}/financial/fiscal-export`,
+      {
+        params: {
+          ...params,
+          fields: params?.fields?.join(","),
+          orderIds: params?.orderIds?.join(","),
+        },
+        responseType: "blob",
+      }
+    );
+    return data;
   }
 
   async getEventTransferHistory(eventId: string): Promise<{

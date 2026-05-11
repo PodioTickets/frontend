@@ -42,7 +42,10 @@
       "WebFetch(domain:docs.cielo.com.br)",
       "Bash(Select-String -Pattern \"useTickets|TicketsSection\" -SimpleMatch)",
       "Bash(Select-Object -First 30)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(curl -sS -o /tmp/figma-drawer.png \"https://www.figma.com/api/mcp/asset/28f151f6-1049-45bf-81dc-49951567bfa1\")",
+      "Read(//tmp/**)",
+      "Bash(curl -sS -o ./figma-modal-tmp.png \"https://www.figma.com/api/mcp/asset/f5c9c618-8b94-4e94-bde6-371cce09833d\")"
     ]
   },
   "disabledMcpjsonServers": [
