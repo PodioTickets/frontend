@@ -26,8 +26,12 @@ jobs:
             cd /home/deploy/podiotickets-frontend
 
             echo "📥 Atualizando código..."
+            # Salva o .env antes do reset
+            [ -f .env ] && cp .env /tmp/frontend-env-backup
             git fetch origin
             git reset --hard origin/homologacao
+            # Restaura o .env
+            [ -f /tmp/frontend-env-backup ] && cp /tmp/frontend-env-backup .env
 
             echo "🔨 Fazendo build..."
             DOCKER_BUILDKIT=1 docker compose build frontend
