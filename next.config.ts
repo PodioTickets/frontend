@@ -50,6 +50,11 @@ const nextConfig: NextConfig = {
       "@fortawesome/react-fontawesome",
       "@fortawesome/free-solid-svg-icons",
     ],
+    // Usa worker threads para paralelizar a compilação webpack — reduz tempo de build
+    webpackBuildWorker: true,
+    // Compila server e client em paralelo em vez de sequencialmente
+    parallelServerCompiles: true,
+    parallelServerBuildTraces: true,
   },
 };
 

@@ -513,7 +513,7 @@ export function LoginModal() {
         sessionStorage.setItem("redirectAfterLogin", currentPath);
       }
     }
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
     window.location.href = `${apiUrl}/api/v1/auth/google`;
   };
 

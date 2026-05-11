@@ -1,7 +1,7 @@
 import { userService } from "@/services";
 
 export function getOrganizerApiUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+  return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
 }
 
 export function getOrganizerAccessToken(): string | null {

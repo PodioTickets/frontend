@@ -279,7 +279,7 @@ export function InformationForm({
     try {
       const fd = new FormData();
       fd.append("file", pdfFile);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
       const token = (userService as any).apiClient?.getAccessToken();
       const response = await fetch(`${apiUrl}/api/v1/upload/pdf`, {
         method: "POST",

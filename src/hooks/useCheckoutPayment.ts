@@ -12,7 +12,7 @@ interface UseCheckoutReturn {
   error: string | null;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
 
 export const useCheckout = (): UseCheckoutReturn => {
   const [loading, setLoading] = useState(false);

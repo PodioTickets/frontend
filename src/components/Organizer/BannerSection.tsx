@@ -133,7 +133,7 @@ export function BannerSection({
   const orgDocDisplay = formatOrgDocument(organizer.document);
 
   const uploadImageFile = useCallback(async (file: File): Promise<string> => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
     const apiClient = (userService as unknown as { apiClient?: { getAccessToken: () => string | null } }).apiClient;
     const token = apiClient?.getAccessToken();
     if (!token) throw new Error("Sessão expirada. Faça login novamente.");

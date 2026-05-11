@@ -29,7 +29,7 @@ const IS_PROD = BRASPAG_ENV === "PRD";
 const SDK_URL = "https://mpisandbox.braspag.com.br/Scripts/BP.Mpi.3ds20.min.js"
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333").replace(/\/$/, "");
 
 // ─── Estado do SDK (módulo-level para não recarregar entre renders) ───────────
 

@@ -396,7 +396,7 @@ const DebitCardForm = memo(function DebitCardForm({
   );
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 function PixModal({
   isOpen,

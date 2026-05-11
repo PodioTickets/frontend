@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { apiClient } from '@/services';
 import type { PixPayment } from '@/interfaces/checkout';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
 
 interface PaymentSummaryResponse {
   payment?: {

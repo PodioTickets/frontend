@@ -14,7 +14,7 @@ import {
 } from "@/interfaces/order";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+  (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
 
 const ORDERS_PATH = "/api/v1/orders";
 

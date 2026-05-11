@@ -1147,7 +1147,7 @@ export class OrganizerService {
       const formData = new FormData();
       formData.append("file", file);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
       const token = this.apiClient.getAccessToken();
 
       const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
