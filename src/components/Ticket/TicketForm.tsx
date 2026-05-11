@@ -20,7 +20,13 @@ import { Loading } from "../Loading";
 import { UnsavedTicketChangesModal } from "./UnsavedTicketChangesModal";
 import { DeleteTicketModal } from "./DeleteTicketModal";
 import { cn } from "@/utils/cn";
-import { useTickets } from "@/hooks/useTickets";
+import {
+  formatRawTicket,
+  markTicketPendingWrite,
+  optimisticUpdateTickets,
+  useTickets,
+  type Ticket,
+} from "@/hooks/useTickets";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
 import { TicketBatchSection } from "./TicketBatchSection";
 import { TicketProductsSection } from "./TicketProductsSection";
@@ -855,17 +861,50 @@ export function TicketForm({
         }),
       };
 
+      let rawSaved: unknown;
       if (mode === "edit" && ticketId) {
-        await organizerService.updateTicket(eventId, ticketId, ticketData);
+        rawSaved = await organizerService.updateTicket(eventId, ticketId, ticketData);
         toast.success("Ingresso atualizado com sucesso!");
       } else {
-        await organizerService.createTicket(eventId, ticketData);
+        rawSaved = await organizerService.createTicket(eventId, ticketData);
         toast.success("Ingresso criado com sucesso!");
       }
 
-      await queryClient.invalidateQueries({ queryKey: queryKeys.events.tickets(eventId) });
+      // Optimistic update + pending-write registry: o backend tem janela de
+      // eventual consistency (réplica/leitor) — o refetch logo abaixo pode
+      // voltar sem o ticket recém-criado/editado. Aqui:
+      // 1) Normalizamos o payload do POST/PATCH (mesmo shape do queryFn).
+      // 2) Inserimos/substituímos no cache pra UI refletir já.
+      // 3) Registramos como pending — o `select` do useTickets mantém o
+      //    ticket visível mesmo se o refetch vier defasado, até o backend
+      //    confirmar (ou o TTL expirar).
+      const savedTicket: Ticket | null = rawSaved ? formatRawTicket(rawSaved) : null;
+      if (savedTicket) {
+        // Atualiza ambos os caches (key antiga em outras páginas + bundle da
+        // página de gerenciamento).
+        optimisticUpdateTickets(queryClient, eventId, (prev) => {
+          const idx = prev.findIndex((t) => t.id === savedTicket.id);
+          if (idx === -1) return [...prev, savedTicket];
+          const next = [...prev];
+          next[idx] = savedTicket;
+          return next;
+        });
+        markTicketPendingWrite(
+          eventId,
+          savedTicket,
+          mode === "edit" ? "update" : "create",
+        );
+      }
+
+      // NÃO invalidar a query de tickets aqui — o `setQueryData` acima já
+      // colocou no cache a versão FRESCA vinda da resposta do PATCH/POST.
+      // Um `invalidate` forçaria refetch imediato que poderia ler de réplica
+      // defasada e sobrescrever os dados atualizados (eventual consistency).
+      // O `staleTime: 30s` do useTicketsManagement cuida da reconciliação
+      // natural no próximo focus/window event.
+      //
+      // Products SIM precisa invalidar — não foi atualizado pelo PATCH.
       await queryClient.invalidateQueries({ queryKey: queryKeys.events.products(eventId) });
-      await queryClient.refetchQueries({ queryKey: queryKeys.events.tickets(eventId) });
 
       window.dispatchEvent(new CustomEvent("ticketCreated"));
 

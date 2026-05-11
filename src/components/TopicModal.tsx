@@ -19,6 +19,7 @@ import {
   decodeStoredEmbedsToRenderable,
   encodeRenderableToStoredEmbeds,
   buildSourceViewHtml,
+  isEmbedHtml,
 } from "@/lib/topicHtmlSourceMode";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -228,6 +229,7 @@ export function TopicModal() {
   const quillInstanceRef = useRef<QuillInstance | null>(null);
   const quillLoadedRef = useRef(false);
   const quillToolbarMousedownCleanupRef = useRef<(() => void) | null>(null);
+  const quillPasteCleanupRef = useRef<(() => void) | null>(null);
   // Scripts de embed extraídos do conteúdo — re-anexados ao salvar e exibidos no source view.
   const embedScriptSrcsRef = useRef<string[]>([]);
   // Textarea do "view source" e ref para a função toggle (acessada pelo handler do Quill).
@@ -495,6 +497,123 @@ export function TopicModal() {
 
           quillInstanceRef.current = quill;
 
+          /**
+           * Paste handler — detecta embeds (Instagram, Twitter, Facebook, iframes
+           * de YouTube/Vimeo/etc) colados direto no editor e os processa
+           * automaticamente, sem precisar abrir o modo código.
+           *
+           * Notas críticas:
+           *
+           * 1. O botão "Copiar código de incorporação" do Instagram entrega o
+           *    HTML do embed como **`text/plain`** (texto cru do textarea da
+           *    modal), NÃO `text/html`. Tentamos `text/html` primeiro e caímos
+           *    pra `text/plain` se vier vazio ou não-embed.
+           *
+           * 2. O `quill.clipboard.dangerouslyPasteHTML` aplica matchers do
+           *    Quill que **removem `class="instagram-media"`/`twitter-tweet`**
+           *    do blockquote — sem essas classes os scripts dos provedores não
+           *    processam o blockquote em iframe. Inserimos como **DOM direto**
+           *    (`insertBefore` no editor) pra preservar 100% dos atributos.
+           *
+           * 3. O `<script>` é removido pelo Quill por segurança; chamamos
+           *    `injectEmbedScript` separadamente pra adicionar no `<head>`.
+           *
+           * Roda em fase de captura (`true`) pra interceptar antes do clipboard
+           * module do Quill (que está em bubble phase).
+           */
+          quillPasteCleanupRef.current?.();
+          const onPaste = (event: ClipboardEvent) => {
+            const cd = event.clipboardData;
+            if (!cd) return;
+
+            // 1. Tenta text/html; fallback pra text/plain (caso do Instagram).
+            let pastedHtml = cd.getData("text/html");
+            if (!pastedHtml || !isEmbedHtml(pastedHtml)) {
+              const plain = cd.getData("text/plain").trim();
+              if (plain.startsWith("<") && isEmbedHtml(plain)) {
+                pastedHtml = plain;
+              }
+            }
+            if (!pastedHtml || !isEmbedHtml(pastedHtml)) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const { html: renderable, scriptSrcs } =
+              decodeStoredEmbedsToRenderable(pastedHtml);
+
+            // Dedup scripts no array de instância (será re-anexado ao salvar).
+            scriptSrcs.forEach((src) => {
+              if (!embedScriptSrcsRef.current.includes(src)) {
+                embedScriptSrcsRef.current.push(src);
+              }
+            });
+
+            // 2. Inserção via DOM direto pra preservar classes/atributos.
+            // Determina o bloco onde inserir: depois do <p> que contém o cursor,
+            // ou no fim do editor se sem seleção.
+            const editor = quill.root;
+            const sel = window.getSelection();
+            let anchorBlock: HTMLElement | null = null;
+            if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+              let node: Node | null = sel.anchorNode;
+              while (
+                node &&
+                node.parentElement &&
+                node.parentElement !== editor
+              ) {
+                node = node.parentElement;
+              }
+              anchorBlock =
+                node && node.nodeType === Node.ELEMENT_NODE
+                  ? (node as HTMLElement)
+                  : null;
+            }
+
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = renderable;
+            const newNodes = Array.from(wrapper.childNodes);
+            if (newNodes.length === 0) return;
+
+            let cursor: Node | null = anchorBlock;
+            for (const node of newNodes) {
+              if (cursor && cursor.parentNode === editor) {
+                editor.insertBefore(node, cursor.nextSibling);
+                cursor = node;
+              } else {
+                editor.appendChild(node);
+                cursor = node;
+              }
+            }
+
+            // Garante um parágrafo vazio depois do embed pra o cursor poder
+            // continuar digitando abaixo (Quill exige bloco trailing pra navegar).
+            if (!editor.lastElementChild || editor.lastElementChild.tagName !== "P") {
+              const trailing = document.createElement("p");
+              trailing.innerHTML = "<br>";
+              editor.appendChild(trailing);
+            }
+
+            // IMPORTANTE: não chamamos `quill.update()` aqui — ele força
+            // sincronização Delta↔DOM e o normalizador remove classes como
+            // `instagram-media` (sem essas classes os scripts dos provedores
+            // não convertem o blockquote em iframe). O `text-change` da próxima
+            // edição do usuário fará sync natural; até lá, o `content` state
+            // reflete o DOM atual com classes intactas.
+            setContent(editor.innerHTML);
+
+            // Injeta scripts no head (dedup global via injectedEmbedScriptSrcs)
+            // e re-aplica estilos a iframes/imagens inseridos.
+            setTimeout(() => {
+              scriptSrcs.forEach(injectEmbedScript);
+              applyQuillEditorMediaStyles(editor);
+            }, 50);
+          };
+          quill.root.addEventListener("paste", onPaste, true);
+          quillPasteCleanupRef.current = () => {
+            quill.root.removeEventListener("paste", onPaste, true);
+          };
+
           /** quill-resize-module sets user-select:none on the document while an image is active; it only clears on hide(), which does not run for toolbar clicks (outside .ql-editor). */
           const hideQuillResizer = () => {
             const r = (quill as unknown as { resizer?: { activeEle?: unknown; hide?: () => void } }).resizer;
@@ -731,6 +850,8 @@ export function TopicModal() {
     return () => {
       quillToolbarMousedownCleanupRef.current?.();
       quillToolbarMousedownCleanupRef.current = null;
+      quillPasteCleanupRef.current?.();
+      quillPasteCleanupRef.current = null;
       if (!isOpen && quillInstanceRef.current) {
         quillInstanceRef.current = null;
       }

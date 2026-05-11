@@ -832,21 +832,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     payOrder,
   } = useCheckoutReservation();
 
-  // Restaura endereço de cobrança persistido para este pedido
-  useEffect(() => {
-    if (!orderId) return;
-    try {
-      const saved = localStorage.getItem(`checkout_billing_${orderId}`);
-      if (saved) {
-        const { address } = JSON.parse(saved) as { address: CheckoutBillingAddress };
-        setBillingAddress(address);
-        setBillingAddressConfirmed(true);
-      }
-    } catch {
-      /* ignora erros de storage */
-    }
-  }, [orderId]);
-
   // Busca o pedido do servidor no mount para obter pricing, coupon e voucher atualizados.
   useEffect(() => {
     if (!orderId || orderFetchedRef.current) return;
@@ -867,7 +852,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   };
 
   // Buscar tickets e categorias do servidor
-  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId, false, true);
   const { categories, loading: categoriesLoading } = useTicketCategories(eventId, !!eventId);
 
   // Buscar produtos do evento
@@ -878,7 +863,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       return organizerService.getProducts(eventId);
     },
     enabled: !!eventId,
-    staleTime: 5 * 60 * 1000,
+    // Checkout exige 100% server-driven: nada de cache.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   // Create productsMap for product images in ParticipantSummaryModal
@@ -1429,19 +1417,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     };
   };
 
-  // Persiste a resposta do /pay pra a página de sucesso consumir.
-  const saveOrderForSuccess = (order: OrderResponse) => {
-    if (typeof window === "undefined" || !eventId) return;
-    try {
-      localStorage.setItem(
-        `checkout_success_${eventId}`,
-        JSON.stringify({ order, timestamp: Date.now() }),
-      );
-    } catch {
-      /* storage indisponível — ignora */
-    }
-  };
-
   const handlePayError = (err: unknown) => {
     if (err instanceof OrderApiError) {
       if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {
@@ -1500,12 +1475,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       syncFromOrder(updated);
       setCurrentOrder(updated);
       setBillingAddressConfirmed(true);
-      try {
-        localStorage.setItem(
-          `checkout_billing_${orderId}`,
-          JSON.stringify({ address: billingAddress }),
-        );
-      } catch { /* ignora */ }
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (
@@ -1551,7 +1520,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       );
       // Timer estende +30min automaticamente — o server devolve o novo expiresAt.
       syncFromOrder(result);
-      saveOrderForSuccess(result);
 
       const pix = result.payment?.pix ?? null;
       if (pix) {
@@ -1587,7 +1555,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         couponCode: isCouponApplied && couponCode ? couponCode : undefined,
       };
       const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
-      saveOrderForSuccess(result);
       clearTimer();
       toast.success("Pedido finalizado!");
       onSuccess?.(result.orderId);
@@ -1661,7 +1628,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       );
 
       if (result.status === "PAID") {
-        saveOrderForSuccess(result);
         clearTimer();
         toast.success("Pagamento aprovado!");
         onSuccess?.(result.orderId);
@@ -1766,7 +1732,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       console.log("[debit] resposta /pay", { status: result.status, orderId: result.orderId });
 
       if (result.status === "PAID") {
-        saveOrderForSuccess(result);
         clearTimer();
         toast.success("Pagamento aprovado!");
         onSuccess?.(result.orderId);

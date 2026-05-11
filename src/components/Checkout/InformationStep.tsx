@@ -69,7 +69,7 @@ export function InformationStep({
   const queryClient = useQueryClient();
 
   // Buscar tickets e categorias do servidor
-  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId, false, true);
   const { categories, loading: categoriesLoading } = useTicketCategories(eventId, !!eventId);
 
   const loading = ticketsLoading || categoriesLoading;
@@ -210,7 +210,10 @@ export function InformationStep({
     queryKey: ["checkout-order", orderId],
     queryFn: async () => (orderId ? getOrder(orderId) : null),
     enabled: !!orderId,
-    staleTime: 5_000,
+    // Checkout exige 100% server-driven: nada de cache.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   const orderTicketPriceById = useMemo(() => {
@@ -885,6 +888,10 @@ export function InformationStep({
       }
     },
     enabled: !!eventId && !usePreviewQuestionList,
+    // Checkout exige 100% server-driven: nada de cache.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   const questionsSource = usePreviewQuestionList

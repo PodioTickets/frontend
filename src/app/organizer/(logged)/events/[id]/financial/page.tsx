@@ -643,7 +643,7 @@ export default function EventFinancialPage() {
               </div>
               <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
                 <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                  Receita bruta
+                  Receita liquida
                 </p>
               </div>
               <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
@@ -722,7 +722,7 @@ export default function EventFinancialPage() {
                         </p>
                       </div>
 
-                      {/* Receita bruta */}
+                      {/* Receita liquida */}
                       <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
                         <div className="flex items-center gap-1">
                           <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
@@ -772,7 +772,7 @@ export default function EventFinancialPage() {
                             </p>
                           </div>
 
-                          {/* Receita bruta */}
+                          {/* Receita liquida */}
                           <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
                             <div className="flex items-center gap-1">
                               <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">

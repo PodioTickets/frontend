@@ -59,6 +59,12 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.events.details(), id] as const,
     tickets: (eventId: string) => [...queryKeys.events.all, "tickets", eventId] as const,
     ticketCategories: (eventId: string) => [...queryKeys.events.all, "ticketCategories", eventId] as const,
+    /**
+     * Bundle agregado da página de gerenciamento de ingressos
+     * (event + categories + tickets em 1 só GET).
+     */
+    ticketsManagement: (eventId: string) =>
+      [...queryKeys.events.all, "ticketsManagement", eventId] as const,
     topics: (eventId: string) => [...queryKeys.events.all, "topics", eventId] as const,
     questions: (eventId: string) => [...queryKeys.events.all, "questions", eventId] as const,
     coupons: (eventId: string) => [...queryKeys.events.all, "coupons", eventId] as const,
@@ -116,10 +122,29 @@ export const invalidateQueries = {
     all: () => queryClient.invalidateQueries({ queryKey: queryKeys.events.all }),
     detail: (id: string) =>
       queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
+    // Sempre invalida AMBAS as keys: a antiga (queries dedicadas em outras
+    // páginas — dashboard, checkout, modais) e a do bundle agregado (página
+    // de gerenciamento). Mantém o cache consistente entre os dois consumidores.
     tickets: (eventId: string) =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.events.tickets(eventId) }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.tickets(eventId) }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.events.ticketsManagement(eventId),
+        }),
+      ]),
     ticketCategories: (eventId: string) =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.events.ticketCategories(eventId) }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.events.ticketCategories(eventId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.events.ticketsManagement(eventId),
+        }),
+      ]),
+    ticketsManagement: (eventId: string) =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.events.ticketsManagement(eventId),
+      }),
     topics: (eventId: string) =>
       queryClient.invalidateQueries({ queryKey: queryKeys.events.topics(eventId) }),
     questions: (eventId: string) =>

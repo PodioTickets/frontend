@@ -12,7 +12,16 @@ import {
 } from "react";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
-import { useTickets, formatRawTicket, type Ticket } from "@/hooks/useTickets";
+import {
+  useTickets,
+  formatRawTicket,
+  optimisticUpdateTickets,
+  type Ticket,
+} from "@/hooks/useTickets";
+import {
+  useTicketsManagement,
+  type TicketsManagementBundle,
+} from "@/hooks/useTicketsManagement";
 import { organizerService } from "@/services";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -111,6 +120,12 @@ interface TicketsSectionProps {
   kitImagePositionDrawer?: KitImagePositionDrawerProps;
   /** CSS classes for the inner flex-col wrapper. */
   innerClassName?: string;
+  /**
+   * Bundle (já formatado) pré-carregado pelo Server Component. Hidrata o
+   * cache do React Query no primeiro render, eliminando o waterfall
+   * HTML → JS → fetch.
+   */
+  initialBundle?: TicketsManagementBundle;
 }
 
 function committedCategoryKeyForTicket(t: Ticket, categories: ModalityGroup[]): string {
@@ -142,6 +157,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
       extraContent,
       kitImagePositionDrawer,
       innerClassName,
+      initialBundle,
     },
     ref,
   ) {
@@ -164,19 +180,29 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
     const committedAssignmentRef = useRef<Record<string, string>>({});
     const prevTicketsLoadingRef = useRef(true);
 
+    // Fonte primária de dados: bundle agregado (1 GET para event+categories+
+    // tickets). `useTicketCategories` e `useTickets` abaixo são usados APENAS
+    // para mutations (`enabled: false` impede a query GET dedicada — assim
+    // não temos request duplicada com o bundle).
     const {
       categories,
-      loading: categoriesLoading,
+      tickets,
+      loading: bundleLoading,
+    } = useTicketsManagement(eventId ?? null, authChecked, { initialData: initialBundle });
+
+    const {
       createCategory,
       updateCategory,
       deleteCategory,
-    } = useTicketCategories(eventId ?? null, authChecked);
+    } = useTicketCategories(eventId ?? null, false);
 
     const {
-      tickets,
-      loading: ticketsLoading,
       deleteTicket,
-    } = useTickets(eventId ?? null, authChecked);
+      markPending: markTicketPending,
+    } = useTickets(eventId ?? null, false);
+
+    const categoriesLoading = bundleLoading;
+    const ticketsLoading = bundleLoading;
 
     const loading = categoriesLoading || ticketsLoading;
 
@@ -221,34 +247,25 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
     // Draft mode: invalidate on mount so stale Router Cache doesn't block fresh data
     useEffect(() => {
       if (persistMode !== "draft" || !authChecked || !eventId) return;
-      void queryClient.invalidateQueries({ queryKey: queryKeys.events.tickets(eventId) });
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.events.ticketCategories(eventId),
+        queryKey: queryKeys.events.ticketsManagement(eventId),
       });
     }, [persistMode, authChecked, eventId, queryClient]);
 
-    // Ticket created / visibility listeners
+    // Refresh quando outro ponto da app dispara `ticketCreated` (ex.: TicketForm
+    // após save). Os outros gatilhos antigos (focus / visibilitychange / pageshow)
+    // foram removidos: o react-query já cobre via `refetchOnWindowFocus: true`
+    // no `useTicketsManagement`, com dedup interna nativa.
     useEffect(() => {
       if (!eventId) return;
       const refresh = () => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.events.tickets(eventId) });
-        void queryClient.refetchQueries({ queryKey: queryKeys.events.tickets(eventId) });
         void queryClient.invalidateQueries({
-          queryKey: queryKeys.events.ticketCategories(eventId),
+          queryKey: queryKeys.events.ticketsManagement(eventId),
         });
       };
-      const onVisibility = () => {
-        if (document.visibilityState === "visible") refresh();
-      };
       window.addEventListener("ticketCreated", refresh);
-      window.addEventListener("focus", refresh);
-      window.addEventListener("pageshow", refresh);
-      document.addEventListener("visibilitychange", onVisibility);
       return () => {
         window.removeEventListener("ticketCreated", refresh);
-        window.removeEventListener("focus", refresh);
-        window.removeEventListener("pageshow", refresh);
-        document.removeEventListener("visibilitychange", onVisibility);
       };
     }, [eventId, queryClient]);
 
@@ -457,21 +474,27 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
             newTicket.sortOrder = Number.MAX_SAFE_INTEGER;
           }
 
-          const ticketsKey = queryKeys.events.tickets(eventId);
-          queryClient.setQueryData<Ticket[]>(ticketsKey, (prev) => {
-            if (!prev) return [newTicket];
+          // Otimista: insere em AMBOS os caches (key antiga + bundle) pra UI
+          // refletir instantaneamente em todos os consumidores.
+          optimisticUpdateTickets(queryClient, eventId, (prev) => {
             // Idempotência: evita duplicata caso um refetch concorrente já tenha inserido.
             if (prev.some((t) => t.id === newTicket.id)) return prev;
             return [...prev, newTicket];
           });
 
+          // Protege contra refetch que volte antes do backend propagar: o merge
+          // no useTickets mantém o ticket visível até o backend confirmar (ou
+          // TTL expirar).
+          markTicketPending(newTicket);
+
           if (persistMode === "immediate") {
-            const list = queryClient.getQueryData<Ticket[]>(ticketsKey) ?? [];
-            const cats =
-              queryClient.getQueryData<ModalityGroup[]>(
-                queryKeys.events.ticketCategories(eventId),
-              ) ?? categories;
-            committedAssignmentRef.current = buildCommittedAssignmentsMap(list, cats);
+            // Lê do estado já atualizado (otimista) — o bundle e a key antiga
+            // foram preenchidas acima por optimisticUpdateTickets, então qualquer
+            // uma serve.
+            committedAssignmentRef.current = buildCommittedAssignmentsMap(
+              tickets,
+              categories,
+            );
           }
 
           // NÃO invalidamos a query nem disparamos "ticketCreated" aqui:
@@ -479,7 +502,8 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
           // então o cache já está consistente. Forçar refetch imediato corre o
           // risco de ler do backend antes da escrita propagar (eventual consistency)
           // e sobrescrever o registro recém-inserido. A reconciliação acontece
-          // naturalmente nos listeners de focus/visibilitychange/pageshow.
+          // naturalmente no `refetchOnWindowFocus` nativo + no pending-writes
+          // registry do useTickets.
           toast.success("Ingresso duplicado com sucesso!");
         } catch (error: any) {
           toast.error(error.response?.data?.message || "Erro ao duplicar ingresso");
@@ -487,7 +511,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
           setDuplicatingTicketId(null);
         }
       },
-      [eventId, queryClient, categories, persistMode],
+      [eventId, queryClient, categories, persistMode, markTicketPending],
     );
 
     const handleDropTicket = useCallback(
@@ -503,15 +527,19 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
         }
         if (categoryIdForTicketScope(ticket, categories) === (categoryId ?? null)) return;
 
-        const qk = queryKeys.events.tickets(eventId);
-        const snapshot = queryClient.getQueryData<Ticket[]>(qk);
+        const snapshot = tickets;
         const nextGroupId =
           categoryId === null || categoryId === "uncategorized" ? "uncategorized" : categoryId;
 
-        queryClient.setQueryData<Ticket[]>(qk, (prev) => {
-          if (!prev) return prev;
-          return prev.map((t) => (t.id === ticketId ? { ...t, groupId: nextGroupId } : t));
-        });
+        // Otimista: atualiza ambos os caches (key antiga + bundle).
+        optimisticUpdateTickets(queryClient, eventId, (prev) =>
+          prev.map((t) => (t.id === ticketId ? { ...t, groupId: nextGroupId } : t)),
+        );
+
+        // Protege a mudança de categoria contra refetch precoce (eventual
+        // consistency do backend): durante a janela de proteção, o pending
+        // sobrescreve a versão do servidor caso a réplica esteja defasada.
+        markTicketPending({ ...ticket, groupId: nextGroupId }, "update");
 
         try {
           await organizerService.updateTicket(eventId, ticketId, {
@@ -519,11 +547,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
               categoryId === null || categoryId === "uncategorized" ? null : categoryId,
           });
           if (persistMode === "immediate") {
-            const list = queryClient.getQueryData<Ticket[]>(qk) ?? [];
-            const updated = list.find((x) => x.id === ticketId) ?? {
-              ...ticket,
-              groupId: nextGroupId,
-            };
+            const updated: Ticket = { ...ticket, groupId: nextGroupId };
             committedAssignmentRef.current = {
               ...committedAssignmentRef.current,
               [ticketId]: committedCategoryKeyForTicket(updated, categories),
@@ -531,7 +555,8 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
           }
           toast.success(categoryId ? "Ingresso movido para a categoria." : "Ingresso movido para avulsos.");
         } catch (error: unknown) {
-          queryClient.setQueryData(qk, snapshot);
+          // Rollback: restaura snapshot em ambos os caches.
+          optimisticUpdateTickets(queryClient, eventId, () => snapshot);
           const msg =
             error &&
             typeof error === "object" &&
@@ -541,7 +566,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
           throw error;
         }
       },
-      [eventId, tickets, queryClient, categories, persistMode],
+      [eventId, tickets, queryClient, categories, persistMode, markTicketPending],
     );
 
     const sensors = useSensors(
@@ -593,19 +618,19 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
             if (persistMode === "immediate" && eventId) {
               const m = new Map(categories.map((c) => [c.id, c]));
               const ordered = next.map((id) => m.get(id)).filter(Boolean) as ModalityGroup[];
+              const invalidateBundle = () =>
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.events.ticketsManagement(eventId),
+                });
               void persistTicketCategoryOrderApi(eventId, ordered)
                 .then(() => {
                   toast.success("Ordem das categorias atualizada.");
-                  return queryClient.invalidateQueries({
-                    queryKey: queryKeys.events.ticketCategories(eventId),
-                  });
+                  return invalidateBundle();
                 })
                 .catch((e) => {
                   console.error(e);
                   toast.error("Não foi possível salvar a ordem das categorias.");
-                  void queryClient.invalidateQueries({
-                    queryKey: queryKeys.events.ticketCategories(eventId),
-                  });
+                  void invalidateBundle();
                 });
             } else {
               queueMicrotask(() => toast.success("Ordem das categorias atualizada."));
@@ -644,21 +669,25 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
             });
 
             if (Object.keys(orderPatch).length > 0 && persistMode === "immediate") {
-              const ticketList =
-                queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ?? tickets;
-              const cats =
-                queryClient.getQueryData<ModalityGroup[]>(
-                  queryKeys.events.ticketCategories(eventId),
-                ) ?? categories;
+              // O bundle é a fonte da verdade — leitura direta do cache pra
+              // pegar o estado mais recente (já reflete optimistic updates).
+              const bundle = queryClient.getQueryData<{
+                tickets: Ticket[];
+                categories: ModalityGroup[];
+              }>(queryKeys.events.ticketsManagement(eventId));
+              const ticketList = bundle?.tickets ?? tickets;
+              const cats = bundle?.categories ?? categories;
               await persistTicketOrderDrafts(eventId, ticketList, cats, orderPatch);
               setTicketOrderDraft({});
-              await queryClient.refetchQueries({ queryKey: queryKeys.events.tickets(eventId) });
-              const freshTickets =
-                queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ?? [];
-              const freshCats =
-                queryClient.getQueryData<ModalityGroup[]>(
-                  queryKeys.events.ticketCategories(eventId),
-                ) ?? cats;
+              await queryClient.refetchQueries({
+                queryKey: queryKeys.events.ticketsManagement(eventId),
+              });
+              const refreshed = queryClient.getQueryData<{
+                tickets: Ticket[];
+                categories: ModalityGroup[];
+              }>(queryKeys.events.ticketsManagement(eventId));
+              const freshTickets = refreshed?.tickets ?? [];
+              const freshCats = refreshed?.categories ?? cats;
               committedAssignmentRef.current = buildCommittedAssignmentsMap(
                 freshTickets,
                 freshCats,
@@ -817,9 +846,10 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
             }
             await persistTicketCategoryOrderApi(eventId, ordered);
           }
-          const ticketList =
-            queryClient.getQueryData<Ticket[]>(queryKeys.events.tickets(eventId)) ??
-            tickets;
+          const bundle = queryClient.getQueryData<{ tickets: Ticket[] }>(
+            queryKeys.events.ticketsManagement(eventId),
+          );
+          const ticketList = bundle?.tickets ?? tickets;
           await persistTicketOrderDrafts(
             eventId,
             ticketList,
@@ -827,9 +857,9 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
             ticketOrderDraftRef.current,
           );
           setTicketOrderDraft({});
-          await queryClient.invalidateQueries({ queryKey: queryKeys.events.tickets(eventId) });
+          // Bundle único cobre tickets + categories.
           await queryClient.invalidateQueries({
-            queryKey: queryKeys.events.ticketCategories(eventId),
+            queryKey: queryKeys.events.ticketsManagement(eventId),
           });
         },
         reset() {

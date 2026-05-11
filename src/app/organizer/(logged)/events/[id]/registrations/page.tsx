@@ -316,18 +316,6 @@ function RegistrationRow({
         </p>
       </div>
 
-      {/* Valor */}
-      <div className="flex h-full items-center justify-center p-4 w-[120px]">
-        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 text-center">
-          R$ {(registration.order?.finalAmount
-            ? (registration.order.finalAmount / 100).toLocaleString("pt-BR", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })
-            : "0,00")}
-        </p>
-      </div>
-
       {/* Status */}
       <div className="flex h-full items-center justify-center text-center p-4 w-[120px]">
         <span
@@ -1140,11 +1128,6 @@ export default function EventRegistrationsPage() {
                   <div className="flex h-full items-center p-4 w-[140px]">
                     <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
                       Data compra
-                    </p>
-                  </div>
-                  <div className="flex h-full items-center justify-center p-4 w-[120px]">
-                    <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                      Valor
                     </p>
                   </div>
                   <div className="flex h-full items-center justify-center p-4 w-[120px]">

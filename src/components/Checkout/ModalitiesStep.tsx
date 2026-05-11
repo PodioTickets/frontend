@@ -39,7 +39,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const eventId = event?.id;
 
   // Buscar tickets e categorias do servidor
-  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+  const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId, false, true);
   const { categories, loading: categoriesLoading } = useTicketCategories(eventId, !!eventId);
 
   const loading = ticketsLoading || categoriesLoading;
@@ -127,7 +127,10 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     queryKey: ["checkout-order", orderId],
     queryFn: async () => (orderId ? getOrder(orderId) : null),
     enabled: !!orderId,
-    staleTime: 5_000,
+    // Checkout exige 100% server-driven: nada de cache.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   const orderTicketPriceById = useMemo(() => {

@@ -27,9 +27,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
 
-  // Type checking e lint rodam no editor/IDE — não durante o docker build na VPS
+  // Type checking roda no editor/IDE — não durante o docker build na VPS.
+  // ESLint não precisa de flag: o Next 16 removeu a integração com `next build`.
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
 
   transpilePackages: ["quill-resize-module"],
   async headers() {

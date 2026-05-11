@@ -15,6 +15,10 @@ export function useEvent(eventId: string | null, enabled: boolean = true) {
       return organizerService.getEventById(eventId);
     },
     enabled: enabled && !!eventId,
+    // Hook usada exclusivamente no checkout — exige 100% server-driven.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   return {

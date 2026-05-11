@@ -135,13 +135,6 @@ export function OrderSummary({
     }).format(new Date(date));
   };
 
-  const maskCPF = (cpf: string) => {
-    if (!cpf) return "";
-    const cleaned = cpf.replace(/\D/g, "");
-    if (cleaned.length !== 11) return cpf;
-    return `${cleaned.slice(0, 3)}.***.***-${cleaned.slice(9)}`;
-  };
-
   const getGenderLabel = (gender?: string) => {
     if (!gender) return "";
     const labels: Record<string, string> = {
@@ -152,16 +145,8 @@ export function OrderSummary({
     return labels[gender] || gender;
   };
 
-  // Calcular subtotal dos produtos opcionais (price vem em centavos da API)
   const productsSubtotal = items.reduce((sum, item) => sum + item.price / 100, 0);
-
-  // Calcular subtotal dos ingressos
   const ticketsSubtotal = groupedTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-
-  // Total de ingressos para label do cupom FIXED
-  const totalTicketCount = groupedTickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
-
-  // Subtotal total — usa valor do backend quando disponível
   const subtotal = subtotalOverride ?? (ticketsSubtotal + productsSubtotal + serviceFee);
 
   const toggleParticipant = (index: number) => {
@@ -376,7 +361,7 @@ export function OrderSummary({
                                   )}
                                   {participantData.participant.cpf && (
                                     <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                                      {maskCPF(participantData.participant.cpf)}
+                                      {participantData.participant.cpf}
                                     </p>
                                   )}
                                 </div>

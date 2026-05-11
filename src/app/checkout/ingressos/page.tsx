@@ -24,7 +24,7 @@ function CheckoutIngressosContent() {
   const { reserveOrder } = useCheckoutReservation();
   const [reserving, setReserving] = useState(false);
   const reservingRef = useRef(false);
-  const { tickets: availableTickets, loading: ticketsLoading } = useTickets(eventId, !!eventId);
+  const { tickets: availableTickets, loading: ticketsLoading } = useTickets(eventId, !!eventId, false, true);
 
   // Remove from state any ticket that was deleted by the organizer
   useEffect(() => {

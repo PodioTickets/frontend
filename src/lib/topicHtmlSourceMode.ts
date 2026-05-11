@@ -21,6 +21,40 @@ const isEmbedElement = (el: Element): boolean => {
   return false;
 };
 
+/**
+ * Detecta se um payload HTML (ex.: vindo de paste do usuário) contém embed
+ * de rede social ou iframe — caso em que o editor deve processá-lo como
+ * embed em vez de inserir como texto plano.
+ *
+ * Heurística por classes/atributos conhecidos + presença de `<script>`.
+ * Conservadora: prefere falso-negativo (deixa Quill processar) a falso-positivo
+ * (que travaria paste de texto comum).
+ */
+export function isEmbedHtml(html: string): boolean {
+  if (!html) return false;
+  // Blockquote de redes sociais (Instagram, Twitter/X) — classes específicas.
+  if (
+    /<blockquote[^>]*\bclass=["'][^"']*\b(?:instagram-media|twitter-tweet)\b/i.test(
+      html,
+    )
+  ) {
+    return true;
+  }
+  // Facebook embed div.
+  if (/<div[^>]*\bclass=["'][^"']*\bfb-post\b/i.test(html)) return true;
+  // Script tag (qualquer src) — usado por todos os embeds de redes sociais.
+  if (/<script\b[^>]*\bsrc=/i.test(html)) return true;
+  // iframe de provedores conhecidos de embed (YouTube, Vimeo, etc).
+  if (
+    /<iframe[^>]*\bsrc=["'][^"']*(?:youtube\.com|youtu\.be|vimeo\.com|player\.twitch\.tv|tiktok\.com)/i.test(
+      html,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 const escapeHtml = (s: string): string =>
   s
     .replace(/&/g, "&amp;")

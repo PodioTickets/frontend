@@ -311,7 +311,7 @@ function ProductsSection({
 // ---------------------------------------------------------------------------
 
 function useSubscriptionData(eventId: string | undefined) {
-  const { tickets, loading: ticketsLoading } = useTickets(eventId ?? null, !!eventId);
+  const { tickets, loading: ticketsLoading } = useTickets(eventId ?? null, !!eventId, false, true);
   const { categories, loading: categoriesLoading } = useTicketCategories(eventId ?? null, !!eventId);
 
   const { data: productsData, isLoading: productsLoading } = useQuery({
@@ -321,7 +321,10 @@ function useSubscriptionData(eventId: string | undefined) {
       return organizerService.getProducts(eventId);
     },
     enabled: !!eventId,
-    staleTime: 5 * 60 * 1000,
+    // Checkout exige 100% server-driven: nada de cache.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   const loading = ticketsLoading || categoriesLoading || productsLoading;
@@ -492,7 +495,10 @@ export function SubscriptionStep({
     queryKey: ["checkout-order", orderId],
     queryFn: async () => (orderId ? getOrder(orderId) : null),
     enabled: !!orderId,
-    staleTime: 5_000,
+    // Checkout exige 100% server-driven: nada de cache.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
   });
 
   // Map ticketId → preço unitário (em reais) vindo da order.

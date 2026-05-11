@@ -41,7 +41,8 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\\\\app\\\\checkout\" -Recurse -ErrorAction SilentlyContinue)",
       "WebFetch(domain:docs.cielo.com.br)",
       "Bash(Select-String -Pattern \"useTickets|TicketsSection\" -SimpleMatch)",
-      "Bash(Select-Object -First 30)"
+      "Bash(Select-Object -First 30)",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "disabledMcpjsonServers": [

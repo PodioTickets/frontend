@@ -1928,7 +1928,10 @@ export class OrganizerService {
       `/api/v1/tickets/events/${eventId}`,
       data
     );
-    return response.data;
+    // Backend envolve em `{ data: { ticket: {...} } }` — mesmo padrão de
+    // `duplicateTicket` e `getTicketById`. Desempacota defensivamente:
+    // se vier sem `.ticket`, retorna o data direto.
+    return (response.data as { ticket?: unknown })?.ticket ?? response.data;
   }
 
   async getTickets(
@@ -1957,7 +1960,10 @@ export class OrganizerService {
       `/api/v1/tickets/events/${eventId}/${ticketId}`,
       data
     );
-    return response.data;
+    // Backend envolve em `{ data: { ticket: {...} } }` — mesmo padrão de
+    // `duplicateTicket` e `getTicketById`. Desempacota defensivamente:
+    // se vier sem `.ticket`, retorna o data direto.
+    return (response.data as { ticket?: unknown })?.ticket ?? response.data;
   }
 
   /** Ordem do array = sortOrder 0…n; todos os ingressos ativos do escopo (mesma categoryId ou sem categoria). */
@@ -2595,5 +2601,33 @@ export class OrganizerService {
       `/api/v1/organizers/${organizationId}/contact`,
       data
     );
+  }
+
+  /**
+   * Bundle da página de gerenciamento de ingressos — `event` + `categories` +
+   * `tickets` em uma única request. Substitui as 3 chamadas separadas
+   * (`getEventById`, `getTicketCategories`, `getTickets`) na página de edit.
+   *
+   * Backend deve retornar tickets ordenados por (categoryId NULLS LAST,
+   * sortOrder ASC, createdAt ASC) e categories por order ASC.
+   */
+  async getTicketsManagementBundle(
+    eventId: string,
+  ): Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    event: { id: string; name: string; slug: string; kitSelectionDisplay?: any };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    categories: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tickets: any[];
+    pagination?: {
+      tickets?: { page: number; limit: number; total: number; totalPages: number };
+    };
+  }> {
+    const { data: response } = await this.apiClient.get<{
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: any;
+    }>(`/api/v1/events/${eventId}/tickets-management`);
+    return response.data;
   }
 }

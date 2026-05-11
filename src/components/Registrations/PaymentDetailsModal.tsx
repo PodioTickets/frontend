@@ -776,157 +776,157 @@ export function PaymentDetailsModal() {
 
                       {/* Payment Information */}
                       {!isFreeOrder ? (
-                      <div className="flex flex-col gap-3">
-                        {/* Payment Method Card */}
-                        <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                          <div className="flex gap-4 items-center flex-1">
-                            {paymentInfo.cardBrand ? (
-                              <div className="size-[36px] relative shrink-0">
-                                <PaymentIcon type={paymentInfo.cardBrand as any} className="size-9" />
+                        <div className="flex flex-col gap-3">
+                          {/* Payment Method Card */}
+                          <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                            <div className="flex gap-4 items-center flex-1">
+                              {paymentInfo.cardBrand ? (
+                                <div className="size-[36px] relative shrink-0">
+                                  <PaymentIcon type={paymentInfo.cardBrand as any} className="size-9" />
+                                </div>
+                              ) : (
+                                <div className="size-[36px] relative shrink-0 flex items-center justify-center border border-gray-6 rounded">
+                                  <PixIcon className="size-6" />
+                                </div>
+                              )}
+                              <div className="flex flex-col">
+                                {paymentInfo.cardBrand && paymentInfo.cardLast4 ? (
+                                  <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
+                                    {paymentInfo.cardBrand} **** {paymentInfo.cardLast4}
+                                  </p>
+                                ) : (
+                                  <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
+                                    {paymentInfo.paymentMethod}
+                                  </p>
+                                )}
+                                <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                  {paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}
+                                </p>
                               </div>
-                            ) : (
-                              <div className="size-[36px] relative shrink-0 flex items-center justify-center border border-gray-6 rounded">
-                                <PixIcon className="size-6" />
+                            </div>
+                            <div className={`flex gap-1 items-center justify-center px-4 py-2 rounded ${getPaymentStatusColor(paymentDetails?.payment?.status)}`}>
+                              {paymentDetails?.payment?.status === "PAID" ? (
+                                <CheckIcon className="size-6" />
+                              ) : (<XCircleIcon className="size-6" />)}
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3]">
+                                {getPaymentStatusLabel(paymentDetails?.payment?.status)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Transaction Details */}
+                          <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 grid grid-cols-3">
+                            <div className="flex flex-col gap-[15px] py-3">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Valor total pago
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {formatPrice(paymentInfo.totalAmount / 100)}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-[15px] py-3">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Data da compra
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {formatDate(paymentInfo.purchaseDate) || "—"}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-[15px] py-3">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Código de autorização
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {paymentInfo.authorizationCode}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-[15px] py-3">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Gateway
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {paymentInfo.gateway}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-[15px] py-3">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                Parcelamento
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {paymentInfo.installments}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-[8px] py-3">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                ID da transação
+                              </p>
+                              <div className="flex gap-1 items-center">
+                                <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                  {paymentInfo.transactionId}
+                                </p>
+                                <button
+                                  onClick={() => handleCopy(paymentInfo.transactionId)}
+                                  className="size-5 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
+                                >
+                                  {copied ? (
+                                    <CheckCircle className="size-4 text-green-11" />
+                                  ) : (
+                                    <Copy className="size-4 text-gray-11" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-[15px] py-4">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                NSU
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {paymentInfo.nsu}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-[15px] py-4">
+                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                IP
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                {paymentInfo.ip}
+                              </p>
+                            </div>
+                            {coupon && (
+                              <div className="flex flex-col gap-[15px] py-4">
+                                <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                  Cupom utilizado
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  <svg className="size-5 text-yellow-12 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                  </svg>
+                                  <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-yellow-12">
+                                    {[
+                                      coupon.code,
+                                      coupon.couponType === "AGE" ? "Por faixa etária" : coupon.couponType === "QUANTITY" ? "Por quantidade" : null,
+                                      coupon.discountType === "PERCENTAGE" && coupon.discountPercentage != null
+                                        ? `${coupon.discountPercentage}% de desconto`
+                                        : coupon.discountValue != null
+                                          ? `${formatPrice(coupon.discountValue / 100)} de desconto`
+                                          : null,
+                                    ].filter(Boolean).join(" - ")}
+                                  </p>
+                                </div>
                               </div>
                             )}
-                            <div className="flex flex-col">
-                              {paymentInfo.cardBrand && paymentInfo.cardLast4 ? (
-                                <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                                  {paymentInfo.cardBrand} **** {paymentInfo.cardLast4}
+                            {voucher && (
+                              <div className="flex flex-col gap-[15px] py-4">
+                                <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                                  Voucher utilizado
                                 </p>
-                              ) : (
-                                <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                                  {paymentInfo.paymentMethod}
-                                </p>
-                              )}
-                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                                {paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}
-                              </p>
-                            </div>
-                          </div>
-                          <div className={`flex gap-1 items-center justify-center px-4 py-2 rounded ${getPaymentStatusColor(paymentDetails?.payment?.status)}`}>
-                            {paymentDetails?.payment?.status === "PAID" ? (
-                              <CheckIcon className="size-6" />
-                            ) : (<XCircleIcon className="size-6" />)}
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3]">
-                              {getPaymentStatusLabel(paymentDetails?.payment?.status)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Transaction Details */}
-                        <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 grid grid-cols-3">
-                          <div className="flex flex-col gap-[15px] py-3">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              Valor total
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {formatPrice(paymentInfo.totalAmount / 100)}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-[15px] py-3">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              Data da compra
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {formatDate(paymentInfo.purchaseDate) || "—"}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-[15px] py-3">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              Código de autorização
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {paymentInfo.authorizationCode}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-[15px] py-3">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              Gateway
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {paymentInfo.gateway}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-[15px] py-3">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              Parcelamento
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {paymentInfo.installments}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-[8px] py-3">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              ID da transação
-                            </p>
-                            <div className="flex gap-1 items-center">
-                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                                {paymentInfo.transactionId}
-                              </p>
-                              <button
-                                onClick={() => handleCopy(paymentInfo.transactionId)}
-                                className="size-5 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors"
-                              >
-                                {copied ? (
-                                  <CheckCircle className="size-4 text-green-11" />
-                                ) : (
-                                  <Copy className="size-4 text-gray-11" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-[15px] py-4">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              NSU
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {paymentInfo.nsu}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-[15px] py-4">
-                            <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              IP
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {paymentInfo.ip}
-                            </p>
-                          </div>
-                          {coupon && (
-                            <div className="flex flex-col gap-[15px] py-4">
-                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                                Cupom utilizado
-                              </p>
-                              <div className="flex items-center gap-1">
-                                <svg className="size-5 text-yellow-12 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                                </svg>
-                                <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-yellow-12">
-                                  {[
-                                    coupon.code,
-                                    coupon.couponType === "AGE" ? "Por faixa etária" : coupon.couponType === "QUANTITY" ? "Por quantidade" : null,
-                                    coupon.discountType === "PERCENTAGE" && coupon.discountPercentage != null
-                                      ? `${coupon.discountPercentage}% de desconto`
-                                      : coupon.discountValue != null
-                                        ? `${formatPrice(coupon.discountValue / 100)} de desconto`
-                                        : null,
-                                  ].filter(Boolean).join(" - ")}
+                                <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                                  {[voucher.code, voucher.name].filter(Boolean).join(" - ")}
                                 </p>
                               </div>
-                            </div>
-                          )}
-                          {voucher && (
-                            <div className="flex flex-col gap-[15px] py-4">
-                              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                                Voucher utilizado
-                              </p>
-                              <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                                {[voucher.code, voucher.name].filter(Boolean).join(" - ")}
-                              </p>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
                       ) : voucher ? (
                         /* Pedido gratuito com voucher: mostra só a info do voucher */
                         <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex flex-col gap-[15px]">

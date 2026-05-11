@@ -296,7 +296,7 @@ export default function OrganizerEventsPage() {
                         Inscritos
                       </th>
                       <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
-                        Vendas
+                        Total Líquido
                       </th>
                       <th className="text-center py-4 px-5 text-gray-12 text-sm font-semibold font-family-dm-sans">
                         Ações

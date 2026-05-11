@@ -6,7 +6,6 @@ import {
   useState,
   useEffect,
   useCallback,
-  useRef,
   useMemo,
   ReactNode,
 } from "react";
@@ -41,91 +40,6 @@ interface CheckoutState {
 
 const CheckoutContext = createContext<CheckoutState | undefined>(undefined);
 
-const STORAGE_PREFIX = "checkout_";
-
-function getStorageKey(eventId: string | null): string | null {
-  if (!eventId) return null;
-  return `${STORAGE_PREFIX}${eventId}`;
-}
-
-function loadFromStorage(eventId: string | null): {
-  raceQuantities: Record<string, number>;
-  participants: ParticipantFormData[];
-} | null {
-  if (typeof window === "undefined" || !eventId) return null;
-
-  try {
-    const storageKey = getStorageKey(eventId);
-    if (!storageKey) return null;
-
-    const stored = localStorage.getItem(storageKey);
-    if (!stored) return null;
-
-    const parsed = JSON.parse(stored);
-    return {
-      raceQuantities: parsed.raceQuantities || {},
-      participants:
-        parsed.participants && parsed.participants.length > 0
-          ? parsed.participants
-          : [
-              {
-                name: "",
-                cpf: "",
-                email: "",
-                birthDate: "",
-                phone: "",
-                gender: "",
-                emergencyPhone: "",
-                emergencyContactName: "",
-                hasEmergencyContact: false,
-              },
-            ],
-    };
-  } catch (error) {
-    console.error("Error loading checkout data from storage:", error);
-    return null;
-  }
-}
-
-function saveToStorageAsync(
-  eventId: string | null,
-  raceQuantities: Record<string, number>,
-  participants: ParticipantFormData[]
-) {
-  if (typeof window === "undefined" || !eventId) return;
-
-  // Use microtask queue for non-blocking save
-  Promise.resolve().then(() => {
-    try {
-      const storageKey = getStorageKey(eventId);
-      if (!storageKey) return;
-
-      const data = {
-        raceQuantities,
-        participants,
-        savedAt: Date.now(),
-      };
-
-      localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch (error) {
-      console.error("Error saving checkout data to storage:", error);
-    }
-  });
-}
-
-function clearStorage(eventId: string | null) {
-  if (typeof window === "undefined" || !eventId) return;
-
-  try {
-    const storageKey = getStorageKey(eventId);
-    if (storageKey) {
-      localStorage.removeItem(storageKey);
-    }
-  } catch (error) {
-    console.error("Error clearing checkout data from storage:", error);
-  }
-}
-
 const DEFAULT_PARTICIPANT: ParticipantFormData = {
   name: "",
   cpf: "",
@@ -140,80 +54,22 @@ const DEFAULT_PARTICIPANT: ParticipantFormData = {
   productVariations: {},
 };
 
+const MAX_TICKETS_PER_ORDER = 20;
+
 function CheckoutProviderContent({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
 
-  // Load initial state from storage
-  const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>(
-    () => {
-      if (typeof window === "undefined") return {};
-      const stored = loadFromStorage(eventId);
-      return stored?.raceQuantities || {};
-    }
-  );
+  const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>({});
+  const [participants, setParticipants] = useState<ParticipantFormData[]>([
+    DEFAULT_PARTICIPANT,
+  ]);
 
-  const [participants, setParticipants] = useState<ParticipantFormData[]>(() => {
-    if (typeof window === "undefined") return [DEFAULT_PARTICIPANT];
-    const stored = loadFromStorage(eventId);
-    return stored?.participants || [DEFAULT_PARTICIPANT];
-  });
-
-  // Refs for debounced save
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const eventIdRef = useRef(eventId);
-  const raceQuantitiesRef = useRef(raceQuantities);
-  const participantsRef = useRef(participants);
-
-  // Keep refs in sync
+  // Reset ao trocar de evento — estado de checkout é por-evento e nunca persistido.
   useEffect(() => {
-    eventIdRef.current = eventId;
+    setRaceQuantities({});
+    setParticipants([DEFAULT_PARTICIPANT]);
   }, [eventId]);
-
-  useEffect(() => {
-    raceQuantitiesRef.current = raceQuantities;
-  }, [raceQuantities]);
-
-  useEffect(() => {
-    participantsRef.current = participants;
-  }, [participants]);
-
-  // Load from storage when eventId changes
-  useEffect(() => {
-    if (eventId) {
-      const stored = loadFromStorage(eventId);
-      if (stored) {
-        setRaceQuantities(stored.raceQuantities);
-        setParticipants(stored.participants);
-      } else {
-        setRaceQuantities({});
-        setParticipants([DEFAULT_PARTICIPANT]);
-      }
-    } else {
-      setRaceQuantities({});
-      setParticipants([DEFAULT_PARTICIPANT]);
-    }
-  }, [eventId]);
-
-  // Debounced async save - completely non-blocking
-  const scheduleSave = useCallback(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    saveTimeoutRef.current = setTimeout(() => {
-      const currentEventId = eventIdRef.current;
-      const currentQuantities = raceQuantitiesRef.current;
-      const currentParticipants = participantsRef.current;
-      
-      if (currentEventId) {
-        saveToStorageAsync(currentEventId, currentQuantities, currentParticipants);
-      }
-    }, 500);
-  }, []);
-
-  // Direct immediate state update - no delays, no async
-  const MAX_TICKETS_PER_ORDER = 20;
 
   const updateRaceQuantity = useCallback((raceId: string, quantity: number) => {
     const newQuantity = Math.max(0, quantity);
@@ -224,13 +80,9 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
         0,
       );
       const clamped = Math.min(newQuantity, MAX_TICKETS_PER_ORDER - totalWithout);
-      const updated = { ...prev, [raceId]: clamped };
-      raceQuantitiesRef.current = updated;
-      return updated;
+      return { ...prev, [raceId]: clamped };
     });
-
-    scheduleSave();
-  }, [scheduleSave]);
+  }, []);
 
   const updateParticipant = useCallback((
     index: number,
@@ -242,42 +94,23 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
         updated[index] = { ...DEFAULT_PARTICIPANT };
       }
       updated[index] = { ...updated[index], ...data };
-      participantsRef.current = updated;
       return updated;
     });
-    scheduleSave();
-  }, [scheduleSave]);
+  }, []);
 
   const addParticipant = useCallback(() => {
-    setParticipants((prev) => {
-      const updated = [...prev, { ...DEFAULT_PARTICIPANT }];
-      participantsRef.current = updated;
-      return updated;
-    });
-    scheduleSave();
-  }, [scheduleSave]);
+    setParticipants((prev) => [...prev, { ...DEFAULT_PARTICIPANT }]);
+  }, []);
 
   const removeParticipant = useCallback((index: number) => {
-    setParticipants((prev) => {
-      const updated = prev.filter((_, i) => i !== index);
-      participantsRef.current = updated;
-      return updated;
-    });
-    scheduleSave();
-  }, [scheduleSave]);
+    setParticipants((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const resetCheckout = useCallback(() => {
     setRaceQuantities({});
     setParticipants([DEFAULT_PARTICIPANT]);
-    raceQuantitiesRef.current = {};
-    participantsRef.current = [DEFAULT_PARTICIPANT];
-    
-    if (eventId) {
-      clearStorage(eventId);
-    }
-  }, [eventId]);
+  }, []);
 
-  // Memoize context value
   const contextValue = useMemo(
     () => ({
       raceQuantities,
@@ -302,7 +135,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
   return <CheckoutProviderContent>{children}</CheckoutProviderContent>;
 }
 
-/** Checkout isolado para pré-visualização (sem localStorage do fluxo real). */
+/** Checkout isolado para pré-visualização — mesma API, estado em memória. */
 export function CheckoutPreviewProvider({ children }: { children: ReactNode }) {
   const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>(
     {},
