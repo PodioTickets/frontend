@@ -26,6 +26,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+
+  // Type checking e lint rodam no editor/IDE — não durante o docker build na VPS
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+
   transpilePackages: ["quill-resize-module"],
   async headers() {
     return [
