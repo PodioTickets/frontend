@@ -28,6 +28,8 @@ jobs:
             echo "📥 Atualizando código..."
             git fetch origin
             git reset --hard origin/homologacao
+            # Restaura o .env apenas se foi apagado pelo reset
+            [ ! -f .env ] && [ -f /tmp/frontend-env-backup ] && cp /tmp/frontend-env-backup .env
 
             echo "🔨 Fazendo build..."
             DOCKER_BUILDKIT=1 docker compose build frontend
