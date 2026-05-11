@@ -1,10 +1,16 @@
 .git
 .github
 node_modules
+.next
 .env
 .env.*
 *.log
 README.md
 Dockerfile
 .dockerignore
-.next/cache
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store

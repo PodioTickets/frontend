@@ -1,49 +1,69 @@
 # syntax=docker/dockerfile:1.4
-# Build completo dentro do Docker — sem dependência do GitHub Actions para compilar.
+# Build acontece na VPS — sem GHCR, sem push/pull de imagem.
+# BuildKit persiste pnpm store e .next/cache entre deploys consecutivos.
 
 FROM node:20-alpine AS base
-RUN npm install -g pnpm@10.33.2
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
+WORKDIR /app
 
-# ── Dependências ──────────────────────────────────────────────────────────────
+# -----------------------------
+# Dependencies (cache layer)
+# -----------------------------
 FROM base AS deps
-WORKDIR /app
+
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Cache do store pnpm entre builds (BuildKit na VPS)
+RUN --mount=type=cache,id=pnpm-store-frontend,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir /pnpm/store
 
-# ── Build ─────────────────────────────────────────────────────────────────────
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# -----------------------------
+# Build (só invalida quando src/* muda)
+# -----------------------------
+FROM deps AS builder
 
+# NEXT_PUBLIC_* são inlined no bundle pelo compilador — devem existir em build-time.
+# Passe via .env na VPS: docker compose build --build-arg NEXT_PUBLIC_API_URL=...
+# ou defina no docker-compose.yml > build > args (lê do .env automaticamente).
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_ORGANIZER_APP_HOST
 ARG NEXT_PUBLIC_ROOT_SITE_URL
-ARG NEXT_PUBLIC_ADMIN_APP_HOST
+ARG NEXT_PUBLIC_BRASPAG_3DS_ENV
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_ORGANIZER_APP_HOST=$NEXT_PUBLIC_ORGANIZER_APP_HOST
-ENV NEXT_PUBLIC_ROOT_SITE_URL=$NEXT_PUBLIC_ROOT_SITE_URL
-ENV NEXT_PUBLIC_ADMIN_APP_HOST=$NEXT_PUBLIC_ADMIN_APP_HOST
-ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
-ENV NEXT_TELEMETRY_DISABLED=1
+# Em VPS pequena (1 GB RAM) reduza para 768. Ajuste no .env ou compose.
+ARG NODE_MAX_OLD_SPACE_SIZE=1024
 
-RUN pnpm build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_ORGANIZER_APP_HOST=$NEXT_PUBLIC_ORGANIZER_APP_HOST \
+    NEXT_PUBLIC_ROOT_SITE_URL=$NEXT_PUBLIC_ROOT_SITE_URL \
+    NEXT_PUBLIC_BRASPAG_3DS_ENV=$NEXT_PUBLIC_BRASPAG_3DS_ENV \
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+    NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}
 
-# ── Runner ────────────────────────────────────────────────────────────────────
+COPY . .
+
+# Cache do .next/cache entre deploys — builds incrementais do Next.js são 5-10× mais rápidos
+RUN --mount=type=cache,id=nextjs-build-cache,target=/app/.next/cache \
+    pnpm run build
+
+# -----------------------------
+# Production
+# -----------------------------
 FROM node:20-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static     ./.next/static
+WORKDIR /app
+
+# --chown no COPY evita RUN chown -R posterior, que duplica todos os inodes
+# de standalone em uma nova layer enorme
+COPY --chown=nextjs:nodejs --from=builder /app/public           ./public
+COPY --chown=nextjs:nodejs --from=builder /app/.next/standalone ./
+COPY --chown=nextjs:nodejs --from=builder /app/.next/static     ./.next/static
 
 USER nextjs
 EXPOSE 3000
