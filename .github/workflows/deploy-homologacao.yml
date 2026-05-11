@@ -4,145 +4,40 @@ on:
   push:
     branches: [homologacao]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: podiotickets/podiotickets-frontend-homolog
-
 jobs:
-  build-and-push:
-    name: Build & Push
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Cache node_modules
-        id: nm-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: nm-homolog-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Instalar dependências
-        if: steps.nm-cache.outputs.cache-hit != 'true'
-        run: pnpm install --frozen-lockfile
-
-      - name: Restaurar cache do Next.js
-        uses: actions/cache@v4
-        with:
-          path: .next/cache
-          key: nextjs-homolog-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
-          restore-keys: |
-            nextjs-homolog-${{ hashFiles('pnpm-lock.yaml') }}-
-            nextjs-homolog-
-
-      - name: Build Next.js
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.HOMOLOG_NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_ORGANIZER_APP_HOST: ${{ secrets.HOMOLOG_NEXT_PUBLIC_ORGANIZER_APP_HOST }}
-          NEXT_PUBLIC_ROOT_SITE_URL: ${{ secrets.HOMOLOG_NEXT_PUBLIC_ROOT_SITE_URL }}
-          NEXT_PUBLIC_ADMIN_APP_HOST: ${{ secrets.HOMOLOG_NEXT_PUBLIC_ADMIN_APP_HOST }}
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.HOMOLOG_NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-
-      - name: Upload docker-compose
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-compose-homolog
-          path: docker-compose.yml
-          retention-days: 1
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=sha-
-            type=raw,value=latest
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build e push da imagem Docker
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
     name: Deploy to VPS Homologação
     runs-on: ubuntu-latest
-    needs: build-and-push
     environment: homologacao
 
     steps:
-      - name: Download docker-compose
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-compose-homolog
-
-      - name: Copy docker-compose to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: docker-compose.yml
-          target: ~/podiotickets-frontend
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 45m
+          script_stop: true
           script: |
-            cd ~/podiotickets-frontend
+            set -e
+            echo "🚀 Iniciando deploy homologação frontend..."
 
-            cat > .env <<EOF
-            GHCR_IMAGE=${{ env.IMAGE_NAME }}
-            NODE_ENV=production
-            NEXT_PUBLIC_API_URL=${{ secrets.HOMOLOG_NEXT_PUBLIC_API_URL }}
-            ORGANIZER_APP_HOST=${{ secrets.ORGANIZER_APP_HOST }}
-            ADMIN_APP_HOST=${{ secrets.HOMOLOG_ADMIN_APP_HOST }}
-            ROOT_SITE_URL=${{ secrets.ROOT_SITE_URL }}
-            NEXT_PUBLIC_ORGANIZER_APP_HOST=${{ secrets.HOMOLOG_NEXT_PUBLIC_ORGANIZER_APP_HOST }}
-            NEXT_PUBLIC_ROOT_SITE_URL=${{ secrets.HOMOLOG_NEXT_PUBLIC_ROOT_SITE_URL }}
-            NEXT_PUBLIC_ADMIN_APP_HOST=${{ secrets.HOMOLOG_NEXT_PUBLIC_ADMIN_APP_HOST }}
-            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ secrets.HOMOLOG_NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-            EOF
+            cd /home/deploy/podiotickets-frontend
 
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "📥 Atualizando código..."
+            git fetch origin
+            git reset --hard origin/homologacao
 
-            docker compose pull
+            echo "🔨 Fazendo build..."
+            DOCKER_BUILDKIT=1 docker compose build frontend
+
+            echo "🚀 Subindo container..."
             docker compose up -d --remove-orphans
 
             docker image prune -f
+
+            echo "📋 Status:"
+            docker compose ps
+
+            echo "✅ Deploy concluído!"
