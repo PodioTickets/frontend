@@ -713,9 +713,25 @@ export function LoginModal() {
     setMfaResendCooldown(0);
   };
 
-  const handleMfaResend = () => {
-    setMfaResendCooldown(60);
-    toast.success("Código reenviado para seu e-mail.");
+  const handleMfaResend = async () => {
+    if (!mfaToken) return;
+    try {
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
+      const res = await fetch(`${apiBase}/api/v1/auth/2fa/resend-login-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mfaToken }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.message || "Erro ao reenviar código.");
+        return;
+      }
+      setMfaResendCooldown(60);
+      toast.success("Código reenviado para seu e-mail.");
+    } catch {
+      toast.error("Erro ao reenviar código. Tente novamente.");
+    }
   };
 
   const handleMfaConfirm = async () => {

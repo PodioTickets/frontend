@@ -41,7 +41,15 @@ export function TwoFASection({
   const [codeError, setCodeError] = useState("");
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const otpPanelRef = useRef<HTMLDivElement>(null);
+
+  // Countdown de reenvio
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   // Sincroniza quando initialEnabled muda (ex: refetchUser no pai)
   useEffect(() => {
@@ -64,6 +72,7 @@ export function TwoFASection({
       setPendingAction(action);
       setShowInput(true);
       setCode("");
+      setResendCooldown(60);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao enviar código. Tente novamente.");
     } finally {
@@ -78,6 +87,7 @@ export function TwoFASection({
       await userService.send2FACode();
       toast.success("Novo código enviado para o seu e-mail.");
       setCode("");
+      setResendCooldown(60);
     } catch (err: any) {
       toast.error(err?.message || "Erro ao reenviar código.");
     } finally {
@@ -227,7 +237,7 @@ export function TwoFASection({
                 <button
                   type="button"
                   onClick={handleResend}
-                  disabled={sending || confirming}
+                  disabled={sending || confirming || resendCooldown > 0}
                   className={cn(
                     "h-[48px] px-8 rounded-[8px] border border-gray-6",
                     "font-sans font-semibold text-gray-12 bg-transparent",
@@ -236,7 +246,7 @@ export function TwoFASection({
                   )}
                   style={{ fontSize: 16, lineHeight: "17.6px" }}
                 >
-                  {sending ? "Reenviando..." : "Reenviar código"}
+                  {sending ? "Reenviando..." : resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar código"}
                 </button>
                 <button
                   type="button"
