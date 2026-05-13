@@ -81,7 +81,14 @@ export function TopicRichContent({ html, className }: TopicRichContentProps) {
     if (scriptSrcs.length === 0) return;
 
     scriptSrcs.forEach((src) => {
-      if (injectedScriptSrcs.has(src)) {
+      // Strava embed não expõe API de reprocessamento (diferente do Instagram).
+      // Cada carga do embed.js itera os `.strava-embed-placeholder` restantes
+      // no DOM e os substitui por iframes — placeholders já processados foram
+      // trocados por iframe e perderam a classe, então não duplicam. Por isso
+      // re-injetamos sempre em navegação SPA.
+      const isStravaScript = src.includes("strava-embeds.com");
+
+      if (injectedScriptSrcs.has(src) && !isStravaScript) {
         // Script já presente no documento — pedir reprocessamento manual.
         const w = window as unknown as {
           instgrm?: { Embeds: { process: () => void } };

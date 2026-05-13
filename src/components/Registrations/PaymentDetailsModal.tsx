@@ -124,17 +124,26 @@ export function PaymentDetailsModal() {
     );
   }
 
+  // Método raw do backend — usado pra decidir ícone (não confiar só em cardBrand,
+  // que pode vir vazio em débito).
+  const rawPaymentMethod = paymentDetails?.payment?.method || "";
+  const isCardPayment =
+    rawPaymentMethod === "CREDIT_CARD" || rawPaymentMethod === "DEBIT_CARD";
+  const isPixPayment = rawPaymentMethod === "PIX";
+
   // Usar dados reais do paymentDetails
   const paymentInfo = paymentDetails ? {
     cardBrand: paymentDetails.payment?.cardBrand || null,
     cardLast4: paymentDetails.payment?.last4Digits || null,
     paymentMethod: paymentDetails.payment?.method === "CREDIT_CARD"
       ? "Cartão de crédito"
-      : paymentDetails.payment?.method === "PIX"
-        ? "PIX"
-        : paymentDetails.payment?.method === "BOLETO"
-          ? "Boleto"
-          : paymentDetails.payment?.method || "Cartão de crédito",
+      : paymentDetails.payment?.method === "DEBIT_CARD"
+        ? "Cartão de débito"
+        : paymentDetails.payment?.method === "PIX"
+          ? "PIX"
+          : paymentDetails.payment?.method === "BOLETO"
+            ? "Boleto"
+            : paymentDetails.payment?.method || "Cartão de crédito",
     totalAmount: paymentDetails.payment?.totalAmount || registration?.finalAmount || 0,
     purchaseDate: paymentDetails.payment?.purchaseDate || paymentDetails.payment?.paymentDate || registration?.purchaseDate || "",
     gateway: paymentDetails.payment?.gateway || "Gateway",
@@ -159,6 +168,19 @@ export function PaymentDetailsModal() {
     nsu: "—",
     ip: "—",
   };
+
+  // Label principal do cartão. Débito frequentemente vem sem `cardBrand` mas
+  // com `last4Digits` — nesse caso mostramos `**** 1234` ao invés de cair pro
+  // texto genérico "Cartão de débito".
+  const cardDisplayLabel = (() => {
+    if (paymentInfo.cardBrand && paymentInfo.cardLast4) {
+      return `${paymentInfo.cardBrand} **** ${paymentInfo.cardLast4}`;
+    }
+    if (isCardPayment && paymentInfo.cardLast4) {
+      return `${paymentInfo.paymentMethod} **** ${paymentInfo.cardLast4}`;
+    }
+    return paymentInfo.paymentMethod;
+  })();
 
   const coupon = paymentDetails?.coupon ?? null;
   const voucher = paymentDetails?.voucher ?? null;
@@ -451,17 +473,25 @@ export function PaymentDetailsModal() {
                       <div className="bg-gray-1 border border-gray-6 rounded-lg p-4 flex flex-col gap-4">
                         <div className="flex gap-3 items-center justify-between">
                           <div className="flex gap-3 items-center">
-                            {paymentInfo.paymentMethod !== "PIX" ? (
+                            {isCardPayment ? (
                               <div className="size-10 shrink-0 flex items-center justify-center">
-                                <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
+                                {paymentInfo.cardBrand ? (
+                                  <PaymentIcon type={paymentInfo.cardBrand as any} className="size-10" />
+                                ) : (
+                                  <CardIcon className="size-6 text-gray-12" />
+                                )}
                               </div>
-                            ) : (
+                            ) : isPixPayment ? (
                               <div className="size-10 shrink-0 flex items-center justify-center">
                                 <PixIcon className="size-6 text-gray-12" />
                               </div>
+                            ) : (
+                              <div className="size-10 shrink-0 flex items-center justify-center">
+                                <CardIcon className="size-6 text-gray-12" />
+                              </div>
                             )}
                             <div className="flex flex-col gap-0">
-                              <p className="font-family-dm-sans font-semibold text-lg text-gray-12">{paymentInfo.cardBrand && paymentInfo.cardLast4 ? `${paymentInfo.cardBrand} **** ${paymentInfo.cardLast4}` : paymentInfo.paymentMethod}</p>
+                              <p className="font-family-dm-sans font-semibold text-lg text-gray-12">{cardDisplayLabel}</p>
                               <p className="font-family-dm-sans font-normal text-base text-gray-11">{paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}</p>
                             </div>
                           </div>
@@ -547,7 +577,13 @@ export function PaymentDetailsModal() {
                                 </div>
                               </div>
                               <div className="shrink-0">
-                                {paymentInfo.cardBrand ? <CardIcon className="size-6 text-gray-11" /> : <PixIcon className="size-5 text-gray-11" />}
+                                {isCardPayment ? (
+                                  <CardIcon className="size-6 text-gray-11" />
+                                ) : isPixPayment ? (
+                                  <PixIcon className="size-5 text-gray-11" />
+                                ) : (
+                                  <CardIcon className="size-6 text-gray-11" />
+                                )}
                               </div>
                             </div>
                             <p className="font-manrope font-extrabold text-xl text-gray-12">
@@ -780,25 +816,29 @@ export function PaymentDetailsModal() {
                           {/* Payment Method Card */}
                           <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between">
                             <div className="flex gap-4 items-center flex-1">
-                              {paymentInfo.cardBrand ? (
+                              {isCardPayment ? (
                                 <div className="size-[36px] relative shrink-0">
-                                  <PaymentIcon type={paymentInfo.cardBrand as any} className="size-9" />
+                                  {paymentInfo.cardBrand ? (
+                                    <PaymentIcon type={paymentInfo.cardBrand as any} className="size-9" />
+                                  ) : (
+                                    <div className="size-9 flex items-center justify-center border border-gray-6 rounded">
+                                      <CardIcon className="size-6" />
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
+                              ) : isPixPayment ? (
                                 <div className="size-[36px] relative shrink-0 flex items-center justify-center border border-gray-6 rounded">
                                   <PixIcon className="size-6" />
                                 </div>
+                              ) : (
+                                <div className="size-[36px] relative shrink-0 flex items-center justify-center border border-gray-6 rounded">
+                                  <CardIcon className="size-6" />
+                                </div>
                               )}
                               <div className="flex flex-col">
-                                {paymentInfo.cardBrand && paymentInfo.cardLast4 ? (
-                                  <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                                    {paymentInfo.cardBrand} **** {paymentInfo.cardLast4}
-                                  </p>
-                                ) : (
-                                  <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
-                                    {paymentInfo.paymentMethod}
-                                  </p>
-                                )}
+                                <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
+                                  {cardDisplayLabel}
+                                </p>
                                 <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
                                   {paymentInfo.paymentMethod === "PIX" ? "Pagamento instantâneo" : paymentInfo.paymentMethod}
                                 </p>
@@ -942,7 +982,7 @@ export function PaymentDetailsModal() {
                       {/* Tickets List */}
                       <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg flex flex-col">
                         {/* Header */}
-                        <div className="flex items-center justify-between px-4 py-5 border-b border-gray-6">
+                        <div className="flex items-center justify-between p-4">
                           <h3 className="font-manrope font-semibold text-[18px] leading-[1.1] text-gray-12">
                             Ingressos vinculados a este pedido
                           </h3>
@@ -970,7 +1010,7 @@ export function PaymentDetailsModal() {
                           </div>
                           <div className="flex-1 px-4">
                             <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">
-                              Ticket
+                              Ingresso
                             </p>
                           </div>
                           <div className="flex-1 px-4 border-r border-gray-6 flex justify-end">
@@ -985,7 +1025,7 @@ export function PaymentDetailsModal() {
                           {paginatedParticipants.map((participant: any) => (
                             <div
                               key={participant.id}
-                              className="flex items-center h-[60px] border-b border-gray-6"
+                              className="flex items-center h-[60px] border-b last:border-0 border-gray-6"
                             >
                               <div className="w-[120px] px-4">
                                 <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 truncate">

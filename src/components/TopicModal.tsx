@@ -9,6 +9,10 @@ import {
   registerTopicQuillImageLayout,
   registerTopicQuillVideoLayout,
 } from "@/components/Topic/registerTopicQuillImageLayout";
+import {
+  registerStravaClipboardMatcher,
+  registerTopicQuillStravaEmbed,
+} from "@/components/Topic/registerTopicQuillStravaEmbed";
 import { extractVideoEmbedUrl } from "@/lib/extractVideoEmbedUrl";
 import {
   maybeDownscaleImageFileForUpload,
@@ -32,6 +36,7 @@ type QuillInstance = InstanceType<typeof import("quill").default>;
 let quillResizeModuleRegistered = false;
 let topicQuillImageLayoutRegistered = false;
 let topicQuillVideoLayoutRegistered = false;
+let topicQuillStravaEmbedRegistered = false;
 
 /**
  * Fluxo tipo quill-image-resize: inline-block permite várias imagens na mesma linha
@@ -203,7 +208,11 @@ const injectedEmbedScriptSrcs = new Set<string>();
  * para que o blockquote recém-inserido vire iframe.
  */
 function injectEmbedScript(src: string) {
-  if (injectedEmbedScriptSrcs.has(src)) {
+  // Strava: embed.js não tem API de reprocessamento — re-injeta sempre pra
+  // que ele varra novamente os `.strava-embed-placeholder` do DOM.
+  const isStravaScript = src.includes("strava-embeds.com");
+
+  if (injectedEmbedScriptSrcs.has(src) && !isStravaScript) {
     if (
       src.includes("instagram.com/embed") &&
       (window as unknown as { instgrm?: { Embeds: { process: () => void } } }).instgrm
@@ -277,6 +286,10 @@ export function TopicModal() {
         if (!topicQuillVideoLayoutRegistered) {
           registerTopicQuillVideoLayout(Quill);
           topicQuillVideoLayoutRegistered = true;
+        }
+        if (!topicQuillStravaEmbedRegistered) {
+          registerTopicQuillStravaEmbed(Quill);
+          topicQuillStravaEmbedRegistered = true;
         }
 
         // Clean up previous instance if exists
@@ -492,10 +505,15 @@ export function TopicModal() {
               /* quill-resize-module — sem isso o Quill remove ql-resize-style-* da linha ao editar */
               'resize-inline',
               'resize-block',
+              /* Strava embed (BlockEmbed custom — preserva data-* do placeholder) */
+              'stravaPlaceholder',
             ]
           });
 
           quillInstanceRef.current = quill;
+          // Garante que paste HTML do Strava vire delta `stravaPlaceholder`
+          // (evita que o matcher genérico do Quill strippe os data-*).
+          registerStravaClipboardMatcher(quill);
 
           /**
            * Paste handler — detecta embeds (Instagram, Twitter, Facebook, iframes
@@ -548,6 +566,24 @@ export function TopicModal() {
                 embedScriptSrcsRef.current.push(src);
               }
             });
+
+            // Strava precisa passar pelo `dangerouslyPasteHTML` p/ o matcher
+            // do clipboard converter a div em blot `stravaPlaceholder` (DOM
+            // direto é strippado pelo normalizador).
+            if (/strava-embed-placeholder/i.test(renderable)) {
+              const sel = quill.getSelection(true);
+              const index = sel ? sel.index : quill.getLength();
+              quill.clipboard.dangerouslyPasteHTML(index, renderable, "user");
+              setContent(quill.root.innerHTML);
+              setTimeout(() => {
+                scriptSrcs.forEach(injectEmbedScript);
+                const ed = quillRef.current?.querySelector(
+                  ".ql-editor",
+                ) as HTMLElement | null;
+                applyQuillEditorMediaStyles(ed);
+              }, 50);
+              return;
+            }
 
             // 2. Inserção via DOM direto pra preservar classes/atributos.
             // Determina o bloco onde inserir: depois do <p> que contém o cursor,
@@ -831,8 +867,11 @@ export function TopicModal() {
             const { html: renderable, scriptSrcs } =
               decodeStoredEmbedsToRenderable(initialContent);
             embedScriptSrcsRef.current = scriptSrcs;
-            quill.root.innerHTML = renderable;
-            setContent(renderable);
+            // dangerouslyPasteHTML aplica os matchers do Quill — incluindo
+            // o do Strava — então `<div class="strava-embed-placeholder">`
+            // vira blot `stravaPlaceholder` ao invés de ser strippado.
+            quill.clipboard.dangerouslyPasteHTML(0, renderable, "silent");
+            setContent(quill.root.innerHTML);
             scriptSrcs.forEach(injectEmbedScript);
             setTimeout(() => {
               styleMedia();
@@ -870,8 +909,12 @@ export function TopicModal() {
           decodeStoredEmbedsToRenderable(initialContent || "");
         if (currentContent !== renderable) {
           embedScriptSrcsRef.current = scriptSrcs;
-          quillInstanceRef.current.root.innerHTML = renderable;
-          setContent(renderable);
+          // Usa dangerouslyPasteHTML p/ que os matchers do Quill (incluindo
+          // o do Strava) sejam aplicados — innerHTML direto strippa data-*.
+          const q = quillInstanceRef.current;
+          q.setContents([], "silent");
+          q.clipboard.dangerouslyPasteHTML(0, renderable, "silent");
+          setContent(q.root.innerHTML);
           scriptSrcs.forEach(injectEmbedScript);
 
           // Apply image alignment after loading saved content
@@ -928,20 +971,28 @@ export function TopicModal() {
     if (!quill) return;
 
     if (!isCodeMode) {
-      const sourceHtml = buildSourceViewHtml(
-        quill.root.innerHTML,
-        embedScriptSrcsRef.current,
+      // WYSIWYG → código: decodifica code-blocks (Strava etc.) pra mostrar
+      // o HTML cru no textarea ao invés da estrutura `ql-code-block-container`.
+      const decoded = decodeStoredEmbedsToRenderable(quill.root.innerHTML);
+      const mergedScripts = Array.from(
+        new Set([...embedScriptSrcsRef.current, ...decoded.scriptSrcs]),
       );
+      embedScriptSrcsRef.current = mergedScripts;
+      const sourceHtml = buildSourceViewHtml(decoded.html, mergedScripts);
       setContent(sourceHtml);
       setIsCodeMode(true);
     } else {
-      // Voltando ao WYSIWYG: parsear textarea, extrair scripts e re-injetar
+      // Código → WYSIWYG: parsear textarea, extrair scripts e re-injetar.
+      // O blot custom do Strava (`stravaPlaceholder`) + matcher do clipboard
+      // preservam os data-* da div quando passado via `dangerouslyPasteHTML`.
+      // Usar `quill.root.innerHTML =` direto strippa os data-*.
       const raw = codeTextareaRef.current?.value ?? "";
       const { html: renderable, scriptSrcs } =
         decodeStoredEmbedsToRenderable(raw);
       embedScriptSrcsRef.current = scriptSrcs;
-      quill.root.innerHTML = renderable;
-      setContent(renderable);
+      quill.setContents([], "silent");
+      quill.clipboard.dangerouslyPasteHTML(0, renderable, "silent");
+      setContent(quill.root.innerHTML);
       scriptSrcs.forEach(injectEmbedScript);
       setIsCodeMode(false);
       setTimeout(() => {
@@ -1124,10 +1175,10 @@ export function TopicModal() {
                       className="[&_.ql-tooltip]:z-200 flex min-h-[inherit] flex-1 flex-col"
                     />
                     {isCodeMode && (
-                      <div className="flex min-h-[inherit] flex-1 flex-col border border-gray-6 overflow-hidden">
-                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-6 bg-gray-2 px-4 py-2">
+                      <div className="flex min-h-[inherit] flex-1 flex-col overflow-hidden border border-gray-12 bg-gray-12">
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-11 bg-gray-12 px-4 py-2">
                           <span
-                            className="text-xs font-semibold uppercase tracking-wide text-gray-11"
+                            className="text-xs font-semibold uppercase tracking-wide text-[#59E373]"
                             style={{
                               fontFamily:
                                 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
@@ -1138,7 +1189,7 @@ export function TopicModal() {
                           <button
                             type="button"
                             onClick={() => toggleCodeModeRef.current()}
-                            className="flex items-center gap-1.5 rounded-md border border-gray-6 bg-gray-1 px-3 py-1 font-manrope text-xs font-semibold text-gray-12 transition-colors hover:bg-gray-3"
+                            className="flex items-center gap-1.5 rounded-md border border-[#1f1f1f] bg-gray-12 px-3 py-1 font-manrope text-xs font-semibold text-[#59E373] transition-colors hover:bg-[#141414] [&_svg]:text-[#59E373]"
                           >
                             <ArrowButton isOpen={false} className="rotate-180 size-3" />
                             Voltar ao editor
@@ -1151,8 +1202,9 @@ export function TopicModal() {
                           style={{
                             fontFamily:
                               'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace',
+                            caretColor: "#59E373",
                           }}
-                          className="flex min-h-0 flex-1 w-full resize-none bg-gray-1 px-5 py-4 text-[13px] leading-[1.5] text-gray-12 focus:outline-none"
+                          className="flex min-h-0 w-full flex-1 resize-none border-t border-black bg-gray-12 px-5 py-4 text-[13px] leading-[1.5] text-[#59E373] placeholder:text-[#2f6f3a] focus:outline-none selection:bg-[#59E373]/30"
                           placeholder='<p>HTML cru aqui...</p>&#10;<blockquote class="instagram-media">...</blockquote>&#10;<script async src="//www.instagram.com/embed.js"></script>'
                           aria-label="Código fonte do tópico"
                         />

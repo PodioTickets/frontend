@@ -11,13 +11,22 @@
 
 const SOCIAL_BLOCKQUOTE_CLASSES = ["instagram-media", "twitter-tweet"];
 
+/**
+ * Classes em <div> que indicam embed de terceiros — preservamos como bloco de
+ * código pra blindar do normalizador do Quill (que strip atributos `data-*`
+ * de elementos desconhecidos durante edição).
+ */
+const EMBED_DIV_CLASSES = ["fb-post", "strava-embed-placeholder"];
+
 const isEmbedElement = (el: Element): boolean => {
   const tag = el.tagName;
   if (tag === "SCRIPT") return true;
   if (tag === "BLOCKQUOTE") {
     return SOCIAL_BLOCKQUOTE_CLASSES.some((c) => el.classList.contains(c));
   }
-  if (el.classList.contains("fb-post")) return true;
+  if (tag === "DIV") {
+    return EMBED_DIV_CLASSES.some((c) => el.classList.contains(c));
+  }
   return false;
 };
 
@@ -42,6 +51,12 @@ export function isEmbedHtml(html: string): boolean {
   }
   // Facebook embed div.
   if (/<div[^>]*\bclass=["'][^"']*\bfb-post\b/i.test(html)) return true;
+  // Strava embed placeholder div.
+  if (
+    /<div[^>]*\bclass=["'][^"']*\bstrava-embed-placeholder\b/i.test(html)
+  ) {
+    return true;
+  }
   // Script tag (qualquer src) — usado por todos os embeds de redes sociais.
   if (/<script\b[^>]*\bsrc=/i.test(html)) return true;
   // iframe de provedores conhecidos de embed (YouTube, Vimeo, etc).

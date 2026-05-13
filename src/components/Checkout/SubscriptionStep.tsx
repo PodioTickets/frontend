@@ -1129,10 +1129,12 @@ export function SubscriptionStep({
                 <span className="font-semibold">{formatPrice(ticket.total)}</span>
               </p>
             ))}
-            <p className="text-sm">
-              Taxa de serviço:{" "}
-              <span className="font-semibold">{formatPrice(serviceFee)}</span>
-            </p>
+            {serviceFee > 0 && (
+              <p className="text-sm">
+                Taxa de serviço:{" "}
+                <span className="font-semibold">{formatPrice(serviceFee)}</span>
+              </p>
+            )}
             <p className="text-base">
               Valor total:{" "}
               <span className="font-bold">{formatPrice(totalAmount)}</span>
@@ -1358,12 +1360,14 @@ export function SubscriptionStep({
                 })}
               </div>
 
-              <div className="flex flex-col gap-2 mt-6">
-                <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
-                  Taxa de serviço:
-                  <span className="text-gray-12">{formatPrice(serviceFee)}</span>
-                </p>
-              </div>
+              {serviceFee > 0 && (
+                <div className="flex flex-col gap-2 mt-6">
+                  <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
+                    Taxa de serviço:
+                    <span className="text-gray-12">{formatPrice(serviceFee)}</span>
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center justify-between text-xl font-bold text-gray-12 mt-4 border-t border-gray-6 pt-4">
                 <p>Total:</p>

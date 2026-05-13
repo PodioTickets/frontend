@@ -4,7 +4,7 @@ import { EventCarousel } from "@/components/EventCarousel";
 
 export default function Home() {
   return (
-    <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12 md:mb-44">
+    <section className="flex flex-col min-h-screen w-full px-4 md:px-0 max-w-[1280px] mx-auto mb-12">
       <Suspense fallback={null}>
         <HomeFilters />
       </Suspense>
@@ -26,25 +26,6 @@ export default function Home() {
             itemsPerViewMobile={1.8}
             itemsPerViewTablet={2.5}
           />
-        </div>
-      </div>
-
-      {/* Promotional Banners */}
-      <div className="flex flex-col gap-4 md:gap-6 w-full mt-8 md:mt-16 px-0 md:px-4">
-        <div className="w-full h-[120px] md:h-[180px] bg-gray-3 border border-gray-6 rounded-lg flex items-center justify-center">
-          <p className="text-gray-11 text-sm md:text-base text-center px-4">
-            BANNER PARA OS ATLETAS/ USUÁRIOS
-          </p>
-        </div>
-        <div className="w-full h-[120px] md:h-[180px] bg-gray-3 border border-gray-6 rounded-lg flex items-center justify-center">
-          <p className="text-gray-11 text-sm md:text-base text-center px-4">
-            BANNER CHAMANDO OS ORGANIZADORES PARA CRIAR EVENTO NA PLATAFORMA
-          </p>
-        </div>
-        <div className="w-full h-[120px] md:h-[180px] bg-gray-3 border border-gray-6 rounded-lg flex items-center justify-center">
-          <p className="text-gray-11 text-sm md:text-base text-center px-4">
-            BANNER VENDENDO NOSSAS QUALIDADES
-          </p>
         </div>
       </div>
     </section>

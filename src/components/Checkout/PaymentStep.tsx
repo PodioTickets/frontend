@@ -1738,9 +1738,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         return;
       }
 
+      // Pagamento não aprovado (ou cancelado pelo usuário) — exibe modal de erro
+      // ao invés de toast pra dar mais visibilidade. syncFromOrder mantém o
+      // redirect silencioso quando o servidor retorna CANCELLED.
       syncFromOrder(result);
-      toast.error("Pagamento não aprovado. Tente novamente.");
       regenerateIdempotencyKey();
+      pauseVisibilityRefresh();
+      setCardErrorModalOpen(true);
     } catch (err) {
       if (err instanceof ThreeDSError) {
         // Log estruturado pra investigar falhas vindas do SDK Braspag
@@ -1751,7 +1755,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         });
         switch (err.code) {
           case "FAILURE":
-            toast.error(`Autenticação recusada pelo banco. ${err.message}`);
+            // Recusado/cancelado no challenge do banco — exibe modal de erro
+            // de pagamento ao invés de toast.
+            pauseVisibilityRefresh();
+            setCardErrorModalOpen(true);
             break;
           case "UNSUPPORTED_BRAND":
             toast.error("Bandeira do cartão não suportada para autenticação de débito.");
@@ -2186,14 +2193,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </p>
               </div>
             )}
-            <div className="flex gap-1 items-center">
-              <p className="text-sm text-gray-12 font-family-dm-sans">
-                Taxa de serviço:
-              </p>
-              <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                {formatPrice(serviceFee)}
-              </p>
-            </div>
+            {serviceFee > 0 && (
+              <div className="flex gap-1 items-center">
+                <p className="text-sm text-gray-12 font-family-dm-sans">
+                  Taxa de serviço:
+                </p>
+                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                  {formatPrice(serviceFee)}
+                </p>
+              </div>
+            )}
             {isCouponApplied && couponDiscount > 0 && (
               <div className="flex gap-1 items-center">
                 <p className="text-sm text-gray-12 font-family-dm-sans">Cupom:</p>
@@ -2723,14 +2732,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       </p>
                     </div>
                   )}
-                  <div className="flex gap-1 items-center">
-                    <p className="text-sm text-gray-12 font-family-dm-sans">
-                      Taxa de serviço:
-                    </p>
-                    <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                      {formatPrice(serviceFee)}
-                    </p>
-                  </div>
+                  {serviceFee > 0 && (
+                    <div className="flex gap-1 items-center">
+                      <p className="text-sm text-gray-12 font-family-dm-sans">
+                        Taxa de serviço:
+                      </p>
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                        {formatPrice(serviceFee)}
+                      </p>
+                    </div>
+                  )}
                   {isCouponApplied && couponDiscount > 0 && (
                     <div className="flex gap-1 items-center">
                       <p className="text-sm text-gray-12 font-family-dm-sans">

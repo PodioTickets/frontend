@@ -33,7 +33,6 @@ interface PixKey {
 
 interface OrgDetail extends AdminAuditOrganization {
   tradeName?: string;
-  ownerName?: string;
   zipCode?: string;
   street?: string;
   number?: string;
@@ -45,25 +44,15 @@ interface OrgDetail extends AdminAuditOrganization {
   description?: string;
   pixKeys?: Array<{ key: string; keyType: string; isDefault: boolean }>;
   _count?: { events?: number; members?: number };
-  members?: Array<{
-    id: string;
-    role: string;
-    user?: {
-      id?: string;
-      firstName?: string;
-      lastName?: string;
-      documentNumber?: string;
-      cpf?: string;
-      document?: string;
-      email?: string;
-    };
-  }>;
 }
 
 export interface OrganizerEditDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  /** `null` quando o modo é "create" — drawer abre com formulário vazio. */
   org: AdminAuditOrganization | null;
+  /** "edit" (default) carrega/edita; "create" submete via POST. */
+  mode?: "create" | "edit";
   onUpdated?: () => void;
 }
 
@@ -406,7 +395,8 @@ function DeactivateOrgModal({
 
 // ─── Drawer ───────────────────────────────────────────────────────────────────
 
-export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: OrganizerEditDrawerProps) {
+export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "edit" }: OrganizerEditDrawerProps) {
+  const isCreate = mode === "create";
   const [detail, setDetail] = useState<OrgDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -418,7 +408,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
   // form fields
   const [name, setName] = useState("");
   const [tradeName, setTradeName] = useState("");
-  const [ownerName, setOwnerName] = useState("");
   const [zipCode, setZipCode] = useState("");
   const [state, setState] = useState("");
   const [street, setStreet] = useState("");
@@ -431,7 +420,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
   const [siteUrl, setSiteUrl] = useState("");
   const [instagram, setInstagram] = useState("");
   const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
-  const [ownerDocument, setOwnerDocument] = useState("");
   const [cnpjValue, setCnpjValue] = useState("");
 
   // pix form
@@ -440,7 +428,33 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
   const [newPix, setNewPix] = useState(emptyPix);
 
   useEffect(() => {
-    if (!isOpen || !org) return;
+    if (!isOpen) return;
+
+    // Modo create: reseta tudo e abre formulário vazio sem fetch.
+    if (isCreate) {
+      setDetail(null);
+      setLoading(false);
+      setCnpjValue("");
+      setName("");
+      setTradeName("");
+      setZipCode("");
+      setState("");
+      setStreet("");
+      setStreetNumber("");
+      setNeighborhood("");
+      setCity("");
+      setEmail("");
+      setWhatsapp("");
+      setPhone("");
+      setSiteUrl("");
+      setInstagram("");
+      setPixKeys([]);
+      setShowAddPix(false);
+      setNewPix(emptyPix);
+      return;
+    }
+
+    if (!org) return;
     let cancelled = false;
 
     setDetail(null);
@@ -457,20 +471,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
         const d: OrgDetail = raw?.data?.organization ?? raw?.organization ?? raw?.data ?? raw;
         setDetail(d);
 
-        const ownerMember = Array.isArray(d.members)
-          ? d.members.find((m) => m.role === "OWNER")
-          : undefined;
-        const ownerUser = ownerMember?.user;
-        const ownerFullName = ownerUser
-          ? [ownerUser.firstName, ownerUser.lastName].filter(Boolean).join(" ")
-          : "";
-        const ownerDoc = ownerUser?.documentNumber ?? ownerUser?.cpf ?? ownerUser?.document ?? "";
-
         setCnpjValue(formatCNPJ(d.document ?? org.document ?? ""));
         setName(d.name ?? "");
         setTradeName(d.tradeName ?? "");
-        setOwnerName(ownerFullName || (d.ownerName ?? ""));
-        setOwnerDocument(formatCPFOrCNPJ(ownerDoc));
         setZipCode(formatCEP(d.zipCode));
         setState(d.state ?? "");
         setStreet(d.street ?? "");
@@ -499,7 +502,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
     })();
 
     return () => { cancelled = true; };
-  }, [isOpen, org]);
+  }, [isOpen, org, isCreate]);
 
   const handleAddPix = () => {
     if (!newPix.key.trim()) {
@@ -515,16 +518,14 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
   };
 
   const handleSave = async () => {
-    if (!org) return;
+    if (!isCreate && !org) return;
     setSaving(true);
     try {
       const api = getApiClient();
-      await api.patch(`/api/v1/admin/organizations/${org.id}`, {
+      const payload = {
         name,
         tradeName,
         document: digits(cnpjValue) || undefined,
-        ownerName,
-        ownerDocument: digits(ownerDocument) || undefined,
         zipCode: digits(zipCode),
         state,
         street,
@@ -544,12 +545,23 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
           accountHolderName: accountHolderName || undefined,
           accountHolderDocument: digits(accountHolderDocument ?? "") || undefined,
         })),
-      });
-      toast.success("Organização atualizada com sucesso!");
+      };
+      if (isCreate) {
+        await api.post(`/api/v1/admin/organizations`, payload);
+        toast.success("Organização criada com sucesso!");
+      } else {
+        await api.patch(`/api/v1/admin/organizations/${org!.id}`, payload);
+        toast.success("Organização atualizada com sucesso!");
+      }
       onUpdated?.();
       onClose();
-    } catch {
-      toast.error("Não foi possível salvar as alterações.");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        (isCreate
+          ? "Não foi possível criar a organização."
+          : "Não foi possível salvar as alterações.");
+      toast.error(typeof msg === "string" ? msg : "Erro ao salvar.");
     } finally {
       setSaving(false);
     }
@@ -593,21 +605,22 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
   };
 
   const logoUrl = detail?.logoUrl ?? org?.logoUrl ?? null;
-  const orgName = name || org?.name || "—";
+  const orgName = isCreate ? (name || "Nova organização") : (name || org?.name || "—");
   const createdAt = detail?.createdAt ?? org?.createdAt;
   const eventCount = detail?._count?.events ?? detail?.eventCount ?? org?.eventCount ?? 0;
   const cnpj = detail?.document ?? org?.document ?? "";
   const isActive = detail?.isActive ?? org?.isActive ?? true;
+  const drawerTitle = isCreate ? "Criar organizador" : "Editar organizador";
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} direction="right">
       <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[540px] border-l border-gray-6">
-        <DrawerTitle className="sr-only">Editar organizador</DrawerTitle>
+        <DrawerTitle className="sr-only">{drawerTitle}</DrawerTitle>
         {/* Header */}
         <DrawerHeader className="px-5 py-3 border-b border-gray-6 shrink-0">
           <div className="flex items-center justify-between">
             <p className="text-xl font-semibold font-family-dm-sans text-gray-12 leading-[1.3]">
-              Editar organizador
+              {drawerTitle}
             </p>
             <DrawerClose asChild>
               <button
@@ -692,8 +705,6 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
                   <FieldInput label="CNPJ" value={cnpjValue} onChange={(v) => setCnpjValue(formatCNPJ(v))} placeholder="00.000.000/0000-00" className="min-w-[284px]" />
                   <FieldInput label="Nome fantasia (Razão social)" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
-                  <FieldInput label="Nome do responsável" value={ownerName} onChange={setOwnerName} placeholder="Nome completo" className="min-w-[284px]" />
-                  <FieldInput label="CPF do responsável" value={ownerDocument} onChange={(v) => setOwnerDocument(formatCPFOrCNPJ(v))} placeholder="000.000.000-00" className="min-w-[284px]" />
                 </div>
               </div>
 
@@ -834,24 +845,26 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
 
               <DrawerDivider />
 
-              {/* Metadata */}
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-manrope font-semibold text-base text-gray-11 leading-[1.1]">Cadastro em</span>
-                  <span className="font-manrope font-semibold text-base text-gray-12 leading-[1.1]">{formatDate(createdAt)}</span>
+              {/* Metadata — não faz sentido em create */}
+              {!isCreate && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-manrope font-semibold text-base text-gray-11 leading-[1.1]">Cadastro em</span>
+                    <span className="font-manrope font-semibold text-base text-gray-12 leading-[1.1]">{formatDate(createdAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-manrope font-semibold text-base text-gray-11 leading-[1.1]">Eventos criados</span>
+                    <span className="font-manrope font-semibold text-base text-gray-12 leading-[1.1]">{eventCount}</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-manrope font-semibold text-base text-gray-11 leading-[1.1]">Eventos criados</span>
-                  <span className="font-manrope font-semibold text-base text-gray-12 leading-[1.1]">{eventCount}</span>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="shrink-0 border-t border-gray-6 bg-gray-2 px-4 py-3 flex items-center justify-end gap-2">
-          {isActive ? (
+          {!isCreate && (isActive ? (
             <Button
               type="button"
               onClick={() => setShowDeactivateModal(true)}
@@ -870,14 +883,16 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated }: Organiz
             >
               {reactivating ? "Reativando..." : "Reativar organização"}
             </Button>
-          )}
+          ))}
           <Button
             type="button"
             onClick={() => void handleSave()}
             disabled={saving || deactivating || reactivating}
             className="disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "Salvando..." : "Salvar alterações"}
+            {saving
+              ? (isCreate ? "Criando..." : "Salvando...")
+              : (isCreate ? "Criar organização" : "Salvar alterações")}
           </Button>
         </div>
         <DeactivateOrgModal

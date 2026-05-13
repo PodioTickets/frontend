@@ -180,11 +180,13 @@ export function OrderSummary({
             </div>
           )}
 
-          {/* Taxa de serviço */}
-          <div className="flex items-center justify-between text-base text-gray-12">
-            <p className="font-manrope font-semibold">Taxa de serviço:</p>
-            <p className="font-manrope font-bold">{formatPrice(serviceFee)}</p>
-          </div>
+          {/* Taxa de serviço — só renderiza quando > 0 */}
+          {serviceFee > 0 && (
+            <div className="flex items-center justify-between text-base text-gray-12">
+              <p className="font-manrope font-semibold">Taxa de serviço:</p>
+              <p className="font-manrope font-bold">{formatPrice(serviceFee)}</p>
+            </div>
+          )}
 
           {/* Subtotal */}
           <div className="flex items-center justify-between text-base text-gray-12">

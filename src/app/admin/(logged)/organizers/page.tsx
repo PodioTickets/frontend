@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { cn } from "@/utils/cn";
@@ -144,6 +144,7 @@ export default function AdminOrganizersPage() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<AdminAuditOrganization | null>(null);
+  const [drawerMode, setDrawerMode] = useState<"create" | "edit">("edit");
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -195,6 +196,13 @@ export default function AdminOrganizersPage() {
 
   const openDrawer = (org: AdminAuditOrganization) => {
     setSelectedOrg(org);
+    setDrawerMode("edit");
+    setDrawerOpen(true);
+  };
+
+  const openCreateDrawer = () => {
+    setSelectedOrg(null);
+    setDrawerMode("create");
     setDrawerOpen(true);
   };
 
@@ -204,19 +212,30 @@ export default function AdminOrganizersPage() {
         isOpen={drawerOpen}
         onClose={() => { setDrawerOpen(false); setSelectedOrg(null); }}
         org={selectedOrg}
+        mode={drawerMode}
         onUpdated={() =>
           queryClient.invalidateQueries({ queryKey: queryKeys.admin.organizations.all() })
         }
       />
       <div className="max-w-[1222px] mx-auto w-full">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-gray-12 tracking-tight text-2xl font-extrabold font-manrope leading-[1.1]">
-            Organizadores
-          </h1>
-          <p className="mt-1 text-gray-11 font-family-dm-sans leading-[1.3] text-sm">
-            Gerencie as organizações cadastradas na plataforma
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-gray-12 tracking-tight text-2xl font-extrabold font-manrope leading-[1.1]">
+              Organizadores
+            </h1>
+            <p className="mt-1 text-gray-11 font-family-dm-sans leading-[1.3] text-sm">
+              Gerencie as organizações cadastradas na plataforma
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={openCreateDrawer}
+            className="shrink-0"
+          >
+            <Plus className="size-4" />
+            Criar organização
+          </Button>
         </div>
 
         {/* Filters */}

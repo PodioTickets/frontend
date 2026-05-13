@@ -11,6 +11,7 @@ import { FlagIcon } from "@/components/Icons/FlagIcon";
 import {
   Plus,
   Calendar,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -35,6 +36,17 @@ import { ArrowButton } from "@/components/ArrowButton";
 function isEventSuspended(event: { status?: string }) {
   return event.status === "SUSPENDED";
 }
+
+/** Opções do filtro de status — usadas no dropdown mobile. */
+const STATUS_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "DRAFT", label: "Rascunhos" },
+  { value: "PUBLISHED", label: "Publicados" },
+  { value: "REVISION", label: "Em revisão" },
+  { value: "SUSPENDED", label: "Suspensos" },
+  { value: "COMPLETED", label: "Concluídos" },
+  { value: "CANCELLED", label: "Cancelados" },
+];
 
 export default function OrganizerEventsPage() {
   const router = useRouter();
@@ -61,9 +73,21 @@ export default function OrganizerEventsPage() {
     totalPages: 1,
   });
   const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
+  const [mobileMenuOpenForId, setMobileMenuOpenForId] = useState<string | null>(null);
+  const [statusFilterOpen, setStatusFilterOpen] = useState(false);
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspendModalEvent, setSuspendModalEvent] = useState<any>(null);
   const [resumeModalEvent, setResumeModalEvent] = useState<any>(null);
+
+  const currentStatusLabel =
+    STATUS_FILTER_OPTIONS.find((o) => o.value === statusFilter)?.label ??
+    "Todos";
+
+  const formatCurrencyBRL = (cents: number) =>
+    `R$ ${(cents / 100).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
 
   useEffect(() => {
     // Aguarda a verificação de autenticação terminar
@@ -239,10 +263,10 @@ export default function OrganizerEventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-2 py-8 px-6">
+    <div className="min-h-screen bg-gray-2 pt-6 md:pt-8 pb-8 px-4 md:px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        {/* Header — Desktop */}
+        <div className="hidden md:flex mb-8 items-center justify-between">
           <div className="flex items-center gap-3">
             <FlagIcon className="size-6 text-gray-12" />
             <h1 className="text-2xl font-extrabold text-gray-12 font-family-dm-sans">
@@ -258,9 +282,72 @@ export default function OrganizerEventsPage() {
           )}
         </div>
 
-        {/* Events Table */}
+        {/* Header — Mobile */}
+        <div className="md:hidden mb-6 flex flex-col gap-6">
+          <div className="flex flex-col gap-3 py-5">
+            <h1 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
+              Meus eventos
+            </h1>
+            <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
+              Gerencie todos os projetos e pagamentos deste evento
+            </p>
+          </div>
+          {canCreateEvent && (
+            <Link href="/organizer/events/new?reset=1" className="w-full">
+              <Button className="w-full h-11">
+                <Plus className="size-5" />
+                Criar novo evento
+              </Button>
+            </Link>
+          )}
+        </div>
+
+        {/* Status filter — Mobile */}
+        <div className="md:hidden mb-6">
+          <Popover open={statusFilterOpen} onOpenChange={setStatusFilterOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="h-10 min-w-[147px] inline-flex items-center justify-between gap-2 px-3 py-4 rounded-lg border border-gray-7 bg-transparent text-sm font-family-dm-sans text-gray-11"
+              >
+                <span>Status: {currentStatusLabel}</span>
+                <ChevronDown className="size-4 text-gray-11 shrink-0" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              sideOffset={6}
+              className="w-56 p-1 border-gray-6 bg-gray-1 shadow-lg"
+            >
+              <div className="flex flex-col gap-0.5">
+                {STATUS_FILTER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter(opt.value);
+                      // Reseta paginação ao trocar de filtro p/ evitar página vazia.
+                      setPagination((prev) => ({ ...prev, page: 1 }));
+                      setStatusFilterOpen(false);
+                    }}
+                    className={cn(
+                      "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors hover:bg-gray-3",
+                      statusFilter === opt.value
+                        ? "text-gray-12 font-semibold bg-gray-2"
+                        : "text-gray-12"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Events */}
         {filteredEvents.length === 0 ? (
-          <div className="bg-gray-1 rounded-lg p-12 border border-gray-6 text-center">
+          <div className="bg-gray-1 rounded-lg p-8 md:p-12 border border-gray-6 text-center">
             <Calendar className="size-12 text-gray-11 mx-auto mb-4" />
             <p className="text-gray-11 mb-4">
               {searchTerm
@@ -278,10 +365,10 @@ export default function OrganizerEventsPage() {
           </div>
         ) : (
           <>
-            <h2 className="text-lg font-semibold text-gray-12 mb-4 font-family-dm-sans">
+            <h2 className="hidden md:block text-lg font-semibold text-gray-12 mb-4 font-family-dm-sans">
               Lista de eventos
             </h2>
-            <div className="bg-gray-1 rounded-lg border border-gray-6 overflow-hidden">
+            <div className="hidden md:block bg-gray-1 rounded-lg border border-gray-6 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-3 border-b border-gray-6">
@@ -494,10 +581,236 @@ export default function OrganizerEventsPage() {
                 </table>
               </div>
             </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden flex flex-col gap-3">
+              {filteredEvents.map((event) => {
+                const statusBadge = getStatusBadge(event);
+                const registrations = getEventRegistrations(event);
+                const isCreationDraft = event.status === "DRAFT";
+                const isRevision = event.status === "REVISION";
+                const hasSecondaryMenu =
+                  canViewDashboard ||
+                  canViewFinancial ||
+                  canViewCoupons ||
+                  canViewPixel ||
+                  canViewNotification ||
+                  canEditEvent;
+
+                return (
+                  <div
+                    key={event.id}
+                    className="bg-gray-1 border border-gray-6 rounded-lg px-3 py-4 flex flex-col gap-5"
+                  >
+                    {/* Image + name */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-11 rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
+                        <ImageWithInitialFallback
+                          src={event.bannerUrl}
+                          alt={event.name}
+                          name={event.name}
+                          fallbackId={event.id}
+                          fill
+                          sizes="44px"
+                          className="size-full border-transparent border-0"
+                          letterClassName="text-sm font-semibold"
+                        />
+                      </div>
+                      <span className="text-base font-medium text-gray-12 font-family-dm-sans truncate min-w-0">
+                        {event.name}
+                      </span>
+                    </div>
+
+                    {/* Status tag */}
+                    <span
+                      className={cn(
+                        "self-start px-3 py-2 rounded text-sm font-family-dm-sans",
+                        statusBadge.className
+                      )}
+                    >
+                      {statusBadge.label}
+                    </span>
+
+                    {/* Stats: Inscritos | Vendas */}
+                    <div className="flex items-start w-full">
+                      <div className="flex-1 min-w-0 flex flex-col gap-3 items-start justify-center">
+                        <p className="text-sm text-gray-11 font-family-dm-sans">
+                          Inscritos
+                        </p>
+                        <p className="text-base font-extrabold text-gray-12 font-manrope truncate w-full">
+                          {registrations}
+                        </p>
+                      </div>
+                      <div className="self-stretch w-px bg-gray-6" />
+                      <div className="flex-1 min-w-0 flex flex-col gap-3 items-start justify-center pl-4">
+                        <p className="text-sm text-gray-11 font-family-dm-sans">
+                          Vendas
+                        </p>
+                        <p className="text-base font-extrabold text-gray-12 font-manrope truncate w-full">
+                          {formatCurrencyBRL(event.totalSales || 0)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px w-full bg-gray-6" />
+
+                    {/* Actions */}
+                    {isCreationDraft ? (
+                      canCreateEvent ? (
+                        <Link
+                          href={`/organizer/events/new?resume=${event.id}`}
+                          className="w-full"
+                        >
+                          <Button
+                            variant="outline"
+                            className="w-full h-11 border-gray-6 text-gray-12 font-manrope"
+                          >
+                            Continuar criação
+                          </Button>
+                        </Link>
+                      ) : null
+                    ) : isRevision ? null : (
+                      <div className="flex gap-2 w-full">
+                        {hasSecondaryMenu && (
+                          <Popover
+                            open={mobileMenuOpenForId === event.id}
+                            onOpenChange={(open) =>
+                              setMobileMenuOpenForId(open ? event.id : null)
+                            }
+                          >
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex-1 h-11 px-5 rounded-lg border border-gray-6 flex items-center justify-center font-manrope text-base font-bold text-gray-12 hover:bg-gray-2 transition-colors"
+                              >
+                                Mais opções
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="start"
+                              sideOffset={6}
+                              className="w-[calc(100vw-2rem)] max-w-72 p-1 border-gray-6 bg-gray-1 shadow-lg"
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                {canViewDashboard && (
+                                  <Link
+                                    href={`/organizer/events/${event.id}/dashboard`}
+                                    onClick={() => setMobileMenuOpenForId(null)}
+                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                  >
+                                    <DashboardIcon className="size-4 text-gray-11" />
+                                    Dashboard
+                                  </Link>
+                                )}
+                                <Link
+                                  href={`/organizer/events/${event.id}/registrations`}
+                                  onClick={() => setMobileMenuOpenForId(null)}
+                                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                >
+                                  <UsersIcon className="size-4 text-gray-11" />
+                                  Inscritos
+                                </Link>
+                                {canViewFinancial && (
+                                  <Link
+                                    href={`/organizer/events/${event.id}/financial`}
+                                    onClick={() => setMobileMenuOpenForId(null)}
+                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                  >
+                                    <MoneyIcon className="size-4 text-gray-11" />
+                                    Financeiro
+                                  </Link>
+                                )}
+                                {canViewCoupons && (
+                                  <Link
+                                    href={`/organizer/events/${event.id}/discount/cupom`}
+                                    onClick={() => setMobileMenuOpenForId(null)}
+                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                  >
+                                    Cupom
+                                  </Link>
+                                )}
+                                {canViewCoupons && (
+                                  <Link
+                                    href={`/organizer/events/${event.id}/discount/voucher`}
+                                    onClick={() => setMobileMenuOpenForId(null)}
+                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                  >
+                                    Voucher
+                                  </Link>
+                                )}
+                                {canViewPixel && (
+                                  <Link
+                                    href={`/organizer/events/${event.id}/ads`}
+                                    onClick={() => setMobileMenuOpenForId(null)}
+                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                  >
+                                    ADS
+                                  </Link>
+                                )}
+                                {canViewNotification && (
+                                  <Link
+                                    href={`/organizer/events/${event.id}/notifications`}
+                                    onClick={() => setMobileMenuOpenForId(null)}
+                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                  >
+                                    Notificação
+                                  </Link>
+                                )}
+                                {canEditEvent && (
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      suspendingId === event.id ||
+                                      (isEventSuspended(event)
+                                        ? event.status !== "SUSPENDED"
+                                        : event.status !== "PUBLISHED")
+                                    }
+                                    onClick={() => {
+                                      setMobileMenuOpenForId(null);
+                                      isEventSuspended(event)
+                                        ? openResumeModal(event)
+                                        : openSuspendModal(event);
+                                    }}
+                                    className={cn(
+                                      "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
+                                      "hover:bg-gray-3 text-gray-12",
+                                      "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                    )}
+                                  >
+                                    {isEventSuspended(event)
+                                      ? "Reativar evento"
+                                      : "Suspender evento"}
+                                  </button>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                        {(canEditEvent || canViewEvent) && (
+                          <Link
+                            href={`/organizer/events/${event.id}/edit`}
+                            className="flex-1"
+                          >
+                            <button
+                              type="button"
+                              className="w-full h-11 px-5 rounded-lg border border-gray-6 flex items-center justify-center gap-2 font-manrope text-base font-bold text-gray-12 hover:bg-gray-2 transition-colors"
+                            >
+                              <PencilIcon className="size-5 text-gray-12" />
+                              {canEditEvent ? "Editar" : "Visualizar"}
+                            </button>
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
 
-        <div className="mt-8 flex items-center justify-center gap-2">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
             onClick={() =>

@@ -158,6 +158,13 @@ export function useUnsavedLeaveGuard(
 
   const confirmLeaveWithoutSaving = useCallback(() => {
     void (async () => {
+      // CRÍTICO: marcar como "saindo" ANTES do await/discard. Sem isso, quando
+      // `onDiscard` zera o state e dispara re-render, o useEffect que observa
+      // `isDirty` (já `false`) chama `history.back()` pra remover o guard —
+      // que então corre contra o `orgNav.push(dest)` do `navigateWithoutGuard`
+      // logo a seguir, desfazendo a navegação. Sintoma: usuário precisa
+      // clicar 2x em "Sair sem salvar".
+      isNavigatingAwayRef.current = true;
       setLeavePromptOpen(false);
       await Promise.resolve(onDiscard());
       navigateWithoutGuard();
@@ -174,6 +181,10 @@ export function useUnsavedLeaveGuard(
   }, [isDirty, navigateTarget, orgNav]);
 
   const beginNavigationAfterSave = useCallback(() => {
+    // Defensivo: mesmo problema do `confirmLeaveWithoutSaving` — o save
+    // atualiza `committedSectionsJson` o que torna `isDirty=false` e dispara
+    // `history.back()` no useEffect. Marcar antes do push evita a race.
+    isNavigatingAwayRef.current = true;
     setLeavePromptOpen(false);
     navigateWithoutGuard();
   }, [navigateWithoutGuard]);

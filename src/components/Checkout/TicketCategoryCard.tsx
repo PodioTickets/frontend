@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { ArrowButton } from "../ArrowButton";
-import { DistanceIcon } from "../Icons/DistanceIcon";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { Minus, Plus } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
@@ -80,7 +79,6 @@ const TicketItemMobile = memo(({
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [currentMainImageIndex, setCurrentMainImageIndex] = useState(0);
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
@@ -97,26 +95,12 @@ const TicketItemMobile = memo(({
     [ticket, kitSelectionDisplay.primaryKitProductByTicketId, showProductImages],
   );
 
-  useEffect(() => {
-    if (productItems.length === 0) {
-      setCurrentMainImageIndex(0);
-      return;
-    }
-    setCurrentMainImageIndex((i) => Math.min(i, productItems.length - 1));
-  }, [productItems.length]);
-
-  const currentProduct = productItems[currentMainImageIndex];
-
-  // Janela de 3 thumbnails após o item atual (circular)
-  const visibleThumbnails = useMemo(() => {
-    if (productItems.length <= 1) return [];
-    const result: Array<{ item: typeof productItems[0]; idx: number }> = [];
-    for (let i = 1; i < productItems.length && result.length < 3; i++) {
-      const idx = (currentMainImageIndex + i) % productItems.length;
-      result.push({ item: productItems[idx], idx });
-    }
-    return result;
-  }, [productItems, currentMainImageIndex]);
+  // ON_TICKETS mobile: 1 imagem principal + 2x2 thumbs. A 5ª recebe overlay
+  // escuro com "+N" quando há mais imagens (N = total - 5).
+  const VISIBLE_THUMB_COUNT = 4;
+  const mainImage = productItems[0];
+  const thumbnails = productItems.slice(1, 1 + VISIBLE_THUMB_COUNT);
+  const remainingCount = Math.max(0, productItems.length - (1 + VISIBLE_THUMB_COUNT));
 
   const maxQuantity = ticket.availableQuantity ?? Infinity;
   const isAtMax = quantity >= maxQuantity || totalQuantity >= 20;
@@ -136,84 +120,83 @@ const TicketItemMobile = memo(({
     setIsImageModalOpen(true);
   };
 
-  const handlePreviousImage = () => {
-    setCurrentMainImageIndex((prev) =>
-      prev === 0 ? productItems.length - 1 : prev - 1
-    );
-  };
-
-  const handleNextImage = () => {
-    setCurrentMainImageIndex((prev) =>
-      prev === productItems.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const handleThumbnailClick = (index: number) => {
-    setCurrentMainImageIndex(index);
-    handleImageClick(index);
-  };
-
   return (
     <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
       {productItems.length > 0 && (
-        <div className="flex gap-3 items-center w-full justify-start">
+        <div className="flex gap-3 items-start w-full">
+          {/* Imagem principal */}
           <button
-            onClick={() => handleImageClick(currentMainImageIndex)}
-            className="w-[136px] h-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+            type="button"
+            onClick={() => handleImageClick(0)}
+            className="size-[136px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+            aria-label="Ver imagem em destaque"
           >
-            {currentProduct ? (
+            {mainImage ? (
               <ImageWithInitialFallback
-                src={currentProduct.src}
+                src={mainImage.src}
                 alt={ticket.name}
-                name={currentProduct.name}
-                fallbackId={currentProduct.id}
+                name={mainImage.name}
+                fallbackId={mainImage.id}
                 fill
-                sizes="(max-width: 768px) 50vw, 136px"
+                sizes="136px"
                 className="size-full border-0"
                 letterClassName="text-3xl"
               />
             ) : null}
           </button>
-          {productItems.length > 1 && (
-            <div className="flex flex-col items-center justify-between self-stretch">
-              <button
-                onClick={handlePreviousImage}
-                className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                aria-label="Imagem anterior"
-              >
-                <div className="-rotate-90">
-                  <ArrowButton isOpen={true} />
-                </div>
-              </button>
-              <div className="flex flex-col gap-1">
-                {visibleThumbnails.map(({ item, idx: originalIndex }) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleThumbnailClick(originalIndex)}
-                    className={`w-9 h-9 relative rounded border overflow-hidden shrink-0 cursor-pointer hover:opacity-90 transition-opacity ${originalIndex === currentMainImageIndex ? "border-primary-11" : "border-gray-6"}`}
-                  >
-                    <ImageWithInitialFallback
-                      src={item.src}
-                      alt={item.name}
-                      name={item.name}
-                      fallbackId={item.id}
-                      fill
-                      sizes="36px"
-                      className="size-full border-0"
-                      letterClassName="text-sm"
-                    />
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={handleNextImage}
-                className="w-[18px] h-8 flex items-center justify-center shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
-                aria-label="Próxima imagem"
-              >
-                <div className="rotate-90">
-                  <ArrowButton isOpen={true} />
-                </div>
-              </button>
+
+          {/* 2 colunas de thumbs (até 2 cada). Cada coluna tem 136px de altura
+              p/ alinhar com a imagem principal — 2 thumbs de 64px + gap 8. */}
+          {thumbnails.length > 0 && (
+            <div className="flex gap-3 items-start">
+              {[0, 1].map((colIdx) => {
+                const colItems = thumbnails.slice(colIdx * 2, colIdx * 2 + 2);
+                if (colItems.length === 0) return null;
+                return (
+                  <div key={colIdx} className="flex flex-col gap-2 h-[136px]">
+                    {colItems.map((item, rowIdx) => {
+                      const thumbIndex = colIdx * 2 + rowIdx;
+                      // 1-based: thumbnails[i] é productItems[i + 1].
+                      const productIndex = thumbIndex + 1;
+                      const isLastVisible =
+                        colIdx === 1 && rowIdx === colItems.length - 1;
+                      const showOverlay = isLastVisible && remainingCount > 0;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleImageClick(productIndex)}
+                          className="size-[64px] relative shrink-0 rounded-lg border border-gray-6 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                          aria-label={
+                            showOverlay
+                              ? `Ver mais ${remainingCount} imagens`
+                              : "Ver imagem"
+                          }
+                        >
+                          <ImageWithInitialFallback
+                            src={item.src}
+                            alt={item.name}
+                            name={item.name}
+                            fallbackId={item.id}
+                            fill
+                            sizes="64px"
+                            className="size-full border-0"
+                            letterClassName="text-base"
+                          />
+                          {showOverlay && (
+                            <div className="absolute inset-0 bg-black/80 rounded-lg flex items-center justify-center gap-0.5">
+                              <Plus className="size-5 text-white" strokeWidth={2.5} />
+                              <span className="text-white text-lg font-extrabold font-manrope leading-[1.1]">
+                                {remainingCount}
+                              </span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -231,27 +214,22 @@ const TicketItemMobile = memo(({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-          <div className="flex flex-wrap gap-4 items-center min-w-0">
-            {distanceKm > 0 && (
-              <div className="flex items-center gap-2">
-                <DistanceIcon className="size-6 shrink-0" />
-                <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                  {distanceKm} {distanceUnit}
-                </p>
-              </div>
-            )}
+          {/* Modalidade + distância — espelha o desktop: o ícone vem da
+              modality (fallback p/ placeholder cinza) e o texto exibe a
+              distância. Sem `DistanceIcon` separado nem nome da modality. */}
+          <div className="flex items-center gap-8 flex-wrap min-w-0">
             {modalityInfo && (
               <div className="flex items-center gap-2">
                 {modalityInfo.icon ? (
-                  <div className="size-6 shrink-0 relative rounded overflow-hidden bg-gray-3 flex items-center justify-center">
+                  <div className="size-6 shrink-0 relative rounded overflow-hidden flex items-center justify-center">
                     <ImageWithInitialFallback
                       src={modalityInfo.icon}
                       alt={modalityInfo.name}
                       name={modalityInfo.name}
                       width={24}
                       height={24}
-                      className="size-6 border-0"
-                      imgClassName="object-contain"
+                      className="size-6 bg-transparent border-0"
+                      imgClassName="object-contain bg-transparent border-0"
                       letterClassName="text-[10px]"
                       nativeImg
                     />
@@ -260,7 +238,7 @@ const TicketItemMobile = memo(({
                   <div className="size-6 shrink-0 rounded bg-gray-4" aria-hidden />
                 )}
                 <p className="text-lg font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                  {modalityInfo.name}
+                  {distanceKm} {distanceUnit}
                 </p>
               </div>
             )}

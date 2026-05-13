@@ -1,7 +1,6 @@
-"use client";
+ "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import {
@@ -136,11 +135,13 @@ export function CategoryKitHorizontalCarousel({
                     className={cn(
                       "relative shrink-0 overflow-hidden rounded-lg border bg-gray-2 transition-all duration-300 ease-out",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8",
+                      // Mobile: 60×60 pra caber 5 itens visíveis (343-32 gaps = 311 ÷ 5 ≈ 62).
+                      // Desktop: 112×112 original.
+                      "size-[60px] md:size-[112px]",
                       isCenter
                         ? "z-10 border-primary-8 scale-110"
                         : "border-gray-5 scale-90 hover:border-gray-7"
                     )}
-                    style={{ width: 112, height: 112 }}
                     aria-label={`${item.name}.${isCenter ? " Selecionada. Ver em tamanho maior." : ""}`}
                     aria-current={isCenter ? "true" : undefined}
                   >
@@ -149,8 +150,8 @@ export function CategoryKitHorizontalCarousel({
                       alt={item.name}
                       name={item.name}
                       fill
-                      sizes="112px"
-                      className="object-cover size-[112px] border-0 rounded-lg"
+                      sizes="(max-width: 768px) 60px, 112px"
+                      className="object-cover size-full border-0 rounded-lg"
                     />
                   </button>
                 );

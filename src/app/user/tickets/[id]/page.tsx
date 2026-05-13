@@ -12,8 +12,6 @@ import { ClockIcon } from "@/components/Icons/ClockIcon";
 import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
-import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
-import { Pencil } from "lucide-react";
 import { ProductVariationCard, type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
 
 export default function TicketDetailsPage() {
@@ -580,9 +578,13 @@ export default function TicketDetailsPage() {
                   <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
                     {payment.method === "CREDIT_CARD"
                       ? "Cartão de crédito"
-                      : payment.method === "PIX"
-                        ? "PIX"
-                        : payment.method || "N/A"}
+                      : payment.method === "DEBIT_CARD"
+                        ? "Cartão de débito"
+                        : payment.method === "PIX"
+                          ? "PIX"
+                          : payment.method === "BOLETO"
+                            ? "Boleto"
+                            : payment.method || "N/A"}
                   </p>
                 </div>
 

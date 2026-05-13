@@ -213,10 +213,83 @@ export function useThreeDS() {
         // Retry automático se o erro for "Cardinal is not defined" — na 2ª
         // tentativa o Cardinal já está em memória.
         let cardinalRetried = false;
+
+        // Detector de cancelamento por remoção do iframe do challenge.
+        // Por que: BP MPI (especialmente no sandbox) nem sempre dispara
+        // onFailure/onError quando o usuário clica em "Cancelar" no popup
+        // do banco — o iframe é removido do DOM sem callback, então a
+        // Promise ficaria pendurada até o timeout de 5min ("loading
+        // infinito"). Aqui rastreamos o iframe visível criado pelo SDK e,
+        // ao ser removido sem que tenhamos settled, tratamos como cancel.
+        let challengeIframe: HTMLIFrameElement | null = null;
+        const CHALLENGE_MIN_SIZE = 200; // px; descarta o collector invisível.
+        const CANCEL_GRACE_MS = 600;    // tempo p/ callback do SDK chegar antes.
+
+        const cancelObserver = new MutationObserver((mutations) => {
+          if (settled) return;
+          for (const mut of mutations) {
+            // Detecta o iframe do challenge sendo adicionado.
+            if (!challengeIframe) {
+              for (const node of Array.from(mut.addedNodes)) {
+                const candidates: HTMLIFrameElement[] = [];
+                if (node instanceof HTMLIFrameElement) candidates.push(node);
+                else if (node instanceof Element) {
+                  candidates.push(
+                    ...Array.from(node.querySelectorAll("iframe")),
+                  );
+                }
+                for (const iframe of candidates) {
+                  const rect = iframe.getBoundingClientRect();
+                  if (
+                    rect.width >= CHALLENGE_MIN_SIZE &&
+                    rect.height >= CHALLENGE_MIN_SIZE
+                  ) {
+                    challengeIframe = iframe;
+                    if (!IS_PROD) console.warn("[3DS] challenge iframe detectado");
+                    break;
+                  }
+                }
+                if (challengeIframe) break;
+              }
+            }
+            // Detecta remoção do challenge iframe → trata como cancelamento.
+            if (challengeIframe) {
+              for (const node of Array.from(mut.removedNodes)) {
+                const removed =
+                  node === challengeIframe ||
+                  (node instanceof Element &&
+                    node.contains(challengeIframe));
+                if (!removed) continue;
+                if (!IS_PROD) console.warn("[3DS] challenge iframe removido");
+                // Grace pra esperar onFailure/onError do SDK; se não vier,
+                // rejeita como cancelamento do usuário.
+                setTimeout(() => {
+                  if (settled) return;
+                  finish(() =>
+                    reject(
+                      new ThreeDSError(
+                        "FAILURE",
+                        "Pagamento cancelado pelo usuário",
+                        "USER_CANCEL",
+                      ),
+                    ),
+                  );
+                }, CANCEL_GRACE_MS);
+                return;
+              }
+            }
+          }
+        });
+        cancelObserver.observe(document.body, {
+          childList: true,
+          subtree: true,
+        });
+
         const finish = (cb: () => void) => {
           if (settled) return;
           settled = true;
           clearTimeout(timeoutId);
+          cancelObserver.disconnect();
           cb();
         };
         const timeoutId = setTimeout(() => {

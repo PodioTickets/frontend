@@ -210,7 +210,6 @@ export function Header() {
             />
           </div>
           <div className="hidden md:flex items-center h-[50px] gap-2">
-            <LanguageToggle className="h-[44px]" />
 
             {isAuthenticated && user ? (
               <Dropdown
@@ -416,12 +415,6 @@ export function Header() {
                           Sair
                         </span>
                       </button>
-
-                      <div className="p-4">
-                        <MobileLanguageToggle
-                          onClose={() => setMobileMenuOpen(false)}
-                        />
-                      </div>
                     </>
                   ) : (
                     <div className="flex flex-col gap-2 p-4">

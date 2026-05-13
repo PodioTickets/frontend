@@ -315,15 +315,17 @@ export function PaymentSuccessStep({
                       </p>
                     </div>
 
-                    {/* Service Fee */}
-                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
-                      <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                        Taxa de serviço:
-                      </p>
-                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
-                        {formatCurrency(serviceFee)}
-                      </p>
-                    </div>
+                    {/* Service Fee — oculto quando 0 */}
+                    {serviceFee > 0 && (
+                      <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                        <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                          Taxa de serviço:
+                        </p>
+                        <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
+                          {formatCurrency(serviceFee)}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Coupon Discount */}
                     {couponDiscount > 0 && (
@@ -846,15 +848,17 @@ export function PaymentSuccessStep({
                       </p>
                     </div>
 
-                    {/* Service Fee */}
-                    <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
-                      <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        Taxa de serviço:
-                      </p>
-                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        {formatCurrency(serviceFee)}
-                      </p>
-                    </div>
+                    {/* Service Fee — oculto quando 0 */}
+                    {serviceFee > 0 && (
+                      <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
+                        <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          Taxa de serviço:
+                        </p>
+                        <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                          {formatCurrency(serviceFee)}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Coupon Discount */}
                     {couponDiscount > 0 && (
