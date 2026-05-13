@@ -206,7 +206,7 @@ export default function OrganizerForgotPasswordPage() {
                       <Input
                         type="email"
                         autoComplete="email"
-                        placeholder="Seu@email.com"
+                        placeholder="seu@email.com"
                         value={email}
                         onChange={(e) => handleEmailChange(e.target.value)}
                         className={`pl-10 h-12 w-full ${errors.email ? "border-red-11" : ""}`}

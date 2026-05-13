@@ -72,7 +72,7 @@ function ForgotPasswordPanel({
                 id="forgot-password-email"
                 type="email"
                 autoComplete="email"
-                placeholder="Seu@email.com"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => onEmailChange(e.target.value)}
                 className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
