@@ -699,9 +699,18 @@ export function LoginModal() {
           }
         });
         setResetPasswordFieldErrors(next);
-        const first = error.issues[0];
-        if (first?.message) toast.error(first.message);
         return;
+      }
+      // Erro de API
+      const err = error as any;
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Erro ao redefinir senha. Tente novamente.";
+      if (msg.toLowerCase().includes("igual")) {
+        setResetPasswordFieldErrors({ password: msg });
+      } else {
+        toast.error(msg);
       }
     }
   };
