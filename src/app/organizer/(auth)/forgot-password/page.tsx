@@ -107,15 +107,17 @@ export default function OrganizerForgotPasswordPage() {
           if (!next[key]) next[key] = issue.message;
         });
         setErrors(next);
-        const first = error.issues[0];
-        if (first?.message) toast.error(first.message);
         return;
       }
       // Erro de API (token expirado, senha inválida, etc.)
       const err = error as any;
       const msg = err?.response?.data?.message || err?.message || "Erro ao redefinir senha. Tente novamente.";
-      toast.error(msg);
-      setErrors({ password: msg });
+      if (msg.toLowerCase().includes("igual")) {
+        setErrors({ password: msg });
+      } else {
+        toast.error(msg);
+        setErrors({ password: msg });
+      }
     }
   };
 

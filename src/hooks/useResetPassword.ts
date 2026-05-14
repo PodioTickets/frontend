@@ -36,14 +36,6 @@ export function useResetPassword(): UseResetPasswordReturn {
       const m = pickResetSuccessMessage(res);
       toast.success(m ?? RESET_SUCCESS_FALLBACK);
     },
-    onError: (error: any) => {
-      console.error("Error resetting password:", error);
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Não foi possível redefinir a senha. Verifique o link ou solicite um novo e-mail.";
-      toast.error(errorMessage);
-    },
   });
 
   return {
