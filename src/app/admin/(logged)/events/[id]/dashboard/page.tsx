@@ -29,7 +29,7 @@ import { CheckIcon } from "@/components/Icons/Organizer/CheckIcon";
 import { DolarIcon } from "@/components/Icons/Organizer/DolarIcon";
 import { BestSellingVariations } from "@/components/Organizer/BestSellingVariations";
 import { QuestionsListing } from "@/components/Organizer/QuestionsListing";
-import { QuestionDetailsDrawer } from "@/components/Organizer/QuestionDetailsDrawer";
+import { QuestionDetailsDrawer, type TextAnswerRow } from "@/components/Organizer/QuestionDetailsDrawer";
 import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawer";
 import type { Question } from "@/interfaces/event";
 import type { BestSellingVariationItem } from "@/components/Organizer/BestSellingVariations";
@@ -196,6 +196,8 @@ export default function EventDashboardPage() {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
+  const [textAnswerRows, setTextAnswerRows] = useState<TextAnswerRow[] | undefined>(undefined);
+  const [textAnswersLoading, setTextAnswersLoading] = useState(false);
   const [lotsNearDepletionPage, setLotsNearDepletionPage] = useState(1);
   const [ticketRankingPage, setTicketRankingPage] = useState(1);
   const { tickets } = useTickets(eventId, true);
@@ -734,6 +736,46 @@ export default function EventDashboardPage() {
     return sortedQuestions.find((q) => q.id === selectedQuestionId) ?? null;
   }, [selectedQuestionId, selectedQuestionFromApi, sortedQuestions]);
 
+  // Lazy fetch: text answers only when a text/number question drawer is opened
+  useEffect(() => {
+    if (!selectedQuestionId) {
+      setTextAnswerRows(undefined);
+      return;
+    }
+    const qType = selectedQuestion?.type;
+    if (qType !== "text" && qType !== "number") {
+      setTextAnswerRows(undefined);
+      return;
+    }
+    let cancelled = false;
+    setTextAnswerRows(undefined);
+    setTextAnswersLoading(true);
+    organizerService
+      .getQuestionTextAnswers(eventId, selectedQuestionId)
+      .then((res) => {
+        if (cancelled) return;
+        setTextAnswerRows(
+          res.answers.map((a) => ({
+            id: a.id,
+            userName: a.userName ?? "Participante",
+            userEmail: a.userEmail ?? undefined,
+            userAvatarUrl: a.userAvatarUrl ?? undefined,
+            answer: a.answer,
+            answeredAt: a.answeredAt,
+          }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setTextAnswerRows([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTextAnswersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedQuestionId, selectedQuestion?.type, eventId]);
+
   const selectedQuestionAnswerRows = useMemo((): { label: string; percentage: number; count: number }[] | undefined => {
     if (!selectedQuestionFromApi?.answersRanking?.length) return undefined;
     return selectedQuestionFromApi.answersRanking.map((a) => ({
@@ -1050,6 +1092,8 @@ export default function EventDashboardPage() {
           questionIndex={selectedQuestionIndex}
           totalQuestions={totalQuestions}
           answerRows={selectedQuestionAnswerRows}
+          textAnswerRows={textAnswerRows}
+          textAnswersLoading={textAnswersLoading}
           totalParticipants={selectedQuestionFromApi?.participantCount ?? 0}
           responseRate={
             dashboardData.totalRegistrations > 0 && selectedQuestionFromApi

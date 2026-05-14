@@ -75,7 +75,9 @@ export function ChangePasswordModal() {
       console.error("Error changing password:", error);
       const message: string = error?.message || "Erro ao alterar senha. Verifique os dados e tente novamente.";
 
-      if (message.toLowerCase().includes("senha atual")) {
+      if (message.toLowerCase().includes("igual")) {
+        setErrors((prev) => ({ ...prev, newPassword: message }));
+      } else if (message.toLowerCase().includes("senha atual")) {
         setErrors((prev) => ({ ...prev, currentPassword: message }));
       } else {
         toast.error(message);
