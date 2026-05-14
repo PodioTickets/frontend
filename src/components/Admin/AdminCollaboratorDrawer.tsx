@@ -202,7 +202,17 @@ export function AdminCollaboratorDrawer({
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? err?.message ?? "Não foi possível criar o colaborador.");
+      const apiMsg: string = err?.response?.data?.message ?? "";
+      // "Este usuário já está em uma organização." / "Usuário já existe na
+      // organização." → erro de validação no input de e-mail, em vez de toast.
+      const isEmailConflict =
+        /j[áa]\s+est[áa].*organiza[çc][ãa]o/i.test(apiMsg) ||
+        /j[áa]\s+existe.*organiza[çc][ãa]o/i.test(apiMsg);
+      if (isEmailConflict) {
+        setFieldErrors({ email: apiMsg });
+      } else {
+        toast.error(apiMsg || err?.message || "Não foi possível criar o colaborador.");
+      }
     } finally {
       setSaving(false);
     }

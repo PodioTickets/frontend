@@ -486,11 +486,23 @@ export function CollaboratorDrawer({
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message ||
-        err?.message ||
-        "Não foi possível criar o colaborador."
-      );
+      const apiMsg: string = err?.response?.data?.message ?? "";
+      // Conflitos de e-mail vindos do backend ("Este usuário já está em uma
+      // organização." / "Usuário já existe na organização.") aparecem como
+      // erro de validação no input de e-mail, não como toast — o usuário
+      // identifica imediatamente qual campo tem problema.
+      const isEmailConflict =
+        /j[áa]\s+est[áa].*organiza[çc][ãa]o/i.test(apiMsg) ||
+        /j[áa]\s+existe.*organiza[çc][ãa]o/i.test(apiMsg);
+      if (isEmailConflict) {
+        setFieldErrors({ email: apiMsg });
+      } else {
+        toast.error(
+          apiMsg ||
+            err?.message ||
+            "Não foi possível criar o colaborador."
+        );
+      }
     } finally {
       setSaving(false);
     }
