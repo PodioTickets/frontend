@@ -109,7 +109,11 @@ export function OrderSummary({
   const voucherDiscount = voucher?.discount ?? 0;
   const voucherName = voucher?.name;
   const [couponCode, setCouponCode] = useState(externalCouponCode);
-  const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({});
+  const [expandedParticipants, setExpandedParticipants] = useState<
+    Record<number, boolean>
+  >({});
+
+  console.log(coupon);
 
   useEffect(() => {
     if (externalCouponCode !== couponCode) {
@@ -145,9 +149,16 @@ export function OrderSummary({
     return labels[gender] || gender;
   };
 
-  const productsSubtotal = items.reduce((sum, item) => sum + item.price / 100, 0);
-  const ticketsSubtotal = groupedTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-  const subtotal = subtotalOverride ?? (ticketsSubtotal + productsSubtotal + serviceFee);
+  const productsSubtotal = items.reduce(
+    (sum, item) => sum + item.price / 100,
+    0,
+  );
+  const ticketsSubtotal = groupedTickets.reduce(
+    (sum, ticket) => sum + ticket.total,
+    0,
+  );
+  const subtotal =
+    subtotalOverride ?? ticketsSubtotal + productsSubtotal + serviceFee;
 
   const toggleParticipant = (index: number) => {
     setExpandedParticipants((prev) => ({
@@ -161,8 +172,9 @@ export function OrderSummary({
       {/* Seção de Valores */}
       <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] p-6">
         <div className="flex flex-col gap-3 pb-6">
-          <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12 mb-2">{event.name}</p>
-
+          <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12 mb-2">
+            {event.name}
+          </p>
 
           {/* Itens adicionais */}
           {items.length > 0 && (
@@ -184,7 +196,9 @@ export function OrderSummary({
           {serviceFee > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">Taxa de serviço:</p>
-              <p className="font-manrope font-bold">{formatPrice(serviceFee)}</p>
+              <p className="font-manrope font-bold">
+                {formatPrice(serviceFee)}
+              </p>
             </div>
           )}
 
@@ -199,15 +213,26 @@ export function OrderSummary({
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">
                 {(() => {
-                  const coveredCount = participantsData.filter(p => p.couponDiscount && p.couponDiscount > 0).length;
-                  return couponValueType === "FIXED" && coveredCount > 1 ? `${coveredCount}x ` : "";
+                  const coveredCount = participantsData.filter(
+                    (p) => p.couponDiscount && p.couponDiscount > 0,
+                  ).length;
+                  return couponValueType === "FIXED" && coveredCount > 1
+                    ? `${coveredCount}x `
+                    : "";
                 })()}
                 {couponType === "QUANTITY" || couponType === "AGE"
                   ? "Cupom automático"
-                  : (couponName ? `Cupom ${couponName}` : "Cupom aplicado")}
-                {couponPercent != null && couponPercent > 0 ? ` (${couponPercent}% OFF)` : ""}:
+                  : couponName
+                    ? `Cupom ${couponName}`
+                    : "Cupom aplicado"}
+                {couponPercent != null && couponPercent > 0
+                  ? ` (${couponPercent}% OFF)`
+                  : ""}
+                :
               </p>
-              <p className="font-manrope font-bold">-{formatPrice(couponDiscount)}</p>
+              <p className="font-manrope font-bold">
+                -{formatPrice(couponDiscount)}
+              </p>
             </div>
           )}
 
@@ -217,7 +242,9 @@ export function OrderSummary({
               <p className="font-manrope font-semibold">
                 {voucherName ? `Voucher ${voucherName}` : "Voucher aplicado"}:
               </p>
-              <p className="font-manrope font-bold">-{formatPrice(voucherDiscount)}</p>
+              <p className="font-manrope font-bold">
+                -{formatPrice(voucherDiscount)}
+              </p>
             </div>
           )}
         </div>
@@ -255,7 +282,9 @@ export function OrderSummary({
               </Button>
             </div>
             {couponError && (
-              <p className="text-sm font-medium text-red-11 mt-2">{couponError}</p>
+              <p className="text-sm font-medium text-red-11 mt-2">
+                {couponError}
+              </p>
             )}
           </div>
         </div>
@@ -273,16 +302,19 @@ export function OrderSummary({
           {/* Lista de Participantes */}
           <div className="flex flex-col gap-4 items-start w-full pb-4">
             {participantsData.map((participantData, index) => {
-              const additionalProductsTotal = participantData.additionalProducts?.reduce(
-                (sum, p) => sum + (p.price / 100) * p.quantity,
-                0
-              ) || 0;
+              const additionalProductsTotal =
+                participantData.additionalProducts?.reduce(
+                  (sum, p) => sum + (p.price / 100) * p.quantity,
+                  0,
+                ) || 0;
 
               return (
                 <div
                   key={index}
                   className={`border border-gray-6 flex flex-col items-start overflow-hidden rounded-xl w-full ${onParticipantClick ? "cursor-pointer hover:bg-gray-3 transition-colors" : ""}`}
-                  onClick={() => onParticipantClick?.(participantData.participantIndex)}
+                  onClick={() =>
+                    onParticipantClick?.(participantData.participantIndex)
+                  }
                 >
                   {/* Conteúdo do Card */}
                   <div className="flex items-center px-4 py-6 w-full">
@@ -309,21 +341,26 @@ export function OrderSummary({
                           {formatPrice(participantData.ticketPrice)}
                         </p>
                       </div>
-                      {participantData.additionalProducts && participantData.additionalProducts.length > 0 && (
-                        <div className="flex items-end justify-between w-full text-gray-12">
-                          <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
-                            Produtos adicionais ({participantData.additionalProducts.length}):
-                          </p>
-                          <p className="font-manrope font-bold text-lg leading-[1.1]">
-                            {formatPrice(additionalProductsTotal)}
-                          </p>
-                        </div>
-                      )}
+                      {participantData.additionalProducts &&
+                        participantData.additionalProducts.length > 0 && (
+                          <div className="flex items-end justify-between w-full text-gray-12">
+                            <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
+                              Produtos adicionais (
+                              {participantData.additionalProducts.length}):
+                            </p>
+                            <p className="font-manrope font-bold text-lg leading-[1.1]">
+                              {formatPrice(additionalProductsTotal)}
+                            </p>
+                          </div>
+                        )}
                     </div>
                   </div>
 
                   {/* Perfil + Badges */}
-                  {(participantData.participant || participantData.couponCode || (isCouponApplied && participantData.couponDiscount) || participantData.voucherCode) && (
+                  {(participantData.participant ||
+                    participantData.couponCode ||
+                    (isCouponApplied && participantData.couponDiscount) ||
+                    participantData.voucherCode) && (
                     <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
                       {participantData.participant && (
                         <div className="flex items-center justify-between w-full gap-2">
@@ -332,7 +369,9 @@ export function OrderSummary({
                               <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
                                 {participantData.participant.name ? (
                                   <span className="text-sm font-bold text-gray-12">
-                                    {participantData.participant.name.charAt(0).toUpperCase()}
+                                    {participantData.participant.name
+                                      .charAt(0)
+                                      .toUpperCase()}
                                   </span>
                                 ) : (
                                   <div className="size-10 rounded-full bg-gray-5" />
@@ -340,13 +379,16 @@ export function OrderSummary({
                               </div>
                               <div className="flex flex-col gap-1 items-start justify-center min-w-0">
                                 <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate w-full">
-                                  {participantData.participant.name || `Participante ${participantData.participantIndex + 1}`}
+                                  {participantData.participant.name ||
+                                    `Participante ${participantData.participantIndex + 1}`}
                                 </p>
                                 <div className="flex gap-1 items-center min-w-0 overflow-hidden">
                                   {participantData.participant.birthDate && (
                                     <>
                                       <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
-                                        {formatDate(participantData.participant.birthDate)}
+                                        {formatDate(
+                                          participantData.participant.birthDate,
+                                        )}
                                       </p>
                                       <div className="size-1 bg-gray-11 rounded-full shrink-0" />
                                     </>
@@ -354,7 +396,9 @@ export function OrderSummary({
                                   {participantData.participant.gender && (
                                     <>
                                       <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
-                                        {getGenderLabel(participantData.participant.gender)}
+                                        {getGenderLabel(
+                                          participantData.participant.gender,
+                                        )}
                                       </p>
                                       {participantData.participant.cpf && (
                                         <div className="size-1 bg-gray-11 rounded-full shrink-0" />
@@ -380,34 +424,44 @@ export function OrderSummary({
                       )}
 
                       {/* Badge de Cupom */}
-                      {(participantData.couponCode || isCouponApplied) && participantData.couponDiscount && (
-                        <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
-                          <div className="flex gap-1 items-center">
-                            <TicketIcon className="size-4 text-yellow-12" />
-                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                              {(couponType === "QUANTITY" || couponType === "AGE" || !participantData.couponCode) ? "Cupom automático" : `Cupom: ${participantData.couponCode}`}
+                      {(participantData.couponCode || isCouponApplied) &&
+                        participantData.couponDiscount && (
+                          <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                            <div className="flex gap-1 items-center">
+                              <TicketIcon className="size-4 text-yellow-12" />
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                {couponType === "QUANTITY" ||
+                                couponType === "AGE" ||
+                                !participantData.couponCode
+                                  ? "Cupom automático"
+                                  : `Cupom: ${participantData.couponCode}`}
+                              </p>
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                {couponValueType === "PERCENTAGE" &&
+                                  `- ${couponPercent}%`}
+                              </p>
+                            </div>
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
+                              -{formatPrice(participantData.couponDiscount!)}
                             </p>
                           </div>
-                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                            -{formatPrice(participantData.couponDiscount!)}
-                          </p>
-                        </div>
-                      )}
+                        )}
 
                       {/* Badge de Voucher */}
-                      {participantData.voucherCode && participantData.voucherDiscount && (
-                        <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
-                          <div className="flex gap-1 items-center">
-                            <StarIcon className="size-4 text-yellow-12" />
-                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                              Voucher: {participantData.voucherCode}
+                      {participantData.voucherCode &&
+                        participantData.voucherDiscount && (
+                          <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                            <div className="flex gap-1 items-center">
+                              <StarIcon className="size-4 text-yellow-12" />
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                Voucher: {participantData.voucherCode}
+                              </p>
+                            </div>
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
+                              100% Cortesia
                             </p>
                           </div>
-                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                            100% Cortesia
-                          </p>
-                        </div>
-                      )}
+                        )}
                     </div>
                   )}
                 </div>
@@ -419,3 +473,4 @@ export function OrderSummary({
     </div>
   );
 }
+

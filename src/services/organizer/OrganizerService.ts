@@ -93,6 +93,7 @@ export interface Organization {
   email: string;
   phone?: string;
   whatsapp?: string;
+  fiscalEmail?: string;
   siteUrl?: string;
   instagram?: string;
   description?: string;
@@ -103,6 +104,7 @@ export interface Organization {
   city?: string;
   state?: string;
   ownerName?: string;
+  ownerDocument?: string;
   pix?: string;
   bankName?: string;
   bankCode?: string;
@@ -213,7 +215,7 @@ export interface OrganizationAuditLogsPagination {
 
 export function normalizeOrganizationAuditLogItem(
   raw: Record<string, unknown>,
-  index: number
+  index: number,
 ): OrganizationAuditLogItem {
   const actor = (raw.actor ?? raw.user) as Record<string, unknown> | undefined;
   const firstName = typeof actor?.firstName === "string" ? actor.firstName : "";
@@ -233,12 +235,10 @@ export function normalizeOrganizationAuditLogItem(
         ? raw.uuid
         : `audit-${index}`;
 
-  const ip = String(
-    raw.ip ?? raw.ipAddress ?? raw.ip_address ?? "—"
-  );
+  const ip = String(raw.ip ?? raw.ipAddress ?? raw.ip_address ?? "—");
   const action = String(raw.action ?? raw.message ?? "—");
   const occurredAt = String(
-    raw.occurredAt ?? raw.occurred_at ?? new Date().toISOString()
+    raw.occurredAt ?? raw.occurred_at ?? new Date().toISOString(),
   );
   const userId =
     typeof raw.userId === "string"
@@ -251,8 +251,8 @@ export function normalizeOrganizationAuditLogItem(
 
   let metadata: Record<string, unknown> | undefined =
     raw.metadata &&
-      typeof raw.metadata === "object" &&
-      !Array.isArray(raw.metadata)
+    typeof raw.metadata === "object" &&
+    !Array.isArray(raw.metadata)
       ? { ...(raw.metadata as Record<string, unknown>) }
       : undefined;
 
@@ -263,10 +263,7 @@ export function normalizeOrganizationAuditLogItem(
     ) {
       target.editedFields = raw.editedFields;
     }
-    if (
-      Array.isArray(raw.fieldsEdited) &&
-      target.fieldsEdited === undefined
-    ) {
+    if (Array.isArray(raw.fieldsEdited) && target.fieldsEdited === undefined) {
       target.fieldsEdited = raw.fieldsEdited;
     }
     if (Array.isArray(raw.changes) && target.changes === undefined) {
@@ -301,7 +298,7 @@ export function normalizeOrganizationAuditLogItem(
  * Ver `ORGANIZATIONS_HTTP_REFERENCE.md` na raiz do frontend.
  */
 function normalizePermissionsField(
-  p: string[] | Record<string, boolean> | null | undefined
+  p: string[] | Record<string, boolean> | null | undefined,
 ): string[] | undefined {
   if (p == null) return undefined;
   if (Array.isArray(p)) return p;
@@ -318,7 +315,7 @@ export function normalizeOrganizationMember(
   raw: OrganizationMember & {
     permissions?: string[] | Record<string, boolean> | null;
     eventAccesses?: { eventId: string }[];
-  }
+  },
 ): OrganizationMember {
   const permissions = normalizePermissionsField(raw.permissions as any);
   let eventIds = raw.eventIds;
@@ -344,7 +341,7 @@ export function normalizeOrganizationMember(
 }
 
 function normalizeMemberDetailResponse(
-  d: OrganizationMemberDetailResponse
+  d: OrganizationMemberDetailResponse,
 ): OrganizationMemberDetailResponse {
   return {
     member: normalizeOrganizationMember(d.member as any),
@@ -368,7 +365,13 @@ export interface CreateEventRequest {
   bannerUrl?: string;
   /** Imagem do card na listagem; API pode persistir como `logoUrl` na resposta GET. */
   cardImageUrl?: string;
-  status?: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" | "SUSPENDED" | "REVISION";
+  status?:
+    | "DRAFT"
+    | "PUBLISHED"
+    | "CANCELLED"
+    | "COMPLETED"
+    | "SUSPENDED"
+    | "REVISION";
   /** Quando true, inscrições/vendas do evento ficam pausadas (reativar com false). */
   isSuspended?: boolean;
   /**
@@ -428,7 +431,7 @@ export interface ModalityTemplate {
   label: string;
   icon?: string;
   isActive: boolean;
-  templates: any[]
+  templates: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -990,19 +993,22 @@ const EVENT_NOTIFICATION_STATUSES: EventNotificationStatus[] = [
   "denied",
 ];
 
-function normalizeEventNotification(raw: Record<string, unknown>): EventNotification {
+function normalizeEventNotification(
+  raw: Record<string, unknown>,
+): EventNotification {
   const chRaw = raw.channels;
   const channels: EventNotificationChannel[] = Array.isArray(chRaw)
-    ? (chRaw.filter((c) =>
-      typeof c === "string" &&
-      (EVENT_NOTIFICATION_CHANNELS as string[]).includes(c)
-    ) as EventNotificationChannel[])
+    ? (chRaw.filter(
+        (c) =>
+          typeof c === "string" &&
+          (EVENT_NOTIFICATION_CHANNELS as string[]).includes(c),
+      ) as EventNotificationChannel[])
     : [];
 
   const st = raw.status;
   const status: EventNotificationStatus =
     typeof st === "string" &&
-      (EVENT_NOTIFICATION_STATUSES as string[]).includes(st)
+    (EVENT_NOTIFICATION_STATUSES as string[]).includes(st)
       ? (st as EventNotificationStatus)
       : "review";
 
@@ -1061,20 +1067,20 @@ function strTracking(v: unknown): string {
   return String(v).trim();
 }
 
-function normalizeEventTracking(raw: Record<string, unknown> | null | undefined): EventTracking {
+function normalizeEventTracking(
+  raw: Record<string, unknown> | null | undefined,
+): EventTracking {
   const t = raw ?? {};
   return {
-    metaPixelId:
-      strTracking(t.metaPixelId) || strTracking(t.meta_pixel_id),
+    metaPixelId: strTracking(t.metaPixelId) || strTracking(t.meta_pixel_id),
     googleAnalyticsId:
       strTracking(t.googleAnalyticsId) || strTracking(t.google_analytics_id),
-    googleAdsId:
-      strTracking(t.googleAdsId) || strTracking(t.google_ads_id),
+    googleAdsId: strTracking(t.googleAdsId) || strTracking(t.google_ads_id),
   };
 }
 
 export class OrganizerService {
-  constructor(private apiClient: ApiClient) { }
+  constructor(private apiClient: ApiClient) {}
 
   // Organizer methods (DEPRECATED - usar getOrganization/createOrganization/updateOrganization)
   // Mantidos apenas para compatibilidade retroativa
@@ -1084,10 +1090,9 @@ export class OrganizerService {
   async createOrganizer(data: CreateOrganizerRequest): Promise<Organizer> {
     // Usa o novo endpoint /organizations através do endpoint de compatibilidade
     // O backend ainda aceita /organizers mas cria Organization internamente
-    const { data: response } = await this.apiClient.post<{ data: { organization: Organization; member: OrganizationMember } }>(
-      "/api/v1/organizers",
-      data
-    );
+    const { data: response } = await this.apiClient.post<{
+      data: { organization: Organization; member: OrganizationMember };
+    }>("/api/v1/organizers", data);
     // Retorna no formato antigo para compatibilidade
     return {
       id: response.data.organization.id,
@@ -1114,7 +1119,7 @@ export class OrganizerService {
       email: org.email,
       phone: org.phone || "",
       description: org.description,
-      userId: org.members?.find(m => m.role === "OWNER")?.userId || "",
+      userId: org.members?.find((m) => m.role === "OWNER")?.userId || "",
       createdAt: org.createdAt,
       updatedAt: org.updatedAt,
     };
@@ -1125,7 +1130,7 @@ export class OrganizerService {
    */
   async updateOrganizer(
     id: string | null,
-    data: Partial<CreateOrganizerRequest>
+    data: Partial<CreateOrganizerRequest>,
   ): Promise<Organizer> {
     // Usa o novo endpoint /organizations/me
     // O parâmetro id é ignorado, mantido apenas para compatibilidade
@@ -1137,7 +1142,7 @@ export class OrganizerService {
       email: org.email,
       phone: org.phone || "",
       description: org.description,
-      userId: org.members?.find(m => m.role === "OWNER")?.userId || "",
+      userId: org.members?.find((m) => m.role === "OWNER")?.userId || "",
       createdAt: org.createdAt,
       updatedAt: org.updatedAt,
     };
@@ -1153,7 +1158,10 @@ export class OrganizerService {
 
   async getOrganization(): Promise<OrganizationMeResponse> {
     const { data: response } = await this.apiClient.get<{
-      data: { organization: Organization; member?: { role: "OWNER" | "EMPLOYEE"; permissions: string[] } | null };
+      data: {
+        organization: Organization;
+        member?: { role: "OWNER" | "EMPLOYEE"; permissions: string[] } | null;
+      };
     }>("/api/v1/organizations/me");
     return {
       organization: response.data.organization,
@@ -1162,20 +1170,18 @@ export class OrganizerService {
   }
 
   async updateOrganization(
-    data: Partial<CreateOrganizationRequest>
+    data: Partial<CreateOrganizationRequest>,
   ): Promise<Organization> {
-    const { data: response } = await this.apiClient.patch<{ data: { organization: Organization } }>(
-      "/api/v1/organizations/me",
-      data
-    );
+    const { data: response } = await this.apiClient.patch<{
+      data: { organization: Organization };
+    }>("/api/v1/organizations/me", data);
     return response.data.organization;
   }
 
   async updateOrganizationLogo(logoUrl: string): Promise<Organization> {
-    const { data: response } = await this.apiClient.patch<{ data: { organization: Organization } }>(
-      "/api/v1/organizations/me/logo",
-      { logoUrl }
-    );
+    const { data: response } = await this.apiClient.patch<{
+      data: { organization: Organization };
+    }>("/api/v1/organizations/me/logo", { logoUrl });
     return response.data.organization;
   }
 
@@ -1184,7 +1190,9 @@ export class OrganizerService {
       const formData = new FormData();
       formData.append("file", file);
 
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
+      const apiUrl = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333"
+      ).replace(/\/$/, "");
       const token = this.apiClient.getAccessToken();
 
       const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
@@ -1201,7 +1209,11 @@ export class OrganizerService {
       }
 
       const result = await response.json();
-      const imageUrl = result.url || result.imageUrl || result.data?.url || result.data?.imageUrl;
+      const imageUrl =
+        result.url ||
+        result.imageUrl ||
+        result.data?.url ||
+        result.data?.imageUrl;
 
       if (!imageUrl) {
         throw new Error("URL da imagem não retornada pelo servidor");
@@ -1246,42 +1258,42 @@ export class OrganizerService {
 
   // Métodos de gerenciamento de membros
   async getOrganizationMembers(): Promise<OrganizationMember[]> {
-    const { data: response } = await this.apiClient.get<{ data: { members: OrganizationMember[] } }>(
-      "/api/v1/organizations/me/members"
+    const { data: response } = await this.apiClient.get<{
+      data: { members: OrganizationMember[] };
+    }>("/api/v1/organizations/me/members");
+    return response.data.members.map((m) =>
+      normalizeOrganizationMember(m as any),
     );
-    return response.data.members.map((m) => normalizeOrganizationMember(m as any));
   }
 
   async addOrganizationMember(
-    data: CreateOrganizationMemberRequest
+    data: CreateOrganizationMemberRequest,
   ): Promise<OrganizationMember> {
-    const { data: response } = await this.apiClient.post<{ data: { member: OrganizationMember } }>(
-      "/api/v1/organizations/me/members",
-      data
-    );
+    const { data: response } = await this.apiClient.post<{
+      data: { member: OrganizationMember };
+    }>("/api/v1/organizations/me/members", data);
     return normalizeOrganizationMember(response.data.member as any);
   }
 
   async updateOrganizationMemberRole(
     memberUserId: string,
-    data: UpdateOrganizationMemberRequest
+    data: UpdateOrganizationMemberRequest,
   ): Promise<OrganizationMember> {
-    const { data: response } = await this.apiClient.patch<{ data: { member: OrganizationMember } }>(
-      `/api/v1/organizations/me/members/${memberUserId}`,
-      data
-    );
+    const { data: response } = await this.apiClient.patch<{
+      data: { member: OrganizationMember };
+    }>(`/api/v1/organizations/me/members/${memberUserId}`, data);
     return normalizeOrganizationMember(response.data.member as any);
   }
 
   /** DELETE responde só `{ message }` — sem `data` (ver ORGANIZATIONS_HTTP_REFERENCE.md). */
   async removeOrganizationMember(memberUserId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/organizations/me/members/${memberUserId}`
+      `/api/v1/organizations/me/members/${memberUserId}`,
     );
   }
 
   async getOrganizationMember(
-    memberUserId: string
+    memberUserId: string,
   ): Promise<OrganizationMemberDetailResponse> {
     const { data: response } = await this.apiClient.get<{
       data: OrganizationMemberDetailResponse;
@@ -1292,7 +1304,7 @@ export class OrganizerService {
   /** Resposta = mesmo formato do GET detalhe (`member` + `permissions` + `eventIds` + `lastLoginAt`). */
   async updateOrganizationMemberSettings(
     memberUserId: string,
-    body: UpdateOrganizationMemberSettingsRequest
+    body: UpdateOrganizationMemberSettingsRequest,
   ): Promise<OrganizationMemberDetailResponse> {
     const { data: response } = await this.apiClient.patch<{
       data: OrganizationMemberDetailResponse;
@@ -1350,7 +1362,10 @@ export class OrganizerService {
     };
     return {
       items: rawItems.map((item, i) =>
-        normalizeOrganizationAuditLogItem(item as unknown as Record<string, unknown>, i)
+        normalizeOrganizationAuditLogItem(
+          item as unknown as Record<string, unknown>,
+          i,
+        ),
       ),
       pagination: {
         page: pagination.page ?? page,
@@ -1444,7 +1459,7 @@ export class OrganizerService {
       limit?: number;
       q?: string;
       status?: EventNotificationStatus;
-    }
+    },
   ): Promise<{
     items: EventNotification[];
     pagination: EventNotificationsPagination;
@@ -1464,7 +1479,7 @@ export class OrganizerService {
     });
 
     const items = (response.data.items ?? []).map((row) =>
-      normalizeEventNotification(row)
+      normalizeEventNotification(row),
     );
     const p = response.data.pagination;
     const pagination: EventNotificationsPagination = {
@@ -1480,19 +1495,17 @@ export class OrganizerService {
   /** Detalhe com `messageHtml` completo. */
   async getEventNotification(
     eventId: string,
-    notificationId: string
+    notificationId: string,
   ): Promise<EventNotification> {
     const { data: response } = await this.apiClient.get<{
       data: Record<string, unknown>;
-    }>(
-      `/api/v1/organizer/events/${eventId}/notifications/${notificationId}`
-    );
+    }>(`/api/v1/organizer/events/${eventId}/notifications/${notificationId}`);
     return normalizeEventNotification(response.data);
   }
 
   async createEventNotification(
     eventId: string,
-    body: CreateEventNotificationRequest
+    body: CreateEventNotificationRequest,
   ): Promise<EventNotification> {
     const { data: response } = await this.apiClient.post<{
       message?: string;
@@ -1504,9 +1517,11 @@ export class OrganizerService {
   async updateEvent(
     id: string,
     data: Partial<CreateEventRequest>,
-    options?: { clientPage?: string }
+    options?: { clientPage?: string },
   ): Promise<Event> {
-    const payload: Record<string, unknown> = { ...(data as Record<string, unknown>) };
+    const payload: Record<string, unknown> = {
+      ...(data as Record<string, unknown>),
+    };
     const cp = options?.clientPage?.trim();
     if (cp) payload.clientPage = cp;
 
@@ -1516,13 +1531,25 @@ export class OrganizerService {
     return response.data.event;
   }
 
-  async getFinancialSettings(eventId: string): Promise<{ organizerFeePercent: number; participantFeePercent: number; maxInstallments: 1 | 2 | 3; totalFee: number }> {
-    const { data } = await this.apiClient.get<{ data: { organizerFeePercent: number; participantFeePercent?: number; maxInstallments: 1 | 2 | 3; totalFee?: number } }>(
-      `/api/v1/events/${eventId}/financial-settings`,
-    );
+  async getFinancialSettings(eventId: string): Promise<{
+    organizerFeePercent: number;
+    participantFeePercent: number;
+    maxInstallments: 1 | 2 | 3;
+    totalFee: number;
+  }> {
+    const { data } = await this.apiClient.get<{
+      data: {
+        organizerFeePercent: number;
+        participantFeePercent?: number;
+        maxInstallments: 1 | 2 | 3;
+        totalFee?: number;
+      };
+    }>(`/api/v1/events/${eventId}/financial-settings`);
     const raw = data.data;
     const participantFeePercent = raw.participantFeePercent ?? 0;
-    const totalFee = raw.totalFee ?? parseFloat((raw.organizerFeePercent + participantFeePercent).toFixed(2));
+    const totalFee =
+      raw.totalFee ??
+      parseFloat((raw.organizerFeePercent + participantFeePercent).toFixed(2));
     return { ...raw, participantFeePercent, totalFee };
   }
 
@@ -1550,7 +1577,7 @@ export class OrganizerService {
       message?: string;
       data: { event: Event };
     }>(`/api/v1/events/${id}/publish`);
-    return body.data.event
+    return body.data.event;
   }
 
   /** PUBLISHED → SUSPENDED. Ver EVENT_SUSPEND_ORGANIZER_API.md */
@@ -1573,7 +1600,7 @@ export class OrganizerService {
 
   async createModalityGroup(
     eventId: string,
-    data: CreateModalityGroupRequest
+    data: CreateModalityGroupRequest,
   ): Promise<ModalityGroup> {
     const { data: response } = await this.apiClient.post<{
       data: ModalityGroup;
@@ -1591,7 +1618,7 @@ export class OrganizerService {
   async updateModalityGroup(
     eventId: string,
     groupId: string,
-    data: Partial<CreateModalityGroupRequest>
+    data: Partial<CreateModalityGroupRequest>,
   ): Promise<ModalityGroup> {
     const { data: response } = await this.apiClient.patch<{
       data: ModalityGroup;
@@ -1601,18 +1628,18 @@ export class OrganizerService {
 
   async deleteModalityGroup(eventId: string, groupId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/modalities/events/${eventId}/groups/${groupId}`
+      `/api/v1/modalities/events/${eventId}/groups/${groupId}`,
     );
   }
 
   // Modality methods
   async createModality(
     eventId: string,
-    data: CreateModalityRequest
+    data: CreateModalityRequest,
   ): Promise<Modality> {
     const { data: response } = await this.apiClient.post<{ data: Modality }>(
       `/api/v1/modalities/events/${eventId}`,
-      data
+      data,
     );
     return response.data;
   }
@@ -1628,18 +1655,18 @@ export class OrganizerService {
   async updateModality(
     eventId: string,
     modalityId: string,
-    data: Partial<CreateModalityRequest>
+    data: Partial<CreateModalityRequest>,
   ): Promise<Modality> {
     const { data: response } = await this.apiClient.patch<{ data: Modality }>(
       `/api/v1/modalities/events/${eventId}/${modalityId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async deleteModality(eventId: string, modalityId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/modalities/events/${eventId}/${modalityId}`
+      `/api/v1/modalities/events/${eventId}/${modalityId}`,
     );
   }
 
@@ -1655,14 +1682,14 @@ export class OrganizerService {
   async createKit(eventId: string, data: CreateKitRequest): Promise<Kit> {
     const { data: response } = await this.apiClient.post<{ data: Kit }>(
       `/api/v1/kits/events/${eventId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async getKits(eventId: string): Promise<Kit[]> {
     const { data: response } = await this.apiClient.get<{ data: Kit[] }>(
-      `/api/v1/kits/events/${eventId}`
+      `/api/v1/kits/events/${eventId}`,
     );
     return response.data;
   }
@@ -1670,11 +1697,11 @@ export class OrganizerService {
   async updateKit(
     eventId: string,
     kitId: string,
-    data: Partial<CreateKitRequest>
+    data: Partial<CreateKitRequest>,
   ): Promise<Kit> {
     const { data: response } = await this.apiClient.patch<{ data: Kit }>(
       `/api/v1/kits/events/${eventId}/${kitId}`,
-      data
+      data,
     );
     return response.data;
   }
@@ -1687,11 +1714,11 @@ export class OrganizerService {
   async createKitItem(
     eventId: string,
     kitId: string,
-    data: CreateKitItemRequest
+    data: CreateKitItemRequest,
   ): Promise<KitItem> {
     const { data: response } = await this.apiClient.post<{ data: KitItem }>(
       `/api/v1/kits/events/${eventId}/kits/${kitId}/items`,
-      data
+      data,
     );
     return response.data;
   }
@@ -1700,11 +1727,11 @@ export class OrganizerService {
     eventId: string,
     kitId: string,
     itemId: string,
-    data: Partial<CreateKitItemRequest>
+    data: Partial<CreateKitItemRequest>,
   ): Promise<KitItem> {
     const { data: response } = await this.apiClient.patch<{ data: KitItem }>(
       `/api/v1/kits/events/${eventId}/kits/${kitId}/items/${itemId}`,
-      data
+      data,
     );
     return response.data;
   }
@@ -1712,54 +1739,54 @@ export class OrganizerService {
   async deleteKitItem(
     eventId: string,
     kitId: string,
-    itemId: string
+    itemId: string,
   ): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/kits/events/${eventId}/kits/${kitId}/items/${itemId}`
+      `/api/v1/kits/events/${eventId}/kits/${kitId}/items/${itemId}`,
     );
   }
 
   // Question methods
   async createQuestion(
     eventId: string,
-    data: CreateQuestionRequest
+    data: CreateQuestionRequest,
   ): Promise<Question> {
     const { data: response } = await this.apiClient.post<{ data: Question }>(
       `/api/v1/questions/events/${eventId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async getQuestions(eventId: string): Promise<Question[]> {
-    const { data: response } = await this.apiClient.get<{ data: { questions: Question[] } }>(
-      `/api/v1/questions/events/${eventId}`
-    );
+    const { data: response } = await this.apiClient.get<{
+      data: { questions: Question[] };
+    }>(`/api/v1/questions/events/${eventId}`);
     return response.data.questions;
   }
 
   async updateQuestion(
     eventId: string,
     questionId: string,
-    data: Partial<CreateQuestionRequest>
+    data: Partial<CreateQuestionRequest>,
   ): Promise<Question> {
     const { data: response } = await this.apiClient.patch<{ data: Question }>(
       `/api/v1/questions/events/${eventId}/${questionId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async deleteQuestion(eventId: string, questionId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/questions/events/${eventId}/${questionId}`
+      `/api/v1/questions/events/${eventId}/${questionId}`,
     );
   }
 
   // Registration methods
   async getEventRegistrations(
     eventId: string,
-    params?: { page?: number; limit?: number; status?: string }
+    params?: { page?: number; limit?: number; status?: string },
   ): Promise<{ registrations: Registration[]; pagination: any }> {
     const { page = 1, limit = 20, status } = params || {};
     const { data: response } = await this.apiClient.get<{
@@ -1785,8 +1812,10 @@ export class OrganizerService {
     const params: Record<string, string> = { format };
     if (fields && fields.length > 0) params.fields = fields.join(",");
     if (filters?.search) params.search = filters.search;
-    if (filters?.status && filters.status !== "all") params.status = filters.status;
-    if (filters?.ticketIds?.length) params.ticketIds = filters.ticketIds.join(",");
+    if (filters?.status && filters.status !== "all")
+      params.status = filters.status;
+    if (filters?.ticketIds?.length)
+      params.ticketIds = filters.ticketIds.join(",");
     if (filters?.startDate) params.startDate = filters.startDate;
     if (filters?.endDate) params.endDate = filters.endDate;
 
@@ -1795,7 +1824,8 @@ export class OrganizerService {
       { params, responseType: "blob" },
     );
 
-    const contentDisposition = (response.headers as any)["content-disposition"] ?? "";
+    const contentDisposition =
+      (response.headers as any)["content-disposition"] ?? "";
     const match = contentDisposition.match(/filename="?([^"]+)"?/);
     const ext = format === "excel" ? "xlsx" : format === "pdf" ? "pdf" : "csv";
     const filename = match?.[1] ?? `inscricoes-${eventId.slice(0, 8)}.${ext}`;
@@ -1805,13 +1835,13 @@ export class OrganizerService {
 
   async getEventStats(eventId: string): Promise<EventStats> {
     const { data: response } = await this.apiClient.get<{ data: EventStats }>(
-      `/api/v1/events/${eventId}/stats`
+      `/api/v1/events/${eventId}/stats`,
     );
     return response.data;
   }
 
   async getEventRevenue(
-    eventId: string
+    eventId: string,
   ): Promise<{ total: number; breakdown: any[] }> {
     const { data: response } = await this.apiClient.get<{
       data: { total: number; breakdown: any[] };
@@ -1828,7 +1858,7 @@ export class OrganizerService {
       isEnabled?: boolean;
       order?: number;
       isDefault?: boolean;
-    }
+    },
   ): Promise<EventTopic> {
     const { data: response } = await this.apiClient.post<{
       data: { topic: EventTopic };
@@ -1845,7 +1875,7 @@ export class OrganizerService {
       isEnabled: boolean;
       order: number;
       isDefault: boolean;
-    }>
+    }>,
   ): Promise<EventTopic> {
     const { data: response } = await this.apiClient.patch<{
       data: { topic: EventTopic };
@@ -1854,7 +1884,10 @@ export class OrganizerService {
   }
 
   /** Body order is 0-based (`order` = index in `topicIds`). Must list every topic id once. */
-  async reorderEventTopics(eventId: string, topicIds: string[]): Promise<EventTopic[]> {
+  async reorderEventTopics(
+    eventId: string,
+    topicIds: string[],
+  ): Promise<EventTopic[]> {
     const { data: response } = await this.apiClient.patch<{
       message: string;
       data: { topics: EventTopic[] };
@@ -1879,7 +1912,7 @@ export class OrganizerService {
       googleMapsLink?: string;
       latitude?: number;
       longitude?: number;
-    }
+    },
   ): Promise<EventLocation> {
     const { data: response } = await this.apiClient.post<{
       data: { location: EventLocation };
@@ -1900,7 +1933,7 @@ export class OrganizerService {
       googleMapsLink: string;
       latitude: number;
       longitude: number;
-    }>
+    }>,
   ): Promise<EventLocation> {
     const { data: response } = await this.apiClient.patch<{
       data: { location: EventLocation };
@@ -1910,52 +1943,61 @@ export class OrganizerService {
 
   async deleteLocation(eventId: string, locationId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/events/${eventId}/locations/${locationId}`
+      `/api/v1/events/${eventId}/locations/${locationId}`,
     );
   }
 
   // Ticket Category methods
-  async createTicketCategory(eventId: string, data: { name: string }): Promise<any> {
+  async createTicketCategory(
+    eventId: string,
+    data: { name: string },
+  ): Promise<any> {
     const { data: response } = await this.apiClient.post<{ data: any }>(
       `/api/v1/tickets/events/${eventId}/categories`,
-      data
+      data,
     );
     return response.data;
   }
 
   async getTicketCategories(eventId: string): Promise<any[]> {
-    const { data: response } = await this.apiClient.get<{ data: { categories: any[] } }>(
-      `/api/v1/tickets/events/${eventId}/categories`
-    );
+    const { data: response } = await this.apiClient.get<{
+      data: { categories: any[] };
+    }>(`/api/v1/tickets/events/${eventId}/categories`);
     console.log("response", response);
     return response.data.categories;
   }
 
   /** Índice em `categoryIds` = sortOrder 0, 1, 2… — todos os ids do evento, sem repetir (como topics/reorder). */
-  async reorderTicketCategories(eventId: string, categoryIds: string[]): Promise<void> {
-    await this.apiClient.patch(`/api/v1/tickets/events/${eventId}/categories/reorder`, {
-      categoryIds,
-    });
+  async reorderTicketCategories(
+    eventId: string,
+    categoryIds: string[],
+  ): Promise<void> {
+    await this.apiClient.patch(
+      `/api/v1/tickets/events/${eventId}/categories/reorder`,
+      {
+        categoryIds,
+      },
+    );
   }
 
   async updateTicketCategory(
     eventId: string,
     categoryId: string,
-    data: Partial<{ name: string; order: number; description?: string }>
+    data: Partial<{ name: string; order: number; description?: string }>,
   ): Promise<any> {
     const { data: response } = await this.apiClient.patch<{ data: any }>(
       `/api/v1/tickets/events/${eventId}/categories/${categoryId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async deleteTicketCategory(
     eventId: string,
-    categoryId: string
+    categoryId: string,
   ): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/tickets/events/${eventId}/categories/${categoryId}`
+      `/api/v1/tickets/events/${eventId}/categories/${categoryId}`,
     );
   }
 
@@ -1963,7 +2005,7 @@ export class OrganizerService {
   async createTicket(eventId: string, data: any): Promise<any> {
     const { data: response } = await this.apiClient.post<{ data: any }>(
       `/api/v1/tickets/events/${eventId}`,
-      data
+      data,
     );
     // Backend envolve em `{ data: { ticket: {...} } }` — mesmo padrão de
     // `duplicateTicket` e `getTicketById`. Desempacota defensivamente:
@@ -1973,7 +2015,12 @@ export class OrganizerService {
 
   async getTickets(
     eventId: string,
-    params?: { categoryId?: string; page?: number; limit?: number; includeInactive?: boolean }
+    params?: {
+      categoryId?: string;
+      page?: number;
+      limit?: number;
+      includeInactive?: boolean;
+    },
   ): Promise<{ tickets: any[]; pagination: any }> {
     const { data: response } = await this.apiClient.get<{
       data: { tickets: any[]; pagination: any };
@@ -1983,7 +2030,7 @@ export class OrganizerService {
 
   async getTicketById(id: string): Promise<any> {
     const { data: response } = await this.apiClient.get<{ data: any }>(
-      `/api/v1/tickets/${id}`
+      `/api/v1/tickets/${id}`,
     );
     return response.data.ticket;
   }
@@ -1991,11 +2038,11 @@ export class OrganizerService {
   async updateTicket(
     eventId: string,
     ticketId: string,
-    data: Partial<any>
+    data: Partial<any>,
   ): Promise<any> {
     const { data: response } = await this.apiClient.patch<{ data: any }>(
       `/api/v1/tickets/events/${eventId}/${ticketId}`,
-      data
+      data,
     );
     // Backend envolve em `{ data: { ticket: {...} } }` — mesmo padrão de
     // `duplicateTicket` e `getTicketById`. Desempacota defensivamente:
@@ -2021,28 +2068,27 @@ export class OrganizerService {
   async reorderTicketProducts(
     eventId: string,
     ticketId: string,
-    productIds: string[]
+    productIds: string[],
   ): Promise<{ ticketId: string; productIds: string[] }> {
     const { data: body } = await this.apiClient.patch<{
       message?: string;
       data: { ticketId: string; productIds: string[] };
-    }>(
-      `/api/v1/tickets/events/${eventId}/${ticketId}/products/reorder`,
-      { productIds }
-    );
+    }>(`/api/v1/tickets/events/${eventId}/${ticketId}/products/reorder`, {
+      productIds,
+    });
     return body.data;
   }
 
   async deleteTicket(eventId: string, ticketId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/tickets/events/${eventId}/${ticketId}`
+      `/api/v1/tickets/events/${eventId}/${ticketId}`,
     );
   }
 
   async duplicateTicket(eventId: string, ticketId: string): Promise<any> {
-    const { data: response } = await this.apiClient.post<{ data: { ticket: any } }>(
-      `/api/v1/tickets/events/${eventId}/${ticketId}/duplicate`
-    );
+    const { data: response } = await this.apiClient.post<{
+      data: { ticket: any };
+    }>(`/api/v1/tickets/events/${eventId}/${ticketId}/duplicate`);
     return response.data.ticket;
   }
 
@@ -2050,14 +2096,14 @@ export class OrganizerService {
   async createProduct(eventId: string, data: any): Promise<any> {
     const { data: response } = await this.apiClient.post<{ data: any }>(
       `/api/v1/products/events/${eventId}`,
-      data
+      data,
     );
     return unwrapProductApiPayload(response.data);
   }
 
   async getProducts(
     eventId: string,
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number },
   ): Promise<{ products: any[]; pagination: any }> {
     const { data: response } = await this.apiClient.get<{
       data: { products: any[]; pagination: any };
@@ -2067,7 +2113,7 @@ export class OrganizerService {
 
   async getProductById(id: string): Promise<any> {
     const { data: response } = await this.apiClient.get<{ data: any }>(
-      `/api/v1/products/${id}`
+      `/api/v1/products/${id}`,
     );
     return unwrapProductApiPayload(response.data);
   }
@@ -2075,18 +2121,18 @@ export class OrganizerService {
   async updateProduct(
     eventId: string,
     productId: string,
-    data: Partial<any>
+    data: Partial<any>,
   ): Promise<any> {
     const { data: response } = await this.apiClient.patch<{ data: any }>(
       `/api/v1/products/events/${eventId}/${productId}`,
-      data
+      data,
     );
     return unwrapProductApiPayload(response.data);
   }
 
   async deleteProduct(eventId: string, productId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/products/events/${eventId}/${productId}`
+      `/api/v1/products/events/${eventId}/${productId}`,
     );
   }
 
@@ -2094,14 +2140,14 @@ export class OrganizerService {
   async createCoupon(eventId: string, data: any): Promise<any> {
     const { data: response } = await this.apiClient.post<{ data: any }>(
       `/api/v1/coupons/events/${eventId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async getCoupons(
     eventId: string,
-    params?: { page?: number; limit?: number; status?: string }
+    params?: { page?: number; limit?: number; status?: string },
   ): Promise<{ coupons: any[]; pagination: any }> {
     const { data: response } = await this.apiClient.get<{
       data: { coupons: any[]; pagination: any };
@@ -2111,7 +2157,7 @@ export class OrganizerService {
 
   async getCouponById(id: string): Promise<any> {
     const { data: response } = await this.apiClient.get<{ data: any }>(
-      `/api/v1/coupons/${id}`
+      `/api/v1/coupons/${id}`,
     );
     return response.data;
   }
@@ -2119,18 +2165,18 @@ export class OrganizerService {
   async updateCoupon(
     eventId: string,
     couponId: string,
-    data: Partial<any>
+    data: Partial<any>,
   ): Promise<any> {
     const { data: response } = await this.apiClient.patch<{ data: any }>(
       `/api/v1/coupons/events/${eventId}/${couponId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async deleteCoupon(eventId: string, couponId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/coupons/events/${eventId}/${couponId}`
+      `/api/v1/coupons/events/${eventId}/${couponId}`,
     );
   }
 
@@ -2138,14 +2184,14 @@ export class OrganizerService {
   async createVoucher(eventId: string, data: any): Promise<any> {
     const { data: response } = await this.apiClient.post<{ data: any }>(
       `/api/v1/vouchers/events/${eventId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async getVouchers(
     eventId: string,
-    params?: { page?: number; limit?: number; status?: string }
+    params?: { page?: number; limit?: number; status?: string },
   ): Promise<{ groups: any[]; pagination: any }> {
     const { data: response } = await this.apiClient.get<{
       data: { groups: any[]; pagination: any };
@@ -2155,7 +2201,7 @@ export class OrganizerService {
 
   async getVoucherById(id: string): Promise<any> {
     const { data: response } = await this.apiClient.get<{ data: any }>(
-      `/api/v1/vouchers/${id}`
+      `/api/v1/vouchers/${id}`,
     );
     return response.data;
   }
@@ -2163,25 +2209,25 @@ export class OrganizerService {
   async updateVoucher(
     eventId: string,
     voucherId: string,
-    data: Partial<any>
+    data: Partial<any>,
   ): Promise<any> {
     const { data: response } = await this.apiClient.patch<{ data: any }>(
       `/api/v1/vouchers/events/${eventId}/${voucherId}`,
-      data
+      data,
     );
     return response.data;
   }
 
   async deleteVoucher(eventId: string, voucherId: string): Promise<void> {
     await this.apiClient.delete(
-      `/api/v1/vouchers/events/${eventId}/${voucherId}`
+      `/api/v1/vouchers/events/${eventId}/${voucherId}`,
     );
   }
 
   async getVoucherGroup(
     eventId: string,
     groupName: string,
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number },
   ): Promise<{
     groupName: string;
     vouchers: any[];
@@ -2195,9 +2241,19 @@ export class OrganizerService {
       inactiveCount: number;
       expiryDate?: string;
       appliesTo?: "all" | Array<string | { id: string }>;
-      linkedTicket?: { id: string; name: string; price: number; category?: { id: string; name: string } };
+      linkedTicket?: {
+        id: string;
+        name: string;
+        price: number;
+        category?: { id: string; name: string };
+      };
     };
-    pagination: { page: number; limit: number; total: number; totalPages: number };
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   }> {
     const { data: response } = await this.apiClient.get<{
       message: string;
@@ -2214,9 +2270,19 @@ export class OrganizerService {
           inactiveCount: number;
           expiryDate?: string;
           appliesTo?: "all" | Array<string | { id: string }>;
-          linkedTicket?: { id: string; name: string; price: number; category?: { id: string; name: string } };
+          linkedTicket?: {
+            id: string;
+            name: string;
+            price: number;
+            category?: { id: string; name: string };
+          };
         };
-        pagination: { page: number; limit: number; total: number; totalPages: number };
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
       };
     }>(`/api/v1/vouchers/events/${eventId}/groups/${groupName}`, { params });
     return response.data;
@@ -2230,7 +2296,7 @@ export class OrganizerService {
       ticketIds?: string[];
       page?: number;
       limit?: number;
-    }
+    },
   ): Promise<DashboardData> {
     const { data: response } = await this.apiClient.get<{
       data: DashboardData;
@@ -2278,7 +2344,7 @@ export class OrganizerService {
       period?: "hoje" | "7d" | "15d" | "1m" | "2m";
       page?: number;
       limit?: number;
-    }
+    },
   ): Promise<FinancialData> {
     const { data: response } = await this.apiClient.get<{
       data: FinancialData;
@@ -2300,7 +2366,7 @@ export class OrganizerService {
       search?: string;
       period?: "7d" | "15d" | "30d" | "60d" | "all";
       valueRange?: "all" | "lt100" | "100to500" | "500to1000" | "gt1000";
-    }
+    },
   ): Promise<FiscalOrdersData> {
     const { data: response } = await this.apiClient.get<{
       data: FiscalOrdersData;
@@ -2319,7 +2385,7 @@ export class OrganizerService {
       orderIds?: string[];
       format?: "txt" | "xlsx" | "pdf";
       fields?: string[];
-    }
+    },
   ): Promise<Blob> {
     const { data } = await this.apiClient.get<Blob>(
       `/api/v1/events/${eventId}/financial/fiscal-export`,
@@ -2330,7 +2396,7 @@ export class OrganizerService {
           orderIds: params?.orderIds?.join(","),
         },
         responseType: "blob",
-      }
+      },
     );
     return data;
   }
@@ -2349,7 +2415,10 @@ export class OrganizerService {
     const d = response.data;
     return {
       transfers: d.transfers ?? [],
-      metrics: d.metrics ?? { totalAmount: d.totalTransferred ?? 0, totalCount: d.transfers?.length ?? 0 },
+      metrics: d.metrics ?? {
+        totalAmount: d.totalTransferred ?? 0,
+        totalCount: d.transfers?.length ?? 0,
+      },
     };
   }
 
@@ -2373,7 +2442,7 @@ export class OrganizerService {
   async getEventPendingReleases(
     eventId: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<{
     pending: PendingRelease[];
     totalPending: number;
@@ -2402,7 +2471,7 @@ export class OrganizerService {
         };
       };
     }>(`/api/v1/events/${eventId}/financial/pending`, {
-      params: { page, limit }
+      params: { page, limit },
     });
     return response.data;
   }
@@ -2412,7 +2481,7 @@ export class OrganizerService {
     params?: {
       page?: number;
       limit?: number;
-    }
+    },
   ): Promise<{
     refunded: Array<{
       id: string;
@@ -2491,7 +2560,7 @@ export class OrganizerService {
     params?: {
       page?: number;
       limit?: number;
-    }
+    },
   ): Promise<{
     chargebacks: Array<{
       id: string;
@@ -2571,14 +2640,20 @@ export class OrganizerService {
     params?: {
       page?: number;
       limit?: number;
-      status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "CHARGEBACK" | "REFUNDED";
+      status?:
+        | "PENDING"
+        | "CONFIRMED"
+        | "CANCELLED"
+        | "COMPLETED"
+        | "CHARGEBACK"
+        | "REFUNDED";
       search?: string;
       ticketIds?: string[];
       startDate?: string;
       endDate?: string;
       sortBy?: "purchaseDate" | "amount" | "status";
       sortOrder?: "asc" | "desc";
-    }
+    },
   ): Promise<{
     registrations: Registration[];
     stats: RegistrationStats;
@@ -2632,7 +2707,9 @@ export class OrganizerService {
     return response.data;
   }
 
-  async getPaymentDetailsByTransaction(transactionId: string): Promise<PaymentDetails> {
+  async getPaymentDetailsByTransaction(
+    transactionId: string,
+  ): Promise<PaymentDetails> {
     const { data: response } = await this.apiClient.get<{
       message: string;
       data: PaymentDetails;
@@ -2648,7 +2725,9 @@ export class OrganizerService {
     return response.data;
   }
 
-  async getPaymentDetailsByRegistration(registrationId: string): Promise<PaymentDetails> {
+  async getPaymentDetailsByRegistration(
+    registrationId: string,
+  ): Promise<PaymentDetails> {
     const { data: response } = await this.apiClient.get<{
       message: string;
       data: PaymentDetails;
@@ -2675,11 +2754,11 @@ export class OrganizerService {
       subject?: string;
       message: string;
       eventId?: string;
-    }
+    },
   ): Promise<void> {
     await this.apiClient.post(
       `/api/v1/organizers/${organizationId}/contact`,
-      data
+      data,
     );
   }
 
@@ -2691,17 +2770,25 @@ export class OrganizerService {
    * Backend deve retornar tickets ordenados por (categoryId NULLS LAST,
    * sortOrder ASC, createdAt ASC) e categories por order ASC.
    */
-  async getTicketsManagementBundle(
-    eventId: string,
-  ): Promise<{
+  async getTicketsManagementBundle(eventId: string): Promise<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    event: { id: string; name: string; slug: string; kitSelectionDisplay?: any };
+    event: {
+      id: string;
+      name: string;
+      slug: string;
+      kitSelectionDisplay?: any;
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     categories: any[];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tickets: any[];
     pagination?: {
-      tickets?: { page: number; limit: number; total: number; totalPages: number };
+      tickets?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
     };
   }> {
     const { data: response } = await this.apiClient.get<{
@@ -2711,3 +2798,4 @@ export class OrganizerService {
     return response.data;
   }
 }
+

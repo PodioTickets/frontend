@@ -677,15 +677,37 @@ export function InformationStep({
     if (!birthDate) {
       errors.birthDate = "Data de nascimento é obrigatória";
     } else if (ageLimit && (ageLimit.min || ageLimit.max)) {
-      const referenceDate = event?.eventDate ? new Date(event.eventDate) : new Date();
-      const birth = new Date(birthDate);
-      const age = Math.floor(
-        (referenceDate.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-      );
-      if (ageLimit.min && age < ageLimit.min) {
-        errors.birthDate = `Idade mínima para este ingresso é ${ageLimit.min} anos`;
-      } else if (ageLimit.max && age > ageLimit.max) {
-        errors.birthDate = `Idade máxima para este ingresso é ${ageLimit.max} anos`;
+      // Idade exigida é a que o participante terá NO DIA DO EVENTO, não hoje.
+      // Ex.: ingresso 18+ e evento em 2026-12-15 → nascido em 2008-12-15 está
+      // OK (faz 18 no dia), mesmo que hoje ainda tenha 17.
+      // Comparação Y/M/D direta (sem 365.25 ms) evita off-by-one quando
+      // aniversário coincide com a data do evento. Parse manual evita o
+      // off-by-one de timezone que `new Date("YYYY-MM-DD")` causa em fusos
+      // a oeste de UTC.
+      const parseYmd = (
+        iso: string,
+      ): { y: number; m: number; d: number } | null => {
+        const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!match) return null;
+        return { y: Number(match[1]), m: Number(match[2]), d: Number(match[3]) };
+      };
+      const fallbackToday = () => {
+        const now = new Date();
+        return { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
+      };
+      const ref =
+        (event?.eventDate ? parseYmd(event.eventDate) : null) ?? fallbackToday();
+      const birth = parseYmd(birthDate);
+      if (birth) {
+        let age = ref.y - birth.y;
+        if (ref.m < birth.m || (ref.m === birth.m && ref.d < birth.d)) {
+          age--;
+        }
+        if (ageLimit.min && age < ageLimit.min) {
+          errors.birthDate = `Idade mínima para este ingresso é ${ageLimit.min} anos no dia do evento`;
+        } else if (ageLimit.max && age > ageLimit.max) {
+          errors.birthDate = `Idade máxima para este ingresso é ${ageLimit.max} anos no dia do evento`;
+        }
       }
     }
 

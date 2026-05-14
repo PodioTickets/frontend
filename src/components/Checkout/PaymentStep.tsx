@@ -1417,7 +1417,21 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     };
   };
 
-  const handlePayError = (err: unknown) => {
+  // `useModal=false` é passado pelo fluxo de débito: lá o modal "Pagamento
+  // não aprovado" deve aparecer SOMENTE em erro/cancelamento do 3DS (tratado
+  // no catch do handler de débito). Recusa pós-3DS, erro de rede, etc. caem
+  // aqui — viram toast em vez de modal pra não confundir o usuário (3DS
+  // autenticou com sucesso, problema é da captura/adquirente).
+  const handlePayError = (err: unknown, opts?: { useModal?: boolean }) => {
+    const useModal = opts?.useModal ?? true;
+    const showFailure = (toastMsg: string) => {
+      if (useModal) {
+        pauseVisibilityRefresh();
+        setCardErrorModalOpen(true);
+      } else {
+        toast.error(toastMsg);
+      }
+    };
     if (err instanceof OrderApiError) {
       if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {
         toast.error("Sua reserva expirou.");
@@ -1426,8 +1440,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       }
       if (err.code === "PAYMENT_REFUSED") {
         regenerateIdempotencyKey();
-        pauseVisibilityRefresh();
-        setCardErrorModalOpen(true);
+        showFailure("Pagamento não aprovado. Tente novamente.");
         return;
       }
       if (err.code === "BILLING_ADDRESS_REQUIRED") {
@@ -1443,12 +1456,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         toast.error("Tente novamente.");
         return;
       }
-      pauseVisibilityRefresh();
-      setCardErrorModalOpen(true);
+      showFailure("Erro ao processar pagamento. Tente novamente.");
       return;
     }
-    pauseVisibilityRefresh();
-    setCardErrorModalOpen(true);
+    showFailure("Erro ao processar pagamento. Tente novamente.");
   };
 
   /**
@@ -1738,13 +1749,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         return;
       }
 
-      // Pagamento não aprovado (ou cancelado pelo usuário) — exibe modal de erro
-      // ao invés de toast pra dar mais visibilidade. syncFromOrder mantém o
-      // redirect silencioso quando o servidor retorna CANCELLED.
+      // 3DS já autenticou com sucesso aqui — uma recusa nesta etapa é da
+      // adquirente/emissor no momento da captura, não do 3DS. Mantém o mesmo
+      // toast do crédito; o modal "Pagamento não aprovado" fica reservado a
+      // erro/cancelamento do 3DS (tratado no catch abaixo).
       syncFromOrder(result);
+      toast.error("Pagamento não aprovado. Tente novamente.");
       regenerateIdempotencyKey();
-      pauseVisibilityRefresh();
-      setCardErrorModalOpen(true);
     } catch (err) {
       if (err instanceof ThreeDSError) {
         // Log estruturado pra investigar falhas vindas do SDK Braspag
@@ -1780,7 +1791,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         regenerateIdempotencyKey();
         return;
       }
-      handlePayError(err);
+      // Pós-3DS: 3DS já autenticou — qualquer erro daqui pra frente é da
+      // captura/adquirente. Toast em vez de modal (`useModal: false`).
+      handlePayError(err, { useModal: false });
     } finally {
       checkoutLoadingRef.current = false;
       setDebitLoading(false);
@@ -2262,7 +2275,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   Pagamento
                 </h1>
               </div>
-              <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
+              <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
                 {!billingAddressConfirmed
                   ? "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."
                   : isFreeOrder

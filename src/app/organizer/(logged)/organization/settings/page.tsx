@@ -12,8 +12,18 @@ import { Dropdown, DropdownOption } from "@/components/Dropdown";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { getAvatarUrl } from "@/utils/avatar";
-import { Plus, ChevronLeft, MapPinIcon, MessageCircleIcon, Phone, XCircle } from "lucide-react";
-import type { Organization, PixKey } from "@/services/organizer/OrganizerService";
+import {
+  Plus,
+  ChevronLeft,
+  MapPinIcon,
+  MessageCircleIcon,
+  Phone,
+  XCircle,
+} from "lucide-react";
+import type {
+  Organization,
+  PixKey,
+} from "@/services/organizer/OrganizerService";
 import { ChatIcon } from "@/components/Icons/ChatIcon";
 import { ArrowButton } from "@/components/ArrowButton";
 import { Loading } from "@/components/Loading";
@@ -120,14 +130,14 @@ export default function OrganizationSettingsPage() {
         document: org.document || "",
         tradeName: org.tradeName || "",
         ownerName: org.ownerName || "",
-        ownerDocument: org.accountHolderDocument || "", // Usar accountHolderDocument como fallback
+        ownerDocument: org.ownerDocument || "",
         zipCode: org.zipCode || "",
         street: org.street || "",
         number: org.number || "",
         neighborhood: org.neighborhood || "",
         city: org.city || "",
         state: org.state || "",
-        email: org.email || "",
+        email: org.fiscalEmail || "",
         whatsapp: org.whatsapp || "",
         phone: org.phone || "",
         siteUrl: org.siteUrl || "",
@@ -178,7 +188,9 @@ export default function OrganizationSettingsPage() {
     } catch (error: any) {
       console.error("Error uploading image:", error);
       const errorMessage =
-        error.message || error.response?.data?.message || "Erro ao fazer upload da imagem";
+        error.message ||
+        error.response?.data?.message ||
+        "Erro ao fazer upload da imagem";
       toast.error(errorMessage);
     } finally {
       setUploadingImage(false);
@@ -194,7 +206,9 @@ export default function OrganizationSettingsPage() {
     } catch (error: any) {
       console.error("Error removing image:", error);
       const errorMessage =
-        error.message || error.response?.data?.message || "Erro ao remover imagem";
+        error.message ||
+        error.response?.data?.message ||
+        "Erro ao remover imagem";
       toast.error(errorMessage);
     }
   };
@@ -284,7 +298,8 @@ export default function OrganizationSettingsPage() {
         ownerName: formData.ownerName || undefined,
         pix: formData.pix || undefined,
         accountHolderName: formData.accountHolderName || undefined,
-        accountHolderDocument: formData.accountHolderDocument.replace(/\D/g, "") || undefined,
+        accountHolderDocument:
+          formData.accountHolderDocument.replace(/\D/g, "") || undefined,
         bankName: formData.bankName || undefined,
         bankCode: formData.bankCode || undefined,
         agency: formData.agency || undefined,
@@ -390,7 +405,10 @@ export default function OrganizationSettingsPage() {
                         {organizer.name || "Nome da organização"}
                       </p>
                       <p className="font-family-dm-sans leading-[1.3] text-sm md:text-xl text-gray-11">
-                        CNPJ: {organizer.document ? maskCNPJ(organizer.document.replace(/\D/g, "")) : "00.000.000/0000-00"}
+                        CNPJ:{" "}
+                        {organizer.document
+                          ? maskCNPJ(organizer.document.replace(/\D/g, ""))
+                          : "00.000.000/0000-00"}
                       </p>
                     </div>
                   </div>
@@ -467,7 +485,8 @@ export default function OrganizationSettingsPage() {
             <div className="bg-gray-1 flex flex-col gap-4 md:gap-6 items-start pb-6 pt-5 px-4 md:pb-8 md:pt-6 relative rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)] border border-gray-6">
               <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
                 <p className="font-manrope font-bold leading-[1.1] text-lg md:text-base text-gray-12 flex items-center gap-2">
-                  <HotelsIcon className="size-6 text-gray-12" /> Detalhes da organização
+                  <HotelsIcon className="size-6 text-gray-12" /> Detalhes da
+                  organização
                 </p>
               </div>
 
@@ -515,7 +534,7 @@ export default function OrganizationSettingsPage() {
                   <Input
                     type="text"
                     name="ownerName"
-                    value={organizer.members?.find((member) => member.role === "OWNER")?.user?.firstName || ""}
+                    value={organizer.ownerName}
                     onChange={handleInputChange}
                     placeholder="Nome do responsável"
                     disabled
@@ -531,7 +550,7 @@ export default function OrganizationSettingsPage() {
                   <Input
                     type="text"
                     name="ownerName"
-                    value={maskCPF((organizer.members?.find((member) => member.role === "OWNER")?.user?.documentNumber || "").replace(/\D/g, ""))}
+                    value={maskCPF(organizer.ownerDocument ?? "")}
                     onChange={handleInputChange}
                     placeholder="CPF do responsável"
                     disabled
@@ -546,7 +565,7 @@ export default function OrganizationSettingsPage() {
                   <Input
                     type="text"
                     name="emailFiscal"
-                    value={organizer.email}
+                    value={organizer.fiscalEmail}
                     onChange={handleInputChange}
                     placeholder="E-mail fiscal"
                     disabled
@@ -595,7 +614,6 @@ export default function OrganizationSettingsPage() {
                     value={formData.street}
                     onChange={handleInputChange}
                     placeholder="Digite o nome da sua rua"
-
                   />
                 </div>
 
@@ -610,7 +628,6 @@ export default function OrganizationSettingsPage() {
                     value={formData.number}
                     onChange={handleInputChange}
                     placeholder="Ex: 123"
-
                   />
                 </div>
 
@@ -625,7 +642,6 @@ export default function OrganizationSettingsPage() {
                     value={formData.neighborhood}
                     onChange={handleInputChange}
                     placeholder="Digite o nome do seu bairro"
-
                   />
                 </div>
 
@@ -640,7 +656,6 @@ export default function OrganizationSettingsPage() {
                     value={formData.city}
                     onChange={handleInputChange}
                     placeholder="Nome da cidade"
-
                   />
                 </div>
 
@@ -656,8 +671,9 @@ export default function OrganizationSettingsPage() {
                       trigger={(isOpen) => (
                         <button className="border border-gray-6 rounded-lg h-[42px] flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
                           <span
-                            className={`text-base flex-1 text-left font-family-dm-sans ${formData.state ? "text-gray-12" : "text-gray-11"
-                              }`}
+                            className={`text-base flex-1 text-left font-family-dm-sans ${
+                              formData.state ? "text-gray-12" : "text-gray-11"
+                            }`}
                           >
                             {selectedState?.label || "Selecione o estado"}
                           </span>
@@ -665,7 +681,10 @@ export default function OrganizationSettingsPage() {
                         </button>
                       )}
                       onSelect={(option) =>
-                        setFormData((prev) => ({ ...prev, state: option.id || "" }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          state: option.id || "",
+                        }))
                       }
                     />
                   </div>
@@ -694,7 +713,6 @@ export default function OrganizationSettingsPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="contato@meuevento.com.br"
-
                   />
                 </div>
 
@@ -752,10 +770,15 @@ export default function OrganizationSettingsPage() {
                   {pixKeys.map((pixKey) => {
                     const isOpen = openPixId === pixKey.id;
                     return (
-                      <div key={pixKey.id} className="w-full border border-gray-6 rounded-lg overflow-hidden">
+                      <div
+                        key={pixKey.id}
+                        className="w-full border border-gray-6 rounded-lg overflow-hidden"
+                      >
                         <button
                           type="button"
-                          onClick={() => setOpenPixId(isOpen ? null : pixKey.id)}
+                          onClick={() =>
+                            setOpenPixId(isOpen ? null : pixKey.id)
+                          }
                           className="w-full flex items-center justify-between p-5 transition-colors text-left"
                         >
                           <div className="flex flex-col gap-2 items-start min-w-0">
@@ -765,8 +788,12 @@ export default function OrganizationSettingsPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-1 text-base leading-[1.3]">
-                              <span className="font-family-dm-sans font-normal text-gray-11">Chave pix ({pixKey.keyType || ""}):</span>
-                              <span className="font-family-dm-sans font-medium text-gray-12 truncate">{pixKey.key || "—"}</span>
+                              <span className="font-family-dm-sans font-normal text-gray-11">
+                                Chave pix ({pixKey.keyType || ""}):
+                              </span>
+                              <span className="font-family-dm-sans font-medium text-gray-12 truncate">
+                                {pixKey.key || "—"}
+                              </span>
                             </div>
                           </div>
                           <div className="shrink-0 ml-3">
@@ -784,7 +811,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.keyType || "—"}
-                                  onChange={() => { }}
+                                  onChange={() => {}}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -797,7 +824,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.key || "—"}
-                                  onChange={() => { }}
+                                  onChange={() => {}}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -810,7 +837,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.accountHolderName || "—"}
-                                  onChange={() => { }}
+                                  onChange={() => {}}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -822,8 +849,14 @@ export default function OrganizationSettingsPage() {
                                 </label>
                                 <Input
                                   type="text"
-                                  value={pixKey.accountHolderDocument ? maskCPForCNPJ(pixKey.accountHolderDocument) : "—"}
-                                  onChange={() => { }}
+                                  value={
+                                    pixKey.accountHolderDocument
+                                      ? maskCPForCNPJ(
+                                          pixKey.accountHolderDocument,
+                                        )
+                                      : "—"
+                                  }
+                                  onChange={() => {}}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -836,7 +869,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.bankName || "—"}
-                                  onChange={() => { }}
+                                  onChange={() => {}}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -915,55 +948,62 @@ export default function OrganizationSettingsPage() {
       </div>
 
       {/* Modal: Remover chave PIX */}
-      {removingPixId && (() => {
-        const pixKey = pixKeys.find((p) => p.id === removingPixId);
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-            onClick={() => setRemovingPixId(null)}
-          >
+      {removingPixId &&
+        (() => {
+          const pixKey = pixKeys.find((p) => p.id === removingPixId);
+          return (
             <div
-              className="bg-gray-1 rounded-xl p-5 w-full max-w-[442px] flex flex-col gap-11 items-center shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+              onClick={() => setRemovingPixId(null)}
             >
-              <div className="flex flex-col gap-6 items-center w-full">
-                <div className="size-[88px] rounded-full bg-gradient-to-b from-red-2 to-red-5 flex items-center justify-center shrink-0">
-                  <XCircle className="size-[52px] text-red-11" strokeWidth={1.5} />
+              <div
+                className="bg-gray-1 rounded-xl p-5 w-full max-w-[442px] flex flex-col gap-11 items-center shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex flex-col gap-6 items-center w-full">
+                  <div className="size-[88px] rounded-full bg-gradient-to-b from-red-2 to-red-5 flex items-center justify-center shrink-0">
+                    <XCircle
+                      className="size-[52px] text-red-11"
+                      strokeWidth={1.5}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-4 items-center w-full">
+                    <p className="font-family-dm-sans font-semibold leading-[1.3] text-xl text-gray-12 text-center">
+                      Remover esta chave Pix?
+                    </p>
+                    <p className="font-family-dm-sans font-normal leading-[1.3] text-base text-gray-11 text-center">
+                      A chave{" "}
+                      <span className="font-medium text-gray-12">
+                        {pixKey?.key}
+                      </span>{" "}
+                      será removida da sua organização.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-4 items-center w-full">
-                  <p className="font-family-dm-sans font-semibold leading-[1.3] text-xl text-gray-12 text-center">
-                    Remover esta chave Pix?
-                  </p>
-                  <p className="font-family-dm-sans font-normal leading-[1.3] text-base text-gray-11 text-center">
-                    A chave{" "}
-                    <span className="font-medium text-gray-12">{pixKey?.key}</span>{" "}
-                    será removida da sua organização.
-                  </p>
+                <div className="flex gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setRemovingPixId(null)}
+                    className="flex-1 h-12 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-2 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleRequestChange();
+                      setRemovingPixId(null);
+                    }}
+                    className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors"
+                  >
+                    Sim, remover
+                  </button>
                 </div>
-              </div>
-              <div className="flex gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={() => setRemovingPixId(null)}
-                  className="flex-1 h-12 border border-gray-6 rounded-lg font-manrope font-bold text-base text-gray-12 hover:bg-gray-2 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleRequestChange();
-                    setRemovingPixId(null);
-                  }}
-                  className="flex-1 h-12 bg-red-11 rounded-lg font-manrope font-bold text-base text-red-2 hover:bg-red-10 transition-colors"
-                >
-                  Sim, remover
-                </button>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </>
   );
 }
+

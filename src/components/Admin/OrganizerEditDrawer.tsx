@@ -42,6 +42,9 @@ interface OrgDetail extends AdminAuditOrganization {
   siteUrl?: string;
   instagram?: string;
   description?: string;
+  ownerName?: string;
+  ownerDocument?: string;
+  fiscalEmail?: string;
   pixKeys?: Array<{ key: string; keyType: string; isDefault: boolean }>;
   _count?: { events?: number; members?: number };
 }
@@ -421,6 +424,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [instagram, setInstagram] = useState("");
   const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
   const [cnpjValue, setCnpjValue] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerDocument, setOwnerDocument] = useState("");
+  const [fiscalEmail, setFiscalEmail] = useState("");
 
   // pix form
   const [showAddPix, setShowAddPix] = useState(false);
@@ -449,6 +455,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       setSiteUrl("");
       setInstagram("");
       setPixKeys([]);
+      setOwnerName("");
+      setOwnerDocument("");
+      setFiscalEmail("");
       setShowAddPix(false);
       setNewPix(emptyPix);
       return;
@@ -485,6 +494,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         setPhone(formatPhone(d.phone));
         setSiteUrl(d.siteUrl ?? "");
         setInstagram(d.instagram ?? "");
+        setOwnerName(d.ownerName ?? "");
+        setOwnerDocument(formatCPF(d.ownerDocument));
+        setFiscalEmail(d.fiscalEmail ?? "");
         const loadedPix: PixKey[] = Array.isArray(d.pixKeys)
           ? d.pixKeys.map((k: any, i: number) => ({ id: `loaded-${i}`, key: k.key, keyType: k.keyType, isDefault: k.isDefault, bankName: k.bankName ?? "", accountHolderName: k.accountHolderName ?? "", accountHolderDocument: k.accountHolderDocument ? formatCPFOrCNPJ(k.accountHolderDocument) : "" }))
           : [];
@@ -537,6 +549,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         phone: digits(phone) || undefined,
         siteUrl,
         instagram,
+        ownerName: ownerName.trim() || undefined,
+        ownerDocument: digits(ownerDocument) || undefined,
+        fiscalEmail: fiscalEmail.trim() || undefined,
         pixKeys: pixKeys.map(({ key, keyType, bankName, accountHolderName, accountHolderDocument }, i) => ({
           key,
           keyType,
@@ -705,6 +720,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
                   <FieldInput label="CNPJ" value={cnpjValue} onChange={(v) => setCnpjValue(formatCNPJ(v))} placeholder="00.000.000/0000-00" className="min-w-[284px]" />
                   <FieldInput label="Nome fantasia (Razão social)" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
+                  <FieldInput label="Nome do responsável" value={ownerName} onChange={setOwnerName} placeholder="Nome completo" className="min-w-[284px]" />
+                  <FieldInput label="CPF do responsável" value={ownerDocument} onChange={(v) => setOwnerDocument(formatCPF(v))} placeholder="000.000.000-00" className="min-w-[284px]" />
+                  <FieldInput label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />
                 </div>
               </div>
 

@@ -13,6 +13,7 @@ import {
   registerStravaClipboardMatcher,
   registerTopicQuillStravaEmbed,
 } from "@/components/Topic/registerTopicQuillStravaEmbed";
+import { createTopicResizeWithSideHandlesClass } from "@/components/Topic/topicQuillResizeWithSideHandles";
 import { extractVideoEmbedUrl } from "@/lib/extractVideoEmbedUrl";
 import {
   maybeDownscaleImageFileForUpload,
@@ -37,6 +38,9 @@ let quillResizeModuleRegistered = false;
 let topicQuillImageLayoutRegistered = false;
 let topicQuillVideoLayoutRegistered = false;
 let topicQuillStravaEmbedRegistered = false;
+// Cache da classe custom de Resize (8 handles) — depende do QuillResize
+// importado dinamicamente; criada uma vez por sessão.
+let topicResizeWithSideHandlesClass: unknown = null;
 
 /**
  * Fluxo tipo quill-image-resize: inline-block permite várias imagens na mesma linha
@@ -279,6 +283,10 @@ export function TopicModal() {
           Quill.register("modules/resize", QuillResize);
           quillResizeModuleRegistered = true;
         }
+        if (!topicResizeWithSideHandlesClass) {
+          topicResizeWithSideHandlesClass =
+            createTopicResizeWithSideHandlesClass(QuillResize);
+        }
         if (!topicQuillImageLayoutRegistered) {
           registerTopicQuillImageLayout(Quill);
           topicQuillImageLayoutRegistered = true;
@@ -314,15 +322,27 @@ export function TopicModal() {
                 matchVisual: false,
               },
               resize: {
-                modules: ["Resize"],
+                // Substitui o módulo "Resize" padrão (4 cantos) pela versão
+                // com 8 handles (4 cantos + 4 laterais), permitindo redimensionar
+                // só largura ou só altura.
+                modules: [topicResizeWithSideHandlesClass],
                 parchment: {
                   image: {
                     attribute: ["width"],
                     limit: { minWidth: 48, maxWidth: 2000 },
                   },
+                  // Sem `ratio` aqui: o usuário pode esticar o iframe (vídeo,
+                  // Instagram/Twitter pós-script, etc.) na horizontal e na
+                  // vertical de forma independente. Com ratio fixo o resize
+                  // ficava preso a 16:9 e altura nunca crescia além do calculado.
                   video: {
                     attribute: ["width", "height"],
-                    limit: { minWidth: 160, maxWidth: 1200, ratio: 0.5625 },
+                    limit: {
+                      minWidth: 160,
+                      maxWidth: 1200,
+                      minHeight: 90,
+                      maxHeight: 1200,
+                    },
                   },
                 },
                 onChangeSize: () => {
@@ -1020,6 +1040,29 @@ export function TopicModal() {
     const root = quillRef.current;
     if (!root) return;
     root.style.display = isCodeMode ? "none" : "flex";
+  }, [isCodeMode]);
+
+  /**
+   * Mantém o botão `code-block` da toolbar em estado ativo enquanto o modo
+   * código está ligado. O handler foi sobrescrito para toggle de modo (em vez
+   * de aplicar o formato `code-block`), então o `ql-active` que o Quill
+   * gerencia por seleção nunca dispara aqui — sincronizamos manualmente.
+   * O background inline duplica a cor aplicada à regra `.ql-active` no init
+   * (#e8e8e8) porque os outros estilos da toolbar também são inline e
+   * sobrescreveriam um `:hover`/classe via CSS.
+   */
+  useEffect(() => {
+    const button = quillRef.current?.querySelector(
+      ".ql-toolbar .ql-code-block",
+    ) as HTMLElement | null;
+    if (!button) return;
+    if (isCodeMode) {
+      button.classList.add("ql-active");
+      button.style.backgroundColor = "#e8e8e8";
+    } else {
+      button.classList.remove("ql-active");
+      button.style.backgroundColor = "#f9f9f9";
+    }
   }, [isCodeMode]);
 
   const handleSave = async () => {

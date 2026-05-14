@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
@@ -10,6 +10,18 @@ import { FinancialSection } from "@/components/Organizer/FinancialSection";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 
+type FinancialBaseline = {
+  organizerPercent: number;
+  maxInstallments: 1 | 2 | 3;
+  totalFee: number;
+};
+
+const DEFAULT_BASELINE: FinancialBaseline = {
+  organizerPercent: 0,
+  maxInstallments: 1,
+  totalFee: 6,
+};
+
 export default function EditFinancialPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -17,9 +29,14 @@ export default function EditFinancialPage() {
   const { authChecked } = useWizardAuth();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [organizerPercent, setOrganizerPercent] = useState(0);
-  const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
-  const [totalFee, setTotalFee] = useState<number>(6);
+  const [organizerPercent, setOrganizerPercent] = useState(DEFAULT_BASELINE.organizerPercent);
+  const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(DEFAULT_BASELINE.maxInstallments);
+  const [totalFee, setTotalFee] = useState<number>(DEFAULT_BASELINE.totalFee);
+
+  // Baseline gravado a partir do GET inicial (ou dos defaults, quando o
+  // endpoint ainda não existir). Atualizado a cada save bem-sucedido pra que
+  // o botão volte a ficar desabilitado até a próxima edição.
+  const baselineRef = useRef<FinancialBaseline | null>(null);
 
   useEffect(() => {
     if (!authChecked || !eventId) return;
@@ -29,9 +46,15 @@ export default function EditFinancialPage() {
         setOrganizerPercent(organizerFeePercent);
         setMaxInstallments(mi);
         setTotalFee(tf);
+        baselineRef.current = {
+          organizerPercent: organizerFeePercent,
+          maxInstallments: mi,
+          totalFee: tf,
+        };
       })
       .catch(() => {
         // endpoint may not exist yet — fall back to defaults
+        baselineRef.current = { ...DEFAULT_BASELINE };
       })
       .finally(() => setDataLoaded(true));
   }, [authChecked, eventId]);
@@ -46,6 +69,7 @@ export default function EditFinancialPage() {
     try {
       const participantFeePercent = parseFloat((totalFee - organizerPercent).toFixed(2));
       await organizerService.saveFinancialSettings(eventId, organizerPercent, participantFeePercent, maxInstallments, totalFee);
+      baselineRef.current = { organizerPercent, maxInstallments, totalFee };
       toast.success("Configurações financeiras salvas!");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Erro ao salvar configurações financeiras");
@@ -53,6 +77,13 @@ export default function EditFinancialPage() {
       setSaving(false);
     }
   };
+
+  const baseline = baselineRef.current;
+  const hasChanges =
+    baseline !== null &&
+    (organizerPercent !== baseline.organizerPercent ||
+      maxInstallments !== baseline.maxInstallments ||
+      totalFee !== baseline.totalFee);
 
   return (
     <WizardStepLayout
@@ -68,7 +99,7 @@ export default function EditFinancialPage() {
         <Button
           type="button"
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !hasChanges}
           variant="default"
           className={cn("h-[52px] px-11 font-manrope text-lg font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50", "max-md:h-12 max-md:w-full max-md:px-4")}
         >

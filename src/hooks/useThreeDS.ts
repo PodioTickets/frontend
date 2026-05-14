@@ -26,7 +26,14 @@ const BRASPAG_ENV: "PRD" | "SDB" =
 
 const IS_PROD = BRASPAG_ENV === "PRD";
 
-const SDK_URL = "https://mpisandbox.braspag.com.br/Scripts/BP.Mpi.3ds20.min.js"
+// SDK URL TEM que casar com BRASPAG_ENV — se carregarmos o SDK sandbox e o
+// backend gerar AccessToken para PRD (ou vice-versa), o Cardinal devolve
+// ErrorNumber 1020 ("Invalid JWT. Error verifying and deserializing JWT.")
+// porque o JWT foi assinado para o outro ambiente. O SDK sandbox só fala
+// com `centinelapistag.cardinalcommerce.com`; o de PRD fala com `centinelapi`.
+const SDK_URL = IS_PROD
+  ? "https://mpi.braspag.com.br/Scripts/BP.Mpi.3ds20.min.js"
+  : "https://mpisandbox.braspag.com.br/Scripts/BP.Mpi.3ds20.min.js";
 
 const API_BASE_URL =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333").replace(/\/$/, "");
@@ -223,7 +230,14 @@ export function useThreeDS() {
         // ao ser removido sem que tenhamos settled, tratamos como cancel.
         let challengeIframe: HTMLIFrameElement | null = null;
         const CHALLENGE_MIN_SIZE = 200; // px; descarta o collector invisível.
-        const CANCEL_GRACE_MS = 600;    // tempo p/ callback do SDK chegar antes.
+        // Grace generoso: no sucesso, o SDK remove o iframe do banco ANTES de
+        // rodar a validação interna no Cardinal e disparar `onSuccess`. Esse
+        // intervalo entre "iframe sumiu" e "onSuccess fired" passou de 600ms
+        // em produção e gerava falso-positivo de cancelamento (usuário via
+        // tela de aprovado e na sequência o modal "Pagamento não aprovado").
+        // 8s é folga suficiente pro round-trip mais lento; se o usuário
+        // realmente cancelou, esperar 8s pelo modal é UX aceitável.
+        const CANCEL_GRACE_MS = 8000;
 
         const cancelObserver = new MutationObserver((mutations) => {
           if (settled) return;
