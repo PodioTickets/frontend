@@ -1,12 +1,13 @@
 "use client";
 
-import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { MapPin, Calendar } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { useRouter } from "next/navigation";
 import { modalitiesColumns } from "@/constants";
 import Image from "next/image";
+import { useState, useCallback } from "react";
+import { itemInitialLetter } from "@/utils/itemInitial";
 
 export interface Ticket {
   id: string;
@@ -42,6 +43,8 @@ interface TicketCardProps {
 
 export function TicketCard({ ticket, className }: TicketCardProps) {
   const router = useRouter();
+  const [imgFailed, setImgFailed] = useState(false);
+  const onImgError = useCallback(() => setImgFailed(true), []);
 
   const handleClick = () => {
     router.push(`/user/tickets/${ticket.id}`);
@@ -80,22 +83,25 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
       )}
       style={{ boxShadow: "0px 2px 6px rgba(17, 17, 17, 0.25)" }}
     >
-      {/* Banner image — rounded-lg so bottom corners are also rounded */}
+      {/* Banner image */}
       <div
-        className="w-full shrink-0 rounded-lg overflow-hidden"
+        className="relative w-full shrink-0 rounded-lg overflow-hidden bg-[#E8E8E8] flex items-center justify-center"
         style={{ height: 232 }}
       >
-        <ImageWithInitialFallback
-          src={imageUrl}
-          alt={ticket.event.name}
-          name={ticket.event.name}
-          fallbackId={ticket.event.id}
-          fill
-          sizes="(max-width: 1440px) 25vw, 308px"
-          className="size-full border-0 border-transparent bg-gray-4"
-          imgClassName="object-cover"
-          letterClassName="text-5xl font-bold"
-        />
+        {imageUrl && !imgFailed ? (
+          <Image
+            src={imageUrl}
+            alt={ticket.event.name}
+            fill
+            sizes="(max-width: 1440px) 25vw, 308px"
+            className="object-contain"
+            onError={onImgError}
+          />
+        ) : (
+          <span className="text-5xl font-bold text-gray-400 select-none">
+            {itemInitialLetter(ticket.event.name, ticket.event.id)}
+          </span>
+        )}
       </div>
 
       {/* "Inscrição feita por" badge — absolute over image */}
