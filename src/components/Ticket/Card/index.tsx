@@ -1,6 +1,7 @@
 "use client";
 
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { MapPin, Calendar } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { useRouter } from "next/navigation";
@@ -39,36 +40,8 @@ interface TicketCardProps {
   className?: string;
 }
 
-const statusConfig = {
-  CONFIRMED: {
-    label: "Inscrição confirmada",
-    bgColor: "bg-[#c4e8d1]",
-    borderColor: "border-primary-7",
-    textColor: "text-primary-12",
-  },
-  PENDING: {
-    label: "Pagamento pendente",
-    bgColor: "bg-yellow-3",
-    borderColor: "border-yellow-8",
-    textColor: "text-yellow-12",
-  },
-  COMPLETED: {
-    label: "Evento realizado",
-    bgColor: "bg-red-3",
-    borderColor: "border-red-8",
-    textColor: "text-red-12",
-  },
-  CANCELLED: {
-    label: "Cancelado",
-    bgColor: "bg-red-3",
-    borderColor: "border-red-8",
-    textColor: "text-red-12",
-  },
-};
-
 export function TicketCard({ ticket, className }: TicketCardProps) {
   const router = useRouter();
-  const status = statusConfig[ticket.status] || statusConfig.PENDING;
 
   const handleClick = () => {
     router.push(`/user/tickets/${ticket.id}`);
@@ -94,20 +67,25 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
       : `${getApiClient().getBaseURL()}${ticket.event.imageUrl}`
     : null;
 
-  const primaryModality =
-    ticket.modalities.length > 0 ? ticket.modalities[0] : null;
+  const primaryModality = ticket.modalities.length > 0 ? ticket.modalities[0] : null;
   const modalityIcon = primaryModality ? getModalityIcon(primaryModality) : null;
 
   return (
     <div
       onClick={handleClick}
       className={cn(
-        "bg-white flex flex-col overflow-hidden rounded-xl shadow-[0px_2px_8px_0px_rgba(17,17,17,0.12)] w-[308px] cursor-pointer hover:shadow-[0px_4px_16px_0px_rgba(17,17,17,0.18)] hover:-translate-y-1 transition-all duration-300",
+        "relative flex flex-col overflow-hidden rounded-lg cursor-pointer bg-[#F9F9F9]",
+        "min-w-[300px] w-[308px] max-w-[308px]",
+        "hover:-translate-y-1 transition-transform duration-200",
         className
       )}
+      style={{ boxShadow: "0px 2px 6px rgba(17, 17, 17, 0.25)" }}
     >
-      {/* Banner image */}
-      <div className="relative w-full overflow-hidden rounded-t-xl bg-gray-4" style={{ height: 232 }}>
+      {/* Banner image — rounded-lg so bottom corners are also rounded */}
+      <div
+        className="relative w-full shrink-0 overflow-hidden rounded-lg bg-gray-4"
+        style={{ height: 232 }}
+      >
         <ImageWithInitialFallback
           src={imageUrl}
           alt={ticket.event.name}
@@ -115,106 +93,120 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           fallbackId={ticket.event.id}
           fill
           sizes="308px"
-          className="size-full border-transparent border-0 object-cover"
+          className="size-full border-0 border-transparent object-cover"
           imgClassName="object-cover"
           letterClassName="text-5xl font-bold"
         />
-
-        {/* "Inscrição feita por" badge */}
-        {ticket.invitedBy && (
-          <div
-            className="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full"
-            style={{
-              background: "rgba(20, 20, 20, 0.65)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-            }}
-          >
-            <Image
-              src="/images/gift-huge.png"
-              alt=""
-              width={14}
-              height={14}
-              className="shrink-0 brightness-0 invert"
-            />
-            <span className="text-white text-xs font-medium leading-none whitespace-nowrap font-dm-sans">
-              Inscrição feita por{" "}
-              <span className="font-semibold">{ticket.invitedBy.fullName}</span>
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Card body */}
-      <div className="flex flex-col gap-3 px-4 py-4">
+      {/* "Inscrição feita por" badge — absolute over image */}
+      {ticket.invitedBy && (
+        <div
+          className="absolute top-2 left-2 flex items-center gap-2 rounded-lg p-2"
+          style={{
+            background: "rgba(1, 29, 33, 0.70)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+          }}
+        >
+          <Image
+            src="/images/gift-huge.png"
+            alt=""
+            width={20}
+            height={20}
+            className="shrink-0 brightness-0 invert"
+          />
+          <div className="flex flex-col gap-2">
+            <span
+              className="font-dm-sans font-normal text-[#B4B4B4]"
+              style={{ fontSize: 12, lineHeight: "15.6px" }}
+            >
+              Inscrição feita por
+            </span>
+            <span
+              className="font-dm-sans font-semibold text-[#EEEEEE]"
+              style={{ fontSize: 12, lineHeight: "15.6px" }}
+            >
+              {ticket.invitedBy.fullName}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Info section (border-bottom) */}
+      <div
+        className="w-full flex flex-col gap-3 border-b border-[#D9D9D9]"
+        style={{ paddingTop: 16, paddingBottom: 12, paddingLeft: 12, paddingRight: 12 }}
+      >
         {/* Event name */}
-        <h3 className="font-bold text-base leading-[1.2] text-gray-12 font-manrope line-clamp-2">
+        <p
+          className="font-manrope font-bold text-[#202020] line-clamp-2"
+          style={{ fontSize: 16, lineHeight: "17.6px" }}
+        >
           {ticket.event.name}
-        </h3>
+        </p>
 
         {/* Location */}
-        <div className="flex items-center gap-2">
-          <Image
-            src="/images/location-huge.png"
-            alt="Local"
-            width={18}
-            height={18}
-            className="shrink-0"
+        <div className="flex items-center gap-1">
+          <MapPin
+            size={20}
+            strokeWidth={1.5}
+            className="shrink-0 text-[#202020]"
           />
-          <span className="text-sm text-gray-11 font-dm-sans leading-none">
+          <span
+            className="font-dm-sans font-normal text-[#202020]"
+            style={{ fontSize: 14, lineHeight: "18.2px" }}
+          >
             {ticket.event.location.city}, {ticket.event.location.state}
           </span>
         </div>
 
         {/* Date */}
-        <div className="flex items-center gap-2">
-          <Image
-            src="/images/calendar-huge.png"
-            alt="Data"
-            width={18}
-            height={18}
-            className="shrink-0"
+        <div className="flex items-center gap-1">
+          <Calendar
+            size={20}
+            strokeWidth={1.5}
+            className="shrink-0 text-[#202020]"
           />
-          <span className="text-sm text-gray-11 font-dm-sans leading-none">
+          <span
+            className="font-dm-sans font-normal text-[#202020]"
+            style={{ fontSize: 14, lineHeight: "18.2px" }}
+          >
             {formatDate(ticket.event.eventDate)}
           </span>
         </div>
-
-        {/* Modality */}
-        {primaryModality && (
-          <div className="flex items-center gap-2">
-            {modalityIcon ? (
-              <Image
-                src={modalityIcon}
-                alt={primaryModality}
-                width={18}
-                height={18}
-                className="shrink-0 object-contain"
-              />
-            ) : (
-              <div className="size-[18px] shrink-0" />
-            )}
-            <span className="text-sm text-gray-11 font-dm-sans leading-none line-clamp-1">
-              {primaryModality}
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Status badge */}
-      <div className="flex items-center px-4 pb-4">
+      {/* Bottom: modality */}
+      <div
+        className="w-full flex flex-col"
+        style={{ paddingTop: 12, paddingBottom: 16 }}
+      >
         <div
-          className={cn(
-            "flex gap-1.5 items-center px-3 py-1.5 rounded-full border",
-            status.bgColor,
-            status.borderColor,
-            status.textColor
-          )}
+          className="w-full flex items-center gap-3"
+          style={{ paddingLeft: 12, paddingRight: 12 }}
         >
-          <div className="size-2 shrink-0 rounded-full bg-current" />
-          <p className="font-semibold text-xs leading-none font-dm-sans whitespace-nowrap">
-            {status.label}
-          </p>
+          {primaryModality && (
+            <div className="flex items-center gap-1">
+              {modalityIcon ? (
+                <Image
+                  src={modalityIcon}
+                  alt={primaryModality}
+                  width={20}
+                  height={20}
+                  className="shrink-0 object-contain"
+                />
+              ) : (
+                <div className="size-5 shrink-0" />
+              )}
+              <span
+                className="font-dm-sans font-normal text-[#202020] line-clamp-1"
+                style={{ fontSize: 14, lineHeight: "18.2px" }}
+              >
+                {primaryModality}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
