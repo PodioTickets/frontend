@@ -510,17 +510,16 @@ export default function OrganizationSettingsPage() {
                   />
                 </div>
 
-                {/* Nome fantasia (Razão social) */}
                 <div className="flex flex-col gap-2 items-start">
                   <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
-                    Nome fantasia (Razão social)
+                    Razão social
                   </label>
                   <Input
                     type="text"
                     name="tradeName"
                     value={formData.tradeName}
                     onChange={handleInputChange}
-                    placeholder="Digite o nome fantasia"
+                    placeholder="Digite a razão social"
                     disabled
                     className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
                   />
@@ -671,9 +670,8 @@ export default function OrganizationSettingsPage() {
                       trigger={(isOpen) => (
                         <button className="border border-gray-6 rounded-lg h-[42px] flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors">
                           <span
-                            className={`text-base flex-1 text-left font-family-dm-sans ${
-                              formData.state ? "text-gray-12" : "text-gray-11"
-                            }`}
+                            className={`text-base flex-1 text-left font-family-dm-sans ${formData.state ? "text-gray-12" : "text-gray-11"
+                              }`}
                           >
                             {selectedState?.label || "Selecione o estado"}
                           </span>
@@ -811,7 +809,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.keyType || "—"}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -824,7 +822,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.key || "—"}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -837,7 +835,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.accountHolderName || "—"}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -852,11 +850,11 @@ export default function OrganizationSettingsPage() {
                                   value={
                                     pixKey.accountHolderDocument
                                       ? maskCPForCNPJ(
-                                          pixKey.accountHolderDocument,
-                                        )
+                                        pixKey.accountHolderDocument,
+                                      )
                                       : "—"
                                   }
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />
@@ -869,7 +867,7 @@ export default function OrganizationSettingsPage() {
                                 <Input
                                   type="text"
                                   value={pixKey.bankName || "—"}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   disabled
                                   className="disabled:opacity-50 disabled:cursor-not-allowed bg-gray-6"
                                 />

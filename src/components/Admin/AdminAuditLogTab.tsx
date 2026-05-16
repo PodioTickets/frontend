@@ -419,7 +419,7 @@ export function AdminAuditLogTab() {
                       type="search"
                       value={orgSearch}
                       onChange={(e) => setOrgSearch(e.target.value)}
-                      placeholder="Nome, nome fantasia, e-mail ou documento…"
+                      placeholder="Nome, razão social, e-mail ou documento…"
                       className={cn(
                         inputShell,
                         "h-10 pl-9 text-sm py-0"
