@@ -202,12 +202,27 @@ export function AdminCollaboratorDrawer({
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
-      const apiMsg: string = err?.response?.data?.message ?? "";
-      // "Este usuário já está em uma organização." / "Usuário já existe na
-      // organização." → erro de validação no input de e-mail, em vez de toast.
+      const rawMsg = err?.response?.data?.message;
+      const apiMsg: string = Array.isArray(rawMsg)
+        ? rawMsg[0]
+        : (typeof rawMsg === "string" ? rawMsg : "");
+      // Conflitos de e-mail vindos do backend aparecem como erro de validação
+      // no input de e-mail (não como toast). Normaliza pra NFC porque "já"
+      // pode chegar decomposto (j + combining-acute) — sem normalizar, o regex
+      // falha silenciosamente. Cobre todas as variantes do backend:
+      //  - "Esse email já foi cadastrado."
+      //  - "User with this email already exists"
+      //  - "Este usuário já está em uma organização."
+      //  - "Usuário já existe na organização."
+      // Fallback: qualquer 409 que mencione "email"/"usuário" também cai aqui.
+      const norm = apiMsg.normalize("NFC").toLowerCase();
       const isEmailConflict =
-        /j[áa]\s+est[áa].*organiza[çc][ãa]o/i.test(apiMsg) ||
-        /j[áa]\s+existe.*organiza[çc][ãa]o/i.test(apiMsg);
+        /e-?mail.*cadastrad/.test(norm) ||
+        /cadastrad.*e-?mail/.test(norm) ||
+        /j(?:á|á)\s+est(?:á|á).*organiza/.test(norm) ||
+        /j(?:á|á)\s+existe.*organiza/.test(norm) ||
+        /e-?mail.*already\s+exists/.test(norm) ||
+        (err?.response?.status === 409 && /e-?mail|usu(?:á|á)rio/.test(norm));
       if (isEmailConflict) {
         setFieldErrors({ email: apiMsg });
       } else {

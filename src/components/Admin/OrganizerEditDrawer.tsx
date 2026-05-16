@@ -214,6 +214,7 @@ function FieldInput({
   readOnly,
   type = "text",
   className,
+  error,
 }: {
   label: string;
   value: string;
@@ -222,6 +223,7 @@ function FieldInput({
   readOnly?: boolean;
   type?: string;
   className?: string;
+  error?: string;
 }) {
   return (
     <div className={cn("flex flex-col gap-2 flex-1", className)}>
@@ -235,12 +237,17 @@ function FieldInput({
         placeholder={placeholder}
         readOnly={readOnly}
         className={cn(
-          "h-12 w-full rounded-lg border border-gray-6 px-3 text-base font-normal font-family-dm-sans leading-[1.3] outline-none transition-colors",
+          "h-12 w-full rounded-lg border px-3 text-base font-normal font-family-dm-sans leading-[1.3] outline-none transition-colors",
           readOnly
             ? "bg-gray-3 border-gray-4 text-gray-12 cursor-default"
             : "bg-gray-1 text-gray-12 placeholder:text-gray-11 focus:border-gray-8",
+          error && !readOnly && "border-red-8 focus:border-red-8",
+          !error && "border-gray-6",
         )}
       />
+      {error ? (
+        <p className="text-sm text-red-11 font-family-dm-sans leading-[1.3]">{error}</p>
+      ) : null}
     </div>
   );
 }
@@ -418,6 +425,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [neighborhood, setNeighborhood] = useState("");
   const [city, setCity] = useState("");
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [phone, setPhone] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
@@ -532,6 +540,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const handleSave = async () => {
     if (!isCreate && !org) return;
     setSaving(true);
+    setEmailError("");
     try {
       const api = getApiClient();
       const payload = {
@@ -571,12 +580,32 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       onUpdated?.();
       onClose();
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        (isCreate
+      const rawMsg = err?.response?.data?.message;
+      const apiMsg = Array.isArray(rawMsg) ? rawMsg[0] : (typeof rawMsg === "string" ? rawMsg : "");
+      // Conflitos de e-mail vindos do backend aparecem como erro de validação
+      // no input de e-mail (não como toast). Normaliza pra NFC porque o backend
+      // pode entregar "já" como "já" (NFD) — sem isso o regex `j[áa]`
+      // falha. Regex genérico `email.*cadastrad` cobre "Esse email já foi
+      // cadastrado", "email cadastrado", "e-mail já cadastrado" etc.
+      const norm = apiMsg.normalize("NFC").toLowerCase();
+      // Cobertura ampla — inclui fallback por status 409 com "email" no texto,
+      // pra capturar frases novas do backend que ainda não mapeamos.
+      const isEmailConflict =
+        /e-?mail.*cadastrad/.test(norm) ||
+        /cadastrad.*e-?mail/.test(norm) ||
+        /e-?mail.*j(?:á|á)\s+(foi\s+)?cadastrad/.test(norm) ||
+        /j(?:á|á)\s+est(?:á|á).*organiza/.test(norm) ||
+        /j(?:á|á)\s+existe.*organiza/.test(norm) ||
+        /e-?mail.*already\s+exists/.test(norm) ||
+        (err?.response?.status === 409 && /e-?mail|usu(?:á|á)rio/.test(norm));
+      if (isEmailConflict) {
+        setEmailError(apiMsg);
+      } else {
+        const fallback = isCreate
           ? "Não foi possível criar a organização."
-          : "Não foi possível salvar as alterações.");
-      toast.error(typeof msg === "string" ? msg : "Erro ao salvar.");
+          : "Não foi possível salvar as alterações.";
+        toast.error(apiMsg || fallback);
+      }
     } finally {
       setSaving(false);
     }
@@ -747,7 +776,18 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<Phone className="size-5" />} label="Contatos da organização" />
                 <div className="grid grid-cols-2 gap-4">
-                  <FieldInput label="E-mail" value={email} onChange={setEmail} placeholder="contato@meuevento.com.br" type="email" className="min-w-[290px]" />
+                  <FieldInput
+                    label="E-mail"
+                    value={email}
+                    onChange={(v) => {
+                      setEmail(v);
+                      if (emailError) setEmailError("");
+                    }}
+                    placeholder="contato@meuevento.com.br"
+                    type="email"
+                    className="min-w-[290px]"
+                    error={emailError}
+                  />
                   <FieldInput label="WhatsApp" value={whatsapp} onChange={(v) => setWhatsapp(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
                   <FieldInput label="Telefone" value={phone} onChange={(v) => setPhone(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
                 </div>

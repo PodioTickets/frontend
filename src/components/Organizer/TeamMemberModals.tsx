@@ -486,20 +486,24 @@ export function CollaboratorDrawer({
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
-      const apiMsg: string = err?.response?.data?.message ?? "";
+      const rawApiMsg = err?.response?.data?.message;
+      const apiMsg: string = Array.isArray(rawApiMsg)
+        ? rawApiMsg[0]
+        : (typeof rawApiMsg === "string" ? rawApiMsg : "");
       // Conflitos de e-mail vindos do backend aparecem como erro de validação
-      // no input de e-mail, não como toast — o usuário identifica imediatamente
-      // qual campo tem problema. Variantes cobertas:
+      // no input de e-mail, não como toast. Normaliza pra NFC porque o backend
+      // pode entregar "já" decomposto (j + combining-acute) — sem normalizar,
+      // o regex `j[áa]` falha. Cobre:
       //  - "Esse email já foi cadastrado."
       //  - "User with this email already exists"
       //  - "Este usuário já está em uma organização."
       //  - "Usuário já existe na organização."
+      const norm = apiMsg.normalize("NFC");
       const isEmailConflict =
-        /j[áa]\s+est[áa].*organiza[çc][ãa]o/i.test(apiMsg) ||
-        /j[áa]\s+existe.*organiza[çc][ãa]o/i.test(apiMsg) ||
-        /e-?mail.*j[áa]\s+(foi\s+)?cadastrado/i.test(apiMsg) ||
-        /(user|usu[áa]rio).*e-?mail.*already\s+exists/i.test(apiMsg) ||
-        /e-?mail.*already\s+exists/i.test(apiMsg);
+        /e-?mail.*cadastrad/i.test(norm) ||
+        /j[áa]\s+est[áa].*organiza/i.test(norm) ||
+        /j[áa]\s+existe.*organiza/i.test(norm) ||
+        /e-?mail.*already\s+exists/i.test(norm);
       if (isEmailConflict) {
         setFieldErrors({ email: apiMsg });
       } else {

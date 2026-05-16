@@ -48,7 +48,10 @@
       "Bash(curl -sS -o ./figma-modal-tmp.png \"https://www.figma.com/api/mcp/asset/f5c9c618-8b94-4e94-bde6-371cce09833d\")",
       "PowerShell(if \\(Test-Path .claude/notes\\) { Get-ChildItem -Path .claude/notes -Recurse -File | Sort-Object LastWriteTime -Descending | Select-Object -First 10 | ForEach-Object { $_.FullName } } else { Write-Output \"no .claude/notes dir\" })",
       "PowerShell(if \\(Test-Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\backend\"\\) { \"exists: backend\" } elseif \\(Test-Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\"\\) { Get-ChildItem \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\" -Directory | ForEach-Object { $_.Name } } else { \"no parent\" })",
-      "Bash(awk '/^[^{]*img[^{]*\\\\{/{f=1} f{print NR\": \"$0; if\\(/\\\\}/\\) f=0}' node_modules/quill/dist/quill.snow.css)"
+      "Bash(awk '/^[^{]*img[^{]*\\\\{/{f=1} f{print NR\": \"$0; if\\(/\\\\}/\\) f=0}' node_modules/quill/dist/quill.snow.css)",
+      "Bash(awk '/^[[:space:]]*async [a-zA-Z]/{m=$0; ln=NR} NR==894{print \"Method at line \" ln \":\", m}' C:/Users/muril/Projects/PodioTickets/server/src/app/organizations/organizations.service.ts)",
+      "Bash(awk '/^[[:space:]]*async [a-zA-Z]/{m=$0; ln=NR} NR==2176{print \"Method at line \" ln \":\", m}' C:/Users/muril/Projects/PodioTickets/server/src/app/organizations/organizations.service.ts)",
+      "Bash(awk 'NR==375,/^  async [a-zA-Z]/{print NR\": \"$0}' C:/Users/muril/Projects/PodioTickets/server/src/app/organizations/organizations.service.ts)"
     ]
   },
   "disabledMcpjsonServers": [
