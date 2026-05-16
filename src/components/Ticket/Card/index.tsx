@@ -94,7 +94,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
             alt={ticket.event.name}
             fill
             sizes="(max-width: 1440px) 25vw, 308px"
-            className="object-contain"
+            className="object-cover"
             onError={onImgError}
           />
         ) : (
