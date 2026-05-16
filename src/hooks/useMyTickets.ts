@@ -168,6 +168,7 @@ export function useMyTickets(
           purchaseDate: order.createdAt,
           createdAt: order.createdAt,
           payment: order.payment,
+          invitedBy: order.invitedBy ?? null,
         };
       });
 

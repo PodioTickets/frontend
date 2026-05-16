@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMyTickets } from "@/hooks/useMyTickets";
 import { TicketCard } from "@/components/Ticket/Card";
-import { Button } from "@/components/Button";
-import Image from "next/image";
 import { Pagination } from "@/components/Pagination";
+import Image from "next/image";
 
 export default function UserTicketsPage() {
   const { isAuthenticated } = useAuth();
@@ -25,17 +25,17 @@ export default function UserTicketsPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <div className="mx-auto max-w-[1280px] px-20 pt-13 pb-20">
+      <div className="mx-auto max-w-[1280px] px-5 md:px-10 xl:px-20 pt-13 pb-20">
         {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
+        <div className="mb-8 flex items-center gap-3">
           <Image
-            src="/images/search_image.png"
+            src="/images/ticket-huge.png"
             alt="Ingressos"
-            width={40}
-            height={40}
+            width={36}
+            height={36}
             draggable={false}
           />
-          <h1 className="text-[28px] font-extrabold text-gray-12 font-manrope">
+          <h1 className="text-[28px] font-extrabold text-gray-12 font-manrope leading-none">
             Meus ingressos
           </h1>
         </div>
@@ -46,20 +46,35 @@ export default function UserTicketsPage() {
             <p className="text-gray-11">Carregando ingressos...</p>
           </div>
         ) : tickets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <p className="text-lg text-gray-11">
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Image
+              src="/images/ticket-huge.png"
+              alt=""
+              width={56}
+              height={56}
+              className="opacity-30"
+              draggable={false}
+            />
+            <p className="text-base text-gray-11 font-dm-sans">
               Você ainda não possui ingressos
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-max">
+          <div className="flex flex-wrap gap-4">
             {tickets.map((ticket) => (
               <TicketCard key={ticket.id} ticket={ticket} />
             ))}
           </div>
         )}
 
-        <Pagination currentPage={pagination.page} onPageChange={setPage} totalPages={pagination.totalPages} className="mt-10" />
+        {pagination.totalPages > 1 && (
+          <Pagination
+            currentPage={pagination.page}
+            onPageChange={setPage}
+            totalPages={pagination.totalPages}
+            className="mt-10"
+          />
+        )}
       </div>
     </div>
   );
