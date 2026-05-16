@@ -250,22 +250,38 @@ input[type="number"] {
  * Imagens no Quill: inline-block (como quill-image-resize) — mesma linha com texto
  * ou duas imagens; alinhamento vem do text-align do <p> (.ql-align-*).
  * Só "justificar" força bloco em largura total.
+ *
+ * `height: auto` aplicado apenas quando a imagem NÃO tem atributo `height`. Se o
+ * usuário redimensionou manualmente (resize module escreve <img height="X">), o
+ * atributo HTML precisa reger — senão o CSS vence o atributo e o browser calcula
+ * altura pela proporção nativa, ignorando o resize vertical. Mesma lógica para
+ * width: só forçar 100% quando não há width manual.
  */
 .ql-editor p > img:not([data-layout]),
 .topic-rich-html p > img:not([data-layout]) {
   display: inline-block;
   vertical-align: top;
   max-width: 100%;
+}
+
+.ql-editor p > img:not([data-layout]):not([height]),
+.topic-rich-html p > img:not([data-layout]):not([height]) {
   height: auto;
 }
 
 .ql-align-justify img:not([data-layout]) {
   display: block;
-  width: 100%;
   max-width: 100%;
-  height: auto;
   margin-left: 0;
   margin-right: 0;
+}
+
+.ql-align-justify img:not([data-layout]):not([width]) {
+  width: 100%;
+}
+
+.ql-align-justify img:not([data-layout]):not([height]) {
+  height: auto;
 }
 
 /*

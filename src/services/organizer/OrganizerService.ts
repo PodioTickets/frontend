@@ -251,8 +251,8 @@ export function normalizeOrganizationAuditLogItem(
 
   let metadata: Record<string, unknown> | undefined =
     raw.metadata &&
-    typeof raw.metadata === "object" &&
-    !Array.isArray(raw.metadata)
+      typeof raw.metadata === "object" &&
+      !Array.isArray(raw.metadata)
       ? { ...(raw.metadata as Record<string, unknown>) }
       : undefined;
 
@@ -366,12 +366,12 @@ export interface CreateEventRequest {
   /** Imagem do card na listagem; API pode persistir como `logoUrl` na resposta GET. */
   cardImageUrl?: string;
   status?:
-    | "DRAFT"
-    | "PUBLISHED"
-    | "CANCELLED"
-    | "COMPLETED"
-    | "SUSPENDED"
-    | "REVISION";
+  | "DRAFT"
+  | "PUBLISHED"
+  | "CANCELLED"
+  | "COMPLETED"
+  | "SUSPENDED"
+  | "REVISION";
   /** Quando true, inscrições/vendas do evento ficam pausadas (reativar com false). */
   isSuspended?: boolean;
   /**
@@ -948,6 +948,8 @@ export interface RegistrationStats {
   paid: number;
   cancelled: number;
   totalCollected: number;
+  refunded: number;
+  refundedChange: number;
   totalChange?: number;
   paidChange?: number;
   cancelledChange?: number;
@@ -999,16 +1001,16 @@ function normalizeEventNotification(
   const chRaw = raw.channels;
   const channels: EventNotificationChannel[] = Array.isArray(chRaw)
     ? (chRaw.filter(
-        (c) =>
-          typeof c === "string" &&
-          (EVENT_NOTIFICATION_CHANNELS as string[]).includes(c),
-      ) as EventNotificationChannel[])
+      (c) =>
+        typeof c === "string" &&
+        (EVENT_NOTIFICATION_CHANNELS as string[]).includes(c),
+    ) as EventNotificationChannel[])
     : [];
 
   const st = raw.status;
   const status: EventNotificationStatus =
     typeof st === "string" &&
-    (EVENT_NOTIFICATION_STATUSES as string[]).includes(st)
+      (EVENT_NOTIFICATION_STATUSES as string[]).includes(st)
       ? (st as EventNotificationStatus)
       : "review";
 
@@ -1080,7 +1082,7 @@ function normalizeEventTracking(
 }
 
 export class OrganizerService {
-  constructor(private apiClient: ApiClient) {}
+  constructor(private apiClient: ApiClient) { }
 
   // Organizer methods (DEPRECATED - usar getOrganization/createOrganization/updateOrganization)
   // Mantidos apenas para compatibilidade retroativa
@@ -2641,12 +2643,12 @@ export class OrganizerService {
       page?: number;
       limit?: number;
       status?:
-        | "PENDING"
-        | "CONFIRMED"
-        | "CANCELLED"
-        | "COMPLETED"
-        | "CHARGEBACK"
-        | "REFUNDED";
+      | "PENDING"
+      | "CONFIRMED"
+      | "CANCELLED"
+      | "COMPLETED"
+      | "CHARGEBACK"
+      | "REFUNDED";
       search?: string;
       ticketIds?: string[];
       startDate?: string;

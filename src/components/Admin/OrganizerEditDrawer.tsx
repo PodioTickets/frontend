@@ -747,11 +747,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<Phone className="size-5" />} label="Contatos da organização" />
                 <div className="grid grid-cols-2 gap-4">
-                  <FieldInput label="E-mail para Atendimento" value={email} onChange={setEmail} placeholder="contato@meuevento.com.br" type="email" className="min-w-[290px]" />
+                  <FieldInput label="E-mail" value={email} onChange={setEmail} placeholder="contato@meuevento.com.br" type="email" className="min-w-[290px]" />
                   <FieldInput label="WhatsApp" value={whatsapp} onChange={(v) => setWhatsapp(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
                   <FieldInput label="Telefone" value={phone} onChange={(v) => setPhone(withPhoneMask(v))} placeholder="(00) 00000-0000" className="min-w-[290px]" />
-                  <FieldInput label="Site Oficial" value={siteUrl} onChange={setSiteUrl} placeholder="https://www.meuevento.com.br" className="min-w-[290px]" />
-                  <FieldInput label="Instagram Oficial" value={instagram} onChange={setInstagram} placeholder="@meuevento" className="min-w-[290px]" />
                 </div>
               </div>
 

@@ -1547,7 +1547,7 @@ export function InformationStep({
                                     handleCPFChange(participantIndex, user.documentNumber);
                                   }
                                 }}
-                                placeholder="Digite nome completo ou selecione um usuário"
+                                placeholder="Digite seu nome completo"
                                 className={`w-full ${selectedLinkedUserIds[participantIndex] ? "pr-9" : ""} ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
                               />
                             </div>
@@ -1930,7 +1930,6 @@ export function InformationStep({
                 {ticket.categoryName ? (
                   <span className="text-gray-11">{ticket.categoryName} · </span>
                 ) : null}
-                {ticket.distance ? `${ticket.distance} ` : ""}
                 {ticket.raceName}:{" "}
                 <span className="font-semibold">
                   {formatPrice(ticket.total)}

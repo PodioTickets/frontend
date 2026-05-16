@@ -12,6 +12,7 @@ import { cn } from "@/utils/cn";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { MessageSentModal } from "./MessageSentModal";
+import { LoadingAnimation } from "@/components/Loading";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -188,15 +189,21 @@ export function ContactOrganizerModal({
 
     setIsSubmitting(true);
     try {
-      await organizerService.contactOrganizer(organizationId, {
-        name: form.name,
-        email: form.email,
-        phone: form.phone || undefined,
-        cpf: form.cpf || undefined,
-        subject: form.subject || undefined,
-        message: form.message,
-        eventId: eventId || undefined,
-      });
+      // Mínimo de 3s de loading para o usuário sentir o envio acontecendo
+      // antes do popup de sucesso. Se a API for mais lenta, espera ela.
+      // `Promise.all` retorna quando a mais demorada termina — sem block extra.
+      await Promise.all([
+        organizerService.contactOrganizer(organizationId, {
+          name: form.name,
+          email: form.email,
+          phone: form.phone || undefined,
+          cpf: form.cpf || undefined,
+          subject: form.subject || undefined,
+          message: form.message,
+          eventId: eventId || undefined,
+        }),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
       setSent(true);
     } catch {
       toast.error("Erro ao enviar mensagem. Tente novamente.");
@@ -380,6 +387,14 @@ export function ContactOrganizerModal({
 
         {/* Sheet */}
         <div className="relative bg-gray-1 rounded-tl-[12px] rounded-tr-[12px] max-h-[92dvh] flex flex-col">
+          {/* Loading local: cobre só o sheet enquanto o envio acontece (mínimo 3s
+              forçado em handleSubmit). Fica dentro do `relative` acima — não
+              esconde o resto da tela. */}
+          {isSubmitting && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-1/80 backdrop-blur-sm rounded-tl-[12px] rounded-tr-[12px]">
+              <LoadingAnimation />
+            </div>
+          )}
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-6 shrink-0">
             <h2 className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
@@ -441,9 +456,17 @@ export function ContactOrganizerModal({
         onClick={onClose}
       >
         <div
-          className="bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[750px] shadow-lg max-h-[90vh] overflow-y-auto"
+          className="relative bg-gray-1 rounded-xl border border-gray-6 w-full max-w-[750px] shadow-lg max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Loading local: cobre só o dialog enquanto o envio acontece (mínimo 3s
+              forçado em handleSubmit). `absolute inset-0` dentro do `relative`
+              acima — não esconde o resto da tela. */}
+          {isSubmitting && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-1/80 backdrop-blur-sm rounded-xl">
+              <LoadingAnimation />
+            </div>
+          )}
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
             <h2 className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">

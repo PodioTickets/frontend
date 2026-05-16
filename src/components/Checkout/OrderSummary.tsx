@@ -438,7 +438,7 @@ export function OrderSummary({
                               </p>
                               <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
                                 {couponValueType === "PERCENTAGE" &&
-                                  `- ${couponPercent}%`}
+                                  `(-${couponPercent}%)`}
                               </p>
                             </div>
                             <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">

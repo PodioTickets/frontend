@@ -2188,7 +2188,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             {groupedTickets.map((ticket, index) => (
               <div key={index} className="flex gap-1 items-center">
                 <p className="text-sm text-gray-12 font-family-dm-sans">
-                  ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:
+                  ({ticket.quantity}x) {ticket.raceName}:
                 </p>
                 <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                   {formatPrice(ticket.total)}
@@ -2202,7 +2202,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   Produtos adicionais:
                 </p>
                 <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  {additionalProductsTotal}
+                  {formatPrice(additionalProductsTotal)}
                 </p>
               </div>
             )}
@@ -2218,7 +2218,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             )}
             {isCouponApplied && couponDiscount > 0 && (
               <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-family-dm-sans">Cupom:</p>
+                <p className="text-sm text-gray-12 font-family-dm-sans">
+                  {isAutomaticCoupon
+                    ? "Cupom automático"
+                    : appliedCouponName
+                      ? `Cupom ${appliedCouponName}`
+                      : "Cupom"}
+                  {couponPercent != null && couponPercent > 0
+                    ? ` (-${couponPercent}%)`
+                    : ""}
+                  :
+                </p>
                 <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                   -{formatPrice(couponDiscount)}
                 </p>
@@ -2585,7 +2595,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                                 {formatPrice(
                                   additionalProducts.reduce(
                                     (sum, item) =>
-                                      sum + item.price * item.quantity,
+                                      sum + (item.price / 100) * item.quantity,
                                     0
                                   )
                                 )}
@@ -2650,7 +2660,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                                           {product.name}
                                         </p>
                                         <p className="text-base font-semibold text-gray-12 font-manrope">
-                                          {formatPrice(product.price)}
+                                          {formatPrice(product.price / 100)}
                                         </p>
                                       </div>
                                     </div>
@@ -2727,7 +2737,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   {groupedTickets.map((ticket, index) => (
                     <div key={index} className="flex gap-1 items-center">
                       <p className="text-sm text-gray-12 font-family-dm-sans">
-                        ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:
+                        ({ticket.quantity}x) {ticket.raceName}:
                       </p>
                       <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                         {formatPrice(ticket.total)}
@@ -2741,7 +2751,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                         Produtos adicionais:
                       </p>
                       <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {additionalProductsCount}
+                        {formatPrice(additionalProductsTotal)}
                       </p>
                     </div>
                   )}
@@ -2758,7 +2768,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   {isCouponApplied && couponDiscount > 0 && (
                     <div className="flex gap-1 items-center">
                       <p className="text-sm text-gray-12 font-family-dm-sans">
-                        Cupom:
+                        {isAutomaticCoupon
+                          ? "Cupom automático"
+                          : appliedCouponName
+                            ? `Cupom ${appliedCouponName}`
+                            : "Cupom"}
+                        {couponPercent != null && couponPercent > 0
+                          ? ` (-${couponPercent}%)`
+                          : ""}
+                        :
                       </p>
                       <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                         -{formatPrice(couponDiscount)}

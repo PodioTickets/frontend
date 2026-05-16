@@ -107,14 +107,22 @@ function CheckoutSucessoContent() {
       };
     });
 
+    const coupon = order?.coupon ?? null;
+    const couponPercent =
+      coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
+
     return {
       orderNumber: order?.id,
       paymentMethod: paymentMethodLabel,
       totalPaid: (order?.pricing?.total ?? 0) / 100,
       participantsData,
       participantsInfo,
+      productsSubtotal: (order.pricing.productsSubtotal ?? 0) / 100,
       serviceFee: (order?.pricing?.serviceFee ?? 0) / 100,
       couponDiscount: (order?.pricing?.discount ?? 0) / 100,
+      couponName: coupon?.code ?? undefined,
+      couponType: coupon?.couponType as "DISCOUNT" | "QUANTITY" | "AGE" | undefined,
+      couponPercent,
       voucherDiscount: 0,
       date: payment?.paymentDate,
     };
@@ -172,6 +180,10 @@ function CheckoutSucessoContent() {
           participantsInfo={successData.participantsInfo}
           serviceFee={successData.serviceFee}
           couponDiscount={successData.couponDiscount}
+          couponName={successData.couponName}
+          productsSubtotal={successData.productsSubtotal}
+          couponType={successData.couponType}
+          couponPercent={successData.couponPercent}
           voucherDiscount={successData.voucherDiscount}
           date={successData.date}
         />

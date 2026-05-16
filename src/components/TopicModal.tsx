@@ -117,12 +117,20 @@ function applyQuillEditorMediaStyles(editor: HTMLElement | null) {
     const img = imgElement as HTMLImageElement;
     if (!img.src || img.src === "" || img.src === href) return;
     if (img.getAttribute("data-layout")) {
+      // Layouts (left/right/half) mantêm proporção natural — height auto.
       img.style.height = "auto";
       return;
     }
     img.style.maxWidth = "100%";
-    img.style.height = "auto";
     img.style.verticalAlign = "top";
+    // IMPORTANTE: NÃO tocar em img.style.height aqui.
+    // - Durante o drag o quill-resize-module aplica inline style.height = "200px"
+    //   pra preview visual; mexer em height aqui apaga o preview.
+    // - Ao soltar, o módulo converte pra atributo HTML (img.height = X) e limpa
+    //   o inline (style.height = null). O atributo já é suficiente — height auto
+    //   fica como default natural do browser quando não há atributo.
+    // Conteúdo legado com `style="height: auto"` é limpo uma única vez no
+    // sanitizador de carga (sanitizeImageDimensions), não em todo tick.
     const parent = img.parentElement;
     if (
       parent?.tagName === "P" &&
@@ -205,6 +213,35 @@ function applyQuillEditorMediaStyles(editor: HTMLElement | null) {
  * Instagram em tópicos diferentes).
  */
 const injectedEmbedScriptSrcs = new Set<string>();
+
+/**
+ * Normaliza dimensões de imagens no HTML antes de injetar no Quill / antes de
+ * salvar:
+ *   1. Remove `style="height: auto"` legado (escrito por applyQuillEditorMediaStyles
+ *      antiga — bloqueava resize vertical).
+ *   2. Promove atributo HTML `width`/`height` para inline `style` correspondente.
+ *      Sem isso o reset do Tailwind preflight (`img { height: auto; max-width: 100% }`)
+ *      vence o atributo HTML e o browser calcula altura pela proporção nativa,
+ *      ignorando o resize manual. Inline style vence o reset.
+ */
+function sanitizeImageDimensions(html: string): string {
+  if (!html) return html;
+  if (typeof document === "undefined") return html;
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  tmp.querySelectorAll("img").forEach((img) => {
+    if (img.style.height === "auto") img.style.removeProperty("height");
+    const w = img.getAttribute("width");
+    const h = img.getAttribute("height");
+    if (w && !/^\d+(\.\d+)?(px|%)?$/.test(img.style.width || "")) {
+      img.style.width = /[a-z%]/i.test(w) ? w : `${w}px`;
+    }
+    if (h && !/^\d+(\.\d+)?(px|%)?$/.test(img.style.height || "")) {
+      img.style.height = /[a-z%]/i.test(h) ? h : `${h}px`;
+    }
+  });
+  return tmp.innerHTML;
+}
 
 /**
  * Injeta o `<script>` de embed (Instagram, Twitter, etc.) no `<head>` se ainda
@@ -328,8 +365,17 @@ export function TopicModal() {
                 modules: [topicResizeWithSideHandlesClass],
                 parchment: {
                   image: {
-                    attribute: ["width"],
-                    limit: { minWidth: 48, maxWidth: 2000 },
+                    // width + height permite redimensionar nos 8 handles (4 cantos
+                    // + 4 laterais) — laterais ajustam só uma dimensão, então o
+                    // usuário pode esticar/encolher a imagem horizontalmente OU
+                    // verticalmente de forma independente, igual aos embeds/vídeos.
+                    attribute: ["width", "height"],
+                    limit: {
+                      minWidth: 48,
+                      maxWidth: 2000,
+                      minHeight: 24,
+                      maxHeight: 2000,
+                    },
                   },
                   // Sem `ratio` aqui: o usuário pode esticar o iframe (vídeo,
                   // Instagram/Twitter pós-script, etc.) na horizontal e na
@@ -345,9 +391,37 @@ export function TopicModal() {
                     },
                   },
                 },
-                onChangeSize: () => {
+                onChangeSize: (
+                  _blot: unknown,
+                  ele: HTMLElement | null,
+                  size: { width?: number | string; height?: number | string },
+                ) => {
+                  // O base módulo já fez:
+                  //   Object.assign(ele, size)         → img.width=450 (vira atributo)
+                  //   Object.assign(ele.style, {width:null, height:null})  → limpa inline
+                  // Re-aplica como inline style com px para sobreviver ao reset
+                  // do Tailwind preflight (`img { height: auto }`) que vence o
+                  // atributo HTML. Inline style vence tudo.
+                  if (ele instanceof HTMLImageElement) {
+                    if (size.width != null)
+                      ele.style.width =
+                        typeof size.width === "number" ? `${size.width}px` : size.width;
+                    if (size.height != null)
+                      ele.style.height =
+                        typeof size.height === "number" ? `${size.height}px` : size.height;
+                  }
                   const q = quillInstanceRef.current;
-                  if (q) setContent(q.root.innerHTML);
+                  if (q) {
+                    // Força sync Delta ← DOM: o resize module aplica
+                    // img.width/img.height como property/atributo, mas o
+                    // mutation observer do Quill não dispara text-change pra
+                    // mudança de atributo em embed inline. Sem `update('user')`
+                    // o Delta interno fica sem width/height; no próximo
+                    // text-change o Quill regenera o <img> a partir do Delta
+                    // antigo e a imagem volta ao tamanho original.
+                    (q as unknown as { update: (source: string) => void }).update("user");
+                    setContent(q.root.innerHTML);
+                  }
                   setTimeout(() => {
                     const ed = quillRef.current?.querySelector(
                       ".ql-editor",
@@ -360,7 +434,31 @@ export function TopicModal() {
                 container: [
                   [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                   ['bold', 'italic', 'underline', 'strike'],
-                  [{ 'color': [] }, { 'background': [] }],
+                  // Paleta explícita (mesmas cores da default do Quill snow). Sem isso,
+                  // `{ color: [] }` deixa o picker tratar o swatch preto como "remover
+                  // format" — o usuário clica preto, Quill drop-a o <span> e o texto fica
+                  // com a cor herdada do editor (#646464). Passando como array explícito,
+                  // #000000 vira VALOR concreto e o format é aplicado como inline style.
+                  [
+                    {
+                      color: [
+                        '#000000', '#e60000', '#ff9900', '#ffff00', '#008a00', '#0066cc', '#9933ff',
+                        '#ffffff', '#facccc', '#ffebcc', '#ffffcc', '#cce8cc', '#cce0f5', '#ebd6ff',
+                        '#bbbbbb', '#f06666', '#ffc266', '#ffff66', '#66b966', '#66a3e0', '#c285ff',
+                        '#888888', '#a10000', '#b26b00', '#b2b200', '#006100', '#0047b2', '#6b24b2',
+                        '#444444', '#5c0000', '#663d00', '#666600', '#003700', '#002966', '#3d1466',
+                      ],
+                    },
+                    {
+                      background: [
+                        '#000000', '#e60000', '#ff9900', '#ffff00', '#008a00', '#0066cc', '#9933ff',
+                        '#ffffff', '#facccc', '#ffebcc', '#ffffcc', '#cce8cc', '#cce0f5', '#ebd6ff',
+                        '#bbbbbb', '#f06666', '#ffc266', '#ffff66', '#66b966', '#66a3e0', '#c285ff',
+                        '#888888', '#a10000', '#b26b00', '#b2b200', '#006100', '#0047b2', '#6b24b2',
+                        '#444444', '#5c0000', '#663d00', '#666600', '#003700', '#002966', '#3d1466',
+                      ],
+                    },
+                  ],
                   [{ 'script': 'sub' }, { 'script': 'super' }],
                   [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                   [{ 'indent': '-1' }, { 'indent': '+1' }],
@@ -522,6 +620,9 @@ export function TopicModal() {
               'blockquote', 'code-block',
               'link', 'image', 'video',
               'layout',
+              /* width/height — imagem e vídeo redimensionáveis (TopicImage + TopicVideo).
+                 Sem isso o Delta drop-a os atributos no próximo text-change e o resize não persiste. */
+              'width', 'height',
               /* quill-resize-module — sem isso o Quill remove ql-resize-style-* da linha ao editar */
               'resize-inline',
               'resize-block',
@@ -890,7 +991,11 @@ export function TopicModal() {
             // dangerouslyPasteHTML aplica os matchers do Quill — incluindo
             // o do Strava — então `<div class="strava-embed-placeholder">`
             // vira blot `stravaPlaceholder` ao invés de ser strippado.
-            quill.clipboard.dangerouslyPasteHTML(0, renderable, "silent");
+            quill.clipboard.dangerouslyPasteHTML(
+              0,
+              sanitizeImageDimensions(renderable),
+              "silent",
+            );
             setContent(quill.root.innerHTML);
             scriptSrcs.forEach(injectEmbedScript);
             setTimeout(() => {
@@ -933,7 +1038,11 @@ export function TopicModal() {
           // o do Strava) sejam aplicados — innerHTML direto strippa data-*.
           const q = quillInstanceRef.current;
           q.setContents([], "silent");
-          q.clipboard.dangerouslyPasteHTML(0, renderable, "silent");
+          q.clipboard.dangerouslyPasteHTML(
+            0,
+            sanitizeImageDimensions(renderable),
+            "silent",
+          );
           setContent(q.root.innerHTML);
           scriptSrcs.forEach(injectEmbedScript);
 
@@ -1106,9 +1215,15 @@ export function TopicModal() {
       }
       applyQuillEditorMediaStyles(tempDiv);
 
+      // Promove atributos width/height → inline style. Inline vence o reset do
+      // Tailwind preflight (`img { height: auto; max-width: 100% }`) que se
+      // aplica ao TopicRichContent no render externo — sem isso, o resize do
+      // usuário some quando o tópico é exibido fora do editor.
+      const normalizedHtml = sanitizeImageDimensions(tempDiv.innerHTML);
+
       // Re-encapsula embeds em ql-code-block-container para o backend / TopicRichContent.
       const htmlToSave = encodeRenderableToStoredEmbeds(
-        tempDiv.innerHTML,
+        normalizedHtml,
         scriptSrcs,
       );
 

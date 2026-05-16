@@ -5,12 +5,10 @@ import Image from "next/image";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { ChevronDown } from "lucide-react";
 import { Button } from "../Button";
-import { SuccessIcon } from "../Icons/SuccessIcon";
 import { useRouter } from "next/navigation";
 import type { Event } from "@/interfaces/event";
 import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
-import { LocationIcon } from "../Icons/LocationIcon";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 
@@ -62,6 +60,10 @@ interface PaymentSuccessStepProps {
   }>;
   serviceFee?: number;
   couponDiscount?: number;
+  couponName?: string;
+  productsSubtotal?: number;
+  couponType?: "DISCOUNT" | "QUANTITY" | "AGE";
+  couponPercent?: number;
   voucherDiscount?: number;
   date?: string;
 }
@@ -87,9 +89,20 @@ export function PaymentSuccessStep({
   participantsInfo = [],
   serviceFee: propServiceFee,
   couponDiscount: propCouponDiscount = 0,
+  couponName,
+  couponType,
+  couponPercent,
+  productsSubtotal,
   voucherDiscount: propVoucherDiscount = 0,
   date: paymentDate,
 }: PaymentSuccessStepProps) {
+  const isAutomaticCoupon = couponType === "QUANTITY" || couponType === "AGE";
+  const couponLabel = `${isAutomaticCoupon
+    ? "Cupom automático"
+    : couponName
+      ? `Cupom ${couponName}`
+      : "Cupom"
+    }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
   const router = useRouter();
 
   const participants = participantsInfo.map(p => ({
@@ -177,15 +190,7 @@ export function PaymentSuccessStep({
 
   // Calculate totals
   const subtotal = participantsData.reduce((sum, p) => sum + p.ticketPrice, 0);
-  const additionalProductsTotal = participantsData.reduce(
-    (sum, p) =>
-      sum +
-      (p.additionalProducts?.reduce(
-        (productSum, product) => productSum + product.price * product.quantity,
-        0
-      ) || 0),
-    0
-  );
+  const additionalProductsTotal = productsSubtotal ?? 0;
   const serviceFee = propServiceFee ?? event?.serviceFee ?? 0;
   const couponDiscount = propCouponDiscount ?? 0;
   const voucherDiscount = propVoucherDiscount ?? 0;
@@ -262,10 +267,10 @@ export function PaymentSuccessStep({
                     {/* Date */}
                     <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
                       <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                        Data do pagamento:
+                        Data da compra:
                       </p>
                       <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
-                        {paymentDate || formatDate(event.eventDate)}
+                        {formatDate(paymentDate || event.eventDate)}
                       </p>
                     </div>
 
@@ -331,7 +336,7 @@ export function PaymentSuccessStep({
                     {couponDiscount > 0 && (
                       <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
                         <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                          Desconto cupom:
+                          {couponLabel}
                         </p>
                         <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
                           – {formatCurrency(couponDiscount)}
@@ -795,10 +800,10 @@ export function PaymentSuccessStep({
                     {/* Date */}
                     <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
                       <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        Data do pagamento:
+                        Data da compra:
                       </p>
                       <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                        {paymentDate || formatDate(event.eventDate)}
+                        {formatDate(paymentDate || event.eventDate)}
                       </p>
                     </div>
 
@@ -864,7 +869,7 @@ export function PaymentSuccessStep({
                     {couponDiscount > 0 && (
                       <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
                         <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                          Desconto cupom:
+                          {couponLabel}
                         </p>
                         <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
                           – {formatCurrency(couponDiscount)}

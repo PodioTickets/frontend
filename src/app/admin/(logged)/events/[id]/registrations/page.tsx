@@ -84,7 +84,7 @@ type RegistrationListRow = Omit<Registration, "user"> & {
 
 function normalizeRegistrationStats(raw: unknown): RegistrationStats {
   if (!raw || typeof raw !== "object") {
-    return { total: 0, paid: 0, cancelled: 0, totalCollected: 0 };
+    return { total: 0, paid: 0, cancelled: 0, totalCollected: 0, refunded: 0, refundedChange: 0 };
   }
   const r = raw as Record<string, unknown>;
   const nested = r.weekOverWeek ?? r.week_over_week;
@@ -107,6 +107,8 @@ function normalizeRegistrationStats(raw: unknown): RegistrationStats {
     totalCollected: Number(src.totalCollected ?? src.total_collected) || 0,
     totalChange: optNum(src.totalChange ?? src.total_change),
     paidChange: optNum(src.paidChange ?? src.paid_change),
+    refunded: optNum(src.refunded) || 0,
+    refundedChange: optNum(src.refundedChange) || 0,
     cancelledChange: optNum(src.cancelledChange ?? src.cancelled_change),
     totalCollectedChange: optNum(
       src.totalCollectedChange ?? src.total_collected_change,
@@ -395,6 +397,8 @@ export default function EventRegistrationsPage() {
     paid: 0,
     cancelled: 0,
     totalCollected: 0,
+    refunded: 0,
+    refundedChange: 0
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -460,7 +464,7 @@ export default function EventRegistrationsPage() {
       } catch {
         setRegistrations([]);
         setPagination({ page: 1, limit: 20, total: 0, totalPages: 1 });
-        setStats({ total: 0, paid: 0, cancelled: 0, totalCollected: 0 });
+        setStats({ total: 0, paid: 0, cancelled: 0, totalCollected: 0, refunded: 0, refundedChange: 0 });
       }
     } catch (error: unknown) {
       console.error("Error loading registrations:", error);
@@ -606,13 +610,13 @@ export default function EventRegistrationsPage() {
             </div>
             <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
               <div className="flex flex-col gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary-4 flex items-center justify-center shrink-0">
-                  <CheckIcon className="size-5 text-gray-12" />
+                <div className="w-8 h-8 rounded-lg bg-red-4 flex items-center justify-center shrink-0">
+                  <XCircle className="size-5 text-red-12" />
                 </div>
-                <p className="font-family-dm-sans font-normal text-base text-gray-11">Inscrições confirmadas</p>
+                <p className="font-family-dm-sans font-normal text-base text-gray-11">Estornos/Chargebacks</p>
               </div>
-              <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.paid.toLocaleString()}</p>
-              <RegistrationsWeekTrend change={stats.paidChange} compact />
+              <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.refunded.toLocaleString()}</p>
+              <RegistrationsWeekTrend change={stats.refundedChange} compact />
             </div>
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
@@ -649,14 +653,14 @@ export default function EventRegistrationsPage() {
           <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
             <div className="mb-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-11 mb-1">Pagos</p>
-                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
-                  <CheckIcon className="size-5 text-gray-12" />
+                <p className="text-sm text-gray-11 mb-1">Estornos/Chargebacks</p>
+                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-red-4 flex items-center justify-center">
+                  <XCircle className="size-5 text-red-12" />
                 </div>
               </div>
-              <p className="text-2xl font-bold text-gray-12">{stats.paid.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-12">{stats.refunded.toLocaleString()}</p>
             </div>
-            <RegistrationsWeekTrend change={stats.paidChange} />
+            <RegistrationsWeekTrend change={stats.refundedChange} />
           </div>
 
           {/* Cancelados */}

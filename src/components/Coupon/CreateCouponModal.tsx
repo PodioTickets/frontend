@@ -43,6 +43,7 @@ export function CreateCouponModal() {
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
   const [cpfSearch, setCpfSearch] = useState("");
+  const [applyToProducts, setApplyToProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
 
@@ -115,13 +116,14 @@ export function CreateCouponModal() {
       JSON.stringify(cpfList) !== JSON.stringify(c.cpfList || []) ||
       minQuantity !== (c.minQuantity?.toString() || "") ||
       minAge !== (c.minAge?.toString() || "") ||
-      maxAge !== (c.maxAge?.toString() || "")
+      maxAge !== (c.maxAge?.toString() || "") ||
+      applyToProducts !== !!c.applyToProducts
     );
   }, [
     isEditing, data, couponType, code, note, discountType, value,
     appliesTo, selectedTicketIds, expiryDate, expiryEnabled,
     usageLimit, usageLimitEnabled, cpfListStatus, cpfList,
-    minQuantity, minAge, maxAge,
+    minQuantity, minAge, maxAge, applyToProducts,
   ]);
 
   // Initialize form when modal opens
@@ -168,8 +170,9 @@ export function CreateCouponModal() {
         setUsageLimitEnabled(!!c.maxUsage);
         setCpfListStatus(c.cpfListStatus || "DISABLED");
         setCpfList(c.cpfList || []);
+        setApplyToProducts(!!c.applyToProducts);
         // Abre painel avançado automaticamente se houver configurações ativas
-        setShowAdvanced(!!(c.expiryDate || c.maxUsage || c.cpfListStatus === "ENABLED" || c.minQuantity || c.minAge || c.maxAge));
+        setShowAdvanced(!!(c.expiryDate || c.maxUsage || c.cpfListStatus === "ENABLED" || c.minQuantity || c.minAge || c.maxAge || c.applyToProducts));
         setMinQuantity(c.minQuantity?.toString() || "");
         setMinAge(c.minAge?.toString() || "");
         setMaxAge(c.maxAge?.toString() || "");
@@ -193,6 +196,7 @@ export function CreateCouponModal() {
         setApiError("");
         setCpfListStatus("DISABLED");
         setCpfList([]);
+        setApplyToProducts(false);
         setMinQuantity("");
         setMinAge("");
         setMaxAge("");
@@ -471,6 +475,7 @@ export function CreateCouponModal() {
         maxUsage: usageLimitEnabled && usageLimit ? parseInt(usageLimit) : undefined,
         cpfListStatus,
         cpfList: cpfListStatus === "ENABLED" ? cpfList : undefined,
+        applyToProducts,
         // Campos específicos por tipo
         minQuantity: couponType === "QUANTITY" ? parseInt(minQuantity) : undefined,
         minAge: couponType === "AGE" && minAge ? parseInt(minAge) : undefined,
@@ -743,45 +748,47 @@ export function CreateCouponModal() {
                   >
                     <div className="flex flex-col gap-9 max-w-full">
 
-                      {/* Tipo de cupom */}
-                      <div className="flex flex-col gap-4">
-                        <div className="flex flex-col gap-3">
-                          <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                            O que você quer criar?
-                          </h3>
-                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                            Escolha um tipo de desconto para configurar
-                          </p>
+                      {/* Tipo de cupom — só na criação. Na edição o tipo é imutável. */}
+                      {!isEditing && (
+                        <div className="flex flex-col gap-4">
+                          <div className="flex flex-col gap-3">
+                            <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                              O que você quer criar?
+                            </h3>
+                            <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                              Escolha um tipo de desconto para configurar
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
+                            {(
+                              [
+                                { key: "DISCOUNT" as CouponType, label: "Cupom de desconto", onSelect: () => { setCouponType("DISCOUNT"); setMinQuantity(""); setMinAge(""); setMaxAge(""); } },
+                                { key: "QUANTITY" as CouponType, label: "Cupom por quantidade", onSelect: () => { setCouponType("QUANTITY"); setMinAge(""); setMaxAge(""); } },
+                                { key: "AGE" as CouponType, label: "Cupom por idade", onSelect: () => { setCouponType("AGE"); setMinQuantity(""); } },
+                              ] as const
+                            ).map(({ key, label, onSelect }) => (
+                              <button
+                                key={key}
+                                onClick={onSelect}
+                                className={cn(
+                                  "flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors w-full md:w-auto",
+                                  couponType === key
+                                    ? "bg-primary-4 border-primary-8"
+                                    : "border-gray-6 hover:bg-gray-2",
+                                )}
+                              >
+                                <Checkbox checked={couponType === key} />
+                                <span className={cn(
+                                  "text-sm font-family-dm-sans leading-[1.3]",
+                                  couponType === key ? "text-gray-12" : "text-gray-11",
+                                )}>
+                                  {label}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
-                          {(
-                            [
-                              { key: "DISCOUNT" as CouponType, label: "Cupom de desconto", onSelect: () => { setCouponType("DISCOUNT"); setMinQuantity(""); setMinAge(""); setMaxAge(""); } },
-                              { key: "QUANTITY" as CouponType, label: "Cupom por quantidade", onSelect: () => { setCouponType("QUANTITY"); setMinAge(""); setMaxAge(""); } },
-                              { key: "AGE" as CouponType, label: "Cupom por idade", onSelect: () => { setCouponType("AGE"); setMinQuantity(""); } },
-                            ] as const
-                          ).map(({ key, label, onSelect }) => (
-                            <button
-                              key={key}
-                              onClick={onSelect}
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-3 rounded-lg border transition-colors w-full md:w-auto",
-                                couponType === key
-                                  ? "bg-primary-4 border-primary-8"
-                                  : "border-gray-6 hover:bg-gray-2",
-                              )}
-                            >
-                              <Checkbox checked={couponType === key} />
-                              <span className={cn(
-                                "text-sm font-family-dm-sans leading-[1.3]",
-                                couponType === key ? "text-gray-12" : "text-gray-11",
-                              )}>
-                                {label}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      )}
 
                       {couponType && (
                         <>
@@ -1302,6 +1309,34 @@ export function CreateCouponModal() {
                                         </div>
                                       </div>
                                     )}
+                                  </div>
+
+                                  {/* Aplicar cupom nos adicionais */}
+                                  <div className="flex flex-col gap-5">
+                                    <div className="flex flex-col gap-2">
+                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                        Aplicar cupom nos adicionais?
+                                      </h3>
+                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                        O desconto também será aplicado aos produtos adicionais de ingresso.
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-6">
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={!applyToProducts}
+                                          onCheckedChange={(checked) => { if (checked) setApplyToProducts(false); }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                      </label>
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={applyToProducts}
+                                          onCheckedChange={(checked) => { if (checked) setApplyToProducts(true); }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                      </label>
+                                    </div>
                                   </div>
                                 </motion.div>
                               )}

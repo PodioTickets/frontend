@@ -10,12 +10,25 @@ export function registerTopicQuillImageLayout(Quill: typeof QuillType) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Parent = Quill.import("formats/image") as any;
 
+  // width/height precisam estar registrados aqui para o Delta do Quill
+  // preservá-los entre re-renders. Sem isso, o `quill-resize-module` aplica
+  // setAttribute('width', X) no DOM, mas o próximo `text-change` re-converte
+  // Delta → DOM e os atributos somem (blot base só conhece src/alt). Com os
+  // atributos no `formats`/`format`, o resize persiste após soltar o handle
+  // e o usuário pode "quebrar" o aspect ratio (mais retangular/quadrada).
+  const IMAGE_SIZE_ATTRIBUTES = ["width", "height"] as const;
+
   class TopicImage extends Parent {
     static blotName = "image";
     static tagName = "IMG";
 
     static formats(domNode: HTMLImageElement) {
       const formats = super.formats(domNode) as Record<string, string | undefined>;
+      IMAGE_SIZE_ATTRIBUTES.forEach((attr) => {
+        if (domNode.hasAttribute(attr)) {
+          formats[attr] = domNode.getAttribute(attr) as string;
+        }
+      });
       const layout = domNode.getAttribute("data-layout");
       if (
         layout === "left" ||
@@ -28,6 +41,14 @@ export function registerTopicQuillImageLayout(Quill: typeof QuillType) {
     }
 
     format(name: string, value: unknown) {
+      if ((IMAGE_SIZE_ATTRIBUTES as readonly string[]).includes(name)) {
+        if (value) {
+          this.domNode.setAttribute(name, String(value));
+        } else {
+          this.domNode.removeAttribute(name);
+        }
+        return;
+      }
       if (name === "layout") {
         if (value === "left" || value === "right" || value === "inline-half") {
           this.domNode.setAttribute("data-layout", value);

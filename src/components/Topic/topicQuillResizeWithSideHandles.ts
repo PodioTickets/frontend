@@ -111,14 +111,23 @@ export function createTopicResizeWithSideHandlesClass(
      * do handle: handles inferiores mantêm a borda de baixo visível, handles
      * superiores mantêm a borda de cima. Mesmo comportamento de quando o
      * cursor de texto vai descendo/subindo no editor.
+     *
+     * IMPORTANTE: aqui re-implementamos a aplicação do resize visual em vez de
+     * chamar `super.handleDrag` — o base faz `Object.assign(style, calcSize)`
+     * com valores SEM unidade ("450"). Para `<img>` isso é CSS inválido e o
+     * browser ignora, então a imagem não acompanha o drag (só a HUD mexe).
+     * Forçando `unit: true` em img, `style.width = "450px"` vence o reset do
+     * Tailwind preflight (`img { height: auto }`).
      */
     handleDrag(evt: MouseEvent | TouchEvent): void {
-      // super faz o resize visual + chama requestUpdate (reposiciona overlay).
-      Object.getPrototypeOf(
-        Object.getPrototypeOf(this) as object,
-      ).handleDrag.call(this, evt);
-
+      if (evt.cancelable) evt.preventDefault();
       if (!this.activeEle) return;
+
+      const limit = this.blotOptions.limit ?? {};
+      const isImage = this.activeEle instanceof HTMLImageElement;
+      const limitForCalc = isImage ? { ...limit, unit: true } : limit;
+      Object.assign(this.activeEle.style, this.calcSize(evt, limitForCalc));
+      this.requestUpdate();
       const idx = this.boxes.indexOf(this.dragBox);
       const handle = HANDLES[idx];
       if (!handle) return;

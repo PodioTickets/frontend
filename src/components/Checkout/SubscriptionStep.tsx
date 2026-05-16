@@ -1125,7 +1125,6 @@ export function SubscriptionStep({
             </p>
             {groupedTickets.map((ticket, index) => (
               <p key={index} className="text-sm">
-                ({ticket.quantity}x) {ticket.distance} {ticket.raceName}:{" "}
                 <span className="font-semibold">{formatPrice(ticket.total)}</span>
               </p>
             ))}

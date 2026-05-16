@@ -564,7 +564,7 @@ export default function TicketDetailsPage() {
 
                 <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Data:
+                    Data da compra:
                   </p>
                   <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
                     {order.createdAt ? formatDate(order.createdAt) : "N/A"}
@@ -619,14 +619,28 @@ export default function TicketDetailsPage() {
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Desconto cupom:
-                  </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
-                    – {formatPrice(pricing.discount ?? 0)}
-                  </p>
-                </div>
+                {(pricing.discount ?? 0) > 0 && (() => {
+                  const coupon = order.coupon ?? null;
+                  const isAutomaticCoupon = coupon?.couponType === "QUANTITY" || coupon?.couponType === "AGE";
+                  const couponPercent = coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
+                  const couponLabel = `${isAutomaticCoupon
+                      ? "Cupom automático"
+                      : coupon?.code
+                        ? `Cupom ${coupon.code}`
+                        : "Cupom"
+                    }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
+
+                  return (
+                    <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                      <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                        {couponLabel}
+                      </p>
+                      <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                        – {formatPrice(pricing.discount ?? 0)}
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

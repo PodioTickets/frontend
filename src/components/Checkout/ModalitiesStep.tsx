@@ -296,7 +296,6 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
               </p>
               {groupedTickets.map((ticket, index) => (
                 <p key={index} className="text-sm">
-                  ({ticket.quantity}x) {ticket.distance ? `${ticket.distance} ` : ""}{ticket.ticketName}:{" "}
                   <span className="font-semibold">
                     {formatPrice(ticket.total)}
                   </span>
@@ -334,7 +333,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                       <TicketCategoryCard
                         tickets={[ticket]}
                         event={event}
-      
+
                         kitSelectionDisplay={kitSelectionDisplay}
                       />
                       {!isLast && <div className="w-full h-px bg-gray-6" />}
@@ -354,7 +353,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                         index={index}
                         expandedByDefault={index === 0}
                         event={event}
-      
+
                         kitSelectionDisplay={kitSelectionDisplay}
                       />
                       {!isLastCategory && (
