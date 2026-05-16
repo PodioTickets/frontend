@@ -84,17 +84,14 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
       style={{ boxShadow: "0px 2px 6px rgba(17, 17, 17, 0.25)" }}
     >
       {/* Banner image */}
-      <div
-        className="relative w-full shrink-0 rounded-lg overflow-hidden bg-[#E8E8E8] flex items-center justify-center"
-        style={{ height: 232 }}
-      >
+      <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-4">
         {imageUrl && !imgFailed ? (
           <Image
             src={imageUrl}
             alt={ticket.event.name}
             fill
             sizes="(max-width: 1440px) 25vw, 308px"
-            className="object-fill"
+            className="object-cover"
             onError={onImgError}
           />
         ) : (
