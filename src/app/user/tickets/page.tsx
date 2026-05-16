@@ -25,7 +25,7 @@ export default function UserTicketsPage() {
   return (
     <div className="min-h-screen bg-[#F9F9F9]">
       <div
-        className="mx-auto max-w-[1280px]"
+        className="mx-auto max-w-[1440px]"
         style={{
           paddingTop: 52,
           paddingBottom: 248,
@@ -79,10 +79,7 @@ export default function UserTicketsPage() {
               </p>
             </div>
           ) : (
-            <div
-              className="flex flex-wrap"
-              style={{ gap: 16, alignContent: "flex-start" }}
-            >
+            <div className="grid grid-cols-4 gap-4">
               {tickets.map((ticket) => (
                 <TicketCard key={ticket.id} ticket={ticket} />
               ))}

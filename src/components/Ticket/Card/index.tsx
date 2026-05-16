@@ -74,8 +74,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     <div
       onClick={handleClick}
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-lg cursor-pointer bg-[#F9F9F9]",
-        "min-w-[300px] w-[308px] max-w-[308px]",
+        "relative flex flex-col overflow-hidden rounded-lg cursor-pointer bg-[#F9F9F9] w-full",
         "hover:-translate-y-1 transition-transform duration-200",
         className
       )}
@@ -83,7 +82,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
     >
       {/* Banner image — rounded-lg so bottom corners are also rounded */}
       <div
-        className="relative w-full shrink-0 overflow-hidden rounded-lg bg-gray-4"
+        className="w-full shrink-0 rounded-lg overflow-hidden"
         style={{ height: 232 }}
       >
         <ImageWithInitialFallback
@@ -92,8 +91,8 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
           name={ticket.event.name}
           fallbackId={ticket.event.id}
           fill
-          sizes="308px"
-          className="size-full border-0 border-transparent object-cover"
+          sizes="(max-width: 1440px) 25vw, 308px"
+          className="size-full border-0 border-transparent bg-gray-4"
           imgClassName="object-cover"
           letterClassName="text-5xl font-bold"
         />
