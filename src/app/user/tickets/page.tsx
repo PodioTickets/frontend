@@ -27,7 +27,7 @@ export default function UserTicketsPage() {
 
   return (
     <div className="min-h-screen bg-[#F9F9F9]">
-      <div className="mx-auto max-w-[1440px] px-5 pt-[88px] pb-[248px] md:px-20 md:pt-[52px]">
+      <div className="mx-auto max-w-[1440px] px-5 pt-5 pb-[248px] md:px-20 md:pt-[52px]">
         <div className="flex flex-col gap-8">
           {/* Header */}
           <div className="flex items-center justify-between md:justify-start md:gap-3">
@@ -79,7 +79,7 @@ export default function UserTicketsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-4 md:gap-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-4">
               {tickets.map((ticket) => (
                 <TicketCard key={ticket.id} ticket={ticket} />
               ))}
