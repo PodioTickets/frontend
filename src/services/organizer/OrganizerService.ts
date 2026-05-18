@@ -2756,6 +2756,7 @@ export class OrganizerService {
       subject?: string;
       message: string;
       eventId?: string;
+      userId?: string;
     },
   ): Promise<void> {
     await this.apiClient.post(
