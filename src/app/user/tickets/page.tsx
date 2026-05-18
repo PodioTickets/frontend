@@ -6,6 +6,7 @@ import { useMyTickets } from "@/hooks/useMyTickets";
 import { TicketCard } from "@/components/Ticket/Card";
 import { Pagination } from "@/components/Pagination";
 import Image from "next/image";
+import { SlidersHorizontal } from "lucide-react";
 
 export default function UserTicketsPage() {
   const { isAuthenticated } = useAuth();
@@ -22,33 +23,32 @@ export default function UserTicketsPage() {
     }
   }, [isAuthenticated, refetch]);
 
+  const hasMore = pagination.page < pagination.totalPages;
+
   return (
     <div className="min-h-screen bg-[#F9F9F9]">
-      <div
-        className="mx-auto max-w-[1440px]"
-        style={{
-          paddingTop: 52,
-          paddingBottom: 248,
-          paddingLeft: 80,
-          paddingRight: 80,
-        }}
-      >
+      <div className="mx-auto max-w-[1440px] px-5 pt-[88px] pb-[248px] md:px-20 md:pt-[52px]">
         <div className="flex flex-col gap-8">
           {/* Header */}
-          <div className="flex items-center gap-3">
-            <Image
-              src="/images/ticket-huge.png"
-              alt="Ingressos"
-              width={32}
-              height={32}
-              draggable={false}
-            />
-            <span
-              className="font-manrope font-extrabold text-[#202020]"
-              style={{ fontSize: 28, lineHeight: "30.8px" }}
-            >
-              Meus ingressos
-            </span>
+          <div className="flex items-center justify-between md:justify-start md:gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
+              <Image
+                src="/images/ticket-huge.png"
+                alt="Ingressos"
+                width={32}
+                height={32}
+                className="w-6 h-6 md:w-8 md:h-8"
+                draggable={false}
+              />
+              <span className="font-manrope font-extrabold text-[#202020] text-[20px] leading-[22px] md:text-[28px] md:leading-[30.8px]">
+                Meus ingressos
+              </span>
+            </div>
+
+            {/* Botão filtro — apenas mobile */}
+            <button className="md:hidden w-12 h-12 p-2 bg-[#FCFCFC] rounded-[32px] border border-[#D9D9D9] flex items-center justify-center shrink-0">
+              <SlidersHorizontal size={16} className="text-[#202020]" />
+            </button>
           </div>
 
           {/* Content */}
@@ -79,20 +79,37 @@ export default function UserTicketsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-4 md:gap-4">
               {tickets.map((ticket) => (
                 <TicketCard key={ticket.id} ticket={ticket} />
               ))}
             </div>
           )}
 
+          {/* Mobile: Carregar mais */}
+          {hasMore && (
+            <div className="md:hidden">
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={loading}
+                className="w-full h-12 rounded-lg border border-[#D9D9D9] flex items-center justify-center font-manrope font-bold text-[#202020] disabled:opacity-50"
+                style={{ fontSize: 16, lineHeight: "17.6px" }}
+              >
+                {loading ? "Carregando..." : "Carregar mais"}
+              </button>
+            </div>
+          )}
+
+          {/* Desktop: Pagination */}
           {pagination.totalPages > 1 && (
-            <Pagination
-              currentPage={pagination.page}
-              onPageChange={setPage}
-              totalPages={pagination.totalPages}
-              className="mt-6"
-            />
+            <div className="hidden md:block">
+              <Pagination
+                currentPage={pagination.page}
+                onPageChange={setPage}
+                totalPages={pagination.totalPages}
+                className="mt-6"
+              />
+            </div>
           )}
         </div>
       </div>
