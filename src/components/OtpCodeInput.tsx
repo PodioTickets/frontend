@@ -82,8 +82,8 @@ export function OtpCodeInput({
             onPaste={index === 0 ? handlePaste : undefined}
             disabled={disabled}
             className={cn(
-              "w-[64px] h-[64px] aspect-square border-2 rounded-lg text-center",
-              "font-extrabold text-[24px] leading-[1.1] text-gray-11 font-manrope",
+              "flex-1 min-w-0 max-w-[64px] aspect-square border-2 rounded-lg text-center",
+              "font-extrabold text-[18px] sm:text-[24px] leading-[1.1] text-gray-11 font-manrope",
               "focus:outline-none focus:border-primary-10 focus:ring-2 focus:ring-primary-10/20",
               "transition-all duration-200 disabled:opacity-50",
               error ? "border-[#FDBDBE] bg-[#FFF7F7]" : "border-gray-6 bg-gray-2",

@@ -370,7 +370,7 @@ export default function OrganizerLoginPage() {
           <div className="absolute inset-0 bg-[rgba(32,32,32,0.90)]" onClick={fecharModal} />
 
           {/* Card do modal */}
-          <div className="relative w-[492px] max-w-[calc(100vw-32px)] bg-[#FCFCFC] rounded-xl overflow-hidden flex flex-col shadow-xl">
+          <div className="relative w-[492px] max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] bg-[#FCFCFC] rounded-xl overflow-y-auto flex flex-col shadow-xl">
 
             {/* Cabeçalho */}
             <div className="flex justify-between items-center px-4 py-3 border-b border-[#D9D9D9]">
