@@ -193,21 +193,21 @@ export default function TicketDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <div className="mx-auto max-w-[700px] px-4 pt-13 pb-20">
+      <div className="mx-auto max-w-[700px] px-4 pt-5 md:pt-13 pb-20">
         {/* Header */}
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="cursor-pointer size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 transition-colors"
+              className="cursor-pointer size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 transition-colors shrink-0"
             >
               <div className="rotate-180"><ArrowButton isOpen={false} /></div>
             </button>
-            <h1 className="text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
+            <h1 className="text-xl md:text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
               Detalhes do seu ingresso
             </h1>
           </div>
-          <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
+          <p className="text-sm md:text-base text-gray-11 font-family-dm-sans leading-[1.3]">
             Apresente este QR Code na retirada do kit ou na entrada do evento para validar sua inscrição.
           </p>
         </div>
@@ -239,43 +239,43 @@ export default function TicketDetailsPage() {
                   {/* Participant Header */}
                   <button
                     onClick={() => toggleParticipant(index)}
-                    className="w-full flex items-center justify-between px-4 py-6 border-b border-gray-6"
+                    className="w-full flex items-center justify-between px-4 py-4 md:py-6 border-b border-gray-6 gap-3 text-left"
                   >
-                    <div className="flex flex-col gap-5 items-start">
-                      <p className="text-base text-gray-12 font-family-dm-sans">
+                    <div className="flex flex-col gap-4 md:gap-5 items-start min-w-0 flex-1">
+                      <p className="text-sm md:text-base text-gray-12 font-family-dm-sans">
                         Participante {index + 1}
                       </p>
-                      <div className="flex flex-col items-start gap-1">
+                      <div className="flex flex-col items-start gap-1 min-w-0 w-full">
                         {ticket.category?.name && (
-                          <p className="text-sm text-gray-11 font-family-dm-sans truncate max-w-[400px]">
+                          <p className="text-sm text-gray-11 font-family-dm-sans truncate w-full">
                             {ticket.category.name}
                           </p>
                         )}
-                        <h2 className="text-2xl font-bold text-gray-12 font-manrope truncate max-w-[400px]">
+                        <h2 className="text-lg md:text-2xl font-bold text-gray-12 font-manrope truncate w-full">
                           {ticket.name || "Ingresso"}
                         </h2>
                       </div>
-                      <div className="flex gap-8 items-center">
+                      <div className="flex flex-wrap gap-3 md:gap-8 items-center">
                         {distance && (
-                          <div className="flex gap-2 items-center">
-                            <DistanceIcon className="size-6" />
-                            <p className="text-lg font-medium text-gray-12 font-family-dm-sans">
+                          <div className="flex gap-1.5 items-center">
+                            <DistanceIcon className="size-5 md:size-6 shrink-0" />
+                            <p className="text-sm md:text-lg font-medium text-gray-12 font-family-dm-sans">
                               {distance}
                             </p>
                           </div>
                         )}
                         {event?.eventDate && (
-                          <div className="flex gap-2 items-center">
-                            <CalendarIcon className="size-6" />
-                            <p className="text-lg font-medium text-gray-12 font-family-dm-sans">
+                          <div className="flex gap-1.5 items-center">
+                            <CalendarIcon className="size-5 md:size-6 shrink-0" />
+                            <p className="text-sm md:text-lg font-medium text-gray-12 font-family-dm-sans">
                               {formatDate(event.eventDate)}
                             </p>
                           </div>
                         )}
                         {event?.eventDate && (
-                          <div className="flex gap-2 items-center">
-                            <ClockIcon className="size-6" />
-                            <p className="text-lg font-medium text-gray-12 font-family-dm-sans">
+                          <div className="flex gap-1.5 items-center">
+                            <ClockIcon className="size-5 md:size-6 shrink-0" />
+                            <p className="text-sm md:text-lg font-medium text-gray-12 font-family-dm-sans">
                               {formatTime(event.eventDate)}
                             </p>
                           </div>
@@ -284,13 +284,13 @@ export default function TicketDetailsPage() {
                     </div>
                     {/* QR Code */}
                     <div className="shrink-0">
-                      <RegistrationQRCode qrCodeData={qrCode} size={120} />
+                      <RegistrationQRCode qrCodeData={qrCode} size={90} />
                     </div>
                   </button>
 
                   {/* Participant Profile Card */}
-                  <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
-                    <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2">
+                  <div className="px-4 py-4 border-b border-gray-6 flex items-center justify-between gap-3">
+                    <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2 min-w-0 flex-1">
                       <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
                         {participant.avatarUrl ? (
                           <Image
@@ -306,30 +306,30 @@ export default function TicketDetailsPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-col">
-                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate">
                           {participant.name || `Participante ${index + 1}`}
                         </p>
-                        <div className="flex gap-2 items-center text-sm text-gray-11 font-family-dm-sans">
+                        <div className="flex flex-wrap gap-1.5 items-center text-xs md:text-sm text-gray-11 font-family-dm-sans">
                           {participant.birthDate && (
                             <>
-                              {formatDate(participant.birthDate)}
-                              <span className="size-1 bg-gray-11 rounded-full" />
+                              <span>{formatDate(participant.birthDate)}</span>
+                              <span className="size-1 bg-gray-11 rounded-full shrink-0" />
                             </>
                           )}
                           {participant.gender && (
                             <>
-                              {getGenderLabel(participant.gender)}
-                              {participant.cpf && <span className="size-1 bg-gray-11 rounded-full" />}
+                              <span>{getGenderLabel(participant.gender)}</span>
+                              {participant.cpf && <span className="size-1 bg-gray-11 rounded-full shrink-0" />}
                             </>
                           )}
-                          {participant.cpf && maskCPF(participant.cpf)}
+                          {participant.cpf && <span>{maskCPF(participant.cpf)}</span>}
                         </div>
                       </div>
                     </div>
                     <button
                       onClick={() => toggleParticipant(index)}
-                      className="size-8 flex items-center justify-center"
+                      className="size-8 flex items-center justify-center shrink-0"
                     >
                       <ArrowButton isOpen={isExpanded} />
                     </button>
@@ -553,11 +553,11 @@ export default function TicketDetailsPage() {
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-start justify-between gap-3">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1] shrink-0">
                     Nome do evento:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.3] text-right">
                     {event?.name || "N/A"}
                   </p>
                 </div>
