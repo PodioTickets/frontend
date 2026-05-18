@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Fragment, useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ArrowButton } from "@/components/ArrowButton";
+import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
+import { adminExternalHref } from "@/lib/adminPathPresentation";
+import { useAdminPathname } from "@/hooks/useAdminPathname";
 
 interface AdminEventHeaderProps {
   eventId: string;
@@ -53,6 +55,15 @@ interface TabsProps {
 }
 
 function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps) {
+  const adminSurface = useAdminAppSurface();
+  // No admin host (admin.dominio) o `href` exibido na URL é curto (/events/...),
+  // mas a rota interna do App Router continua /admin/events/... — converte aqui
+  // pra evitar que o Link aponte pra rota inexistente.
+  const navHref = useCallback(
+    (internal: string) => adminExternalHref(internal, adminSurface),
+    [adminSurface],
+  );
+
   const [descontoOpen, setDescontoOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -204,7 +215,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
         {discountOptions.map((opt) => (
           <Link
             key={opt.id}
-            href={opt.href}
+            href={navHref(opt.href)}
             onClick={() => { opt.onClick?.(); setDescontoOpen(false); }}
             className="flex h-12 items-center px-4 text-sm text-gray-12 transition-colors hover:bg-gray-3"
           >
@@ -227,7 +238,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
         {editStepOptions.map((opt) => (
           <Link
             key={opt.id}
-            href={opt.href}
+            href={navHref(opt.href)}
             onClick={() => { opt.onClick?.(); setEditarOpen(false); }}
             className="flex h-12 items-center px-4 text-sm text-gray-12 transition-colors hover:bg-gray-3"
           >
@@ -270,7 +281,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
                   <Fragment key={tab.href}>
                     <Link
                       ref={editarLinkRef}
-                      href={tab.href}
+                      href={navHref(tab.href)}
                       className={`${linkTabCls(isEditActive)} hidden md:block`}
                     >
                       {tab.label}
@@ -305,7 +316,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
               <Link
                 key={tab.href}
                 ref={(node) => setTabLinkRef(tab.href, node)}
-                href={tab.href}
+                href={navHref(tab.href)}
                 onClick={onLinkClick}
                 className={linkTabCls(isActive)}
               >
@@ -322,7 +333,12 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
 }
 
 export function AdminEventHeader({ eventId, eventName, eventSlug }: AdminEventHeaderProps) {
-  const pathname = usePathname();
+  // Pathname normalizado pra rota interna (/admin/...) mesmo quando o host curto
+  // está em uso — sem isso, activeHref nunca bate com tab.href e nenhuma aba fica
+  // marcada como ativa.
+  const pathname = useAdminPathname();
+  const adminSurface = useAdminAppSurface();
+  const navHref = (internal: string) => adminExternalHref(internal, adminSurface);
 
   return (
     <>
@@ -332,7 +348,7 @@ export function AdminEventHeader({ eventId, eventName, eventSlug }: AdminEventHe
           <div className="flex-1 min-w-0">
             <div className="mb-4 px-6">
               <div className="flex items-center gap-2 text-sm text-gray-11">
-                <Link href="/admin/events" className="hover:text-gray-12">
+                <Link href={navHref("/admin/events")} className="hover:text-gray-12">
                   Eventos
                 </Link>
                 <ArrowButton isOpen={false} className="size-2" />
@@ -367,7 +383,7 @@ export function AdminEventHeader({ eventId, eventName, eventSlug }: AdminEventHe
       <div className="md:hidden bg-gray-1 border-b border-gray-6 -mt-4 -mx-4">
         <div className="flex items-center gap-1 h-[52px] px-4">
           <Link
-            href="/admin/events"
+            href={navHref("/admin/events")}
             className="-rotate-180 size-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-gray-3 transition-colors"
             aria-label="Voltar"
           >

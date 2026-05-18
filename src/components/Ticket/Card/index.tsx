@@ -83,14 +83,15 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
       )}
       style={{ boxShadow: "0px 2px 6px rgba(17, 17, 17, 0.25)" }}
     >
-      {/* Banner image */}
-      <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-4">
+      {/* Banner image — mobile: altura fixa 232px (Figma); desktop: aspect-square pra
+          grid-cols-4 manter quadradas */}
+      <div className="relative w-full h-[232px] md:h-auto md:aspect-square overflow-hidden rounded-lg bg-gray-4">
         {imageUrl && !imgFailed ? (
           <Image
             src={imageUrl}
             alt={ticket.event.name}
             fill
-            sizes="(max-width: 1440px) 25vw, 308px"
+            sizes="(max-width: 768px) 100vw, (max-width: 1440px) 25vw, 308px"
             className="object-cover"
             onError={onImgError}
           />

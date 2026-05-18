@@ -24,29 +24,20 @@ export default function UserTicketsPage() {
 
   return (
     <div className="min-h-screen bg-[#F9F9F9]">
-      <div
-        className="mx-auto max-w-[1440px]"
-        style={{
-          paddingTop: 52,
-          paddingBottom: 248,
-          paddingLeft: 80,
-          paddingRight: 80,
-        }}
-      >
+      <div className="mx-auto max-w-[1440px] pt-6 pb-16 px-5 md:pt-[52px] md:pb-[248px] md:px-20">
         <div className="flex flex-col gap-8">
-          {/* Header */}
-          <div className="flex items-center gap-3">
+          {/* Header — mesma estrutura mobile/desktop, só os tamanhos variam.
+              Filtro do Figma omitido conforme pedido. */}
+          <div className="flex items-center gap-2 md:gap-3">
             <Image
               src="/images/ticket-huge.png"
               alt="Ingressos"
               width={32}
               height={32}
+              className="size-6 md:size-8"
               draggable={false}
             />
-            <span
-              className="font-manrope font-extrabold text-[#202020]"
-              style={{ fontSize: 28, lineHeight: "30.8px" }}
-            >
+            <span className="font-manrope font-extrabold text-[#202020] text-xl leading-[22px] md:text-[28px] md:leading-[30.8px]">
               Meus ingressos
             </span>
           </div>
@@ -79,7 +70,7 @@ export default function UserTicketsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-4">
               {tickets.map((ticket) => (
                 <TicketCard key={ticket.id} ticket={ticket} />
               ))}

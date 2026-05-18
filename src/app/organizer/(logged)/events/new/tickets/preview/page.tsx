@@ -5,6 +5,7 @@ import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useCreateEvent } from "@/contexts/CreateEventContext";
 import { organizerService } from "@/services";
 import { CheckoutPreviewProvider } from "@/contexts/CheckoutContext";
+import { CheckoutTimerPreviewProvider } from "@/contexts/CheckoutTimerContext";
 import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { Loading } from "@/components/Loading";
 import { Button } from "@/components/Button";
@@ -108,12 +109,14 @@ export default function CreateTicketsCheckoutPreviewPage() {
       </div>
 
       <CheckoutPreviewProvider>
-        <ModalitiesStep
-          event={previewEvent}
-          onNext={() => {
-            handleBack();
-          }}
-        />
+        <CheckoutTimerPreviewProvider>
+          <ModalitiesStep
+            event={previewEvent}
+            onNext={() => {
+              handleBack();
+            }}
+          />
+        </CheckoutTimerPreviewProvider>
       </CheckoutPreviewProvider>
     </div>
   );

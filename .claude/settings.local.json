@@ -51,7 +51,11 @@
       "Bash(awk '/^[^{]*img[^{]*\\\\{/{f=1} f{print NR\": \"$0; if\\(/\\\\}/\\) f=0}' node_modules/quill/dist/quill.snow.css)",
       "Bash(awk '/^[[:space:]]*async [a-zA-Z]/{m=$0; ln=NR} NR==894{print \"Method at line \" ln \":\", m}' C:/Users/muril/Projects/PodioTickets/server/src/app/organizations/organizations.service.ts)",
       "Bash(awk '/^[[:space:]]*async [a-zA-Z]/{m=$0; ln=NR} NR==2176{print \"Method at line \" ln \":\", m}' C:/Users/muril/Projects/PodioTickets/server/src/app/organizations/organizations.service.ts)",
-      "Bash(awk 'NR==375,/^  async [a-zA-Z]/{print NR\": \"$0}' C:/Users/muril/Projects/PodioTickets/server/src/app/organizations/organizations.service.ts)"
+      "Bash(awk 'NR==375,/^  async [a-zA-Z]/{print NR\": \"$0}' C:/Users/muril/Projects/PodioTickets/server/src/app/organizations/organizations.service.ts)",
+      "Bash(npm run *)",
+      "Bash(curl -s -m 5 http://localhost:3000/admin/events/test-id/dashboard)",
+      "Bash(cp /tmp/desktop-ticket.png \"C:/Users/muril/Projects/PodioTickets/frontend/.claude/notes/desktop-ticket.png\")",
+      "Bash(mkdir -p \"C:/Users/muril/Projects/PodioTickets/frontend/.claude/notes\")"
     ]
   },
   "disabledMcpjsonServers": [

@@ -1095,7 +1095,7 @@ export function LoginModal() {
                       >
                         {isSubmitting || authLoading
                           ? "Conectando..."
-                          : "Conectar-se"}
+                          : "Entrar"}
                       </Button>
                     </form>
 
@@ -1137,7 +1137,7 @@ export function LoginModal() {
                           }}
                           className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
                         >
-                          Cadastrar-se
+                          Criar conta
                         </button>
                       </div>
 
@@ -1236,7 +1236,7 @@ export function LoginModal() {
                         Bem-vindo de volta
                       </h2>
                       <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Por favor, preencha os campos para conectar-se
+                        Por favor, preencha os campos para Entrar
                       </p>
                     </div>
 
@@ -1355,7 +1355,7 @@ export function LoginModal() {
                       >
                         {isSubmitting || authLoading
                           ? "Conectando..."
-                          : "Conectar-se"}
+                          : "Entrar"}
                       </Button>
                     </form>
 
@@ -1397,7 +1397,7 @@ export function LoginModal() {
                           }}
                           className="font-semibold text-base leading-[1.3] text-primary-10 underline hover:text-primary-11 transition-colors font-family-dm-sans cursor-pointer"
                         >
-                          Cadastrar-se
+                          Criar conta
                         </button>
                       </div>
 

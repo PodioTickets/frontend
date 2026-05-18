@@ -79,8 +79,11 @@ export default function ReviewTicketsPage() {
   const discardLocalChanges = useCallback(async () => {
     if (!eventId) return;
     ticketsSectionRef.current?.reset();
-    await queryClient.refetchQueries({ queryKey: queryKeys.events.tickets(eventId) });
-    await queryClient.refetchQueries({ queryKey: queryKeys.events.ticketCategories(eventId) });
+    // `TicketsSection` lê do bundle agregado — invalidar as chaves antigas
+    // (tickets/ticketCategories) deixava o discard sem efeito visual.
+    await queryClient.refetchQueries({
+      queryKey: queryKeys.events.ticketsManagement(eventId),
+    });
     await reloadEvent();
     try {
       const ev = await organizerService.getEventById(eventId);

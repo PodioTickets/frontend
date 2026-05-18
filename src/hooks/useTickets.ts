@@ -71,7 +71,16 @@ export function formatRawTicket(ticket: any): Ticket {
         }
       : undefined,
     activeBatchStatus: ticket.activeBatchStatus ?? undefined,
-    products: ticket.productIds || [],
+    // O backend bundle retorna `productIds: string[]`, mas a resposta do
+    // POST/PATCH /tickets retorna apenas `products: [{productId, product}]`
+    // (o join). Cobrir os dois formatos pra que tickets recém-criados/editados
+    // não fiquem com lista de produtos vazia no card.
+    products:
+      ticket.productIds && Array.isArray(ticket.productIds)
+        ? ticket.productIds
+        : (ticket.products || [])
+            .map((tp: any) => tp?.productId)
+            .filter((id: unknown): id is string => typeof id === "string"),
     productImages: (ticket.products || []).map((tp: any) => ({
       id: tp.productId,
       name: tp.product?.name ?? "Produto",
@@ -260,18 +269,14 @@ export function mergeTicketsWithPendingWrites(
       result.push(t);
       continue;
     }
-    if (entry.op === "create") {
-      // Backend confirmou o create → limpa pending, usa servidor (fonte da verdade).
-      m.delete(t.id);
-      result.push(t);
-      continue;
-    }
-    // op === "update"
+    // Mesma proteção pra create e update: enquanto a janela `overwriteUntil`
+    // estiver ativa, o pending sobrescreve o servidor. Cobre o caso em que o
+    // refetch do bundle volta de réplica defasada (ex.: sem o join de `products`
+    // que o backend só popula após a replicação), o que sobrescreveria o cache
+    // otimista enriquecido e o card apareceria sem fotos.
     if (now < entry.overwriteUntil) {
-      // Janela de proteção ativa — pending sobrescreve servidor.
       result.push(entry.ticket);
     } else {
-      // Janela expirou — confia no servidor.
       m.delete(t.id);
       result.push(t);
     }

@@ -15,6 +15,7 @@ import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { Loading } from "../Loading";
 import type { Ticket } from "@/hooks/useTickets";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
+import { ticketUnitPriceForPrePaymentCents } from "@/lib/orderAutoCouponDisplay";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 
@@ -136,7 +137,9 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const orderTicketPriceById = useMemo(() => {
     const m = new Map<string, number>();
     orderData?.tickets.forEach((t) => {
-      const cents = t.finalUnitPrice ?? t.unitPrice ?? 0;
+      // Pré-pagamento: ignora cupons automáticos (QUANTITY/AGE) — o desconto
+      // só deve aparecer no resumo da PaymentStep.
+      const cents = ticketUnitPriceForPrePaymentCents(t, orderData?.coupon);
       m.set(t.ticketId, cents / 100);
     });
     return m;

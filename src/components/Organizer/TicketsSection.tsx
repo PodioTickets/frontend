@@ -677,6 +677,27 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
               }>(queryKeys.events.ticketsManagement(eventId));
               const ticketList = bundle?.tickets ?? tickets;
               const cats = bundle?.categories ?? categories;
+
+              // Optimistic update do `sortOrder` no bundle ANTES de limpar o draft.
+              // Sem isso, entre `setTicketOrderDraft({})` e o `refetchQueries`
+              // completar, a UI re-renderiza usando o sortOrder velho do cache —
+              // se a réplica do backend vier defasada, o usuário vê a ordem
+              // antiga até dar refresh manual.
+              optimisticUpdateTickets(queryClient, eventId, (prev) => {
+                if (prev.length === 0) return prev;
+                const newOrderByTicketId = new Map<string, number>();
+                for (const [scopeKey, ids] of Object.entries(orderPatch)) {
+                  ids.forEach((id, idx) => newOrderByTicketId.set(id, idx));
+                  // scopeKey usado apenas pra clareza no diff — sortOrder é por escopo.
+                  void scopeKey;
+                }
+                return prev.map((t) => {
+                  const nextOrder = newOrderByTicketId.get(t.id);
+                  if (nextOrder == null) return t;
+                  return { ...t, sortOrder: nextOrder };
+                });
+              });
+
               await persistTicketOrderDrafts(eventId, ticketList, cats, orderPatch);
               setTicketOrderDraft({});
               await queryClient.refetchQueries({

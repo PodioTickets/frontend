@@ -643,13 +643,27 @@ export default function EventRegistrationsPage() {
             <div className="mb-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-11 mb-1">Inscrições Confirmadas</p>
-                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-3 flex items-center justify-center">
-                  <CartIcon className="size-5 text-blue-12" />
+                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
+                  <DolarIcon className="size-5 text-[#202020]" />
                 </div>
               </div>
               <p className="text-2xl font-bold text-gray-12">{stats.total.toLocaleString()}</p>
             </div>
             <RegistrationsWeekTrend change={stats.totalChange} />
+          </div>
+
+          {/* Cancelados */}
+          <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
+            <div className="mb-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-11 mb-1">Cancelados</p>
+                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-red-4 flex items-center justify-center">
+                  <XCircle className="size-5 text-red-12" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-gray-12">{stats.cancelled.toLocaleString()}</p>
+            </div>
+            <RegistrationsWeekTrend change={stats.cancelledChange} />
           </div>
 
           {/* Pagos */}
@@ -666,20 +680,7 @@ export default function EventRegistrationsPage() {
             <RegistrationsWeekTrend change={stats.refundedChange} />
           </div>
 
-          {/* Cancelados */}
-          <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
-            <div className="mb-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-11 mb-1">Cancelados</p>
-                <div className="w-[28px] h-[28px] p-1 rounded-lg bg-yellow-10/20 flex items-center justify-center">
-                  <ClockIcon className="size-5 text-yellow-11" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-gray-12">{stats.cancelled.toLocaleString()}</p>
-            </div>
-            <RegistrationsWeekTrend change={stats.cancelledChange} />
-          </div>
-
+        
           {/* Total arrecadado */}
           <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
             <div className="mb-2">

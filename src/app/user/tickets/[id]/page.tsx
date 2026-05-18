@@ -9,6 +9,7 @@ import Image from "next/image";
 import { DistanceIcon } from "@/components/Icons/DistanceIcon";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { ClockIcon } from "@/components/Icons/ClockIcon";
+import { EventInfoCard } from "@/components/Event/EventInfoCard";
 import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
@@ -159,7 +160,7 @@ export default function TicketDetailsPage() {
   if (!orderData) {
     return (
       <div className="min-h-screen bg-gray-2">
-        <div className="mx-auto max-w-[1280px] px-4 md:px-20 pt-13 pb-20">
+        <div className="mx-auto max-w-[1280px] px-4 pt-13 pb-20">
           <div className="mb-6 flex items-center gap-3">
             <button
               onClick={() => router.back()}
@@ -193,17 +194,38 @@ export default function TicketDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-2">
-      <div className="mx-auto max-w-[700px] px-4 pt-13 pb-20">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4">
+      {/* Mobile header — fixo no padrão do Figma: back à esquerda, título centralizado, border-bottom */}
+      <div className="md:hidden bg-gray-2 border-b border-gray-6 px-4 pt-5 pb-2">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="cursor-pointer size-8 flex items-center justify-center"
+            aria-label="Voltar"
+          >
+            <div className="rotate-180 size-8 flex items-center justify-center">
+              <ArrowButton isOpen={false} />
+            </div>
+          </button>
+          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
+            Detalhes do ingresso
+          </p>
+          {/* Spacer pra centralizar o título (mesma largura do botão de voltar) */}
+          <div className="size-8" aria-hidden />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[700px] px-4 pt-6 pb-20 md:pt-13">
+        {/* Desktop header — back chevron + título compacto + subtítulo (Figma desktop) */}
+        <div className="mb-6 hidden md:flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="cursor-pointer size-9 flex items-center justify-center rounded-full border border-gray-6 hover:bg-gray-3 transition-colors"
+              className="cursor-pointer size-9 flex items-center justify-center rounded-full hover:bg-gray-3 transition-colors"
+              aria-label="Voltar"
             >
               <div className="rotate-180"><ArrowButton isOpen={false} /></div>
             </button>
-            <h1 className="text-[28px] font-bold text-gray-12 font-manrope leading-[1.1]">
+            <h1 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
               Detalhes do seu ingresso
             </h1>
           </div>
@@ -211,6 +233,16 @@ export default function TicketDetailsPage() {
             Apresente este QR Code na retirada do kit ou na entrada do evento para validar sua inscrição.
           </p>
         </div>
+
+        {/* Mobile: descrição (card-resumo do evento fica fora do bloco, compartilhado com desktop) */}
+        <div className="md:hidden mb-6">
+          <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3]">
+            Apresente este QR Code na retirada do kit ou na entrada do evento para validar sua inscrição.
+          </p>
+        </div>
+
+        {/* Card-resumo do evento — único bloco responsivo (mobile = 2 linhas, desktop = 1 linha) */}
+        {event && <EventInfoCard event={event} className="mb-6" />}
 
         {/* Participants List */}
         {participants.length === 0 ? (
@@ -236,54 +268,36 @@ export default function TicketDetailsPage() {
                   key={participant.id || index}
                   className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden"
                 >
-                  {/* Participant Header */}
+                  {/* Participant Header — mobile: QR à esquerda + título à direita, ícones abaixo (Figma).
+                      Desktop: texto à esquerda com todos os dados, QR à direita. */}
                   <button
                     onClick={() => toggleParticipant(index)}
-                    className="w-full flex items-center justify-between px-4 py-6 border-b border-gray-6"
+                    className="w-full flex flex-col gap-5 items-start px-4 py-6 border-b border-gray-6 md:flex-row md:items-center md:justify-between"
                   >
-                    <div className="flex flex-col gap-5 items-start">
-                      <p className="text-base text-gray-12 font-family-dm-sans">
-                        Participante {index + 1}
-                      </p>
-                      <div className="flex flex-col items-start gap-1">
-                        {ticket.category?.name && (
-                          <p className="text-sm text-gray-11 font-family-dm-sans truncate max-w-[400px]">
-                            {ticket.category.name}
-                          </p>
-                        )}
-                        <h2 className="text-2xl font-bold text-gray-12 font-manrope truncate max-w-[400px]">
-                          {ticket.name || "Ingresso"}
-                        </h2>
+                    {/* Linha 1 mobile: QR + (Participante N + ticket name).
+                        Desktop: contém tudo à esquerda. */}
+                    <div className="flex gap-3 items-start w-full md:flex-col md:gap-5 md:items-start md:w-auto">
+                      {/* QR — visível só no mobile aqui (no desktop renderiza na direita) */}
+                      <div className="shrink-0 md:hidden">
+                        <RegistrationQRCode qrCodeData={qrCode} size={120} />
                       </div>
-                      <div className="flex gap-8 items-center">
-                        {distance && (
-                          <div className="flex gap-2 items-center">
-                            <DistanceIcon className="size-6" />
-                            <p className="text-lg font-medium text-gray-12 font-family-dm-sans">
-                              {distance}
-                            </p>
-                          </div>
-                        )}
-                        {event?.eventDate && (
-                          <div className="flex gap-2 items-center">
-                            <CalendarIcon className="size-6" />
-                            <p className="text-lg font-medium text-gray-12 font-family-dm-sans">
-                              {formatDate(event.eventDate)}
-                            </p>
-                          </div>
-                        )}
-                        {event?.eventDate && (
-                          <div className="flex gap-2 items-center">
-                            <ClockIcon className="size-6" />
-                            <p className="text-lg font-medium text-gray-12 font-family-dm-sans">
-                              {formatTime(event.eventDate)}
-                            </p>
-                          </div>
-                        )}
+                      <div className="flex flex-col items-start gap-2 py-3 md:gap-2 md:py-0">
+                        <p className="text-base text-gray-12 font-family-dm-sans">
+                          Participante {index + 1}
+                        </p>
+                        <div className="flex flex-col items-start gap-1">
+                          <p className="text-sm text-gray-11 font-family-dm-sans truncate max-w-full md:max-w-[400px]">
+                            {ticket?.category?.name ?? "Ingresso avulso"}
+                          </p>
+                          <h2 className="text-lg md:text-2xl font-bold text-gray-12 font-manrope truncate max-w-full md:max-w-[400px]">
+                            {ticket.name || "Ingresso"}
+                          </h2>
+                        </div>
                       </div>
                     </div>
-                    {/* QR Code */}
-                    <div className="shrink-0">
+
+                    {/* QR — desktop-only, à direita */}
+                    <div className="hidden md:block shrink-0">
                       <RegistrationQRCode qrCodeData={qrCode} size={120} />
                     </div>
                   </button>
@@ -543,17 +557,18 @@ export default function TicketDetailsPage() {
         <div className="mt-10">
           <div className="bg-gray-1 border border-gray-6 rounded-xl overflow-hidden">
             <div className="flex flex-col gap-2 px-4 py-6">
+              {/* Seção 1: meta do pedido — linhas com borda individual */}
               <div className="flex flex-col gap-2">
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Número do pedido:
                   </p>
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1] text-right">
                     #{order.id || "N/A"}
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Nome do evento:
                   </p>
@@ -562,20 +577,20 @@ export default function TicketDetailsPage() {
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Data da compra:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
                     {order.createdAt ? formatDate(order.createdAt) : "N/A"}
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Forma de pagamento:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
                     {payment.method === "CREDIT_CARD"
                       ? "Cartão de crédito"
                       : payment.method === "DEBIT_CARD"
@@ -588,11 +603,11 @@ export default function TicketDetailsPage() {
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Participantes:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
                     {participants.length}
                   </p>
                 </div>
@@ -600,21 +615,22 @@ export default function TicketDetailsPage() {
 
               <div className="w-full h-px bg-gray-6 my-2" />
 
+              {/* Seção 2: valores — linhas com borda individual */}
               <div className="flex flex-col gap-2">
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Subtotal:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
                     {formatPrice(pricing.subtotal ?? 0)}
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Taxa de serviço:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
                     {formatPrice(pricing.serviceFee ?? 0)}
                   </p>
                 </div>
@@ -624,18 +640,18 @@ export default function TicketDetailsPage() {
                   const isAutomaticCoupon = coupon?.couponType === "QUANTITY" || coupon?.couponType === "AGE";
                   const couponPercent = coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
                   const couponLabel = `${isAutomaticCoupon
-                      ? "Cupom automático"
-                      : coupon?.code
-                        ? `Cupom ${coupon.code}`
-                        : "Cupom"
+                    ? "Cupom automático"
+                    : coupon?.code
+                      ? `Cupom ${coupon.code}`
+                      : "Cupom"
                     }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
 
                   return (
-                    <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                    <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                       <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                         {couponLabel}
                       </p>
-                      <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1]">
+                      <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
                         – {formatPrice(pricing.discount ?? 0)}
                       </p>
                     </div>

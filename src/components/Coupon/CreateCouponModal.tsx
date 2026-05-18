@@ -60,6 +60,10 @@ export function CreateCouponModal() {
 
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
   const advancedPanelRef = useRef<HTMLDivElement>(null);
+  // Guarda se o toggle do painel avançado partiu de clique do usuário.
+  // Sem isso, a abertura automática em modo de edição (data sync) dispararia
+  // o scroll-into-view e o modal abriria já rolado pra baixo.
+  const userToggledAdvancedRef = useRef(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [isAddingCpf, setIsAddingCpf] = useState(false);
   const [newCpfInput, setNewCpfInput] = useState("");
@@ -129,6 +133,9 @@ export function CreateCouponModal() {
   // Initialize form when modal opens
   useEffect(() => {
     if (isOpen) {
+      // Reseta o intent — qualquer scroll precisa vir de clique explícito do usuário
+      // após esta abertura do modal.
+      userToggledAdvancedRef.current = false;
       if (isEditing && data?.coupon) {
         // Editing mode - load coupon data
         const c = data.coupon;
@@ -171,8 +178,19 @@ export function CreateCouponModal() {
         setCpfListStatus(c.cpfListStatus || "DISABLED");
         setCpfList(c.cpfList || []);
         setApplyToProducts(!!c.applyToProducts);
-        // Abre painel avançado automaticamente se houver configurações ativas
-        setShowAdvanced(!!(c.expiryDate || c.maxUsage || c.cpfListStatus === "ENABLED" || c.minQuantity || c.minAge || c.maxAge || c.applyToProducts));
+        // Abre painel avançado automaticamente se houver configurações ativas.
+        // IMPORTANTE: minQuantity/minAge/maxAge NÃO entram aqui — esses campos
+        // ficam no formulário principal (obrigatórios pros tipos QUANTITY/AGE),
+        // não no painel avançado, então usá-los como gatilho abria o painel
+        // indevidamente em todo cupom desses tipos.
+        setShowAdvanced(
+          !!(
+            c.expiryDate ||
+            c.maxUsage ||
+            c.cpfListStatus === "ENABLED" ||
+            c.applyToProducts
+          )
+        );
         setMinQuantity(c.minQuantity?.toString() || "");
         setMinAge(c.minAge?.toString() || "");
         setMaxAge(c.maxAge?.toString() || "");
@@ -207,6 +225,9 @@ export function CreateCouponModal() {
 
   useEffect(() => {
     if (!showAdvanced) return;
+    // Só rola pra mostrar o painel quando o usuário pediu (clicou no toggle).
+    // Abertura automática em modo de edição não deve mexer no scroll.
+    if (!userToggledAdvancedRef.current) return;
 
     let cancelled = false;
     let resizeObserver: ResizeObserver | null = null;
@@ -466,20 +487,25 @@ export function CreateCouponModal() {
     setIsSubmitting(true);
 
     try {
+      // Backend usa PATCH semantics: campo ausente = sem alteração.
+      // `undefined` é stripado pelo JSON.stringify → precisaria mandar `null`
+      // explicitamente pra LIMPAR um valor anteriormente setado (a interface do
+      // backend declara esses campos como `number | null` / `string | null`).
       const couponData: any = {
         couponType,
         type: discountType,
         value: discountType === "FIXED" ? Math.round(numericValue * 100) : numericValue,
-        note: note.trim() || undefined,
-        expiryDate: expiryEnabled && expiryDate ? expiryDate : undefined,
-        maxUsage: usageLimitEnabled && usageLimit ? parseInt(usageLimit) : undefined,
+        note: note.trim() || null,
+        expiryDate: expiryEnabled && expiryDate ? expiryDate : null,
+        maxUsage: usageLimitEnabled && usageLimit ? parseInt(usageLimit) : null,
         cpfListStatus,
-        cpfList: cpfListStatus === "ENABLED" ? cpfList : undefined,
+        cpfList: cpfListStatus === "ENABLED" ? cpfList : null,
         applyToProducts,
-        // Campos específicos por tipo
-        minQuantity: couponType === "QUANTITY" ? parseInt(minQuantity) : undefined,
-        minAge: couponType === "AGE" && minAge ? parseInt(minAge) : undefined,
-        maxAge: couponType === "AGE" && maxAge ? parseInt(maxAge) : undefined,
+        // Campos específicos por tipo — quando o tipo do cupom muda, os campos
+        // dos outros tipos precisam ser limpos no backend.
+        minQuantity: couponType === "QUANTITY" ? parseInt(minQuantity) : null,
+        minAge: couponType === "AGE" && minAge ? parseInt(minAge) : null,
+        maxAge: couponType === "AGE" && maxAge ? parseInt(maxAge) : null,
       };
 
       // Código é obrigatório apenas para DISCOUNT, opcional para outros tipos
@@ -514,8 +540,18 @@ export function CreateCouponModal() {
     } catch (error: any) {
       const raw = error.response?.data?.message ?? error?.message ?? "";
       const message = Array.isArray(raw) ? raw[0] : String(raw);
-      if (message.includes("already exists")) {
-        setCodeError("Esse código já existe para este evento");
+      const code = error.response?.data?.code ?? error.response?.data?.error ?? "";
+      // Detecta colisão de código tanto pelo error code do backend quanto por
+      // pattern matching nas mensagens (PT-BR e EN), pra não depender de um
+      // único idioma/formato.
+      const normalized = message.toLowerCase();
+      const isDuplicateCode =
+        String(code).toUpperCase().includes("DUPLICATE") ||
+        String(code).toUpperCase().includes("ALREADY_EXISTS") ||
+        normalized.includes("already exists") ||
+        normalized.includes("já existe");
+      if (isDuplicateCode) {
+        setCodeError(message || "Esse código já existe para este evento");
       } else {
         setApiError(message || "Erro ao salvar cupom");
       }
@@ -1012,7 +1048,10 @@ export function CreateCouponModal() {
                           {/* Conteúdo avançado */}
                           <div className="flex flex-col gap-5">
                             <button
-                              onClick={() => setShowAdvanced(!showAdvanced)}
+                              onClick={() => {
+                                userToggledAdvancedRef.current = true;
+                                setShowAdvanced(!showAdvanced);
+                              }}
                               className="flex items-center gap-2 text-primary-11 hover:text-primary-12 transition-colors self-start"
                             >
                               <span className="text-base font-medium font-family-dm-sans leading-[1.3]">
@@ -1031,6 +1070,9 @@ export function CreateCouponModal() {
                                   transition={{ duration: 0.2 }}
                                   className="overflow-hidden flex flex-col gap-9"
                                   onAnimationComplete={() => {
+                                    // Mesma guarda: não scrollar quando o painel
+                                    // foi aberto automaticamente em modo de edição.
+                                    if (!userToggledAdvancedRef.current) return;
                                     requestAnimationFrame(() => {
                                       const scrollEl = modalBodyScrollRef.current;
                                       const panel = advancedPanelRef.current;

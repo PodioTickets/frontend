@@ -11,6 +11,7 @@ import { CalendarIcon } from "../Icons/CalendarIcon";
 import { ClockIcon } from "../Icons/ClockIcon";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { EventInfoCard } from "@/components/Event/EventInfoCard";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -393,6 +394,9 @@ export function PaymentSuccessStep({
                   evento para validar sua inscrição.
                 </p>
               </div>
+
+              {/* Event Info Card (mobile) — contexto do evento dentro de "Detalhes do seu ingresso" */}
+              <EventInfoCard event={event} className="w-full" />
 
               {/* Participant Cards */}
               <div className="flex flex-col gap-5 items-start w-full">
@@ -927,6 +931,9 @@ export function PaymentSuccessStep({
                 </p>
               </div>
 
+              {/* Event Info Card (desktop) — contexto do evento dentro de "Detalhes do seu ingresso" */}
+              <EventInfoCard event={event} className="w-full" />
+
               {/* Participant Cards */}
               <div className="flex flex-col gap-[20px] items-center w-full">
                 {displayParticipants.map((participantData, index) => {
@@ -959,21 +966,6 @@ export function PaymentSuccessStep({
                               <h3 className="font-bold text-[24px] truncate max-w-[400px] leading-[1.1] text-gray-12 font-manrope">
                                 {participantData.ticketName}
                               </h3>
-                            </div>
-
-                            <div className="flex gap-[32px] items-start">
-                              <div className="flex gap-[8px] items-center">
-                                <CalendarIcon className="size-6 text-gray-12" />
-                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                                  {formatDate(event.eventDate)}
-                                </span>
-                              </div>
-                              <div className="flex gap-[8px] items-center">
-                                <ClockIcon className="size-6 text-gray-12" />
-                                <span className="font-medium text-[18px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                                  {formatTime(event.eventDate)}
-                                </span>
-                              </div>
                             </div>
                           </div>
                           {/* QR Code */}

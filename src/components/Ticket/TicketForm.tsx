@@ -186,6 +186,16 @@ export function TicketForm({
         if (!b.price.trim()) errors[`batch_price_${b.id}`] = "Preço é obrigatório";
       });
     }
+    // Restrição de idade: quando ambos os campos estão preenchidos, mínima
+    // tem que ser <= máxima. Salvar com min > max gera ranges impossíveis e o
+    // backend rejeita.
+    if (hasAgeRestriction && minAge.trim() && maxAge.trim()) {
+      const minN = parseInt(minAge, 10);
+      const maxN = parseInt(maxAge, 10);
+      if (Number.isFinite(minN) && Number.isFinite(maxN) && minN > maxN) {
+        errors.ageRange = "A idade mínima não pode ser maior que a máxima";
+      }
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -881,7 +891,9 @@ export function TicketForm({
       const savedTicket: Ticket | null = rawSaved ? formatRawTicket(rawSaved) : null;
       if (savedTicket) {
         // Atualiza ambos os caches (key antiga em outras páginas + bundle da
-        // página de gerenciamento).
+        // página de gerenciamento). A resposta do POST/PATCH traz o join completo
+        // de `products` (com `image`, `images`, `primaryImageIndex`), então
+        // `formatRawTicket` já produz `productImages` populado corretamente.
         optimisticUpdateTickets(queryClient, eventId, (prev) => {
           const idx = prev.findIndex((t) => t.id === savedTicket.id);
           if (idx === -1) return [...prev, savedTicket];
@@ -896,15 +908,16 @@ export function TicketForm({
         );
       }
 
-      // NÃO invalidar a query de tickets aqui — o `setQueryData` acima já
-      // colocou no cache a versão FRESCA vinda da resposta do PATCH/POST.
-      // Um `invalidate` forçaria refetch imediato que poderia ler de réplica
-      // defasada e sobrescrever os dados atualizados (eventual consistency).
-      // O `staleTime: 30s` do useTicketsManagement cuida da reconciliação
-      // natural no próximo focus/window event.
-      //
       // Products SIM precisa invalidar — não foi atualizado pelo PATCH.
       await queryClient.invalidateQueries({ queryKey: queryKeys.events.products(eventId) });
+
+      // Invalida o bundle de tickets pro backend re-joinar os produtos relacionados
+      // (com `images`, ordem, categoria). A resposta do POST/PATCH pode vir sem o
+      // join completo, deixando o card sem imagens dos produtos atrelados.
+      // O `optimisticUpdateTickets` acima já manteve o ticket visível, e
+      // `pendingWrites` segura o estado caso a réplica venha defasada — então
+      // não há risco de sumir da lista por eventual consistency.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.events.ticketsManagement(eventId) });
 
       window.dispatchEvent(new CustomEvent("ticketCreated"));
 
@@ -1128,30 +1141,43 @@ export function TicketForm({
               </div>
             </div>
             {hasAgeRestriction && (
-              <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start">
-                <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
-                  <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                    Idade mínima
-                  </label>
-                  <Input
-                    value={minAge}
-                    onChange={(e) => setMinAge(e.target.value)}
-                    placeholder="Ex: 18 anos"
-                    className="h-12"
-                  />
+              <>
+                <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-start">
+                  <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
+                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                      Idade mínima
+                    </label>
+                    <Input
+                      value={minAge}
+                      onChange={(e) => {
+                        setMinAge(e.target.value.replace(/\D/g, ""));
+                        if (formErrors.ageRange) clearFieldError("ageRange");
+                      }}
+                      placeholder="Ex: 18 anos"
+                      inputMode="numeric"
+                      className={`h-12 ${formErrors.ageRange ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
+                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
+                      Idade máxima
+                    </label>
+                    <Input
+                      value={maxAge}
+                      onChange={(e) => {
+                        setMaxAge(e.target.value.replace(/\D/g, ""));
+                        if (formErrors.ageRange) clearFieldError("ageRange");
+                      }}
+                      placeholder="Ex: 35 anos"
+                      inputMode="numeric"
+                      className={`h-12 ${formErrors.ageRange ? "border-red-8 focus-visible:ring-red-8" : ""}`}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2 w-full sm:w-max sm:flex-1 sm:min-w-0">
-                  <label className="text-gray-12 text-base font-family-dm-sans leading-[1.1]">
-                    Idade máxima
-                  </label>
-                  <Input
-                    value={maxAge}
-                    onChange={(e) => setMaxAge(e.target.value)}
-                    placeholder="Ex: 35 anos"
-                    className="h-12"
-                  />
-                </div>
-              </div>
+                {formErrors.ageRange && (
+                  <p className="text-red-11 text-sm font-family-dm-sans">{formErrors.ageRange}</p>
+                )}
+              </>
             )}
           </div>
 

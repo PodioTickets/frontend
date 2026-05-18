@@ -280,14 +280,14 @@ export function Header() {
                   variant="outline"
                   size="default"
                 >
-                  Cadastrar-se
+                  Criar conta
                 </Button>
                 <Button
                   onClick={() => openModal("login")}
                   variant="default"
                   size="default"
                 >
-                  Conectar-se
+                  Entrar
                 </Button>
               </>
             )}
@@ -424,7 +424,7 @@ export function Header() {
                         size="default"
                         className="w-full"
                       >
-                        Conectar-se
+                        Entrar
                       </Button>
                       <Button
                         onClick={() => openModal("register")}
@@ -432,7 +432,7 @@ export function Header() {
                         size="default"
                         className="w-full"
                       >
-                        Cadastrar-se
+                        Criar conta
                       </Button>
                       <MobileLanguageToggle
                         onClose={() => setMobileMenuOpen(false)}

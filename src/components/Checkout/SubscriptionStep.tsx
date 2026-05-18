@@ -8,6 +8,10 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import {
+  orderTotalForPrePaymentCents,
+  ticketUnitPriceForPrePaymentCents,
+} from "@/lib/orderAutoCouponDisplay";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import type { Ticket } from "@/hooks/useTickets";
@@ -505,7 +509,9 @@ export function SubscriptionStep({
   const orderTicketPriceById = useMemo(() => {
     const m = new Map<string, number>();
     orderData?.tickets.forEach((t) => {
-      const cents = t.finalUnitPrice ?? t.unitPrice ?? 0;
+      // Pré-pagamento: ignora cupons automáticos (QUANTITY/AGE) — o desconto
+      // só deve aparecer no resumo da PaymentStep.
+      const cents = ticketUnitPriceForPrePaymentCents(t, orderData?.coupon);
       m.set(t.ticketId, cents / 100);
     });
     return m;
@@ -829,12 +835,14 @@ export function SubscriptionStep({
     const grouped: Array<{
       quantity: number;
       raceName: string;
+      categoryName?: string;
       distance: string;
       price: number;
       total: number;
     }> = [];
 
     const ticketMap = new Map<string, { ticket: Ticket; quantity: number }>();
+    const categoryById = new Map(categories.map((c) => [c.id, c.name]));
 
     participantsWithTickets.forEach(({ ticket }) => {
       const existing = ticketMap.get(ticket.id);
@@ -849,6 +857,7 @@ export function SubscriptionStep({
       grouped.push({
         quantity,
         raceName: ticket.name,
+        categoryName: ticket.groupId ? categoryById.get(ticket.groupId) : undefined,
         distance: ticket.distance ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
         price: getTicketPrice(ticket),
         total: getTicketPrice(ticket) * quantity,
@@ -856,7 +865,7 @@ export function SubscriptionStep({
     });
 
     return grouped;
-  }, [participantsWithTickets]);
+  }, [participantsWithTickets, categories]);
 
   const totalProductsPrice = useMemo(() => {
     return participantsWithTickets.reduce((total, { participantIndex }) => {
@@ -889,8 +898,12 @@ export function SubscriptionStep({
   }, [totalProductsPrice]);
 
   const totalAmount = useMemo(() => {
-    if (orderData?.pricing) {
-      const orderTotal = orderData.pricing.total / 100;
+    const preCouponCents = orderTotalForPrePaymentCents(
+      orderData?.pricing,
+      orderData?.coupon,
+    );
+    if (preCouponCents != null) {
+      const orderTotal = preCouponCents / 100;
       return orderHasProductsApplied
         ? orderTotal
         : orderTotal + totalProductsPrice;
@@ -1117,16 +1130,27 @@ export function SubscriptionStep({
 
       {/* Mobile Footer Summary */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
-        <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
-          <div className="flex flex-col gap-2">
+        <div className="flex items-end justify-between gap-3 text-gray-12 font-family-dm-sans">
+          <div className="flex flex-col gap-2 min-w-0 flex-1">
             <h1 className="text-base font-bold">{event.name}</h1>
             <p className="text-sm">
               Participantes: <span className="font-semibold">{totalParticipants}</span>
             </p>
+            {/* Categoria acima, nome do ingresso bold abaixo — mesmo padrão do OrderSummary desktop */}
             {groupedTickets.map((ticket, index) => (
-              <p key={index} className="text-sm">
-                <span className="font-semibold">{formatPrice(ticket.total)}</span>
-              </p>
+              <div key={index} className="flex flex-col gap-0.5 min-w-0">
+                <p className="text-xs text-gray-11 leading-[1.3] truncate">
+                  {ticket.categoryName || "Ingresso Avulso"}
+                </p>
+                <div className="flex items-baseline gap-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-12 truncate min-w-0">
+                    ({ticket.quantity}x) {ticket.raceName}:
+                  </p>
+                  <p className="text-sm font-semibold text-gray-12 shrink-0">
+                    {formatPrice(ticket.total)}
+                  </p>
+                </div>
+              </div>
             ))}
             {serviceFee > 0 && (
               <p className="text-sm">

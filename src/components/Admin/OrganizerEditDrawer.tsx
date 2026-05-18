@@ -18,6 +18,7 @@ import type { AdminAuditOrganization } from "@/services/admin/AdminService";
 import { cn } from "@/utils/cn";
 import toast from "react-hot-toast";
 import { FinanceIcon } from "../Icons/Organizer/FinanceIcon";
+import { lookupCepDigits } from "@/utils/lookupCep";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -435,6 +436,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [ownerName, setOwnerName] = useState("");
   const [ownerDocument, setOwnerDocument] = useState("");
   const [fiscalEmail, setFiscalEmail] = useState("");
+  const [loadingCep, setLoadingCep] = useState(false);
+  // Guarda o último CEP buscado pra não disparar fetch duplicado em re-renders.
+  const lastFetchedCepRef = useRef<string>("");
 
   // pix form
   const [showAddPix, setShowAddPix] = useState(false);
@@ -761,7 +765,42 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<MapPin className="size-5" />} label="Endereço" />
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
-                  <FieldInput label="CEP" value={zipCode} onChange={(v) => setZipCode(withCEPMask(v))} placeholder="00000-000" className="min-w-[264px]" />
+                  <FieldInput
+                    label="CEP"
+                    value={zipCode}
+                    onChange={(v) => {
+                      const masked = withCEPMask(v);
+                      setZipCode(masked);
+                      const cepDigits = digits(masked);
+                      // Auto-fetch quando completa 8 dígitos. Guarda o último CEP buscado
+                      // (lastFetchedCepRef) pra evitar refetch ao re-digitar o mesmo valor.
+                      if (cepDigits.length === 8 && cepDigits !== lastFetchedCepRef.current) {
+                        lastFetchedCepRef.current = cepDigits;
+                        void (async () => {
+                          setLoadingCep(true);
+                          try {
+                            const result = await lookupCepDigits(cepDigits);
+                            if (!result.ok) {
+                              toast.error(result.message);
+                              return;
+                            }
+                            const { data } = result;
+                            setState(data.uf || "");
+                            setStreet(data.logradouro || "");
+                            setNeighborhood(data.bairro || "");
+                            setCity(data.localidade || "");
+                            toast.success("Endereço encontrado!");
+                          } finally {
+                            setLoadingCep(false);
+                          }
+                        })();
+                      } else if (cepDigits.length < 8) {
+                        lastFetchedCepRef.current = "";
+                      }
+                    }}
+                    placeholder={loadingCep ? "Buscando endereço..." : "00000-000"}
+                    className="min-w-[264px]"
+                  />
                   <FieldInput label="Estado" value={state} onChange={setState} placeholder="Selecione o estado" className="min-w-[183px]" />
                   <FieldInput label="Rua" value={street} onChange={setStreet} placeholder="Digite o nome da sua rua" className="min-w-[340px]" />
                   <FieldInput label="Número" value={streetNumber} onChange={setStreetNumber} placeholder="Ex: 123" className="min-w-[189px] max-w-[189px]" />

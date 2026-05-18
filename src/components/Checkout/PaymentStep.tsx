@@ -22,6 +22,7 @@ import { TrashIcon } from "../Icons/TrashIcon";
 import { PencilIcon } from "../Icons/PencilIcon";
 import Image from "next/image";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { ProductCardGallery } from "./ProductCardGallery";
 import { Tooltip, CVVTooltip } from "../Tooltip";
 import type { Event } from "@/interfaces/event";
 import { useCheckout } from "@/contexts/CheckoutContext";
@@ -1048,10 +1049,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   // Helper para obter produtos de um participante
   const getParticipantProducts = (participantIndex: number): Array<{
+    productId: string;
     name: string;
     price: number;
     quantity: number;
     size?: string;
+    image?: string | null;
+    images?: string[];
   }> => {
     if (!productsData?.products) return [];
 
@@ -1059,10 +1063,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     if (!participant?.productVariations) return [];
 
     const items: Array<{
+      productId: string;
       name: string;
       price: number;
       quantity: number;
       size?: string;
+      image?: string | null;
+      images?: string[];
     }> = [];
 
     Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
@@ -1080,14 +1087,22 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         (v.id || `${product.id}-${i}`) === variationId
       );
 
-      const price = variation?.price ?? product.basePrice ?? 0;
+      // Variação só sobrescreve basePrice quando tem preço próprio (> 0).
+      // Sem isso, variações de tamanho/cor com price=0 zerariam o produto e o filtro
+      // abaixo o esconderia silenciosamente do resumo.
+      const variationPrice = Number(variation?.price ?? 0);
+      const basePrice = Number(product.basePrice ?? 0);
+      const price = variationPrice > 0 ? variationPrice : basePrice;
 
       if (price > 0) {
         items.push({
+          productId: product.id,
           name: product.name,
           price,
           quantity: 1,
           size: variation?.name,
+          image: product.image ?? null,
+          images: Array.isArray(product.images) ? product.images.filter(Boolean) : [],
         });
       }
     });
@@ -1230,10 +1245,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           (v.id || `${product.id}-${i}`) === variationId
         );
 
-        // Calcular preço (variação ou preço base)
-        const price = variation?.price ?? product.basePrice ?? 0;
+        // Variação só sobrescreve basePrice quando tem preço próprio (> 0).
+        const variationPrice = Number(variation?.price ?? 0);
+        const basePrice = Number(product.basePrice ?? 0);
+        const price = variationPrice > 0 ? variationPrice : basePrice;
 
-        // Só adicionar se tiver preço > 0
         if (price > 0) {
           items.push({
             name: product.name,
@@ -1841,35 +1857,35 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       participantIndex: number;
       participant: (typeof participants)[0];
       ticket: Ticket;
+      categoryName?: string;
       additionalProducts?: Array<{
+        productId: string;
         name: string;
         price: number;
         quantity: number;
         size?: string;
-        image?: string;
+        image?: string | null;
+        images?: string[];
       }>;
     }> = [];
 
     participantsWithTickets.forEach(({ ticket, participantIndex }) => {
       const participant = participants[participantIndex];
       if (participant) {
-        // Obter produtos do participante
         const products = getParticipantProducts(participantIndex);
 
         result.push({
           participantIndex,
           participant,
           ticket,
-          additionalProducts: products.length > 0 ? products.map(p => ({
-            ...p,
-            image: undefined, // Pode ser adicionado se necessário
-          })) : undefined,
+          categoryName: ticket.groupId ? categoryNameMap.get(ticket.groupId) : undefined,
+          additionalProducts: products.length > 0 ? products : undefined,
         });
       }
     });
 
     return result;
-  }, [participantsWithTickets, participants, productsData]);
+  }, [participantsWithTickets, participants, productsData, categoryNameMap]);
 
   // Generate participant data for the modal
   const participantModalData = useMemo(() => {
@@ -2289,8 +2305,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 {!billingAddressConfirmed
                   ? "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."
                   : isFreeOrder
-                  ? "Clique em Finalizar pedido para confirmar. Os ingressos serão liberados imediatamente."
-                  : "Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento."}
+                    ? "Clique em Finalizar pedido para confirmar. Os ingressos serão liberados imediatamente."
+                    : "Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento."}
               </p>
             </div>
 
@@ -2507,6 +2523,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                         participantIndex,
                         participant,
                         ticket,
+                        categoryName,
                         additionalProducts,
                       },
                       index
@@ -2574,12 +2591,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           </div>
                         </div>
 
-                        {/* Ticket Info */}
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                            {ticket.name}
-                          </p>
-                          <p className="text-base font-bold text-gray-12 font-manrope">
+                        {/* Ticket Info — categoria acima do nome do ingresso (mesmo padrão do OrderSummary desktop) */}
+                        <div className="flex items-end justify-between gap-3 mb-3">
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
+                              {categoryName || "Ingresso Avulso"}
+                            </p>
+                            <p className="font-manrope font-bold text-base leading-[1.1] text-gray-12 truncate">
+                              {ticket.name}
+                            </p>
+                          </div>
+                          <p className="font-manrope font-bold text-base leading-[1.1] text-gray-12 shrink-0">
                             {formatPrice(getTicketPrice(ticket))}
                           </p>
                         </div>
@@ -2602,34 +2624,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               </p>
                             </div>
                           )}
-
-                        {/* Action Buttons */}
-                        {additionalProducts &&
-                          additionalProducts.length > 0 && (
-                            <div className="flex gap-2 items-center mb-4">
-                              <button
-                                type="button"
-                                title="Deletar"
-                                className="bg-red-2 border-[1.5px] border-red-6 rounded-lg size-9 flex items-center justify-center"
-                                onClick={() => {
-                                  // Handle delete
-                                }}
-                              >
-                                <TrashIcon className="size-6 text-red-11" />
-                              </button>
-                              <button
-                                type="button"
-                                title="Editar"
-                                className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg size-9 flex items-center justify-center"
-                                onClick={() => {
-                                  // Handle edit
-                                }}
-                              >
-                                <PencilIcon className="size-6 text-gray-12" />
-                              </button>
-                            </div>
-                          )}
-
                         {/* Expanded Additional Products */}
                         {expandedProducts[participantIndex] &&
                           additionalProducts &&
@@ -2638,23 +2632,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               {additionalProducts.map(
                                 (product, productIndex) => (
                                   <div
-                                    key={productIndex}
+                                    key={product.productId ?? productIndex}
                                     className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
                                   >
                                     {/* Product Header */}
                                     <div className="flex gap-3 p-4 border-b border-gray-6">
-                                      <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0 relative">
-                                        <ImageWithInitialFallback
-                                          src={product.image}
-                                          alt={product.name}
-                                          name={product.name}
-                                          fallbackId={String(productIndex)}
-                                          fill
-                                          sizes="100px"
-                                          className="size-full"
-                                          letterClassName="text-2xl font-semibold"
-                                        />
-                                      </div>
+                                      <ProductCardGallery
+                                        productId={product.productId ?? String(productIndex)}
+                                        productName={product.name}
+                                        image={product.image}
+                                        images={product.images}
+                                      />
                                       <div className="flex flex-col justify-between flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
                                           {product.name}
@@ -2700,7 +2688,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           )}
 
                         {/* Participant Total */}
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-between w-full">
+
+                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                            Total:
+                          </p>
                           <p className="text-base font-bold text-gray-12 font-manrope">
                             {formatPrice(
                               getTicketPrice(ticket) +

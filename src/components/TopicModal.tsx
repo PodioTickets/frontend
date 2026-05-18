@@ -76,6 +76,10 @@ function applyTopicQuillLayoutSizes(root: HTMLElement | null) {
   if (editor) {
     editor.style.padding = editorPad;
     editor.style.fontSize = fontPx;
+    // Texto sem format de cor explícito herda do editor. Quill Snow usa #646464
+    // por padrão (cinza) — sobrescrevemos com preto pra que o texto default já
+    // saia na cor "neutra" que a paleta do picker oferece como swatch principal.
+    editor.style.color = "#000000";
   }
 
   root

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { CheckoutPreviewProvider } from "@/contexts/CheckoutContext";
+import { CheckoutTimerPreviewProvider } from "@/contexts/CheckoutTimerContext";
 import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { Loading } from "@/components/Loading";
 import { Button } from "@/components/Button";
@@ -88,7 +89,9 @@ export default function ReviewTicketsPreviewPage() {
       </div>
 
       <CheckoutPreviewProvider>
-        <ModalitiesStep event={previewEvent} onNext={handleNext} />
+        <CheckoutTimerPreviewProvider>
+          <ModalitiesStep event={previewEvent} onNext={handleNext} />
+        </CheckoutTimerPreviewProvider>
       </CheckoutPreviewProvider>
     </div>
   );

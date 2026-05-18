@@ -18,6 +18,10 @@ import type { Question } from "@/interfaces/event";
 import { eventService, userService } from "@/services";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { organizerService } from "@/services";
+import {
+  orderTotalForPrePaymentCents,
+  ticketUnitPriceForPrePaymentCents,
+} from "@/lib/orderAutoCouponDisplay";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
@@ -219,7 +223,9 @@ export function InformationStep({
   const orderTicketPriceById = useMemo(() => {
     const m = new Map<string, number>();
     orderData?.tickets.forEach((t) => {
-      const cents = t.finalUnitPrice ?? t.unitPrice ?? 0;
+      // Pré-pagamento: ignora cupons automáticos (QUANTITY/AGE) — o desconto
+      // só deve aparecer no resumo da PaymentStep.
+      const cents = ticketUnitPriceForPrePaymentCents(t, orderData?.coupon);
       m.set(t.ticketId, cents / 100);
     });
     return m;
@@ -366,9 +372,14 @@ export function InformationStep({
   }, [orderData, totalPrice, event.participantFeePercent]);
 
   // Total a exibir — `pricing.total` (= `finalAmount`) já considera
-  // tickets + serviceFee + descontos aplicados. Fallback é a soma local.
+  // tickets + serviceFee + descontos aplicados. Pré-pagamento adicionamos de
+  // volta o desconto de cupom automático pra não confundir o usuário.
   const totalAmount = useMemo(() => {
-    if (orderData?.pricing) return orderData.pricing.total / 100;
+    const preCouponCents = orderTotalForPrePaymentCents(
+      orderData?.pricing,
+      orderData?.coupon,
+    );
+    if (preCouponCents != null) return preCouponCents / 100;
     return totalPrice + serviceFee;
   }, [orderData, totalPrice, serviceFee]);
 
@@ -1917,24 +1928,28 @@ export function InformationStep({
 
       {/* Mobile Footer Summary - Same style as ModalitiesStep */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
-        <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
-          <div className="flex flex-col gap-2">
+        <div className="flex items-end justify-between gap-3 text-gray-12 font-family-dm-sans">
+          <div className="flex flex-col gap-2 min-w-0 flex-1">
             <h1 className="text-base font-bold">{event.name}</h1>
             <p className="text-sm">
               Participantes:{" "}
               <span className="font-semibold">{totalParticipants}</span>
             </p>
+            {/* Categoria acima, nome do ingresso bold abaixo — mesmo padrão do OrderSummary desktop / SubscriptionStep mobile */}
             {groupedTickets.map((ticket, index) => (
-              <p key={index} className="text-sm">
-                ({ticket.quantity}x){" "}
-                {ticket.categoryName ? (
-                  <span className="text-gray-11">{ticket.categoryName} · </span>
-                ) : null}
-                {ticket.raceName}:{" "}
-                <span className="font-semibold">
-                  {formatPrice(ticket.total)}
-                </span>
-              </p>
+              <div key={index} className="flex flex-col gap-0.5 min-w-0">
+                <p className="text-xs text-gray-11 leading-[1.3] truncate">
+                  {ticket.categoryName || "Ingresso Avulso"}
+                </p>
+                <div className="flex items-baseline justify-between gap-2 min-w-0">
+                  <p className="text-sm font-semibold text-gray-12 truncate min-w-0">
+                    ({ticket.quantity}x) {ticket.raceName}
+                  </p>
+                  <p className="text-sm font-semibold text-gray-12 shrink-0">
+                    {formatPrice(ticket.total)}
+                  </p>
+                </div>
+              </div>
             ))}
             {serviceFee > 0 && (
               <p className="text-sm">

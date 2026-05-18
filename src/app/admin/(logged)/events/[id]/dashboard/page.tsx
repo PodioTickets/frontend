@@ -951,10 +951,10 @@ export default function EventDashboardPage() {
             ) : null}
           </div>
 
-          {/* Cancelamentos / Estornos */}
+          {/* Cancelamentos */}
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
-              <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Cancelamentos / Estornos</p>
+              <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Cancelamentos</p>
               <div className="w-[28px] h-[28px] p-1 rounded-xl bg-red-4 flex items-center justify-center">
                 <XCircle className="size-5 text-red-12" />
               </div>
@@ -969,18 +969,6 @@ export default function EventDashboardPage() {
                 <div className="px-4 pb-3 pt-1 flex-1 flex items-center">
                   <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
                     Cancelados
-                  </p>
-                </div>
-              </div>
-              <div className="flex-1 flex flex-col">
-                <div className="px-4 pt-4 pb-3 h-[49px] flex items-start">
-                  <p className="font-manrope font-bold text-[24px] leading-[1.1] text-gray-12">
-                    {dashboardData.refunds}
-                  </p>
-                </div>
-                <div className="px-4 pb-3 pt-1 flex-1 flex items-center">
-                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                    Estornos
                   </p>
                 </div>
               </div>
@@ -1329,19 +1317,15 @@ export default function EventDashboardPage() {
           </div>
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[171px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
-              <p className="font-family-dm-sans font-normal text-base text-gray-11 leading-tight">Cancelamentos / Estornos</p>
+              <p className="font-family-dm-sans font-normal text-base text-gray-11 leading-tight">Cancelamentos</p>
               <div className="w-7 h-7 p-1 rounded-xl bg-red-4 flex items-center justify-center shrink-0">
                 <XCircle className="size-5 text-red-12" />
               </div>
             </div>
-            <div className="flex-1 flex border-t border-gray-6">
+            <div className="flex-1 flex">
               <div className="flex-1 flex flex-col justify-center py-3 px-3 border-r border-gray-6">
                 <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">{dashboardData.cancellations}</p>
                 <p className="font-family-dm-sans font-normal text-sm text-gray-11 mt-1">Cancelados</p>
-              </div>
-              <div className="flex-1 flex flex-col justify-center py-3 px-3">
-                <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">{dashboardData.refunds}</p>
-                <p className="font-family-dm-sans font-normal text-sm text-gray-11 mt-1">Estornos</p>
               </div>
             </div>
           </div>

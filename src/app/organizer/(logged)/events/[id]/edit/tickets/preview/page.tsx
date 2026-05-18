@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useEditEvent } from "@/contexts/EditEventContext";
 import { CheckoutPreviewProvider } from "@/contexts/CheckoutContext";
+import { CheckoutTimerPreviewProvider } from "@/contexts/CheckoutTimerContext";
 import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { Loading } from "@/components/Loading";
 import { Button } from "@/components/Button";
@@ -93,7 +94,9 @@ export default function EditTicketsCheckoutPreviewPage() {
       </div>
 
       <CheckoutPreviewProvider>
-        <ModalitiesStep event={previewEvent} onNext={handleNext} />
+        <CheckoutTimerPreviewProvider>
+          <ModalitiesStep event={previewEvent} onNext={handleNext} />
+        </CheckoutTimerPreviewProvider>
       </CheckoutPreviewProvider>
     </div>
   );

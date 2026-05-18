@@ -431,6 +431,36 @@ export function useCheckoutTimer(): CheckoutTimerContextValue {
   return ctx;
 }
 
+/**
+ * Provider no-op para fluxos de pré-visualização (organizer/admin editando
+ * tickets). Mesma API do provider real, mas sem nenhum side-effect: não lê
+ * localStorage, não chama `getOrder`, não monta interval/listeners. Permite
+ * que componentes de checkout (ex.: `ModalitiesStep`) sejam renderizados na
+ * prévia sem disparar fetch de ordem ou redirecionamento por timer expirado.
+ */
+export function CheckoutTimerPreviewProvider({ children }: { children: ReactNode }) {
+  const value = useMemo<CheckoutTimerContextValue>(
+    () => ({
+      orderId: null,
+      expiresAt: null,
+      remainingMs: 0,
+      isActive: false,
+      startTimer: () => { },
+      syncFromOrder: () => { },
+      clearTimer: () => { },
+      refreshFromServer: async () => null,
+      pauseVisibilityRefresh: () => { },
+      resumeVisibilityRefresh: () => { },
+    }),
+    [],
+  );
+  return (
+    <CheckoutTimerContext.Provider value={value}>
+      {children}
+    </CheckoutTimerContext.Provider>
+  );
+}
+
 export function formatRemaining(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const mm = Math.floor(totalSeconds / 60);
