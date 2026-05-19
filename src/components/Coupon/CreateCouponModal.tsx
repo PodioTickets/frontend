@@ -1360,7 +1360,7 @@ export function CreateCouponModal() {
                                         Aplicar cupom nos adicionais?
                                       </h3>
                                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        O desconto também será aplicado aos produtos adicionais que não estão inclusos no ingresso.
+                                        O desconto também será aplicado aos produtos adicionais que não estão inclusos no ingresso
                                       </p>
                                     </div>
                                     <div className="flex gap-6">
