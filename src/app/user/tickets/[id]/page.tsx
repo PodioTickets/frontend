@@ -303,8 +303,8 @@ export default function TicketDetailsPage() {
                   </button>
 
                   {/* Participant Profile Card */}
-                  <div className="px-4 py-5 border-b border-gray-6 flex items-center justify-between">
-                    <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2">
+                  <div className="px-4 py-4 border-b border-gray-6 flex items-center justify-between gap-3">
+                    <div className="border border-gray-6 rounded-xl p-3 flex items-center gap-2 min-w-0 flex-1">
                       <div className="size-10 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
                         {participant.avatarUrl ? (
                           <Image
@@ -320,30 +320,30 @@ export default function TicketDetailsPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-col">
-                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans truncate">
                           {participant.name || `Participante ${index + 1}`}
                         </p>
-                        <div className="flex gap-2 items-center text-sm text-gray-11 font-family-dm-sans">
+                        <div className="flex flex-wrap gap-1.5 items-center text-xs md:text-sm text-gray-11 font-family-dm-sans">
                           {participant.birthDate && (
                             <>
-                              {formatDate(participant.birthDate)}
-                              <span className="size-1 bg-gray-11 rounded-full" />
+                              <span>{formatDate(participant.birthDate)}</span>
+                              <span className="size-1 bg-gray-11 rounded-full shrink-0" />
                             </>
                           )}
                           {participant.gender && (
                             <>
-                              {getGenderLabel(participant.gender)}
-                              {participant.cpf && <span className="size-1 bg-gray-11 rounded-full" />}
+                              <span>{getGenderLabel(participant.gender)}</span>
+                              {participant.cpf && <span className="size-1 bg-gray-11 rounded-full shrink-0" />}
                             </>
                           )}
-                          {participant.cpf && maskCPF(participant.cpf)}
+                          {participant.cpf && <span>{maskCPF(participant.cpf)}</span>}
                         </div>
                       </div>
                     </div>
                     <button
                       onClick={() => toggleParticipant(index)}
-                      className="size-8 flex items-center justify-center"
+                      className="size-8 flex items-center justify-center shrink-0"
                     >
                       <ArrowButton isOpen={isExpanded} />
                     </button>
@@ -572,7 +572,7 @@ export default function TicketDetailsPage() {
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Nome do evento:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.3] text-right">
                     {event?.name || "N/A"}
                   </p>
                 </div>

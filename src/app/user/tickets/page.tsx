@@ -6,6 +6,7 @@ import { useMyTickets } from "@/hooks/useMyTickets";
 import { TicketCard } from "@/components/Ticket/Card";
 import { Pagination } from "@/components/Pagination";
 import Image from "next/image";
+import { SlidersHorizontal } from "lucide-react";
 
 export default function UserTicketsPage() {
   const { isAuthenticated } = useAuth();
@@ -21,6 +22,8 @@ export default function UserTicketsPage() {
       refetch();
     }
   }, [isAuthenticated, refetch]);
+
+  const hasMore = pagination.page < pagination.totalPages;
 
   return (
     <div className="min-h-screen bg-[#F9F9F9]">
@@ -77,13 +80,30 @@ export default function UserTicketsPage() {
             </div>
           )}
 
+          {/* Mobile: Carregar mais */}
+          {hasMore && (
+            <div className="md:hidden">
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={loading}
+                className="w-full h-12 rounded-lg border border-[#D9D9D9] flex items-center justify-center font-manrope font-bold text-[#202020] disabled:opacity-50"
+                style={{ fontSize: 16, lineHeight: "17.6px" }}
+              >
+                {loading ? "Carregando..." : "Carregar mais"}
+              </button>
+            </div>
+          )}
+
+          {/* Desktop: Pagination */}
           {pagination.totalPages > 1 && (
-            <Pagination
-              currentPage={pagination.page}
-              onPageChange={setPage}
-              totalPages={pagination.totalPages}
-              className="mt-6"
-            />
+            <div className="hidden md:block">
+              <Pagination
+                currentPage={pagination.page}
+                onPageChange={setPage}
+                totalPages={pagination.totalPages}
+                className="mt-6"
+              />
+            </div>
           )}
         </div>
       </div>

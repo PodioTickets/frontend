@@ -154,7 +154,7 @@ export default function OrganizerForgotPasswordPage() {
 
   return (
     <div className="min-h-screen h-screen bg-gray-2 flex overflow-hidden">
-      <div className="flex-1 flex flex-col items-center justify-between px-4 sm:px-8 md:px-[372px] py-11 h-full overflow-y-auto relative">
+      <div className="flex-1 flex flex-col items-center justify-between px-4 sm:px-8 py-11 h-full overflow-y-auto relative">
         {step !== "success" && (
           <button
             type="button"

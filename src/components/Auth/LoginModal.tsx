@@ -1174,9 +1174,9 @@ export function LoginModal() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden ${mfaToken || showForgotFlow
+              className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden max-h-[calc(100dvh-32px)] ${mfaToken || showForgotFlow
                   ? "max-w-[460px] bg-transparent"
-                  : "max-w-[600px] bg-gray-1"
+                  : "max-w-[600px] bg-gray-1 overflow-y-auto"
                 }`}
             >
               {mfaToken ? (
