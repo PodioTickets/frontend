@@ -201,7 +201,6 @@ export function ContactOrganizerModal({
           subject: form.subject || undefined,
           message: form.message,
           eventId: eventId || undefined,
-          userId: user?.id || undefined,
         }),
         new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
