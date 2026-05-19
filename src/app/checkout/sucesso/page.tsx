@@ -65,29 +65,56 @@ function CheckoutSucessoContent() {
         : 0;
 
     const participantsData = registrations.map((reg: any, index: number) => {
+      // `ticket.includedProducts` é o catálogo completo de produtos configurados
+      // pro ticket. Só os com `isIncludedInTicket === true` são realmente bundled
+      // grátis. Os demais (opcionais comprados) vêm em `reg.products`.
+      const includedProducts = (reg.ticket?.includedProducts ?? [])
+        .filter((p: any) => {
+          if (p.isIncludedInTicket !== true) return false;
+          if (p.selectedVariation?.name && isSemInteresseVariation({ name: p.selectedVariation.name })) return false;
+          return true;
+        })
+        .map((p: any) => ({
+          name: p.name,
+          price: (p.basePrice ?? 0) / 100,
+          quantity: 1,
+          variationName: p.selectedVariation?.name ?? null,
+          variationType: p.variationType ?? null,
+          isIncluded: true,
+          isRequired: p.isRequired ?? true,
+          image: p.image ?? null,
+        }));
+
+      // `reg.products` = carrinho (produtos adicionais pagos). Shape:
+      // { product: {name, image, variationType}, variation: {name, price}, variationName, quantity, unitPrice, totalPrice }
+      const rawProducts = (reg.products || reg.additionalProducts || []) as any[];
+      const additionalProducts = rawProducts
+        .filter((item: any) => {
+          const variationName = item.variation?.name ?? item.variationName ?? null;
+          if (variationName && isSemInteresseVariation({ name: variationName })) return false;
+          return true;
+        })
+        .map((item: any) => {
+          const qty = item.quantity ?? 1;
+          const totalCents = item.totalPrice ?? (item.unitPrice ?? 0) * qty;
+          return {
+            name: item.product?.name ?? "Produto",
+            price: totalCents / 100,
+            quantity: qty,
+            variationName: item.variation?.name ?? item.variationName ?? null,
+            variationType: item.product?.variationType ?? null,
+            image: item.product?.image ?? null,
+          };
+        });
+
       return {
         participantIndex: index,
         ticketName: reg.ticket?.name ?? "Ingresso",
         categoryName: reg.ticket?.category?.name ?? undefined,
         ticketPrice: perTicketPrice,
         qrCode: reg.qrCode,
-        includedProducts: (reg.ticket?.includedProducts ?? [])
-          .filter((p: any) => {
-            if (p.isIncludedInTicket === false) return false;
-            if (p.isRequired === false && p.selectedVariation?.name && isSemInteresseVariation({ name: p.selectedVariation.name })) return false;
-            return true;
-          })
-          .map((p: any) => ({
-            name: p.name,
-            price: (p.basePrice ?? 0) / 100,
-            quantity: 1,
-            variationName: p.selectedVariation?.name ?? null,
-            variationType: p.variationType ?? null,
-            isIncluded: true,
-            isRequired: p.isRequired ?? true,
-            image: p.image ?? null,
-          })),
-        additionalProducts: [],
+        includedProducts,
+        additionalProducts,
       };
     });
 

@@ -113,14 +113,24 @@ export default function TicketDetailsPage() {
       const p = reg.participant || {};
       const ticket = reg.ticket || {};
 
+      // `ticket.includedProducts` é o CATÁLOGO de produtos configurados pro tipo de
+      // ingresso (todos os opcionais + obrigatórios). Só são realmente "incluídos
+      // no ingresso" (grátis, recebidos automaticamente) os com `isIncludedInTicket: true`.
+      // Os demais são opcionais que o usuário pode ter pago — esses aparecem em
+      // `reg.products` (carrinho) e renderizam na seção "Adicionais".
       const includedProducts: IncludedProduct[] = (ticket.includedProducts || []).filter((item: any) => {
+        if (item.isIncludedInTicket !== true) return false;
         const selectedName = item.selectedVariation?.name ?? null;
         if (selectedName && isSemInteresseVariation({ name: selectedName })) return false;
         return true;
       });
 
-      const additionalProducts = (reg.additionalProducts || []).filter((item: any) => {
-        const variationName = item.variation?.name ?? null;
+      // `reg.products` = carrinho de produtos adicionais comprados. Estrutura:
+      // { product, variation, variationName, quantity, unitPrice, totalPrice }.
+      // Aceitar `reg.additionalProducts` também (alias defensivo se o contrato mudar).
+      const rawProducts = (reg.products || reg.additionalProducts || []) as any[];
+      const additionalProducts = rawProducts.filter((item: any) => {
+        const variationName = item.variation?.name ?? item.variationName ?? null;
         if (variationName && isSemInteresseVariation({ name: variationName })) return false;
         return true;
       });
