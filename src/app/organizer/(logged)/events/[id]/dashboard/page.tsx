@@ -912,8 +912,8 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Ticket Médio</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-primary-4 flex items-center justify-center">
-                <CheckIcon className="size-5 text-gray-12" />
+              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center">
+                <DolarIcon className="size-5 text-[#202020]" />
               </div>
             </div>
             <div className="px-4 h-[49px] flex items-center">
@@ -939,8 +939,8 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Inscrições Confirmadas</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center">
-                <DolarIcon className="size-5 text-[#202020]" />
+              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-primary-4 flex items-center justify-center">
+                <CheckIcon className="size-5 text-gray-12" />
               </div>
             </div>
             <div className="px-4 h-[49px] flex items-center">

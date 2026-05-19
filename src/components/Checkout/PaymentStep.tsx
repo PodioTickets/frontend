@@ -1306,14 +1306,18 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     (sum, { ticket }) => sum + getTicketPrice(ticket),
     0
   );
-  const serverServiceFee = currentOrder?.pricing.serviceFee ?? 0;
-  const serviceFee = serverServiceFee > 0
-    ? serverServiceFee / 100
-    : ticketSubtotalLocal * ((event.participantFeePercent ?? 0) / 100);
   const additionalProductsTotal = orderItems.reduce(
     (sum, item) => sum + item.price / 100,
     0
   );
+  // Fallback local inclui produtos adicionais — base da taxa é
+  // tickets + produtos (mesma fórmula do backend). Sem isso, a taxa fica
+  // subestimada quando a order ainda não foi recalculada com produtos.
+  const serverServiceFee = currentOrder?.pricing.serviceFee ?? 0;
+  const serviceFee = serverServiceFee > 0
+    ? serverServiceFee / 100
+    : (ticketSubtotalLocal + additionalProductsTotal) *
+      ((event.participantFeePercent ?? 0) / 100);
   // Subtotal e desconto de cupom vêm direto do backend — não recalcular no frontend
   const subtotalValue = currentOrder
     ? currentOrder.pricing.subtotal / 100

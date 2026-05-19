@@ -61,14 +61,18 @@ export function EventInfoCard({
     >
       {/* Topo mobile / esquerda desktop: imagem + nome (mobile junta numa row, desktop separa) */}
       <div className="flex gap-3 items-center md:contents">
-        <div className="h-[70px] w-[86px] rounded-lg overflow-hidden bg-gray-4 shrink-0 relative">
+        {/* Aspect 16:9 — mesmo formato dos banners 1280x720 enviados pelo
+            organizador e renderizados na página do evento (object-cover). */}
+        <div className="h-[70px] md:h-[70px] w-1/2 md:w-[150px] md:aspect-video rounded-lg overflow-hidden shrink-0 relative">
           {event.bannerUrl ? (
             <Image
               src={event.bannerUrl}
               alt={event.name || "Evento"}
-              fill
-              sizes="86px"
-              className="object-cover"
+              sizes="70px"
+              className="object-contain h-full w-full"
+              unoptimized
+              width={10000000}
+              height={1000000}
             />
           ) : null}
         </div>

@@ -55,7 +55,8 @@
       "Bash(npm run *)",
       "Bash(curl -s -m 5 http://localhost:3000/admin/events/test-id/dashboard)",
       "Bash(cp /tmp/desktop-ticket.png \"C:/Users/muril/Projects/PodioTickets/frontend/.claude/notes/desktop-ticket.png\")",
-      "Bash(mkdir -p \"C:/Users/muril/Projects/PodioTickets/frontend/.claude/notes\")"
+      "Bash(mkdir -p \"C:/Users/muril/Projects/PodioTickets/frontend/.claude/notes\")",
+      "Bash(Get-ChildItem -Path src/app/checkout -Recurse -Include *.tsx, *.ts)"
     ]
   },
   "disabledMcpjsonServers": [

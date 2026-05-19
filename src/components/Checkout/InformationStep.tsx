@@ -27,6 +27,7 @@ import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { UserAutocomplete } from "../UserAutocomplete";
+import { Tooltip } from "@/components/Tooltip";
 import type { LinkedUser } from "@/hooks/useLinkedUsers";
 import toast from "react-hot-toast";
 import { Loading } from "../Loading";
@@ -1942,9 +1943,19 @@ export function InformationStep({
                   {ticket.categoryName || "Ingresso Avulso"}
                 </p>
                 <div className="flex items-baseline justify-between gap-2 min-w-0">
-                  <p className="text-sm font-semibold text-gray-12 truncate min-w-0">
-                    ({ticket.quantity}x) {ticket.raceName}
-                  </p>
+                  {/* Tooltip click-to-reveal mostra o nome completo quando truncado (mobile sem hover). */}
+                  <Tooltip
+                    content={`(${ticket.quantity}x) ${ticket.raceName}`}
+                    position="topRight"
+                    trigger="click"
+                    usePortal
+                    className="block min-w-0 flex-1"
+                    contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+                  >
+                    <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer">
+                      ({ticket.quantity}x) {ticket.raceName}
+                    </p>
+                  </Tooltip>
                   <p className="text-sm font-semibold text-gray-12 shrink-0">
                     {formatPrice(ticket.total)}
                   </p>

@@ -13,9 +13,11 @@ import { ArrowButton } from "../ArrowButton";
 import { FlagIcon } from "../Icons/FlagIcon";
 import { SuccessIcon } from "../Icons/SuccessIcon";
 import {
-  registerStep1Schema,
+  registerStep1aSchema,
+  registerStep1bSchema,
   registerStep2Schema,
-  type RegisterStep1FormData,
+  type RegisterStep1aFormData,
+  type RegisterStep1bFormData,
   type RegisterStep2FormData,
 } from "@/validators/Auth.validator";
 import { ZodError } from "zod";
@@ -30,7 +32,8 @@ import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
-type RegisterStep = 1 | 2 | 3;
+// 1 = email/senha · 2 = nome+nacionalidade · 3 = resto dos dados pessoais · 4 = tela de sucesso (UX expõe 3 etapas; 4 é só confirmação pós-cadastro).
+type RegisterStep = 1 | 2 | 3 | 4;
 
 export function RegisterModal() {
   const { isOpen, closeRegisterModal, data: modalData } = useRegisterModal();
@@ -79,8 +82,8 @@ export function RegisterModal() {
   }, [isOpen]);
 
   useEffect(() => {
-    // Não resetar se já estivermos no step 3 (sucesso) ou se o modal estiver fechado
-    if (currentStep === 3 || !isOpen) {
+    // Não resetar se já estivermos na tela de sucesso (step 4) ou se o modal estiver fechado
+    if (currentStep === 4 || !isOpen) {
       return;
     }
 
@@ -150,36 +153,52 @@ export function RegisterModal() {
     }
   };
 
-  const validateStep1 = (): boolean => {
+  // Aplica erros do Zod no state + dispara toast da primeira issue.
+  const applyZodErrors = (error: unknown): false => {
+    if (error instanceof ZodError) {
+      const newErrors: Record<string, string> = {};
+      error.issues.forEach((err) => {
+        if (err.path.length > 0) {
+          newErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(newErrors);
+      const firstError = error.issues[0];
+      if (firstError) {
+        toast.error(firstError.message);
+      }
+    }
+    return false;
+  };
+
+  const validateStep1a = (): boolean => {
     try {
-      const step1Data: RegisterStep1FormData = {
+      const data: RegisterStep1aFormData = {
         nome: formData.nome,
         nacionalidade: formData.nacionalidade,
+      };
+      registerStep1aSchema.parse(data);
+      setErrors({});
+      return true;
+    } catch (error) {
+      return applyZodErrors(error);
+    }
+  };
+
+  const validateStep1b = (): boolean => {
+    try {
+      const data: RegisterStep1bFormData = {
         cpf: formData.cpf,
         dataNascimento: formData.dataNascimento!,
         telefone: formData.telefone,
         telefoneEmergencia: formData.telefoneEmergencia || "",
         sexo: formData.sexo,
       };
-      registerStep1Schema.parse(step1Data);
+      registerStep1bSchema.parse(data);
       setErrors({});
       return true;
     } catch (error) {
-      if (error instanceof ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.issues.forEach((err) => {
-          if (err.path.length > 0) {
-            newErrors[err.path[0] as string] = err.message;
-          }
-        });
-        setErrors(newErrors);
-        // Show first error as toast
-        const firstError = error.issues[0];
-        if (firstError) {
-          toast.error(firstError.message);
-        }
-      }
-      return false;
+      return applyZodErrors(error);
     }
   };
 
@@ -205,21 +224,7 @@ export function RegisterModal() {
       setErrors({});
       return true;
     } catch (error) {
-      if (error instanceof ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.issues.forEach((err) => {
-          if (err.path.length > 0) {
-            newErrors[err.path[0] as string] = err.message;
-          }
-        });
-        setErrors(newErrors);
-        // Show first error as toast
-        const firstError = error.issues[0];
-        if (firstError) {
-          toast.error(firstError.message);
-        }
-      }
-      return false;
+      return applyZodErrors(error);
     }
   };
 
@@ -277,9 +282,16 @@ export function RegisterModal() {
       return;
     }
 
-    // Step 2: dados pessoais
+    // Step 2: nome + nacionalidade → valida e avança (sem hit no backend).
     if (currentStep === 2) {
-      if (!validateStep1()) return;
+      if (!validateStep1a()) return;
+      setCurrentStep(3);
+      return;
+    }
+
+    // Step 3: documentos + contato → valida tudo e dispara o cadastro.
+    if (currentStep === 3) {
+      if (!validateStep1b()) return;
 
       setIsSubmitting(true);
       try {
@@ -287,7 +299,7 @@ export function RegisterModal() {
         if (isCompletingProfile) {
           await userService.updateUser(user!.id, buildPersonalUpdateData(formData));
           await refetchUser();
-          setCurrentStep(3);
+          setCurrentStep(4);
           toast.success("Cadastro finalizado com sucesso!");
           setTimeout(() => {
             closeRegisterModal();
@@ -323,7 +335,7 @@ export function RegisterModal() {
           acceptedPrivacyPolicy: true,
         });
 
-        setCurrentStep(3);
+        setCurrentStep(4);
         toast.success("Cadastro realizado com sucesso!");
       } catch (error: unknown) {
         const e = error as Error & Partial<Pick<AuthError, "formFieldErrors">>;
@@ -462,27 +474,31 @@ export function RegisterModal() {
     { id: "outro", label: "Outro" }
   ];
 
-  const renderStep1Mobile = () => (
-    <div className="md:hidden h-screen">
-      {/* Mobile Header */}
-      <div className="md:hidden border-b border-gray-6 flex items-center justify-center h-[52px] px-4 py-2 relative shrink-0 w-full">
-        <div className="flex gap-2 items-center flex-1">
-          {!isCompletingProfile && (
-            <button
-              onClick={handleBack}
-              className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
-              aria-label="Voltar"
-            >
-              <ArrowButton isOpen={true} />
-            </button>
-          )}
-          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Informações pessoais
-          </p>
-        </div>
+  // Header mobile compartilhado entre as duas sub-etapas de dados pessoais.
+  const renderPersonalInfoMobileHeader = () => (
+    <div className="md:hidden border-b border-gray-6 flex items-center justify-center h-[52px] px-4 py-2 relative shrink-0 w-full">
+      <div className="flex gap-2 items-center flex-1">
+        {!isCompletingProfile && (
+          <button
+            onClick={handleBack}
+            className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
+            aria-label="Voltar"
+          >
+            <ArrowButton isOpen={true} />
+          </button>
+        )}
+        <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+          Informações pessoais
+        </p>
       </div>
+    </div>
+  );
 
-      {/* Mobile Form content */}
+  // Step 2 (UX): nome + nacionalidade. Botão "Continuar" → Step 3.
+  const renderStep1aMobile = () => (
+    <div className="md:hidden h-screen">
+      {renderPersonalInfoMobileHeader()}
+
       <div className="md:hidden flex flex-col gap-8 items-center px-4 py-6 relative shrink-0 w-full overflow-y-auto h-full">
         <div className="flex flex-col gap-5 items-start relative shrink-0 w-full">
           {/* Nome */}
@@ -581,7 +597,29 @@ export function RegisterModal() {
               </p>
             )}
           </div>
+        </div>
 
+        {/* Botão "Continuar" — só avança pra Step 3 (sem hit no backend). */}
+        <div className="flex flex-col items-start relative shrink-0 w-full gap-4">
+          <Button
+            onClick={handleNext}
+            disabled={isSubmitting}
+            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Continuar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 3 (UX): documentos + contato. Botão final dispara o cadastro.
+  const renderStep1bMobile = () => (
+    <div className="md:hidden h-screen">
+      {renderPersonalInfoMobileHeader()}
+
+      <div className="md:hidden flex flex-col gap-8 items-center px-4 py-6 relative shrink-0 w-full overflow-y-auto h-full">
+        <div className="flex flex-col gap-5 items-start relative shrink-0 w-full">
           {/* CPF */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
@@ -698,7 +736,7 @@ export function RegisterModal() {
           </div>
         </div>
 
-        {/* Mobile: step 2 = último passo, botão Criar conta / Finalizar cadastro */}
+        {/* Step final (UX): Turnstile + botão Criar conta / Finalizar cadastro. */}
         <div className="flex flex-col items-start relative shrink-0 w-full gap-4">
           {!isCompletingProfile && TURNSTILE_SITE_KEY && (
             <Turnstile
@@ -729,25 +767,29 @@ export function RegisterModal() {
     </div>
   );
 
-  const renderStep1 = () => (
-    <>
-      {/* Desktop Header */}
-      <div className="hidden md:flex border-b border-gray-6 gap-0.5 items-center px-4 py-3 relative shrink-0 w-full overflow-visible">
-        {!isCompletingProfile && (
-          <button
-            onClick={handleBack}
-            className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
-            aria-label="Voltar"
-          >
-            <ArrowButton isOpen={true} />
-          </button>
-        )}
-        <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
-          Informações pessoais
-        </p>
-      </div>
+  // Header desktop compartilhado entre as duas sub-etapas de dados pessoais.
+  const renderPersonalInfoDesktopHeader = () => (
+    <div className="hidden md:flex border-b border-gray-6 gap-0.5 items-center px-4 py-3 relative shrink-0 w-full overflow-visible">
+      {!isCompletingProfile && (
+        <button
+          onClick={handleBack}
+          className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
+          aria-label="Voltar"
+        >
+          <ArrowButton isOpen={true} />
+        </button>
+      )}
+      <p className="font-semibold text-xl leading-[1.3] text-gray-12 font-family-dm-sans">
+        Informações pessoais
+      </p>
+    </div>
+  );
 
-      {/* Desktop Form content */}
+  // Step 2 (UX): nome + nacionalidade. Botão "Continuar" → Step 3.
+  const renderStep1a = () => (
+    <>
+      {renderPersonalInfoDesktopHeader()}
+
       <div className="hidden md:flex flex-col items-start relative shrink-0 w-full overflow-visible">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start p-6 relative shrink-0 w-full overflow-visible">
           {/* Nome */}
@@ -844,7 +886,29 @@ export function RegisterModal() {
               </p>
             )}
           </div>
+        </div>
 
+        {/* Botão "Continuar" — só avança pra Step 3 (sem hit no backend). */}
+        <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full gap-4">
+          <Button
+            onClick={handleNext}
+            disabled={isSubmitting}
+            className="px-8 font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Continuar
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+
+  // Step 3 (UX): documentos + contato. Botão final dispara o cadastro.
+  const renderStep1b = () => (
+    <>
+      {renderPersonalInfoDesktopHeader()}
+
+      <div className="hidden md:flex flex-col items-start relative shrink-0 w-full overflow-visible">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start p-6 relative shrink-0 w-full overflow-visible">
           {/* CPF */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
@@ -961,7 +1025,7 @@ export function RegisterModal() {
           </div>
         </div>
 
-        {/* Desktop: step 2 = último passo, botão Criar conta / Finalizar cadastro */}
+        {/* Step final (UX): Turnstile + botão Criar conta / Finalizar cadastro. */}
         <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full gap-4">
           {!isCompletingProfile && TURNSTILE_SITE_KEY && (
             <Turnstile
@@ -1307,12 +1371,23 @@ export function RegisterModal() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {renderStep1Mobile()}
+                    {renderStep1aMobile()}
                   </motion.div>
                 )}
                 {currentStep === 3 && (
                   <motion.div
                     key="step3-mobile"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {renderStep1bMobile()}
+                  </motion.div>
+                )}
+                {currentStep === 4 && (
+                  <motion.div
+                    key="step4-mobile"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -1360,12 +1435,23 @@ export function RegisterModal() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {renderStep1()}
+                    {renderStep1a()}
                   </motion.div>
                 )}
                 {currentStep === 3 && (
                   <motion.div
                     key="step3-desktop"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {renderStep1b()}
+                  </motion.div>
+                )}
+                {currentStep === 4 && (
+                  <motion.div
+                    key="step4-desktop"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}

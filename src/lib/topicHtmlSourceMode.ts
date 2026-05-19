@@ -12,6 +12,17 @@
 const SOCIAL_BLOCKQUOTE_CLASSES = ["instagram-media", "twitter-tweet"];
 
 /**
+ * Cor "default" do texto do tópico — gravada inline no HTML salvo (wrapper
+ * `<div style="color: #000000">`) pra que o render externo herde preto, em vez
+ * de assumir a cor do container consumidor (ex.: `.text-gray-11`). Spans com
+ * cor explícita (via picker do Quill) vencem por proximidade; `<a>` mantém o
+ * azul via `.topic-rich-html a` no globals.css.
+ */
+const TOPIC_DEFAULT_TEXT_COLOR = "#000000";
+// rgb(0, 0, 0) é o que `element.style.color` retorna ao parsear `#000000` no DOM.
+const TOPIC_DEFAULT_TEXT_COLOR_RGB = "rgb(0, 0, 0)";
+
+/**
  * Classes em <div> que indicam embed de terceiros — preservamos como bloco de
  * código pra blindar do normalizador do Quill (que strip atributos `data-*`
  * de elementos desconhecidos durante edição).
@@ -94,6 +105,23 @@ export function decodeStoredEmbedsToRenderable(html: string): {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const scriptSrcs: string[] = [];
 
+  // Unwrap do `<div style="color:#000000">` aplicado em save (ver
+  // `wrapWithTopicDefaultTextColor`). No editor o Quill mantém o `.ql-editor`
+  // com `style.color="#000"` aplicado via DOM, então o wrapper não é necessário
+  // no modo edição — e removê-lo evita aninhar `<div>`s a cada round-trip.
+  const root = doc.body;
+  if (root.childElementCount === 1) {
+    const only = root.firstElementChild as HTMLElement | null;
+    if (
+      only &&
+      only.tagName === "DIV" &&
+      only.style.color === TOPIC_DEFAULT_TEXT_COLOR_RGB
+    ) {
+      while (only.firstChild) root.insertBefore(only.firstChild, only);
+      only.remove();
+    }
+  }
+
   doc.querySelectorAll(".ql-code-block-container").forEach((container) => {
     const blocks = container.querySelectorAll(".ql-code-block");
     // textContent decodifica entidades HTML automaticamente
@@ -167,6 +195,28 @@ export function encodeRenderableToStoredEmbeds(
     }
   }
   return parts.join("");
+}
+
+/**
+ * Envolve o HTML armazenado num `<div style="color: #000000">` para que o
+ * texto sem `<span style="color">` herde preto no render externo, em vez de
+ * herdar a cor do consumidor (`.text-gray-11`). Idempotente.
+ *
+ * O decode (`decodeStoredEmbedsToRenderable`) remove o wrapper ao carregar
+ * para o editor, então não há aninhamento crescente entre saves.
+ */
+export function wrapWithTopicDefaultTextColor(html: string): string {
+  const trimmed = html.trim();
+  if (!trimmed) return html;
+  // Idempotência via regex barato: evita parse DOM quando já está wrapped.
+  if (
+    /^<div\s+style=["']color:\s*#000000["'][^>]*>[\s\S]*<\/div>\s*$/i.test(
+      trimmed,
+    )
+  ) {
+    return html;
+  }
+  return `<div style="color: ${TOPIC_DEFAULT_TEXT_COLOR}">${html}</div>`;
 }
 
 /**

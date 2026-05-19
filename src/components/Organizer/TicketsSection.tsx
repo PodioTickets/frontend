@@ -197,7 +197,6 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
     } = useTicketCategories(eventId ?? null, false);
 
     const {
-      deleteTicket,
       markPending: markTicketPending,
     } = useTickets(eventId ?? null, false);
 
@@ -802,13 +801,6 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
       return rows;
     }, [orderedCategories, categoryNameDraft, ticketsByCategory, uncategorizedTickets]);
 
-    const handleDeleteTicket = useCallback(
-      async (ticketId: string) => {
-        await deleteTicket(ticketId);
-      },
-      [deleteTicket],
-    );
-
     // KitImagePositionDrawer data — only computed when the drawer prop is provided
     const kitImagePositionDrawerData = useMemo(() => {
       if (!kitImagePositionDrawer) return null;
@@ -1018,7 +1010,6 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                       ticketScopeCategoryId={null}
                       moveCategoryOptions={ticketMoveCategoryOptions}
                       onMoveTicketToCategory={handleDropTicket}
-                      onDeleteTicket={handleDeleteTicket}
                     />
                   </div>
                 </MobileGeneralTicketsSection>
@@ -1247,7 +1238,6 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                             onDropTicket={handleDropTicket}
                             moveCategoryOptions={ticketMoveCategoryOptions}
                             onMoveTicketToCategory={handleDropTicket}
-                            onDeleteTicket={handleDeleteTicket}
                           />
                         </SortableTicketCategoryItem>
                       );

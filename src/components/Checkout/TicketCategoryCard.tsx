@@ -693,8 +693,11 @@ export function TicketCategoryCard({
     kitSelectionDisplay.showKitImagesOnSelection &&
     kitSelectionDisplay.kitImagesLayout === "ON_CATEGORIES";
 
-  // ON_CATEGORIES com categoria real → imagens no carousel da categoria, não no ticket
-  const showTicketLevelImages = !showCategoryLevelKit;
+  // `showKitImagesOnSelection=false` desliga qualquer renderização de imagem
+  // de produto nesta etapa, independente do layout escolhido. Quando ligado,
+  // ON_CATEGORIES move pro carrossel da categoria; o resto cai no ticket.
+  const showTicketLevelImages =
+    kitSelectionDisplay.showKitImagesOnSelection && !showCategoryLevelKit;
 
   const categoryCarouselItems = useMemo(
     () =>

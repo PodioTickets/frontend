@@ -12,7 +12,6 @@ import {
   Move,
   Folder,
   Ticket as TicketIcon,
-  CircleX,
 } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { CSS } from "@dnd-kit/utilities";
@@ -29,7 +28,6 @@ import {
   DrawerContent,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { DeleteTicketModal } from "./DeleteTicketModal";
 
 export type TicketMoveCategoryOption = {
   id: string;
@@ -57,7 +55,6 @@ interface TicketTableProps {
     ticketId: string,
     categoryId: string | null,
   ) => void | Promise<void>;
-  onDeleteTicket?: (ticketId: string) => void | Promise<void>;
 }
 
 const formatPrice = (price: string) => {
@@ -437,7 +434,6 @@ export function TicketTable({
   ticketScopeCategoryId = null,
   moveCategoryOptions,
   onMoveTicketToCategory,
-  onDeleteTicket,
 }: TicketTableProps) {
   const mobileNoDrag = useOrganizerTicketMobileNoDrag();
 
@@ -447,22 +443,16 @@ export function TicketTable({
   );
 
   const canMobileMove = Boolean(onMoveTicketToCategory && moveDestinations.length > 0);
-  const canMobileDelete = Boolean(onDeleteTicket);
 
   const [mobileSheet, setMobileSheet] = useState<
     { ticketId: string; phase: "options" | "move" } | null
   >(null);
-  const [deleteTicketId, setDeleteTicketId] = useState<string | null>(null);
   const [moveSubmitting, setMoveSubmitting] = useState(false);
 
   const sheetTicket = useMemo(
     () => (mobileSheet ? tickets.find((t) => t.id === mobileSheet.ticketId) : undefined),
     [mobileSheet, tickets],
   );
-
-  const deleteTicket = deleteTicketId
-    ? tickets.find((t) => t.id === deleteTicketId)
-    : undefined;
 
   const closeMobileSheet = () => {
     setMobileSheet(null);
@@ -583,7 +573,7 @@ export function TicketTable({
                 <button
                   type="button"
                   disabled={duplicatingTicketId === sheetTicket.id}
-                  className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors hover:bg-gray-2 disabled:opacity-50"
+                  className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-gray-2 disabled:opacity-50"
                   onClick={() => {
                     if (duplicatingTicketId === sheetTicket.id) return;
                     onEdit(sheetTicket.id);
@@ -600,7 +590,7 @@ export function TicketTable({
                 <button
                   type="button"
                   disabled={duplicatingTicketId != null}
-                  className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors hover:bg-gray-2 disabled:opacity-50"
+                  className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-gray-2 disabled:opacity-50"
                   onClick={() => {
                     if (duplicatingTicketId != null) return;
                     onDuplicate(sheetTicket.id);
@@ -617,7 +607,7 @@ export function TicketTable({
                 {canMobileMove ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors hover:bg-gray-2"
+                    className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-gray-2"
                     onClick={() =>
                       setMobileSheet({ ticketId: sheetTicket.id, phase: "move" })
                     }
@@ -625,21 +615,6 @@ export function TicketTable({
                     <Move className="size-5 shrink-0 text-primary-11" strokeWidth={2} />
                     <span className="font-family-dm-sans text-base font-medium text-primary-11">
                       Mover para categoria
-                    </span>
-                  </button>
-                ) : null}
-                {canMobileDelete ? (
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-gray-2"
-                    onClick={() => {
-                      setDeleteTicketId(sheetTicket.id);
-                      closeMobileSheet();
-                    }}
-                  >
-                    <CircleX className="size-5 shrink-0 text-red-11" strokeWidth={2} />
-                    <span className="font-family-dm-sans text-base font-medium text-red-11">
-                      Remover ingresso
                     </span>
                   </button>
                 ) : null}
@@ -715,17 +690,6 @@ export function TicketTable({
           ) : null}
         </DrawerContent>
       </Drawer>
-
-      <DeleteTicketModal
-        open={deleteTicketId !== null}
-        onClose={() => setDeleteTicketId(null)}
-        ticketName={deleteTicket?.name}
-        onConfirm={async () => {
-          if (deleteTicketId && onDeleteTicket) {
-            await onDeleteTicket(deleteTicketId);
-          }
-        }}
-      />
     </SortableContext>
   );
 }

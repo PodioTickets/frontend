@@ -5,7 +5,7 @@ import { InformationStep } from "@/components/Checkout/InformationStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { Suspense, useState, useRef } from "react";
+import { Suspense, useState, useRef, useTransition } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
@@ -32,6 +32,9 @@ function CheckoutInformacoesContent() {
   const { patchParticipants } = useCheckoutReservation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  // useTransition mantém o botão pendente durante a transição de rota,
+  // evitando o "freeze" entre clique e render da próxima página.
+  const [isNavigating, startNavigation] = useTransition();
 
   const handleNext = async () => {
     if (!eventId || isSubmittingRef.current) return;
@@ -96,7 +99,9 @@ function CheckoutInformacoesContent() {
     try {
       const updated = await patchParticipants(orderId, payload);
       syncFromOrder(updated);
-      router.push(`/checkout/produtos?eventId=${eventId}`);
+      startNavigation(() => {
+        router.push(`/checkout/produtos?eventId=${eventId}`);
+      });
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {
@@ -120,7 +125,9 @@ function CheckoutInformacoesContent() {
 
   const handleBack = () => {
     if (eventId) {
-      router.push(`/checkout/ingressos?eventId=${eventId}`);
+      startNavigation(() => {
+        router.push(`/checkout/ingressos?eventId=${eventId}`);
+      });
     }
   };
 
@@ -170,7 +177,7 @@ function CheckoutInformacoesContent() {
           event={event}
           onNext={handleNext}
           onBack={handleBack}
-          isSubmitting={isSubmitting}
+          isSubmitting={isSubmitting || isNavigating}
         />
       </div>
     </div>

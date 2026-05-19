@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { Loading } from "../Loading";
+import { Tooltip } from "@/components/Tooltip";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import {
   type Product,
@@ -873,14 +874,20 @@ export function SubscriptionStep({
     }, 0);
   }, [participantsWithTickets, selectedVariations, allProducts]);
 
-  // Taxa de serviço — sempre da order quando disponível. Fallback ao cálculo
-  // local (% do evento sobre tickets+produtos) só enquanto a query carrega.
+  // Taxa de serviço — atualiza em tempo real conforme o usuário seleciona
+  // produtos. Quando há produtos WIP (`totalProductsPrice > 0`), o
+  // `orderData.pricing.serviceFee` do servidor ainda não reflete a nova base
+  // (só é recalculado no `patchProducts` do `handleNext`), então calculamos
+  // client-side com a mesma fórmula do backend: % do evento sobre
+  // tickets + produtos. Mesma heurística usada em `orderHasProductsApplied`
+  // mais abaixo — backend reconcilia no save.
   const serviceFee = useMemo(() => {
+    const percent = (event.participantFeePercent ?? 0) / 100;
+    if (totalProductsPrice > 0) {
+      return (totalPrice + totalProductsPrice) * percent;
+    }
     if (orderData?.pricing) return orderData.pricing.serviceFee / 100;
-    return (
-      (totalPrice + totalProductsPrice) *
-      ((event.participantFeePercent ?? 0) / 100)
-    );
+    return totalPrice * percent;
   }, [orderData, totalPrice, totalProductsPrice, event.participantFeePercent]);
 
   // Total a exibir — autoritativo da order. `pricing.total` é o `finalAmount`
@@ -1143,9 +1150,19 @@ export function SubscriptionStep({
                   {ticket.categoryName || "Ingresso Avulso"}
                 </p>
                 <div className="flex items-baseline gap-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-12 truncate min-w-0">
-                    ({ticket.quantity}x) {ticket.raceName}:
-                  </p>
+                  {/* Tooltip click-to-reveal mostra o nome completo quando truncado (mobile sem hover). */}
+                  <Tooltip
+                    content={`(${ticket.quantity}x) ${ticket.raceName}`}
+                    position="topRight"
+                    trigger="click"
+                    usePortal
+                    className="block min-w-0 flex-1"
+                    contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+                  >
+                    <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer">
+                      ({ticket.quantity}x) {ticket.raceName}:
+                    </p>
+                  </Tooltip>
                   <p className="text-sm font-semibold text-gray-12 shrink-0">
                     {formatPrice(ticket.total)}
                   </p>

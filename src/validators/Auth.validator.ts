@@ -14,8 +14,8 @@ export const loginSchema = z.object({
 
 export const forgotPasswordStep1Schema = loginSchema.pick({ email: true });
 
-// Step 1: Personal Information
-export const registerStep1Schema = z.object({
+// Step 1a: Identidade (nome + nacionalidade) — primeira tela de dados pessoais.
+export const registerStep1aSchema = z.object({
   nome: z
     .string()
     .min(1, "Nome completo é obrigatório")
@@ -24,6 +24,10 @@ export const registerStep1Schema = z.object({
       { message: "Informe o nome completo" }
     ),
   nacionalidade: z.string().min(1, "Nacionalidade é obrigatória"),
+});
+
+// Step 1b: Documentos + contato — segunda tela de dados pessoais.
+export const registerStep1bSchema = z.object({
   cpf: z
     .string()
     .min(1, "CPF é obrigatório")
@@ -84,6 +88,9 @@ export const registerStep1Schema = z.object({
   sexo: z.string().min(1, "Sexo é obrigatório"),
 });
 
+// Composição: dados pessoais completos (1a + 1b) — usado no payload final.
+export const registerStep1Schema = registerStep1aSchema.merge(registerStep1bSchema);
+
 // Step 2: Account Access
 export const registerStep2Schema = z
   .object({
@@ -127,4 +134,6 @@ export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type RegisterStep1FormData = z.infer<typeof registerStep1Schema>;
+export type RegisterStep1aFormData = z.infer<typeof registerStep1aSchema>;
+export type RegisterStep1bFormData = z.infer<typeof registerStep1bSchema>;
 export type RegisterStep2FormData = z.infer<typeof registerStep2Schema>;

@@ -25,6 +25,7 @@ import {
   encodeRenderableToStoredEmbeds,
   buildSourceViewHtml,
   isEmbedHtml,
+  wrapWithTopicDefaultTextColor,
 } from "@/lib/topicHtmlSourceMode";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1226,10 +1227,16 @@ export function TopicModal() {
       const normalizedHtml = sanitizeImageDimensions(tempDiv.innerHTML);
 
       // Re-encapsula embeds em ql-code-block-container para o backend / TopicRichContent.
-      const htmlToSave = encodeRenderableToStoredEmbeds(
+      const encoded = encodeRenderableToStoredEmbeds(
         normalizedHtml,
         scriptSrcs,
       );
+
+      // Envolve em `<div style="color:#000000">` para que o texto sem cor
+      // explícita seja renderizado em preto no preview / página do evento —
+      // espelha o default visual do editor (`.ql-editor { color: #000 }`).
+      // Spans coloridos vencem por proximidade; `<a>` mantém o azul via CSS.
+      const htmlToSave = wrapWithTopicDefaultTextColor(encoded);
 
       await onModalSave({ title, content: htmlToSave });
       closeTopicModal();

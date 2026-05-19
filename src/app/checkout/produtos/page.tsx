@@ -5,7 +5,7 @@ import { SubscriptionStep } from "@/components/Checkout/SubscriptionStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { Suspense, useState, useRef } from "react";
+import { Suspense, useState, useRef, useTransition } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
@@ -23,6 +23,9 @@ function CheckoutProdutosContent() {
   const { patchProducts } = useCheckoutReservation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  // useTransition mantém o botão pendente durante a transição de rota,
+  // evitando o "freeze" entre clique e render da próxima página.
+  const [isNavigating, startNavigation] = useTransition();
 
   const handleNext = async () => {
     if (!eventId || isSubmittingRef.current) return;
@@ -52,7 +55,9 @@ function CheckoutProdutosContent() {
     try {
       const updated = await patchProducts(orderId, { products });
       syncFromOrder(updated);
-      router.push(`/checkout/pagamento?eventId=${eventId}`);
+      startNavigation(() => {
+        router.push(`/checkout/pagamento?eventId=${eventId}`);
+      });
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {
@@ -72,7 +77,9 @@ function CheckoutProdutosContent() {
 
   const handleBack = () => {
     if (eventId) {
-      router.push(`/checkout/informacoes?eventId=${eventId}`);
+      startNavigation(() => {
+        router.push(`/checkout/informacoes?eventId=${eventId}`);
+      });
     }
   };
 
@@ -118,7 +125,7 @@ function CheckoutProdutosContent() {
     <div className="w-full gap-4">
       <CheckoutHeader activeStep={3} />
       <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
-        <SubscriptionStep event={event} onNext={handleNext} onBack={handleBack} isSubmitting={isSubmitting} />
+        <SubscriptionStep event={event} onNext={handleNext} onBack={handleBack} isSubmitting={isSubmitting || isNavigating} />
       </div>
     </div>
   );

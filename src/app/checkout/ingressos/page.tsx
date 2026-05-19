@@ -5,7 +5,7 @@ import { ModalitiesStep } from "@/components/Checkout/ModalitiesStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { Suspense, useState, useRef, useEffect } from "react";
+import { Suspense, useState, useRef, useEffect, useTransition } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
@@ -24,6 +24,10 @@ function CheckoutIngressosContent() {
   const { reserveOrder } = useCheckoutReservation();
   const [reserving, setReserving] = useState(false);
   const reservingRef = useRef(false);
+  // useTransition marca o botão "Selecionar" como pendente DURANTE o RSC
+  // fetch da próxima rota — sem isso, há um "freeze" entre `router.push` e a
+  // transição visual. Combinado com loading.tsx, o feedback é instantâneo.
+  const [isNavigating, startNavigation] = useTransition();
   const { tickets: availableTickets, loading: ticketsLoading } = useTickets(eventId, !!eventId, false, true);
 
   // Remove from state any ticket that was deleted by the organizer
@@ -60,7 +64,9 @@ function CheckoutIngressosContent() {
       const slug = (event as { slug?: string } | null)?.slug;
       const fallbackUrl = slug ? `/events/${slug}` : `/`;
       startTimer(order, fallbackUrl);
-      router.push(`/checkout/informacoes?eventId=${eventId}`);
+      startNavigation(() => {
+        router.push(`/checkout/informacoes?eventId=${eventId}`);
+      });
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (err.code === "BATCH_SOLD_OUT") {
@@ -125,7 +131,7 @@ function CheckoutIngressosContent() {
     <div className="w-full gap-4">
       <CheckoutHeader activeStep={1} />
       <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
-        <ModalitiesStep event={event} onNext={handleNext} isSubmitting={reserving} />
+        <ModalitiesStep event={event} onNext={handleNext} isSubmitting={reserving || isNavigating} />
       </div>
     </div>
   );

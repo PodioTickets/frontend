@@ -13,6 +13,7 @@ import { Button } from "../Button";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { Loading } from "../Loading";
+import { Tooltip } from "@/components/Tooltip";
 import type { Ticket } from "@/hooks/useTickets";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { ticketUnitPriceForPrePaymentCents } from "@/lib/orderAutoCouponDisplay";
@@ -187,6 +188,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     const grouped: Array<{
       quantity: number;
       ticketName: string;
+      categoryName?: string;
       distance: string;
       price: number;
       total: number;
@@ -201,6 +203,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
           grouped.push({
             quantity,
             ticketName: ticket.name,
+            categoryName: category.name,
             distance,
             price: getTicketPrice(ticket),
             total: getTicketPrice(ticket) * quantity,
@@ -290,19 +293,38 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
 
         {/* Fixed Bottom Bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
-          <div className="flex items-end justify-between text-gray-12 font-family-dm-sans">
-            <div className="flex flex-col gap-2">
+          <div className="flex items-end justify-between gap-3 text-gray-12 font-family-dm-sans">
+            <div className="flex flex-col gap-2 min-w-0 flex-1">
               <h1 className="text-base font-bold">{event.name}</h1>
               <p className="text-sm">
                 Participantes:{" "}
                 <span className="font-semibold">{totalParticipants}</span>
               </p>
+              {/* Categoria acima, nome do ingresso bold abaixo — mesmo padrão dos demais steps mobile. */}
               {groupedTickets.map((ticket, index) => (
-                <p key={index} className="text-sm">
-                  <span className="font-semibold">
-                    {formatPrice(ticket.total)}
-                  </span>
-                </p>
+                <div key={index} className="flex flex-col gap-0.5 min-w-0">
+                  <p className="text-xs text-gray-11 leading-[1.3] truncate">
+                    {ticket.categoryName || "Ingresso Avulso"}
+                  </p>
+                  <div className="flex items-baseline gap-1 min-w-0">
+                    {/* Tooltip click-to-reveal mostra o nome completo quando truncado (mobile sem hover). */}
+                    <Tooltip
+                      content={`(${ticket.quantity}x) ${ticket.ticketName}`}
+                      position="topRight"
+                      trigger="click"
+                      usePortal
+                      className="block min-w-0 flex-1"
+                      contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+                    >
+                      <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer">
+                        ({ticket.quantity}x) {ticket.ticketName}:
+                      </p>
+                    </Tooltip>
+                    <p className="text-sm font-semibold text-gray-12 shrink-0">
+                      {formatPrice(ticket.total)}
+                    </p>
+                  </div>
+                </div>
               ))}
               <p className="text-base">
                 Valor total:{" "}

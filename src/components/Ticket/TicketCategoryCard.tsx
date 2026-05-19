@@ -34,7 +34,6 @@ interface TicketCategoryCardProps {
     ticketId: string,
     categoryId: string | null,
   ) => void | Promise<void>;
-  onDeleteTicket?: (ticketId: string) => void | Promise<void>;
   /** Sobrescreve bordas/raio quando a categoria está dentro de um wrapper (ex.: sortable). */
   className?: string;
   /** Quando true, não renderiza a linha do nome + lápis + lixeira (ex.: header no SortableTicketCategoryItem). */
@@ -58,7 +57,6 @@ export function TicketCategoryCard({
   onDropTicket,
   moveCategoryOptions,
   onMoveTicketToCategory,
-  onDeleteTicket,
   className: rootClassName,
   hideCategoryTitleRow = false,
 }: TicketCategoryCardProps) {
@@ -273,7 +271,6 @@ export function TicketCategoryCard({
           ticketScopeCategoryId={category.id}
           moveCategoryOptions={moveCategoryOptions}
           onMoveTicketToCategory={onMoveTicketToCategory}
-          onDeleteTicket={onDeleteTicket}
         />
       )}
     </div>
