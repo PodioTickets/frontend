@@ -64,7 +64,7 @@ export function DeleteTicketModal({
             <div className="flex flex-col items-center justify-center px-5 pt-6 pb-5 gap-11">
               <div className="flex flex-col gap-4 items-center justify-center w-full">
                 <p className="font-semibold text-[20px] leading-[1.3] text-gray-12 font-family-dm-sans text-center">
-                  Deletar ingresso?
+                  Confirmar?
                 </p>
                 <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
                   {ticketName ? (
@@ -86,18 +86,19 @@ export function DeleteTicketModal({
                   variant="outline"
                   onClick={onClose}
                   disabled={submitting}
-                  className="flex-1 h-12 min-h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope leading-[1.1] hover:bg-gray-2 rounded-lg"
+                  className="flex-1 h-12 min-h-12 border-gray-6 text-gray-12"
                 >
                   Fechar
                 </Button>
-                <button
+                <Button
                   type="button"
                   onClick={handleConfirm}
                   disabled={submitting}
-                  className="flex-1 h-12 min-h-12 bg-red-11 text-red-2 font-bold text-base font-manrope leading-[1.1] rounded-lg transition-colors duration-200 flex items-center justify-center hover:bg-red-12 disabled:pointer-events-none disabled:opacity-50"
+                  variant={"destructive"}
+                  className="flex-1 h-12 min-h-12 disabled:pointer-events-none disabled:opacity-50"
                 >
-                  Deletar ingresso
-                </button>
+                  Confirmar
+                </Button>
               </div>
             </div>
           </motion.div>

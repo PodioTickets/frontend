@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
+import { Tooltip } from "@/components/Tooltip";
 
 interface EventInfoCardEvent {
   name?: string;
@@ -63,7 +64,7 @@ export function EventInfoCard({
       <div className="flex gap-3 items-center md:contents">
         {/* Aspect 16:9 — mesmo formato dos banners 1280x720 enviados pelo
             organizador e renderizados na página do evento (object-cover). */}
-        <div className="h-[70px] md:h-[70px] w-1/2 md:w-[150px] md:aspect-video rounded-lg overflow-hidden shrink-0 relative">
+        <div className="h-[70px] md:h-[70px] w-auto md:w-[150px] md:aspect-video rounded-lg overflow-hidden shrink-0 relative">
           {event.bannerUrl ? (
             <Image
               src={event.bannerUrl}
@@ -77,9 +78,20 @@ export function EventInfoCard({
           ) : null}
         </div>
         <div className="flex flex-col gap-2 flex-1 min-w-0">
-          <p className="font-manrope font-bold text-base leading-[1.1] text-gray-12 line-clamp-2 md:truncate">
-            {event.name || ""}
-          </p>
+          {/* Tooltip click-to-reveal: mostra o nome completo quando truncado em
+              3 linhas (mobile/desktop). Click trigger pra cobrir mobile sem hover. */}
+          <Tooltip
+            content={event.name || ""}
+            position="topRight"
+            trigger="click"
+            usePortal
+            className="block min-w-0"
+            contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+          >
+            <p className="font-manrope font-bold text-base leading-[1.1] text-gray-12 line-clamp-3 cursor-pointer">
+              {event.name || ""}
+            </p>
+          </Tooltip>
           {/* Meta (location + date) — escondido no mobile (linha separada abaixo), inline no desktop */}
           <div className="hidden md:flex items-center gap-6 flex-wrap">
             {cityState && (

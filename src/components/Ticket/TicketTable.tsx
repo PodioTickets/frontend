@@ -12,6 +12,8 @@ import {
   Move,
   Folder,
   Ticket as TicketIcon,
+  SquareArrowUp,
+  SquareArrowDown,
 } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { CSS } from "@dnd-kit/utilities";
@@ -54,6 +56,15 @@ interface TicketTableProps {
   onMoveTicketToCategory?: (
     ticketId: string,
     categoryId: string | null,
+  ) => void | Promise<void>;
+  /**
+   * Move um ingresso uma posição (cima/baixo) dentro do escopo atual.
+   * No-op silencioso quando já está nas pontas — o botão correspondente é
+   * desabilitado dentro do componente.
+   */
+  onMoveTicketWithinScope?: (
+    ticketId: string,
+    direction: "up" | "down",
   ) => void | Promise<void>;
 }
 
@@ -253,7 +264,7 @@ function SortableTicketRow({
 
         <div className="flex h-full min-h-px min-w-px flex-1 items-center justify-center p-4">
           <p className="font-inter text-sm font-semibold leading-[1.3] text-gray-12">
-            {formatPrice(ticket.price)}
+            {ticket?.price !== "R$ 0,00" ? formatPrice(ticket.price) : "Gratuito"}
           </p>
         </div>
 
@@ -434,6 +445,7 @@ export function TicketTable({
   ticketScopeCategoryId = null,
   moveCategoryOptions,
   onMoveTicketToCategory,
+  onMoveTicketWithinScope,
 }: TicketTableProps) {
   const mobileNoDrag = useOrganizerTicketMobileNoDrag();
 
@@ -454,9 +466,35 @@ export function TicketTable({
     [mobileSheet, tickets],
   );
 
+  const sheetTicketIndex = useMemo(
+    () => (mobileSheet ? tickets.findIndex((t) => t.id === mobileSheet.ticketId) : -1),
+    [mobileSheet, tickets],
+  );
+  // Botões "Mover pra cima/baixo" só aparecem quando há mais de 1 ingresso no
+  // escopo e o callback existe. Cada um é desabilitado quando o ticket é a
+  // extremidade — evita feedback de "movi" sem mudança real.
+  const canMobileReorderWithinScope = Boolean(
+    onMoveTicketWithinScope && tickets.length > 1,
+  );
+  const canMoveUp = canMobileReorderWithinScope && sheetTicketIndex > 0;
+  const canMoveDown =
+    canMobileReorderWithinScope &&
+    sheetTicketIndex >= 0 &&
+    sheetTicketIndex < tickets.length - 1;
+
   const closeMobileSheet = () => {
     setMobileSheet(null);
     setMoveSubmitting(false);
+  };
+
+  // Fecha o drawer ANTES do await — a UI já reflete a mudança via optimistic
+  // update no `TicketsSection.handleMoveTicketWithinScope`, e o toast (success
+  // ou error) é disparado pelo parent ao final do persist.
+  const handleReorderWithinScope = (direction: "up" | "down") => {
+    if (!mobileSheet?.ticketId || !onMoveTicketWithinScope) return;
+    const ticketId = mobileSheet.ticketId;
+    closeMobileSheet();
+    void onMoveTicketWithinScope(ticketId, direction);
   };
 
   const handleSelectMoveTarget = async (opt: TicketMoveCategoryOption) => {
@@ -524,8 +562,8 @@ export function TicketTable({
                 type="button"
                 onClick={() => onPageChange(p)}
                 className={`flex size-8 items-center justify-center rounded-lg border ${currentPage === p
-                    ? "border-[#59E373] bg-[#59E373] text-gray-12"
-                    : "border-gray-6 hover:bg-gray-3"
+                  ? "border-[#59E373] bg-[#59E373] text-gray-12"
+                  : "border-gray-6 hover:bg-gray-3"
                   }`}
               >
                 {p}
@@ -604,6 +642,38 @@ export function TicketTable({
                   )}
                   <span className="font-family-dm-sans text-base text-gray-12">Duplicar</span>
                 </button>
+                {canMobileReorderWithinScope ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={!canMoveUp}
+                      className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-gray-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => handleReorderWithinScope("up")}
+                    >
+                      <SquareArrowUp
+                        className="size-5 shrink-0 text-gray-12"
+                        strokeWidth={2}
+                      />
+                      <span className="font-family-dm-sans text-base text-gray-12">
+                        Mover para cima
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canMoveDown}
+                      className="flex w-full items-center gap-3 border-b border-gray-6 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-gray-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => handleReorderWithinScope("down")}
+                    >
+                      <SquareArrowDown
+                        className="size-5 shrink-0 text-gray-12"
+                        strokeWidth={2}
+                      />
+                      <span className="font-family-dm-sans text-base text-gray-12">
+                        Mover para baixo
+                      </span>
+                    </button>
+                  </>
+                ) : null}
                 {canMobileMove ? (
                   <button
                     type="button"

@@ -874,7 +874,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Receita Líquida</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-blue-4 flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-blue-4 flex items-center justify-center">
                 <CartIcon className="size-5 text-blue-12" />
               </div>
             </div>
@@ -901,7 +901,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Ticket Médio</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
                 <DolarIcon className="size-5 text-[#202020]" />
               </div>
             </div>
@@ -928,7 +928,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Inscrições Confirmadas</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-primary-4 flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-primary-4 flex items-center justify-center">
                 <CheckIcon className="size-5 text-gray-12" />
               </div>
             </div>
@@ -955,7 +955,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl h-[133px] flex flex-col">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 h-[44px]">
               <p className="font-family-dm-sans font-normal text-[16px] text-gray-11">Cancelamentos</p>
-              <div className="w-[28px] h-[28px] p-1 rounded-xl bg-red-4 flex items-center justify-center">
+              <div className="w-[28px] h-[28px] p-1 rounded-lg bg-red-4 flex items-center justify-center">
                 <XCircle className="size-5 text-red-12" />
               </div>
             </div>
@@ -1255,7 +1255,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
               <p className="font-family-dm-sans font-normal text-base text-gray-11">Receita Líquida</p>
-              <div className="w-7 h-7 p-1 rounded-xl bg-blue-4 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 p-1 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
                 <CartIcon className="size-5 text-blue-12" />
               </div>
             </div>
@@ -1276,7 +1276,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
               <p className="font-family-dm-sans font-normal text-base text-gray-11">Ticket Médio</p>
-              <div className="w-7 h-7 p-1 rounded-xl bg-primary-4 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 p-1 rounded-lg bg-primary-4 flex items-center justify-center shrink-0">
                 <CheckIcon className="size-5 text-gray-12" />
               </div>
             </div>
@@ -1297,7 +1297,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[143px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
               <p className="font-family-dm-sans font-normal text-base text-gray-11">Inscrições Confirmadas</p>
-              <div className="w-7 h-7 p-1 rounded-xl bg-[#EBE4FF] flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
                 <DolarIcon className="size-5 text-gray-12" />
               </div>
             </div>
@@ -1318,7 +1318,7 @@ export default function EventDashboardPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-xl flex flex-col min-h-[171px]">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
               <p className="font-family-dm-sans font-normal text-base text-gray-11 leading-tight">Cancelamentos</p>
-              <div className="w-7 h-7 p-1 rounded-xl bg-red-4 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 p-1 rounded-lg bg-red-4 flex items-center justify-center shrink-0">
                 <XCircle className="size-5 text-red-12" />
               </div>
             </div>

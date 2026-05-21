@@ -890,39 +890,23 @@ export function SubscriptionStep({
     return totalPrice * percent;
   }, [orderData, totalPrice, totalProductsPrice, event.participantFeePercent]);
 
-  // Total a exibir — autoritativo da order. `pricing.total` é o `finalAmount`
-  // calculado pelo backend (já com cupom/voucher aplicados). Somamos os
-  // produtos selecionados localmente que ainda não foram persistidos via
-  // `patchProducts` (ocorre no `handleNext` da página de produtos), para
-  // refletir corretamente o estado WIP da seleção.
-  const orderHasProductsApplied = useMemo(() => {
-    // Heurística: se a order veio com itens marcados além dos tickets puros,
-    // assumimos que `pricing.total` já inclui produtos. Como o shape de
-    // products na order não é exposto pelo `OrderResponse` atual, usamos
-    // a presença de patch anterior (best-effort): se totalProductsPrice = 0,
-    // não há nada a somar de qualquer forma.
-    return totalProductsPrice === 0;
-  }, [totalProductsPrice]);
-
+  // Total a exibir — quando há produtos selecionados localmente (WIP), o
+  // `pricing.total` do servidor ainda não inclui a taxa de serviço sobre os
+  // produtos (só será recalculada no `patchProducts`). Calculamos client-side
+  // com a base atualizada (tickets + produtos + taxa unified) pra refletir o
+  // valor real que o usuário pagará. Sem produtos WIP, confiamos no
+  // autoritativo do backend.
   const totalAmount = useMemo(() => {
+    if (totalProductsPrice > 0) {
+      return totalPrice + totalProductsPrice + serviceFee;
+    }
     const preCouponCents = orderTotalForPrePaymentCents(
       orderData?.pricing,
       orderData?.coupon,
     );
-    if (preCouponCents != null) {
-      const orderTotal = preCouponCents / 100;
-      return orderHasProductsApplied
-        ? orderTotal
-        : orderTotal + totalProductsPrice;
-    }
-    return totalPrice + totalProductsPrice + serviceFee;
-  }, [
-    orderData,
-    orderHasProductsApplied,
-    totalProductsPrice,
-    totalPrice,
-    serviceFee,
-  ]);
+    if (preCouponCents != null) return preCouponCents / 100;
+    return totalPrice + serviceFee;
+  }, [orderData, totalPrice, totalProductsPrice, serviceFee]);
 
   if (loading) return <Loading />;
 
@@ -1176,7 +1160,7 @@ export function SubscriptionStep({
               </p>
             )}
             <p className="text-base">
-              Valor total:{" "}
+              Total:{" "}
               <span className="font-bold">{formatPrice(totalAmount)}</span>
             </p>
           </div>

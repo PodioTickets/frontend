@@ -34,6 +34,11 @@ interface TicketCategoryCardProps {
     ticketId: string,
     categoryId: string | null,
   ) => void | Promise<void>;
+  /** Mover um ingresso uma posição (cima/baixo) dentro desta categoria via menu mobile. */
+  onMoveTicketWithinScope?: (
+    ticketId: string,
+    direction: "up" | "down",
+  ) => void | Promise<void>;
   /** Sobrescreve bordas/raio quando a categoria está dentro de um wrapper (ex.: sortable). */
   className?: string;
   /** Quando true, não renderiza a linha do nome + lápis + lixeira (ex.: header no SortableTicketCategoryItem). */
@@ -57,6 +62,7 @@ export function TicketCategoryCard({
   onDropTicket,
   moveCategoryOptions,
   onMoveTicketToCategory,
+  onMoveTicketWithinScope,
   className: rootClassName,
   hideCategoryTitleRow = false,
 }: TicketCategoryCardProps) {
@@ -271,6 +277,7 @@ export function TicketCategoryCard({
           ticketScopeCategoryId={category.id}
           moveCategoryOptions={moveCategoryOptions}
           onMoveTicketToCategory={onMoveTicketToCategory}
+          onMoveTicketWithinScope={onMoveTicketWithinScope}
         />
       )}
     </div>

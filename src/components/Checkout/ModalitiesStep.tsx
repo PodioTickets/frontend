@@ -183,6 +183,16 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     return { totalParticipants: participants, totalPrice: total };
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
+  // Taxa de serviço aplicada sobre o subtotal dos ingressos (mesma fórmula
+  // do backend e do SubscriptionStep). Mostrada já nesta etapa para que o
+  // participante veja o valor final desde a seleção.
+  const serviceFee = useMemo(() => {
+    const percent = (event.participantFeePercent ?? 0) / 100;
+    return totalPrice * percent;
+  }, [totalPrice, event.participantFeePercent]);
+
+  const totalWithFee = totalPrice + serviceFee;
+
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
@@ -326,9 +336,15 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   </div>
                 </div>
               ))}
+              {serviceFee > 0 && (
+                <p className="text-sm">
+                  Taxa de serviço:{" "}
+                  <span className="font-semibold">{formatPrice(serviceFee)}</span>
+                </p>
+              )}
               <p className="text-base">
                 Valor total:{" "}
-                <span className="font-bold">{formatPrice(totalPrice)}</span>
+                <span className="font-bold">{formatPrice(totalWithFee)}</span>
               </p>
             </div>
             <Button onClick={handleNext} disabled={totalParticipants === 0} isLoading={isSubmitting}>

@@ -622,7 +622,7 @@ export default function EventRegistrationsPage() {
           <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
             <div className="flex gap-2 items-center">
               <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
-                <DolarIcon className="size-5 text-gray-12" />
+                <CartIcon className="size-5 text-gray-12" />
               </div>
               <p className="font-family-dm-sans font-normal text-sm text-gray-11">Receita Líquida</p>
             </div>
@@ -685,7 +685,7 @@ export default function EventRegistrationsPage() {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-11 mb-1">Receita Líquida</p>
                 <div className="w-[28px] h-[28px] p-1 rounded-lg bg-gray-3 flex items-center justify-center">
-                  <DolarIcon className="size-5 text-gray-12" />
+                  <CartIcon className="size-5 text-gray-12" />
                 </div>
               </div>
 

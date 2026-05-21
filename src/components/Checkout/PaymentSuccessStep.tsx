@@ -7,11 +7,10 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "../Button";
 import { useRouter } from "next/navigation";
 import type { Event } from "@/interfaces/event";
-import { CalendarIcon } from "../Icons/CalendarIcon";
-import { ClockIcon } from "../Icons/ClockIcon";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { EventInfoCard } from "@/components/Event/EventInfoCard";
+import { Tooltip } from "@/components/Tooltip";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -45,6 +44,7 @@ interface PaymentSuccessStepProps {
       variationType?: string | null;
       isIncluded?: boolean;
       isRequired?: boolean;
+      image?: string | null;
     }>;
   }>;
   participantsInfo?: Array<{
@@ -57,7 +57,10 @@ interface PaymentSuccessStepProps {
     gender: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | null;
     emergencyContactName?: string;
     emergencyPhone?: string;
-    questionAnswers?: Array<{ question: any; answer: any }>;
+    questionAnswers?: Array<{
+      question?: string | { question?: string } | null;
+      answer?: unknown;
+    }>;
   }>;
   serviceFee?: number;
   couponDiscount?: number;
@@ -69,16 +72,28 @@ interface PaymentSuccessStepProps {
   date?: string;
 }
 
-function formatAnswer(answer: any): string {
+function formatAnswer(answer: unknown): string {
   if (answer == null) return "—";
   if (Array.isArray(answer)) return answer.join(", ");
   if (typeof answer === "string") {
     try {
-      const parsed = JSON.parse(answer);
+      const parsed: unknown = JSON.parse(answer);
       if (Array.isArray(parsed)) return parsed.join(", ");
     } catch { }
   }
   return String(answer) || "—";
+}
+
+/** Extrai o texto da pergunta — aceita string direta ou objeto `{ question }`. */
+function getQuestionLabel(
+  question: string | { question?: string } | null | undefined,
+  fallbackIndex: number,
+): string {
+  if (typeof question === "string" && question.trim()) return question;
+  if (question && typeof question === "object" && typeof question.question === "string" && question.question.trim()) {
+    return question.question;
+  }
+  return `Pergunta ${fallbackIndex + 1}`;
 }
 
 export function PaymentSuccessStep({
@@ -131,15 +146,6 @@ export function PaymentSuccessStep({
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
-  };
-
-  const formatTime = (date: string) => {
-    if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
     }).format(new Date(date));
   };
 
@@ -242,25 +248,25 @@ export function PaymentSuccessStep({
                 <div className="border-b border-gray-6 flex flex-col gap-4 items-start px-4 py-6 w-full">
                   <div className="flex flex-col gap-2 items-start w-full">
                     {/* Order Number */}
-                    <div className="border border-gray-6 flex gap-8 items-center p-4 rounded-lg w-full">
+                    <div className="border border-gray-6 flex flex-col gap-2 items-start p-4 rounded-lg w-full">
                       <div className="flex-1 flex flex-col items-start">
                         <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
                           Número do pedido:
                         </p>
                       </div>
                       <div className="flex flex-col items-end">
-                        <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                        <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
                           #{orderNumber}
                         </p>
                       </div>
                     </div>
 
                     {/* Event Name */}
-                    <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
+                    <div className="border border-gray-6 flex flex-col items-start justify-between p-4 gap-2 rounded-lg w-full">
                       <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
                         Nome do evento:
                       </p>
-                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope text-right flex-1 ml-2">
+                      <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope text-left flex-1">
                         {event.name}
                       </p>
                     </div>
@@ -429,28 +435,23 @@ export function PaymentSuccessStep({
                                 Participante{" "}
                                 {participantData.participantIndex + 1}
                               </p>
-                              <p className="font-bold text-lg leading-[1.1] font-manrope">
-                                {participantData.ticketName}
-                              </p>
+                              <Tooltip
+                                content={participantData.ticketName}
+                                position="topRight"
+                                trigger="click"
+                                usePortal
+                                className="block min-w-0 max-w-full"
+                                contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+                              >
+                                <p className="font-bold text-lg leading-[1.1] font-manrope line-clamp-3 cursor-pointer">
+                                  {participantData.ticketName}
+                                </p>
+                              </Tooltip>
                               {participantData.categoryName && (
                                 <p className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
                                   {participantData.categoryName}
                                 </p>
                               )}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-4 items-start w-full">
-                            <div className="flex gap-2 items-center">
-                              <CalendarIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                {formatDate(event.eventDate)}
-                              </span>
-                            </div>
-                            <div className="flex gap-2 items-center">
-                              <ClockIcon className="size-6 text-gray-12" />
-                              <span className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                {formatTime(event.eventDate)}
-                              </span>
                             </div>
                           </div>
                         </div>
@@ -608,10 +609,10 @@ export function PaymentSuccessStep({
                                     Perguntas do Organizador
                                   </p>
                                   <div className="grid grid-cols-1 gap-4 w-full">
-                                    {participant.questionAnswers.map((q: any, idx: number) => (
+                                    {participant.questionAnswers.map((q, idx) => (
                                       <div key={idx} className="flex flex-col items-start rounded-lg w-full">
                                         <label className="font-normal text-sm text-gray-12 font-family-dm-sans">
-                                          {q.question?.question || q.question || `Pergunta ${idx + 1}`}
+                                          {getQuestionLabel(q.question, idx)}
                                         </label>
                                         <input
                                           type="text"
@@ -642,7 +643,7 @@ export function PaymentSuccessStep({
                                       <div className="flex flex-1 gap-3 items-center w-full">
                                         <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
                                           <ImageWithInitialFallback
-                                            src={(product as any).image}
+                                            src={product.image}
                                             alt={product.name}
                                             name={product.name}
                                             fallbackId={`inc-${idx}`}
@@ -652,25 +653,23 @@ export function PaymentSuccessStep({
                                             letterClassName="text-2xl font-semibold"
                                           />
                                         </div>
-                                        <div className="flex flex-1 flex-col gap-6 items-start justify-center min-w-0">
-                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                        <div className="flex flex-1 flex-col gap-3 items-start justify-center min-w-0">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans line-clamp-2 w-full">
                                             {product.name}
                                           </p>
-                                          <div className="flex items-center justify-between w-full">
-                                            <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                              {product.price > 0 ? formatCurrency(product.price) : "Incluso"}
-                                            </p>
-                                            {product.variationName && (
-                                              <div className="flex gap-1 items-center justify-end min-w-[147px]">
-                                                <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                                  {product.variationType || "Variação"}:
-                                                </p>
-                                                <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                                  {product.variationName}
-                                                </p>
-                                              </div>
-                                            )}
-                                          </div>
+                                          <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                            {product.price > 0 ? formatCurrency(product.price) : "Incluso"}
+                                          </p>
+                                          {product.variationName && (
+                                            <div className="flex gap-1 items-center min-w-0 max-w-full">
+                                              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans shrink-0">
+                                                {product.variationType || "Variação"}:
+                                              </p>
+                                              <p className="font-semibold text-sm leading-[1.1] text-gray-12 font-manrope min-w-0 truncate">
+                                                {product.variationName}
+                                              </p>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -687,9 +686,9 @@ export function PaymentSuccessStep({
                                       className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
                                     >
                                       <div className="flex flex-1 gap-3 items-center w-full">
-                                        <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                        <div className="relative rounded-lg shrink-0 size-[100px] overflow-hidden">
                                           <ImageWithInitialFallback
-                                            src={(product as any).image}
+                                            src={product.image}
                                             alt={product.name}
                                             name={product.name}
                                             fallbackId={`add-${idx}`}
@@ -699,28 +698,26 @@ export function PaymentSuccessStep({
                                             letterClassName="text-2xl font-semibold"
                                           />
                                         </div>
-                                        <div className="flex flex-1 flex-col gap-6 items-start justify-center min-w-0">
-                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                                        <div className="flex flex-1 flex-col gap-3 items-start justify-center min-w-0">
+                                          <p className="font-semibold text-base leading-[1.3] text-gray-12 font-family-dm-sans line-clamp-2 w-full">
                                             {product.name}
                                             {product.quantity > 1 && (
                                               <span className="text-gray-11 font-normal"> x{product.quantity}</span>
                                             )}
                                           </p>
-                                          <div className="flex items-center justify-between w-full">
-                                            <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                              {product.price > 0 ? formatCurrency(product.price * product.quantity) : "Incluso"}
-                                            </p>
-                                            {product.variationName && (
-                                              <div className="flex gap-1 items-center justify-end min-w-[147px]">
-                                                <p className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                                                  {product.variationType || "Variação"}:
-                                                </p>
-                                                <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                                                  {product.variationName}
-                                                </p>
-                                              </div>
-                                            )}
-                                          </div>
+                                          <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
+                                            {product.price > 0 ? formatCurrency(product.price * product.quantity) : "Incluso"}
+                                          </p>
+                                          {product.variationName && (
+                                            <div className="flex gap-1 items-center min-w-0 max-w-full">
+                                              <p className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans shrink-0">
+                                                {product.variationType || "Variação"}:
+                                              </p>
+                                              <p className="font-semibold text-sm leading-[1.1] text-gray-12 font-manrope min-w-0 truncate">
+                                                {product.variationName}
+                                              </p>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -796,7 +793,7 @@ export function PaymentSuccessStep({
                       <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
                         Nome do evento:
                       </p>
-                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
+                      <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope text-right line-clamp-3 w-1/2">
                         {event.name}
                       </p>
                     </div>
@@ -958,14 +955,21 @@ export function PaymentSuccessStep({
                               {participantData.participantIndex + 1}
                             </p>
                             <div className="flex flex-col items-start">
-                              {participantData.categoryName && (
-                                <p className="font-normal text-base truncate max-w-[400px] leading-[1.3] text-gray-11 font-family-dm-sans">
-                                  {participantData.categoryName}
-                                </p>
-                              )}
-                              <h3 className="font-bold text-[24px] truncate max-w-[400px] leading-[1.1] text-gray-12 font-manrope">
-                                {participantData.ticketName}
-                              </h3>
+                              <p className="font-normal text-base truncate max-w-[400px] leading-[1.3] text-gray-11 font-family-dm-sans">
+                                {participantData.categoryName ?? "Ingresso avulso"}
+                              </p>
+                              <Tooltip
+                                content={participantData.ticketName}
+                                position="topRight"
+                                trigger="click"
+                                usePortal
+                                className="block min-w-0 max-w-[400px]"
+                                contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+                              >
+                                <h3 className="font-bold text-[24px] line-clamp-3 leading-[1.1] text-gray-12 font-manrope text-left cursor-pointer">
+                                  {participantData.ticketName}
+                                </h3>
+                              </Tooltip>
                             </div>
                           </div>
                           {/* QR Code */}
@@ -1140,10 +1144,10 @@ export function PaymentSuccessStep({
                                     Perguntas do Organizador
                                   </p>
                                   <div className="grid grid-cols-2 gap-10 w-full">
-                                    {participant.questionAnswers.map((q: any, idx: number) => (
+                                    {participant.questionAnswers.map((q, idx) => (
                                       <div key={idx} className="flex flex-col gap-2 items-start rounded-[8px] min-w-[313px]">
                                         <label className="font-normal text-[16px] leading-[1.3] text-gray-12 font-family-dm-sans">
-                                          {q.question?.question || q.question || `Pergunta ${idx + 1}`}
+                                          {getQuestionLabel(q.question, idx)}
                                         </label>
                                         <input
                                           type="text"
@@ -1172,9 +1176,9 @@ export function PaymentSuccessStep({
                                       className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
                                     >
                                       <div className="flex flex-1 gap-3 items-center w-full">
-                                        <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                        <div className="relative rounded-lg shrink-0 size-[100px] overflow-hidden">
                                           <ImageWithInitialFallback
-                                            src={(product as any).image}
+                                            src={product.image}
                                             alt={product.name}
                                             name={product.name}
                                             fallbackId={`inc-${idx}`}
@@ -1219,9 +1223,9 @@ export function PaymentSuccessStep({
                                       className="border border-gray-6 flex flex-col items-center justify-center p-4 rounded-xl w-full"
                                     >
                                       <div className="flex flex-1 gap-3 items-center w-full">
-                                        <div className="border border-gray-6 relative rounded-lg shrink-0 size-[100px] overflow-hidden">
+                                        <div className="relative shrink-0 size-[100px] overflow-hidden">
                                           <ImageWithInitialFallback
-                                            src={(product as any).image}
+                                            src={product.image}
                                             alt={product.name}
                                             name={product.name}
                                             fallbackId={`add-${idx}`}

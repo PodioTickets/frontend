@@ -1231,10 +1231,10 @@ export function InformationStep({
                 />
               </div>
 
-              <div className="flex flex-col justify-center px-4 py-6 border-r border-gray-6 flex-1 min-w-0">
+              <div className="flex flex-col justify-center items-center px-4 border-r border-gray-6 flex-1 min-w-0">
                 <div className="flex flex-col gap-4">
                   <p className="text-base text-gray-11">Seu pedido:</p>
-                  <h1 className="text-xl font-bold text-gray-12 h-[36px] leading-tight">
+                  <h1 className="text-xl font-bold text-gray-12 leading-tight">
                     {event.name}
                   </h1>
                 </div>
@@ -1247,8 +1247,8 @@ export function InformationStep({
                       key={index}
                       className="flex items-center justify-between text-base text-gray-12"
                     >
-                      <div className="flex flex-col">
-                        <p className="text-gray-11 text-xs truncate max-w-[200px]">{ticket.categoryName ? (
+                      <div className="flex flex-col max-w-[80%]">
+                        <p className="text-gray-11 text-xs truncate ">{ticket.categoryName ? (
                           ticket.categoryName
                         ) : "Ingresso Avulso"}</p>
                         <p className="font-semibold text-gray-12 text-base truncate">

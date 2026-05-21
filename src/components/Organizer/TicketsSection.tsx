@@ -77,6 +77,7 @@ import {
 import {
   applyDraftOrderToTickets,
   applyOrganizerTicketDragEnd,
+  buildMoveTicketWithinScopePatch,
   categoryIdForTicketScope,
   persistTicketOrderDrafts,
 } from "@/lib/organizerTicketListDnD";
@@ -734,6 +735,82 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
       setActiveId(null);
     }, []);
 
+    /**
+     * Mover um ticket uma posição (cima/baixo) dentro do mesmo escopo via menu
+     * mobile. Replica o fluxo do `handleDragEnd`: optimistic update do
+     * `sortOrder` no bundle pra evitar UI ler cache velho durante a janela do
+     * refetch + persistência via `reorderTickets` + refetch final. Em
+     * `persistMode="draft"` (new flow), só atualiza o `ticketOrderDraft` —
+     * commit é feito em `flushAndPersistAll`.
+     */
+    const handleMoveTicketWithinScope = useCallback(
+      async (
+        ticketId: string,
+        scopeCategoryId: string | null,
+        direction: "up" | "down",
+      ) => {
+        const orderPatch = buildMoveTicketWithinScopePatch(
+          ticketOrderDraft,
+          tickets,
+          categories,
+          scopeCategoryId,
+          ticketId,
+          direction,
+        );
+        if (Object.keys(orderPatch).length === 0) return;
+
+        setTicketOrderDraft((prev) => ({ ...prev, ...orderPatch }));
+
+        if (persistMode !== "immediate" || !eventId) {
+          // No `draft` flow não há request — a mudança é só local até o flush.
+          // Damos o feedback imediato pelo toast.
+          toast.success("Ordem dos ingressos atualizada.");
+          return;
+        }
+
+        try {
+          const bundle = queryClient.getQueryData<{
+            tickets: Ticket[];
+            categories: ModalityGroup[];
+          }>(queryKeys.events.ticketsManagement(eventId));
+          const ticketList = bundle?.tickets ?? tickets;
+          const cats = bundle?.categories ?? categories;
+
+          optimisticUpdateTickets(queryClient, eventId, (prev) => {
+            if (prev.length === 0) return prev;
+            const newOrderByTicketId = new Map<string, number>();
+            for (const [scopeKey, ids] of Object.entries(orderPatch)) {
+              ids.forEach((id, idx) => newOrderByTicketId.set(id, idx));
+              void scopeKey;
+            }
+            return prev.map((t) => {
+              const nextOrder = newOrderByTicketId.get(t.id);
+              if (nextOrder == null) return t;
+              return { ...t, sortOrder: nextOrder };
+            });
+          });
+
+          await persistTicketOrderDrafts(eventId, ticketList, cats, orderPatch);
+          setTicketOrderDraft({});
+          await queryClient.refetchQueries({
+            queryKey: queryKeys.events.ticketsManagement(eventId),
+          });
+          toast.success("Ordem dos ingressos atualizada.");
+        } catch (e) {
+          console.error(e);
+          toast.error("Não foi possível salvar a ordem dos ingressos.");
+        }
+      },
+      [
+        tickets,
+        categories,
+        eventId,
+        queryClient,
+        ticketOrderDraft,
+        persistMode,
+      ],
+    );
+
     const ticketsByCategory = useMemo(() => {
       const map: Record<string, Ticket[]> = {};
       tickets.forEach((ticket) => {
@@ -1010,6 +1087,9 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                       ticketScopeCategoryId={null}
                       moveCategoryOptions={ticketMoveCategoryOptions}
                       onMoveTicketToCategory={handleDropTicket}
+                      onMoveTicketWithinScope={(ticketId, direction) =>
+                        handleMoveTicketWithinScope(ticketId, null, direction)
+                      }
                     />
                   </div>
                 </MobileGeneralTicketsSection>
@@ -1238,6 +1318,9 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                             onDropTicket={handleDropTicket}
                             moveCategoryOptions={ticketMoveCategoryOptions}
                             onMoveTicketToCategory={handleDropTicket}
+                            onMoveTicketWithinScope={(ticketId, direction) =>
+                              handleMoveTicketWithinScope(ticketId, category.id, direction)
+                            }
                           />
                         </SortableTicketCategoryItem>
                       );

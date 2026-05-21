@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
@@ -23,31 +23,30 @@ export default function EditTicketsCheckoutPreviewPage() {
   const eventId = params.id as string;
   const orgNav = useOrganizerNavigate();
   const { event, loading } = useEditEvent();
-  const [previewEvent, setPreviewEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
-    if (!event) {
-      setPreviewEvent(null);
-      return;
-    }
+  // Leitura síncrona do draft (sessionStorage) já no primeiro render — evita
+  // que ModalitiesStep e seus filhos capturem o `kitSelectionDisplay` salvo
+  // antes do useEffect aplicar o rascunho.
+  const previewEvent = useMemo<Event | null>(() => {
+    if (!event) return null;
     const draft = readTicketsCheckoutPreviewDraft(eventId);
     const kit = draft?.kitSelectionDisplay
       ? {
-        ...defaultEventKitSelectionDisplay(),
-        ...draft.kitSelectionDisplay,
-        primaryKitProductByTicketId: {
-          ...draft.kitSelectionDisplay.primaryKitProductByTicketId,
-        },
-        primaryKitProductByCategoryId: {
-          ...draft.kitSelectionDisplay.primaryKitProductByCategoryId,
-        },
-      }
+          ...defaultEventKitSelectionDisplay(),
+          ...draft.kitSelectionDisplay,
+          primaryKitProductByTicketId: {
+            ...draft.kitSelectionDisplay.primaryKitProductByTicketId,
+          },
+          primaryKitProductByCategoryId: {
+            ...draft.kitSelectionDisplay.primaryKitProductByCategoryId,
+          },
+        }
       : parseEventKitSelectionDisplay(event.kitSelectionDisplay);
-    setPreviewEvent({ ...event, kitSelectionDisplay: kit } as Event);
+    return { ...event, kitSelectionDisplay: kit } as Event;
   }, [event, eventId]);
 
   const handleBack = useCallback(() => {

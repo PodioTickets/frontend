@@ -14,6 +14,7 @@ import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { ProductVariationCard, type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
+import { Tooltip } from "@/components/Tooltip";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -113,18 +114,6 @@ export default function TicketDetailsPage() {
       const p = reg.participant || {};
       const ticket = reg.ticket || {};
 
-      // `ticket.includedProducts` é o CATÁLOGO de produtos configurados pro tipo de
-      // ingresso (todos os opcionais + obrigatórios). Só são realmente "incluídos
-      // no ingresso" (grátis, recebidos automaticamente) os com `isIncludedInTicket: true`.
-      // Os demais são opcionais que o usuário pode ter pago — esses aparecem em
-      // `reg.products` (carrinho) e renderizam na seção "Adicionais".
-      const includedProducts: IncludedProduct[] = (ticket.includedProducts || []).filter((item: any) => {
-        if (item.isIncludedInTicket !== true) return false;
-        const selectedName = item.selectedVariation?.name ?? null;
-        if (selectedName && isSemInteresseVariation({ name: selectedName })) return false;
-        return true;
-      });
-
       // `reg.products` = carrinho de produtos adicionais comprados. Estrutura:
       // { product, variation, variationName, quantity, unitPrice, totalPrice }.
       // Aceitar `reg.additionalProducts` também (alias defensivo se o contrato mudar).
@@ -132,6 +121,28 @@ export default function TicketDetailsPage() {
       const additionalProducts = rawProducts.filter((item: any) => {
         const variationName = item.variation?.name ?? item.variationName ?? null;
         if (variationName && isSemInteresseVariation({ name: variationName })) return false;
+        return true;
+      });
+
+      // ProductIds que estão no carrinho — não devem aparecer também em
+      // "Inclusos no ingresso" senão duplica visualmente (o backend devolve
+      // o produto opcional comprado em ambas as listas).
+      const cartProductIds = new Set<string>(
+        rawProducts
+          .map((item: any) => item.product?.id)
+          .filter((id: any): id is string => typeof id === "string" && id.length > 0),
+      );
+
+      // `ticket.includedProducts` é o CATÁLOGO de produtos configurados pro tipo de
+      // ingresso. Só são realmente "incluídos no ingresso" (grátis, recebidos
+      // automaticamente) os com `isIncludedInTicket: true` E que NÃO estejam no
+      // carrinho. Os demais são opcionais que o usuário pode ter pago — esses
+      // aparecem em `reg.products` (carrinho) e renderizam na seção "Adicionais".
+      const includedProducts: IncludedProduct[] = (ticket.includedProducts || []).filter((item: any) => {
+        if (item.isIncludedInTicket !== true) return false;
+        const selectedName = item.selectedVariation?.name ?? null;
+        if (selectedName && isSemInteresseVariation({ name: selectedName })) return false;
+        if (item.id && cartProductIds.has(item.id)) return false;
         return true;
       });
 
@@ -205,7 +216,7 @@ export default function TicketDetailsPage() {
   return (
     <div className="min-h-screen bg-gray-2">
       {/* Mobile header — fixo no padrão do Figma: back à esquerda, título centralizado, border-bottom */}
-      <div className="md:hidden bg-gray-2 border-b border-gray-6 px-4 pt-5 pb-2">
+      <div className="md:hidden bg-gray-2 border-b border-gray-6 px-4 py-2">
         <div className="flex items-center justify-between">
           <button
             onClick={() => router.back()}
@@ -299,9 +310,18 @@ export default function TicketDetailsPage() {
                           <p className="text-sm text-gray-11 font-family-dm-sans truncate max-w-full md:max-w-[400px]">
                             {ticket?.category?.name ?? "Ingresso avulso"}
                           </p>
-                          <h2 className="text-lg md:text-2xl font-bold text-gray-12 font-manrope truncate max-w-full md:max-w-[400px]">
-                            {ticket.name || "Ingresso"}
-                          </h2>
+                          <Tooltip
+                            content={ticket.name || "Ingresso"}
+                            position="topRight"
+                            trigger="click"
+                            usePortal
+                            className="block min-w-0 max-w-full md:max-w-[400px]"
+                            contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+                          >
+                            <h2 className="text-lg md:text-2xl font-bold text-gray-12 text-left font-manrope line-clamp-3 cursor-pointer">
+                              {ticket.name || "Ingresso"}
+                            </h2>
+                          </Tooltip>
                         </div>
                       </div>
                     </div>
@@ -569,20 +589,20 @@ export default function TicketDetailsPage() {
             <div className="flex flex-col gap-2 px-4 py-6">
               {/* Seção 1: meta do pedido — linhas com borda individual */}
               <div className="flex flex-col gap-2">
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
+                <div className="border border-gray-6 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Número do pedido:
                   </p>
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1] text-right">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1] md:text-right">
                     #{order.id || "N/A"}
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
+                <div className="border border-gray-6 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Nome do evento:
                   </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.3] text-right">
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.3] md:text-right">
                     {event?.name || "N/A"}
                   </p>
                 </div>

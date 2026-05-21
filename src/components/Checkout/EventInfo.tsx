@@ -112,6 +112,11 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     return total;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
+  const serviceFee = useMemo(
+    () => totalPrice * ((event.participantFeePercent ?? 0) / 100),
+    [totalPrice, event.participantFeePercent],
+  );
+
   const totalParticipants = useMemo(() => {
     let participants = 0;
 
@@ -183,12 +188,20 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         </div>
 
         {groupedTickets.length > 0 && (
-          <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
-            Total:{" "}
-            <span className="text-gray-12">
-              {formatPrice(totalPrice + totalPrice * ((event.participantFeePercent ?? 0) / 100))}
-            </span>
-          </h1>
+          <>
+            {serviceFee > 0 && (
+              <p className="flex items-center justify-between w-full mt-4 text-sm font-medium text-gray-11">
+                Taxa de serviço:
+                <span className="text-gray-12">{formatPrice(serviceFee)}</span>
+              </p>
+            )}
+            <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
+              Total:{" "}
+              <span className="text-gray-12">
+                {formatPrice(totalPrice + serviceFee)}
+              </span>
+            </h1>
+          </>
         )}
 
         <Button

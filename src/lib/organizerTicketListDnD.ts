@@ -129,6 +129,37 @@ function buildSameScopeOrderPatch(
   return { [key]: arrayMove(base, oldIndex, newIndex) };
 }
 
+/**
+ * Patch de ordem ao mover um ticket uma posição (cima/baixo) dentro do mesmo
+ * escopo. Usado pelo menu mobile "Mais opções". No-op se o ticket já está nas
+ * pontas do bucket (caller deve desabilitar o botão correspondente).
+ */
+export function buildMoveTicketWithinScopePatch(
+  ticketOrderDraft: Record<string, string[]>,
+  tickets: Ticket[],
+  categories: ModalityGroup[],
+  scopeCategoryId: string | null,
+  ticketId: string,
+  direction: "up" | "down",
+): Record<string, string[]> {
+  const key = ticketOrderDraftKey(scopeCategoryId);
+  const bucket = sortedTicketsInScope(tickets, scopeCategoryId, categories);
+  let base = ticketOrderDraft[key];
+  const bucketIds = new Set(bucket.map((t) => t.id));
+  if (
+    !base ||
+    base.length !== bucket.length ||
+    base.some((id) => !bucketIds.has(id))
+  ) {
+    base = bucket.map((t) => t.id);
+  }
+  const oldIndex = base.indexOf(ticketId);
+  if (oldIndex < 0) return {};
+  const newIndex = direction === "up" ? oldIndex - 1 : oldIndex + 1;
+  if (newIndex < 0 || newIndex >= base.length) return {};
+  return { [key]: arrayMove(base, oldIndex, newIndex) };
+}
+
 /** Retorna patch de ordem por escopo e se houve mudança de categoria via API. */
 export async function applyOrganizerTicketDragEnd({
   event,

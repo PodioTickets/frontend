@@ -21,7 +21,11 @@ import {
   parseEventKitSelectionDisplay,
   type EventKitSelectionDisplay,
 } from "@/lib/eventKitSelectionDisplay";
-import { writeTicketsCheckoutPreviewDraft } from "@/lib/ticketsCheckoutPreviewDraft";
+import {
+  clearTicketsCheckoutPreviewDraft,
+  readTicketsCheckoutPreviewDraft,
+  writeTicketsCheckoutPreviewDraft,
+} from "@/lib/ticketsCheckoutPreviewDraft";
 import { TicketsSection, type TicketsSectionRef } from "@/components/Organizer/TicketsSection";
 import type { TicketsManagementBundle } from "@/hooks/useTicketsManagement";
 import toast from "react-hot-toast";
@@ -76,7 +80,29 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
     ...defaultEventKitSelectionDisplay(),
   }));
 
+  // Quando o usuário volta da página de prévia (`/edit/tickets/preview`), o
+  // componente remonta — sem isso, o draft local seria sobrescrito pelo
+  // `savedKitSelection` no useEffect abaixo. Lemos o sessionStorage uma vez
+  // no mount e marcamos a ref pra travar a ressincronização.
+  const hydratedFromStorageRef = useRef(false);
   useEffect(() => {
+    if (!eventId) return;
+    const draft = readTicketsCheckoutPreviewDraft(eventId);
+    if (!draft) return;
+    setDraftKitSelection({
+      ...defaultEventKitSelectionDisplay(),
+      ...draft.kitSelectionDisplay,
+      primaryKitProductByTicketId: { ...draft.kitSelectionDisplay.primaryKitProductByTicketId },
+      primaryKitProductByCategoryId: { ...draft.kitSelectionDisplay.primaryKitProductByCategoryId },
+    });
+    hydratedFromStorageRef.current = true;
+  }, [eventId]);
+
+  useEffect(() => {
+    // Se hidratamos do sessionStorage (volta da prévia com alterações
+    // pendentes), não sobrescrever — `discardLocalChanges` e save fazem o
+    // reset explícito e zeram a ref.
+    if (hydratedFromStorageRef.current) return;
     setDraftKitSelection({
       ...defaultEventKitSelectionDisplay(),
       ...savedKitSelection,
@@ -103,6 +129,10 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
       queryKey: queryKeys.events.ticketsManagement(eventId),
     });
     await reloadEvent();
+    // Descarte explícito do rascunho — libera o useEffect de `savedKitSelection`
+    // pra voltar a ressincronizar com o backend.
+    clearTicketsCheckoutPreviewDraft();
+    hydratedFromStorageRef.current = false;
     try {
       const ev = await organizerService.getEventById(eventId);
       const parsed = parseEventKitSelectionDisplay(ev.kitSelectionDisplay);
@@ -155,6 +185,10 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
         { clientPage: `events/${eventId}/tickets` },
       );
       await reloadEvent();
+      // Rascunho foi promovido para o backend — limpa o sessionStorage e
+      // libera o useEffect a ressincronizar com `savedKitSelection`.
+      clearTicketsCheckoutPreviewDraft();
+      hydratedFromStorageRef.current = false;
       toast.success("Alterações salvas com sucesso!");
       return true;
     } catch (e) {
@@ -243,6 +277,7 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
                 }
                 kitImagesLayout={draftKitSelection.kitImagesLayout}
                 onOpenKitImagePositionDrawer={() => setKitImagePositionDrawerOpen(true)}
+                defaultOpen={kitSelectionDirty}
               />
             </div>
           }

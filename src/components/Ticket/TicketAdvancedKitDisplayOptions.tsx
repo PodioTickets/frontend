@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Radio } from "@/components/Radio";
@@ -19,6 +19,8 @@ type TicketAdvancedKitDisplayOptionsProps = {
   onShowKitImagesOnSelectionChange?: (value: boolean) => void;
   /** Controlado: layout salvo (badge "Configuração atual"). Default ON_TICKETS. */
   kitImagesLayout?: KitImagesLayoutApi;
+  /** Quando `true`, o painel já monta expandido — útil pra exibir alterações pendentes ao voltar da prévia. */
+  defaultOpen?: boolean;
 };
 
 export function TicketAdvancedKitDisplayOptions({
@@ -27,8 +29,15 @@ export function TicketAdvancedKitDisplayOptions({
   showKitImagesOnSelection: controlledShow,
   onShowKitImagesOnSelectionChange,
   kitImagesLayout = "ON_TICKETS",
+  defaultOpen = false,
 }: TicketAdvancedKitDisplayOptionsProps) {
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(defaultOpen);
+  // `kitSelectionDirty` no parent só vira true após o useEffect de hidratação
+  // do sessionStorage rodar (render 2). Reagimos abrindo o painel — mas não
+  // fechamos automaticamente quando vira false (não roubar controle do usuário).
+  useEffect(() => {
+    if (defaultOpen) setAdvancedOpen(true);
+  }, [defaultOpen]);
   const [internalShow, setInternalShow] = useState(true);
   const showKitImagesOnSelection =
     controlledShow !== undefined ? controlledShow : internalShow;

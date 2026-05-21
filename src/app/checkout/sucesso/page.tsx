@@ -65,28 +65,8 @@ function CheckoutSucessoContent() {
         : 0;
 
     const participantsData = registrations.map((reg: any, index: number) => {
-      // `ticket.includedProducts` é o catálogo completo de produtos configurados
-      // pro ticket. Só os com `isIncludedInTicket === true` são realmente bundled
-      // grátis. Os demais (opcionais comprados) vêm em `reg.products`.
-      const includedProducts = (reg.ticket?.includedProducts ?? [])
-        .filter((p: any) => {
-          if (p.isIncludedInTicket !== true) return false;
-          if (p.selectedVariation?.name && isSemInteresseVariation({ name: p.selectedVariation.name })) return false;
-          return true;
-        })
-        .map((p: any) => ({
-          name: p.name,
-          price: (p.basePrice ?? 0) / 100,
-          quantity: 1,
-          variationName: p.selectedVariation?.name ?? null,
-          variationType: p.variationType ?? null,
-          isIncluded: true,
-          isRequired: p.isRequired ?? true,
-          image: p.image ?? null,
-        }));
-
       // `reg.products` = carrinho (produtos adicionais pagos). Shape:
-      // { product: {name, image, variationType}, variation: {name, price}, variationName, quantity, unitPrice, totalPrice }
+      // { product: {id, name, image, variationType}, variation: {name, price}, variationName, quantity, unitPrice, totalPrice }
       const rawProducts = (reg.products || reg.additionalProducts || []) as any[];
       const additionalProducts = rawProducts
         .filter((item: any) => {
@@ -106,6 +86,36 @@ function CheckoutSucessoContent() {
             image: item.product?.image ?? null,
           };
         });
+
+      // Set de productIds que já aparecem no carrinho (`reg.products`).
+      // Esses NÃO entram em "Inclusos no ingresso" — senão duplica visualmente
+      // (o backend devolve o produto opcional comprado em ambas as listas).
+      const cartProductIds = new Set<string>(
+        rawProducts
+          .map((item: any) => item.product?.id)
+          .filter((id: any): id is string => typeof id === "string" && id.length > 0),
+      );
+
+      // `ticket.includedProducts` é o catálogo completo de produtos configurados
+      // pro ticket. Só os com `isIncludedInTicket === true` E que NÃO estejam
+      // no carrinho são truly bundled grátis.
+      const includedProducts = (reg.ticket?.includedProducts ?? [])
+        .filter((p: any) => {
+          if (p.isIncludedInTicket !== true) return false;
+          if (p.selectedVariation?.name && isSemInteresseVariation({ name: p.selectedVariation.name })) return false;
+          if (p.id && cartProductIds.has(p.id)) return false;
+          return true;
+        })
+        .map((p: any) => ({
+          name: p.name,
+          price: (p.basePrice ?? 0) / 100,
+          quantity: 1,
+          variationName: p.selectedVariation?.name ?? null,
+          variationType: p.variationType ?? null,
+          isIncluded: true,
+          isRequired: p.isRequired ?? true,
+          image: p.image ?? null,
+        }));
 
       return {
         participantIndex: index,
