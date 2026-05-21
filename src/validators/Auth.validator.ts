@@ -26,7 +26,40 @@ export const registerStep1aSchema = z.object({
   nacionalidade: z.string().min(1, "Nacionalidade é obrigatória"),
 });
 
+/**
+ * Decide se a pessoa é brasileira a partir do campo `nacionalidade`.
+ * Aceita variantes ("BR", "Brasil", "Brazil") e trata vazio como BR (default
+ * do formulário).
+ */
+export function isBrazilianCountry(country: string | undefined | null): boolean {
+  if (!country) return true;
+  const c = country.trim().toLowerCase();
+  return !c || c === "br" || c === "brasil" || c === "brazil";
+}
+
+/**
+ * Schema dinâmico da Step 1b. Quando a nacionalidade selecionada é brasileira
+ * exige CPF válido; caso contrário aceita um documento genérico (passaporte,
+ * RNE, identidade estrangeira) entre 4 e 30 caracteres. O campo continua se
+ * chamando `cpf` no formData só pra evitar refactor em todo o componente.
+ * A função é definida após `registerStep1bSchema` para reutilizar o shape
+ * dos outros campos (dataNascimento, telefone, etc).
+ */
+export function buildRegisterStep1bSchema(country: string | undefined | null) {
+  const docSchema = isBrazilianCountry(country)
+    ? registerStep1bSchema.shape.cpf
+    : z
+      .string()
+      .min(4, "Documento deve ter pelo menos 4 caracteres")
+      .max(30, "Documento deve ter no máximo 30 caracteres");
+
+  return registerStep1bSchema.extend({ cpf: docSchema });
+}
+
 // Step 1b: Documentos + contato — segunda tela de dados pessoais.
+// Mantido como CPF brasileiro por compatibilidade com tipos exportados (form
+// data type). A validação real em runtime usa `buildRegisterStep1bSchema()`
+// que considera a nacionalidade selecionada.
 export const registerStep1bSchema = z.object({
   cpf: z
     .string()

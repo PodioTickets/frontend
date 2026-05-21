@@ -15,6 +15,8 @@ import { SuccessIcon } from "../Icons/SuccessIcon";
 import {
   registerStep1aSchema,
   registerStep1bSchema,
+  buildRegisterStep1bSchema,
+  isBrazilianCountry,
   registerStep2Schema,
   type RegisterStep1aFormData,
   type RegisterStep1bFormData,
@@ -194,7 +196,9 @@ export function RegisterModal() {
         telefoneEmergencia: formData.telefoneEmergencia || "",
         sexo: formData.sexo,
       };
-      registerStep1bSchema.parse(data);
+      /* Schema dinâmico: para brasileiros (formData.nacionalidade BR/Brasil/Brazil)
+       * exige CPF válido; para estrangeiros aceita documento genérico. */
+      buildRegisterStep1bSchema(formData.nacionalidade).parse(data);
       setErrors({});
       return true;
     } catch (error) {
@@ -255,8 +259,15 @@ export function RegisterModal() {
     }
     if (data.nacionalidade) updateData.country = data.nacionalidade;
     if (data.cpf) {
-      updateData.documentNumber = data.cpf.replace(/\D/g, "");
-      updateData.documentType = "CPF";
+      /* Brasileiros: strip de máscara para padronizar (xxx.xxx.xxx-xx → 11 dígitos).
+       * Estrangeiros: documento vai cru (passaporte preserva letras). */
+      if (isBrazilianCountry(data.nacionalidade)) {
+        updateData.documentNumber = data.cpf.replace(/\D/g, "");
+        updateData.documentType = "CPF";
+      } else {
+        updateData.documentNumber = data.cpf.trim();
+        updateData.documentType = "PASSPORT";
+      }
     }
     return updateData;
   };
@@ -329,8 +340,10 @@ export function RegisterModal() {
           reserve_phone: formData.telefoneEmergencia || undefined,
           dateOfBirth,
           country: formData.nacionalidade,
+          /* Brasileiros: envia CPF formatado (backend faz strip de máscara).
+           * Estrangeiros: envia documento cru e marca como PASSPORT. */
           documentNumber: formData.cpf,
-          documentType: "CPF",
+          documentType: isBrazilianCountry(formData.nacionalidade) ? "CPF" : "PASSPORT",
           acceptedTerms: true,
           acceptedPrivacyPolicy: true,
         });
@@ -422,7 +435,25 @@ export function RegisterModal() {
     }
   };
 
+  /* Aplica máscara CPF só para brasileiros. Estrangeiros podem digitar
+   * passaporte/RNE livremente (letras + dígitos). */
+  const isBrUser = isBrazilianCountry(formData.nacionalidade);
+  const docLabel = isBrUser ? "CPF" : "Documento";
+  const docPlaceholder = isBrUser ? "000.000.000-00" : "Passaporte / documento";
+  const docMaxLength = isBrUser ? 14 : 30;
+
   const handleCPFChange = (value: string) => {
+    if (!isBrUser) {
+      setFormData((prev) => ({ ...prev, cpf: value.slice(0, docMaxLength) }));
+      if (errors.cpf) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.cpf;
+          return next;
+        });
+      }
+      return;
+    }
     const masked = maskCPF(value);
     handleInputChange("cpf", masked);
   };
@@ -620,19 +651,19 @@ export function RegisterModal() {
 
       <div className="md:hidden flex flex-col gap-8 items-center px-4 py-6 relative shrink-0 w-full overflow-y-auto h-full">
         <div className="flex flex-col gap-5 items-start relative shrink-0 w-full">
-          {/* CPF */}
+          {/* CPF / Documento (depende da nacionalidade) */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              CPF
+              {docLabel}
             </label>
             <div className="relative w-full">
               <CPFIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="text"
-                placeholder="000.000.000-00"
+                placeholder={docPlaceholder}
                 value={formData.cpf}
                 onChange={(e) => handleCPFChange(e.target.value)}
-                maxLength={14}
+                maxLength={docMaxLength}
                 className={`pl-10 h-12 ${errors.cpf ? "border-red-9 focus-visible:border-red-9" : ""
                   }`}
                 aria-invalid={!!errors.cpf}
@@ -909,19 +940,19 @@ export function RegisterModal() {
 
       <div className="hidden md:flex flex-col items-start relative shrink-0 w-full overflow-visible">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start p-6 relative shrink-0 w-full overflow-visible">
-          {/* CPF */}
+          {/* CPF / Documento (depende da nacionalidade) */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-              CPF
+              {docLabel}
             </label>
             <div className="relative w-full">
               <CPFIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="text"
-                placeholder="000.000.000-00"
+                placeholder={docPlaceholder}
                 value={formData.cpf}
                 onChange={(e) => handleCPFChange(e.target.value)}
-                maxLength={14}
+                maxLength={docMaxLength}
                 className={`pl-10 h-12 ${errors.cpf ? "border-red-9 focus-visible:border-red-9" : ""
                   }`}
                 aria-invalid={!!errors.cpf}
