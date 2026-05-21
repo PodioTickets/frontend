@@ -8,6 +8,7 @@ import { Button } from "@/components/Button";
 import { Dropdown } from "@/components/Dropdown";
 import { useAuth } from "@/hooks/useAuth";
 import { isValidCPF } from "@/utils/cpf";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { cn } from "@/utils/cn";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
@@ -91,17 +92,31 @@ export function ContactOrganizerModal({
 
   const [errors, setErrors] = useState<FormErrors>({});
 
+  /* Decide se o documento exigido é CPF (brasileiro) ou documento genérico
+   * (estrangeiro). Usa o country da conta logada — quando não há user
+   * (anônimo), assume brasileiro (default histórico). */
+  const isBrUser = isBrazilianCountry((user as any)?.country ?? null);
+  const docLabel = isBrUser ? "CPF" : "Documento";
+  const docPlaceholder = isBrUser ? "000.000.000-00" : "Passaporte / documento";
+  const docMaxLength = isBrUser ? 14 : 30;
+
   useEffect(() => {
     if (!isOpen) return;
 
     const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
-    const rawCpf = user?.documentNumber?.replace(/\D/g, "") ?? "";
+    /* Para brasileiros: usa documentNumber do user com máscara CPF.
+     * Para estrangeiros: passaporte armazenado com letras — usa cru. */
+    const userIsBr = isBrazilianCountry((user as any)?.country ?? null);
+    const rawDoc = user?.documentNumber ?? "";
+    const prefillDoc = userIsBr
+      ? (rawDoc ? maskCpf(rawDoc.replace(/\D/g, "")) : "")
+      : rawDoc;
     const rawPhone = (user as any)?.phone?.replace(/\D/g, "") ?? "";
 
     setForm((prev) => ({
       ...prev,
       name: fullName || prev.name,
-      cpf: rawCpf ? maskCpf(rawCpf) : prev.cpf,
+      cpf: prefillDoc || prev.cpf,
       email: user?.email || prev.email,
       phone: rawPhone ? maskPhone(rawPhone) : prev.phone,
     }));
@@ -116,8 +131,11 @@ export function ContactOrganizerModal({
   if (!isOpen) return null;
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const masked = maskCpf(e.target.value);
-    setForm((prev) => ({ ...prev, cpf: masked }));
+    /* Estrangeiros digitam livre (passaporte tem letras); brasileiros recebem máscara CPF. */
+    const next = isBrUser
+      ? maskCpf(e.target.value)
+      : e.target.value.slice(0, docMaxLength);
+    setForm((prev) => ({ ...prev, cpf: next }));
     if (errors.cpf) setErrors((prev) => ({ ...prev, cpf: undefined }));
   };
 
@@ -141,13 +159,24 @@ export function ContactOrganizerModal({
     if (!form.name.trim()) next.name = "Nome é obrigatório";
     else if (nameParts.length < 2) next.name = "Informe o nome completo";
 
-    const cpfDigits = form.cpf.replace(/\D/g, "");
-    if (!cpfDigits) {
-      next.cpf = "CPF é obrigatório";
-    } else if (cpfDigits.length !== 11) {
-      next.cpf = "CPF deve ter 11 dígitos";
-    } else if (!isValidCPF(form.cpf)) {
-      next.cpf = "CPF inválido";
+    if (isBrUser) {
+      const cpfDigits = form.cpf.replace(/\D/g, "");
+      if (!cpfDigits) {
+        next.cpf = "CPF é obrigatório";
+      } else if (cpfDigits.length !== 11) {
+        next.cpf = "CPF deve ter 11 dígitos";
+      } else if (!isValidCPF(form.cpf)) {
+        next.cpf = "CPF inválido";
+      }
+    } else {
+      const doc = form.cpf.trim();
+      if (!doc) {
+        next.cpf = "Documento é obrigatório";
+      } else if (doc.length < 4) {
+        next.cpf = "Documento deve ter pelo menos 4 caracteres";
+      } else if (doc.length > 30) {
+        next.cpf = "Documento deve ter no máximo 30 caracteres";
+      }
     }
 
     if (!form.email.trim()) next.email = "E-mail é obrigatório";
@@ -168,7 +197,7 @@ export function ContactOrganizerModal({
     if (!organizationId) {
       const body = [
         `Nome: ${form.name}`,
-        `CPF: ${form.cpf}`,
+        `${docLabel}: ${form.cpf}`,
         `Email: ${form.email}`,
         form.phone ? `Telefone: ${form.phone}` : null,
         `Assunto: ${form.subject}`,
@@ -263,8 +292,8 @@ export function ContactOrganizerModal({
           </div>
           {/* CPF */}
           <div className="flex flex-col gap-2">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">CPF</label>
-            <Input type="text" placeholder="000.000.000-00" value={form.cpf} onChange={handleCpfChange} maxLength={14}
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{docLabel}</label>
+            <Input type="text" placeholder={docPlaceholder} value={form.cpf} onChange={handleCpfChange} maxLength={docMaxLength}
               className={fieldClass(errors.cpf)} />
             {errors.cpf && <p className="text-sm text-red-9 font-family-dm-sans">{errors.cpf}</p>}
           </div>
@@ -324,8 +353,8 @@ export function ContactOrganizerModal({
           </div>
           {/* CPF */}
           <div className="flex flex-col gap-2 flex-1 min-w-[230px]">
-            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">CPF</label>
-            <Input type="text" placeholder="000.000.000-00" value={form.cpf} onChange={handleCpfChange} maxLength={14}
+            <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">{docLabel}</label>
+            <Input type="text" placeholder={docPlaceholder} value={form.cpf} onChange={handleCpfChange} maxLength={docMaxLength}
               className={fieldClass(errors.cpf)} />
             {errors.cpf && <p className="text-sm text-red-9 font-family-dm-sans">{errors.cpf}</p>}
           </div>
