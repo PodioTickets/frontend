@@ -35,7 +35,7 @@ export default function CreateTicketPage() {
       backUrl="/organizer/events/new/tickets"
       mode="create"
       localStorageKey="createTicketFormData"
-      className="bg-gray-2 flex-1 px-5 pb-28 pt-[52px] md:px-[124px]"
+      className="bg-gray-2 flex-1 px-4 pb-0 pt-0 md:pt-4 md:px-[124px]"
     />
   );
 }

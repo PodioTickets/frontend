@@ -21,8 +21,12 @@ interface WizardStepLayoutProps {
   /** When true, applies sticky top-0 z-20 to the mobile header (for pages without a visible progress bar on mobile). */
   stickyMobileHeader?: boolean;
   children: React.ReactNode;
-  /** Content rendered inside the bottom action bar */
-  actions: React.ReactNode;
+  /**
+   * Conteúdo da barra de ações no rodapé. Quando omitido, o rodapé não é
+   * renderizado — útil para steps cuja ação já está dentro do conteúdo
+   * (ex.: Banner, cujo CTA fica no `BannerSection`).
+   */
+  actions?: React.ReactNode;
   /**
    * Extra classes for the outermost wrapper.
    * Default fits the new-event wizard (accounts for the 52px progress bar header).
@@ -64,43 +68,49 @@ export function WizardStepLayout({
     <ArrowButton isOpen={false} />
   );
 
-  const mobileBackButton = backHref ? (
-    <Link
-      href={backHref}
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gray-6 text-gray-12 transition-colors hover:bg-gray-3 rotate-180"
-      aria-label="Voltar"
-    >
-      {backButtonContent}
-    </Link>
-  ) : (
-    <button
-      type="button"
-      onClick={onBack}
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gray-6 text-gray-12 transition-colors hover:bg-gray-3 rotate-180"
-      aria-label="Voltar"
-    >
-      {backButtonContent}
-    </button>
-  );
+  const hasBackTrigger = Boolean(backHref || onBack);
 
-  const desktopBackButton = backHref ? (
-    <Link
-      href={backHref}
-      className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
-      aria-label="Voltar"
-    >
-      {backButtonContent}
-    </Link>
-  ) : (
-    <button
-      type="button"
-      onClick={onBack}
-      className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
-      aria-label="Voltar"
-    >
-      {backButtonContent}
-    </button>
-  );
+  const mobileBackButton = !hasBackTrigger
+    ? null
+    : backHref ? (
+      <Link
+        href={backHref}
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gray-6 text-gray-12 transition-colors hover:bg-gray-3 rotate-180"
+        aria-label="Voltar"
+      >
+        {backButtonContent}
+      </Link>
+    ) : (
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gray-6 text-gray-12 transition-colors hover:bg-gray-3 rotate-180"
+        aria-label="Voltar"
+      >
+        {backButtonContent}
+      </button>
+    );
+
+  const desktopBackButton = !hasBackTrigger
+    ? null
+    : backHref ? (
+      <Link
+        href={backHref}
+        className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
+        aria-label="Voltar"
+      >
+        {backButtonContent}
+      </Link>
+    ) : (
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3"
+        aria-label="Voltar"
+      >
+        {backButtonContent}
+      </button>
+    );
 
   if (isLoading) {
     return (
@@ -157,18 +167,20 @@ export function WizardStepLayout({
         {children}
 
         {/* Bottom action bar — fixed on mobile, inline on desktop */}
-        <div
-          className={cn(
-            "mt-10 flex w-full items-start gap-2 pb-4",
-            "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30",
-            "max-md:mt-0 max-md:flex-col max-md:gap-3",
-            "max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4",
-            "max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
-            "md:justify-end",
-          )}
-        >
-          {actions}
-        </div>
+        {actions && (
+          <div
+            className={cn(
+              "mt-10 flex w-full items-start gap-2 pb-4",
+              "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30",
+              "max-md:mt-0 max-md:flex-col max-md:gap-3",
+              "max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4",
+              "max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
+              "md:justify-end",
+            )}
+          >
+            {actions}
+          </div>
+        )}
 
       </div>
     </div>

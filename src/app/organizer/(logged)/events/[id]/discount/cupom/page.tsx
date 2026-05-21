@@ -403,7 +403,6 @@ export default function CouponsPage() {
                 <div className="md:hidden flex flex-col gap-3">
                   {coupons.map((coupon) => {
                     const statusBadge = getStatusBadge(coupon.status);
-                    console.log(coupon);
                     return (
                       <div
                         key={coupon.id}

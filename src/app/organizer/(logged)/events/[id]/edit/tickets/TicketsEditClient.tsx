@@ -258,7 +258,6 @@ export function TicketsEditClient({ initialBundle }: TicketsEditClientProps) {
           authChecked={authChecked}
           persistMode="immediate"
           initialBundle={initialBundle ?? undefined}
-          onBack={handleBack}
           onCreateTicket={() => requestNavigate(`/organizer/events/${eventId}/edit/tickets/create`)}
           onEditTicket={(ticketId) =>
             requestNavigate(`/organizer/events/${eventId}/edit/tickets/${ticketId}`)

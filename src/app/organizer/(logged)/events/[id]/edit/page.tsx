@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { organizerService } from "@/services";
@@ -28,16 +28,17 @@ export default function EditInformationPage() {
   const eventId = params.id as string;
   const orgNav = useOrganizerNavigate();
   const { authChecked } = useWizardAuth();
-  const { formData, updateFormData, errors, setErrors, loading: eventLoading } = useEditEvent();
+  const {
+    formData,
+    initialFormData,
+    updateFormData,
+    commitInitialFormData,
+    errors,
+    setErrors,
+    loading: eventLoading,
+  } = useEditEvent();
   const [saving, setSaving] = useState(false);
   const [hasPendingPdf, setHasPendingPdf] = useState(false);
-
-  // Layout renders this page only after event data is loaded, so formData is
-  // already populated on the first render. Capture it as the "clean" baseline.
-  const initialDataRef = useRef<typeof formData | null>(null);
-  if (initialDataRef.current === null) {
-    initialDataRef.current = { ...formData };
-  }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -80,12 +81,9 @@ export default function EditInformationPage() {
         eventBody as never,
         { clientPage: organizerEventEditClientPage(eventId, "general") },
       );
-      if (resolvedPdfUrl) updateFormData({ regulationUrl: resolvedPdfUrl });
-      // Sync baseline so button disables again after a successful save
-      initialDataRef.current = {
-        ...formData,
-        ...(resolvedPdfUrl ? { regulationUrl: resolvedPdfUrl } : {}),
-      };
+      // Atualiza formData (regulationUrl) e re-fixa o baseline do dirty check
+      // num único ato — botão volta a ficar desabilitado até o usuário editar.
+      commitInitialFormData(resolvedPdfUrl ? { regulationUrl: resolvedPdfUrl } : undefined);
       toast.success("Informações salvas com sucesso!");
     } catch (error: any) {
       let errorMessage = "Erro ao salvar evento";
@@ -118,11 +116,12 @@ export default function EditInformationPage() {
     !!formData.state?.trim() &&
     !!formData.contactEmail?.trim();
 
-  const initial = initialDataRef.current ?? formData;
   const hasChanges =
     hasPendingPdf ||
     INFORMATION_FIELDS.some(
-      (k) => (formData[k as keyof typeof formData] ?? "") !== (initial[k as keyof typeof initial] ?? ""),
+      (k) =>
+        (formData[k as keyof typeof formData] ?? "") !==
+        (initialFormData[k as keyof typeof initialFormData] ?? ""),
     );
 
   const canSave = isFormValid && hasChanges;
@@ -130,9 +129,8 @@ export default function EditInformationPage() {
   return (
     <WizardStepLayout
       title="Informações"
-      onBack={handleBack}
       description="Edite as informações principais do evento."
-      className="bg-gray-2 flex-1 pb-28 md:pb-44 px-4 md:px-[124px] mt-0 md:mt-10 min-w-0"
+      className="bg-gray-2 flex-1 pb-28 md:pb-44 -mx-4 md:px-[124px] pt-0 mt-0 min-w-0"
       maxWidth="max-w-[1060px]"
       isLoading={!authChecked || eventLoading}
       actions={

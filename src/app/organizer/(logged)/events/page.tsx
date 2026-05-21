@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,12 @@ import { MoneyIcon } from "@/components/Icons/MoneyIcon";
 import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
 import { UsersIcon } from "@/components/Icons/Organizer/UsersIcon";
 import { ThreePointsIcon } from "@/components/Icons/Organizer/ThreePointsIcon";
+import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
+import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
+import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
+import { TopicsIcon } from "@/components/Icons/TopicsIcon";
+import { QuestionIcon } from "@/components/Icons/QuestionIcon";
+import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import {
   Popover,
   PopoverContent,
@@ -47,6 +53,10 @@ const STATUS_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "COMPLETED", label: "Concluídos" },
   { value: "CANCELLED", label: "Cancelados" },
 ];
+
+const ALL_STATUS_VALUES = STATUS_FILTER_OPTIONS
+  .filter((o) => o.value !== "all")
+  .map((o) => o.value);
 
 export default function OrganizerEventsPage() {
   const router = useRouter();
@@ -74,14 +84,25 @@ export default function OrganizerEventsPage() {
   });
   const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
   const [mobileMenuOpenForId, setMobileMenuOpenForId] = useState<string | null>(null);
+  const [mobileEditMenuOpenForId, setMobileEditMenuOpenForId] = useState<string | null>(null);
   const [statusFilterOpen, setStatusFilterOpen] = useState(false);
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspendModalEvent, setSuspendModalEvent] = useState<any>(null);
   const [resumeModalEvent, setResumeModalEvent] = useState<any>(null);
+  // Status que realmente existem nos eventos do organizador. Inicializa com
+  // todos pra UI não piscar enquanto a checagem roda; o useEffect reconcilia.
+  const [availableStatuses, setAvailableStatuses] = useState<Set<string>>(
+    () => new Set(ALL_STATUS_VALUES),
+  );
 
   const currentStatusLabel =
     STATUS_FILTER_OPTIONS.find((o) => o.value === statusFilter)?.label ??
     "Todos";
+
+  // Opções visíveis no dropdown: "Todos" + apenas status com >=1 evento.
+  const visibleStatusOptions = STATUS_FILTER_OPTIONS.filter(
+    (opt) => opt.value === "all" || availableStatuses.has(opt.value),
+  );
 
   const formatCurrencyBRL = (cents: number) =>
     `R$ ${(cents / 100).toLocaleString("pt-BR", {
@@ -109,12 +130,62 @@ export default function OrganizerEventsPage() {
     loadEvents();
   }, [authChecked, statusFilter, pagination.page]);
 
+  // Descobre quais status têm pelo menos 1 evento. Faz uma chamada por status
+  // com `limit: 1` em paralelo — leve no backend (COUNT + LIMIT 1) e robusto
+  // contra paginação (não dá pra derivar da página atual quando há filtro).
+  const refreshAvailableStatuses = useCallback(async () => {
+    try {
+      const results = await Promise.all(
+        ALL_STATUS_VALUES.map(async (status) => {
+          try {
+            const res = await organizerService.getMyEvents({
+              status,
+              limit: 1,
+              page: 1,
+              // Inclui eventos passados pra contar COMPLETED corretamente.
+              includePast: true,
+            });
+            const total = res.pagination?.total ?? res.events?.length ?? 0;
+            return { status, has: total > 0 };
+          } catch {
+            return { status, has: false };
+          }
+        }),
+      );
+      setAvailableStatuses(
+        new Set(results.filter((r) => r.has).map((r) => r.status)),
+      );
+    } catch (e) {
+      console.error("Erro ao verificar status disponíveis:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked || authLoading) return;
+    void refreshAvailableStatuses();
+  }, [authChecked, authLoading, refreshAvailableStatuses]);
+
+  // Reseta o filtro se o status atualmente selecionado deixou de existir
+  // (ex.: usuário reativou o último evento suspenso enquanto filtrava por
+  // "Suspensos"). Evita lista vazia sem motivo aparente.
+  useEffect(() => {
+    if (statusFilter === "all") return;
+    if (availableStatuses.size === 0) return;
+    if (!availableStatuses.has(statusFilter)) {
+      setStatusFilter("all");
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    }
+  }, [availableStatuses, statusFilter]);
+
   const loadEvents = async () => {
     try {
       setLoading(true);
       const params: any = {
         page: pagination.page,
         limit: pagination.limit,
+        // "Meus eventos" precisa mostrar eventos passados também
+        // (status COMPLETED). Default do backend é filtrar por data futura.
+        includePast: true,
       };
       if (statusFilter !== "all") {
         params.status = statusFilter;
@@ -211,6 +282,7 @@ export default function OrganizerEventsPage() {
       );
       toast.success(message || "Evento suspenso com sucesso.");
       loadEvents();
+      void refreshAvailableStatuses();
     } catch (e: any) {
       console.error(e);
       toast.error(
@@ -231,6 +303,7 @@ export default function OrganizerEventsPage() {
       );
       toast.success(message || "Evento reativado com sucesso.");
       loadEvents();
+      void refreshAvailableStatuses();
     } catch (e: any) {
       console.error(e);
       toast.error(
@@ -320,7 +393,7 @@ export default function OrganizerEventsPage() {
               className="w-56 p-1 border-gray-6 bg-gray-1 shadow-lg"
             >
               <div className="flex flex-col gap-0.5">
-                {STATUS_FILTER_OPTIONS.map((opt) => (
+                {visibleStatusOptions.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
@@ -494,8 +567,8 @@ export default function OrganizerEventsPage() {
                                     <button
                                       type="button"
                                       className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors"
-                                      title="Mais opções"
-                                      aria-label="Mais opções"
+                                      title="Menu"
+                                      aria-label="Menu"
                                     >
                                       <ThreePointsIcon className="size-5 text-gray-11" />
                                     </button>
@@ -684,7 +757,7 @@ export default function OrganizerEventsPage() {
                                 type="button"
                                 className="flex-1 h-11 px-5 rounded-lg border border-gray-6 flex items-center justify-center font-manrope text-base font-bold text-gray-12 hover:bg-gray-2 transition-colors"
                               >
-                                Mais opções
+                                Menu
                               </button>
                             </PopoverTrigger>
                             <PopoverContent
@@ -788,18 +861,80 @@ export default function OrganizerEventsPage() {
                           </Popover>
                         )}
                         {(canEditEvent || canViewEvent) && (
-                          <Link
-                            href={`/organizer/events/${event.id}/edit`}
-                            className="flex-1"
+                          <Popover
+                            open={mobileEditMenuOpenForId === event.id}
+                            onOpenChange={(open) =>
+                              setMobileEditMenuOpenForId(open ? event.id : null)
+                            }
                           >
-                            <button
-                              type="button"
-                              className="w-full h-11 px-5 rounded-lg border border-gray-6 flex items-center justify-center gap-2 font-manrope text-base font-bold text-gray-12 hover:bg-gray-2 transition-colors"
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex-1 h-11 px-5 rounded-lg border border-gray-6 flex items-center justify-center gap-2 font-manrope text-base font-bold text-gray-12 hover:bg-gray-2 transition-colors"
+                              >
+                                <PencilIcon className="size-5 text-gray-12" />
+                                {canEditEvent ? "Editar" : "Visualizar"}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="end"
+                              sideOffset={6}
+                              className="w-[calc(100vw-2rem)] max-w-72 p-1 border-gray-6 bg-gray-1 shadow-lg"
                             >
-                              <PencilIcon className="size-5 text-gray-12" />
-                              {canEditEvent ? "Editar" : "Visualizar"}
-                            </button>
-                          </Link>
+                              <div className="flex flex-col gap-0.5">
+                                <Link
+                                  href={`/organizer/events/${event.id}/edit`}
+                                  onClick={() => setMobileEditMenuOpenForId(null)}
+                                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                >
+                                  <OrganizerInfoIcon className="size-4 text-gray-11" />
+                                  Informações
+                                </Link>
+                                <Link
+                                  href={`/organizer/events/${event.id}/edit/banner`}
+                                  onClick={() => setMobileEditMenuOpenForId(null)}
+                                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                >
+                                  <BannerIcon className="size-4 text-gray-11" />
+                                  Banner
+                                </Link>
+                                <Link
+                                  href={`/organizer/events/${event.id}/edit/tickets`}
+                                  onClick={() => setMobileEditMenuOpenForId(null)}
+                                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                >
+                                  <OrganizerTicketIcon className="size-4 text-gray-11" />
+                                  Ingressos
+                                </Link>
+                                <Link
+                                  href={`/organizer/events/${event.id}/edit/topics`}
+                                  onClick={() => setMobileEditMenuOpenForId(null)}
+                                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                >
+                                  <TopicsIcon className="size-4 text-gray-11" />
+                                  Tópicos
+                                </Link>
+                                <Link
+                                  href={`/organizer/events/${event.id}/edit/questionnaire`}
+                                  onClick={() => setMobileEditMenuOpenForId(null)}
+                                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                >
+                                  <QuestionIcon className="size-4 text-gray-11" />
+                                  Questionário
+                                </Link>
+                                {canViewFinancial && (
+                                  <Link
+                                    href={`/organizer/events/${event.id}/edit/financial`}
+                                    onClick={() => setMobileEditMenuOpenForId(null)}
+                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 flex items-center gap-2"
+                                  >
+                                    <FinancialStepIcon className="size-4 text-gray-11" />
+                                    Pagamento
+                                  </Link>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
                     )}

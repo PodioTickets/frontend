@@ -51,8 +51,8 @@ export default function IngressosPage() {
   }, [formData.createdEventId, orgNav]);
 
   return (
-    <div className="flex-1 bg-gray-2 px-4 pb-32 pt-0 md:bg-transparent md:px-5 md:pb-0 md:pt-[52px] lg:px-[124px]">
-      <div className="mx-auto max-w-[1192px]">
+    <div className="flex-1 bg-gray-2 px-4 pb-4 mt-0 pt-0 md:px-5 md:pb-20 md:pt-10 md:px-[124px]">
+      <div className="mx-auto max-w-[1060px]">
         <TicketsSection
           ref={ticketsSectionRef}
           eventId={formData.createdEventId}
@@ -63,15 +63,15 @@ export default function IngressosPage() {
           onEditTicket={(ticketId) =>
             orgNav.push(`/organizer/events/new/tickets/edit/${ticketId}`)
           }
-          innerClassName="flex flex-col gap-5 md:gap-9"
+          innerClassName="flex w-full flex-col gap-5 md:gap-9"
           actionSlot={(ticketCount) => (
-            <div className="flex flex-col gap-2 md:flex-row md:justify-end">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleOpenPreview}
                 disabled={ticketCount === 0 || !formData.createdEventId}
-                className="h-14 w-full rounded-lg border-gray-6 font-manrope font-bold text-gray-12 disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-auto md:px-10 md:text-[18px]"
+                className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Prévia
               </Button>
@@ -80,7 +80,7 @@ export default function IngressosPage() {
                 onClick={() => void handleConfirmIngressos()}
                 variant="default"
                 disabled={savingConfirm || ticketCount === 0}
-                className="h-14 w-full rounded-lg font-manrope font-bold disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-auto md:px-10 md:text-[18px]"
+                className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:px-10 sm:text-[20px]"
               >
                 {savingConfirm ? "Salvando..." : "Confirmar ingressos"}
               </Button>

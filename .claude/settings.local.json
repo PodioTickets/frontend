@@ -58,7 +58,11 @@
       "Bash(mkdir -p \"C:/Users/muril/Projects/PodioTickets/frontend/.claude/notes\")",
       "Bash(Get-ChildItem -Path src/app/checkout -Recurse -Include *.tsx, *.ts)",
       "Bash(findstr \"\\\\\"dev\\\\\":\")",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(git stash *)",
+      "Bash(rm \"src/app/organizer/\\(logged\\)/events/[id]/edit/information/page.tsx\")",
+      "Bash(rm \"src/app/admin/\\(logged\\)/events/[id]/edit/information/page.tsx\")",
+      "Bash(rmdir \"src/app/organizer/\\(logged\\)/events/[id]/edit/information\" \"src/app/admin/\\(logged\\)/events/[id]/edit/information\")"
     ]
   },
   "disabledMcpjsonServers": [

@@ -1721,9 +1721,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     setDebitLoading(true);
     setCheckoutLoading(true);
     try {
-      // 2. Autenticar via SDK 3DS client-side (Braspag/Cielo)
-      //    O SDK abre o desafio do banco internamente (popup/modal)
-      console.log("[debit] chamando threeDS.authenticate()");
       const auth = await threeDS.authenticate({
         orderId,
         totalAmountCents: Math.round(totalValue * 100),
@@ -1733,7 +1730,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           expiry: debitCardExpiry,
         },
       });
-      console.log("[debit] threeDS.authenticate() resolveu", auth);
 
       // 3. Enviar pagamento com os dados de autenticação retornados pelo SDK
       const payload: PayOrderDebitCardRequest = {
@@ -1753,15 +1749,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         },
         couponCode: isCouponApplied && couponCode ? couponCode : undefined,
       };
-
-      console.log("[debit] enviando POST /pay", {
-        orderId,
-        threeDs: payload.threeDs,
-        idempotencyKey: idempotencyKeyRef.current,
-      });
       const result = await payOrder(orderId, payload, idempotencyKeyRef.current);
-      console.log("[debit] resposta /pay", { status: result.status, orderId: result.orderId });
-
       if (result.status === "PAID") {
         clearTimer();
         toast.success("Pagamento aprovado!");

@@ -113,8 +113,6 @@ export function OrderSummary({
     Record<number, boolean>
   >({});
 
-  console.log(coupon);
-
   useEffect(() => {
     if (externalCouponCode !== couponCode) {
       setCouponCode(externalCouponCode);

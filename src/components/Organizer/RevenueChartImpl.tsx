@@ -25,8 +25,14 @@ ChartJS.register(
   Filler
 );
 
-const MAX_LABELS_MOBILE = 6;
+const MAX_LABELS_MOBILE = 4;
 const MAX_LABELS_DESKTOP = 8;
+
+// No mobile, encurtar ano de 4 dígitos pra 2 ("Jan/2026" → "Jan/26") evita
+// que labels grandes colidam e quebrem o eixo X.
+function shortenYearForMobile(label: string): string {
+  return label.replace(/\/(\d{4})$/, (_, y: string) => `/${y.slice(-2)}`);
+}
 
 /** Um ponto do tooltip: valores em reais e quantidade inteira. */
 type RevenueChartTooltipBucket = {
@@ -485,6 +491,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                 /^[a-záàâãéêíóôõúç]{3,4}\s+de\s+\d{4}$/i.test(label.trim()) ||
                 /^\d{2}\/\d{2}$/.test(label.trim());
               const formattedLabel = isMonthlyLabel ? label.trim() : formatDateLabel(label);
+              const finalLabel = isMobile ? shortenYearForMobile(formattedLabel) : formattedLabel;
 
               const isFirst = index === 0;
               const isLast = index === totalLabels - 1;
@@ -493,14 +500,14 @@ export function RevenueChart({ data }: RevenueChartProps) {
               return (
                 <span
                   key={`${label}-${index}`}
-                  className="text-xs md:text-sm text-gray-11 font-family-dm-sans"
+                  className="text-[11px] md:text-sm text-gray-11 font-family-dm-sans whitespace-nowrap"
                   style={{
                     position: "absolute",
                     left: `${position}%`,
                     transform: `translateX(${translate})`,
                   }}
                 >
-                  {formattedLabel}
+                  {finalLabel}
                 </span>
               );
             });

@@ -44,6 +44,12 @@ interface EditEventContextType {
   formData: EditEventFormData;
   initialFormData: EditEventFormData;
   updateFormData: (data: Partial<EditEventFormData>) => void;
+  /**
+   * Re-fixa o `initialFormData` (baseline pro dirty check) com o `formData`
+   * atual mesclado com `partial`. Chamar após save bem-sucedido pra
+   * desabilitar o botão de salvar até o usuário editar algo novamente.
+   */
+  commitInitialFormData: (partial?: Partial<EditEventFormData>) => void;
   errors: Record<string, string>;
   setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   loading: boolean;
@@ -193,6 +199,14 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
+  const commitInitialFormData = (partial?: Partial<EditEventFormData>) => {
+    setFormData((prev) => {
+      const next = partial ? { ...prev, ...partial } : prev;
+      setInitialFormData(next);
+      return next;
+    });
+  };
+
   const reloadEvent = async () => {
     await refetch();
   };
@@ -202,6 +216,7 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
       formData,
       initialFormData,
       updateFormData,
+      commitInitialFormData,
       errors,
       setErrors,
       loading: isLoading,

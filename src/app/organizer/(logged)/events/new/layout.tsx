@@ -20,9 +20,8 @@ export const dynamic = 'force-dynamic';
 
 function ConditionalProgressBar() {
   const pathname = useOrganizerPathname();
-  const hideOnMobile =
-    pathname.startsWith("/organizer/events/new/information") ||
-    pathname.startsWith("/organizer/events/new/banner");
+  const hideOnMobile = pathname.startsWith("/organizer/events/new")
+
   return (
     <div className={hideOnMobile ? "hidden md:block" : ""}>
       <ProgressBar />
@@ -305,7 +304,7 @@ function ProgressBar() {
                   </div>
                 </div>
                 <p className="text-gray-12 text-base font-semibold font-manrope leading-[1.1] text-center whitespace-nowrap">
-                  Financeiro
+                  Pagamento
                 </p>
               </div>
             );
@@ -326,19 +325,13 @@ function CreateEventLayoutInner({ children }: { children: ReactNode }) {
     saveLastCreateEventWizardPath(pathname);
   }, [pathname]);
 
-  const isInformationOrBanner =
-    pathname.startsWith("/organizer/events/new/information") ||
-    pathname.startsWith("/organizer/events/new/banner");
   const isNewBannerDesktopShell = pathname.startsWith(
     "/organizer/events/new/banner",
   );
+  
   return (
     <div
-      className={
-        isInformationOrBanner
-          ? "min-h-screen bg-gray-2 flex flex-col mt-0 md:mt-6"
-          : "min-h-screen bg-gray-2 flex flex-col mt-6"
-      }
+      className={"min-h-screen bg-gray-2 flex flex-col mt-0 md:mt-6"}
     >
       {isNewBannerDesktopShell ? (
         <div className="mx-auto flex w-full max-w-7xl flex-col px-4 lg:px-0">

@@ -110,7 +110,11 @@ interface TicketsSectionProps {
   authChecked: boolean;
   /** "draft": order persisted only on flushAndPersistAll. "immediate": order API-persisted on each drag end. */
   persistMode: "draft" | "immediate";
-  onBack: () => void;
+  /**
+   * Quando omitido, o botão de voltar não é renderizado (usado no fluxo
+   * `/edit/tickets`, onde a navegação acontece pelo stepper do evento).
+   */
+  onBack?: () => void;
   onCreateTicket: () => void;
   onEditTicket: (ticketId: string) => void;
   /** Render prop for the action buttons row. Receives current ticket count. */
@@ -979,15 +983,17 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
           <div className={innerClassName ?? "flex w-full flex-col gap-5 md:gap-9"}>
             {/* Mobile header */}
             <div className="-mx-4 flex h-[52px] items-center border-b border-gray-6 bg-gray-2 px-4 md:hidden">
-              <button
-                type="button"
-                onClick={onBack}
-                className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
-                aria-label="Voltar"
-              >
-                <ArrowButton isOpen={false} />
-              </button>
-              <h1 className="ml-2 font-manrope text-base font-extrabold leading-[1.1] text-gray-12">
+              {onBack ? (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-md border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
+                  aria-label="Voltar"
+                >
+                  <ArrowButton isOpen={false} />
+                </button>
+              ) : null}
+              <h1 className={`font-manrope text-base font-extrabold leading-[1.1] text-gray-12 ${onBack ? "ml-2" : ""}`}>
                 Ingressos
               </h1>
             </div>
@@ -995,14 +1001,16 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
             {/* Desktop title + description */}
             <div className="flex flex-col gap-5 md:gap-4">
               <div className="hidden items-center gap-3 md:flex">
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="flex size-9 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
-                  aria-label="Voltar"
-                >
-                  <ArrowButton isOpen={false} />
-                </button>
+                {onBack ? (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex size-9 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors rotate-180 hover:bg-gray-3"
+                    aria-label="Voltar"
+                  >
+                    <ArrowButton isOpen={false} />
+                  </button>
+                ) : null}
                 <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">
                   Ingressos
                 </h1>
@@ -1079,7 +1087,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                       tickets={allTicketsDisplay}
                       currentPage={1}
                       totalPages={1}
-                      onPageChange={() => {}}
+                      onPageChange={() => { }}
                       onEdit={onEditTicket}
                       onDuplicate={handleDuplicateTicket}
                       duplicatingTicketId={duplicatingTicketId}
@@ -1127,12 +1135,12 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                           setEditingGroupName("");
                         }
                       }}
-                      className="text-gray-12 text-2xl font-bold font-manrope bg-transparent focus:outline-none flex-1"
+                      className="text-gray-12 text-base md:text-2xl font-bold font-manrope bg-transparent focus:outline-none flex-1"
                       placeholder="Adicione um nome a esta categoria..."
                       autoFocus
                     />
                   ) : (
-                    <h3 className="text-gray-12 text-2xl font-bold font-manrope">
+                    <h3 className="text-gray-12 text-base md:text-2xl font-bold font-manrope">
                       Adicione um nome a esta categoria...
                     </h3>
                   )}
@@ -1223,12 +1231,12 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                             setEditingGroupName("");
                           }
                         }}
-                        className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 flex-1"
+                        className="text-gray-12 text-base md:text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 flex-1"
                         placeholder="Adicione um nome a esta categoria..."
                         autoFocus
                       />
                     ) : (
-                      <h3 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
+                      <h3 className="text-gray-12 text-base md:text-2xl font-bold font-manrope leading-[1.1]">
                         Adicione um nome a esta categoria...
                       </h3>
                     )}
@@ -1263,7 +1271,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                         className="object-contain"
                       />
                     </div>
-                    <p className="text-gray-12 text-xl font-semibold font-manrope leading-[1.1]">
+                    <p className="text-gray-12 text-base md:text-xl font-semibold font-manrope leading-[1.1]">
                       Nenhum ingresso criado ainda....
                     </p>
                   </div>
@@ -1311,7 +1319,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                             onEditDescription={handleUpdateGroupDescription}
                             onDelete={handleDeleteGroup}
                             onEditTicket={onEditTicket}
-                            onPageChange={() => {}}
+                            onPageChange={() => { }}
                             onDuplicateTicket={handleDuplicateTicket}
                             duplicatingTicketId={duplicatingTicketId}
                             productsMap={productsMap}

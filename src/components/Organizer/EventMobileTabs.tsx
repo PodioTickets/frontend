@@ -264,23 +264,23 @@ export function EventMobileTabs({
   const linkTabClass = (active: boolean) =>
     isPageHeader
       ? `shrink-0 border-b-2 pb-3 px-1 text-sm transition-colors ${active
-        ? "border-primary-10 font-manrope font-bold text-primary-10"
-        : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"
+        ? "border-primary-10 font-bold text-primary-10"
+        : "border-transparent font-normal text-gray-11 hover:text-gray-12"
       }`
-      : `-mb-px shrink-0 border-b-2 px-4 py-3 text-base transition-colors ${active
-        ? "border-primary-11 font-manrope font-bold text-primary-11"
-        : "border-transparent font-family-dm-sans font-normal text-gray-11"
+      : `shrink-0 border-b-2 px-4 py-3 text-base transition-colors ${active
+        ? "border-primary-11 font-bold text-primary-11"
+        : "border-transparent font-normal text-gray-11"
       }`;
 
   const menuTriggerClass = (active: boolean) =>
     isPageHeader
       ? `flex cursor-pointer items-center gap-1 border-b-2 pb-3 px-1 text-sm transition-colors ${active
-        ? "border-primary-10 font-manrope font-bold text-primary-10"
-        : "border-transparent font-family-dm-sans font-normal text-gray-11 hover:text-gray-12"
+        ? "border-primary-10 font-normal text-primary-10"
+        : "border-transparent font-normal text-gray-11 hover:text-gray-12"
       }`
-      : `-mb-px flex w-full shrink-0 cursor-pointer items-center gap-1 border-b-2 px-4 py-3 text-base transition-colors ${active
-        ? "border-primary-11 font-manrope font-bold text-primary-11"
-        : "border-transparent font-family-dm-sans font-normal text-gray-11"
+      : `flex w-full shrink-0 cursor-pointer items-center gap-1 border-b-2 px-4 py-3 text-base transition-colors ${active
+        ? "border-primary-11 font-normal text-primary-11"
+        : "border-transparent font-normal text-gray-11"
       }`;
 
   const descontoPortal =

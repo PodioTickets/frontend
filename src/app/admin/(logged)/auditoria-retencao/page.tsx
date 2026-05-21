@@ -91,7 +91,6 @@ const STATUS_CONFIG: Record<RetentionStatus, { label: string; bg: string; text: 
 };
 
 function StatusBadge({ status }: { status: RetentionStatus }) {
-  console.log(status)
   const cfg = STATUS_CONFIG[status];
   return (
     <span

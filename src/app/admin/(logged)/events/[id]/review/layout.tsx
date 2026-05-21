@@ -21,7 +21,7 @@ const STEPS = [
   { step: 3, label: "Ingressos", segment: "tickets", icon: OrganizerTicketIcon },
   { step: 4, label: "Tópicos", segment: "topics", icon: TopicsIcon },
   { step: 5, label: "Questionário", segment: "questionnaire", icon: QuestionIcon },
-  { step: 6, label: "Financeiro", segment: "financial", icon: FinancialStepIcon },
+  { step: 6, label: "Pagamento", segment: "financial", icon: FinancialStepIcon },
 ];
 
 function ReviewProgressBar({ eventId }: { eventId: string }) {

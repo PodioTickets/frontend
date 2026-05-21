@@ -1650,7 +1650,6 @@ export class OrganizerService {
     const { data: response } = await this.apiClient.get<{
       data: { modalities: Modality[] };
     }>(`/api/v1/modalities/events/${eventId}`);
-    console.log("response", response);
     return response.data.modalities;
   }
 
@@ -1965,7 +1964,6 @@ export class OrganizerService {
     const { data: response } = await this.apiClient.get<{
       data: { categories: any[] };
     }>(`/api/v1/tickets/events/${eventId}/categories`);
-    console.log("response", response);
     return response.data.categories;
   }
 

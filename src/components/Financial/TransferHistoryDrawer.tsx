@@ -79,7 +79,6 @@ export function TransferHistoryDrawer({
 
   const formatTransferForDisplay = (transfer: Transfer) => {
     const date = new Date(transfer.createdAt);
-    console.log(date)
     const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     const formattedTime = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const id = transfer.id
@@ -423,7 +422,6 @@ export function TransferHistoryDrawer({
                   ) : (
                     paginatedTransfers.map((transfer) => {
                       const displayTransfer = formatTransferForDisplay(transfer);
-                      console.log(displayTransfer)
                       return (
                         <div
                           key={transfer.id}

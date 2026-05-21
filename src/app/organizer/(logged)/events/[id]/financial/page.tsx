@@ -328,14 +328,22 @@ export default function EventFinancialPage() {
                 className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 onScroll={(e) => {
+                  // Índice por FRAÇÃO do scroll (em vez de `scrollLeft / step`)
+                  // — assim o último dot acende quando o usuário chega no fim,
+                  // mesmo que o último card não consiga alinhar à esquerda
+                  // (snap-start não tem como centralizar um card que ultrapassa
+                  // os bounds horizontais).
                   const el = e.currentTarget;
-                  const cardWidth = 157.5 + 8;
-                  const index = Math.round(el.scrollLeft / cardWidth);
-                  setMobileCardsScrollIndex(Math.min(index, 4));
+                  const lastIdx = el.children.length - 1;
+                  if (lastIdx <= 0) return;
+                  const maxScroll = el.scrollWidth - el.clientWidth;
+                  const ratio = maxScroll > 0 ? el.scrollLeft / maxScroll : 0;
+                  const idx = Math.round(ratio * lastIdx);
+                  setMobileCardsScrollIndex(Math.min(Math.max(0, idx), lastIdx));
                 }}
               >
                 {/* Parcelados a receber */}
-                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-center">
+                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
                   <div className="flex flex-col gap-3 pt-3 pb-1 px-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-4 flex items-center justify-center shrink-0">
                       <CalendarIcon className="size-5 text-blue-12" />
@@ -352,7 +360,7 @@ export default function EventFinancialPage() {
                   </button>
                 </div>
                 {/* Aguardando liberação */}
-                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-center">
+                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
                   <div className="flex flex-col gap-3 pt-3 pb-1 px-3">
                     <div className="w-8 h-8 rounded-lg bg-yellow-4 flex items-center justify-center shrink-0">
                       <TimerIcon className="size-5 text-yellow-12" />
@@ -366,7 +374,7 @@ export default function EventFinancialPage() {
                   </div>
                 </div>
                 {/* Total já repassado */}
-                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-center">
+                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
                   <div className="flex flex-col gap-3 pt-3 pb-1 px-3">
                     <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
                       <RepasseIcon className="size-5 text-gray-12" />
@@ -383,7 +391,7 @@ export default function EventFinancialPage() {
                   </button>
                 </div>
                 {/* Estornado */}
-                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-center">
+                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
                   <div className="flex flex-col gap-3 pt-3 pb-1 px-3">
                     <div className="w-8 h-8 rounded-lg bg-red-3 flex items-center justify-center shrink-0">
                       <RemoveIcon className="size-3 text-red-12" />
@@ -400,7 +408,7 @@ export default function EventFinancialPage() {
                   </button>
                 </div>
                 {/* Chargebacks */}
-                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-center">
+                <div className="bg-gray-1 border border-gray-6 rounded-lg min-w-[157px] w-[157px] shrink-0 snap-start">
                   <div className="flex flex-col gap-3 pt-3 pb-1 px-3">
                     <div className="w-8 h-8 rounded-lg bg-red-3 flex items-center justify-center shrink-0">
                       <ChargeBackIcon className="size-5 text-red-12" />

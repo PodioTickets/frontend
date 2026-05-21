@@ -1424,7 +1424,6 @@ export default function EventDashboardPage() {
             {paginatedLotsNearDepletion.map((lot, index) => {
               const globalIndex = lotsNearDepletionSliceStart + index;
               const percentage = (lot.sold / lot.total) * 100;
-              console.log(lot)
               const getStatusColor = (status: string) => {
                 if (status === "Crítico") return "bg-red-11";
                 if (status === "Atenção") return "bg-yellow-11";

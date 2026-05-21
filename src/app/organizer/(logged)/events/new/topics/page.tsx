@@ -289,8 +289,10 @@ export default function TopicosPage() {
   return (
     <WizardStepLayout
       title="Tópicos"
-      desktopTitle="Criar tópicos"
+      description="Adicione e organize seções de conteúdo que aparecem na página do evento."
+      showDescriptionOnMobile
       onBack={handleBack}
+      className="pt-0 md:pt-[52px]"
       isLoading={!authChecked || loading}
       actions={
         <>

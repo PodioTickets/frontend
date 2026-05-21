@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -19,6 +19,12 @@ import { MoneyIcon } from "@/components/Icons/MoneyIcon";
 import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
 import { UsersIcon } from "@/components/Icons/Organizer/UsersIcon";
 import { ThreePointsIcon } from "@/components/Icons/Organizer/ThreePointsIcon";
+import { OrganizerInfoIcon } from "@/components/Icons/Organizer/InfoIcon";
+import { OrganizerTicketIcon } from "@/components/Icons/Organizer/TicketIcon";
+import { BannerIcon } from "@/components/Icons/Organizer/BannerIcon";
+import { TopicsIcon } from "@/components/Icons/TopicsIcon";
+import { QuestionIcon } from "@/components/Icons/QuestionIcon";
+import { FinancialStepIcon } from "@/components/Icons/Organizer/FinancialStepIcon";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SuspendEventModal } from "@/components/Event/SuspendEventModal";
 import { ResumeEventModal } from "@/components/Event/ResumeEventModal";
@@ -173,6 +179,10 @@ const STATUS_OPTIONS = [
   { value: "COMPLETED", label: "Concluído" },
 ];
 
+const ALL_ADMIN_STATUS_VALUES = STATUS_OPTIONS
+  .filter((o) => o.value)
+  .map((o) => o.value);
+
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: "createdAt", label: "Data de criação" },
   { value: "eventDate", label: "Data do evento" },
@@ -204,6 +214,11 @@ export default function AdminEventsPage() {
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspendModalEvent, setSuspendModalEvent] = useState<AdminEvent | null>(null);
   const [resumeModalEvent, setResumeModalEvent] = useState<AdminEvent | null>(null);
+  // Status que realmente existem na plataforma. Inicializa com todos pra UI
+  // não piscar enquanto a checagem roda em background.
+  const [availableStatuses, setAvailableStatuses] = useState<Set<string>>(
+    () => new Set(ALL_ADMIN_STATUS_VALUES),
+  );
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -211,6 +226,60 @@ export default function AdminEventsPage() {
   }, [search]);
 
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, sortBy, sortOrder]);
+
+  // Descobre quais status têm pelo menos 1 evento. 5 chamadas paralelas
+  // com `limit: 1` — leve no backend (COUNT) e robusto contra paginação.
+  const refreshAvailableStatuses = useCallback(async () => {
+    try {
+      const results = await Promise.all(
+        ALL_ADMIN_STATUS_VALUES.map(async (status) => {
+          try {
+            const params = new URLSearchParams({
+              page: "1",
+              limit: "1",
+              status,
+              // Mesma razão da listagem: sem `includePast`, COMPLETED some.
+              includePast: "true",
+            });
+            const res = await getApiClient().get<{
+              data: { events: AdminEvent[]; pagination: Pagination };
+            }>(`/api/v1/admin/events?${params.toString()}`);
+            const total =
+              res.data.data.pagination?.total ??
+              res.data.data.events?.length ??
+              0;
+            return { status, has: total > 0 };
+          } catch {
+            return { status, has: false };
+          }
+        }),
+      );
+      setAvailableStatuses(
+        new Set(results.filter((r) => r.has).map((r) => r.status)),
+      );
+    } catch (e) {
+      console.error("Erro ao verificar status disponíveis:", e);
+    }
+  }, []);
+
+  // Reconcilia sempre que a lista é refetched (inclui após suspend/resume,
+  // que incrementam `fetchKey`). 5 requests COUNT são baratos vs ler tudo.
+  useEffect(() => {
+    void refreshAvailableStatuses();
+  }, [refreshAvailableStatuses, fetchKey]);
+
+  // Reseta filtro se o status selecionado deixou de existir.
+  useEffect(() => {
+    if (!statusFilter) return;
+    if (availableStatuses.size === 0) return;
+    if (!availableStatuses.has(statusFilter)) {
+      setStatusFilter("");
+    }
+  }, [availableStatuses, statusFilter]);
+
+  const visibleStatusOptions = STATUS_OPTIONS.filter(
+    (opt) => !opt.value || availableStatuses.has(opt.value),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +291,10 @@ export default function AdminEventsPage() {
           limit: String(ITEMS_PER_PAGE),
           sortBy,
           sortOrder,
+          // Admin precisa ver tudo, incluindo eventos com data já passada
+          // (status COMPLETED). Sem isso o backend filtra `eventDate < hoje`
+          // e os concluídos somem da listagem.
+          includePast: "true",
         });
         if (debouncedSearch) params.set("search", debouncedSearch);
         if (statusFilter) params.set("status", statusFilter);
@@ -304,9 +377,62 @@ export default function AdminEventsPage() {
         <ActionIconLink href={`/admin/events/${ev.id}/dashboard`} title="Dashboard">
           <DashboardIcon className="size-4 text-gray-11" />
         </ActionIconLink>
-        <ActionIconLink href={`/admin/events/${ev.id}/edit`} title="Editar">
-          <PencilIcon className="size-4 text-gray-11" />
-        </ActionIconLink>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              title="Editar"
+              aria-label="Editar"
+              className="size-8 rounded-lg bg-gray-2 border border-gray-6 hover:bg-gray-4 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+            >
+              <PencilIcon className="size-4 text-gray-11 pointer-events-none" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={6}
+              className="z-50 w-52 rounded-md border border-gray-6 bg-gray-1 p-1 shadow-lg outline-none"
+            >
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/edit`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
+                  <OrganizerInfoIcon className="size-4 text-gray-11" />
+                  Informações
+                </Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/edit/banner`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
+                  <BannerIcon className="size-4 text-gray-11" />
+                  Banner
+                </Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/edit/tickets`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
+                  <OrganizerTicketIcon className="size-4 text-gray-11" />
+                  Ingressos
+                </Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/edit/topics`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
+                  <TopicsIcon className="size-4 text-gray-11" />
+                  Tópicos
+                </Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/edit/questionnaire`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
+                  <QuestionIcon className="size-4 text-gray-11" />
+                  Questionário
+                </Link>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item asChild>
+                <Link href={`/admin/events/${ev.id}/edit/financial`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">
+                  <FinancialStepIcon className="size-4 text-gray-11" />
+                  Pagamento
+                </Link>
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
         <ActionIconLink href={`/admin/events/${ev.id}/financial`} title="Financeiro">
           <MoneyIcon className="size-5 text-gray-11" />
         </ActionIconLink>
@@ -318,7 +444,7 @@ export default function AdminEventsPage() {
             <button
               type="button"
               className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors cursor-pointer"
-              aria-label="Mais opções"
+              aria-label="Menu"
             >
               <ThreePointsIcon className="size-5 text-gray-11 pointer-events-none" />
             </button>
@@ -403,7 +529,7 @@ export default function AdminEventsPage() {
                 className={cn(inputShell, "cursor-pointer appearance-none bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-10")}
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")` }}
               >
-                {STATUS_OPTIONS.map((o) => (
+                {visibleStatusOptions.map((o) => (
                   <option key={o.value || "all"} value={o.value}>{o.label}</option>
                 ))}
               </select>
@@ -616,8 +742,8 @@ export default function AdminEventsPage() {
                                   <button
                                     type="button"
                                     className="size-8 rounded-lg bg-transparent hover:bg-gray-4 flex items-center justify-center transition-colors cursor-pointer"
-                                    title="Mais opções"
-                                    aria-label="Mais opções"
+                                    title="Menu"
+                                    aria-label="Menu"
                                   >
                                     <ThreePointsIcon className="size-5 text-gray-11 pointer-events-none" />
                                   </button>

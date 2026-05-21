@@ -87,9 +87,8 @@ export default function EditFinancialPage() {
 
   return (
     <WizardStepLayout
-      title="Financeiro"
-      onBack={handleBack}
-      className="flex-1 bg-gray-2 px-5 pt-[52px] pb-[176px] max-md:pb-40"
+      title="Pagamento"
+      className="flex-1 bg-gray-2 px-5 pt-0 pb-[176px] max-md:pb-40"
       maxWidth="max-w-7xl"
       gutter="5"
       description="Configure a divisão da taxa da plataforma e as formas de pagamento aceitas. Estes dados ficam travados após a publicação."

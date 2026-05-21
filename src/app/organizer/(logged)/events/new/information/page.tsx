@@ -144,7 +144,7 @@ export default function InformacoesPage() {
       backHref={eventsListHref}
       stickyMobileHeader
       description="Comece pelo básico. Defina nome, data, local e as imagens principais. Você poderá ajustar os detalhes depois."
-      className="bg-gray-2 flex-1 pb-28 md:pb-44 px-4 md:px-[124px] mt-0 md:mt-10 min-w-0"
+      className="bg-gray-2 flex-1 pb-28 md:pb-44 px-4 md:px-[124px] mt-0 pt-0 md:mt-10 min-w-0"
       maxWidth="max-w-[1060px]"
       actions={
         <>

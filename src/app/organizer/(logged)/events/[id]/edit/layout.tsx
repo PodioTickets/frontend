@@ -96,7 +96,7 @@ function EditProgressBar() {
     },
     {
       step: 6,
-      label: "Financeiro",
+      label: "Pagamento",
       icon: FinancialStepIcon,
       href: `/organizer/events/${eventId}/edit/financial`,
     },

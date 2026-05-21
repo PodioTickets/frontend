@@ -59,7 +59,7 @@ export default function FinancialPage() {
 
   return (
     <WizardStepLayout
-      title="Financeiro"
+      title="Pagamento"
       onBack={handleBack}
       className="flex-1 bg-gray-2 px-5 pt-[52px] pb-[176px] max-md:pb-40"
       maxWidth="max-w-7xl"

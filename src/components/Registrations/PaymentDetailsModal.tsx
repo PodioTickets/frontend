@@ -67,10 +67,6 @@ export function PaymentDetailsModal() {
           organizerService.getPaymentDetailsByRegistration(registrationId),
           organizerService.getRegistrationById(registrationId),
         ]);
-        console.log("Payment Details:", details);
-        console.log("Payment object:", details?.payment);
-        console.log("Card Brand:", details?.payment?.cardBrand);
-        console.log("Last 4 Digits:", details?.payment?.last4Digits);
         setPaymentDetails(details);
         setRegistrationData(registration);
       } catch (error: any) {

@@ -89,24 +89,11 @@ export default function QuestionnairePage() {
     orgNav.push("/organizer/events/new/financial");
   };
 
-  const handleOpenQuestionnairePreview = useCallback(() => {
-    if (!formData.createdEventId) {
-      toast.error("Evento não encontrado");
-      return;
-    }
-    writeQuestionnairePreviewDraft({
-      v: 1,
-      eventId: formData.createdEventId,
-      questions: [...questions],
-    });
-    orgNav.push("/organizer/events/new/questionnaire/preview");
-  }, [formData.createdEventId, questions, orgNav]);
-
   return (
     <WizardStepLayout
       title="Questionário"
       onBack={handleBack}
-      className="flex-1 bg-gray-2 px-5 pt-[52px] pb-[176px] max-md:pb-40 md:px-[124px]"
+      className="flex-1 bg-gray-2 px-5 pt-0 md:pt-[52px] pb-[176px] max-md:pb-40 md:px-[124px]"
       maxWidth="max-w-[1192px]"
       gutter="5"
       description="Crie perguntas extras para coletar informações dos participantes. Você pode pular esta etapa se desejar"

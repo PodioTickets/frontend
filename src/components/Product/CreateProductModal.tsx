@@ -713,8 +713,12 @@ export function CreateProductModal() {
           }
           return fromForm;
         })(),
-        buyerVariationEditAllowed: buyerCanEditVariation,
-        variationEditDeadlineDays: buyerCanEditVariation ? deadlineDays : 0,
+        // Edição de variação pós-compra só é válida para produtos inclusos.
+        // Defesa em profundidade: força `false`/0 caso o estado tenha sido
+        // carregado de um produto legado (criado antes desta regra).
+        buyerVariationEditAllowed: isIncludedInTicket && buyerCanEditVariation,
+        variationEditDeadlineDays:
+          isIncludedInTicket && buyerCanEditVariation ? deadlineDays : 0,
       };
       const productData = baseProductPayload;
 
@@ -912,15 +916,15 @@ export function CreateProductModal() {
                           Boas fotos ajudam na decisão do participante
                         </p>
                       </div>
-                      <div className="flex flex-col gap-3 p-4 border-2 rounded-xl border-dashed border-gray-6 w-max">
-                        <div className="flex flex-wrap gap-3 ">
+                      <div className="flex flex-col gap-3 p-3 md:p-4 border-2 rounded-xl border-dashed border-gray-6 w-full md:w-max">
+                        <div className="flex flex-wrap gap-2 md:gap-3">
                           {productImages.map((img, idx) => (
                             <div key={idx} className="relative">
                               <button
                                 type="button"
                                 onClick={() => setPrimaryImageIndex(idx)}
                                 className={cn(
-                                  "relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 transition-colors",
+                                  "relative size-[80px] md:size-[100px] shrink-0 overflow-hidden rounded-xl border-2 transition-colors",
                                   idx === primaryImageIndex
                                     ? "border-primary-8"
                                     : "border-gray-6 hover:border-gray-9"
@@ -932,14 +936,14 @@ export function CreateProductModal() {
                                   alt={`Foto ${idx + 1}`}
                                   name={productName || "Produto"}
                                   fill
-                                  sizes="100px"
+                                  sizes="(max-width: 768px) 80px, 100px"
                                   className="size-full object-cover border-0 border-transparent"
                                   letterClassName="text-2xl font-semibold"
                                 />
                                 {idx === primaryImageIndex && (
-                                  <div className="absolute bottom-0 left-0 right-0 bg-primary-4 text-center flex items-center justify-center py-1">
-                                    <span className="text-[10px] font-semibold text-primary-11 font-manrope leading-none">
-                                      Imagem principal
+                                  <div className="absolute bottom-0 left-0 right-0 bg-primary-4 text-center flex items-center justify-center py-0.5 md:py-1">
+                                    <span className="text-[9px] md:text-[10px] font-semibold text-primary-11 font-manrope leading-none">
+                                      Principal
                                     </span>
                                   </div>
                                 )}
@@ -974,7 +978,7 @@ export function CreateProductModal() {
                             <div
                               onDrop={handleDrop}
                               onDragOver={handleDragOver}
-                              className="flex size-[100px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border border-gray-6 transition-colors hover:border-primary-8"
+                              className="flex size-[80px] md:size-[100px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border border-gray-6 transition-colors hover:border-primary-8"
                               onClick={() => {
                                 cropTargetIndexRef.current = null;
                                 productCropRef.current?.open();
@@ -990,16 +994,16 @@ export function CreateProductModal() {
                               tabIndex={0}
                               aria-label="Adicionar foto"
                             >
-                              <Plus className="size-8 text-gray-12" />
+                              <Plus className="size-7 md:size-8 text-gray-12" />
                             </div>
                           )}
                         </div>
-                        <h1 className="font-bold text-primary-11 font-family-dm-sans">
-                          Arraste uma imagem para este campo ou clique aqui
+                        <h1 className="font-bold text-primary-11 font-family-dm-sans text-sm md:text-base">
+                          <span className="md:hidden">Toque para adicionar fotos</span>
+                          <span className="hidden md:inline">Arraste uma imagem para este campo ou clique aqui</span>
                         </h1>
-                        <p className="font-family-dm-sans text-gray-11">
-                          Pode adicionar até 7 fotos do seu produto <br />
-                          PNG ou JPG, máximo 10MB cada
+                        <p className="font-family-dm-sans text-gray-11 text-xs md:text-base">
+                          Até 7 fotos · PNG ou JPG, máximo 10MB cada
                         </p>
                       </div>
                     </div>
@@ -1068,6 +1072,10 @@ export function CreateProductModal() {
                             onChange={() => {
                               setIsIncludedInTicket(false);
                               setIsRequired(false);
+                              // Edição de variação pós-compra só faz sentido
+                              // para produtos inclusos no ingresso — desliga
+                              // automaticamente ao sair do modo "incluso".
+                              setBuyerCanEditVariation(false);
                               setBasePrice((p) =>
                                 (p ?? "").trim() === "" ? "0,00" : p,
                               );
@@ -1106,16 +1114,6 @@ export function CreateProductModal() {
                               aria-invalid={basePriceInvalidNotIncluded}
                               className={`h-12 px-3 ${basePriceInvalidNotIncluded ? "border-red-8 focus-visible:border-red-8 focus-visible:ring-red-8/30" : ""}`}
                             />
-                            <div className="flex items-start gap-2 md:hidden">
-                              <Info
-                                className="mt-0.5 size-5 shrink-0 text-gray-11"
-                                aria-hidden
-                              />
-                              <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                Você ainda poderá escolher um preço específico nas
-                                variações
-                              </p>
-                            </div>
                             {basePriceInvalidNotIncluded ? (
                               <p className="text-red-11 text-sm font-family-dm-sans leading-[1.3]">
                                 Informe um valor acima de R$ 0,00.
@@ -1470,42 +1468,44 @@ export function CreateProductModal() {
                   {/* Right Column - Preview */}
                   <div className="flex w-full shrink-0 flex-col gap-4 md:sticky md:top-5">
                     <div className="flex w-full flex-col gap-3 md:gap-5">
-                      <div className="flex flex-col gap-3">
-                        <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
-                          Deseja liberar a edição da variação pelo comprador após a compra?
-                        </p>
-                        <div className="flex flex-wrap items-center gap-x-[10px] gap-y-2">
-                          <div className="flex items-center gap-2">
-                            <Radio
-                              name="buyerVariationEdit"
-                              checked={buyerCanEditVariation}
-                              onChange={() => setBuyerCanEditVariation(true)}
-                            />
-                            <button
-                              type="button"
-                              className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
-                              onClick={() => setBuyerCanEditVariation(true)}
-                            >
-                              Sim
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Radio
-                              name="buyerVariationEdit"
-                              checked={!buyerCanEditVariation}
-                              onChange={() => setBuyerCanEditVariation(false)}
-                            />
-                            <button
-                              type="button"
-                              className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
-                              onClick={() => setBuyerCanEditVariation(false)}
-                            >
-                              Não
-                            </button>
+                      {isIncludedInTicket && (
+                        <div className="flex flex-col gap-3">
+                          <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
+                            Deseja liberar a edição da variação pelo comprador após a compra?
+                          </p>
+                          <div className="flex flex-wrap items-center gap-x-[10px] gap-y-2">
+                            <div className="flex items-center gap-2">
+                              <Radio
+                                name="buyerVariationEdit"
+                                checked={buyerCanEditVariation}
+                                onChange={() => setBuyerCanEditVariation(true)}
+                              />
+                              <button
+                                type="button"
+                                className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
+                                onClick={() => setBuyerCanEditVariation(true)}
+                              >
+                                Sim
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Radio
+                                name="buyerVariationEdit"
+                                checked={!buyerCanEditVariation}
+                                onChange={() => setBuyerCanEditVariation(false)}
+                              />
+                              <button
+                                type="button"
+                                className="cursor-pointer select-none border-none bg-transparent p-0 text-left text-base font-normal font-family-dm-sans leading-[1.3] text-gray-12 hover:text-gray-12 md:text-sm"
+                                onClick={() => setBuyerCanEditVariation(false)}
+                              >
+                                Não
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      {buyerCanEditVariation && (
+                      )}
+                      {isIncludedInTicket && buyerCanEditVariation && (
                         <div className="flex flex-col gap-3">
                           <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                             Até quantos dias antes do evento o participante
@@ -1544,7 +1544,7 @@ export function CreateProductModal() {
                       <div
                         className={cn(
                           "flex items-center gap-3 p-4",
-                          buyerCanEditVariation && "border-b border-gray-6",
+                          productPreviewDropdownOptions.length > 0 && "border-b border-gray-6",
                         )}
                       >
                         <div className="relative size-[100px] shrink-0 overflow-hidden rounded border border-gray-6 bg-gray-3">
@@ -1574,7 +1574,7 @@ export function CreateProductModal() {
                         </div>
                       </div>
                       {productPreviewDropdownOptions.length > 0 ? (
-                        <div className="p-4 hidden md:block">
+                        <div className="p-4">
                           <p className="mb-2 text-base text-gray-12">
                             Escolha a variação - {variationTypeName.trim() || "Variações"}
                           </p>

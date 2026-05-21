@@ -352,6 +352,8 @@ export function Dropdown({
     bottom?: number;
     left: number;
     width: number;
+    /** Limite vertical baseado no espaço disponível na viewport. */
+    maxHeight?: number;
   } | null>(null);
   const [internalSelectedIds, setInternalSelectedIds] =
     useState<string[]>(selectedIds);
@@ -397,6 +399,14 @@ export function Dropdown({
     setMounted(true);
   }, []);
 
+  // Altura desejada do menu em px (parseada de `maxHeight` prop tipo "max-h-[200px]")
+  // — usada tanto pelo cálculo de placement no portal quanto pelo `menuBody` interno.
+  const containerHeight = useMemo(() => {
+    if (!maxHeight) return 400;
+    const match = maxHeight.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 400;
+  }, [maxHeight]);
+
   useLayoutEffect(() => {
     if (!menuInPortal || menuInline || !isOpen || !triggerRef.current) {
       setPortalPlacement(null);
@@ -408,23 +418,37 @@ export function Dropdown({
     const update = () => {
       const r = el.getBoundingClientRect();
       const gap = 8;
-      if (position === "top") {
+      const viewportMargin = 16; // respiro pra não colar nas bordas
+      const desired = containerHeight;
+      const spaceBelow = window.innerHeight - r.bottom - gap - viewportMargin;
+      const spaceAbove = r.top - gap - viewportMargin;
+
+      // Flip automático: se o consumidor preferiu "bottom" mas não cabe E há
+      // mais espaço acima, abre pra cima (mantém o menu DENTRO da viewport).
+      // Mesmo princípio pra "top".
+      const preferBottom = position !== "top";
+      const useBottom =
+        preferBottom
+          ? spaceBelow >= Math.min(desired, 200) || spaceBelow >= spaceAbove
+          : !(spaceAbove >= Math.min(desired, 200) || spaceAbove >= spaceBelow);
+
+      if (useBottom) {
+        // Limita maxHeight ao espaço disponível pra evitar que o menu transborde
+        // a viewport (e o usuário não consiga rolar pra ver mais variações).
+        const cappedHeight = Math.max(120, Math.min(desired, spaceBelow));
+        setPortalPlacement({
+          top: r.bottom + gap,
+          left: r.left,
+          width: r.width,
+          maxHeight: cappedHeight,
+        });
+      } else {
+        const cappedHeight = Math.max(120, Math.min(desired, spaceAbove));
         setPortalPlacement({
           bottom: window.innerHeight - r.top + gap,
           left: r.left,
           width: r.width,
-        });
-      } else if (position === "bottom") {
-        setPortalPlacement({
-          top: r.bottom + gap,
-          left: r.left,
-          width: r.width,
-        });
-      } else {
-        setPortalPlacement({
-          top: r.bottom + gap,
-          left: r.left,
-          width: r.width,
+          maxHeight: cappedHeight,
         });
       }
     };
@@ -436,7 +460,7 @@ export function Dropdown({
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [menuInPortal, menuInline, isOpen, position]);
+  }, [menuInPortal, menuInline, isOpen, position, containerHeight]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -541,19 +565,19 @@ export function Dropdown({
   const triggerContent =
     typeof trigger === "function" ? trigger(isOpen) : trigger;
 
-  const containerHeight = useMemo(() => {
-    if (!maxHeight) return 400;
-    const match = maxHeight.match(/\d+/);
-    return match ? parseInt(match[0], 10) : 400;
-  }, [maxHeight]);
-
   const shouldUseVirtualList = useMemo(() => {
     return options && options.length > 10;
   }, [options]);
 
+  // No modo portal, o pai (do portal) já clampa a altura ao espaço disponível
+  // na viewport — aqui usamos o mesmo valor pra evitar bug em que o filho
+  // tem max-h maior que o pai e itens ficam cortados sem aparecer no scroll.
+  const effectiveMenuMaxHeight =
+    portalPlacement?.maxHeight ?? containerHeight;
   const menuBody = (
     <div
-      className={`${maxHeight} overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full`}
+      className="overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
+      style={{ maxHeight: effectiveMenuMaxHeight }}
     >
       {children ? (
         typeof children === "function" ? (
@@ -608,7 +632,7 @@ export function Dropdown({
         <VirtualList
           items={options}
           itemHeight={50}
-          containerHeight={containerHeight}
+          containerHeight={effectiveMenuMaxHeight}
           overscan={3}
           className="[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
           renderItem={(option, index) => (
@@ -652,7 +676,9 @@ export function Dropdown({
             position: "fixed",
             left: portalPlacement.left,
             width: portalPlacement.width,
-            maxHeight: containerHeight,
+            // Usa o limite calculado dinamicamente quando disponível
+            // (mantém o menu dentro da viewport), ou o máximo configurado.
+            maxHeight: portalPlacement.maxHeight ?? containerHeight,
             ...(portalPlacement.top != null
               ? { top: portalPlacement.top }
               : {}),

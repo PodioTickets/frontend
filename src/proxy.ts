@@ -335,7 +335,6 @@ export async function proxy(request: NextRequest) {
   const userAgent = request.headers.get("user-agent");
 
   if (!userAgent || userAgent.length < 10) {
-    console.log("❌ Blocked: No user agent or too short");
     return new NextResponse(
       JSON.stringify({
         success: false,
@@ -363,7 +362,6 @@ export async function proxy(request: NextRequest) {
 
   if (pathname.startsWith("/api/")) {
     if (request.method !== "GET" && !isValidOrigin(origin, host)) {
-      console.log("❌ Blocked: Invalid origin", { origin, host });
       return new NextResponse(
         JSON.stringify({
           success: false,

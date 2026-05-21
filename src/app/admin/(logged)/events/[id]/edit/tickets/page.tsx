@@ -241,7 +241,6 @@ export default function EditTicketsPage() {
           eventId={eventId}
           authChecked={authChecked}
           persistMode="immediate"
-          onBack={handleBack}
           onCreateTicket={() => requestNavigate(`/admin/events/${eventId}/edit/tickets/create`)}
           onEditTicket={(ticketId) =>
             requestNavigate(`/admin/events/${eventId}/edit/tickets/${ticketId}`)

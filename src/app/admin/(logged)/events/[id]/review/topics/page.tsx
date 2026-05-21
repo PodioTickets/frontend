@@ -5,8 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { Button } from "@/components/Button";
-import { ArrowButton } from "@/components/ArrowButton";
 import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
+import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { useTopicModal } from "@/stores/modalStore";
 import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { Plus } from "lucide-react";
@@ -24,7 +24,6 @@ import {
   writeTopicsPreviewDraft,
   type TopicSectionRow,
 } from "@/lib/eventTopicSections";
-import { cn } from "@/utils/cn";
 
 export default function ReviewTopicsPage() {
   const router = useRouter();
@@ -236,22 +235,25 @@ export default function ReviewTopicsPage() {
   }
 
   return (
-    <div className="pb-20 max-md:pb-40">
-      <div className="mx-auto flex w-full max-w-[843px] flex-col gap-9 max-md:gap-8 md:px-0">
-        <div className="flex h-[52px] items-center gap-2 border-b border-gray-6 bg-gray-2 max-md:-mx-4 max-md:px-4 md:hidden">
-          <button type="button" onClick={handleBack} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-12 transition-colors hover:bg-gray-3 rotate-180" aria-label="Voltar">
-            <ArrowButton isOpen={false} />
-          </button>
-          <h1 className="min-w-0 font-manrope text-base font-extrabold leading-[1.1] text-gray-12">Tópicos</h1>
-        </div>
-
-        <div className="hidden items-center gap-3 md:flex">
-          <button type="button" onClick={handleBack} className="flex size-9 rotate-180 cursor-pointer items-center justify-center rounded-[52px] border border-gray-6 transition-colors hover:bg-gray-3" aria-label="Voltar">
-            <ArrowButton isOpen={false} />
-          </button>
-          <h1 className="font-manrope text-[28px] font-bold leading-[1.1] text-gray-12">Editar tópicos</h1>
-        </div>
-
+    <>
+      <WizardStepLayout
+        title="Tópicos"
+        description="Adicione e organize seções de conteúdo que aparecem na página do evento."
+        showDescriptionOnMobile
+        onBack={handleBack}
+        className="bg-gray-2 flex-1 pb-28 md:pb-44 md:px-[124px] pt-0 mt-0 min-w-0"
+        maxWidth="max-w-[843px]"
+        actions={
+          <>
+            <Button variant="outline" disabled={sections.length === 0} onClick={() => { writeTopicsPreviewDraft({ v: 1, eventId, sections }); router.push(`/admin/events/${eventId}/review/topics/preview`); }} className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px] disabled:cursor-not-allowed disabled:opacity-50">
+              Prévia
+            </Button>
+            <Button onClick={() => void handleSave()} disabled={saving || loading || !isDirty} className="h-[52px] w-full font-manrope text-base font-bold max-md:h-12 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto md:px-11 md:text-[20px]">
+              {saving ? "Salvando..." : (<><span className="md:hidden">Confirmar informações</span><span className="hidden md:inline">Salvar alterações</span></>)}
+            </Button>
+          </>
+        }
+      >
         <div className="flex min-w-0 w-full max-w-full flex-col items-stretch px-0 max-md:px-05">
           <SortableTopicsList topics={sections} onReorder={setSections} onEditTopic={handleEditTopic} />
 
@@ -262,19 +264,10 @@ export default function ReviewTopicsPage() {
               <span className="hidden md:inline">Adicionar tópico</span>
             </Button>
           </div>
-
-          <div className={cn("mt-10 flex w-full items-start gap-2 pb-4", "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:mt-0 max-md:flex-col max-md:gap-3 max-md:border-t max-md:border-gray-6 max-md:bg-gray-1 max-md:p-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]", "md:justify-end")}>
-            <Button variant="outline" disabled={sections.length === 0} onClick={() => { writeTopicsPreviewDraft({ v: 1, eventId, sections }); router.push(`/admin/events/${eventId}/review/topics/preview`); }} className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px] disabled:cursor-not-allowed disabled:opacity-50">
-              Prévia
-            </Button>
-            <Button onClick={() => void handleSave()} disabled={saving || loading || !isDirty} className="h-[52px] w-full font-manrope text-base font-bold max-md:h-12 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto md:px-11 md:text-[20px]">
-              {saving ? "Salvando..." : (<><span className="md:hidden">Confirmar informações</span><span className="hidden md:inline">Salvar alterações</span></>)}
-            </Button>
-          </div>
         </div>
-      </div>
+      </WizardStepLayout>
 
       <UnsavedChangesModal open={leavePromptOpen} onClose={dismissLeavePrompt} title="Alterações não salvas" description="Você fez alterações nos tópicos. Se sair agora, elas serão perdidas." onSaveAndLeave={handleSaveAndLeave} onLeaveWithoutSaving={confirmLeaveWithoutSaving} />
-    </div>
+    </>
   );
 }

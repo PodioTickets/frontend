@@ -58,31 +58,33 @@ export function SelectTicketsModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center">
+    <div className="fixed inset-0 z-100 flex items-center justify-center md:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative bg-gray-1 rounded-xl overflow-hidden w-full max-w-[1098px] max-h-[90vh] flex flex-col shadow-lg">
+      {/* Modal: fullscreen no mobile, dialog centralizado no desktop */}
+      <div className="relative bg-gray-1 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[1098px] md:rounded-xl overflow-hidden flex flex-col shadow-lg pb-[max(0px,env(safe-area-inset-bottom))]">
         {/* Header */}
-        <div className="border-b border-gray-6 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <div className="border-b border-gray-6 px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 md:gap-2.5 min-w-0">
             <button
               onClick={onClose}
-              className="border border-gray-6 rounded-full p-2 hover:bg-gray-2 transition-colors"
+              className="border border-gray-6 rounded-full p-2 hover:bg-gray-2 transition-colors shrink-0"
+              aria-label="Voltar"
             >
               <ArrowLeft className="size-5 text-gray-12" />
             </button>
-            <h2 className="text-gray-12 text-xl font-semibold font-family-dm-sans leading-[1.3]">
+            <h2 className="text-gray-12 text-lg md:text-xl font-semibold font-family-dm-sans leading-[1.3] truncate">
               Vincular ingressos
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-11 hover:text-gray-12 transition-colors p-1 rounded-lg hover:bg-gray-3"
+            className="text-gray-11 hover:text-gray-12 transition-colors p-1 rounded-lg hover:bg-gray-3 shrink-0"
+            aria-label="Fechar"
           >
             <X className="size-6" />
           </button>
@@ -90,28 +92,28 @@ export function SelectTicketsModal({
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-4 md:p-5">
             {/* Info bar */}
-            <div className="flex items-center justify-between mb-7">
-              <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 mb-5 md:mb-7">
+              <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
                 {singleSelect
                   ? "Selecione o ingresso que deseja vincular a este voucher"
                   : "Selecione os ingressos que deseja vincular a este cupom"}
               </p>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4 md:gap-6 shrink-0">
                 <div className="flex items-center gap-1">
-                  <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                    Total de ingressos:
+                  <span className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
+                    Total:
                   </span>
-                  <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                  <span className="text-gray-12 text-sm md:text-base font-family-dm-sans leading-[1.3] tabular-nums">
                     {tickets.length}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                  <span className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
                     Selecionados:
                   </span>
-                  <span className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                  <span className="text-gray-12 text-sm md:text-base font-family-dm-sans leading-[1.3] tabular-nums">
                     {selectedIds.length}
                   </span>
                 </div>
@@ -135,7 +137,7 @@ export function SelectTicketsModal({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {tickets.map((ticket) => (
                   <TicketCard
                     key={ticket.id}
@@ -151,12 +153,11 @@ export function SelectTicketsModal({
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-2 border-t border-gray-6 px-4 py-3 flex items-center justify-end">
+        <div className="bg-gray-2 border-t border-gray-6 px-4 py-3 flex items-center justify-end shrink-0">
           <Button
             onClick={handleConfirm}
             disabled={selectedIds.length === 0}
-            className="
-            disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Adicionar ao cupom
           </Button>

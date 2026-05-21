@@ -92,17 +92,6 @@ function UserAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string }) {
   );
 }
 
-function formatAnsweredAt(iso: string) {
-  try {
-    const d = new Date(iso);
-    const date = d.toLocaleDateString("pt-BR");
-    const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    return { date, time };
-  } catch {
-    return null;
-  }
-}
-
 export function QuestionDetailsDrawer({
   isOpen,
   onClose,
@@ -311,53 +300,34 @@ export function QuestionDetailsDrawer({
                           Nenhuma resposta encontrada.
                         </p>
                       ) : (
-                        pagedAnswers.map((row, i) => {
-                          const dt = row.answeredAt ? formatAnsweredAt(row.answeredAt) : null;
-                          return (
-                            <div
-                              key={row.id ?? i}
-                              className="w-full bg-[#FCFCFC] rounded-lg border border-[#D9D9D9] flex flex-col"
-                            >
-                              {/* Cabeçalho do card: usuário | data */}
-                              <div className="w-full border-b border-[#D9D9D9] flex justify-between">
-                                {/* Esquerda: avatar + nome/email */}
-                                <div className="flex-1 px-4 py-3 flex items-center gap-2">
-                                  <UserAvatar name={row.userName} avatarUrl={row.userAvatarUrl} />
-                                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                    <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate">
-                                      {row.userName}
-                                    </p>
-                                    {row.userEmail && (
-                                      <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
-                                        {row.userEmail}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Direita: data · hora */}
-                                {dt && (
-                                  <div className="flex-1 px-4 py-3 flex items-center justify-end gap-2 shrink-0">
-                                    <p className="font-inter font-semibold text-sm leading-[1.3] text-gray-12 whitespace-nowrap">
-                                      {dt.date}
-                                    </p>
-                                    <div className="size-1 rounded-full bg-gray-11 shrink-0" />
-                                    <p className="font-inter font-semibold text-sm leading-[1.3] text-gray-11 whitespace-nowrap">
-                                      {dt.time}
-                                    </p>
-                                  </div>
+                        pagedAnswers.map((row, i) => (
+                          <div
+                            key={row.id ?? i}
+                            className="w-full bg-[#FCFCFC] rounded-lg border border-[#D9D9D9] flex flex-col"
+                          >
+                            {/* Cabeçalho do card: usuário */}
+                            <div className="w-full border-b border-[#D9D9D9] px-4 py-3 flex items-center gap-2">
+                              <UserAvatar name={row.userName} avatarUrl={row.userAvatarUrl} />
+                              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate">
+                                  {row.userName}
+                                </p>
+                                {row.userEmail && (
+                                  <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
+                                    {row.userEmail}
+                                  </p>
                                 )}
                               </div>
-
-                              {/* Corpo: texto da resposta */}
-                              <div className="px-4 pt-4 pb-5">
-                                <p className="font-inter font-medium text-sm leading-[1.3] text-black">
-                                  {row.answer}
-                                </p>
-                              </div>
                             </div>
-                          );
-                        })
+
+                            {/* Corpo: texto da resposta */}
+                            <div className="px-4 pt-4 pb-5">
+                              <p className="font-inter font-medium text-sm leading-[1.3] text-black">
+                                {row.answer}
+                              </p>
+                            </div>
+                          </div>
+                        ))
                       )}
                     </div>
 

@@ -231,8 +231,7 @@ export default function EditQuestionnairePage() {
     <>
       <WizardStepLayout
         title="Questionário"
-        onBack={handleBack}
-        className="flex-1 bg-gray-2 px-5 pt-[52px] pb-[176px] max-md:pb-40 md:px-[124px]"
+        className="flex-1 bg-gray-2 px-5 pt-0 pb-[176px] max-md:pb-40 md:px-[124px]"
         maxWidth="max-w-[1192px]"
         gutter="5"
         description="Crie perguntas extras para coletar informações dos participantes. Você pode pular esta etapa se desejar"
