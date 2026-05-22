@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowButton } from "@/components/ArrowButton";
 import { userService } from "@/services";
-import { Loading } from "@/components/Loading";
+import UserTicketDetailLoading from "./loading";
 import Image from "next/image";
 import { DistanceIcon } from "@/components/Icons/DistanceIcon";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
@@ -187,12 +187,11 @@ export default function TicketDetailsPage() {
     return orderData.event;
   }, [orderData]);
 
+  /* Mantém o skeleton enquanto o fetch da order roda — o `loading.tsx` do Next
+   * só cobre a navegação; após o RSC chegar, o estado client começa em loading
+   * e expõe só o footer do layout pai se devolvermos algo menor que viewport. */
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-2 flex items-center justify-center">
-        <Loading />
-      </div>
-    );
+    return <UserTicketDetailLoading />;
   }
 
   if (!orderData) {

@@ -305,7 +305,7 @@ export function FiscalExportDrawer({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por ID do pedido, nome ou cpf"
-              className="flex-1 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
+              className="flex-1 h-10 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
             />
           </div>
 
@@ -466,7 +466,7 @@ export function FiscalExportDrawer({
                         onClick={() => openPaymentDetails(order)}
                         className="size-9 flex items-center justify-center rounded-lg border border-gray-6 hover:bg-gray-3 transition-colors cursor-pointer"
                       >
-                        <BookIcon className="size-5 text-gray-12" />
+                        <FileText className="size-5 text-gray-12" />
                       </button>
                     </div>
                   </div>

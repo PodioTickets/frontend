@@ -8,7 +8,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { X, ChevronRight, ArrowLeft, Ticket, CheckCircle, Copy, FileText } from "lucide-react";
+import { X, Ticket, CheckCircle, Copy, XCircleIcon } from "lucide-react";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
@@ -16,12 +16,9 @@ import { organizerService } from "@/services";
 import type { PaymentDetails } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
 import { Loading } from "@/components/Loading";
-import Image from "next/image";
-import { getAvatarUrl } from "@/utils/avatar";
 import { Pagination } from "@/components/Pagination";
-import { XCircleIcon } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
-import { ArrowButton } from "../ArrowButton";
+import { PaymentDetailsMobile, type MobileParticipantItem } from "./PaymentDetailsMobile";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -157,8 +154,32 @@ export function PaymentItemDetailsDrawer({
   const getStatusBadge = (status: string) => {
     if (status === "PAID") return "bg-primary-11 text-primary-1";
     if (status === "PENDING") return "bg-yellow-11 text-white";
-    if (status === "REFUNDED" || status === "CANCELLED") return "bg-red-11 text-gray-1";
+    if (status === "REFUNDED") return "bg-red-11 text-gray-1";
+    if (status === "CANCELLED" || status === "FAILED") return "bg-red-11 text-gray-1";
+    if (status === "CHARGEBACK") return "bg-orange-11 text-white";
     return "bg-primary-11 text-primary-1";
+  };
+
+  /** CEP formatado (00000-000) ou retorna cru se não tiver 8 dígitos. */
+  const formatBillingCep = (code?: string | null) => {
+    if (!code) return "";
+    const d = String(code).replace(/\D/g, "");
+    if (d.length === 8) return `${d.slice(0, 5)}-${d.slice(5)}`;
+    return String(code).trim();
+  };
+
+  /** Só a data (dd/mm/yyyy) — `formatDate` inclui hora, que não cabe em "Data de nascimento". */
+  const formatBirthDate = (dateString?: string | null) => {
+    if (!dateString) return "—";
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateString;
+    }
   };
 
   const handleCopy = (text: string) => {
@@ -206,73 +227,124 @@ export function PaymentItemDetailsDrawer({
 
   const { buyer, payment, event, coupon } = paymentDetails;
 
+  /* Props normalizadas pro mobile — derivar a partir do paymentDetails
+   * (mesmo shape do desktop) num lugar só pra evitar dessincronia. */
+  const mobileParticipants: MobileParticipantItem[] = paginatedParticipants.map((p) => ({
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    ticketName: p.ticketName,
+    categoryName: p.categoryName,
+  }));
+
+  const mobileBuyerFields = [
+    {
+      label: "Nome",
+      value:
+        buyer.fullName ||
+        `${buyer.firstName ?? ""} ${buyer.lastName ?? ""}`.trim() ||
+        "—",
+    },
+    { label: "Email", value: buyer.email || "—" },
+    { label: "CPF", value: formatDocument(buyer.documentNumber) },
+    {
+      label: "Data de nascimento:",
+      value: buyer.dateOfBirth ? formatDate(buyer.dateOfBirth).split(" - ")[0] : "—",
+    },
+    { label: "Telefone:", value: formatPhone(buyer.phone) },
+    { label: "Sexo", value: formatGender(buyer.gender) },
+    { label: "Telefone de emergência", value: formatPhone(buyer.reservePhone) },
+  ];
+
   return (
     <Drawer open={isOpen} onOpenChange={onClose} direction="right">
       <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[970px] border-l border-gray-6">
         <DrawerTitle className="sr-only">Comprovante do pagamento</DrawerTitle>
-        {/* Header */}
-        <DrawerHeader className="border-b border-gray-6 px-5 py-3">
+
+        {/* Mobile body — fiel ao Figma 2770:51521 */}
+        <PaymentDetailsMobile
+          eventName={event.name}
+          onClose={onClose}
+          orderId={paymentDetails.orderId}
+          buyerFields={mobileBuyerFields}
+          paymentMethod={payment.method}
+          cardBrand={payment.cardBrand ?? undefined}
+          last4Digits={payment.last4Digits ?? undefined}
+          paymentStatus={payment.status}
+          paymentStatusLabel={getStatusLabel(payment.status)}
+          totalAmount={payment.totalAmount}
+          purchaseDate={formatDate(payment.purchaseDate)}
+          gateway={payment.gateway}
+          authorizationCode={payment.authorizationCode ?? undefined}
+          transactionId={paymentDetails.transactionId}
+          installmentsLabel={
+            formatInstallments(payment.installments ?? null, payment.installmentValue ?? null) ||
+            (payment.method !== "PIX" ? "À vista" : undefined)
+          }
+          nsu={payment.nsu ?? undefined}
+          transactionIp={payment.transactionIp ?? undefined}
+          couponCode={coupon?.code ?? undefined}
+          participants={mobileParticipants}
+          currentPage={safeTicketsPage}
+          totalPages={totalTicketPages}
+          onPageChange={setTicketsPage}
+          copied={copied}
+          onCopy={handleCopy}
+        />
+
+        {/* Desktop header — padrão do PaymentDetailsModal (Inscrições): só título + close. */}
+        <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={onClose}
-                className="size-9 flex items-center justify-center border border-gray-6 rounded-full hover:bg-gray-3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rotate-180"
-              >
-                <ArrowButton className="text-gray-12" />
-              </button>
-              <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
-                Comprovante do pagamento
-              </h2>
-            </div>
+            <h2 className="font-family-dm-sans font-semibold text-[20px] leading-[1.3] text-gray-12">
+              Detalhes de pagamento
+            </h2>
             <DrawerClose asChild>
               <button className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors cursor-pointer">
-                <X className="size-6 text-gray-11" />
+                <X className="size-5 text-gray-11" />
               </button>
             </DrawerClose>
           </div>
         </DrawerHeader>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-5 flex flex-col gap-5">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-1 text-[14px] text-gray-11 font-family-dm-sans flex-wrap">
-              <span>Eventos</span>
-              <ChevronRight className="size-3 text-gray-11 shrink-0" />
-              <span>Financeiro</span>
-              <ChevronRight className="size-3 text-gray-11 shrink-0" />
-              <span className="text-gray-12">Comprovante de pagamento</span>
-            </div>
+        {/* Desktop content — mesma estrutura do PaymentDetailsModal (Inscrições). */}
+        <div className="hidden md:block flex-1 overflow-y-auto">
+          <div className="p-5 flex flex-col gap-4">
 
             {/* Order ID */}
-            <div className="flex items-center gap-1 text-[16px] font-family-dm-sans">
-              <span className="text-gray-11">ID do pedido:</span>
-              <span className="text-gray-12 font-medium">{paymentDetails.orderId}</span>
+            <div className="flex gap-1 items-center">
+              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
+                ID do pedido:
+              </p>
+              <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                #{paymentDetails.orderId}
+              </p>
             </div>
 
-            {/* Buyer Section */}
-            <div>
-              <p className="text-[18px] text-gray-12 font-manrope font-bold mb-3">
+            {/* Informações do comprador — grid 3 colunas */}
+            <div className="flex flex-col gap-2">
+              <h3 className="font-manrope font-bold text-[18px] leading-[1.1] text-gray-12">
                 Informações do comprador
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4">
+              </h3>
+              <div className="grid grid-cols-3">
                 {[
-                  { label: "Nome", value: buyer.fullName || `${buyer.firstName} ${buyer.lastName}`.trim() || "—" },
-                  { label: "Email", value: buyer.email || "—" },
-                  { label: "CPF", value: formatDocument(buyer.documentNumber) },
                   {
-                    label: "Data de nascimento",
-                    value: buyer.dateOfBirth ? formatDate(buyer.dateOfBirth).split(" - ")[0] : "—",
+                    label: "Nome",
+                    value:
+                      buyer.fullName ||
+                      `${buyer.firstName ?? ""} ${buyer.lastName ?? ""}`.trim() ||
+                      "—",
                   },
-                  { label: "Telefone", value: formatPhone(buyer.phone) },
-                  { label: "Telefone de emergência", value: formatPhone(buyer.reservePhone) },
+                  { label: "Email", value: buyer.email || "—" },
+                  { label: "Telefone:", value: formatPhone(buyer.phone) },
+                  { label: "CPF", value: formatDocument(buyer.documentNumber) },
+                  { label: "Data de nascimento:", value: formatBirthDate(buyer.dateOfBirth) },
                   { label: "Sexo", value: formatGender(buyer.gender) },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex flex-col gap-1 py-2">
-                    <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">
+                  <div key={label} className="flex flex-col py-2">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
                       {label}
                     </p>
-                    <p className="font-family-dm-sans font-medium text-[15px] leading-[1.3] text-gray-12">
+                    <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
                       {value}
                     </p>
                   </div>
@@ -280,178 +352,198 @@ export function PaymentItemDetailsDrawer({
               </div>
             </div>
 
-            {/* Event Section */}
-            <div>
-              <p className="text-[18px] text-gray-12 font-manrope font-bold mb-3">Evento</p>
-              <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center gap-4">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-primary-4 flex items-center justify-center shrink-0">
-                    <Ticket className="size-5 text-gray-12" />
-                  </div>
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <p className="font-family-dm-sans font-semibold text-[15px] leading-[1.3] text-gray-12 truncate">
-                      {event.name}
-                    </p>
-                    {event.category && (
-                      <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 truncate">
-                        {event.category}
+            {/* Endereço de cobrança — grid 3 colunas (Rua ocupa 2) */}
+            <div className="flex flex-col gap-2">
+              <h3 className="font-manrope font-bold text-[18px] leading-[1.1] text-gray-12">
+                Endereço de cobrança
+              </h3>
+              {paymentDetails.billingAddress ? (
+                <div className="grid grid-cols-3">
+                  {[
+                    { label: "País", value: paymentDetails.billingAddress.country || "—" },
+                    { label: "CEP", value: formatBillingCep(paymentDetails.billingAddress.postalCode) || "—" },
+                    { label: "Estado", value: paymentDetails.billingAddress.stateUf || "—" },
+                    { label: "Cidade", value: paymentDetails.billingAddress.city || "—" },
+                    { label: "Bairro", value: paymentDetails.billingAddress.neighborhood || "—" },
+                    { label: "Número", value: paymentDetails.billingAddress.number || "—" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex flex-col py-2">
+                      <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                        {label}
                       </p>
-                    )}
-                  </div>
-                </div>
-                {event.organizer && (
-                  <>
-                    <div className="h-8 w-px bg-gray-6 shrink-0" />
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {event.organizer.avatar ? (
-                        <div className="size-8 rounded-full overflow-hidden bg-gray-6 shrink-0">
-                          <Image
-                            src={getAvatarUrl(event.organizer.avatar)}
-                            alt={event.organizer.name}
-                            width={32}
-                            height={32}
-                            className="rounded-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="size-8 rounded-full bg-gray-6 flex items-center justify-center shrink-0">
-                          <span className="text-gray-12 font-semibold text-sm">
-                            {event.organizer.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <p className="font-family-dm-sans font-semibold text-[15px] leading-[1.3] text-gray-12 truncate">
-                          {event.organizer.name}
-                        </p>
-                        <p className="font-family-dm-sans font-normal text-[13px] leading-[1.3] text-gray-11 truncate">
-                          {event.organizer.email}
-                        </p>
-                      </div>
+                      <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                        {value}
+                      </p>
                     </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Payment Method Card */}
-            <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-4">
-              <div className="flex gap-4 items-center flex-1">
-                <div className="size-[36px] flex items-center justify-center shrink-0">
-                  {payment.method === "PIX" ? (
-                    <PixIcon className="size-9 text-gray-12" />
-                  ) : payment.cardBrand ? (
-                    <PaymentIcon type={payment.cardBrand as any} className="size-9" />
-                  ) : (
-                    <CardIcon className="size-9 text-gray-12" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="font-family-dm-sans font-semibold text-[16px] leading-[1.3] text-gray-12">
-                    {payment.method === "PIX"
-                      ? "Pix"
-                      : payment.cardBrand && payment.last4Digits
-                        ? `${payment.cardBrand} **** ${payment.last4Digits}`
-                        : formatPaymentMethod(payment.method)}
-                  </p>
-                  <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">
-                    {formatPaymentMethod(payment.method)}
-                  </p>
-                </div>
-              </div>
-              <div className={`flex gap-1 items-center justify-center px-3 py-1.5 rounded-lg text-[14px] font-family-dm-sans shrink-0 ${getStatusBadge(payment.status)}`}>
-                {payment.status === "PAID" ? (
-                  <CheckCircle className="size-4" />
-                ) : (
-                  <XCircleIcon className="size-4" />
-                )}
-                <span>{getStatusLabel(payment.status)}</span>
-              </div>
-            </div>
-
-            {/* Transaction Details */}
-            <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-              {[
-                {
-                  label: "Valor total",
-                  value: `R$ ${(payment.totalAmount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                },
-                { label: "Data da compra", value: formatDate(payment.purchaseDate) },
-                { label: "Código de autorização", value: payment.authorizationCode || "—" },
-                { label: "Gateway", value: payment.gateway },
-                {
-                  label: "Parcelamento",
-                  value: formatInstallments(payment.installments ?? null, payment.installmentValue ?? null) || "À vista",
-                },
-                { label: "NSU", value: payment.nsu || "—" },
-                { label: "IP", value: payment.transactionIp || "—" },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex flex-col gap-2 py-3">
-                  <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">
-                    {label}
-                  </p>
-                  <p className="font-family-dm-sans font-medium text-[15px] leading-[1.3] text-gray-12">
-                    {value}
-                  </p>
-                </div>
-              ))}
-
-              {/* Transaction ID with copy */}
-              <div className="flex flex-col gap-2 py-3">
-                <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">
-                  ID da transação
-                </p>
-                <div className="flex gap-1 items-center">
-                  <p className="font-family-dm-sans font-medium text-[15px] leading-[1.3] text-gray-12 truncate max-w-[150px]">
-                    {paymentDetails.transactionId}
-                  </p>
-                  <button
-                    onClick={() => handleCopy(paymentDetails.transactionId)}
-                    className="size-5 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors shrink-0"
-                  >
-                    {copied ? (
-                      <CheckCircle className="size-4 text-primary-11" />
-                    ) : (
-                      <Copy className="size-4 text-gray-11" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Coupon */}
-              {coupon && (
-                <div className="flex flex-col gap-2 py-3">
-                  <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11">
-                    Cupom utilizado
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <Ticket className="size-4 text-yellow-12" />
-                    <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-yellow-12">
-                      {coupon.code}
+                  ))}
+                  <div className="col-span-2 flex flex-col py-2">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      Rua
+                    </p>
+                    <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                      {paymentDetails.billingAddress.street || "—"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col py-2">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      Complemento
+                    </p>
+                    <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                      {paymentDetails.billingAddress.complement?.trim() || "—"}
                     </p>
                   </div>
                 </div>
+              ) : (
+                <p className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
+                  Sem endereço de cobrança registrado neste pedido.
+                </p>
               )}
             </div>
 
-            {participants.length > 0 && (
-              <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-5 border-b border-gray-6">
-                  <p className="font-manrope font-bold text-[18px] leading-[1.1] text-gray-12">
-                    Ingressos vinculados a este pedido
+            {/* Payment Method Card */}
+            <div className="flex flex-col gap-3">
+              <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 flex items-center justify-between">
+                <div className="flex gap-4 items-center flex-1">
+                  <div className="size-[36px] relative shrink-0 flex items-center justify-center">
+                    {payment.method === "PIX" ? (
+                      <PixIcon className="size-9 text-gray-12" />
+                    ) : payment.cardBrand ? (
+                      <PaymentIcon type={payment.cardBrand as any} className="size-9" />
+                    ) : (
+                      <CardIcon className="size-9 text-gray-12" />
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="font-family-dm-sans font-semibold text-[18px] leading-[1.3] text-gray-12">
+                      {payment.method === "PIX"
+                        ? "Pix"
+                        : payment.cardBrand && payment.last4Digits
+                          ? `${payment.cardBrand} **** ${payment.last4Digits}`
+                          : formatPaymentMethod(payment.method)}
+                    </p>
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      {payment.method === "PIX" ? "Pagamento instantâneo" : formatPaymentMethod(payment.method)}
+                    </p>
+                  </div>
+                </div>
+                <div className={`flex gap-1 items-center justify-center px-4 py-2 rounded ${getStatusBadge(payment.status)}`}>
+                  {payment.status === "PAID" ? (
+                    <CheckCircle className="size-6" />
+                  ) : (
+                    <XCircleIcon className="size-6" />
+                  )}
+                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3]">
+                    {getStatusLabel(payment.status)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Transaction Details — grid 3 colunas */}
+              <div className="bg-gray-2 border border-gray-6 rounded-lg p-4 grid grid-cols-3">
+                {[
+                  {
+                    label: "Valor total pago",
+                    value: `R$ ${(payment.totalAmount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+                  },
+                  { label: "Data da compra", value: formatDate(payment.purchaseDate) },
+                  { label: "Código de autorização", value: payment.authorizationCode || "—" },
+                  { label: "Gateway", value: payment.gateway },
+                  {
+                    label: "Parcelamento",
+                    value:
+                      formatInstallments(payment.installments ?? null, payment.installmentValue ?? null) ||
+                      "À vista",
+                  },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex flex-col gap-[15px] py-3">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      {label}
+                    </p>
+                    <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                      {value}
+                    </p>
+                  </div>
+                ))}
+
+                {/* ID da transação com copy */}
+                <div className="flex flex-col gap-[8px] py-3">
+                  <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                    ID da transação
                   </p>
                   <div className="flex gap-1 items-center">
-                    <span className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
-                      Total ingressos:
-                    </span>
-                    <span className="font-family-dm-sans font-bold text-[16px] leading-[1.3] text-gray-12">
-                      {participants.length}
-                    </span>
+                    <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12 truncate max-w-[180px]">
+                      {paymentDetails.transactionId}
+                    </p>
+                    <button
+                      onClick={() => handleCopy(paymentDetails.transactionId)}
+                      className="size-5 flex items-center justify-center rounded-lg hover:bg-gray-3 transition-colors shrink-0"
+                      aria-label="Copiar ID da transação"
+                    >
+                      {copied ? (
+                        <CheckCircle className="size-4 text-primary-11" />
+                      ) : (
+                        <Copy className="size-4 text-gray-11" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                {/* Column Headers */}
+                {payment.nsu && (
+                  <div className="flex flex-col gap-[15px] py-4">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      NSU
+                    </p>
+                    <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                      {payment.nsu}
+                    </p>
+                  </div>
+                )}
+
+                {payment.transactionIp && (
+                  <div className="flex flex-col gap-[15px] py-4">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      IP
+                    </p>
+                    <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
+                      {payment.transactionIp}
+                    </p>
+                  </div>
+                )}
+
+                {coupon && (
+                  <div className="flex flex-col gap-[15px] py-4">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
+                      Cupom utilizado
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Ticket className="size-5 text-yellow-12 shrink-0" />
+                      <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-yellow-12">
+                        {coupon.code}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tickets List — header de tabela */}
+            {participants.length > 0 && (
+              <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg flex flex-col">
+                <div className="flex items-center justify-between p-4">
+                  <h3 className="font-manrope font-semibold text-[18px] leading-[1.1] text-gray-12">
+                    Ingressos vinculados a este pedido
+                  </h3>
+                  <div className="flex gap-1 items-center">
+                    <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-11">
+                      Total ingressos:
+                    </p>
+                    <p className="font-family-dm-sans font-bold text-[16px] leading-[1.3] text-gray-12">
+                      {participants.length}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Table Header */}
                 <div className="bg-gray-3 border-b border-t border-gray-6 flex h-[44px] items-center">
                   <div className="w-[120px] px-4 shrink-0">
                     <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">
@@ -465,7 +557,7 @@ export function PaymentItemDetailsDrawer({
                   </div>
                   <div className="flex-1 min-w-0 px-4">
                     <p className="font-inter font-medium text-[14px] leading-[1.3] text-gray-12">
-                      Ticket
+                      Ingresso
                     </p>
                   </div>
                   <div className="flex-1 min-w-0 px-4 border-r border-gray-6 flex justify-end">
@@ -475,28 +567,25 @@ export function PaymentItemDetailsDrawer({
                   </div>
                 </div>
 
-                {/* Rows */}
+                {/* Table Rows */}
                 <div className="flex flex-col">
                   {paginatedParticipants.map((p) => (
                     <div
                       key={p.id}
-                      className="flex items-center border-b border-gray-6 last:border-b-0 bg-gray-1"
+                      className="flex items-center h-[60px] border-b border-gray-6 last:border-b-0 bg-gray-1"
                     >
-                      {/* ID inscrição */}
-                      <div className="w-[120px] px-4 py-3 shrink-0">
+                      <div className="w-[120px] px-4 shrink-0">
                         <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 truncate">
-                          {p.registrationCode}
+                          #{p.registrationCode}
                         </p>
                       </div>
-
-                      {/* Participante */}
-                      <div className="w-[273px] px-4 py-3 flex gap-[10px] items-center shrink-0">
-                        <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="w-[273px] px-4 flex gap-[10px] items-center shrink-0">
+                        <div className="size-9 rounded-lg bg-gray-6 flex items-center justify-center shrink-0">
                           <span className="text-gray-12 font-semibold text-sm">
                             {(p.name || "P").charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                        <div className="flex flex-col min-w-0 flex-1">
                           <p className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12 truncate">
                             {p.name}
                           </p>
@@ -505,9 +594,7 @@ export function PaymentItemDetailsDrawer({
                           </p>
                         </div>
                       </div>
-
-                      {/* Ticket */}
-                      <div className="flex-1 min-w-0 px-4 py-3 flex flex-col gap-1">
+                      <div className="flex-1 min-w-0 px-4 flex flex-col">
                         <p className="font-family-dm-sans font-normal text-[14px] leading-[1.3] text-gray-11 truncate">
                           {p.categoryName}
                         </p>
@@ -515,13 +602,12 @@ export function PaymentItemDetailsDrawer({
                           {p.ticketName}
                         </p>
                       </div>
-
-                      {/* Ações */}
                       <div className="flex-1 min-w-0 px-4 py-2 flex justify-end">
                         <button
                           type="button"
+                          aria-label="Informações do participante"
+                          title="Informações do participante"
                           className="bg-gray-2 border border-gray-6 rounded-lg size-8 flex items-center justify-center hover:bg-gray-3 transition-colors cursor-pointer shrink-0"
-                          title="Ver comprovante"
                         >
                           <TicketIcon className="size-4 text-gray-11" />
                         </button>

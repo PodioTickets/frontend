@@ -36,6 +36,7 @@ import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { TwoFASection } from "@/components/TwoFASection";
+import UserLoading from "./loading";
 
 /** Alinha valores antigos da API («Brasileira», etc.) ao nome do país da lista de cadastro. */
 function mapStoredCountryToPickerValue(raw: string | null | undefined): string {
@@ -573,8 +574,11 @@ export default function UserProfilePage() {
     openChangeEmailModal();
   };
 
+  /* Mantém o skeleton enquanto a checagem de auth do client roda — sem isso,
+   * o `loading.tsx` do Next some quando o RSC chega mas a página retorna null
+   * por ~300ms, expondo só o footer do layout pai (flash visual). */
   if (!authChecked) {
-    return null;
+    return <UserLoading />;
   }
 
   return (

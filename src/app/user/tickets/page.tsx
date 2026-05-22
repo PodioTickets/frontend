@@ -7,6 +7,7 @@ import { TicketCard } from "@/components/Ticket/Card";
 import { Pagination } from "@/components/Pagination";
 import Image from "next/image";
 import { SlidersHorizontal } from "lucide-react";
+import UserTicketsLoading from "./loading";
 
 export default function UserTicketsPage() {
   const { isAuthenticated } = useAuth();
@@ -24,6 +25,15 @@ export default function UserTicketsPage() {
   }, [isAuthenticated, refetch]);
 
   const hasMore = pagination.page < pagination.totalPages;
+
+  /* Primeira carga (sem dados ainda): mantém o skeleton da grid em vez de
+   * renderizar o container vazio com texto — assim o esqueleto continua
+   * visível desde o `loading.tsx` até os dados chegarem, sem flash de footer
+   * sob conteúdo curto. Paginações subsequentes não acionam isso pq já há
+   * `tickets.length > 0`. */
+  if (loading && tickets.length === 0) {
+    return <UserTicketsLoading />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F9F9F9]">

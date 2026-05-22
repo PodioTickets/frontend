@@ -19,6 +19,7 @@ import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ChargeBackIcon } from "../Icons/ChargeBackIcon";
 import { Tooltip } from "../Tooltip";
+import { FinancialDetailsMobile, type FinancialDetailsItem } from "./FinancialDetailsMobile";
 
 interface ChargebackDrawerProps {
   isOpen: boolean;
@@ -141,13 +142,65 @@ export function ChargebackDrawer({
     };
   };
 
+  /* Mesma normalização do RefundedDrawer pra reusar `FinancialDetailsMobile`. */
+  const mobileItems: FinancialDetailsItem[] = chargebackItems.map((item) => {
+    const d = formatChargebackForDisplay(item);
+    return {
+      id: item.id,
+      orderId: d.orderId,
+      buyer: d.buyer,
+      paymentMethod: d.paymentMethod,
+      value: d.value,
+    };
+  });
+
+  const handleMobileItemClick = (mobile: FinancialDetailsItem) => {
+    const original = chargebackItems.find((i) => i.id === mobile.id);
+    if (!original) return;
+    const displayItem = formatChargebackForDisplay(original);
+    setSelectedPayment({
+      ...displayItem,
+      releaseDate: displayItem.date,
+      nextReleaseDate: displayItem.date,
+      installment: null,
+    });
+    setIsDetailsOpen(true);
+  };
+
   return (
     <>
       <Drawer open={isOpen} onOpenChange={onClose} direction="right">
         <DrawerContent className="bg-gray-1 h-full w-full sm:max-w-[969px] border-l border-gray-6">
           <DrawerTitle className="sr-only">Chargebacks - Detalhes</DrawerTitle>
-          {/* Header */}
-          <DrawerHeader className="border-b border-gray-6 px-5 py-3">
+
+          {/* Mobile body — fiel ao Figma 2680:110005 (mesmo template do Refunded) */}
+          <FinancialDetailsMobile
+            eventName={eventName}
+            title="Chargebacks - Detalhes"
+            titleIconBgClass="bg-red-4"
+            titleIcon={<ChargeBackIcon className="size-5 text-red-12" />}
+            onClose={onClose}
+            totalLabel="Total em chargeback"
+            totalAmount={totalChargebacks / 100}
+            countLabel={
+              <>
+                <p className="leading-[1.2] mb-0">Transações em</p>
+                <p className="leading-[1.2]">chargeback</p>
+              </>
+            }
+            count={pagination.total}
+            items={mobileItems}
+            loading={loading}
+            emptyMessage="Nenhum chargeback encontrado"
+            valueColorClass="text-orange-11"
+            onItemClick={handleMobileItemClick}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+
+          {/* Desktop header */}
+          <DrawerHeader className="hidden md:block border-b border-gray-6 px-5 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-5">
                 {/* Navigation Buttons */}
@@ -186,8 +239,8 @@ export function ChargebackDrawer({
             </div>
           </DrawerHeader>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Desktop content (tabela) */}
+          <div className="hidden md:block flex-1 overflow-y-auto">
             <div className="p-5">
               {/* Info Header */}
               <div className="mb-5 flex items-center gap-2 text-base text-gray-11 font-family-dm-sans">
