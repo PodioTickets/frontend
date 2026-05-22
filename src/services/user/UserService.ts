@@ -369,6 +369,14 @@ export class UserService {
     refresh_token?: string;
   }> {
     try {
+      /* Brasileiros: strip de máscara (CPF clean — backend espera 11 dígitos).
+       * Estrangeiros: documento cru — passaporte/RNE preserva letras. Strip
+       * incondicional zerava o doc quando o passaporte não tinha dígitos. */
+      const documentNumberForBackend =
+        data.documentType === "PASSPORT"
+          ? data.documentNumber.trim()
+          : data.documentNumber.replace(/\D/g, "");
+
       const registerData: any = {
         email: data.email,
         password: data.password,
@@ -378,7 +386,7 @@ export class UserService {
         dateOfBirth: data.dateOfBirth,
         country: data.country,
         documentType: data.documentType,
-        documentNumber: data.documentNumber.replace(/\D/g, ""),
+        documentNumber: documentNumberForBackend,
         acceptedTerms: data.acceptedTerms ?? true,
         acceptedPrivacyPolicy: data.acceptedPrivacyPolicy ?? true,
       };

@@ -31,6 +31,8 @@ import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfir
 import Image from "next/image";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { Checkbox } from "@/components/CheckBox";
+import { TermsOfServiceModal } from "./TermsOfServiceModal";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -44,6 +46,11 @@ export function RegisterModal() {
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  /* Aceite explícito dos termos de uso. Marca quando o usuário clica em
+   * "Aceitar termos" no modal OU toggla o checkbox direto. Backend exige
+   * acceptedTerms=true no /auth/register. */
+  const [acceptedTermsChecked, setAcceptedTermsChecked] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const mobileTurnstileRef = useRef<TurnstileInstance>(null);
   const desktopTurnstileRef = useRef<TurnstileInstance>(null);
 
@@ -78,6 +85,8 @@ export function RegisterModal() {
     if (!isOpen) {
       setCurrentStep(1);
       setTurnstileToken(null);
+      setAcceptedTermsChecked(false);
+      setShowTermsModal(false);
       mobileTurnstileRef.current?.reset();
       desktopTurnstileRef.current?.reset();
     }
@@ -304,6 +313,13 @@ export function RegisterModal() {
     if (currentStep === 3) {
       if (!validateStep1b()) return;
 
+      // Aceite de termos é obrigatório — botão já fica disabled, mas validamos
+      // de novo aqui pra defender contra bypass via DevTools.
+      if (!isCompletingProfile && !acceptedTermsChecked) {
+        toast.error("É preciso aceitar os Termos de uso pra criar conta.");
+        return;
+      }
+
       setIsSubmitting(true);
       try {
         // Fluxo: completar perfil Google OAuth
@@ -344,8 +360,8 @@ export function RegisterModal() {
            * Estrangeiros: envia documento cru e marca como PASSPORT. */
           documentNumber: formData.cpf,
           documentType: isBrazilianCountry(formData.nacionalidade) ? "CPF" : "PASSPORT",
-          acceptedTerms: true,
-          acceptedPrivacyPolicy: true,
+          acceptedTerms: acceptedTermsChecked,
+          acceptedPrivacyPolicy: acceptedTermsChecked,
         });
 
         setCurrentStep(4);
@@ -439,7 +455,7 @@ export function RegisterModal() {
    * passaporte/RNE livremente (letras + dígitos). */
   const isBrUser = isBrazilianCountry(formData.nacionalidade);
   const docLabel = isBrUser ? "CPF" : "Documento";
-  const docPlaceholder = isBrUser ? "000.000.000-00" : "Passaporte / documento";
+  const docPlaceholder = isBrUser ? "000.000.000-00" : "12345...";
   const docMaxLength = isBrUser ? 14 : 30;
 
   const handleCPFChange = (value: string) => {
@@ -504,6 +520,36 @@ export function RegisterModal() {
     { id: "feminino", label: "Feminino" },
     { id: "outro", label: "Outro" }
   ];
+
+  /* Checkbox de aceite — única fonte de verdade compartilhada entre mobile e
+   * desktop. Renderizada antes do Turnstile + botão de submit no Step 3 (UX).
+   * Clicar no texto "Termos de uso" abre o modal em paralelo (z-[100000]). */
+  const renderAcceptTermsCheckbox = () => {
+    if (isCompletingProfile) return null;
+    return (
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <Checkbox
+          checked={acceptedTermsChecked}
+          onCheckedChange={(checked) => setAcceptedTermsChecked(checked === true)}
+          aria-label="Aceitar termos de uso"
+        />
+        <span className="text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
+          Li e aceito os{" "}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setShowTermsModal(true);
+            }}
+            className="text-primary-11 hover:text-primary-12 underline-offset-2 underline cursor-pointer"
+          >
+            Termos de uso
+          </button>{" "}
+          da PódioTicket
+        </span>
+      </label>
+    );
+  };
 
   // Header mobile compartilhado entre as duas sub-etapas de dados pessoais.
   const renderPersonalInfoMobileHeader = () => (
@@ -767,8 +813,9 @@ export function RegisterModal() {
           </div>
         </div>
 
-        {/* Step final (UX): Turnstile + botão Criar conta / Finalizar cadastro. */}
+        {/* Step final (UX): Turnstile + checkbox de termos + botão. */}
         <div className="flex flex-col items-start relative shrink-0 w-full gap-4">
+          {renderAcceptTermsCheckbox()}
           {!isCompletingProfile && TURNSTILE_SITE_KEY && (
             <Turnstile
               ref={mobileTurnstileRef}
@@ -782,8 +829,8 @@ export function RegisterModal() {
           )}
           <Button
             onClick={handleNext}
-            disabled={isSubmitting || authLoading || (!isCompletingProfile && !!TURNSTILE_SITE_KEY && !turnstileToken)}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting || authLoading || (!isCompletingProfile && (!acceptedTermsChecked || (!!TURNSTILE_SITE_KEY && !turnstileToken)))}
+            className="w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting || authLoading
               ? isCompletingProfile
@@ -939,7 +986,7 @@ export function RegisterModal() {
       {renderPersonalInfoDesktopHeader()}
 
       <div className="hidden md:flex flex-col items-start relative shrink-0 w-full overflow-visible">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start p-6 relative shrink-0 w-full overflow-visible">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start p-6 pb-0 relative shrink-0 w-full overflow-visible">
           {/* CPF / Documento (depende da nacionalidade) */}
           <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
             <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
@@ -1056,8 +1103,9 @@ export function RegisterModal() {
           </div>
         </div>
 
-        {/* Step final (UX): Turnstile + botão Criar conta / Finalizar cadastro. */}
-        <div className="flex flex-col items-end justify-end pb-8 pt-4 px-6 relative shrink-0 w-full gap-4">
+        {/* Step final (UX): Turnstile + checkbox de termos + botão. */}
+        <div className="flex flex-col items-stretch justify-end pb-8 pt-4 px-6 relative shrink-0 w-full gap-4">
+          {renderAcceptTermsCheckbox()}
           {!isCompletingProfile && TURNSTILE_SITE_KEY && (
             <Turnstile
               ref={desktopTurnstileRef}
@@ -1069,19 +1117,21 @@ export function RegisterModal() {
               className="w-full"
             />
           )}
-          <Button
-            onClick={handleNext}
-            disabled={isSubmitting || authLoading || (!isCompletingProfile && !!TURNSTILE_SITE_KEY && !turnstileToken)}
-            className="px-8 font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting || authLoading
-              ? isCompletingProfile
-                ? "Finalizando cadastro..."
-                : "Criando conta..."
-              : isCompletingProfile
-                ? "Finalizar cadastro"
-                : "Criar conta"}
-          </Button>
+          <div className="flex justify-end">
+            <Button
+              onClick={handleNext}
+              disabled={isSubmitting || authLoading || (!isCompletingProfile && (!acceptedTermsChecked || (!!TURNSTILE_SITE_KEY && !turnstileToken)))}
+              className="px-8 font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting || authLoading
+                ? isCompletingProfile
+                  ? "Finalizando cadastro..."
+                  : "Criando conta..."
+                : isCompletingProfile
+                  ? "Finalizar cadastro"
+                  : "Criar conta"}
+            </Button>
+          </div>
         </div>
       </div>
     </>
@@ -1494,6 +1544,14 @@ export function RegisterModal() {
               </AnimatePresence>
             </motion.div>
           </motion.div>
+
+          {/* Modal de Termos — renderiza em paralelo (z-[100000]) sobre o
+              RegisterModal sem fechar o fluxo de cadastro. */}
+          <TermsOfServiceModal
+            isOpen={showTermsModal}
+            onClose={() => setShowTermsModal(false)}
+            onAccept={() => setAcceptedTermsChecked(true)}
+          />
         </>
       )}
     </AnimatePresence>

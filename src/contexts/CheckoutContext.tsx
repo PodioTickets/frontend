@@ -18,6 +18,13 @@ interface ParticipantFormData {
   birthDate: string;
   phone: string;
   gender: string;
+  /**
+   * Nacionalidade selecionada pelo usuário no card do participante. Default "Brasil".
+   * Determina label/placeholder/máscara/validação do campo de documento. NÃO é enviada
+   * ao backend hoje (endpoint PATCH /participants tem `forbidNonWhitelisted`); fica no
+   * estado local pra coerência da UI durante a navegação do checkout.
+   */
+  nationality?: string;
   emergencyPhone?: string;
   emergencyContactName?: string;
   hasEmergencyContact?: boolean;
@@ -47,6 +54,7 @@ const DEFAULT_PARTICIPANT: ParticipantFormData = {
   birthDate: "",
   phone: "",
   gender: "",
+  nationality: "Brasil",
   emergencyPhone: "",
   emergencyContactName: "",
   hasEmergencyContact: false,

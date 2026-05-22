@@ -77,9 +77,25 @@ export default function TicketDetailsPage() {
     }).format(price / 100);
   };
 
-  const maskCPF = (cpf: string) => {
+  /* Mascara doc do participante.
+   * - CPF (BR): exibe parcial `xxx.***.***-xx` (proteção de PII).
+   * - Estrangeiro (passaporte/RNE): exibe cru — não há padrão de mascaramento
+   *   consensual e o doc tem letras essenciais. */
+  const maskCPF = (cpf: string, isBr: boolean = true) => {
     if (!cpf) return "";
+    if (!isBr) return cpf;
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
+  };
+
+  /* Brasileiro quando documentType === "CPF" (autoritativo); fallback pra
+   * heurística do shape do doc só quando o backend ainda não popular o tipo
+   * (registros legados pré-migration de internacionalização). */
+  const isParticipantBr = (p: { documentType?: string | null; cpf?: string | null }): boolean => {
+    if (p.documentType) return p.documentType === "CPF";
+    const raw = (p.cpf || "").trim();
+    if (!raw) return true;
+    if (/[A-Za-z]/.test(raw)) return false;
+    return raw.replace(/\D/g, "").length === 11;
   };
 
   const formatPhone = (phone: string) => {
@@ -150,6 +166,7 @@ export default function TicketDetailsPage() {
         id: reg.id,
         name: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || "",
         email: p.email || "",
+        documentType: (p.documentType as "CPF" | "PASSPORT" | null | undefined) ?? null,
         cpf: p.documentNumber || "",
         birthDate: p.dateOfBirth || "",
         gender: p.gender || "",
@@ -367,7 +384,7 @@ export default function TicketDetailsPage() {
                               {participant.cpf && <span className="size-1 bg-gray-11 rounded-full shrink-0" />}
                             </>
                           )}
-                          {participant.cpf && <span>{maskCPF(participant.cpf)}</span>}
+                          {participant.cpf && <span>{maskCPF(participant.cpf, isParticipantBr(participant))}</span>}
                         </div>
                       </div>
                     </div>
@@ -422,10 +439,14 @@ export default function TicketDetailsPage() {
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
-                                <label className="text-base text-gray-12 font-family-dm-sans">CPF</label>
+                                <label className="text-base text-gray-12 font-family-dm-sans">
+                                  {isParticipantBr(participant) ? "CPF" : "Documento"}
+                                </label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                   {participant.cpf
-                                    ? participant.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                                    ? isParticipantBr(participant)
+                                      ? participant.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                                      : participant.cpf
                                     : "-"}
                                 </p>
                               </div>

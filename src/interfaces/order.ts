@@ -118,7 +118,17 @@ export interface ReserveOrderRequest {
 export interface PatchParticipantsRequest {
   participants: Array<{
     name: string;
-    cpf: string;
+    /**
+     * Tipo do documento. CPF pra brasileiros, PASSPORT pra estrangeiros.
+     * Backend usa em conjunto com `documentNumber` pra dedupe correto sem
+     * destruir letras de passaporte (`participantDocumentNumberClean`).
+     */
+    documentType: "CPF" | "PASSPORT";
+    /**
+     * Documento internacionalizado. Brasileiros: dígitos limpos do CPF.
+     * Estrangeiros: passaporte/RNE cru (preserva letras).
+     */
+    documentNumber: string;
     email: string;
     birthDate: string;
     phone: string;

@@ -6,6 +6,7 @@ import { cn } from "@/utils/cn";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { X } from "lucide-react";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 
 interface UserAutocompleteProps {
   value: string;
@@ -106,12 +107,32 @@ export function UserAutocomplete({
     setIsOpen(true);
   };
 
-  const formatCPF = (cpf: string) => {
-    const cleaned = cpf.replace(/\D/g, "");
+  /**
+   * Exibe o documento adequado ao tipo:
+   * - CPF (BR): aplica máscara `xxx.xxx.xxx-xx` quando 11 dígitos.
+   * - PASSPORT/estrangeiro: mostra cru (preserva letras de passaporte/RNE).
+   * Prioriza `documentType` quando vier; senão usa `country` (via
+   * `isBrazilianCountry`) como fallback compat.
+   */
+  const formatDocumentForDisplay = (user: LinkedUser): string => {
+    const raw = user.documentNumber || "";
+    if (!raw) return "";
+    const isBr = user.documentType
+      ? user.documentType === "CPF"
+      : isBrazilianCountry(user.country);
+    if (!isBr) return raw;
+    const cleaned = raw.replace(/\D/g, "");
     if (cleaned.length === 11) {
       return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
     }
-    return cpf;
+    return raw;
+  };
+
+  const getDocumentLabel = (user: LinkedUser): string => {
+    const isBr = user.documentType
+      ? user.documentType === "CPF"
+      : isBrazilianCountry(user.country);
+    return isBr ? "CPF" : "Documento";
   };
 
   // Componente para item do usuário (permite usar useState para erro de imagem)
@@ -174,7 +195,7 @@ export function UserAutocomplete({
                 <span className="text-xs text-gray-11 truncate">{user.email}</span>
                 {user.documentNumber && (
                   <span className="text-xs text-gray-11">
-                    CPF: {formatCPF(user.documentNumber)}
+                    {getDocumentLabel(user)}: {formatDocumentForDisplay(user)}
                   </span>
                 )}
               </div>

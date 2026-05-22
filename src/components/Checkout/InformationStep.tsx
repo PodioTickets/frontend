@@ -32,8 +32,11 @@ import type { LinkedUser } from "@/hooks/useLinkedUsers";
 import toast from "react-hot-toast";
 import { Loading } from "../Loading";
 import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { COUNTRIES_PT_BR } from "@/data/countries";
+import { FlagIcon } from "../Icons/FlagIcon";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 interface InformationStepProps {
   event: Event;
@@ -50,6 +53,123 @@ interface ParticipantWithTicket {
   categoryName: string;
   participantIndex: number;
   isExpanded: boolean;
+}
+
+/**
+ * Dropdown de nacionalidade pra o card de participante.
+ * Mesma UX do dropdown usado no RegisterModal / /user/page.tsx — busca client-side
+ * com normalização de acentos. Encapsulado aqui pra evitar duplicação dos handlers
+ * de outside-click e estado em cada card.
+ */
+function NationalitySelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (country: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const options = useMemo(
+    () =>
+      COUNTRIES_PT_BR.map((name) => ({
+        id: name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, "")
+          .replace(/\s+/g, "-"),
+        label: name,
+      })),
+    [],
+  );
+
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return options;
+    const q = normalize(search);
+    return options.filter((opt) => normalize(opt.label).includes(q));
+  }, [options, search]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const el = ref.current;
+      if (el && !el.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div className="w-full relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          setOpen((v) => !v);
+          if (!open) setSearch("");
+        }}
+        className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 w-full hover:bg-gray-3 transition-colors cursor-pointer text-left disabled:opacity-50 disabled:cursor-not-allowed bg-gray-2"
+      >
+        <div className="flex gap-1 items-center flex-1 min-w-0">
+          <FlagIcon className="w-5 h-5 text-gray-11 shrink-0" />
+          <span
+            className={`font-normal text-base leading-[1.3] font-family-dm-sans truncate ${value ? "text-gray-12" : "text-gray-11"}`}
+          >
+            {value || "Selecione"}
+          </span>
+        </div>
+        <div className="flex-none -scale-y-100 shrink-0">
+          <ArrowButton isOpen={open} />
+        </div>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-60 bg-gray-1 border border-gray-6 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-gray-6">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-11" />
+              <input
+                type="text"
+                placeholder="Pesquisar país"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="w-full h-9 pl-8 pr-3 rounded-md border border-gray-6 bg-gray-2 text-sm font-family-dm-sans text-gray-12 placeholder:text-gray-10 focus:outline-none focus:ring-2 focus:ring-primary-8 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div className="max-h-[220px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-sm text-gray-11 font-family-dm-sans text-center">
+                Nenhum país encontrado
+              </div>
+            ) : (
+              filtered.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.label);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                  className="w-full px-3 py-2.5 text-left text-sm font-family-dm-sans text-gray-12 hover:bg-gray-3 transition-colors"
+                >
+                  {option.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function InformationStep({
@@ -86,6 +206,15 @@ export function InformationStep({
   });
 
   const [showAllTicketsModal, setShowAllTicketsModal] = useState(false);
+
+  // Limpa timers de debounce do lookup de documento ao desmontar — evita
+  // chamadas async tentando atualizar state depois do unmount.
+  useEffect(() => {
+    return () => {
+      Object.values(docLookupTimersRef.current).forEach(clearTimeout);
+      docLookupTimersRef.current = {};
+    };
+  }, []);
 
   // Estado para armazenar respostas das perguntas por participante
   // Inicializar com dados do contexto
@@ -311,6 +440,7 @@ export function InformationStep({
           birthDate: "",
           phone: "",
           gender: "",
+          nationality: "Brasil",
           emergencyPhone: "",
           emergencyContactName: "",
           hasEmergencyContact: false,
@@ -455,6 +585,7 @@ export function InformationStep({
         birthDate: "",
         phone: "",
         gender: "",
+        nationality: "Brasil",
         emergencyPhone: "",
         emergencyContactName: "",
         hasEmergencyContact: false,
@@ -467,6 +598,7 @@ export function InformationStep({
         birthDate: "",
         phone: "",
         gender: "",
+        nationality: "Brasil",
         emergencyPhone: "",
         emergencyContactName: "",
         hasEmergencyContact: false,
@@ -476,7 +608,10 @@ export function InformationStep({
     // Verificar se está tentando fechar (participante já está expandido)
     const isCurrentlyExpanded = expandedParticipants[index];
 
-    if (isCurrentlyExpanded && isParticipantComplete(index)) {
+    /* Estrangeiros (passaporte/RNE) não passam por checagem de CPF — qualquer
+     * combinação de caracteres é válida pra eles. */
+    const participantIsBr = isBrazilianCountry(participant.nationality);
+    if (isCurrentlyExpanded && isParticipantComplete(index) && participantIsBr) {
       const cleanCPF = (participant.cpf || "").replace(/\D/g, "");
       if (cleanCPF.length === 11 && !isValidCPF(participant.cpf || "")) {
         toast.error("CPF inválido");
@@ -510,8 +645,61 @@ export function InformationStep({
     updateParticipant(index, { [name]: value });
   };
 
+  /* Timers de debounce do lookup por participante. Pra brasileiros o lookup
+   * dispara síncrono assim que o CPF fica completo (11 dígitos válidos). Pra
+   * estrangeiros não há boundary natural — usamos debounce de 500ms a partir
+   * do último keystroke pra evitar 1 request por tecla. */
+  const docLookupTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  /* Popula nome/email/telefone/birthDate/gênero a partir de um usuário
+   * retornado pelo lookup. Extraído pra reuso entre fluxo BR e estrangeiro. */
+  const applyLookedUpUser = (
+    index: number,
+    looked: { firstName?: string; lastName?: string; email?: string; phone?: string; dateOfBirth?: string; gender?: string },
+  ) => {
+    const fullName = [looked.firstName, looked.lastName].filter(Boolean).join(" ");
+    updateParticipant(index, {
+      name: fullName,
+      email: looked.email || "",
+      phone: looked.phone ? maskPhone(looked.phone) : "",
+      birthDate: looked.dateOfBirth || "",
+      gender: looked.gender || "",
+    });
+  };
+
   const handleCPFChange = async (index: number, value: string) => {
     clearParticipantFieldError(index, "cpf");
+    const participantIsBr = isBrazilianCountry(participants[index]?.nationality);
+
+    // Cancela qualquer lookup pendente do participante — input mudou
+    if (docLookupTimersRef.current[index]) {
+      clearTimeout(docLookupTimersRef.current[index]);
+      delete docLookupTimersRef.current[index];
+    }
+
+    if (!participantIsBr) {
+      /* Estrangeiro: documento livre (passaporte/RNE), sem máscara.
+       * Lookup com debounce 500ms quando length >= 4 — backend
+       * (findUserByCpf) aceita doc estrangeiro via inferDocumentType. */
+      const trimmed = value.slice(0, 30).trim();
+      updateParticipant(index, { cpf: trimmed });
+
+      if (trimmed.length >= 4) {
+        docLookupTimersRef.current[index] = setTimeout(async () => {
+          try {
+            const user = await userService.getUserByCpf(trimmed);
+            if (user) applyLookedUpUser(index, user);
+          } catch {
+            // silently ignore — não bloqueia o preenchimento manual
+          } finally {
+            delete docLookupTimersRef.current[index];
+          }
+        }, 500);
+      }
+      return;
+    }
+
+    // Brasileiro: aplica máscara + lookup síncrono quando 11 dígitos válidos
     const masked = maskCPF(value);
     updateParticipant(index, { cpf: masked });
 
@@ -519,19 +707,24 @@ export function InformationStep({
     if (clean.length === 11 && isValidCPF(masked)) {
       try {
         const user = await userService.getUserByCpf(clean);
-        if (user) {
-          const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
-          updateParticipant(index, {
-            name: fullName,
-            email: user.email || "",
-            phone: user.phone ? maskPhone(user.phone) : "",
-            birthDate: user.dateOfBirth || "",
-            gender: user.gender || "",
-          });
-        }
+        if (user) applyLookedUpUser(index, user);
       } catch {
         // silently ignore — não bloqueia o preenchimento manual
       }
+    }
+  };
+
+  /* Limpa o campo de documento ao alternar nacionalidade — caso contrário um
+   * CPF mascarado vira "documento" cru (ou vice-versa) e confunde validação. */
+  const handleNationalityChange = (index: number, nextNationality: string) => {
+    const current = participants[index];
+    const wasBr = isBrazilianCountry(current?.nationality);
+    const willBeBr = isBrazilianCountry(nextNationality);
+    clearParticipantFieldError(index, "cpf");
+    if (wasBr !== willBeBr) {
+      updateParticipant(index, { nationality: nextNationality, cpf: "" });
+    } else {
+      updateParticipant(index, { nationality: nextNationality });
     }
   };
 
@@ -595,6 +788,7 @@ export function InformationStep({
         (p?.birthDate || "") !== sp.birthDate ||
         (p?.phone || "") !== sp.phone ||
         (p?.gender || "") !== sp.gender ||
+        (p?.nationality || "Brasil") !== (sp.nationality || "Brasil") ||
         String(p?.hasEmergencyContact ?? false) !== (sp.hasEmergencyContact ?? "false") ||
         (p?.emergencyContactName || "") !== (sp.emergencyContactName || "") ||
         (p?.emergencyPhone || "") !== (sp.emergencyPhone || "");
@@ -615,19 +809,22 @@ export function InformationStep({
     const birthDate = participant.birthDate?.trim();
     const phone = participant.phone?.trim();
     const gender = participant.gender?.trim();
+    const participantIsBr = isBrazilianCountry(participant.nationality);
 
     // Nome deve ter pelo menos 2 palavras (nome e sobrenome)
     const nameParts = name ? name.split(/\s+/).filter(Boolean) : [];
     const hasFullName = nameParts.length >= 2;
 
-    const cpfOk =
-      !!cpf &&
-      getCpfValidationMessage(cpf) === null;
+    /* Brasileiros: exige CPF válido. Estrangeiros: documento entre 4 e 30 chars
+     * (mesmo range usado no buildRegisterStep1bSchema). */
+    const docOk = participantIsBr
+      ? !!cpf && getCpfValidationMessage(cpf) === null
+      : !!cpf && cpf.length >= 4 && cpf.length <= 30;
 
     const basicFieldsComplete = !!(
       name &&
       hasFullName &&
-      cpfOk &&
+      docOk &&
       email &&
       birthDate &&
       phone &&
@@ -665,6 +862,7 @@ export function InformationStep({
     const birthDate = participant.birthDate?.trim();
     const phone = participant.phone?.trim();
     const gender = participant.gender?.trim();
+    const participantIsBr = isBrazilianCountry(participant.nationality);
 
     if (!name) {
       errors.name = "Nome completo é obrigatório";
@@ -681,9 +879,21 @@ export function InformationStep({
       errors.email = "Informe um email válido";
     }
 
-    const cpfMsg = getCpfValidationMessage(cpf);
-    if (cpfMsg) {
-      errors.cpf = cpfMsg;
+    /* Brasileiros: valida formato CPF. Estrangeiros: aceita 4-30 chars
+     * (passaporte, RNE, identidade estrangeira). */
+    if (participantIsBr) {
+      const cpfMsg = getCpfValidationMessage(cpf);
+      if (cpfMsg) {
+        errors.cpf = cpfMsg;
+      }
+    } else {
+      if (!cpf) {
+        errors.cpf = "Documento é obrigatório";
+      } else if (cpf.length < 4) {
+        errors.cpf = "Documento deve ter pelo menos 4 caracteres";
+      } else if (cpf.length > 30) {
+        errors.cpf = "Documento deve ter no máximo 30 caracteres";
+      }
     }
 
     if (!birthDate) {
@@ -802,8 +1012,18 @@ export function InformationStep({
 
           const payload = {
             participants: remaining.map((p) => {
+              /* Brasileiros: doc clean (só dígitos). Estrangeiros: doc cru
+               * (preserva letras de passaporte/RNE). Backend usa
+               * documentType pra normalizar via cleanDocumentNumber. */
+              const participantIsBr = isBrazilianCountry(p.nationality);
+              const docForBackend = participantIsBr
+                ? (p.cpf || "").replace(/\D/g, "")
+                : (p.cpf || "").trim();
               const mapped: {
-                name: string; cpf: string; email: string;
+                name: string;
+                documentType: "CPF" | "PASSPORT";
+                documentNumber: string;
+                email: string;
                 birthDate: string; phone: string;
                 gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
                 emergencyContactName?: string; emergencyPhone?: string;
@@ -811,7 +1031,8 @@ export function InformationStep({
                 questionAnswers?: Array<{ questionId: string; answer: string | boolean | number }>;
               } = {
                 name: p.name,
-                cpf: p.cpf.replace(/\D/g, ""),
+                documentType: participantIsBr ? "CPF" : "PASSPORT",
+                documentNumber: docForBackend,
                 email: p.email,
                 birthDate: p.birthDate,
                 phone: p.phone?.replace(/\D/g, "") || "",
@@ -878,9 +1099,13 @@ export function InformationStep({
     )}`;
   };
 
-  // Mask CPF for display (partial masking)
-  const maskCPFDisplay = (cpf: string) => {
+  /* Mask CPF for display (partial masking).
+   * Brasileiros: mascarado parcialmente (XXX.***.***-XX).
+   * Estrangeiros: exibe o documento integral — passaporte/RNE não tem padrão
+   * de mascaramento aceito universalmente. */
+  const maskCPFDisplay = (cpf: string, isBr: boolean = true) => {
     if (!cpf) return "";
+    if (!isBr) return cpf;
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
   };
 
@@ -1296,10 +1521,15 @@ export function InformationStep({
                 birthDate: "",
                 phone: "",
                 gender: "",
+                nationality: "Brasil",
                 emergencyPhone: "",
                 emergencyContactName: "",
                 hasEmergencyContact: false,
               };
+              const participantIsBr = isBrazilianCountry(participant.nationality);
+              const docLabel = participantIsBr ? "CPF" : "Documento";
+              const docPlaceholder = participantIsBr ? "000.000.000-00" : "12345...";
+              const docMaxLength = participantIsBr ? 14 : 30;
               const isExpanded =
                 expandedParticipants[participantIndex] ?? false;
               const isComplete = !!savedParticipants[participantIndex] && !participantDirtyMap[participantIndex];
@@ -1376,7 +1606,7 @@ export function InformationStep({
                                     {participant.cpf && (
                                       <>
                                         <span className="size-1 bg-gray-11 rounded-full" />
-                                        {maskCPFDisplay(participant.cpf)}
+                                        {maskCPFDisplay(participant.cpf, isBrazilianCountry(participant.nationality))}
                                       </>
                                     )}
                                   </p>
@@ -1541,23 +1771,40 @@ export function InformationStep({
                                     }
                                   }
 
+                                  /* Deriva nacionalidade do linked user:
+                                   * - `country` quando vier (mainUser + linked herdam do main).
+                                   * - Fallback por `documentType` quando o country não foi carregado
+                                   *   (CPF → Brasil, PASSPORT → mantém atual pra usuário escolher).
+                                   * Default: Brasil. */
+                                  const inheritedNationality =
+                                    user.country?.trim() ||
+                                    (user.documentType === "PASSPORT"
+                                      ? participant.nationality || ""
+                                      : "Brasil");
+                                  const userIsBr = isBrazilianCountry(inheritedNationality);
+
+                                  /* Documento: pra brasileiro aplica máscara CPF (igual handleCPFChange).
+                                   * Pra estrangeiro mantém cru (preserva letras de passaporte). */
+                                  const docValue = user.documentNumber || "";
+                                  const docFormatted = userIsBr
+                                    ? maskCPF(docValue)
+                                    : docValue.slice(0, 30);
+
                                   updateParticipant(participantIndex, {
                                     name: `${user.firstName} ${user.lastName}`.trim(),
                                     email: user.email || "",
                                     phone: formattedPhone,
                                     birthDate: user.dateOfBirth || "",
                                     gender: normalizedGender,
+                                    nationality: inheritedNationality,
+                                    cpf: docFormatted,
                                   });
+                                  clearParticipantFieldError(participantIndex, "cpf");
 
                                   setSelectedLinkedUserIds((prev) => ({
                                     ...prev,
                                     [participantIndex]: user.id,
                                   }));
-
-                                  // Verifica o CPF em tempo real para garantir dados atualizados
-                                  if (user.documentNumber) {
-                                    handleCPFChange(participantIndex, user.documentNumber);
-                                  }
                                 }}
                                 placeholder="Digite seu nome completo"
                                 className={`w-full ${selectedLinkedUserIds[participantIndex] ? "pr-9" : ""} ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
@@ -1588,7 +1835,17 @@ export function InformationStep({
                           </div>
                           <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium text-gray-12">
-                              CPF
+                              Nacionalidade
+                            </label>
+                            <NationalitySelect
+                              value={participant.nationality || "Brasil"}
+                              disabled={previewMode}
+                              onChange={(country) => handleNationalityChange(participantIndex, country)}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-gray-12">
+                              {docLabel}
                             </label>
                             <input
                               type="text"
@@ -1601,9 +1858,9 @@ export function InformationStep({
                                   e.target.value
                                 )
                               }
-                              maxLength={14}
+                              maxLength={docMaxLength}
                               className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.cpf ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                              placeholder="000.000.000-00"
+                              placeholder={docPlaceholder}
                             />
                             {fieldErrors[participantIndex]?.cpf && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].cpf}</p>
@@ -1842,6 +2099,7 @@ export function InformationStep({
                                     birthDate: p?.birthDate || "",
                                     phone: p?.phone || "",
                                     gender: p?.gender || "",
+                                    nationality: p?.nationality || "Brasil",
                                     hasEmergencyContact: String(p?.hasEmergencyContact ?? false),
                                     emergencyContactName: p?.emergencyContactName || "",
                                     emergencyPhone: p?.emergencyPhone || "",

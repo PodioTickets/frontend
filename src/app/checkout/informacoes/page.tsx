@@ -11,6 +11,7 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { OrderApiError } from "@/interfaces/order";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 import toast from "react-hot-toast";
 
 function mapGender(value?: string) {
@@ -53,9 +54,18 @@ function CheckoutInformacoesContent() {
 
     const payload = {
       participants: activeParticipants.map((p) => {
+        const participantIsBr = isBrazilianCountry(p.nationality);
+        /* Brasileiros: strip de máscara (CPF clean). Estrangeiros: documento
+         * cru — passaporte/RNE pode ter letras que não podem ser removidas.
+         * Backend usa documentType pra normalizar corretamente
+         * (cleanDocumentNumber preserva letras pra PASSPORT). */
+        const documentNumber = participantIsBr
+          ? (p.cpf || "").replace(/\D/g, "")
+          : (p.cpf || "").trim();
         const mapped: {
           name: string;
-          cpf: string;
+          documentType: "CPF" | "PASSPORT";
+          documentNumber: string;
           email: string;
           birthDate: string;
           phone: string;
@@ -69,7 +79,8 @@ function CheckoutInformacoesContent() {
           }>;
         } = {
           name: p.name,
-          cpf: p.cpf.replace(/\D/g, ""),
+          documentType: participantIsBr ? "CPF" : "PASSPORT",
+          documentNumber,
           email: p.email,
           birthDate: p.birthDate,
           phone: p.phone?.replace(/\D/g, "") || "",

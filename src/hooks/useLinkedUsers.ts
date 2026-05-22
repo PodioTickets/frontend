@@ -6,7 +6,10 @@ export interface LinkedUser {
   firstName: string;
   lastName: string;
   email: string;
+  documentType?: "CPF" | "PASSPORT" | null;
   documentNumber: string;
+  /** País do usuário principal (herdado pelos perfis vinculados até existir coluna própria). */
+  country?: string | null;
   phone: string;
   dateOfBirth: string;
   gender: string;

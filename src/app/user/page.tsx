@@ -25,6 +25,7 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { useChangeEmailModal, useChangePasswordModal } from "@/stores/modalStore";
 import { CPFIcon } from "@/components/Icons/CPFIcon";
 import { getCpfValidationMessage } from "@/utils/cpf";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { getAvatarUrl } from "@/utils/avatar";
 import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
 import {
@@ -174,23 +175,32 @@ export default function UserProfilePage() {
 
   // Initialize formData with user data when available
   const initialFormData = useMemo(
-    () => ({
-      firstName: (user as any)?.firstName ?? "",
-      lastName: (user as any)?.lastName ?? "",
-      documentNumber: maskCPFForInit((user as any)?.documentNumber || ""),
-      dateOfBirth: (user as any)?.dateOfBirth ?? "",
-      nationality: mapStoredCountryToPickerValue(
+    () => {
+      const nationality = mapStoredCountryToPickerValue(
         (user as any)?.nationality || (user as any)?.country,
-      ),
-      phone: maskPhoneForInit((user as any)?.phone || ""),
-      emergencyPhone: maskPhoneForInit((user as any)?.emergencyPhone || ""),
-      gender:
-        formatGenderFromBackend((user as any)?.gender || (user as any)?.sex) ||
-        "",
-      email: user?.email ?? "",
-      currentPassword: "",
-      newPassword: "",
-    }),
+      );
+      const rawDoc = (user as any)?.documentNumber || "";
+      /* Estrangeiros: preserva o documento cru (passaporte/RNE pode ter letras).
+       * Brasileiros: aplica máscara de CPF pra exibição. */
+      const displayDoc = isBrazilianCountry(nationality)
+        ? maskCPFForInit(rawDoc)
+        : rawDoc;
+      return {
+        firstName: (user as any)?.firstName ?? "",
+        lastName: (user as any)?.lastName ?? "",
+        documentNumber: displayDoc,
+        dateOfBirth: (user as any)?.dateOfBirth ?? "",
+        nationality,
+        phone: maskPhoneForInit((user as any)?.phone || ""),
+        emergencyPhone: maskPhoneForInit((user as any)?.emergencyPhone || ""),
+        gender:
+          formatGenderFromBackend((user as any)?.gender || (user as any)?.sex) ||
+          "",
+        email: user?.email ?? "",
+        currentPassword: "",
+        newPassword: "",
+      };
+    },
     [user]
   );
 
@@ -203,12 +213,17 @@ export default function UserProfilePage() {
   const profileBaseline = useMemo(() => {
     if (!user) return null;
     const u = user as any;
+    const nationality = mapStoredCountryToPickerValue(u.nationality || u.country);
+    const rawDoc = u.documentNumber || "";
+    const displayDoc = isBrazilianCountry(nationality)
+      ? maskCPFForInit(rawDoc)
+      : rawDoc;
     return {
       firstName: u.firstName ?? "",
       lastName: u.lastName ?? "",
-      documentNumber: maskCPFForInit(u.documentNumber || ""),
+      documentNumber: displayDoc,
       dateOfBirth: u.dateOfBirth ?? "",
-      nationality: mapStoredCountryToPickerValue(u.nationality || u.country),
+      nationality,
       phone: maskPhoneForInit(u.phone || ""),
       emergencyPhone: maskPhoneForInit(u.emergencyPhone || ""),
       gender:
@@ -223,7 +238,12 @@ export default function UserProfilePage() {
     const f = formData;
     if ((f.firstName || "").trim() !== (b.firstName || "").trim()) return true;
     if ((f.lastName || "").trim() !== (b.lastName || "").trim()) return true;
-    if (d(f.documentNumber) !== d(b.documentNumber)) return true;
+    /* Brasileiros: comparação por dígitos (ignora máscara). Estrangeiros:
+     * comparação direta (passaporte/RNE preserva letras). */
+    const docIsBr = isBrazilianCountry(f.nationality);
+    const docCurrent = docIsBr ? d(f.documentNumber) : (f.documentNumber || "").trim();
+    const docBaseline = docIsBr ? d(b.documentNumber) : (b.documentNumber || "").trim();
+    if (docCurrent !== docBaseline) return true;
     if ((f.dateOfBirth || "") !== (b.dateOfBirth || "")) return true;
     if ((f.nationality || "") !== (b.nationality || "")) return true;
     if (d(f.phone) !== d(b.phone)) return true;
@@ -245,7 +265,13 @@ export default function UserProfilePage() {
         firstName: (user as any)?.firstName ?? prev.firstName,
         lastName: (user as any)?.lastName ?? prev.lastName,
         documentNumber: rawDocumentNumber
-          ? maskCPFForInit(rawDocumentNumber)
+          ? (isBrazilianCountry(
+            mapStoredCountryToPickerValue(
+              (user as any)?.nationality || (user as any)?.country,
+            ),
+          )
+            ? maskCPFForInit(rawDocumentNumber)
+            : rawDocumentNumber)
           : prev.documentNumber,
         dateOfBirth: (user as any)?.dateOfBirth ?? prev.dateOfBirth,
         nationality: mapStoredCountryToPickerValue(
@@ -422,7 +448,11 @@ export default function UserProfilePage() {
     // Aplica máscara para CPF e telefones
     let processedValue = value;
     if (name === "documentNumber") {
-      processedValue = maskCPF(value);
+      /* Aplica máscara CPF só pra brasileiros — estrangeiros digitam livre
+       * (passaporte/RNE com letras). */
+      processedValue = isBrazilianCountry(formData.nationality)
+        ? maskCPF(value)
+        : value.slice(0, 30);
     } else if (name === "phone" || name === "emergencyPhone") {
       processedValue = maskPhone(value);
     }
@@ -454,11 +484,16 @@ export default function UserProfilePage() {
       errors.phone = "Telefone é obrigatório";
     }
 
+    const userIsBr = isBrazilianCountry(formData.nationality);
     if (!formData.documentNumber?.trim()) {
-      errors.documentNumber = "CPF é obrigatório";
-    } else {
+      errors.documentNumber = userIsBr ? "CPF é obrigatório" : "Documento é obrigatório";
+    } else if (userIsBr) {
       const cpfError = getCpfValidationMessage(formData.documentNumber);
       if (cpfError) errors.documentNumber = cpfError;
+    } else {
+      const len = formData.documentNumber.trim().length;
+      if (len < 4) errors.documentNumber = "Documento deve ter pelo menos 4 caracteres";
+      else if (len > 30) errors.documentNumber = "Documento deve ter no máximo 30 caracteres";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -487,8 +522,16 @@ export default function UserProfilePage() {
       }
 
       if (formData.documentNumber) {
-        updateData.documentNumber = formData.documentNumber.replace(/\D/g, "");
-        updateData.documentType = "CPF";
+        /* Brasileiros: strip de máscara antes de mandar (padroniza pra 11 dígitos).
+         * Estrangeiros: documento vai cru — preserva letras de passaporte/RNE.
+         * documentType segue o mesmo padrão do RegisterModal (CPF | PASSPORT). */
+        if (isBrazilianCountry(formData.nationality)) {
+          updateData.documentNumber = formData.documentNumber.replace(/\D/g, "");
+          updateData.documentType = "CPF";
+        } else {
+          updateData.documentNumber = formData.documentNumber.trim();
+          updateData.documentType = "PASSPORT";
+        }
       }
 
       if (formData.dateOfBirth) {
@@ -779,10 +822,19 @@ export default function UserProfilePage() {
                               key={option.id}
                               type="button"
                               onClick={() => {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  nationality: option.label,
-                                }));
+                                setFormData((prev) => {
+                                  /* Limpa o documento ao alternar BR ↔ estrangeiro —
+                                   * CPF mascarado não é doc estrangeiro válido (e
+                                   * vice-versa). */
+                                  const wasBr = isBrazilianCountry(prev.nationality);
+                                  const willBeBr = isBrazilianCountry(option.label);
+                                  return {
+                                    ...prev,
+                                    nationality: option.label,
+                                    documentNumber: wasBr !== willBeBr ? "" : prev.documentNumber,
+                                  };
+                                });
+                                setFormErrors((prev) => ({ ...prev, documentNumber: "" }));
                                 setShowNationalityDropdown(false);
                                 setNationalitySearch("");
                               }}
@@ -833,7 +885,7 @@ export default function UserProfilePage() {
 
               <div className="flex flex-1 flex-col gap-2 min-w-[283px] w-full md:w-auto">
                 <label className="text-base text-gray-12 font-family-dm-sans md:text-base md:text-gray-12">
-                  CPF
+                  {isBrazilianCountry(formData.nationality) ? "CPF" : "Documento"}
                 </label>
                 <div className={cn("flex h-12 items-center gap-1 rounded-lg border bg-transparent px-3 md:gap-2.5", formErrors.documentNumber ? "border-red-500" : "border-gray-6")}>
                   <CPFIcon className="size-5 shrink-0 text-gray-11" />
@@ -843,7 +895,8 @@ export default function UserProfilePage() {
                     name="documentNumber"
                     value={formData.documentNumber}
                     onChange={handleInputChange}
-                    placeholder="000.000.000-00"
+                    placeholder={isBrazilianCountry(formData.nationality) ? "000.000.000-00" : "12345..."}
+                    maxLength={isBrazilianCountry(formData.nationality) ? 14 : 30}
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
@@ -852,7 +905,8 @@ export default function UserProfilePage() {
                     name="documentNumber"
                     value={formData.documentNumber}
                     onChange={handleInputChange}
-                    placeholder="000.000.000-00"
+                    placeholder={isBrazilianCountry(formData.nationality) ? "000.000.000-00" : "12345..."}
+                    maxLength={isBrazilianCountry(formData.nationality) ? 14 : 30}
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
