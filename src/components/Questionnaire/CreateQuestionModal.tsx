@@ -362,7 +362,7 @@ export function CreateQuestionModal() {
                           type="text"
                           value={question}
                           onChange={(e) => setQuestion(e.target.value)}
-                          placeholder="Digite uma pergunta aos participantes"
+                          placeholder="Digite sua pergunta"
                           maxLength={200}
                           className="h-12 px-3 pr-24"
                         />

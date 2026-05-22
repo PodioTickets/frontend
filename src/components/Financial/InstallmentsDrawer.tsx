@@ -448,6 +448,7 @@ export function InstallmentsDrawer({
                             trigger="hover"
                             content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{installment.orderId}</p>}
                             contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                            className="block min-w-0 max-w-full"
                           >
                             <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12 truncate cursor-help">
                               #{installment.orderId.slice(0, 6)}...{installment.orderId.slice(-4)}

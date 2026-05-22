@@ -619,13 +619,13 @@ export default function EventRegistrationsPage() {
             <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.cancelled.toLocaleString()}</p>
             <RegistrationsWeekTrend change={stats.cancelledChange} compact />
           </div>
-          {/* Estornos/Chargebacks — cores espelhadas no desktop (neutro). */}
+          {/* Estornos / Chargebacks — cores espelhadas no desktop (neutro). */}
           <div className="bg-gray-1 border border-gray-6 rounded-lg p-3 flex flex-col gap-2">
             <div className="flex flex-col gap-3">
               <div className="w-8 h-8 rounded-lg bg-gray-3 flex items-center justify-center shrink-0">
                 <XCircle className="size-5 text-gray-12" />
               </div>
-              <p className="font-family-dm-sans font-normal text-base text-gray-11">Estornos/Chargebacks</p>
+              <p className="font-family-dm-sans font-normal text-base text-gray-11">Estornos / Chargebacks</p>
             </div>
             <p className="font-manrope font-extrabold text-lg text-gray-12">{stats.refunded.toLocaleString()}</p>
             <RegistrationsWeekTrend change={stats.refundedChange} compact />
@@ -677,11 +677,11 @@ export default function EventRegistrationsPage() {
             <RegistrationsWeekTrend change={stats.cancelledChange} />
           </div>
 
-          {/* Estornos/Chargebacks — cores espelhadas no card de Receita Líquida (neutro). */}
+          {/* Estornos / Chargebacks — cores espelhadas no card de Receita Líquida (neutro). */}
           <div className="bg-gray-1 rounded-lg px-4 py-3 border border-gray-6">
             <div className="mb-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-11 mb-1">Estornos/Chargebacks</p>
+                <p className="text-sm text-gray-11 mb-1">Estornos / Chargebacks</p>
                 <div className="w-[28px] h-[28px] p-1 rounded-lg bg-gray-3 flex items-center justify-center">
                   <XCircle className="size-5 text-gray-12" />
                 </div>
@@ -1007,8 +1007,19 @@ export default function EventRegistrationsPage() {
                                   <span className="text-primary-11 font-semibold text-sm">{(fullName || "U").charAt(0).toUpperCase()}</span>
                                 </div>
                               )}
-                              <div className="flex flex-col gap-1 min-w-0">
-                                <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">{fullName || ""}</p>
+                              <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                {/* Tooltip envolvendo o nome — `block min-w-0 max-w-full`
+                                    sobrescreve o `inline-block` default do Tooltip pra que
+                                    o `truncate` corte quando o nome estourar a largura. */}
+                                <Tooltip
+                                  position="topRight"
+                                  trigger="hover"
+                                  content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{fullName || "—"}</p>}
+                                  contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                                  className="block min-w-0 max-w-full"
+                                >
+                                  <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate cursor-help">{fullName || ""}</p>
+                                </Tooltip>
                                 <div className="flex items-center gap-2">
                                   <span className="font-family-dm-sans font-normal text-sm text-gray-11">{timeStr}</span>
                                   <span className="size-1 rounded-full bg-gray-11 shrink-0" />
@@ -1024,17 +1035,22 @@ export default function EventRegistrationsPage() {
                           </div>
                           <div className="flex items-center justify-between">
                             <p className="font-manrope font-extrabold text-xl text-gray-12">R$ {price}</p>
+                            {/* ID com 3 pontos no meio (`#xxxxxx...xxxx`) + tooltip
+                                mostrando ID completo — padrão dos drawers financeiros.
+                                `topLeft` alinha pela direita do trigger (tooltip estende
+                                pra ESQUERDA) — necessário aqui porque o trigger fica no
+                                canto direito do card; `topRight` estouraria a viewport.
+                                `usePortal` escapa `overflow-hidden` do card. */}
                             <Tooltip
-                              contentClassName="w-auto px-3 py-2 gap-0"
-                              position="topRight"
-                              content={
-                                <p className="font-inter font-normal text-sm text-gray-11 leading-[1.3] whitespace-nowrap">
-                                  {registration.id}
-                                </p>
-                              }
+                              position="topLeft"
+                              trigger="hover"
+                              usePortal
+                              content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{registration.id}</p>}
+                              contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
+                              className="block min-w-0 max-w-full"
                             >
-                              <p className="font-family-dm-sans font-medium text-sm text-gray-12 cursor-default">
-                                ID inscrição: {registration.id?.length > 10 ? `${registration.id.slice(0, 4)}-${registration.id.slice(-4)}` : registration.id}
+                              <p className="font-family-dm-sans font-medium text-sm text-gray-12 truncate cursor-help">
+                                ID inscrição: {registration.id?.length > 10 ? `#${registration.id.slice(0, 6)}...${registration.id.slice(-4)}` : registration.id}
                               </p>
                             </Tooltip>
                           </div>

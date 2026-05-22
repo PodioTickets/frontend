@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
 import Image from "next/image";
@@ -123,6 +123,38 @@ export function Tooltip({
 
     setPortalStyle(style);
   }, [usePortal, isOpen, position]);
+
+  /* Clamp horizontal: mede o tooltip renderizado e ajusta `left`/`right` se
+   * estiver vazando a viewport. Roda só pra `usePortal=true` (sem portal não
+   * tem fixed positioning). Sem isso, IDs longos numa coluna grudada na borda
+   * do card faziam o painel sair da tela em mobile. */
+  useLayoutEffect(() => {
+    if (!usePortal || !isOpen || !tooltipRef.current) return;
+    const panel = tooltipRef.current.firstElementChild as HTMLElement | null;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    const MARGIN = 8;
+    const overflowRight = rect.right - (window.innerWidth - MARGIN);
+    const overflowLeft = MARGIN - rect.left;
+    if (overflowRight <= 0 && overflowLeft <= 0) return;
+
+    setPortalStyle((prev) => {
+      const next: React.CSSProperties = { ...prev };
+      const leftIsNum = typeof prev.left === "number";
+      const rightIsNum = typeof prev.right === "number";
+
+      if (overflowRight > 0) {
+        if (leftIsNum) next.left = (prev.left as number) - overflowRight;
+        else if (rightIsNum) next.right = (prev.right as number) + overflowRight;
+      }
+      if (overflowLeft > 0) {
+        if (leftIsNum) next.left = (prev.left as number) + overflowLeft;
+        else if (rightIsNum) next.right = (prev.right as number) - overflowLeft;
+      }
+      if (next.left === prev.left && next.right === prev.right) return prev;
+      return next;
+    });
+  }, [usePortal, isOpen, portalStyle]);
 
   // A ponta sem rounded aponta para o trigger; varia conforme a posição
   const sharpCornerClasses: Record<typeof position & string, string> = {

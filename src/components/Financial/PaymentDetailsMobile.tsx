@@ -17,7 +17,7 @@ import { XCircleIcon } from "lucide-react";
  * pagamento (método + status) e transação (valor, gateway, IDs com copy),
  * lista de ingressos vinculados com paginação mobile.
  *
- * Não compartilha com `FinancialDetailsMobile` (estornos/chargebacks) porque
+ * Não compartilha com `FinancialDetailsMobile` (Estornos / Chargebacks) porque
  * a estrutura difere — aqui tem mais informações estruturadas em seções
  * (comprador / pagamento / transação / ingressos) e cards de info-pair.
  */
