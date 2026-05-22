@@ -111,11 +111,11 @@ export function TransferHistoryDrawer({
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Concluído":   return "bg-primary-11 text-primary-1";
+      case "Concluído": return "bg-primary-11 text-primary-1";
       case "Processando": return "bg-yellow-11 text-yellow-1";
-      case "Cancelado":   return "bg-red-11 text-red-1";
-      case "Falhou":      return "bg-red-3 text-red-11";
-      default:            return "bg-gray-4 text-gray-12";
+      case "Cancelado": return "bg-red-11 text-red-1";
+      case "Falhou": return "bg-red-3 text-red-11";
+      default: return "bg-gray-4 text-gray-12";
     }
   };
 
@@ -216,7 +216,7 @@ export function TransferHistoryDrawer({
                     <div className="w-8 h-8 rounded-lg bg-[#EBE4FF] flex items-center justify-center shrink-0">
                       <FileText className="size-5 text-gray-12" />
                     </div>
-                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Transações de repasse</p>
+                    <p className="font-family-dm-sans font-normal text-base text-gray-11">Transações de repasse concluídos</p>
                   </div>
                   <p className="font-manrope font-extrabold text-lg text-gray-12">
                     {metrics.totalCount}
@@ -275,7 +275,9 @@ export function TransferHistoryDrawer({
                                     <p className="font-family-dm-sans font-normal text-sm text-gray-11">{d.requestDate}</p>
                                   </div>
                                 </div>
-                                <span className={`shrink-0 px-3 py-2 rounded text-sm font-family-dm-sans font-normal ${isConcluido ? "bg-[#21835d] text-primary-1" : "bg-yellow-11 text-yellow-1"}`}>
+                                <span className={`shrink-0 px-3 py-2 rounded text-sm font-family-dm-sans font-normal ${getStatusBadge(
+                                  d.status
+                                )}`}>
                                   {d.status}
                                 </span>
                               </div>
@@ -366,7 +368,7 @@ export function TransferHistoryDrawer({
                 <div className="bg-gray-1 border border-gray-6 rounded-[12px] px-4 py-3 flex-1">
                   <div className="flex items-center justify-between mb-3">
                     <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                      Transações de repasse
+                      Transações de repasse concluídos
                     </p>
                     <div className="w-[28px] h-[28px] p-1 rounded-lg bg-[#EBE4FF] flex items-center justify-center">
                       <FileText className="size-4 text-gray-12" />
