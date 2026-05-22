@@ -13,6 +13,7 @@ import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useTickets } from "@/hooks/useTickets";
 import { OrderApiError } from "@/interfaces/order";
 import toast from "react-hot-toast";
+import CheckoutIngressosLoading from "./loading";
 
 function CheckoutIngressosContent() {
   const searchParams = useSearchParams();
@@ -106,8 +107,11 @@ function CheckoutIngressosContent() {
     );
   }
 
+  /* Mantém o skeleton da subpágina enquanto o fetch do evento roda — sem isso
+   * o `loading.tsx` some quando o RSC chega mas a page client retorna um
+   * spinner curto, expondo só o footer do RootLayout (flash visual). */
   if (isLoading) {
-    return <Loading />;
+    return <CheckoutIngressosLoading />;
   }
 
   if (!event) {

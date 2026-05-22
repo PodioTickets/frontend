@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
 import { Suspense } from "react";
 import { Loading } from "@/components/Loading";
+import CheckoutPagamentoLoading from "./loading";
 
 function CheckoutPagamentoContent() {
   const searchParams = useSearchParams();
@@ -44,7 +45,7 @@ function CheckoutPagamentoContent() {
   }
 
   if (isLoading) {
-    return <Loading />;
+    return <CheckoutPagamentoLoading />;
   }
 
   if (!event) {

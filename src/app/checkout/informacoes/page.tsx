@@ -13,6 +13,7 @@ import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { OrderApiError } from "@/interfaces/order";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import toast from "react-hot-toast";
+import CheckoutInformacoesLoading from "./loading";
 
 function mapGender(value?: string) {
   if (!value) return undefined;
@@ -160,7 +161,7 @@ function CheckoutInformacoesContent() {
   }
 
   if (isLoading) {
-    return <Loading />;
+    return <CheckoutInformacoesLoading />;
   }
 
   if (!event) {

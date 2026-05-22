@@ -12,6 +12,7 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { OrderApiError } from "@/interfaces/order";
 import toast from "react-hot-toast";
+import CheckoutProdutosLoading from "./loading";
 
 function CheckoutProdutosContent() {
   const searchParams = useSearchParams();
@@ -101,7 +102,7 @@ function CheckoutProdutosContent() {
   }
 
   if (isLoading) {
-    return <Loading />;
+    return <CheckoutProdutosLoading />;
   }
 
   if (!event) {

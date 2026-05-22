@@ -18,6 +18,7 @@ import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { Loading } from "@/components/Loading";
+import EventLoading from "./loading";
 import {
   getEventOrganizer,
   getEventOrganizationId,
@@ -128,9 +129,11 @@ export default function EventPage() {
     }).format(new Date(date));
   };
 
-  // Mostrar loading enquanto está carregando (incluindo quando ainda não tem dados)
+  /* Mantém o skeleton da página enquanto o fetch do evento roda — sem isso,
+   * o `loading.tsx` some quando o RSC chega e o spinner curto deixa o footer
+   * do RootLayout visível por um frame. */
   if (isLoading || (event === undefined && !error)) {
-    return <Loading />;
+    return <EventLoading />;
   }
 
   // Só mostrar "não encontrado" quando terminou de carregar e realmente não tem evento
