@@ -241,7 +241,7 @@ export function PaymentDetailsModal() {
       name: reg.name || "Participante",
       email: reg.email || "",
       ticket: reg.ticket?.name || "Ticket",
-      category: reg.ticketCategory?.name || "Nome da categoria",
+      category: reg.ticketCategory?.name || "Ingresso avulso",
     }))
     : registration?.ticket ? [{
       id: registration.id,
@@ -252,7 +252,7 @@ export function PaymentDetailsModal() {
         : buyerData?.fullName || "Participante",
       email: buyerData?.email || "",
       ticket: registration.ticket?.name || "Ticket",
-      category: registration.ticket?.category?.name || "Nome da categoria",
+      category: registration.ticket?.category?.name || "Ingresso avulso",
     }] : registration?.modalities?.map((mod: any, index: number) => ({
       id: `${registration.id}-${index}`,
       viewRegistrationId: registration.id as string,
@@ -262,7 +262,7 @@ export function PaymentDetailsModal() {
         : buyerData?.fullName || "Participante",
       email: buyerData?.email || "",
       ticket: mod.modality?.name || registration?.ticket?.name || "Ticket",
-      category: registration?.ticket?.category?.name || "Nome da categoria",
+      category: registration?.ticket?.category?.name || "Ingresso avulso",
     })) || [];
 
   const formatDate = (dateString?: string) => {
@@ -597,7 +597,7 @@ export function PaymentDetailsModal() {
                               }
                               className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
                             >
-                              <FileText className="size-5" />
+                              <TicketIcon className="size-5" />
                               Ver detalhes
                             </button>
                           </div>

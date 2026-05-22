@@ -249,11 +249,11 @@ export function PaymentDetailsMobile({
         {/* Breadcrumb */}
         <div className="px-4 pt-6 pb-6 flex flex-wrap gap-y-2 gap-x-1 items-center justify-center font-family-dm-sans text-sm leading-[1.3]">
           <span className="text-gray-11">Eventos</span>
-          <ChevronLeft className="size-4 text-gray-11 -rotate-90 shrink-0" />
+          <ChevronLeft className="size-4 text-gray-11 rotate-180 shrink-0" />
           <span className="text-gray-11">Financeiro</span>
-          <ChevronLeft className="size-4 text-gray-11 -rotate-90 shrink-0" />
+          <ChevronLeft className="size-4 text-gray-11 rotate-180 shrink-0" />
           <span className="text-gray-11">Histórico de repasses</span>
-          <ChevronLeft className="size-4 text-gray-11 -rotate-90 shrink-0" />
+          <ChevronLeft className="size-4 text-gray-11 rotate-180 shrink-0" />
           <span className="text-gray-12">Detalhes do pedido</span>
         </div>
 
