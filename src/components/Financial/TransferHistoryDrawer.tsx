@@ -263,10 +263,17 @@ export function TransferHistoryDrawer({
                             <div className="flex-1 min-w-0 flex flex-col gap-3">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex flex-col min-w-0">
+                                  {/* Trigger mostra ID resumido (`d.id` = `#xxxxxx...xxxx`);
+                                      tooltip mostra `transfer.id` cru (UUID completo).
+                                      `topRight` aqui porque o trigger fica no canto
+                                      esquerdo do card — tooltip estende pra direita
+                                      sem estourar. `usePortal` + clamp do Tooltip
+                                      garantem que o ID longo não vaze a viewport. */}
                                   <Tooltip
                                     position="topRight"
                                     trigger="hover"
-                                    content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{d.id}</p>}
+                                    usePortal
+                                    content={<p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-12 text-left break-all">{transfer.id}</p>}
                                     contentClassName="max-w-[min(320px,calc(100vw-2rem))] w-max min-w-0 px-3 py-2 gap-0 !items-stretch"
                                     className="block min-w-0 max-w-full"
                                   >
