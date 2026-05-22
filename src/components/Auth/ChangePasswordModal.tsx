@@ -230,7 +230,7 @@ export function ChangePasswordModal() {
                   {/* Confirm Password */}
                   <div className="flex flex-col gap-2 items-start w-full">
                     <label className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-                      Confirmar nova senha
+                    Confirme sua senha
                     </label>
                     <div className="border border-gray-6 flex gap-2.5 h-12 items-center px-3 rounded-lg w-full">
                       <Lock className="w-6 h-6 text-gray-11 shrink-0" />
