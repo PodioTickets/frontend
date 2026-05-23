@@ -16,6 +16,7 @@ import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { ProductVariationCard, type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
 import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -88,10 +89,22 @@ export default function TicketDetailsPage() {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
   };
 
-  /* Brasileiro quando documentType === "CPF" (autoritativo); fallback pra
-   * heurística do shape do doc só quando o backend ainda não popular o tipo
-   * (registros legados pré-migration de internacionalização). */
-  const isParticipantBr = (p: { documentType?: string | null; cpf?: string | null }): boolean => {
+  /* Brasileiro quando:
+   *   1. country existe e bate com BR/Brasil/Brazil (sinal mais confiável,
+   *      vem do cadastro internacional), OU
+   *   2. country é null mas documentType === "CPF" (registros legados onde
+   *      country não foi preenchido), OU
+   *   3. ambos null + heurística do shape do doc (CPF tem 11 dígitos puros).
+   *
+   * NÃO confiar em documentType primeiro: contas pre-migration tem
+   * documentType="CPF" mesmo com country="Estados Unidos", e o shape do
+   * documento (passaporte 6 chars) seria classificado como CPF inválido. */
+  const isParticipantBr = (p: {
+    country?: string | null;
+    documentType?: string | null;
+    cpf?: string | null;
+  }): boolean => {
+    if (p.country) return isBrazilianCountry(p.country);
     if (p.documentType) return p.documentType === "CPF";
     const raw = (p.cpf || "").trim();
     if (!raw) return true;
