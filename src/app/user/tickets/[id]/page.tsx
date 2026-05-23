@@ -15,6 +15,7 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { ProductVariationCard, type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
 import { Tooltip } from "@/components/Tooltip";
+import { formatPhoneForCountry } from "@/utils/phone";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -98,18 +99,15 @@ export default function TicketDetailsPage() {
     return raw.replace(/\D/g, "").length === 11;
   };
 
-  /* Formata telefone conforme nacionalidade do participante.
-   * - BR: aplica máscara (XX) XXXXX-XXXX para celular ou (XX) XXXX-XXXX p/ fixo.
-   * - Estrangeiro: preserva como veio (trim + normaliza espaços múltiplos).
-   *   Não tenta reformatar — cada país tem convenção própria (E.164 +XX,
-   *   parênteses, hífens) e máscara BR distorce números como +1 415... */
-  const formatPhone = (phone: string, isBr: boolean = true) => {
+  /* Formata telefone conforme o país do participante usando o mesmo helper
+   * `formatPhoneForCountry` que o cadastro (libphonenumber-js AsYouType).
+   * - BR "11999990000" → "(11) 99999-0000"
+   * - US "2025550100" → "(202) 555-0100"
+   * - PT "912345678" → "912 345 678"
+   * Quando o país não é mapeado, fallback retorna só dígitos. */
+  const formatPhone = (phone: string, country?: string | null) => {
     if (!phone) return "";
-    if (!isBr) return phone.trim().replace(/\s+/g, " ");
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 11) return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    if (cleaned.length === 10) return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    return phone;
+    return formatPhoneForCountry(phone, country ?? null) || phone;
   };
 
   const getGenderLabel = (gender?: string) => {
@@ -173,6 +171,7 @@ export default function TicketDetailsPage() {
         name: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || "",
         email: p.email || "",
         documentType: (p.documentType as "CPF" | "PASSPORT" | null | undefined) ?? null,
+        country: p.country ?? null,
         cpf: p.documentNumber || "",
         birthDate: p.dateOfBirth || "",
         gender: p.gender || "",
@@ -466,7 +465,7 @@ export default function TicketDetailsPage() {
                               <div className="flex flex-col py-4">
                                 <label className="text-base text-gray-12 font-family-dm-sans">Telefone</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                  {participant.phone ? formatPhone(participant.phone, isParticipantBr(participant)) : "-"}
+                                  {participant.phone ? formatPhone(participant.phone, participant.country) : "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
@@ -483,7 +482,7 @@ export default function TicketDetailsPage() {
                                   <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                     {participant.emergencyContact.name || "-"} -{" "}
                                     {participant.emergencyContact.phone
-                                      ? formatPhone(participant.emergencyContact.phone, isParticipantBr(participant))
+                                      ? formatPhone(participant.emergencyContact.phone, participant.country)
                                       : "-"}
                                   </p>
                                 </div>
