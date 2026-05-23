@@ -1161,12 +1161,20 @@ export function SubscriptionStep({
               </div>
             ))}
             {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-              <p className="text-sm">
-                {formatCouponLineLabel(appliedCoupon)}:{" "}
-                <span className="font-semibold">
-                  -{formatPrice(couponDiscountAmount)}
-                </span>
-              </p>
+              <>
+                <p className="text-sm text-gray-12">
+                  Subtotal:{" "}
+                  <span className="font-semibold">
+                    {formatPrice(totalPrice + totalProductsPrice)}
+                  </span>
+                </p>
+                <p className="text-sm">
+                  {formatCouponLineLabel(appliedCoupon)}:{" "}
+                  <span className="font-semibold">
+                    -{formatPrice(couponDiscountAmount)}
+                  </span>
+                </p>
+              </>
             )}
             {serviceFee > 0 && (
               <p className="text-sm">
@@ -1400,12 +1408,20 @@ export function SubscriptionStep({
               </div>
 
               {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                <div className="flex flex-col gap-2 mt-6">
-                  <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
-                    {formatCouponLineLabel(appliedCoupon)}:
-                    <span className="text-gray-12">-{formatPrice(couponDiscountAmount)}</span>
-                  </p>
-                </div>
+                <>
+                  <div className="flex flex-col gap-2 mt-6">
+                    <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                      Subtotal:
+                      <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
+                      {formatCouponLineLabel(appliedCoupon)}:
+                      <span className="text-gray-12">-{formatPrice(couponDiscountAmount)}</span>
+                    </p>
+                  </div>
+                </>
               )}
               {serviceFee > 0 && (
                 <div className={`flex flex-col gap-2 ${appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 ? "mt-2" : "mt-6"}`}>

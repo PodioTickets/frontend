@@ -450,6 +450,34 @@ export class UserService {
     }
   }
 
+  /**
+   * Preview de cupom sem reservar order — usado no `/checkout/ingressos`
+   * pra exibir "(X% OFF)" antes do user confirmar a seleção. Retorna `null`
+   * em qualquer erro (cupom inválido, endpoint indisponível) pra não bloquear
+   * o fluxo: o cupom de verdade só será aplicado no `patchCoupon` do
+   * `handleNext`, e lá os erros sobem normalmente.
+   */
+  async previewCoupon(
+    eventId: string,
+    code: string,
+  ): Promise<{
+    code: string;
+    value: number;
+    type: "PERCENTAGE" | "FIXED";
+    couponType?: string;
+    applyToProducts?: boolean;
+  } | null> {
+    try {
+      const { data: response } = await this.apiClient.get<{ data: any }>(
+        `/api/v1/coupons/events/${eventId}/preview`,
+        { params: { code } },
+      );
+      return response.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async validateGoogleCode(code: string, redirectUri: string): Promise<{
     success: boolean;
     mfaRequired?: boolean;

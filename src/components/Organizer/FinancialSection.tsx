@@ -129,29 +129,28 @@ export function FinancialSection({
                   <div
                     className={cn(
                       "absolute inset-y-0 left-0",
-                      readOnly ? "bg-gray-8" : "bg-[#6e56cf]",
+                      /* readOnly mantém o roxo mas mistura com cinza —
+                       * dessaturado, não cinza puro. */
+                      readOnly ? "bg-[#9b8fc0]" : "bg-[#6e56cf]",
                     )}
                     style={{ width: `${sliderPosition}%` }}
                   />
                   <div
                     className={cn(
                       "absolute inset-y-0 right-0",
-                      readOnly ? "bg-gray-6" : "bg-[#30a476]",
+                      readOnly ? "bg-[#7da896]" : "bg-[#30a476]",
                     )}
                     style={{ width: `${100 - sliderPosition}%` }}
                   />
                 </div>
                 <div
-                  className={cn(
-                    "pointer-events-none absolute top-0 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border shadow-md",
-                    readOnly ? "border-gray-8 bg-gray-3" : "border-gray-12 bg-gray-2",
-                  )}
+                  className="pointer-events-none absolute top-0 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-gray-12 bg-gray-2 shadow-md"
                   style={{ left: `${sliderPosition}%` }}
                 >
                   <div className="flex flex-col gap-[3px]">
-                    <div className={cn("h-[2px] w-3 rounded-full", readOnly ? "bg-gray-9" : "bg-gray-12")} />
-                    <div className={cn("h-[2px] w-3 rounded-full", readOnly ? "bg-gray-9" : "bg-gray-12")} />
-                    <div className={cn("h-[2px] w-3 rounded-full", readOnly ? "bg-gray-9" : "bg-gray-12")} />
+                    <div className="h-[2px] w-3 rounded-full bg-gray-12" />
+                    <div className="h-[2px] w-3 rounded-full bg-gray-12" />
+                    <div className="h-[2px] w-3 rounded-full bg-gray-12" />
                   </div>
                 </div>
               </div>

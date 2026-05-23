@@ -20,6 +20,7 @@ import { ticketUnitPriceForPrePaymentCents } from "@/lib/orderAutoCouponDisplay"
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
+import { useCouponPreview } from "@/hooks/useCouponPreview";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -32,6 +33,12 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
   const pendingCoupon = usePendingCouponSnapshot();
+  const { data: couponPreview } = useCouponPreview(event?.id, pendingCoupon);
+  /* Sufixo "(X% OFF)" — só pra cupons PERCENTAGE válidos. */
+  const couponPercentSuffix =
+    couponPreview && couponPreview.type === "PERCENTAGE" && couponPreview.value > 0
+      ? ` (${couponPreview.value}% OFF)`
+      : "";
 
   const handleNext = () => {
     if (!isAuthenticated) {
@@ -339,10 +346,16 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                 </div>
               ))}
               {pendingCoupon && (
-                <p className="text-sm flex items-center justify-between gap-2">
-                  <span className="text-gray-11">Cupom {pendingCoupon}:</span>
-                  <span className="text-gray-12 text-xs font-medium">ao continuar</span>
-                </p>
+                <>
+                  <p className="text-sm">
+                    Subtotal:{" "}
+                    <span className="font-semibold">{formatPrice(totalPrice)}</span>
+                  </p>
+                  <p className="text-sm">
+                    Cupom {pendingCoupon}{couponPercentSuffix}:{" "}
+                    <span className="text-xs font-medium">ao continuar</span>
+                  </p>
+                </>
               )}
               {serviceFee > 0 && (
                 <p className="text-sm">

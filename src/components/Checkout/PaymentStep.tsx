@@ -59,6 +59,7 @@ const COUPON_ERROR_MESSAGES: Record<string, string> = {
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
 import { getPendingCoupon, clearPendingCoupon } from "@/hooks/usePendingCoupon";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import toast from "react-hot-toast";
 import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
@@ -1109,6 +1110,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       const variation = product.variations?.find((v: any, i: number) =>
         (v.id || `${product.id}-${i}`) === variationId
       );
+
+      // Variação "Sem interesse" (opt-out do kit) não aparece no resumo —
+      // mesma regra do desktop (orderItems pula isIncludedInTicket que cobre
+      // esses casos). Aqui o filtro é explícito porque `includeIncluded: true`
+      // deixa inclusos passarem, e queremos ocultar essa variação especial.
+      if (variation && isSemInteresseVariation({ name: variation.name ?? "" })) return;
 
       // Variação só sobrescreve basePrice quando tem preço próprio (> 0).
       // Sem isso, variações de tamanho/cor com price=0 zerariam o produto e o filtro
@@ -2245,13 +2252,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </p>
               </div>
             )}
-            {serviceFee > 0 && (
+            {isCouponApplied && couponDiscount > 0 && (
               <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-family-dm-sans">
-                  Taxa de serviço:
-                </p>
+                <p className="text-sm text-gray-12 font-family-dm-sans">Subtotal:</p>
                 <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  {formatPrice(serviceFee)}
+                  {formatPrice(ticketSubtotalLocal + additionalProductsTotal)}
                 </p>
               </div>
             )}
@@ -2270,6 +2275,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </p>
                 <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                   -{formatPrice(couponDiscount)}
+                </p>
+              </div>
+            )}
+            {serviceFee > 0 && (
+              <div className="flex gap-1 items-center">
+                <p className="text-sm text-gray-12 font-family-dm-sans">
+                  Taxa de serviço:
+                </p>
+                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                  {formatPrice(serviceFee)}
                 </p>
               </div>
             )}
@@ -2783,13 +2798,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       </p>
                     </div>
                   )}
-                  {serviceFee > 0 && (
+                  {isCouponApplied && couponDiscount > 0 && (
                     <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-family-dm-sans">
-                        Taxa de serviço:
-                      </p>
+                      <p className="text-sm text-gray-12 font-family-dm-sans">Subtotal:</p>
                       <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {formatPrice(serviceFee)}
+                        {formatPrice(ticketSubtotalLocal + additionalProductsTotal)}
                       </p>
                     </div>
                   )}
@@ -2808,6 +2821,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       </p>
                       <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
                         -{formatPrice(couponDiscount)}
+                      </p>
+                    </div>
+                  )}
+                  {serviceFee > 0 && (
+                    <div className="flex gap-1 items-center">
+                      <p className="text-sm text-gray-12 font-family-dm-sans">
+                        Taxa de serviço:
+                      </p>
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                        {formatPrice(serviceFee)}
                       </p>
                     </div>
                   )}

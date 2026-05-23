@@ -16,6 +16,31 @@ import {
 } from "@/utils/ticketProductVisuals";
 import { CategoryKitHorizontalCarousel } from "./CategoryKitHorizontalCarousel";
 import { cn } from "@/utils/cn";
+import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
+import { useCouponPreview } from "@/hooks/useCouponPreview";
+
+/* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
+ * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
+ * de verdade no PaymentStep — aqui é só feedback visual antes do reserveOrder.
+ * FIXED: value vem em centavos. PERCENTAGE: value é % (1-100). */
+function applyCouponPreviewToPrice(
+  price: number,
+  coupon: { type: string; value: number } | null | undefined,
+): { discounted: number; original: number; hasDiscount: boolean } {
+  if (!coupon || !(coupon.value > 0)) {
+    return { discounted: price, original: price, hasDiscount: false };
+  }
+  if (coupon.type === "PERCENTAGE") {
+    const discounted = Math.max(0, price * (1 - coupon.value / 100));
+    return { discounted, original: price, hasDiscount: discounted < price };
+  }
+  if (coupon.type === "FIXED") {
+    const fixedReais = coupon.value / 100;
+    const discounted = Math.max(0, price - fixedReais);
+    return { discounted, original: price, hasDiscount: discounted < price };
+  }
+  return { discounted: price, original: price, hasDiscount: false };
+}
 
 interface TicketCategoryCardProps {
   categoryId?: string;
@@ -67,6 +92,7 @@ const TicketItemMobile = memo(({
   onIncrease,
   kitSelectionDisplay,
   showProductImages = true,
+  couponPreview,
 }: {
   ticket: Ticket;
   event: Event;
@@ -76,6 +102,7 @@ const TicketItemMobile = memo(({
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
   showProductImages?: boolean;
+  couponPreview?: { type: string; value: number } | null;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -85,6 +112,10 @@ const TicketItemMobile = memo(({
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
+  const priceBreakdown = useMemo(
+    () => applyCouponPreviewToPrice(price, couponPreview),
+    [price, couponPreview],
+  );
 
   const productItems = useMemo(
     () => showProductImages
@@ -332,9 +363,16 @@ const TicketItemMobile = memo(({
       ) : null}
 
       <div className="flex items-center justify-between">
-        <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-          {formatPrice(price)}
-        </p>
+        <div className="flex items-baseline gap-2">
+          <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+            {formatPrice(priceBreakdown.discounted)}
+          </p>
+          {priceBreakdown.hasDiscount && (
+            <p className="text-sm font-medium text-gray-11 font-manrope leading-[1.1] line-through">
+              {formatPrice(priceBreakdown.original)}
+            </p>
+          )}
+        </div>
         <div className="relative">
           <div className="absolute bottom-full right-0 pb-1 pointer-events-none">
             {isBatchSoldOut ? (
@@ -397,6 +435,7 @@ const TicketItemDesktop = memo(({
   onIncrease,
   kitSelectionDisplay,
   showProductImages = true,
+  couponPreview,
 }: {
   ticket: Ticket;
   event: Event;
@@ -406,6 +445,7 @@ const TicketItemDesktop = memo(({
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
   showProductImages?: boolean;
+  couponPreview?: { type: string; value: number } | null;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -416,6 +456,10 @@ const TicketItemDesktop = memo(({
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
+  const priceBreakdown = useMemo(
+    () => applyCouponPreviewToPrice(price, couponPreview),
+    [price, couponPreview],
+  );
 
   const productItems = useMemo(
     () => showProductImages
@@ -592,7 +636,14 @@ const TicketItemDesktop = memo(({
           </div>
 
           <div className="flex items-end justify-between">
-            <p className="text-xl font-bold text-gray-12">{formatPrice(price)}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-xl font-bold text-gray-12">{formatPrice(priceBreakdown.discounted)}</p>
+              {priceBreakdown.hasDiscount && (
+                <p className="text-sm font-medium text-gray-11 line-through">
+                  {formatPrice(priceBreakdown.original)}
+                </p>
+              )}
+            </div>
             <div className="flex flex-col items-center gap-2 relative">
               <div className="absolute bottom-full right-0 pb-1">
                 {isBatchSoldOut ? (
@@ -671,6 +722,10 @@ export function TicketCategoryCard({
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
   const { raceQuantities, updateRaceQuantity } = useCheckout();
+  // Preview do cupom da URL pra renderizar preço descontado com strike-through.
+  // Backend reconcilia no PaymentStep; aqui é só feedback visual no /ingressos.
+  const pendingCoupon = usePendingCouponSnapshot();
+  const { data: couponPreview } = useCouponPreview(event?.id, pendingCoupon);
 
   const totalQuantity = useMemo(
     () => Object.values(raceQuantities).reduce((s, q) => s + q, 0),
@@ -740,6 +795,7 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
+              couponPreview={couponPreview ?? null}
             />
           ))}
         </div>
@@ -755,6 +811,7 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
+              couponPreview={couponPreview ?? null}
             />
           ))}
         </div>
@@ -794,8 +851,13 @@ export function TicketCategoryCard({
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
-                      {formatPrice(minPrice)}
+                      {formatPrice(applyCouponPreviewToPrice(minPrice, couponPreview).discounted)}
                     </span>
+                    {applyCouponPreviewToPrice(minPrice, couponPreview).hasDiscount && (
+                      <span className="text-gray-11 text-sm font-medium font-manrope leading-[1.1] line-through">
+                        {formatPrice(minPrice)}
+                      </span>
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -833,6 +895,7 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
+                    couponPreview={couponPreview ?? null}
                   />
                 ))}
               </div>
@@ -910,6 +973,7 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
+                    couponPreview={couponPreview ?? null}
                   />
                 ))}
               </div>

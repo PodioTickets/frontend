@@ -1,21 +1,27 @@
 /**
- * Cupom pendente capturado da URL via `?coupon=CODIGO` em qualquer rota.
+ * Cupom pendente capturado da URL via `?coupon=CODIGO`.
  *
- * Persistido em `sessionStorage` (por aba, não vaza entre janelas, some ao fechar
- * a aba). Aplicado uma única vez ao avançar da tela de ingressos pra informações
- * (fallback: PaymentStep) quando a order não tem cupom ainda.
+ * Convenção: a URL é a ÚNICA fonte de verdade duradoura.
+ * - Tem cupom na URL → cupom ativo.
+ * - Sem cupom na URL → sem cupom.
+ * - Recarregar a página com URL "limpa" → some.
+ * - Editar a URL manualmente removendo `?coupon=` → some.
  *
- * Falhas silenciosas em todos os helpers: ambientes sem storage (SSR, modo
- * privado restrito) só não persistem — não quebram o fluxo.
+ * O `pendingCouponMemory` é apenas um buffer em memória JS (volátil) usado pelo
+ * `CouponLinkCapture` pra re-anexar `?coupon=` em navegações internas
+ * (router.push / <Link>) — quando o destino não inclui o param. Não persiste
+ * entre reloads nem entre abas (sem sessionStorage / localStorage).
  */
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-const PENDING_COUPON_KEY = "pp:pendingCoupon";
 const COUPON_QUERY_PARAM = "coupon";
 
 /** Comprimento máximo defensivo (códigos reais raramente passam de 30 chars). */
 const MAX_COUPON_LENGTH = 30;
+
+/* Buffer volátil — zera quando o JS da página é recarregado. */
+let pendingCouponMemory: string | null = null;
 
 export function normalizeCouponCode(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -25,49 +31,34 @@ export function normalizeCouponCode(raw: string | null | undefined): string | nu
 }
 
 export function getPendingCoupon(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.sessionStorage.getItem(PENDING_COUPON_KEY);
-  } catch {
-    return null;
-  }
+  return pendingCouponMemory;
 }
 
 export function setPendingCoupon(code: string): void {
-  if (typeof window === "undefined") return;
   const normalized = normalizeCouponCode(code);
   if (!normalized) return;
-  try {
-    window.sessionStorage.setItem(PENDING_COUPON_KEY, normalized);
-  } catch {
-    /* sem storage disponível — ignora */
-  }
+  pendingCouponMemory = normalized;
 }
 
 export function clearPendingCoupon(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.removeItem(PENDING_COUPON_KEY);
-  } catch {
-    /* sem storage disponível — ignora */
-  }
+  pendingCouponMemory = null;
 }
 
 /**
  * Snapshot reativo do cupom pendente para uso em componentes React.
  *
- * Prioriza a URL (`?coupon=`) por ser a fonte autoritativa e re-renderizar
- * automaticamente em mudanças. Fallback pro sessionStorage quando o
- * `CouponLinkCapture` ainda não propagou o param pra rota atual.
+ * Lê direto da URL (`?coupon=`) — fonte da verdade. O buffer em memória é
+ * fallback durante o exato momento de navegação interna onde a URL nova
+ * ainda não foi reescrita pelo `CouponLinkCapture`.
  */
 export function usePendingCouponSnapshot(): string | null {
   const searchParams = useSearchParams();
   const urlCode = normalizeCouponCode(searchParams.get(COUPON_QUERY_PARAM));
-  const [storedCode, setStoredCode] = useState<string | null>(null);
+  const [memoryCode, setMemoryCode] = useState<string | null>(null);
 
   useEffect(() => {
-    setStoredCode(getPendingCoupon());
+    setMemoryCode(getPendingCoupon());
   }, [searchParams]);
 
-  return urlCode ?? storedCode;
+  return urlCode ?? memoryCode;
 }

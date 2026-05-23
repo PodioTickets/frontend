@@ -64,7 +64,8 @@
       "Bash(rm \"src/app/admin/\\(logged\\)/events/[id]/edit/information/page.tsx\")",
       "Bash(rmdir \"src/app/organizer/\\(logged\\)/events/[id]/edit/information\" \"src/app/admin/\\(logged\\)/events/[id]/edit/information\")",
       "Bash(npx tsx *)",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "Bash(awk 'NR>=1 && NR<=200' \"C:/Users/muril/.claude/projects/C--Users-muril-Projects-PodioTickets-frontend/30a047be-542b-408e-bf23-fd1a8b40aeb5/tool-results/mcp-claude_ai_Figma-get_design_context-1779504760908.txt\")"
     ]
   },
   "disabledMcpjsonServers": [

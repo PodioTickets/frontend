@@ -9,13 +9,14 @@ import {
 } from "@/hooks/usePendingCoupon";
 
 /**
- * Captura `?coupon=CODIGO` em qualquer rota e persiste em sessionStorage.
- * Além disso, propaga o cupom na URL: se há código pendente em storage mas a
- * rota atual não tem `?coupon=`, anexa via `router.replace` (sem entrar no
- * histórico). Isso garante que o cupom sobreviva mesmo se o sessionStorage
- * for limpo (modo privado, outra aba) — o link sempre carrega o estado.
+ * Captura `?coupon=CODIGO` em qualquer rota e mantém na URL.
+ * A URL é a ÚNICA fonte duradoura: recarregar uma rota sem `?coupon=`
+ * descarta o cupom. Não usa sessionStorage nem localStorage — só um buffer
+ * volátil em memória JS (`pendingCouponMemory` em `usePendingCoupon.ts`)
+ * pra propagar o param em navegações SPA que destruiriam a query string
+ * (router.push / <Link> sem o coupon). No reload da página o buffer zera.
  *
- * Quando o usuário chegar ao PaymentStep, o cupom é aplicado automaticamente
+ * Quando o usuário avança no checkout o cupom é aplicado automaticamente
  * (silencioso em caso de erro).
  */
 const COUPON_QUERY_PARAM = "coupon";
@@ -29,21 +30,22 @@ export function CouponLinkCapture() {
     const urlCode = normalizeCouponCode(searchParams.get(COUPON_QUERY_PARAM));
 
     if (urlCode) {
-      // URL é a fonte da verdade — sincroniza storage com ela.
-      const stored = getPendingCoupon();
-      if (urlCode !== stored) {
+      // URL é a fonte da verdade — sincroniza o buffer em memória com ela.
+      const buffered = getPendingCoupon();
+      if (urlCode !== buffered) {
         setPendingCoupon(urlCode);
       }
       return;
     }
 
-    // Sem cupom na URL: se houver em storage, propaga pra rota atual.
-    // Próxima execução do effect verá `urlCode === stored` e cairá no return acima.
-    const stored = getPendingCoupon();
-    if (!stored) return;
+    // Sem cupom na URL: se o buffer ainda tem (navegação SPA acabou de remover
+    // a query), re-anexa via router.replace. Próxima execução do effect verá
+    // `urlCode === buffered` e cairá no return acima.
+    const buffered = getPendingCoupon();
+    if (!buffered) return;
 
     const params = new URLSearchParams(searchParams.toString());
-    params.set(COUPON_QUERY_PARAM, stored);
+    params.set(COUPON_QUERY_PARAM, buffered);
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [searchParams, pathname, router]);

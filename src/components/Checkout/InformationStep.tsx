@@ -286,6 +286,30 @@ export function InformationStep({
     Record<number, boolean>
   >({});
 
+  /* Hidrata nacionalidade quando o `authUser` chega DEPOIS do mount inicial.
+   * Cenário: primeiro render tem `authUser=null` (useAuth async) → useEffect
+   * de criação de participantes (mais abaixo) usa "Brasil" como default →
+   * quando o profile chega com `country: "Estados Unidos"`, esse effect
+   * sobrescreve participantes que ainda têm a default e não foram salvos.
+   * Roda apenas uma vez (ref) — depois disso, alterações de nacionalidade
+   * são exclusivas do usuário. */
+  const nationalityHydrationRef = useRef(false);
+  useEffect(() => {
+    if (nationalityHydrationRef.current) return;
+    const country = authUser?.country?.trim();
+    if (!country || country === "Brasil") return;
+    if (participants.length === 0) return;
+
+    participants.forEach((p, i) => {
+      if (!p) return;
+      if (savedParticipants[i]) return;
+      const current = (p.nationality || "").trim();
+      if (current && current !== "Brasil") return;
+      updateParticipant(i, { nationality: country });
+    });
+    nationalityHydrationRef.current = true;
+  }, [authUser?.country, participants, savedParticipants, updateParticipant]);
+
   // Snapshot dos dados do participante no momento em que foi salvo — usado para detectar mudanças
   const [savedSnapshots, setSavedSnapshots] = useState<
     Record<number, { participant: Record<string, string>; questionAnswers: Record<string, string | string[]> }>
@@ -1531,14 +1555,20 @@ export function InformationStep({
                     </button>
                   )}
                   {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                    <div className="flex items-center justify-between text-base text-gray-12">
-                      <p className="font-semibold">
-                        {formatCouponLineLabel(appliedCoupon)}:
-                      </p>
-                      <p className="font-bold">
-                        -{formatPrice(couponDiscountAmount)}
-                      </p>
-                    </div>
+                    <>
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">Subtotal:</p>
+                        <p className="font-bold">{formatPrice(totalPrice)}</p>
+                      </div>
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">
+                          {formatCouponLineLabel(appliedCoupon)}:
+                        </p>
+                        <p className="font-bold">
+                          -{formatPrice(couponDiscountAmount)}
+                        </p>
+                      </div>
+                    </>
                   )}
                   {serviceFee > 0 && (
                     <div className="flex items-center justify-between text-base text-gray-12">
@@ -2271,12 +2301,18 @@ export function InformationStep({
               </div>
             ))}
             {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-              <p className="text-sm">
-                {formatCouponLineLabel(appliedCoupon)}:{" "}
-                <span className="font-semibold">
-                  -{formatPrice(couponDiscountAmount)}
-                </span>
-              </p>
+              <>
+                <p className="text-sm text-gray-12">
+                  Subtotal:{" "}
+                  <span className="font-semibold">{formatPrice(totalPrice)}</span>
+                </p>
+                <p className="text-sm">
+                  {formatCouponLineLabel(appliedCoupon)}:{" "}
+                  <span className="font-semibold">
+                    -{formatPrice(couponDiscountAmount)}
+                  </span>
+                </p>
+              </>
             )}
             {serviceFee > 0 && (
               <p className="text-sm">
@@ -2384,14 +2420,20 @@ export function InformationStep({
                       </div>
                     ))}
                     {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                      <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">
-                          {formatCouponLineLabel(appliedCoupon)}:
-                        </p>
-                        <p className="font-bold">
-                          -{formatPrice(couponDiscountAmount)}
-                        </p>
-                      </div>
+                      <>
+                        <div className="flex items-center justify-between text-base text-gray-12">
+                          <p className="font-semibold">Subtotal:</p>
+                          <p className="font-bold">{formatPrice(totalPrice)}</p>
+                        </div>
+                        <div className="flex items-center justify-between text-base text-gray-12">
+                          <p className="font-semibold">
+                            {formatCouponLineLabel(appliedCoupon)}:
+                          </p>
+                          <p className="font-bold">
+                            -{formatPrice(couponDiscountAmount)}
+                          </p>
+                        </div>
+                      </>
                     )}
                     {serviceFee > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">

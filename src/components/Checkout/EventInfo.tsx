@@ -10,6 +10,7 @@ import type { Ticket } from "@/hooks/useTickets";
 import { getEventOrganizer } from "@/utils/organization";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
+import { useCouponPreview } from "@/hooks/useCouponPreview";
 
 interface EventInfoProps {
   event: Event;
@@ -24,6 +25,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   const { raceQuantities } = useCheckout();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const pendingCoupon = usePendingCouponSnapshot();
+  const { data: couponPreview } = useCouponPreview(event.id, pendingCoupon);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -33,6 +35,12 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
       maximumFractionDigits: 2,
     }).format(price);
   };
+
+  const couponPercentSuffix =
+    couponPreview && couponPreview.type === "PERCENTAGE" && couponPreview.value > 0
+      ? ` (${couponPreview.value}% OFF)`
+      : ` (${formatPrice((couponPreview?.value ?? 0) / 100)} OFF)`;
+
 
   const getTicketPrice = (ticket: Ticket): number => {
     try {
@@ -167,16 +175,15 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
               {groupedTickets.map((ticket, index) => (
                 <div
                   key={index}
-                  className="text-sm font-semibold text-gray-12 flex items-center justify-between w-full"
+                  className="text-sm font-semibold text-gray-12 flex items-end justify-between w-full"
                 >
-                  <div className="flex items-center gap-1">
-                    ({ticket.quantity}x){" "}
+                  <div className="flex items-end gap-1">
                     <div className="flex flex-col items-start">
                       <span className="text-gray-11 text-xs truncate">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
-                      <span className="text-gray-12 text-sm truncate">{ticket.ticketName}:{" "}</span>
+                      <span className="text-gray-12 text-sm truncate">({ticket.quantity}x){" "} {ticket.ticketName}:{" "}</span>
                     </div>
                   </div>
-                  <span className="text-gray-12">
+                  <span className="text-gray-12 font-bold">
                     {formatPrice(ticket.total)}
                   </span>
                 </div>
@@ -192,18 +199,22 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         {groupedTickets.length > 0 && (
           <>
             {pendingCoupon && (
-              <p className="mt-4 flex items-center justify-between w-full text-sm font-medium text-gray-11">
-                Cupom {pendingCoupon}:
-                <span className="text-gray-11 text-xs font-medium">
-                  Continue para aplicar
-                </span>
-              </p>
+              <>
+                <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                  <p className="font-semibold">Subtotal:</p>
+                  <p className="font-bold">{formatPrice(totalPrice)}</p>
+                </div>
+                <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                  <p className="font-semibold">Cupom {pendingCoupon}:</p>
+                  <p className="font-bold">{couponPercentSuffix}</p>
+                </div>
+              </>
             )}
             {serviceFee > 0 && (
-              <p className="flex items-center justify-between w-full mt-4 text-sm font-medium text-gray-11">
-                Taxa de serviço:
-                <span className="text-gray-12">{formatPrice(serviceFee)}</span>
-              </p>
+              <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                <p className="font-semibold">Taxa de serviço:</p>
+                <p className="font-bold">{formatPrice(serviceFee)}</p>
+              </div>
             )}
             <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
               Total:{" "}

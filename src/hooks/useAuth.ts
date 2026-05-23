@@ -337,12 +337,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       }
 
+      /* Inclui `country`, `documentType` e demais campos a partir do form —
+       * sem isso o user fica com country vazio até o `refetchUser` background
+       * terminar, e o checkout (que lê `user.country` pra escolher CPF vs
+       * PASSPORT) pode disparar antes, caindo no fallback "Brasil" pra um
+       * estrangeiro. Backend pode não devolver esses campos no /register.  */
       const userObj = {
         id: createdUser.id,
         email: createdUser.email,
         firstName: createdUser.firstName ?? "",
         lastName: createdUser.lastName ?? "",
-        documentNumber: createdUser.documentNumber ?? "",
+        documentNumber: createdUser.documentNumber ?? data.documentNumber ?? "",
+        documentType: data.documentType ?? "",
+        country: data.country ?? "",
+        phone: data.phone ?? "",
+        dateOfBirth: data.dateOfBirth ?? "",
+        gender: data.gender ?? "",
         role: createdUser.role,
         accountType: createdUser.accountType ?? "USER",
         avatarUrl: createdUser.avatarUrl ?? "",
