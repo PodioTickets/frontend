@@ -15,6 +15,8 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { ProductVariationCard, type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
 import { Tooltip } from "@/components/Tooltip";
+import { formatPhoneForCountry } from "@/utils/phone";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 
 export default function TicketDetailsPage() {
   const params = useParams();
@@ -87,10 +89,22 @@ export default function TicketDetailsPage() {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
   };
 
-  /* Brasileiro quando documentType === "CPF" (autoritativo); fallback pra
-   * heurística do shape do doc só quando o backend ainda não popular o tipo
-   * (registros legados pré-migration de internacionalização). */
-  const isParticipantBr = (p: { documentType?: string | null; cpf?: string | null }): boolean => {
+  /* Brasileiro quando:
+   *   1. country existe e bate com BR/Brasil/Brazil (sinal mais confiável,
+   *      vem do cadastro internacional), OU
+   *   2. country é null mas documentType === "CPF" (registros legados onde
+   *      country não foi preenchido), OU
+   *   3. ambos null + heurística do shape do doc (CPF tem 11 dígitos puros).
+   *
+   * NÃO confiar em documentType primeiro: contas pre-migration tem
+   * documentType="CPF" mesmo com country="Estados Unidos", e o shape do
+   * documento (passaporte 6 chars) seria classificado como CPF inválido. */
+  const isParticipantBr = (p: {
+    country?: string | null;
+    documentType?: string | null;
+    cpf?: string | null;
+  }): boolean => {
+    if (p.country) return isBrazilianCountry(p.country);
     if (p.documentType) return p.documentType === "CPF";
     const raw = (p.cpf || "").trim();
     if (!raw) return true;
@@ -98,12 +112,15 @@ export default function TicketDetailsPage() {
     return raw.replace(/\D/g, "").length === 11;
   };
 
-  const formatPhone = (phone: string) => {
+  /* Formata telefone conforme o país do participante usando o mesmo helper
+   * `formatPhoneForCountry` que o cadastro (libphonenumber-js AsYouType).
+   * - BR "11999990000" → "(11) 99999-0000"
+   * - US "2025550100" → "(202) 555-0100"
+   * - PT "912345678" → "912 345 678"
+   * Quando o país não é mapeado, fallback retorna só dígitos. */
+  const formatPhone = (phone: string, country?: string | null) => {
     if (!phone) return "";
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 11) return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    if (cleaned.length === 10) return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    return phone;
+    return formatPhoneForCountry(phone, country ?? null) || phone;
   };
 
   const getGenderLabel = (gender?: string) => {
@@ -167,6 +184,7 @@ export default function TicketDetailsPage() {
         name: p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim() || "",
         email: p.email || "",
         documentType: (p.documentType as "CPF" | "PASSPORT" | null | undefined) ?? null,
+        country: p.country ?? null,
         cpf: p.documentNumber || "",
         birthDate: p.dateOfBirth || "",
         gender: p.gender || "",
@@ -460,7 +478,7 @@ export default function TicketDetailsPage() {
                               <div className="flex flex-col py-4">
                                 <label className="text-base text-gray-12 font-family-dm-sans">Telefone</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                  {participant.phone ? formatPhone(participant.phone) : "-"}
+                                  {participant.phone ? formatPhone(participant.phone, participant.country) : "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
@@ -477,7 +495,7 @@ export default function TicketDetailsPage() {
                                   <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                     {participant.emergencyContact.name || "-"} -{" "}
                                     {participant.emergencyContact.phone
-                                      ? formatPhone(participant.emergencyContact.phone)
+                                      ? formatPhone(participant.emergencyContact.phone, participant.country)
                                       : "-"}
                                   </p>
                                 </div>
