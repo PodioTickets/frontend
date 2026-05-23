@@ -58,6 +58,7 @@ const COUPON_ERROR_MESSAGES: Record<string, string> = {
 };
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
+import { getPendingCoupon, clearPendingCoupon } from "@/hooks/usePendingCoupon";
 import toast from "react-hot-toast";
 import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
@@ -834,13 +835,30 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   } = useCheckoutReservation();
 
   // Busca o pedido do servidor no mount para obter pricing, coupon e voucher atualizados.
+  // Ao final, tenta auto-aplicar cupom pendente capturado da URL via `?coupon=` —
+  // ignora silenciosamente qualquer falha (cupom inválido pra esse evento, expirado, etc.).
   useEffect(() => {
     if (!orderId || orderFetchedRef.current) return;
     orderFetchedRef.current = true;
     getOrder(orderId)
-      .then((order) => setCurrentOrder(order))
+      .then(async (order) => {
+        setCurrentOrder(order);
+
+        const pending = getPendingCoupon();
+        if (!pending || order.coupon) return;
+        try {
+          const updated = await patchCoupon(orderId, { couponCode: pending });
+          syncFromOrder(updated);
+          setCurrentOrder(updated);
+          setCouponCode(pending);
+        } catch {
+          /* silencioso por design — cupom de link inválido não interrompe o fluxo */
+        } finally {
+          clearPendingCoupon();
+        }
+      })
       .catch(() => { /* ignora — usa valores locais como fallback */ });
-  }, [orderId, getOrder]);
+  }, [orderId, getOrder, patchCoupon, syncFromOrder]);
 
   /**
    * Idempotency key pro POST /pay. Gerada UMA vez quando o usuário monta
@@ -1047,8 +1065,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return result;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
-  // Helper para obter produtos de um participante
-  const getParticipantProducts = (participantIndex: number): Array<{
+  // Helper para obter produtos de um participante.
+  // Por padrão retorna apenas adicionais cobráveis (uso em cálculo de subtotal/orderItems).
+  // Com `includeIncluded: true`, retorna também os produtos inclusos no ingresso —
+  // usado no resumo visual mobile pra listar TODOS os itens do participante.
+  type ParticipantProduct = {
     productId: string;
     name: string;
     price: number;
@@ -1056,21 +1077,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     size?: string;
     image?: string | null;
     images?: string[];
-  }> => {
+    isIncluded: boolean;
+  };
+
+  const getParticipantProducts = (
+    participantIndex: number,
+    options: { includeIncluded?: boolean } = {}
+  ): ParticipantProduct[] => {
     if (!productsData?.products) return [];
 
     const participant = participants[participantIndex];
     if (!participant?.productVariations) return [];
 
-    const items: Array<{
-      productId: string;
-      name: string;
-      price: number;
-      quantity: number;
-      size?: string;
-      image?: string | null;
-      images?: string[];
-    }> = [];
+    const { includeIncluded = false } = options;
+    const items: ParticipantProduct[] = [];
 
     Object.entries(participant.productVariations).forEach(([productId, variationId]) => {
       if (!variationId) return;
@@ -1080,8 +1100,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       );
       if (!product) return;
 
-      // Se o produto está incluído no ingresso, não mostrar como adicional
-      if (product.isIncludedInTicket) return;
+      const isIncluded = !!product.isIncludedInTicket;
+
+      // Inclusos só entram quando explicitamente pedido (resumo visual);
+      // pra cálculo de preço/orderItems eles são pulados.
+      if (isIncluded && !includeIncluded) return;
 
       const variation = product.variations?.find((v: any, i: number) =>
         (v.id || `${product.id}-${i}`) === variationId
@@ -1092,19 +1115,24 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       // abaixo o esconderia silenciosamente do resumo.
       const variationPrice = Number(variation?.price ?? 0);
       const basePrice = Number(product.basePrice ?? 0);
-      const price = variationPrice > 0 ? variationPrice : basePrice;
+      const rawPrice = variationPrice > 0 ? variationPrice : basePrice;
+      // Inclusos não cobram do participante — preço efetivo é 0.
+      const price = isIncluded ? 0 : rawPrice;
 
-      if (price > 0) {
-        items.push({
-          productId: product.id,
-          name: product.name,
-          price,
-          quantity: 1,
-          size: variation?.name,
-          image: product.image ?? null,
-          images: Array.isArray(product.images) ? product.images.filter(Boolean) : [],
-        });
-      }
+      // Adicionais sem preço positivo continuam ocultos (ruído visual).
+      // Inclusos passam mesmo com price=0 pra aparecer no resumo expandido.
+      if (!isIncluded && rawPrice <= 0) return;
+
+      items.push({
+        productId: product.id,
+        name: product.name,
+        price,
+        quantity: 1,
+        size: variation?.name,
+        image: product.image ?? null,
+        images: Array.isArray(product.images) ? product.images.filter(Boolean) : [],
+        isIncluded,
+      });
     });
 
     return items;
@@ -1843,7 +1871,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }, 300);
   };
 
-  // Generate participants with tickets dynamically
+  // Generate participants with tickets dynamically.
+  // No resumo mobile incluímos os produtos inclusos (isIncluded=true) pra listar
+  // todos os itens do participante quando expande "Mostrar mais".
   const participantsWithTicketsForDisplay = useMemo(() => {
     const result: Array<{
       participantIndex: number;
@@ -1858,13 +1888,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         size?: string;
         image?: string | null;
         images?: string[];
+        isIncluded: boolean;
       }>;
     }> = [];
 
     participantsWithTickets.forEach(({ ticket, participantIndex }) => {
       const participant = participants[participantIndex];
       if (participant) {
-        const products = getParticipantProducts(participantIndex);
+        const products = getParticipantProducts(participantIndex, { includeIncluded: true });
 
         result.push({
           participantIndex,
@@ -2598,104 +2629,117 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           </p>
                         </div>
 
-                        {/* Additional Products Summary */}
-                        {additionalProducts &&
-                          additionalProducts.length > 0 && (
-                            <div className="flex items-center justify-between mb-3">
-                              <p className="text-base font-semibold text-gray-12 font-manrope">
-                                {additionalProducts.length}x Itens adicionais:
-                              </p>
-                              <p className="text-base font-bold text-gray-12 font-manrope">
-                                {formatPrice(
-                                  additionalProducts.reduce(
-                                    (sum, item) =>
-                                      sum + (item.price / 100) * item.quantity,
-                                    0
-                                  )
-                                )}
-                              </p>
-                            </div>
-                          )}
-                        {/* Expanded Additional Products */}
-                        {expandedProducts[participantIndex] &&
-                          additionalProducts &&
-                          additionalProducts.length > 0 && (
-                            <div className="mb-4">
-                              {additionalProducts.map(
-                                (product, productIndex) => (
-                                  <div
-                                    key={product.productId ?? productIndex}
-                                    className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
-                                  >
-                                    {/* Product Header */}
-                                    <div className="flex gap-3 p-4 border-b border-gray-6">
-                                      <ProductCardGallery
-                                        productId={product.productId ?? String(productIndex)}
-                                        productName={product.name}
-                                        image={product.image}
-                                        images={product.images}
-                                      />
-                                      <div className="flex flex-col justify-between flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
-                                          {product.name}
-                                        </p>
-                                        <p className="text-base font-semibold text-gray-12 font-manrope">
-                                          {formatPrice(product.price / 100)}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {/* Product Size */}
-                                    <div className="p-4">
-                                      <div className="flex gap-1 items-center">
-                                        <p className="text-base text-gray-12 font-family-dm-sans">
-                                          Tamanho:
-                                        </p>
-                                        <p className="text-base font-semibold text-gray-12 font-manrope">
-                                          {product.size || "N/A"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
+                        {/* Resumo de produtos: linha de adicionais (cobrados) e/ou de inclusos.
+                            Inclusos têm price=0, então não afetam a soma — entram só na contagem visual. */}
+                        {(() => {
+                          const optionalProducts =
+                            additionalProducts?.filter((p) => !p.isIncluded) ?? [];
+                          const includedProducts =
+                            additionalProducts?.filter((p) => p.isIncluded) ?? [];
+                          const optionalTotal = optionalProducts.reduce(
+                            (sum, item) => sum + (item.price / 100) * item.quantity,
+                            0
+                          );
+                          const hasAnyProduct =
+                            optionalProducts.length > 0 || includedProducts.length > 0;
+
+                          return (
+                            <>
+                              {optionalProducts.length > 0 && (
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-base font-semibold text-gray-12 font-manrope">
+                                    {optionalProducts.length}x Itens adicionais:
+                                  </p>
+                                  <p className="text-base font-bold text-gray-12 font-manrope">
+                                    {formatPrice(optionalTotal)}
+                                  </p>
+                                </div>
                               )}
-                            </div>
-                          )}
+                              {includedProducts.length > 0 && (
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-base font-semibold text-gray-12 font-manrope">
+                                    {includedProducts.length}x Itens inclusos:
+                                  </p>
+                                  <p className="text-base font-bold text-gray-12 font-manrope">
+                                    Grátis
+                                  </p>
+                                </div>
+                              )}
 
-                        {/* Show More/Less Button */}
-                        {additionalProducts &&
-                          additionalProducts.length > 0 && (
-                            <button
-                              onClick={() => {
-                                setExpandedProducts((prev) => ({
-                                  ...prev,
-                                  [participantIndex]: !prev[participantIndex],
-                                }));
-                              }}
-                              className="text-base font-medium text-gray-11 font-family-dm-sans underline mb-4"
-                            >
-                              {expandedProducts[participantIndex]
-                                ? "Mostrar menos"
-                                : "Mostrar mais"}
-                            </button>
-                          )}
+                              {/* Expanded Products — lista todos (adicionais + inclusos) */}
+                              {expandedProducts[participantIndex] && hasAnyProduct && (
+                                <div className="mb-4">
+                                  {additionalProducts!.map((product, productIndex) => (
+                                    <div
+                                      key={product.productId ?? productIndex}
+                                      className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
+                                    >
+                                      {/* Product Header */}
+                                      <div className="flex gap-3 p-4 border-b border-gray-6">
+                                        <ProductCardGallery
+                                          productId={product.productId ?? String(productIndex)}
+                                          productName={product.name}
+                                          image={product.image}
+                                          images={product.images}
+                                        />
+                                        <div className="flex flex-col justify-between flex-1 min-w-0">
+                                          <div className="flex items-start gap-2">
+                                            <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2 flex-1 min-w-0">
+                                              {product.name}
+                                            </p>
+                                          </div>
+                                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                                            {product.isIncluded
+                                              ? "Grátis"
+                                              : formatPrice(product.price / 100)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {/* Product Size */}
+                                      <div className="p-4">
+                                        <div className="flex gap-1 items-center">
+                                          <p className="text-base text-gray-12 font-family-dm-sans">
+                                            Tamanho:
+                                          </p>
+                                          <p className="text-base font-semibold text-gray-12 font-manrope">
+                                            {product.size || "N/A"}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
 
-                        {/* Participant Total */}
-                        <div className="flex items-center justify-between w-full">
+                              {/* Show More/Less Button — visível se houver qualquer produto (incluso ou adicional) */}
+                              {hasAnyProduct && (
+                                <button
+                                  onClick={() => {
+                                    setExpandedProducts((prev) => ({
+                                      ...prev,
+                                      [participantIndex]: !prev[participantIndex],
+                                    }));
+                                  }}
+                                  className="text-base font-medium text-gray-11 font-family-dm-sans underline mb-4"
+                                >
+                                  {expandedProducts[participantIndex]
+                                    ? "Mostrar menos"
+                                    : "Mostrar mais"}
+                                </button>
+                              )}
 
-                          <p className="text-base font-semibold text-gray-12 font-manrope">
-                            Total:
-                          </p>
-                          <p className="text-base font-bold text-gray-12 font-manrope">
-                            {formatPrice(
-                              getTicketPrice(ticket) +
-                              (additionalProducts?.reduce(
-                                (sum, item) =>
-                                  sum + (item.price / 100) * item.quantity,
-                                0
-                              ) || 0)
-                            )}
-                          </p>
-                        </div>
+                              {/* Participant Total — soma só os opcionais (inclusos não cobram). */}
+                              <div className="flex items-center justify-between w-full">
+                                <p className="text-base font-semibold text-gray-12 font-manrope">
+                                  Total:
+                                </p>
+                                <p className="text-base font-bold text-gray-12 font-manrope">
+                                  {formatPrice(getTicketPrice(ticket) + optionalTotal)}
+                                </p>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     )
                   )}

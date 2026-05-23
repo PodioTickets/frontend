@@ -9,6 +9,7 @@ import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
 import { getEventOrganizer } from "@/utils/organization";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
+import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 
 interface EventInfoProps {
   event: Event;
@@ -22,6 +23,7 @@ interface EventInfoProps {
 export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [] }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const pendingCoupon = usePendingCouponSnapshot();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -189,6 +191,14 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
 
         {groupedTickets.length > 0 && (
           <>
+            {pendingCoupon && (
+              <p className="mt-4 flex items-center justify-between w-full text-sm font-medium text-gray-11">
+                Cupom {pendingCoupon}:
+                <span className="text-gray-11 text-xs font-medium">
+                  Continue para aplicar
+                </span>
+              </p>
+            )}
             {serviceFee > 0 && (
               <p className="flex items-center justify-between w-full mt-4 text-sm font-medium text-gray-11">
                 Taxa de serviço:

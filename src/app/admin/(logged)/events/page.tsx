@@ -238,8 +238,6 @@ export default function AdminEventsPage() {
               page: "1",
               limit: "1",
               status,
-              // Mesma razão da listagem: sem `includePast`, COMPLETED some.
-              includePast: "true",
             });
             const res = await getApiClient().get<{
               data: { events: AdminEvent[]; pagination: Pagination };
@@ -291,10 +289,6 @@ export default function AdminEventsPage() {
           limit: String(ITEMS_PER_PAGE),
           sortBy,
           sortOrder,
-          // Admin precisa ver tudo, incluindo eventos com data já passada
-          // (status COMPLETED). Sem isso o backend filtra `eventDate < hoje`
-          // e os concluídos somem da listagem.
-          includePast: "true",
         });
         if (debouncedSearch) params.set("search", debouncedSearch);
         if (statusFilter) params.set("status", statusFilter);

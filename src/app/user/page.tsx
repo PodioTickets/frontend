@@ -26,6 +26,12 @@ import { useChangeEmailModal, useChangePasswordModal } from "@/stores/modalStore
 import { CPFIcon } from "@/components/Icons/CPFIcon";
 import { getCpfValidationMessage } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import {
+  formatPhoneForCountry,
+  getPhonePlaceholderForCountry,
+  getPhoneMaxLengthForCountry,
+  getPhoneDigitsForBackend,
+} from "@/utils/phone";
 import { getAvatarUrl } from "@/utils/avatar";
 import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
 import {
@@ -192,8 +198,8 @@ export default function UserProfilePage() {
         documentNumber: displayDoc,
         dateOfBirth: (user as any)?.dateOfBirth ?? "",
         nationality,
-        phone: maskPhoneForInit((user as any)?.phone || ""),
-        emergencyPhone: maskPhoneForInit((user as any)?.emergencyPhone || ""),
+        phone: formatPhoneForCountry((user as any)?.phone || "", nationality),
+        emergencyPhone: formatPhoneForCountry((user as any)?.emergencyPhone || "", nationality),
         gender:
           formatGenderFromBackend((user as any)?.gender || (user as any)?.sex) ||
           "",
@@ -225,8 +231,8 @@ export default function UserProfilePage() {
       documentNumber: displayDoc,
       dateOfBirth: u.dateOfBirth ?? "",
       nationality,
-      phone: maskPhoneForInit(u.phone || ""),
-      emergencyPhone: maskPhoneForInit(u.emergencyPhone || ""),
+      phone: formatPhoneForCountry(u.phone || "", nationality),
+      emergencyPhone: formatPhoneForCountry(u.emergencyPhone || "", nationality),
       gender:
         formatGenderFromBackend(u.gender || u.sex) || "",
     };
@@ -278,9 +284,21 @@ export default function UserProfilePage() {
         nationality: mapStoredCountryToPickerValue(
           (user as any)?.nationality || (user as any)?.country,
         ),
-        phone: rawPhone ? maskPhoneForInit(rawPhone) : prev.phone,
+        phone: rawPhone
+          ? formatPhoneForCountry(
+              rawPhone,
+              mapStoredCountryToPickerValue(
+                (user as any)?.nationality || (user as any)?.country,
+              ),
+            )
+          : prev.phone,
         emergencyPhone: rawEmergencyPhone
-          ? maskPhoneForInit(rawEmergencyPhone)
+          ? formatPhoneForCountry(
+              rawEmergencyPhone,
+              mapStoredCountryToPickerValue(
+                (user as any)?.nationality || (user as any)?.country,
+              ),
+            )
           : prev.emergencyPhone,
         gender: (() => {
           const userGender = (user as any)?.gender;
@@ -455,7 +473,8 @@ export default function UserProfilePage() {
         ? maskCPF(value)
         : value.slice(0, 30);
     } else if (name === "phone" || name === "emergencyPhone") {
-      processedValue = maskPhone(value);
+      /* Máscara dinâmica por país via libphonenumber-js. */
+      processedValue = formatPhoneForCountry(value, formData.nationality);
     }
 
     setFormData((prev) => ({
@@ -543,9 +562,13 @@ export default function UserProfilePage() {
         updateData.country = formData.nationality;
       }
 
-      updateData.phone = formData.phone.replace(/\D/g, "") || null;
-
-      updateData.emergencyPhone = formData.emergencyPhone.replace(/\D/g, "") || null;
+      /* Telefone: dígitos nacionais via libphonenumber-js (formato por país). */
+      updateData.phone = formData.phone
+        ? getPhoneDigitsForBackend(formData.phone, formData.nationality)
+        : null;
+      updateData.emergencyPhone = formData.emergencyPhone
+        ? getPhoneDigitsForBackend(formData.emergencyPhone, formData.nationality)
+        : null;
 
       if (formData.gender) {
         // Converter do formato da tela para o formato do backend
@@ -867,8 +890,8 @@ export default function UserProfilePage() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
+                    placeholder={getPhonePlaceholderForCountry(formData.nationality)}
+                    maxLength={getPhoneMaxLengthForCountry(formData.nationality)}
                     className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 text-base text-gray-11 font-family-dm-sans placeholder:text-gray-11 md:hidden"
                   />
                   {/* Desktop Input */}
@@ -877,8 +900,8 @@ export default function UserProfilePage() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
+                    placeholder={getPhonePlaceholderForCountry(formData.nationality)}
+                    maxLength={getPhoneMaxLengthForCountry(formData.nationality)}
                     className="hidden md:block h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>

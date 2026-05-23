@@ -712,34 +712,37 @@ export default function EventRegistrationsPage() {
         </div>
 
         {/* Mobile: Search + Limpar + Filtros row */}
-        <div className="md:hidden flex flex-wrap gap-2 items-center mb-4">
-          <div className="flex-1 min-w-[140px] border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
+        <div className="md:hidden flex flex-col gap-2 items-center mb-4">
+          <div className="flex-1 w-full min-w-[140px] border border-gray-6 rounded-lg h-10 flex items-center gap-2 px-3 bg-gray-1">
             <Search className="size-5 text-gray-11 shrink-0" />
             <input
               type="text"
               placeholder="Nome, CPF, IDs.."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 min-w-0 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
+              className="flex-1 min-w-0 h-10 bg-transparent font-family-dm-sans font-normal text-sm text-gray-12 placeholder:text-gray-11 outline-none"
             />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!hasActiveFilters}
-            onClick={handleClearFilters}
-            className="shrink-0 h-10 px-3 text-sm border-gray-6 text-gray-12 disabled:opacity-50"
-          >
-            Limpar filtros
-          </Button>
-          <button
-            type="button"
-            onClick={() => setMobileFiltersOpen((v) => !v)}
-            className="shrink-0 flex items-center gap-2 px-3 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 font-family-dm-sans font-normal text-sm h-10"
-          >
-            Filtros
-            <ArrowButton isOpen={mobileFiltersOpen} />
-          </button>
+          <div className="flex items-center justify-between gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen((v) => !v)}
+              className="flex w-max items-center gap-2 px-3 rounded-lg border border-gray-6 bg-gray-1 text-gray-11 font-family-dm-sans font-normal text-sm h-10"
+            >
+              Filtros
+              <ArrowButton isOpen={mobileFiltersOpen} />
+            </button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!hasActiveFilters}
+              onClick={handleClearFilters}
+              className="h-10 px-3 text-sm border-gray-6 text-gray-12 disabled:opacity-50 flex-1"
+            >
+              Limpar filtros
+            </Button>
+
+          </div>
         </div>
 
         {/* Mobile: Filters panel (when open) */}

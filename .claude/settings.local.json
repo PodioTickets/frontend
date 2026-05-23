@@ -62,7 +62,9 @@
       "Bash(git stash *)",
       "Bash(rm \"src/app/organizer/\\(logged\\)/events/[id]/edit/information/page.tsx\")",
       "Bash(rm \"src/app/admin/\\(logged\\)/events/[id]/edit/information/page.tsx\")",
-      "Bash(rmdir \"src/app/organizer/\\(logged\\)/events/[id]/edit/information\" \"src/app/admin/\\(logged\\)/events/[id]/edit/information\")"
+      "Bash(rmdir \"src/app/organizer/\\(logged\\)/events/[id]/edit/information\" \"src/app/admin/\\(logged\\)/events/[id]/edit/information\")",
+      "Bash(npx tsx *)",
+      "Bash(pnpm exec *)"
     ]
   },
   "disabledMcpjsonServers": [

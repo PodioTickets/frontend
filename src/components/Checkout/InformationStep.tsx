@@ -35,8 +35,16 @@ import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { FlagIcon } from "../Icons/FlagIcon";
+import {
+  formatPhoneForCountry,
+  getPhonePlaceholderForCountry,
+  getPhoneMaxLengthForCountry,
+  getPhoneDigitsForBackend,
+} from "@/utils/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X } from "lucide-react";
+import { isAutoCoupon } from "@/lib/orderAutoCouponDisplay";
+import { formatCouponLineLabel } from "@/lib/orderCouponDiscount";
 
 interface InformationStepProps {
   event: Event;
@@ -189,7 +197,7 @@ export function InformationStep({
   } = useCheckout();
 
   const eventId = event?.id;
-  const { clearTimer, orderId } = useCheckoutTimer();
+  const { clearTimer, orderId, currentOrder: timerCurrentOrder } = useCheckoutTimer();
   const { patchParticipants, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
 
@@ -514,6 +522,21 @@ export function InformationStep({
     return totalPrice + serviceFee;
   }, [orderData, totalPrice, serviceFee]);
 
+  // Cupom aplicado (badge + linha de desconto). Cupons automáticos
+  // (QUANTITY/AGE) ficam escondidos pré-pagamento — o resumo só revela o
+  // valor lá. Pra DISCOUNT manual (incluindo o vindo de link `?coupon=`),
+  // mostramos imediatamente pra dar feedback ao usuário.
+  //
+  // Prioriza `currentOrder` do CheckoutTimerContext: ele é populado pela
+  // response do `patchCoupon` (que garante `applyToProducts`). O GET /orders
+  // pode omitir esse campo em algumas versões do backend.
+  const appliedCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
+  const showCouponDiscount = !!appliedCoupon && !isAutoCoupon(appliedCoupon);
+  const couponDiscountAmount = useMemo(() => {
+    if (!showCouponDiscount) return 0;
+    return (orderData?.pricing?.couponDiscount ?? 0) / 100;
+  }, [orderData, showCouponDiscount]);
+
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
     const grouped: Array<{
@@ -658,10 +681,11 @@ export function InformationStep({
     looked: { firstName?: string; lastName?: string; email?: string; phone?: string; dateOfBirth?: string; gender?: string },
   ) => {
     const fullName = [looked.firstName, looked.lastName].filter(Boolean).join(" ");
+    const nationality = participants[index]?.nationality;
     updateParticipant(index, {
       name: fullName,
       email: looked.email || "",
-      phone: looked.phone ? maskPhone(looked.phone) : "",
+      phone: looked.phone ? formatPhoneForCountry(looked.phone, nationality) : "",
       birthDate: looked.dateOfBirth || "",
       gender: looked.gender || "",
     });
@@ -734,7 +758,10 @@ export function InformationStep({
     value: string
   ) => {
     if (field === "phone") clearParticipantFieldError(index, "phone");
-    const masked = maskPhone(value);
+    /* Máscara por país (libphonenumber-js). Cada participante pode ter
+     * nacionalidade própria, então deriva do participants[index]. */
+    const nationality = participants[index]?.nationality;
+    const masked = formatPhoneForCountry(value, nationality);
     updateParticipant(index, { [field]: masked });
   };
 
@@ -1035,12 +1062,12 @@ export function InformationStep({
                 documentNumber: docForBackend,
                 email: p.email,
                 birthDate: p.birthDate,
-                phone: p.phone?.replace(/\D/g, "") || "",
+                phone: p.phone ? getPhoneDigitsForBackend(p.phone, p.nationality) : "",
               };
               const gender = mapGender(p.gender);
               if (gender) mapped.gender = gender;
               if (p.emergencyContactName?.trim()) mapped.emergencyContactName = p.emergencyContactName.trim();
-              if (p.emergencyPhone?.trim()) mapped.emergencyPhone = p.emergencyPhone.replace(/\D/g, "");
+              if (p.emergencyPhone?.trim()) mapped.emergencyPhone = getPhoneDigitsForBackend(p.emergencyPhone, p.nationality);
               if (p.hasEmergencyContact) mapped.hasEmergencyContact = true;
               if (p.questionAnswers && Object.keys(p.questionAnswers).length > 0) {
                 mapped.questionAnswers = Object.entries(p.questionAnswers).map(
@@ -1494,6 +1521,16 @@ export function InformationStep({
                       Ver mais {groupedTickets.length - 3} ingresso{groupedTickets.length - 3 > 1 ? "s" : ""}
                     </button>
                   )}
+                  {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">
+                        {formatCouponLineLabel(appliedCoupon)}:
+                      </p>
+                      <p className="font-bold">
+                        -{formatPrice(couponDiscountAmount)}
+                      </p>
+                    </div>
+                  )}
                   {serviceFee > 0 && (
                     <div className="flex items-center justify-between text-base text-gray-12">
                       <p className="font-semibold">Taxa de serviço:</p>
@@ -1748,9 +1785,8 @@ export function InformationStep({
                                   }
                                 }}
                                 onSelectUser={(user: LinkedUser) => {
-                                  const formattedPhone = user.phone
-                                    ? maskPhone(user.phone.replace(/\D/g, ""))
-                                    : "";
+                                  /* `formattedPhone` recalculado depois que sabemos a
+                                   * nacionalidade herdada — máscara depende dela. */
 
                                   let normalizedGender = user.gender || "";
                                   if (normalizedGender) {
@@ -1789,6 +1825,11 @@ export function InformationStep({
                                   const docFormatted = userIsBr
                                     ? maskCPF(docValue)
                                     : docValue.slice(0, 30);
+
+                                  /* Telefone formatado conforme país herdado. */
+                                  const formattedPhone = user.phone
+                                    ? formatPhoneForCountry(user.phone, inheritedNationality)
+                                    : "";
 
                                   updateParticipant(participantIndex, {
                                     name: `${user.firstName} ${user.lastName}`.trim(),
@@ -1903,9 +1944,9 @@ export function InformationStep({
                                   e.target.value
                                 )
                               }
-                              maxLength={15}
+                              maxLength={getPhoneMaxLengthForCountry(participant.nationality)}
                               className={`w-full px-4 py-3 rounded-lg border bg-gray-2 text-gray-12 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${fieldErrors[participantIndex]?.phone ? "border-red-6 focus:border-red-10" : "border-gray-6 focus:border-primary-10"}`}
-                              placeholder="(00) 99999-9999"
+                              placeholder={getPhonePlaceholderForCountry(participant.nationality)}
                             />
                             {fieldErrors[participantIndex]?.phone && (
                               <p className="text-sm text-red-11">{fieldErrors[participantIndex].phone}</p>
@@ -2038,9 +2079,9 @@ export function InformationStep({
                                       e.target.value
                                     )
                                   }
-                                  maxLength={15}
+                                  maxLength={getPhoneMaxLengthForCountry(participant.nationality)}
                                   className="w-full h-12 px-3 rounded-lg border border-gray-6 bg-transparent text-gray-12 focus:outline-none focus:border-primary-10 transition-colors font-family-dm-sans text-base placeholder:text-gray-11"
-                                  placeholder="(00) 99999-9999"
+                                  placeholder={getPhonePlaceholderForCountry(participant.nationality)}
                                 />
                               </div>
                             </div>
@@ -2220,6 +2261,14 @@ export function InformationStep({
                 </div>
               </div>
             ))}
+            {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
+              <p className="text-sm">
+                {formatCouponLineLabel(appliedCoupon)}:{" "}
+                <span className="font-semibold">
+                  -{formatPrice(couponDiscountAmount)}
+                </span>
+              </p>
+            )}
             {serviceFee > 0 && (
               <p className="text-sm">
                 Taxa de serviço:{" "}
@@ -2325,6 +2374,16 @@ export function InformationStep({
                         </p>
                       </div>
                     ))}
+                    {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">
+                          {formatCouponLineLabel(appliedCoupon)}:
+                        </p>
+                        <p className="font-bold">
+                          -{formatPrice(couponDiscountAmount)}
+                        </p>
+                      </div>
+                    )}
                     {serviceFee > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">Taxa de serviço:</p>

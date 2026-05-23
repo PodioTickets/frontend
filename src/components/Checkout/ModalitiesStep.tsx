@@ -19,6 +19,7 @@ import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { ticketUnitPriceForPrePaymentCents } from "@/lib/orderAutoCouponDisplay";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
+import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 
 interface ModalitiesStepProps {
   event: Event;
@@ -30,6 +31,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const { raceQuantities } = useCheckout();
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
+  const pendingCoupon = usePendingCouponSnapshot();
 
   const handleNext = () => {
     if (!isAuthenticated) {
@@ -336,6 +338,12 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   </div>
                 </div>
               ))}
+              {pendingCoupon && (
+                <p className="text-sm flex items-center justify-between gap-2">
+                  <span className="text-gray-11">Cupom {pendingCoupon}:</span>
+                  <span className="text-gray-12 text-xs font-medium">ao continuar</span>
+                </p>
+              )}
               {serviceFee > 0 && (
                 <p className="text-sm">
                   Taxa de serviço:{" "}

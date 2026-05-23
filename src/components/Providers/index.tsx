@@ -5,6 +5,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ModalsProvider } from "./ModalsProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProfileCompleteChecker } from "./ProfileCompleteChecker";
+import { CouponLinkCapture } from "./CouponLinkCapture";
 
 const Providers = ({ children }: PropsWithChildren) => {
   return (
@@ -13,6 +14,7 @@ const Providers = ({ children }: PropsWithChildren) => {
         <AuthProvider>
           <ModalsProvider />
           <ProfileCompleteChecker />
+          <CouponLinkCapture />
           {children}
         </AuthProvider>
       </QueryProvider>

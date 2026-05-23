@@ -37,6 +37,10 @@ export interface OrderCoupon {
   couponType: "DISCOUNT" | "QUANTITY" | "AGE";
   type: "PERCENTAGE" | "FIXED";
   value: number;
+  /** Escopo do cupom — "all" significa todos os ingressos/lotes do evento. */
+  appliesTo?: string;
+  /** Quando true, o desconto incide também sobre o valor dos produtos. */
+  applyToProducts?: boolean;
 }
 
 export interface OrderVoucher {

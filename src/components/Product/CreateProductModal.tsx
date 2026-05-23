@@ -12,7 +12,7 @@ import { useCreateProductModal } from "@/stores/modalStore";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Radio } from "@/components/Radio";
-import { X, Plus, Info, MoreVertical } from "lucide-react";
+import { X, Plus, Info, MoreVertical, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { TrashIcon } from "../Icons/TrashIcon";
@@ -126,6 +126,20 @@ export function CreateProductModal() {
   const cropTargetIndexRef = useRef<number | null>(null);
   /** Variação «Sem interesse» criada pelo backend: não exibimos ao organizador, mas reenviamos no PATCH se o produto continuar fora do ingresso. */
   const organizerHiddenSemInteresseRef = useRef<ProductVariation | null>(null);
+
+  // ─── Mobile-only: bottom sheets para edição/criação de variação (Figma 3428:160661 + 3428:161019) ───
+  // Mobile não edita inputs inline — abre bottom sheet "Mais opções" (Editar/Remover)
+  // que por sua vez abre "Editar/Adicionar variação" com inputs nome/preço/estoque.
+  const [mobileMoreMenuVariationId, setMobileMoreMenuVariationId] = useState<string | null>(null);
+  type MobileVariationDraft = {
+    /** "new" cria uma nova variação ao salvar; UUID edita a existente. */
+    target: "new" | string;
+    name: string;
+    price: string;
+    stock: string;
+  };
+  const [mobileVariationDraft, setMobileVariationDraft] = useState<MobileVariationDraft | null>(null);
+  const [mobileVariationDraftError, setMobileVariationDraftError] = useState<string | null>(null);
 
   const isEditing = data?.productId !== undefined;
   const isReadOnly = data?.readOnly === true;
@@ -625,6 +639,64 @@ export function CreateProductModal() {
     const raw = value.replace(/^R\$\s*/i, "").trim();
     const formatted = formatPrice(raw);
     setBasePrice(formatted === "" ? "0,00" : formatted);
+  };
+
+  // ─── Handlers dos bottom sheets mobile de variação ───
+  const openMobileEditVariation = (id: string) => {
+    const v = variations.find((x) => x.id === id);
+    if (!v) return;
+    setMobileVariationDraft({ target: id, name: v.name, price: v.price, stock: v.stock });
+    setMobileVariationDraftError(null);
+    setMobileMoreMenuVariationId(null);
+  };
+
+  const openMobileAddVariation = () => {
+    setMobileVariationDraft({ target: "new", name: "", price: "", stock: defaultVariationStockFromBatches });
+    setMobileVariationDraftError(null);
+  };
+
+  const closeMobileVariationDraft = () => {
+    setMobileVariationDraft(null);
+    setMobileVariationDraftError(null);
+  };
+
+  const handleMobileDraftPriceChange = (value: string) => {
+    if (!mobileVariationDraft) return;
+    const formatted = formatPrice(value);
+    setMobileVariationDraft({ ...mobileVariationDraft, price: formatted === "" ? "" : formatted });
+  };
+
+  const saveMobileVariationDraft = () => {
+    if (!mobileVariationDraft) return;
+    const name = mobileVariationDraft.name.trim();
+    if (!name) {
+      setMobileVariationDraftError("Informe o nome da variação.");
+      return;
+    }
+    if (mobileVariationDraft.target === "new") {
+      const newVariation: ProductVariation = {
+        id: Date.now().toString(),
+        name,
+        price: mobileVariationDraft.price || "",
+        stock: mobileVariationDraft.stock || defaultVariationStockFromBatches,
+      };
+      setVariations([...variations, newVariation]);
+    } else {
+      const targetId = mobileVariationDraft.target;
+      setVariations(
+        variations.map((v) =>
+          v.id === targetId
+            ? { ...v, name, price: mobileVariationDraft.price, stock: mobileVariationDraft.stock }
+            : v,
+        ),
+      );
+    }
+    closeMobileVariationDraft();
+  };
+
+  const handleMobileRemoveVariation = (id: string) => {
+    setMobileMoreMenuVariationId(null);
+    handleRemoveVariation(id);
   };
 
   const validateBeforeSave = (): boolean => {
@@ -1278,102 +1350,42 @@ export function CreateProductModal() {
                         {/* Variations List */}
                         {variations.map((variation) => (
                           <Fragment key={variation.id}>
-                            {/* Mobile — Figma 3428:160533 */}
+                            {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
                             <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
                               <div className="flex w-full items-start justify-between gap-2">
                                 <div className="flex min-w-0 flex-1 flex-col gap-3">
                                   <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
                                     Nome da variação
                                   </p>
-                                  <input
-                                    type="text"
-                                    value={variation.name}
-                                    onChange={(e) =>
-                                      handleVariationChange(
-                                        variation.id,
-                                        "name",
-                                        e.target.value,
-                                      )
-                                    }
-                                    placeholder="Ex: P, M, G"
-                                    className="w-full border-0 bg-transparent p-0 text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-0 focus:outline-none focus:ring-0"
-                                  />
+                                  <p className="truncate text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                    {variation.name || "—"}
+                                  </p>
                                 </div>
-                                <Dropdown
-                                  menuInPortal
-                                  align="end"
-                                  position="bottom"
-                                  width="w-52"
-                                  options={[
-                                    {
-                                      id: "remove",
-                                      label: "Remover variação",
-                                      onClick: () =>
-                                        handleRemoveVariation(variation.id),
-                                    },
-                                  ]}
-                                  trigger={(open) => (
-                                    <button
-                                      type="button"
-                                      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
-                                      aria-label="Ações da variação"
-                                      aria-expanded={open}
-                                    >
-                                      <MoreVertical className="size-6" />
-                                    </button>
-                                  )}
-                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setMobileMoreMenuVariationId(variation.id)}
+                                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
+                                  aria-label="Mais opções da variação"
+                                >
+                                  <MoreVertical className="size-6" />
+                                </button>
                               </div>
                               <div className="flex w-full items-start justify-between gap-4">
                                 <div className="flex flex-col gap-3">
                                   <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
                                     Preço específico
                                   </p>
-                                  {isIncludedInTicket ? (
-                                    <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                      Incluso
-                                    </p>
-                                  ) : (
-                                    <div className="flex items-baseline gap-0.5 text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                      <span>R$</span>
-                                      <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={variation.price || "0,00"}
-                                        onChange={(e) =>
-                                          handlePriceChange(
-                                            variation.id,
-                                            e.target.value,
-                                          )
-                                        }
-                                        className="min-w-0 max-w-[140px] border-0 bg-transparent p-0 focus:border-0 focus:outline-none focus:ring-0"
-                                        placeholder="0,00"
-                                      />
-                                    </div>
-                                  )}
+                                  <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                    {isIncludedInTicket ? "Incluso" : `R$ ${variation.price || "0,00"}`}
+                                  </p>
                                 </div>
                                 <div className="flex flex-col items-end gap-3">
                                   <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
                                     Estoque
                                   </p>
-                                  <div className="flex items-center gap-1">
-                                    <input
-                                      type="number"
-                                      value={variation.stock}
-                                      onChange={(e) =>
-                                        handleVariationChange(
-                                          variation.id,
-                                          "stock",
-                                          e.target.value,
-                                        )
-                                      }
-                                      className="w-14 border-0 bg-transparent p-0 text-right text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12 focus:outline-none focus:ring-0"
-                                      placeholder="0"
-                                    />
-                                    <span className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                      Un
-                                    </span>
-                                  </div>
+                                  <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                    {variation.stock || "0"} Un
+                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -1450,11 +1462,17 @@ export function CreateProductModal() {
                           </Fragment>
                         ))}
 
-                        {/* Add Variation Button */}
+                        {/* Add Variation Button — desktop adiciona linha inline, mobile abre bottom sheet. */}
                         <div className="flex justify-center p-4 max-md:pt-0 md:border-t md:border-gray-6">
                           <button
                             type="button"
-                            onClick={handleAddVariation}
+                            onClick={() => {
+                              if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+                                openMobileAddVariation();
+                              } else {
+                                handleAddVariation();
+                              }
+                            }}
                             className="flex h-11 items-center gap-1 px-6 text-base font-semibold font-family-dm-sans text-gray-11 transition-colors hover:text-gray-12 md:px-11"
                           >
                             <Plus className="size-6" />
@@ -1672,6 +1690,177 @@ export function CreateProductModal() {
             onInvalidFile={(msg) => toast.error(msg)}
             onCropFailed={(msg) => toast.error(msg)}
           />
+
+          {/* Bottom sheet mobile: "Mais opções" da variação (Figma 3428:160985) */}
+          <AnimatePresence>
+            {mobileMoreMenuVariationId !== null && (
+              <>
+                <motion.div
+                  key="variation-more-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)] md:hidden"
+                  onClick={() => setMobileMoreMenuVariationId(null)}
+                />
+                <motion.div
+                  key="variation-more-sheet"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="fixed inset-x-0 bottom-0 z-61 flex flex-col items-stretch rounded-t-xl bg-gray-1 md:hidden"
+                >
+                  <div className="flex items-center justify-between border-b border-gray-6 px-4 py-2">
+                    <p className="font-family-dm-sans text-base font-semibold leading-[1.3] text-gray-12">
+                      Mais opções
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setMobileMoreMenuVariationId(null)}
+                      className="flex size-7 items-center justify-center rounded-lg text-gray-11 hover:bg-gray-3"
+                      aria-label="Fechar"
+                    >
+                      <X className="size-5" />
+                    </button>
+                  </div>
+                  <div className="flex flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+                    <button
+                      type="button"
+                      onClick={() => mobileMoreMenuVariationId && openMobileEditVariation(mobileMoreMenuVariationId)}
+                      className="flex h-11 items-center gap-2 border-b border-gray-6 px-4 text-left transition-colors hover:bg-gray-3"
+                    >
+                      <Pencil className="size-5 text-gray-12" />
+                      <span className="font-family-dm-sans text-sm font-medium leading-[1.3] text-gray-12">
+                        Editar variante
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mobileMoreMenuVariationId && handleMobileRemoveVariation(mobileMoreMenuVariationId)}
+                      className="flex h-11 items-center gap-2 border-b border-gray-6 px-4 text-left transition-colors hover:bg-red-2"
+                    >
+                      <X className="size-5 text-red-11" />
+                      <span className="font-family-dm-sans text-sm font-medium leading-[1.3] text-red-11">
+                        Remover variante
+                      </span>
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Bottom sheet mobile: "Adicionar/Editar variação" (Figma 3428:161368) */}
+          <AnimatePresence>
+            {mobileVariationDraft !== null && (
+              <>
+                <motion.div
+                  key="variation-draft-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-60 bg-[rgba(32,32,32,0.9)] md:hidden"
+                  onClick={closeMobileVariationDraft}
+                />
+                <motion.div
+                  key="variation-draft-sheet"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="fixed inset-x-0 bottom-0 z-61 flex flex-col items-stretch rounded-t-xl bg-gray-1 md:hidden"
+                >
+                  <div className="flex items-center justify-between border-b border-gray-6 px-4 py-2">
+                    <p className="font-family-dm-sans text-base font-semibold leading-[1.3] text-gray-12">
+                      {mobileVariationDraft.target === "new" ? "Adicionar variação" : "Editar variação"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={closeMobileVariationDraft}
+                      className="flex size-7 items-center justify-center rounded-lg text-gray-11 hover:bg-gray-3"
+                      aria-label="Fechar"
+                    >
+                      <X className="size-5" />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-6 px-4 pt-6 pb-3">
+                    <div className="flex flex-col gap-2">
+                      <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                        Nome da variação
+                      </label>
+                      <input
+                        type="text"
+                        value={mobileVariationDraft.name}
+                        onChange={(e) => {
+                          setMobileVariationDraft({ ...mobileVariationDraft, name: e.target.value });
+                          if (mobileVariationDraftError) setMobileVariationDraftError(null);
+                        }}
+                        placeholder="Ex: GG, Azul, 22"
+                        className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
+                      />
+                      {mobileVariationDraftError && (
+                        <p className="font-family-dm-sans text-sm text-red-11">{mobileVariationDraftError}</p>
+                      )}
+                    </div>
+                    {!isIncludedInTicket && (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-1">
+                          <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                            Preço específico
+                          </label>
+                          <Tooltip content="Sobrescreve o preço base do produto pra essa variação.">
+                            <BookIcon className="size-5 text-gray-11" />
+                          </Tooltip>
+                        </div>
+                        <div className="flex h-12 items-center gap-2 rounded-lg border border-gray-6 px-3 py-4">
+                          <span className="font-family-dm-sans text-base text-gray-11">R$</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={mobileVariationDraft.price}
+                            onChange={(e) => handleMobileDraftPriceChange(e.target.value)}
+                            placeholder="00,00"
+                            className="flex-1 border-0 bg-transparent p-0 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                        Estoque
+                      </label>
+                      <input
+                        type="number"
+                        value={mobileVariationDraft.stock}
+                        onChange={(e) => setMobileVariationDraft({ ...mobileVariationDraft, stock: e.target.value })}
+                        placeholder="Ex: 100"
+                        className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                    <button
+                      type="button"
+                      onClick={closeMobileVariationDraft}
+                      className="flex h-12 flex-1 items-center justify-center rounded-lg border border-gray-6 font-manrope text-base font-bold leading-[1.1] text-gray-12 transition-colors hover:bg-gray-3"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveMobileVariationDraft}
+                      className="flex h-12 flex-1 items-center justify-center rounded-lg bg-primary-11 font-manrope text-base font-bold leading-[1.1] text-primary-2 transition-colors hover:bg-primary-10"
+                    >
+                      {mobileVariationDraft.target === "new" ? "Adicionar" : "Salvar"}
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Confirmação de exclusão (Figma: modal sobre o fluxo de produto) */}
           <AnimatePresence>

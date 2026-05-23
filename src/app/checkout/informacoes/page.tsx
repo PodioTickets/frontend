@@ -12,6 +12,7 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { OrderApiError } from "@/interfaces/order";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { getPhoneDigitsForBackend } from "@/utils/phone";
 import toast from "react-hot-toast";
 import CheckoutInformacoesLoading from "./loading";
 
@@ -84,14 +85,15 @@ function CheckoutInformacoesContent() {
           documentNumber,
           email: p.email,
           birthDate: p.birthDate,
-          phone: p.phone?.replace(/\D/g, "") || "",
+          /* Extrai dígitos nacionais (BR: 11, US: 10, etc.) via libphonenumber-js. */
+          phone: p.phone ? getPhoneDigitsForBackend(p.phone, p.nationality) : "",
         };
         const gender = mapGender(p.gender);
         if (gender) mapped.gender = gender;
         if (p.emergencyContactName?.trim())
           mapped.emergencyContactName = p.emergencyContactName.trim();
         if (p.emergencyPhone?.trim())
-          mapped.emergencyPhone = p.emergencyPhone.replace(/\D/g, "");
+          mapped.emergencyPhone = getPhoneDigitsForBackend(p.emergencyPhone, p.nationality);
         if (p.hasEmergencyContact) mapped.hasEmergencyContact = true;
         if (p.questionAnswers && Object.keys(p.questionAnswers).length > 0) {
           mapped.questionAnswers = Object.entries(p.questionAnswers).map(

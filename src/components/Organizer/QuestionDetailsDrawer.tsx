@@ -11,6 +11,8 @@ import {
 import { X, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import type { Question } from "@/interfaces/event";
 import { ArrowButton } from "../ArrowButton";
+import { Pagination } from "../Pagination";
+import { Button } from "../Button";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Texto livre",
@@ -122,13 +124,13 @@ export function QuestionDetailsDrawer({
     (isTextQuestion
       ? [{ label: "Texto livre", percentage: 100, count: totalParticipants || 0 }]
       : (question?.options ?? []).map((opt) => ({
-          label: opt,
-          percentage: totalQuestions > 0 ? Math.round(100 / (question?.options?.length ?? 1)) : 0,
-          count:
-            totalParticipants > 0
-              ? Math.round((totalParticipants ?? 0) / (question?.options?.length ?? 1))
-              : 0,
-        })));
+        label: opt,
+        percentage: totalQuestions > 0 ? Math.round(100 / (question?.options?.length ?? 1)) : 0,
+        count:
+          totalParticipants > 0
+            ? Math.round((totalParticipants ?? 0) / (question?.options?.length ?? 1))
+            : 0,
+      })));
 
   const filteredTextAnswers = useMemo(() => {
     if (!textAnswerRows) return [];
@@ -280,114 +282,74 @@ export function QuestionDetailsDrawer({
                       />
                     </div>
 
-                  <div className="w-full bg-[#F9F9F9] rounded-lg border border-[#D9D9D9] flex flex-col overflow-hidden">
+                    <div className="w-full bg-[#F9F9F9] rounded-lg border border-[#D9D9D9] flex flex-col overflow-hidden">
 
-                    {/* Header do card */}
-                    <div className="h-11 bg-[#F0F0F0] border-b border-[#D9D9D9] px-4 flex items-center shrink-0">
-                      <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
-                        Respostas de todos os usuários
-                      </p>
-                    </div>
-
-                    {/* Lista de cards */}
-                    <div className="px-3 py-4 flex flex-col gap-2">
-                      {textAnswersLoading ? (
-                        <p className="text-sm text-gray-11 font-family-dm-sans text-center py-8">
-                          Carregando respostas...
+                      {/* Header do card */}
+                      <div className="h-11 bg-[#F0F0F0] border-b border-[#D9D9D9] px-4 flex items-center shrink-0">
+                        <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
+                          Respostas de todos os usuários
                         </p>
-                      ) : pagedAnswers.length === 0 ? (
-                        <p className="text-sm text-gray-11 font-family-dm-sans text-center py-8">
-                          Nenhuma resposta encontrada.
-                        </p>
-                      ) : (
-                        pagedAnswers.map((row, i) => (
-                          <div
-                            key={row.id ?? i}
-                            className="w-full bg-[#FCFCFC] rounded-lg border border-[#D9D9D9] flex flex-col"
-                          >
-                            {/* Cabeçalho do card: usuário */}
-                            <div className="w-full border-b border-[#D9D9D9] px-4 py-3 flex items-center gap-2">
-                              <UserAvatar name={row.userName} avatarUrl={row.userAvatarUrl} />
-                              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate">
-                                  {row.userName}
-                                </p>
-                                {row.userEmail && (
-                                  <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
-                                    {row.userEmail}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Corpo: texto da resposta */}
-                            <div className="px-4 pt-4 pb-5">
-                              <p className="font-inter font-medium text-sm leading-[1.3] text-black">
-                                {row.answer}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Footer: paginação + CSV */}
-                    <div className="p-4 flex justify-between items-center border-t border-[#D9D9D9]">
-                      {/* Paginação */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                          disabled={currentPage <= 1}
-                          className="size-8 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none transition-colors"
-                          aria-label="Página anterior"
-                        >
-                          <ChevronLeft className="size-5 text-gray-11" />
-                        </button>
-                        {pageNumbers.map((p, i) =>
-                          p === "..." ? (
-                            <span
-                              key={`ellipsis-${i}`}
-                              className="size-8 flex items-center justify-center text-sm text-gray-11 font-family-dm-sans"
-                            >
-                              ...
-                            </span>
-                          ) : (
-                            <button
-                              key={p}
-                              type="button"
-                              onClick={() => setCurrentPage(p as number)}
-                              className={`size-8 flex items-center justify-center rounded-lg text-sm font-medium font-family-dm-sans transition-colors ${
-                                currentPage === p
-                                  ? "bg-[#308737] text-[#FBFEFB]"
-                                  : "bg-[#E8E8E8] text-gray-12 hover:bg-gray-5"
-                              }`}
-                            >
-                              {p}
-                            </button>
-                          )
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                          disabled={currentPage >= totalPages}
-                          className="size-8 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none transition-colors"
-                          aria-label="Próxima página"
-                        >
-                          <ChevronRight className="size-5 text-gray-11" />
-                        </button>
                       </div>
 
-                      {/* Botão exportar CSV */}
-                      <button
-                        type="button"
-                        onClick={handleExportCsv}
-                        className="h-11 px-5 bg-[#59E373] rounded-lg font-manrope font-bold text-base text-[#141A15] hover:bg-[#4fd066] transition-colors shrink-0"
-                      >
-                        Exportar CSV
-                      </button>
+                      {/* Lista de cards */}
+                      <div className="px-3 py-4 flex flex-col gap-2">
+                        {textAnswersLoading ? (
+                          <p className="text-sm text-gray-11 font-family-dm-sans text-center py-8">
+                            Carregando respostas...
+                          </p>
+                        ) : pagedAnswers.length === 0 ? (
+                          <p className="text-sm text-gray-11 font-family-dm-sans text-center py-8">
+                            Nenhuma resposta encontrada.
+                          </p>
+                        ) : (
+                          pagedAnswers.map((row, i) => (
+                            <div
+                              key={row.id ?? i}
+                              className="w-full bg-[#FCFCFC] rounded-lg border border-[#D9D9D9] flex flex-col"
+                            >
+                              {/* Cabeçalho do card: usuário */}
+                              <div className="w-full border-b border-[#D9D9D9] px-4 py-3 flex items-center gap-2">
+                                <UserAvatar name={row.userName} avatarUrl={row.userAvatarUrl} />
+                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                  <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate">
+                                    {row.userName}
+                                  </p>
+                                  {row.userEmail && (
+                                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
+                                      {row.userEmail}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Corpo: texto da resposta */}
+                              <div className="px-4 pt-4 pb-5">
+                                <p className="font-inter font-medium text-sm leading-[1.3] text-black">
+                                  {row.answer}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Footer: paginação + CSV */}
+                      <div className="p-4 flex md:flex-row flex-col gap-4 justify-between items-center border-t border-[#D9D9D9]">
+                        {/* Paginação */}
+                        <Pagination className="w-max" currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+
+
+
+                        {/* Botão exportar CSV */}
+                        <Button
+                          type="button"
+                          onClick={handleExportCsv}
+                          className="h-11 px-5 md:w-max w-full"
+                        >
+                          Exportar CSV
+                        </Button>
+                      </div>
                     </div>
-                  </div>
                   </div>
                 ) : (
                   /* ── Perguntas de opção: tabela ── */

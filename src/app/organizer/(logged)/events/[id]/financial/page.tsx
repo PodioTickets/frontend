@@ -37,6 +37,8 @@ import { FaturaIcon } from "@/components/Icons/FaturaIcon";
 import Link from "next/link";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
 import { Tooltip } from "@/components/Tooltip";
+import { TicketIcon } from "@/components/Icons/TicketIcon";
+import { cn } from "@/utils/cn";
 
 function TicketsPagination({
   page,
@@ -585,66 +587,109 @@ export default function EventFinancialPage() {
 
           <PaymentMethodsCard stats={financialData.paymentMethodStats} />
 
-          {/* ========== MOBILE: Ingressos de lotes (cards) ========== */}
-          <div className="lg:hidden w-full flex flex-col gap-2">
-            <h2 className="font-manrope font-extrabold text-base text-gray-12">Ingressos de lotes</h2>
-            <div className="flex flex-col gap-2">
+          {/* ========== MOBILE: Ingressos de lotes (cards) — Figma 2665:106817 ========== */}
+          <div className="lg:hidden w-full flex flex-col gap-4">
+            <h2 className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">Ingressos de lotes</h2>
+            <div className="flex flex-col gap-3">
               {ticketsData.map((item) => {
                 const isExpanded = expandedRows.has(item.id);
-                const hasLots = item.lots && item.lots.length > 0;
+                const hasLots = !!item.lots && item.lots.length > 0;
+                const revenueLabel = `R$ ${(item.revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                const subtitleLabel = item.subtitle || "Sem categoria";
+
+                /* Card de CATEGORIA com lotes — destacado em azul, sem ícone, lotes inline ao expandir. */
+                if (hasLots) {
+                  return (
+                    <div
+                      key={item.id}
+                      className="overflow-hidden rounded-lg border border-blue-6 bg-blue-2"
+                    >
+                      <button
+                        onClick={() => toggleRow(item.id)}
+                        className="flex w-full flex-col gap-4 border-b border-blue-6 px-3 py-4 text-left transition-colors hover:bg-blue-3/50"
+                      >
+                        <div className="flex w-full flex-col gap-2">
+                          <div className="flex items-center justify-between gap-3 min-w-0">
+                            <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 truncate min-w-0">
+                              {subtitleLabel}
+                            </p>
+                            <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap shrink-0">
+                              {item.sold} vendidos
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between gap-3 min-w-0">
+                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate min-w-0">
+                              {item.name}
+                            </p>
+                            <ChevronDown
+                              className={cn(
+                                "size-5 shrink-0 text-gray-12 transition-transform",
+                                isExpanded ? "rotate-0" : "-rotate-90",
+                              )}
+                            />
+                          </div>
+                        </div>
+                        <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
+                          {revenueLabel}
+                        </p>
+                      </button>
+                      {isExpanded && item.lots && item.lots.map((lot: any, lotIndex: number) => {
+                        const lotSold = lot.quantitySold || 0;
+                        const lotRevenue = lotSold * (lot.price || 0);
+                        const lotRevenueLabel = `R$ ${(lotRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        return (
+                          <div
+                            key={`${item.id}-lot-${lot.id}`}
+                            className="flex flex-col gap-4 border-b border-blue-6 px-3 py-4 last:border-b-0"
+                          >
+                            <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12">
+                              Lote {lotIndex + 1}
+                            </p>
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
+                                {lotRevenueLabel}
+                              </p>
+                              <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap">
+                                {lotSold} vendidos
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                /* Card sem lotes — ícone ticket, layout horizontal. */
                 return (
                   <div
                     key={item.id}
-                    className={`rounded-lg border border-gray-6 overflow-hidden ${isExpanded && hasLots ? "bg-primary-4/20" : "bg-gray-1"}`}
+                    className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4"
                   >
-                    <button
-                      onClick={() => hasLots && toggleRow(item.id)}
-                      className="flex items-center justify-between w-full px-4 py-3 text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="flex flex-col min-w-0">
-                          {item.subtitle && (
-                            <p className="font-family-dm-sans font-normal text-sm text-gray-11 truncate">{item.subtitle}</p>
-                          )}
-                          <p className="font-manrope font-bold text-sm text-gray-12 truncate">{item.name}</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-5">
+                        <TicketIcon className="size-5 text-gray-12" />
+                      </div>
+                      <div className="flex flex-1 min-w-0 flex-col gap-2">
+                        <div className="flex items-center justify-between gap-3 min-w-0">
+                          <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 truncate min-w-0">
+                            {subtitleLabel}
+                          </p>
+                          <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap shrink-0">
+                            {item.sold} vendidos
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 min-w-0">
+                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate min-w-0">
+                            {item.name}
+                          </p>
+                          <ChevronRight className="size-5 shrink-0 text-gray-12" />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-family-dm-sans font-semibold text-sm text-gray-12">{item.sold} vendidos</span>
-                        {hasLots && (
-                          isExpanded
-                            ? <ChevronDown className="size-4 text-gray-12" />
-                            : <ChevronRight className="size-4 text-gray-12" />
-                        )}
-                      </div>
-                    </button>
-                    <div className="px-4 pb-3 pt-0">
-                      <span className="font-manrope font-bold text-sm text-gray-12">
-                        R$ {(item.revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
                     </div>
-                    {isExpanded && hasLots && item.lots && (
-                      <div className="border-t border-gray-6 bg-primary-4/10">
-                        {item.lots.map((lot: any, lotIndex: number) => {
-                          const lotSold = lot.quantitySold || 0;
-                          const lotRevenue = lotSold * (lot.price || 0);
-                          return (
-                            <div
-                              key={`${item.id}-lot-${lot.id}`}
-                              className="flex items-center justify-between px-4 py-3 pl-12"
-                            >
-                              <span className="font-manrope font-semibold text-sm text-gray-12">Lote {lotIndex + 1}</span>
-                              <div className="flex items-center gap-4">
-                                <span className="font-family-dm-sans font-semibold text-sm text-gray-12">{lotSold} vendidos</span>
-                                <span className="font-manrope font-bold text-sm text-gray-12">
-                                  R$ {(lotRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
+                      {revenueLabel}
+                    </p>
                   </div>
                 );
               })}

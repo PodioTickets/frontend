@@ -40,6 +40,12 @@ interface CheckoutTimerContextValue {
   expiresAt: string | null;
   remainingMs: number;
   isActive: boolean;
+  /**
+   * Snapshot autoritativo da última `OrderResponse` recebida do backend.
+   * Permite que steps intermediários (ingressos, informações, produtos) leiam
+   * `coupon`, `voucher`, `pricing` sem refazer GET /orders/{id}.
+   */
+  currentOrder: OrderResponse | null;
   /** Inicia ou substitui o timer. Chamado após POST /reserve. */
   startTimer: (order: OrderResponse, fallbackUrl: string) => void;
   /** Atualiza a partir de qualquer resposta do backend (estende PIX, etc). */
@@ -124,6 +130,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
   const { getOrder } = useCheckoutReservation();
 
   const [state, setState] = useState<TimerState | null>(null);
+  const [currentOrder, setCurrentOrder] = useState<OrderResponse | null>(null);
   const [remainingMs, setRemainingMs] = useState(0);
   const [expiredModalOpen, setExpiredModalOpen] = useState(false);
   const [expiredFallbackUrl, setExpiredFallbackUrl] = useState<string | null>(null);
@@ -155,6 +162,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
         fallbackUrl,
       };
       setState(next);
+      setCurrentOrder(order);
       stateRef.current = next;
       hasExpiredRef.current = false;
       saveStored(order.eventId, {
@@ -178,6 +186,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
     clearStored(current.eventId);
     setExpiredFallbackUrl(current.fallbackUrl);
     setState(null);
+    setCurrentOrder(null);
     stateRef.current = null;
     setRemainingMs(0);
     setExpiredModalOpen(true);
@@ -191,6 +200,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
     hasExpiredRef.current = true;
     clearStored(stateRef.current?.eventId ?? "");
     setState(null);
+    setCurrentOrder(null);
     stateRef.current = null;
     setRemainingMs(0);
     routerRef.current.push(fallbackUrl);
@@ -215,6 +225,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
           // PAID — limpa timer silenciosamente
           clearStored(order.eventId);
           setState(null);
+          setCurrentOrder(null);
           stateRef.current = null;
           setRemainingMs(0);
         }
@@ -229,6 +240,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
     const current = stateRef.current;
     if (current) clearStored(current.eventId);
     setState(null);
+    setCurrentOrder(null);
     stateRef.current = null;
     setRemainingMs(0);
     hasExpiredRef.current = false;
@@ -384,6 +396,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
       expiresAt: state?.expiresAt ?? null,
       remainingMs,
       isActive: state !== null && remainingMs > 0,
+      currentOrder,
       startTimer,
       syncFromOrder,
       clearTimer,
@@ -394,6 +407,7 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
     [
       state,
       remainingMs,
+      currentOrder,
       startTimer,
       syncFromOrder,
       clearTimer,
@@ -445,6 +459,7 @@ export function CheckoutTimerPreviewProvider({ children }: { children: ReactNode
       expiresAt: null,
       remainingMs: 0,
       isActive: false,
+      currentOrder: null,
       startTimer: () => { },
       syncFromOrder: () => { },
       clearTimer: () => { },

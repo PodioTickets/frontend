@@ -127,22 +127,31 @@ export function FinancialSection({
               >
                 <div className="absolute inset-y-0 left-0 right-0 overflow-hidden rounded-full">
                   <div
-                    className="absolute inset-y-0 left-0 bg-[#6e56cf]"
+                    className={cn(
+                      "absolute inset-y-0 left-0",
+                      readOnly ? "bg-gray-8" : "bg-[#6e56cf]",
+                    )}
                     style={{ width: `${sliderPosition}%` }}
                   />
                   <div
-                    className="absolute inset-y-0 right-0 bg-[#30a476]"
+                    className={cn(
+                      "absolute inset-y-0 right-0",
+                      readOnly ? "bg-gray-6" : "bg-[#30a476]",
+                    )}
                     style={{ width: `${100 - sliderPosition}%` }}
                   />
                 </div>
                 <div
-                  className="pointer-events-none absolute top-0 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-gray-12 bg-gray-2 shadow-md"
+                  className={cn(
+                    "pointer-events-none absolute top-0 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border shadow-md",
+                    readOnly ? "border-gray-8 bg-gray-3" : "border-gray-12 bg-gray-2",
+                  )}
                   style={{ left: `${sliderPosition}%` }}
                 >
                   <div className="flex flex-col gap-[3px]">
-                    <div className="h-[2px] w-3 rounded-full bg-gray-12" />
-                    <div className="h-[2px] w-3 rounded-full bg-gray-12" />
-                    <div className="h-[2px] w-3 rounded-full bg-gray-12" />
+                    <div className={cn("h-[2px] w-3 rounded-full", readOnly ? "bg-gray-9" : "bg-gray-12")} />
+                    <div className={cn("h-[2px] w-3 rounded-full", readOnly ? "bg-gray-9" : "bg-gray-12")} />
+                    <div className={cn("h-[2px] w-3 rounded-full", readOnly ? "bg-gray-9" : "bg-gray-12")} />
                   </div>
                 </div>
               </div>

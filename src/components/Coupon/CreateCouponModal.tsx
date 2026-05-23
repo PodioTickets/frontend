@@ -621,25 +621,25 @@ export function CreateCouponModal() {
               transition={{ duration: 0.15 }}
               className="fixed inset-0 z-[61] flex items-center justify-center p-4"
             >
-              <div className="bg-gray-1 rounded-xl w-full max-w-[569px] flex flex-col overflow-hidden shadow-xl">
+              <div className="bg-gray-1 rounded-xl w-full max-w-[569px] max-h-[90vh] flex flex-col overflow-hidden shadow-xl">
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-6">
-                  <span className="text-gray-12 text-[20px] font-semibold font-family-dm-sans leading-[26px]">Importar lista de CPF</span>
+                <div className="flex items-center justify-between px-4 md:px-5 py-3 border-b border-gray-6 gap-3">
+                  <span className="text-gray-12 text-base md:text-[20px] font-semibold font-family-dm-sans leading-[1.3] truncate">Importar lista de CPF</span>
                   <button
                     type="button"
                     onClick={() => setShowImportModal(false)}
-                    className="w-9 h-9 rounded-lg hover:bg-gray-3 transition-colors inline-flex items-center justify-center overflow-hidden"
+                    className="w-9 h-9 shrink-0 rounded-lg hover:bg-gray-3 transition-colors inline-flex items-center justify-center overflow-hidden"
                   >
                     <img src="https://podioticket.com.br/images/remove.svg" alt="Fechar" className="w-9 h-9 object-contain" />
                   </button>
                 </div>
 
                 {/* Body */}
-                <div className="flex flex-col gap-9 px-5 pt-5 pb-8 overflow-y-auto">
+                <div className="flex flex-col gap-6 md:gap-9 px-4 md:px-5 pt-5 pb-6 md:pb-8 overflow-y-auto">
                   {/* Formato esperado */}
                   <div className="flex flex-col gap-4">
-                    <h3 className="text-gray-12 text-[18px] font-semibold font-family-manrope leading-[19.8px]">Formato esperado do arquivo</h3>
-                    <div className="w-[290px] bg-gray-2 rounded-lg overflow-hidden flex flex-col" style={{ outline: '1px solid #D9D9D9' }}>
+                    <h3 className="text-gray-12 text-base md:text-[18px] font-semibold font-family-manrope leading-[1.3]">Formato esperado do arquivo</h3>
+                    <div className="w-full max-w-[290px] bg-gray-2 rounded-lg overflow-hidden flex flex-col" style={{ outline: '1px solid #D9D9D9' }}>
                       {[1, 2, 3].map((n) => (
                         <div key={n} className="flex items-center h-8 border-b border-gray-6">
                           <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ outline: '1px solid #D9D9D9' }}>
@@ -656,32 +656,32 @@ export function CreateCouponModal() {
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <svg className="w-6 h-6 shrink-0" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-5 h-5 md:w-6 md:h-6 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="7" r="1" fill="#646464" />
                         <path d="M11 10H12V17M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#646464" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                      <p className="flex-1 text-gray-11 text-[16px] font-normal font-family-dm-sans leading-[20.8px]">1 CPF por linha. Pode usar apenas números, com pontuação ou sem pontuação. Duplicadas serão ignoradas automaticamente.</p>
+                      <p className="flex-1 min-w-0 text-gray-11 text-sm md:text-[16px] font-normal font-family-dm-sans leading-[1.3]">1 CPF por linha. Pode usar apenas números, com pontuação ou sem pontuação. Duplicadas serão ignoradas automaticamente.</p>
                     </div>
                   </div>
 
                   {/* Drop zone */}
                   <div className="flex flex-col gap-4">
-                    <h3 className="text-gray-12 text-[18px] font-semibold font-family-manrope leading-[19.8px]">Arquivo CSV</h3>
+                    <h3 className="text-gray-12 text-base md:text-[18px] font-semibold font-family-manrope leading-[1.3]">Arquivo CSV</h3>
                     <div
                       onClick={() => csvInputRef.current?.click()}
                       onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
                       onDragLeave={() => setIsDraggingCsv(false)}
                       onDrop={handleDropzoneDrop}
-                      className={`flex items-center gap-4 p-6 rounded-xl cursor-pointer transition-colors ${isDraggingCsv ? "bg-green-2" : "hover:bg-gray-2"}`}
+                      className={`flex items-center gap-3 md:gap-4 p-4 md:p-6 rounded-xl cursor-pointer transition-colors ${isDraggingCsv ? "bg-green-2" : "hover:bg-gray-2"}`}
                       style={{ outline: isDraggingCsv ? '2px solid #46A758' : '2px solid #D9D9D9' }}
                     >
-                      <div className="w-16 h-16 shrink-0 flex items-center justify-center">
-                        <img src="/images/plus.svg" alt="" className="w-16 h-16" />
+                      <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 flex items-center justify-center">
+                        <img src="/images/plus.svg" alt="" className="w-full h-full" />
                       </div>
-                      <div className="flex-1 flex flex-col justify-center items-start gap-6">
-                        <div className="flex flex-col gap-4 w-full">
-                          <p className="w-full text-[16px] font-bold font-family-dm-sans leading-[20.8px]" style={{ color: '#308737' }}>Clique para selecionar ou arraste o arquivo aqui</p>
-                          <p className="w-full text-[16px] font-semibold font-family-manrope leading-[17.6px]" style={{ color: '#202020' }}>Formato aceito: .CSV e .TXT</p>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center items-start gap-3 md:gap-6">
+                        <div className="flex flex-col gap-2 md:gap-4 w-full">
+                          <p className="w-full text-sm md:text-[16px] font-bold font-family-dm-sans leading-[1.3]" style={{ color: '#308737' }}>Clique para selecionar ou arraste o arquivo aqui</p>
+                          <p className="w-full text-xs md:text-[16px] font-semibold font-family-manrope leading-[1.2]" style={{ color: '#202020' }}>Formato aceito: .CSV e .TXT</p>
                         </div>
                       </div>
                     </div>
@@ -689,11 +689,11 @@ export function CreateCouponModal() {
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-2 px-4 py-3 bg-gray-2 border-t border-gray-6">
+                <div className="flex items-center justify-end gap-2 px-4 py-3 bg-gray-2 border-t border-gray-6 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                   <button
                     type="button"
                     onClick={() => setShowImportModal(false)}
-                    className="h-11 px-5 rounded-lg text-gray-12 text-[16px] font-bold font-family-manrope leading-[17.6px] hover:bg-gray-3 transition-colors"
+                    className="h-11 px-5 rounded-lg text-gray-12 text-[16px] font-bold font-family-manrope leading-[17.6px] hover:bg-gray-3 transition-colors max-md:flex-1"
                     style={{ outline: '1px solid #D9D9D9' }}
                   >
                     Cancelar
@@ -701,7 +701,7 @@ export function CreateCouponModal() {
                   <button
                     type="button"
                     onClick={() => csvInputRef.current?.click()}
-                    className="h-11 px-5 rounded-lg text-[16px] font-bold font-family-manrope leading-[17.6px] transition-colors"
+                    className="h-11 px-5 rounded-lg text-[16px] font-bold font-family-manrope leading-[17.6px] transition-colors max-md:flex-1"
                     style={{ background: '#59E373', color: '#141A15' }}
                   >
                     Importar lista
@@ -1284,7 +1284,8 @@ export function CreateCouponModal() {
                                         {/* Inline add CPF row */}
                                         {isAddingCpf && (
                                           <div className="px-4 py-2 border-t border-gray-6 flex flex-col gap-1">
-                                            <div className="flex items-center gap-2">
+                                            {/* Mobile: input ocupa linha inteira (min-w-full + flex-wrap), botões dividem a 2ª linha; desktop: tudo inline. */}
+                                            <div className="flex items-center gap-2 max-md:flex-wrap">
                                               <input
                                                 type="text"
                                                 value={newCpfInput}
@@ -1295,19 +1296,19 @@ export function CreateCouponModal() {
                                                 }}
                                                 autoFocus
                                                 placeholder="000.000.000-00"
-                                                className={cn("flex-1 h-9 px-3 rounded-lg border bg-gray-1 text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none", newCpfError ? "border-red-8 focus:border-red-8" : "border-gray-6 focus:border-green-8")}
+                                                className={cn("flex-1 h-9 px-3 rounded-lg border bg-gray-1 text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none max-md:min-w-full", newCpfError ? "border-red-8 focus:border-red-8" : "border-gray-6 focus:border-green-8")}
                                               />
                                               <button
                                                 type="button"
                                                 onClick={handleConfirmAddCPF}
-                                                className="h-9 px-3 rounded-lg border border-gray-6 text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
+                                                className="h-9 px-3 rounded-lg border border-gray-6 text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors max-md:flex-1"
                                               >
                                                 Confirmar
                                               </button>
                                               <button
                                                 type="button"
                                                 onClick={() => { setIsAddingCpf(false); setNewCpfInput(""); setNewCpfError(""); }}
-                                                className="h-9 px-3 rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-11 hover:bg-gray-3 transition-colors"
+                                                className="h-9 px-3 rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-11 hover:bg-gray-3 transition-colors max-md:flex-1"
                                               >
                                                 Cancelar
                                               </button>
@@ -1317,34 +1318,34 @@ export function CreateCouponModal() {
                                             )}
                                           </div>
                                         )}
-                                        {/* Footer actions */}
-                                        <div className="px-4 py-3 border-t border-gray-6 flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
+                                        {/* Footer actions — mobile empilha: [Importar | Adicionar] em linha, "Limpar lista" centralizado abaixo. */}
+                                        <div className="px-4 py-3 border-t border-gray-6 flex items-center justify-between gap-3 max-md:flex-col max-md:items-stretch">
+                                          <div className="flex md:flex-row flex-col items-center gap-2 max-md:w-full">
                                             <button
                                               type="button"
                                               onClick={handleImportCSV}
-                                              className="flex items-center gap-1.5 h-9 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
+                                              className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
                                             >
                                               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M13.333 10v1.333A2 2 0 0 1 11.333 13.333H4.667A2 2 0 0 1 2.667 11.333V10M5.333 6.667 8 9.333m0 0 2.667-2.666M8 9.333V2.667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                               </svg>
-                                              Importar arquivo
+                                              <span className="truncate">Importar arquivo</span>
                                             </button>
                                             <button
                                               type="button"
                                               onClick={handleAddCPF}
-                                              className="flex items-center gap-1.5 h-9 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
+                                              className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
                                             >
                                               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                               </svg>
-                                              Adicionar campo
+                                              <span className="truncate">Adicionar campo</span>
                                             </button>
                                           </div>
                                           <button
                                             type="button"
                                             onClick={handleClearList}
-                                            className="text-sm font-semibold font-family-dm-sans text-gray-11 hover:text-red-11 transition-colors"
+                                            className="text-sm font-semibold font-family-dm-sans text-gray-11 hover:text-red-11 transition-colors max-md:self-center"
                                           >
                                             Limpar lista
                                           </button>

@@ -33,6 +33,12 @@ import { COUNTRIES_PT_BR } from "@/data/countries";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Checkbox } from "@/components/CheckBox";
 import { TermsOfServiceModal } from "./TermsOfServiceModal";
+import {
+  formatPhoneForCountry,
+  getPhonePlaceholderForCountry,
+  getPhoneMaxLengthForCountry,
+  getPhoneDigitsForBackend,
+} from "@/utils/phone";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -257,8 +263,10 @@ export function RegisterModal() {
       };
       updateData.gender = genderMap[data.sexo.toLowerCase().trim()] ?? data.sexo;
     }
-    if (data.telefone) updateData.phone = data.telefone.replace(/\D/g, "");
-    if (data.telefoneEmergencia) updateData.emergencyPhone = data.telefoneEmergencia.replace(/\D/g, "");
+    /* Telefone: extrai dígitos nacionais via libphonenumber-js (BR: 11 dígitos,
+     * US: 10, etc.). Sem fallback regex pra evitar enviar máscara residual. */
+    if (data.telefone) updateData.phone = getPhoneDigitsForBackend(data.telefone, data.nacionalidade);
+    if (data.telefoneEmergencia) updateData.emergencyPhone = getPhoneDigitsForBackend(data.telefoneEmergencia, data.nacionalidade);
     if (data.dataNascimento) {
       const date = data.dataNascimento;
       const year = date.getFullYear();
@@ -426,18 +434,10 @@ export function RegisterModal() {
     )}-${numbers.slice(9, 11)}`;
   };
 
-  const maskPhone = (value: string) => {
-    // Remove tudo que não é dígito
-    const numbers = value.replace(/\D/g, "");
-    // Aplica a máscara (99) 99999-9999
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 7)
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(
-      7,
-      11
-    )}`;
-  };
+  /* Máscara/placeholder/length dinâmicos baseados na nacionalidade
+   * selecionada. Usa libphonenumber-js — cobre todos os países. */
+  const phonePlaceholder = getPhonePlaceholderForCountry(formData.nacionalidade);
+  const phoneMaxLength = getPhoneMaxLengthForCountry(formData.nacionalidade);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -478,7 +478,7 @@ export function RegisterModal() {
     field: "telefone" | "telefoneEmergencia",
     value: string
   ) => {
-    const masked = maskPhone(value);
+    const masked = formatPhoneForCountry(value, formData.nacionalidade);
     handleInputChange(field, masked);
   };
 
@@ -760,10 +760,10 @@ export function RegisterModal() {
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="tel"
-                placeholder="(00) 99999-9999"
+                placeholder={phonePlaceholder}
                 value={formData.telefone}
                 onChange={(e) => handlePhoneChange("telefone", e.target.value)}
-                maxLength={15}
+                maxLength={phoneMaxLength}
                 className={`pl-10 h-12 ${errors.telefone
                   ? "border-red-9 focus-visible:border-red-9"
                   : ""
@@ -1050,10 +1050,10 @@ export function RegisterModal() {
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
               <Input
                 type="tel"
-                placeholder="(00) 99999-9999"
+                placeholder={phonePlaceholder}
                 value={formData.telefone}
                 onChange={(e) => handlePhoneChange("telefone", e.target.value)}
-                maxLength={15}
+                maxLength={phoneMaxLength}
                 className={`pl-10 h-12 ${errors.telefone
                   ? "border-red-9 focus-visible:border-red-9"
                   : ""

@@ -9,9 +9,13 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import {
-  orderTotalForPrePaymentCents,
   ticketUnitPriceForPrePaymentCents,
+  isAutoCoupon,
 } from "@/lib/orderAutoCouponDisplay";
+import {
+  computeCouponDiscount,
+  formatCouponLineLabel,
+} from "@/lib/orderCouponDiscount";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import type { Ticket } from "@/hooks/useTickets";
@@ -494,7 +498,7 @@ export function SubscriptionStep({
   // Cálculo local (parsing de `ticket.price`, % do evento) fica apenas como
   // fallback enquanto a query carrega — o estado autoritativo de quanto será
   // cobrado é sempre o do servidor (evita divergência com o que o usuário paga).
-  const { orderId } = useCheckoutTimer();
+  const { orderId, currentOrder: timerCurrentOrder } = useCheckoutTimer();
   const { getOrder } = useCheckoutReservation();
   const { data: orderData } = useQuery({
     queryKey: ["checkout-order", orderId],
@@ -874,39 +878,42 @@ export function SubscriptionStep({
     }, 0);
   }, [participantsWithTickets, selectedVariations, allProducts]);
 
-  // Taxa de serviço — atualiza em tempo real conforme o usuário seleciona
-  // produtos. Quando há produtos WIP (`totalProductsPrice > 0`), o
-  // `orderData.pricing.serviceFee` do servidor ainda não reflete a nova base
-  // (só é recalculado no `patchProducts` do `handleNext`), então calculamos
-  // client-side com a mesma fórmula do backend: % do evento sobre
-  // tickets + produtos. Mesma heurística usada em `orderHasProductsApplied`
-  // mais abaixo — backend reconcilia no save.
+  // Cupom aplicado + cálculo de desconto. No SubscriptionStep o estado local
+  // de produtos é SEMPRE a fonte da verdade — o backend só recebe via
+  // `patchProducts` no `handleNext`, então o `pricing.couponDiscount` /
+  // `pricing.total` podem refletir um snapshot stale (produto antigo,
+  // variação trocada por gratuita, etc.). Calculamos tudo client-side com
+  // `computeCouponDiscount` espelhando a regra do backend, e ele reconcilia
+  // no save.
+  //
+  // Prioriza `currentOrder` do CheckoutTimerContext: ele é populado pela
+  // response do `patchCoupon` (que tem certeza de incluir `applyToProducts`).
+  // O GET /orders pode omitir esse campo em algumas versões do backend, então
+  // usamos o snapshot do timer como fonte primária e o orderData como fallback.
+  const appliedCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
+  const showCouponDiscount = !!appliedCoupon && !isAutoCoupon(appliedCoupon);
+  const couponBreakdown = useMemo(() => {
+    return computeCouponDiscount(appliedCoupon, totalPrice, totalProductsPrice);
+  }, [appliedCoupon, totalPrice, totalProductsPrice]);
+  const couponDiscountAmount = showCouponDiscount ? couponBreakdown.totalDiscount : 0;
+
+  // Subtotal pós-cupom — base sobre a qual a taxa de serviço incide.
+  // Fórmula: ((tickets + produtos) - cupom) * % + cupom_resultado_zero_clamp.
+  const subtotalAfterCoupon = useMemo(
+    () => Math.max(0, totalPrice + totalProductsPrice - couponDiscountAmount),
+    [totalPrice, totalProductsPrice, couponDiscountAmount],
+  );
+
+  // Taxa de serviço — incide sobre o subtotal JÁ DESCONTADO pelo cupom
+  // (mesma regra do backend pra cupons DISCOUNT). Sempre client-side: o
+  // backend pode estar stale enquanto o user mexe nos produtos.
   const serviceFee = useMemo(() => {
     const percent = (event.participantFeePercent ?? 0) / 100;
-    if (totalProductsPrice > 0) {
-      return (totalPrice + totalProductsPrice) * percent;
-    }
-    if (orderData?.pricing) return orderData.pricing.serviceFee / 100;
-    return totalPrice * percent;
-  }, [orderData, totalPrice, totalProductsPrice, event.participantFeePercent]);
+    return subtotalAfterCoupon * percent;
+  }, [subtotalAfterCoupon, event.participantFeePercent]);
 
-  // Total a exibir — quando há produtos selecionados localmente (WIP), o
-  // `pricing.total` do servidor ainda não inclui a taxa de serviço sobre os
-  // produtos (só será recalculada no `patchProducts`). Calculamos client-side
-  // com a base atualizada (tickets + produtos + taxa unified) pra refletir o
-  // valor real que o usuário pagará. Sem produtos WIP, confiamos no
-  // autoritativo do backend.
-  const totalAmount = useMemo(() => {
-    if (totalProductsPrice > 0) {
-      return totalPrice + totalProductsPrice + serviceFee;
-    }
-    const preCouponCents = orderTotalForPrePaymentCents(
-      orderData?.pricing,
-      orderData?.coupon,
-    );
-    if (preCouponCents != null) return preCouponCents / 100;
-    return totalPrice + serviceFee;
-  }, [orderData, totalPrice, totalProductsPrice, serviceFee]);
+  // Total = ((tickets + produtos) - cupom) + taxa.
+  const totalAmount = subtotalAfterCoupon + serviceFee;
 
   if (loading) return <Loading />;
 
@@ -1153,6 +1160,14 @@ export function SubscriptionStep({
                 </div>
               </div>
             ))}
+            {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
+              <p className="text-sm">
+                {formatCouponLineLabel(appliedCoupon)}:{" "}
+                <span className="font-semibold">
+                  -{formatPrice(couponDiscountAmount)}
+                </span>
+              </p>
+            )}
             {serviceFee > 0 && (
               <p className="text-sm">
                 Taxa de serviço:{" "}
@@ -1384,8 +1399,16 @@ export function SubscriptionStep({
                 })}
               </div>
 
-              {serviceFee > 0 && (
+              {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                 <div className="flex flex-col gap-2 mt-6">
+                  <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
+                    {formatCouponLineLabel(appliedCoupon)}:
+                    <span className="text-gray-12">-{formatPrice(couponDiscountAmount)}</span>
+                  </p>
+                </div>
+              )}
+              {serviceFee > 0 && (
+                <div className={`flex flex-col gap-2 ${appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 ? "mt-2" : "mt-6"}`}>
                   <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
                     Taxa de serviço:
                     <span className="text-gray-12">{formatPrice(serviceFee)}</span>

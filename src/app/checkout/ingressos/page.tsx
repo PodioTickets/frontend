@@ -12,6 +12,7 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useTickets } from "@/hooks/useTickets";
 import { OrderApiError } from "@/interfaces/order";
+import { getPendingCoupon, clearPendingCoupon } from "@/hooks/usePendingCoupon";
 import toast from "react-hot-toast";
 import CheckoutIngressosLoading from "./loading";
 
@@ -21,8 +22,8 @@ function CheckoutIngressosContent() {
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { raceQuantities, updateRaceQuantity } = useCheckout();
-  const { startTimer } = useCheckoutTimer();
-  const { reserveOrder } = useCheckoutReservation();
+  const { startTimer, syncFromOrder } = useCheckoutTimer();
+  const { reserveOrder, patchCoupon } = useCheckoutReservation();
   const [reserving, setReserving] = useState(false);
   const reservingRef = useRef(false);
   // useTransition marca o botão "Selecionar" como pendente DURANTE o RSC
@@ -65,6 +66,21 @@ function CheckoutIngressosContent() {
       const slug = (event as { slug?: string } | null)?.slug;
       const fallbackUrl = slug ? `/events/${slug}` : `/`;
       startTimer(order, fallbackUrl);
+
+      // Aplica cupom vindo do link (?coupon=) silenciosamente — falha não
+      // interrompe o fluxo (cupom errado pro evento, expirado, etc.).
+      const pending = getPendingCoupon();
+      if (pending) {
+        try {
+          const updated = await patchCoupon(order.orderId, { couponCode: pending });
+          syncFromOrder(updated);
+        } catch {
+          /* silencioso por design */
+        } finally {
+          clearPendingCoupon();
+        }
+      }
+
       startNavigation(() => {
         router.push(`/checkout/informacoes?eventId=${eventId}`);
       });
