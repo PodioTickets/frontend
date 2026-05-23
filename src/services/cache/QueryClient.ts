@@ -74,6 +74,47 @@ export const queryKeys = {
     modalities: {
       templates: () => [...queryKeys.events.all, "modalities", "templates"] as const,
     },
+    /* Dashboard split em 3 rotas independentes (overview/rankings/secondary).
+     * Cada rota tem queryKey própria com params como sub-key — paginar uma
+     * tabela só invalida/refetch a respectiva rota, as outras ficam intactas. */
+    dashboard: {
+      all: (eventId: string) =>
+        [...queryKeys.events.all, "dashboard", eventId] as const,
+      overview: (
+        eventId: string,
+        params: { period?: string; ticketIds?: string[] },
+      ) =>
+        [
+          ...queryKeys.events.dashboard.all(eventId),
+          "overview",
+          params,
+        ] as const,
+      rankings: (
+        eventId: string,
+        params: {
+          period?: string;
+          ticketIds?: string[];
+          ticketRankingPage?: number;
+          ticketRankingLimit?: number;
+          ticketsPage?: number;
+          ticketsLimit?: number;
+        },
+      ) =>
+        [
+          ...queryKeys.events.dashboard.all(eventId),
+          "rankings",
+          params,
+        ] as const,
+      secondary: (
+        eventId: string,
+        params: { period?: string; ticketIds?: string[] },
+      ) =>
+        [
+          ...queryKeys.events.dashboard.all(eventId),
+          "secondary",
+          params,
+        ] as const,
+    },
   },
   user: {
     all: ["user"] as const,

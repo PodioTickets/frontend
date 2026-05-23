@@ -22,6 +22,12 @@ import type { SalesHeatmapData } from "@/services/organizer/OrganizerService";
 import { ArrowButton } from "@/components/ArrowButton";
 import { SelectTicketsFilterModal } from "@/components/Registrations/SelectTicketsFilterModal";
 import { useTickets } from "@/hooks/useTickets";
+import { useEvent } from "@/hooks/useEvent";
+import {
+  useDashboardOverview,
+  useDashboardRankings,
+  useDashboardSecondary,
+} from "@/hooks/useDashboard";
 import { ArrowUpIcon } from "@/components/Icons/ArrowUpIcon";
 import { ShopIcon } from "@/components/Icons/ShopIcon";
 import { CartIcon } from "@/components/Icons/CartIcon";
@@ -35,8 +41,13 @@ import type { Question } from "@/interfaces/event";
 import type { BestSellingVariationItem } from "@/components/Organizer/BestSellingVariations";
 import { Tooltip } from "@/components/Tooltip";
 import { cn } from "@/utils/cn";
+import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
+import { mapTicketsToFinancialList } from "@/utils/financialTickets";
+import { formatRawTicket } from "@/hooks/useTickets";
+import type { FinancialTicket } from "@/services/organizer/OrganizerService";
 
 const LOTS_NEAR_DEPLETION_PAGE_SIZE = 4;
+const TICKETS_WITH_LOTS_PAGE_SIZE = 10;
 const TICKET_RANKING_PAGE_SIZE = 4;
 
 function LotsNearDepletionPaginationBar({
@@ -189,8 +200,6 @@ export default function EventDashboardPage() {
   const eventId = params.id as string;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [event, setEvent] = useState<any>(null);
   const [periodFilter, setPeriodFilter] = useState("geral");
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
@@ -200,108 +209,220 @@ export default function EventDashboardPage() {
   const [textAnswersLoading, setTextAnswersLoading] = useState(false);
   const [lotsNearDepletionPage, setLotsNearDepletionPage] = useState(1);
   const [ticketRankingPage, setTicketRankingPage] = useState(1);
+  const [ticketsWithLotsPage, setTicketsWithLotsPage] = useState(1);
+  const [ticketsWithLotsExpanded, setTicketsWithLotsExpanded] = useState<Set<string>>(new Set());
+  /* `useTickets` mantido só pro filter modal — a lista de lotes agora vem do
+   * endpoint `/dashboard/rankings` com paginação server-side. */
   const { tickets } = useTickets(eventId, true);
 
-  // Mock data - substituir com dados reais da API
-  const [dashboardData, setDashboardData] = useState<{
-    netRevenue: number;
-    netRevenueChange: number;
-    averageTicket: number;
-    averageTicketChange: number;
-    totalRegistrations: number;
-    totalRegistrationsChange: number;
-    cancellations: number;
-    cancellationsStatus: string;
-    refunds: number;
-    refundsStatus: string;
-    registrationsTrend: {
-      amount: number;
-      change: number;
-      confirmed: number;
-      canceled: number;
-      refunded: number;
-      chartData: {
-        labels: string[];
-        revenue: number[];
-        dailyData?: unknown[];
+  /* Dashboard split em 3 queries independentes via react-query.
+   * - `placeholderData: keepPreviousData` (no hook) mantém dados antigos
+   *   visíveis durante refetch → zero flash ao paginar.
+   * - Cada query tem queryKey por params → paginar só rankings não invalida
+   *   overview/secondary.
+   * - Cache `staleTime` 30s/60s reaproveita resposta backend (cache Redis 30s/60s).
+   * - `useEvent` cobre o eventInfo (mesma queryKey usada por outras pages). */
+  const { event } = useEvent(eventId, authChecked && !!eventId);
+
+  const dashboardEnabled = authChecked && !!eventId;
+  const period = periodFilter as
+    | "geral" | "24h" | "7d" | "15d" | "1m" | "2m";
+  const ticketIds =
+    selectedTicketIds.length > 0 ? selectedTicketIds : undefined;
+
+  const overviewQuery = useDashboardOverview(
+    eventId,
+    { period, ticketIds },
+    dashboardEnabled,
+  );
+  const rankingsQuery = useDashboardRankings(
+    eventId,
+    {
+      period,
+      ticketIds,
+      ticketRankingPage,
+      ticketRankingLimit: TICKET_RANKING_PAGE_SIZE,
+      ticketsPage: ticketsWithLotsPage,
+      ticketsLimit: TICKETS_WITH_LOTS_PAGE_SIZE,
+    },
+    dashboardEnabled,
+  );
+  const secondaryQuery = useDashboardSecondary(
+    eventId,
+    { period, ticketIds },
+    dashboardEnabled,
+  );
+
+  /* Loading full-screen apenas na 1ª carga (nenhuma das queries tem data ainda).
+   * Refetch ao paginar mantém os dados antigos (`keepPreviousData`) — sem flash. */
+  const isFirstLoad =
+    !overviewQuery.data && !rankingsQuery.data && !secondaryQuery.data;
+  const loading =
+    overviewQuery.isLoading ||
+    rankingsQuery.isLoading ||
+    secondaryQuery.isLoading
+      ? isFirstLoad
+      : false;
+
+  /* Lista "Ingressos de lotes" — derivada do rankings (paginação server-side). */
+  const ticketsWithLotsList: FinancialTicket[] = useMemo(() => {
+    const raw = rankingsQuery.data?.tickets?.data?.tickets ?? [];
+    return mapTicketsToFinancialList(raw.map(formatRawTicket));
+  }, [rankingsQuery.data]);
+  const ticketsWithLotsTotalPages =
+    rankingsQuery.data?.tickets?.data?.pagination?.totalPages || 1;
+  const ticketRankingTotalPagesServer =
+    rankingsQuery.data?.ticketRanking?.pagination?.totalPages || 1;
+
+  const toggleTicketsWithLotsRow = (id: string) => {
+    setTicketsWithLotsExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  /* `dashboardData` derivada das 3 queries — substitui o `useState` legacy
+   * com `setDashboardData` no `loadData`. Mesmo shape pra render não mudar. */
+  const dashboardData = useMemo(() => {
+    const overview = overviewQuery.data;
+    const rankings = rankingsQuery.data;
+    const secondary = secondaryQuery.data;
+
+    /* Helper de formatação de labels do chart pra period=geral: a API retorna
+     * "mai/26", mapeamos pra "Mai/2026" pra UX consistente com os outros formatos. */
+    const formatChartLabels = (originalData: any) => {
+      if (
+        periodFilter !== "geral" ||
+        !originalData?.labels ||
+        !Array.isArray(originalData.labels)
+      ) {
+        return originalData;
+      }
+      const monthMap: { [k: string]: string } = {
+        jan: "Jan", fev: "Fev", mar: "Mar", abr: "Abr",
+        mai: "Mai", jun: "Jun", jul: "Jul", ago: "Ago",
+        set: "Set", out: "Out", nov: "Nov", dez: "Dez",
+      };
+      const monthNames = [
+        "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+        "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+      ];
+      const currentYear = new Date().getFullYear();
+      const currentCentury = Math.floor(currentYear / 100) * 100;
+      const expandYear = (yearShort: string) => {
+        const n = parseInt(yearShort, 10);
+        let full = currentCentury + n;
+        if (full > currentYear + 10) full = currentCentury - 100 + n;
+        return full;
+      };
+      const formattedLabels = originalData.labels.map((label: any) => {
+        const labelStr = String(label || "").trim();
+        if (!labelStr) return label;
+        let m = labelStr.match(/^(\w+)\/(\d{2})$/);
+        if (m) {
+          const name =
+            monthMap[m[1].toLowerCase()] ||
+            m[1].charAt(0).toUpperCase() + m[1].slice(1);
+          return `${name}/${expandYear(m[2])}`;
+        }
+        m = labelStr.match(/^(\d{1,2})\/(\d{2})$/);
+        if (m) {
+          const monthNum = parseInt(m[1], 10);
+          if (monthNum < 1 || monthNum > 12) return labelStr;
+          return `${monthNames[monthNum - 1]}/${expandYear(m[2])}`;
+        }
+        m = labelStr.match(/^(\w+)\/(\d{4})$/);
+        if (m) {
+          const name = monthMap[m[1].toLowerCase()] || m[1];
+          return `${name}/${m[2]}`;
+        }
+        return labelStr;
+      });
+      return {
+        labels: formattedLabels,
+        revenue: originalData.revenue,
+        dailyData: originalData.dailyData,
       };
     };
-    ticketRanking: Array<{
-      name: string;
-      category: string;
-      quantity: number;
-      total: number;
-    }>;
-    topCities: Array<{
-      city: string;
-      buyers: number;
-    }>;
-    lotsNearDepletion: Array<{
-      name: string;
-      status: "Normal" | "Atenção" | "Crítico";
-      sold: number;
-      total: number;
-      remaining: number;
-      percentageSold: number;
-      activeBatch?: { id: string; number: number; label: string } | null;
-    }>;
-    salesHeatmap: SalesHeatmapData[];
-    dailyData: any[];
-    topProductVariations: Array<{
-      productId: string;
-      productName: string;
-      productImage?: string | null;
-      /** Valor total vendido do produto em centavos (API: totalSoldAmount) */
-      totalSoldAmount?: number;
-      variations: Array<{
-        variationId: string | null;
-        variationName: string;
-        quantitySold: number;
-        percentage?: number;
-        remainingStock?: number;
-        totalStock?: number;
-      }>;
-    }>;
-    mostAnsweredQuestions: Array<{
-      questionId: string;
-      question: string;
-      order: number;
-      participantCount: number;
-      type: string;
-      options?: string[];
-      isRequired?: boolean;
-      answersRanking: Array<{ answer: string; count: number; percentage: number }>;
-    }>;
-  }>({
-    netRevenue: 0,
-    netRevenueChange: 0,
-    averageTicket: 0,
-    averageTicketChange: 0,
-    totalRegistrations: 0,
-    totalRegistrationsChange: 0,
-    cancellations: 0,
-    cancellationsStatus: "Normal",
-    refunds: 0,
-    refundsStatus: "Normal",
-    registrationsTrend: {
-      amount: 0,
-      change: 0,
-      confirmed: 0,
-      canceled: 0,
-      refunded: 0,
-      chartData: {
-        labels: [],
-        revenue: [],
+
+    return {
+      netRevenue: overview?.metrics.netRevenue ?? 0,
+      netRevenueChange: overview?.metrics.netRevenueChange ?? 0,
+      averageTicket: overview?.metrics.averageTicket ?? 0,
+      averageTicketChange: overview?.metrics.averageTicketChange ?? 0,
+      totalRegistrations: overview?.metrics.totalRegistrations ?? 0,
+      totalRegistrationsChange: overview?.metrics.totalRegistrationsChange ?? 0,
+      cancellations: overview?.metrics.cancellations ?? 0,
+      cancellationsStatus: overview?.metrics.cancellationsStatus ?? "Normal",
+      refunds: overview?.metrics.refunds ?? 0,
+      refundsStatus: overview?.metrics.refundsStatus ?? "Normal",
+      registrationsTrend: {
+        amount: overview?.registrationsTrend.amount ?? 0,
+        change: overview?.registrationsTrend.change ?? 0,
+        confirmed: overview?.registrationsTrend.confirmed ?? 0,
+        canceled: overview?.registrationsTrend.canceled ?? 0,
+        refunded: overview?.registrationsTrend.refunded ?? 0,
+        chartData: formatChartLabels(
+          overview?.registrationsTrend.chartData ?? { labels: [], revenue: [] },
+        ),
       },
-    },
-    ticketRanking: [],
-    topCities: [],
-    lotsNearDepletion: [],
-    salesHeatmap: [],
-    dailyData: [],
-    topProductVariations: [],
-    mostAnsweredQuestions: [],
-  });
+      ticketRanking: (rankings?.ticketRanking.data ?? []).map((t) => ({
+        name: t.name,
+        category: t.category,
+        quantity: t.quantity,
+        total: t.total,
+      })),
+      topCities: (secondary?.topCities ?? []).map((c) => ({
+        city: c.city,
+        state: c.state,
+        participants: c.participants,
+      })),
+      lotsNearDepletion: (rankings?.lotsNearDepletion ?? []).map((l) => ({
+        name: l.ticketName,
+        status: l.status,
+        sold: l.sold,
+        total: l.total,
+        remaining: l.remaining,
+        percentageSold: l.percentageSold,
+        activeBatch: l.activeBatch ?? null,
+      })),
+      salesHeatmap: secondary?.salesHeatmap ?? [],
+      dailyData: [],
+      topProductVariations: (rankings?.topProductVariations ?? []).map((p) => ({
+        productId: p.productId,
+        productName: p.productName,
+        productImage: p.productImage ?? null,
+        totalSoldAmount: p.totalSoldAmount,
+        variations: (p.variations ?? []).map((v) => ({
+          variationId: v.variationId ?? null,
+          variationName: v.variationName ?? "—",
+          quantitySold: v.quantitySold ?? 0,
+          percentage: v.percentage,
+          remainingStock: v.remainingStock ?? undefined,
+          totalStock: v.totalStock ?? undefined,
+        })),
+      })),
+      mostAnsweredQuestions: (secondary?.mostAnsweredQuestions ?? []).map(
+        (q) => ({
+          questionId: q.questionId,
+          question: q.question,
+          order: q.order,
+          participantCount: q.participantCount,
+          type: q.type ?? "text",
+          options: q.options ?? [],
+          isRequired: q.isRequired ?? false,
+          answersRanking: (q.answersRanking ?? []).map((a) => ({
+            answer: a.answer,
+            count: a.count,
+            percentage: a.percentage,
+          })),
+        }),
+      ),
+    };
+  }, [overviewQuery.data, rankingsQuery.data, secondaryQuery.data, periodFilter]);
+
 
   useEffect(() => {
     if (authLoading) return;
@@ -317,227 +438,17 @@ export default function EventDashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  /* Erros das queries → toast (react-query lida com retry automático). */
   useEffect(() => {
-    if (!authChecked || authLoading || !eventId) return;
-    loadData();
-  }, [authChecked, eventId, periodFilter, selectedTicketIds]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [eventData, dashboardDataResponse] = await Promise.all([
-        organizerService.getEventById(eventId),
-        organizerService.getEventDashboard(eventId, {
-          period: periodFilter as "geral" | "24h" | "7d" | "15d" | "1m" | "2m",
-          ticketIds: selectedTicketIds.length > 0 ? selectedTicketIds : undefined,
-        }),
-      ]);
-      setEvent(eventData);
-      setDashboardData({
-        netRevenue: dashboardDataResponse.metrics.netRevenue,
-        netRevenueChange: dashboardDataResponse.metrics.netRevenueChange,
-        averageTicket: dashboardDataResponse.metrics.averageTicket,
-        averageTicketChange: dashboardDataResponse.metrics.averageTicketChange,
-        totalRegistrations: dashboardDataResponse.metrics.totalRegistrations,
-        totalRegistrationsChange: dashboardDataResponse.metrics.totalRegistrationsChange,
-        cancellations: dashboardDataResponse.metrics.cancellations,
-        cancellationsStatus: dashboardDataResponse.metrics.cancellationsStatus,
-        refunds: dashboardDataResponse.metrics.refunds,
-        refundsStatus: dashboardDataResponse.metrics.refundsStatus,
-        registrationsTrend: {
-          amount: dashboardDataResponse.registrationsTrend.amount,
-          change: dashboardDataResponse.registrationsTrend.change,
-          confirmed: dashboardDataResponse.registrationsTrend.confirmed,
-          canceled: dashboardDataResponse.registrationsTrend.canceled,
-          refunded: dashboardDataResponse.registrationsTrend.refunded,
-          chartData: (() => {
-            if (periodFilter === "geral" && dashboardDataResponse.registrationsTrend.chartData) {
-              const originalData = dashboardDataResponse.registrationsTrend.chartData;
-              if (originalData.labels && Array.isArray(originalData.labels) && originalData.revenue) {
-                const formattedLabels = originalData.labels.map((label: any) => {
-                  const labelStr = String(label || '').trim();
-                  if (!labelStr) return label;
-                  let match = labelStr.match(/^(\w+)\/(\d{2})$/);
-
-                  if (match) {
-                    const monthAbbr = match[1].toLowerCase();
-                    const yearShort = match[2];
-
-                    // Mapear abreviações de meses para nomes completos
-                    const monthMap: { [key: string]: string } = {
-                      'jan': 'Jan', 'fev': 'Fev', 'mar': 'Mar', 'abr': 'Abr',
-                      'mai': 'Mai', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Ago',
-                      'set': 'Set', 'out': 'Out', 'nov': 'Nov', 'dez': 'Dez'
-                    };
-
-                    const monthName = monthMap[monthAbbr] || monthAbbr.charAt(0).toUpperCase() + monthAbbr.slice(1);
-
-                    // Converter ano de 2 dígitos para 4 dígitos
-                    const currentYear = new Date().getFullYear();
-                    const currentCentury = Math.floor(currentYear / 100) * 100;
-                    const yearNumber = parseInt(yearShort, 10);
-
-                    // Se o ano for maior que o ano atual, assumir século anterior
-                    let fullYear = currentCentury + yearNumber;
-                    if (fullYear > currentYear + 10) {
-                      fullYear = (currentCentury - 100) + yearNumber;
-                    }
-
-                    return `${monthName}/${fullYear}`;
-                  }
-
-                  // Tentar formato "MM/AA" (02/25, 09/25, etc.)
-                  match = labelStr.match(/^(\d{1,2})\/(\d{2})$/);
-                  if (match) {
-                    const monthNumber = parseInt(match[1], 10);
-                    const yearShort = match[2];
-
-                    // Validar número do mês
-                    if (monthNumber < 1 || monthNumber > 12) {
-                      return labelStr; // Retornar original se inválido
-                    }
-
-                    // Mapear número do mês para nome abreviado
-                    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-                    const monthName = monthNames[monthNumber - 1] || `Mês ${monthNumber}`;
-
-                    // Converter ano de 2 dígitos para 4 dígitos
-                    const currentYear = new Date().getFullYear();
-                    const currentCentury = Math.floor(currentYear / 100) * 100;
-                    const yearNumber = parseInt(yearShort, 10);
-
-                    // Se o ano for maior que o ano atual, assumir século anterior
-                    let fullYear = currentCentury + yearNumber;
-                    if (fullYear > currentYear + 10) {
-                      fullYear = (currentCentury - 100) + yearNumber;
-                    }
-
-                    return `${monthName}/${fullYear}`;
-                  }
-
-                  // Se já estiver no formato "Mês/Ano" completo, verificar se precisa ajustar
-                  match = labelStr.match(/^(\w+)\/(\d{4})$/);
-                  if (match) {
-                    // Já está no formato correto, apenas capitalizar o mês se necessário
-                    const monthAbbr = match[1].toLowerCase();
-                    const fullYear = match[2];
-
-                    const monthMap: { [key: string]: string } = {
-                      'jan': 'Jan', 'fev': 'Fev', 'mar': 'Mar', 'abr': 'Abr',
-                      'mai': 'Mai', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Ago',
-                      'set': 'Set', 'out': 'Out', 'nov': 'Nov', 'dez': 'Dez'
-                    };
-
-                    const monthName = monthMap[monthAbbr] || match[1];
-                    return `${monthName}/${fullYear}`;
-                  }
-
-                  // Se não conseguir parsear, retornar como está
-                  return labelStr;
-                });
-
-                return {
-                  labels: formattedLabels,
-                  revenue: originalData.revenue,
-                  dailyData: originalData.dailyData
-                };
-              }
-            }
-
-            // Para outros filtros, retornar dados originais
-            return dashboardDataResponse.registrationsTrend.chartData;
-          })(),
-        },
-        ticketRanking: (() => {
-          const ranking = dashboardDataResponse.ticketRanking as any;
-          const data = Array.isArray(ranking) ? ranking : (ranking?.data || []);
-          return data.map((t: any) => ({
-            name: t.name,
-            category: t.category,
-            quantity: t.quantity,
-            total: t.total,
-          }));
-        })(),
-        topCities: (() => {
-          const cities = dashboardDataResponse.topCities as any;
-          const data = Array.isArray(cities) ? cities : (cities || []);
-          return data.map((c: any) => ({
-            city: c.city,
-            buyers: c.buyers,
-          }));
-        })(),
-        lotsNearDepletion: (dashboardDataResponse.lotsNearDepletion ?? []).map((l) => ({
-          name: l.ticketName,
-          status: l.status,
-          sold: l.sold,
-          total: l.total,
-          remaining: l.remaining,
-          percentageSold: l.percentageSold,
-          activeBatch: l.activeBatch ?? null,
-        })),
-        salesHeatmap: dashboardDataResponse.salesHeatmap,
-        dailyData: [],
-        topProductVariations: (() => {
-          const raw = (dashboardDataResponse as any).topProductVariations;
-          const arr = Array.isArray(raw) ? raw : [];
-          return arr.map((p: any) => ({
-            productId: p.productId ?? p.product_id ?? "",
-            productName: p.productName ?? p.product_name ?? "",
-            productImage: p.productImage ?? p.product_image ?? null,
-            totalSoldAmount:
-              typeof p.totalSoldAmount === "number"
-                ? p.totalSoldAmount
-                : typeof p.total_sold_amount === "number"
-                  ? p.total_sold_amount
-                  : undefined,
-            variations: Array.isArray(p.variations)
-              ? p.variations.map((v: any) => ({
-                variationId: v.variationId ?? v.variation_id ?? null,
-                variationName: v.variationName ?? v.variation_name ?? "—",
-                quantitySold: typeof v.quantitySold === "number" ? v.quantitySold : Number(v.quantity_sold ?? 0) || 0,
-                percentage: typeof v.percentage === "number" ? v.percentage : undefined,
-                remainingStock: typeof v.remainingStock === "number" ? v.remainingStock : (typeof v.remaining_stock === "number" ? v.remaining_stock : undefined),
-                totalStock: typeof v.totalStock === "number" ? v.totalStock : (typeof v.total_stock === "number" ? v.total_stock : undefined),
-              }))
-              : [],
-          }));
-        })(),
-        mostAnsweredQuestions: (() => {
-          const raw = (dashboardDataResponse as any).mostAnsweredQuestions;
-          const arr = Array.isArray(raw) ? raw : [];
-          return arr.map((q: any) => ({
-            questionId: q.questionId ?? q.question_id ?? "",
-            question: q.question ?? "",
-            order: typeof q.order === "number" ? q.order : Number(q.order ?? 0) || 0,
-            participantCount: typeof q.participantCount === "number" ? q.participantCount : Number(q.participant_count ?? 0) || 0,
-            type: typeof q.type === "string" ? q.type : "text",
-            options: Array.isArray(q.options) ? q.options : [],
-            isRequired: Boolean(q.isRequired ?? q.is_required ?? false),
-            answersRanking: Array.isArray(q.answersRanking)
-              ? (q.answersRanking as any[]).map((a: any) => ({
-                answer: a.answer ?? a.label ?? "",
-                count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
-                percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
-              }))
-              : Array.isArray(q.answers_ranking)
-                ? (q.answers_ranking as any[]).map((a: any) => ({
-                  answer: a.answer ?? a.label ?? "",
-                  count: typeof a.count === "number" ? a.count : Number(a.count ?? 0) || 0,
-                  percentage: typeof a.percentage === "number" ? a.percentage : Number(a.percentage ?? 0) || 0,
-                }))
-                : [],
-          }));
-        })(),
-      });
-    } catch (error: any) {
-      console.error("Error loading data:", error);
+    const err =
+      overviewQuery.error || rankingsQuery.error || secondaryQuery.error;
+    if (err) {
+      console.error("Error loading dashboard:", err);
       toast.error("Erro ao carregar dados");
-      // Não redirecionar, apenas mostrar erro - manter dados mockados como fallback
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [overviewQuery.error, rankingsQuery.error, secondaryQuery.error]);
+
+
 
   const lotsNearDepletionList = dashboardData.lotsNearDepletion;
   const lotsNearDepletionTotalPages = Math.max(
@@ -564,25 +475,13 @@ export default function EventDashboardPage() {
     );
   }, [lotsNearDepletionList, lotsNearDepletionSliceStart]);
 
+  /* Ranking de ingressos agora paginado server-side via `/dashboard/rankings`.
+   * Lista já vem pré-paginada — render direto, total vem da pagination. */
   const ticketRankingList = dashboardData.ticketRanking;
-  const ticketRankingTotalPages = Math.max(
-    1,
-    Math.ceil(ticketRankingList.length / TICKET_RANKING_PAGE_SIZE),
-  );
-
-  useEffect(() => {
-    setTicketRankingPage(1);
-  }, [ticketRankingList]);
-
-  const ticketRankingSliceStart = (ticketRankingPage - 1) * TICKET_RANKING_PAGE_SIZE;
-  const paginatedTicketRanking = useMemo(
-    () =>
-      ticketRankingList.slice(
-        ticketRankingSliceStart,
-        ticketRankingSliceStart + TICKET_RANKING_PAGE_SIZE,
-      ),
-    [ticketRankingList, ticketRankingSliceStart],
-  );
+  const ticketRankingTotalPages = ticketRankingTotalPagesServer;
+  const ticketRankingSliceStart =
+    (ticketRankingPage - 1) * TICKET_RANKING_PAGE_SIZE;
+  const paginatedTicketRanking = ticketRankingList;
 
   // Um item por produto (soma de todas as variações)
   const bestSellingVariations = useMemo((): BestSellingVariationItem[] => {
@@ -1209,11 +1108,23 @@ export default function EventDashboardPage() {
                 </div>
                 <p className="font-family-dm-sans font-semibold text-[16px] text-gray-12 mb-2">{city.city}</p>
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
-                  QT de compradores: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.buyers}</span>
+                  QT de compradores: <span className="font-family-dm-sans font-semibold text-[14px] leading-[1.3] text-gray-12">{city.participants}</span>
                 </p>
               </div>
             )
           })}
+        </div>
+
+        {/* Ingressos de lotes — desktop (componente compartilhado com financeiro). */}
+        <div className="mt-8 w-full">
+          <TicketsWithLotsList
+            tickets={ticketsWithLotsList}
+            expandedRows={ticketsWithLotsExpanded}
+            onToggleRow={toggleTicketsWithLotsRow}
+            page={ticketsWithLotsPage}
+            totalPages={ticketsWithLotsTotalPages}
+            onPageChange={setTicketsWithLotsPage}
+          />
         </div>
       </div>
 
@@ -1464,11 +1375,23 @@ export default function EventDashboardPage() {
                 </div>
                 <p className="font-family-dm-sans font-semibold text-base text-gray-12 mb-1">{city.city}</p>
                 <p className="font-family-dm-sans font-normal text-sm text-gray-11">
-                  QT de compradores: <span className="font-semibold text-gray-12">{city.buyers}</span>
+                  QT de compradores: <span className="font-semibold text-gray-12">{city.participants}</span>
                 </p>
               </div>
             );
           })}
+        </div>
+
+        {/* Ingressos de lotes - mobile (componente compartilhado com financeiro). */}
+        <div className="mt-6">
+          <TicketsWithLotsList
+            tickets={ticketsWithLotsList}
+            expandedRows={ticketsWithLotsExpanded}
+            onToggleRow={toggleTicketsWithLotsRow}
+            page={ticketsWithLotsPage}
+            totalPages={ticketsWithLotsTotalPages}
+            onPageChange={setTicketsWithLotsPage}
+          />
         </div>
       </div>
 

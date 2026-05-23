@@ -9,7 +9,6 @@ import { organizerService, userService } from "@/services";
 import { Button } from "@/components/Button";
 import {
   ArrowUp,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -19,73 +18,25 @@ import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { EventPageHeader } from "@/components/Organizer/EventPageHeader";
 import { RevenueChart } from "@/components/Organizer/RevenueChart";
 import { PaymentMethodsCard } from "@/components/Organizer/PaymentMethodsCard";
-import { ArrowButton } from "@/components/ArrowButton";
 import { TransferHistoryDrawer } from "@/components/Financial/TransferHistoryDrawer";
 import { InstallmentsDrawer } from "@/components/Financial/InstallmentsDrawer";
 import { AwaitingReleaseDrawer } from "@/components/Financial/AwaitingReleaseDrawer";
 import { RefundedDrawer } from "@/components/Financial/RefundedDrawer";
 import { ChargebackDrawer } from "@/components/Financial/ChargebackDrawer";
 import { FiscalExportDrawer } from "@/components/Financial/FiscalExportDrawer";
+import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
 import { useRequestTransferModal } from "@/stores/modalStore";
 import { RepasseIcon } from "@/components/Icons/RepasseIcon";
 import { PaymentIcon } from "@/components/Icons/PaymentIcon";
 import type { FinancialTicket, PaymentMethodStats } from "@/services/organizer/OrganizerService";
+import { mapTicketsToFinancialList } from "@/utils/financialTickets";
+import { formatRawTicket } from "@/hooks/useTickets";
 import { RemoveIcon } from "@/components/Icons/RemoveIcon";
 import { ChargeBackIcon } from "@/components/Icons/ChargeBackIcon";
 import { TimerIcon } from "@/components/Icons/Organizer/TimerIcon";
 import { FaturaIcon } from "@/components/Icons/FaturaIcon";
 import Link from "next/link";
 import { EventMobileHeader } from "@/components/Organizer/EventMobileHeader";
-import { Tooltip } from "@/components/Tooltip";
-import { TicketIcon } from "@/components/Icons/TicketIcon";
-import { cn } from "@/utils/cn";
-
-function TicketsPagination({
-  page,
-  totalPages,
-  onChange,
-}: {
-  page: number;
-  totalPages: number;
-  onChange: (page: number) => void;
-}) {
-  return (
-    <div className="flex items-center justify-center gap-2 py-3">
-      <button
-        onClick={() => onChange(Math.max(1, page - 1))}
-        disabled={page <= 1}
-        className="size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50 hover:bg-gray-3 transition-colors"
-      >
-        <ChevronLeft className="size-4" />
-      </button>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-          const pageNum = i + 1;
-          const isActive = pageNum === page;
-          return (
-            <button
-              key={pageNum}
-              onClick={() => onChange(pageNum)}
-              className={`size-8 flex items-center justify-center border rounded-lg text-sm font-family-dm-sans font-medium transition-colors ${isActive
-                ? "bg-primary-11 border-primary-11 text-primary-2"
-                : "border-gray-6 hover:bg-gray-3 text-gray-12 bg-gray-4"
-                }`}
-            >
-              {pageNum}
-            </button>
-          );
-        })}
-      </div>
-      <button
-        onClick={() => onChange(Math.min(totalPages, page + 1))}
-        disabled={page >= totalPages}
-        className="size-8 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12 disabled:opacity-50 hover:bg-gray-3 transition-colors"
-      >
-        <ChevronRight className="size-4" />
-      </button>
-    </div>
-  );
-}
 
 export default function EventFinancialPage() {
   const router = useRouter();
@@ -193,25 +144,9 @@ export default function EventFinancialPage() {
       });
 
       const rawTickets: any[] = financialDataResponse.tickets.data.tickets;
-      const formattedTickets: FinancialTicket[] = rawTickets.map((ticket) => {
-        const categoryName = ticket.category?.name || "Ingresso avulso";
-        const totalSold = ticket.quantitySold || 0;
-        const totalRevenue = (ticket.batches as any[]).reduce(
-          (sum: number, b: any) => sum + (b.quantitySold || 0) * (b.price || 0),
-          0,
-        );
-        return {
-          id: ticket.id,
-          type: "category",
-          name: ticket.name,
-          subtitle: categoryName,
-          categoryId: ticket.categoryId,
-          sold: totalSold.toString(),
-          revenue: totalRevenue,
-          createdAt: ticket.createdAt,
-          lots: ticket.batches,
-        };
-      });
+      const formattedTickets = mapTicketsToFinancialList(
+        rawTickets.map(formatRawTicket),
+      );
       setTicketsData(formattedTickets);
       setTicketsPagination(financialDataResponse.tickets.data.pagination);
     } catch (error: any) {
@@ -587,298 +522,16 @@ export default function EventFinancialPage() {
 
           <PaymentMethodsCard stats={financialData.paymentMethodStats} />
 
-          {/* ========== MOBILE: Ingressos de lotes (cards) — Figma 2665:106817 ========== */}
-          <div className="lg:hidden w-full flex flex-col gap-4">
-            <h2 className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">Ingressos de lotes</h2>
-            <div className="flex flex-col gap-3">
-              {ticketsData.map((item) => {
-                const isExpanded = expandedRows.has(item.id);
-                const hasLots = !!item.lots && item.lots.length > 0;
-                const revenueLabel = `R$ ${(item.revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                const subtitleLabel = item.subtitle || "Sem categoria";
+          {/* Lista "Ingressos de lotes" — componente compartilhado (mobile + desktop). */}
+          <TicketsWithLotsList
+            tickets={ticketsData}
+            expandedRows={expandedRows}
+            onToggleRow={toggleRow}
+            page={ticketsPage}
+            totalPages={ticketsPagination.totalPages}
+            onPageChange={setTicketsPage}
+          />
 
-                /* Card de CATEGORIA com lotes — destacado em azul, sem ícone, lotes inline ao expandir. */
-                if (hasLots) {
-                  return (
-                    <div
-                      key={item.id}
-                      className="overflow-hidden rounded-lg border border-blue-6 bg-blue-2"
-                    >
-                      <button
-                        onClick={() => toggleRow(item.id)}
-                        className="flex w-full flex-col gap-4 border-b border-blue-6 px-3 py-4 text-left transition-colors hover:bg-blue-3/50"
-                      >
-                        <div className="flex w-full flex-col gap-2">
-                          <div className="flex items-center justify-between gap-3 min-w-0">
-                            <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 truncate min-w-0">
-                              {subtitleLabel}
-                            </p>
-                            <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap shrink-0">
-                              {item.sold} vendidos
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between gap-3 min-w-0">
-                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate min-w-0">
-                              {item.name}
-                            </p>
-                            <ChevronDown
-                              className={cn(
-                                "size-5 shrink-0 text-gray-12 transition-transform",
-                                isExpanded ? "rotate-0" : "-rotate-90",
-                              )}
-                            />
-                          </div>
-                        </div>
-                        <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
-                          {revenueLabel}
-                        </p>
-                      </button>
-                      {isExpanded && item.lots && item.lots.map((lot: any, lotIndex: number) => {
-                        const lotSold = lot.quantitySold || 0;
-                        const lotRevenue = lotSold * (lot.price || 0);
-                        const lotRevenueLabel = `R$ ${(lotRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                        return (
-                          <div
-                            key={`${item.id}-lot-${lot.id}`}
-                            className="flex flex-col gap-4 border-b border-blue-6 px-3 py-4 last:border-b-0"
-                          >
-                            <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12">
-                              Lote {lotIndex + 1}
-                            </p>
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
-                                {lotRevenueLabel}
-                              </p>
-                              <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap">
-                                {lotSold} vendidos
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                }
-
-                /* Card sem lotes — ícone ticket, layout horizontal. */
-                return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-5">
-                        <TicketIcon className="size-5 text-gray-12" />
-                      </div>
-                      <div className="flex flex-1 min-w-0 flex-col gap-2">
-                        <div className="flex items-center justify-between gap-3 min-w-0">
-                          <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 truncate min-w-0">
-                            {subtitleLabel}
-                          </p>
-                          <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap shrink-0">
-                            {item.sold} vendidos
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between gap-3 min-w-0">
-                          <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate min-w-0">
-                            {item.name}
-                          </p>
-                          <ChevronRight className="size-5 shrink-0 text-gray-12" />
-                        </div>
-                      </div>
-                    </div>
-                    <p className="font-manrope font-extrabold text-base leading-[1.1] text-gray-12">
-                      {revenueLabel}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-            <TicketsPagination
-              page={ticketsPage}
-              totalPages={ticketsPagination.totalPages}
-              onChange={setTicketsPage}
-            />
-          </div>
-
-          {/* Table Section (Desktop only) */}
-          <div className="hidden lg:block bg-gray-2 border border-gray-6 rounded-lg overflow-hidden w-full">
-            {/* Table Header */}
-            <div className="bg-gray-4 border-b border-gray-6 flex h-[44px] items-center">
-              <div className="flex h-full items-center p-4 w-[289.5px]">
-                <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                  Ingresso/Lotes
-                </p>
-              </div>
-              <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                  Vendidos
-                </p>
-              </div>
-              <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                  Receita líquida
-                </p>
-              </div>
-              <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4">
-                <p className="font-inter font-medium leading-[1.3] text-sm text-gray-12">
-                  Criado em
-                </p>
-              </div>
-            </div>
-
-            {/* Table Rows */}
-            <div className="flex flex-col items-start w-full">
-              {ticketsData.map((item, index) => {
-                const isExpanded = expandedRows.has(item.id);
-                const isCategory = item.type === "category";
-                const hasLots = item.lots && item.lots.length > 0;
-                return (
-                  <div key={item.id} className="w-full">
-                    {/* Categoria/Ticket */}
-                    <div
-                      className={`border-b border-gray-6 flex items-center justify-between w-full hover:bg-gray-2 transition-colors ${isExpanded && hasLots ? "bg-blue-3" : "bg-gray-1"} ${isCategory ? "h-[56px]" : "h-[48px]"}`}
-                    >
-                      {/* Ingresso/Lotes */}
-                      <div className="flex h-full items-center px-4 py-3 w-[289.5px]">
-                        <div className="flex items-center gap-3">
-                          {hasLots && (
-                            <button
-                              onClick={() => toggleRow(item.id)}
-                              className="flex items-center justify-center cursor-pointer"
-                            >
-                              <div className="relative size-6">
-                                <div className={`absolute inset-0 ${isExpanded ? "bg-blue-5" : "bg-gray-4"} rounded p-1`}>
-                                  <div className="size-full rounded-lg flex items-center justify-center p-1">
-                                    <ArrowButton isOpen={isExpanded} />
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
-                          )}
-                          <div className="flex flex-col gap-0 w-[200px]">
-                            {item.subtitle && (
-                              <Tooltip
-                                contentClassName="w-auto px-3 py-2 gap-0"
-                                position="topRight"
-                                content={
-                                  <p className="font-inter font-normal text-xs text-gray-11 leading-[1.3] whitespace-nowrap">
-                                    {item.subtitle}
-                                  </p>
-                                }
-                              >
-                                <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
-                                  {item.subtitle}
-                                </p>
-                              </Tooltip>
-                            )}
-                            <Tooltip
-                              contentClassName="w-auto px-3 py-2 gap-0"
-                              position="topRight"
-                              content={
-                                <p className="font-family-dm-sans text-xs font-semibold text-gray-12 leading-[1.3] whitespace-nowrap">
-                                  {item.name}
-                                </p>
-                              }
-                            >
-                              <p className="overflow-hidden text-ellipsis whitespace-nowrap font-family-dm-sans text-sm font-semibold leading-[1.3] text-gray-12">
-                                {item.name}
-                              </p>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Vendidos */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {item.sold}
-                        </p>
-                      </div>
-
-                      {/* Receita líquida */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            R$
-                          </span>
-                          <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {(item.revenue / 100).toFixed(2).replace(".", ",")}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Criado em */}
-                      <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
-                        <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                          {new Date(item.createdAt).toLocaleDateString("pt-BR")}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Lotes (quando expandido) */}
-                    {isExpanded && hasLots && item.lots && item.lots.map((lot: any, lotIndex: number) => {
-                      const lotSold = lot.quantitySold || 0;
-                      const lotRevenue = (lot.price || 0) * lotSold;
-                      const lotCreatedAt = lot.createdAt || item.createdAt;
-                      const lotName = `Lote ${lotIndex + 1}`;
-
-                      return (
-                        <div
-                          key={`${item.id}-lot-${lot.id}`}
-                          className="bg-blue-2 border-b border-blue-6 flex items-center justify-between w-full h-[48px] hover:bg-blue-3 transition-colors last:border-b-0"
-                        >
-                          {/* Ingresso/Lotes */}
-                          <div className="flex h-full items-center px-4 py-3 w-[289.5px]">
-                            <div className="flex items-center gap-3">
-                              <div className="flex flex-col gap-0">
-                                <p className="font-inter max-w-[250px] font-semibold leading-[1.3] text-sm text-gray-12 truncate">
-                                  {lotName}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Vendidos */}
-                          <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {lotSold}
-                            </p>
-                          </div>
-
-                          {/* Receita líquida */}
-                          <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                                R$
-                              </span>
-                              <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                                {(lotRevenue / 100).toFixed(2).replace(".", ",")}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Criado em */}
-                          <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
-                            <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {new Date(lotCreatedAt).toLocaleDateString("pt-BR")}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="px-4">
-              <TicketsPagination
-                page={ticketsPage}
-                totalPages={ticketsPagination.totalPages}
-                onChange={setTicketsPage}
-              />
-            </div>
-          </div>
 
         </div>
       </div>

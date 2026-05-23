@@ -9,6 +9,14 @@ export interface Ticket {
   name: string;
   isActive: boolean;
   groupId: string;
+  /** ID original da categoria (sem normalização "uncategorized"). Usado pelo
+   * listing financeiro que distingue ticket com vs. sem categoria. */
+  categoryId?: string | null;
+  /** Nome da categoria (`ticket.category?.name`). Usado pelo listing financeiro. */
+  categoryName?: string;
+  /** Total de unidades vendidas do ticket (soma dos batches). Opcional pois
+   * nem todo endpoint retorna esse agregado — só `/tickets/events/:id`. */
+  quantitySold?: number;
   /** Ordem de exibição dentro da categoria (ou entre avulsos). */
   sortOrder?: number;
   modality: string;
@@ -29,6 +37,10 @@ export interface Ticket {
     id: string;
     quantity: string;
     price: string;
+    /** Unidades vendidas desse lote — preservado pra cálculos de receita. */
+    quantitySold?: number;
+    /** Criação do lote — usado no listing financeiro. */
+    createdAt?: string;
   }>;
   availableQuantity: number | null;
   isSoldOut: boolean;
@@ -99,10 +111,17 @@ export function formatRawTicket(ticket: any): Ticket {
       id: b.id ?? b.batchId ?? "",
       quantity: String(b.quantity ?? ""),
       price: String(b.price ?? ""),
+      quantitySold:
+        typeof b.quantitySold === "number" ? b.quantitySold : undefined,
+      createdAt: b.createdAt ?? undefined,
     })),
     availableQuantity: ticket.availableQuantity ?? null,
     isSoldOut: ticket.isSoldOut ?? false,
     createdAt: ticket.createdAt,
+    categoryId: ticket.categoryId ?? null,
+    categoryName: ticket.category?.name ?? undefined,
+    quantitySold:
+      typeof ticket.quantitySold === "number" ? ticket.quantitySold : undefined,
   };
 }
 

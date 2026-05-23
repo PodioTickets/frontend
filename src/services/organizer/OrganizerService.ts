@@ -623,7 +623,18 @@ export interface TicketRanking {
 export interface TopCity {
   city: string;
   state?: string;
-  buyers: number;
+  /** Renomeado de `buyers` no split do dashboard (2026-05). 1 por registration paga+confirmada. */
+  participants: number;
+}
+
+export interface LotNearDepletionBatch {
+  id: string;
+  name: string;
+  total: number;
+  sold: number;
+  remaining: number;
+  percentageSold: number;
+  status: "Normal" | "Atenção" | "Crítico";
 }
 
 export interface LotNearDepletion {
@@ -635,7 +646,8 @@ export interface LotNearDepletion {
   remaining: number;
   percentageSold: number;
   activeBatch?: { id: string; number: number; label: string } | null;
-  batches?: Array<{ id: string; number: number; label: string }>;
+  /** Shape detalhado a partir da rota `/dashboard/rankings`. */
+  batches?: LotNearDepletionBatch[];
 }
 
 export interface SalesHeatmapData {
@@ -649,12 +661,21 @@ export interface TopProductVariationItem {
   variationId: string | null;
   variationName: string;
   quantitySold: number;
+  /** % sobre o total do produto. Opcional pra retro-compat. */
+  percentage?: number;
+  /** `null`/ausente quando estoque ilimitado. */
+  remainingStock?: number | null;
+  totalStock?: number | null;
 }
 
 /** Produto com variações ordenadas por quantidade vendida (API dashboard) */
 export interface TopProductVariation {
   productId: string;
   productName: string;
+  productImage?: string | null;
+  totalQuantitySold?: number;
+  /** Receita líquida do produto rateada pela razão orderNet/orderGross (centavos). */
+  totalSoldAmount?: number;
   variations: TopProductVariationItem[];
 }
 
@@ -663,18 +684,65 @@ export interface MostAnsweredQuestion {
   questionId: string;
   question: string;
   order: number;
-  answerCount: number;
+  type?: "text" | "select" | "checkbox" | "true_false";
+  options?: string[];
+  isRequired?: boolean;
+  participantCount: number;
+  answersRanking?: Array<{
+    answer: string;
+    count: number;
+    /** % sobre participantCount (não sobre total — checkbox pode somar >100%). */
+    percentage: number;
+  }>;
 }
 
-export interface DashboardData {
+export interface DashboardPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface DashboardPeriod {
+  selected: "geral" | "24h" | "7d" | "15d" | "1m" | "2m";
+  startDate: string;
+  endDate: string;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * Dashboard split — 3 rotas independentes (substituiu `/dashboard` legacy).
+ * Cada rota pode ser chamada em paralelo; falha em uma não afeta as outras.
+ * Cache backend: overview/rankings 30s, secondary 60s.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export interface DashboardOverviewData {
+  period: DashboardPeriod;
   metrics: DashboardMetrics;
   registrationsTrend: RegistrationsTrend;
-  ticketRanking: TicketRanking[];
-  topCities: TopCity[];
+}
+
+export interface DashboardRankingsData {
+  ticketRanking: {
+    data: TicketRanking[];
+    pagination: DashboardPagination;
+  };
+  tickets: {
+    message: string;
+    data: {
+      /** Shape idêntico ao retornado por `/events/:id/financial` — raw, pra
+       * passar por `formatRawTicket` + `mapTicketsToFinancialList`. */
+      tickets: any[];
+      pagination: DashboardPagination;
+    };
+  };
+  topProductVariations: TopProductVariation[];
   lotsNearDepletion: LotNearDepletion[];
+}
+
+export interface DashboardSecondaryData {
+  topCities: TopCity[];
   salesHeatmap: SalesHeatmapData[];
-  topProductVariations?: TopProductVariation[];
-  mostAnsweredQuestions?: MostAnsweredQuestion[];
+  mostAnsweredQuestions: MostAnsweredQuestion[];
 }
 
 // Financial interfaces
@@ -2288,24 +2356,69 @@ export class OrganizerService {
     return response.data;
   }
 
-  // Dashboard methods
-  async getEventDashboard(
+  // Dashboard methods (split em 3 rotas independentes — chamar em paralelo)
+
+  /** KPIs principais + gráfico de tendência. Cache backend 30s. */
+  async getEventDashboardOverview(
     eventId: string,
     params?: {
       period?: "geral" | "24h" | "7d" | "15d" | "1m" | "2m";
       ticketIds?: string[];
-      page?: number;
-      limit?: number;
     },
-  ): Promise<DashboardData> {
+  ): Promise<DashboardOverviewData> {
     const { data: response } = await this.apiClient.get<{
-      data: DashboardData;
-    }>(`/api/v1/events/${eventId}/dashboard`, {
+      data: DashboardOverviewData;
+    }>(`/api/v1/events/${eventId}/dashboard/overview`, {
       params: {
         period: params?.period,
         ticketIds: params?.ticketIds,
-        page: params?.page,
-        limit: params?.limit,
+      },
+    });
+    return response.data;
+  }
+
+  /** Tabelas paginadas: ranking, tickets (lista financeiro), produtos, lotes.
+   *  Cada bloco tem paginação independente. Cache backend 30s. */
+  async getEventDashboardRankings(
+    eventId: string,
+    params?: {
+      period?: "geral" | "24h" | "7d" | "15d" | "1m" | "2m";
+      ticketIds?: string[];
+      ticketRankingPage?: number;
+      ticketRankingLimit?: number;
+      ticketsPage?: number;
+      ticketsLimit?: number;
+    },
+  ): Promise<DashboardRankingsData> {
+    const { data: response } = await this.apiClient.get<{
+      data: DashboardRankingsData;
+    }>(`/api/v1/events/${eventId}/dashboard/rankings`, {
+      params: {
+        period: params?.period,
+        ticketIds: params?.ticketIds,
+        ticketRankingPage: params?.ticketRankingPage,
+        ticketRankingLimit: params?.ticketRankingLimit,
+        ticketsPage: params?.ticketsPage,
+        ticketsLimit: params?.ticketsLimit,
+      },
+    });
+    return response.data;
+  }
+
+  /** Widgets secundários (lazy-load): cidades, heatmap, perguntas. Cache backend 60s. */
+  async getEventDashboardSecondary(
+    eventId: string,
+    params?: {
+      period?: "geral" | "24h" | "7d" | "15d" | "1m" | "2m";
+      ticketIds?: string[];
+    },
+  ): Promise<DashboardSecondaryData> {
+    const { data: response } = await this.apiClient.get<{
+      data: DashboardSecondaryData;
+    }>(`/api/v1/events/${eventId}/dashboard/secondary`, {
+      params: {
+        period: params?.period,
+        ticketIds: params?.ticketIds,
       },
     });
     return response.data;

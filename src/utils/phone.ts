@@ -1,5 +1,6 @@
 import {
   AsYouType,
+  getCountryCallingCode,
   getExampleNumber,
   isValidPhoneNumber,
   parsePhoneNumberFromString,
@@ -120,11 +121,15 @@ export function getCountryCodeFromName(
 /**
  * Formata o input do usuário conforme ele digita, usando a máscara nacional
  * do país. SEMPRE remove o DDI (código internacional, `+55` / `+1` / etc.)
- * antes de aplicar a máscara — usuário digita só os dígitos nacionais.
+ * antes de aplicar a máscara — usuário digita só os dígitos nacionais, mesmo
+ * quando cola/digita o DDI por engano.
  *
- * Ex.: BR "11999990000" → "(11) 99999-0000"
- *      US "2025550100" → "(202) 555-0100"
- *      PT "912345678" → "912 345 678"
+ * Ex.: BR "11999990000"      → "(11) 99999-0000"
+ *      BR "+5511999990000"   → "(11) 99999-0000"  (DDI extraído)
+ *      BR "5511999990000"    → "(11) 99999-0000"  (DDI sem `+` removido)
+ *      US "2025550100"       → "(202) 555-0100"
+ *      US "12025550100"      → "(202) 555-0100"   (DDI `1` removido — NANP)
+ *      PT "351912345678"     → "912 345 678"
  *
  * Quando o país não é mapeado (sem ISO), retorna só dígitos limpos.
  */
@@ -150,8 +155,35 @@ export function formatPhoneForCountry(
     }
   }
 
-  /* Limita ao tamanho do placeholder do país — evita digitar a mais. */
   const maxDigits = exampleDigitsLengthForCountry(isoCode);
+
+  /* Remove DDI/CC do começo dos dígitos quando inadvertidamente digitado/colado.
+   * Sem isso, AsYouType "consome" o CC e formata exibindo-o (`1 (313) 131-31`,
+   * `55 11 96123 4567`) — o user espera sempre o formato nacional puro
+   * (`(313) 131-3131`, `(11) 96123-4567`).
+   *
+   * Critérios pra strip:
+   * - NANP (CC=1, US/Canada/Caribbean): número nacional NUNCA começa com `1`
+   *   (área code começa em 2-9), então `1` inicial é sempre DDI. Strip seguro.
+   * - Outros países: só strip quando o total excede `maxDigits` — sinal claro
+   *   de DDI duplicado. Evita falso positivo em BR (área 55 PE, área 11 SP). */
+  const callingCode = (() => {
+    try {
+      return getCountryCallingCode(isoCode);
+    } catch {
+      return "";
+    }
+  })();
+
+  if (callingCode && nationalDigits.startsWith(callingCode)) {
+    const exceedsMax = maxDigits > 0 && nationalDigits.length > maxDigits;
+    const isNanp = callingCode === "1" && nationalDigits.length >= 2;
+    if (exceedsMax || isNanp) {
+      nationalDigits = nationalDigits.slice(callingCode.length);
+    }
+  }
+
+  /* Limita ao tamanho do placeholder do país — evita digitar a mais. */
   if (maxDigits > 0 && nationalDigits.length > maxDigits) {
     nationalDigits = nationalDigits.slice(0, maxDigits);
   }
@@ -160,16 +192,58 @@ export function formatPhoneForCountry(
    * Try/catch defensivo: alguns ambientes (bundlers/Node sem interop CJS/ESM
    * correto) podem fazer `new AsYouType()` lançar por causa de metadata
    * malformada. Nesse caso retorna o valor cru pra não bloquear o input. */
+  let formatted: string;
   try {
-    const formatter = new AsYouType(isoCode);
-    const formatted = formatter.input(nationalDigits);
-    return formatted || nationalDigits;
+    formatted = new AsYouType(isoCode).input(nationalDigits) || nationalDigits;
   } catch (err) {
     if (process.env.NODE_ENV !== "production") {
       console.warn("[phone] AsYouType falhou pra", isoCode, err);
     }
-    return nationalDigits;
+    formatted = nationalDigits;
   }
+
+  /* Fallback: AsYouType só formata prefixos válidos do país (ex.: CM aceita
+   * `2` fixo e `6/7` móvel — `3...` retorna dígitos crus sem máscara). Pra
+   * garantir feedback visual consistente durante digitação, aplica máscara
+   * baseada no template do placeholder quando AsYouType não formatou. */
+  if (nationalDigits.length > 0 && !HAS_SEPARATOR_RE.test(formatted)) {
+    const placeholder = getPhonePlaceholderForCountry(countryName);
+    if (placeholder && HAS_SEPARATOR_RE.test(placeholder)) {
+      return applyTemplateMask(nationalDigits, placeholder);
+    }
+  }
+
+  return formatted;
+}
+
+/* Detecta se a string tem algum caractere não-dígito (espaço, parêntese, hífen).
+ * Usado pra decidir se AsYouType aplicou máscara ou retornou dígitos crus. */
+const HAS_SEPARATOR_RE = /\D/;
+
+/**
+ * Aplica máscara baseada em template, preservando separadores do template
+ * e substituindo posições de dígitos pelos dígitos do input.
+ *
+ * Ex.: digits="3333333", template="6 71 23 45 67" → "3 33 33 33"
+ *      digits="20155", template="(201) 555-0123" → "(201) 55"
+ */
+function applyTemplateMask(digits: string, template: string): string {
+  let out = "";
+  let digitIndex = 0;
+  for (const ch of template) {
+    if (digitIndex >= digits.length) break;
+    if (ch >= "0" && ch <= "9") {
+      out += digits[digitIndex++];
+    } else {
+      out += ch;
+    }
+  }
+  /* Se o input tem mais dígitos que o template (shouldn't happen por causa
+   * do `maxDigits` slice), anexa o restante cru. */
+  if (digitIndex < digits.length) {
+    out += digits.slice(digitIndex);
+  }
+  return out;
 }
 
 /* Quantidade de dígitos nacionais do exemplo do país — usado pra cortar
