@@ -98,8 +98,14 @@ export default function TicketDetailsPage() {
     return raw.replace(/\D/g, "").length === 11;
   };
 
-  const formatPhone = (phone: string) => {
+  /* Formata telefone conforme nacionalidade do participante.
+   * - BR: aplica máscara (XX) XXXXX-XXXX para celular ou (XX) XXXX-XXXX p/ fixo.
+   * - Estrangeiro: preserva como veio (trim + normaliza espaços múltiplos).
+   *   Não tenta reformatar — cada país tem convenção própria (E.164 +XX,
+   *   parênteses, hífens) e máscara BR distorce números como +1 415... */
+  const formatPhone = (phone: string, isBr: boolean = true) => {
     if (!phone) return "";
+    if (!isBr) return phone.trim().replace(/\s+/g, " ");
     const cleaned = phone.replace(/\D/g, "");
     if (cleaned.length === 11) return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
     if (cleaned.length === 10) return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
@@ -460,7 +466,7 @@ export default function TicketDetailsPage() {
                               <div className="flex flex-col py-4">
                                 <label className="text-base text-gray-12 font-family-dm-sans">Telefone</label>
                                 <p className="text-base font-medium text-gray-12 font-family-dm-sans">
-                                  {participant.phone ? formatPhone(participant.phone) : "-"}
+                                  {participant.phone ? formatPhone(participant.phone, isParticipantBr(participant)) : "-"}
                                 </p>
                               </div>
                               <div className="flex flex-col py-4">
@@ -477,7 +483,7 @@ export default function TicketDetailsPage() {
                                   <p className="text-base font-medium text-gray-12 font-family-dm-sans">
                                     {participant.emergencyContact.name || "-"} -{" "}
                                     {participant.emergencyContact.phone
-                                      ? formatPhone(participant.emergencyContact.phone)
+                                      ? formatPhone(participant.emergencyContact.phone, isParticipantBr(participant))
                                       : "-"}
                                   </p>
                                 </div>
