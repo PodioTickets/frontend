@@ -45,6 +45,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, X } from "lucide-react";
 import { isAutoCoupon } from "@/lib/orderAutoCouponDisplay";
 import { formatCouponLineLabel } from "@/lib/orderCouponDiscount";
+import { useAuth } from "@/hooks/useAuth";
 
 interface InformationStepProps {
   event: Event;
@@ -200,6 +201,14 @@ export function InformationStep({
   const { clearTimer, orderId, currentOrder: timerCurrentOrder } = useCheckoutTimer();
   const { patchParticipants, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
+  const { user: authUser } = useAuth();
+
+  /**
+   * Nacionalidade default pra novos participantes — herda do `country` do user
+   * logado (JWT profile, ver memory: project_document_internationalization).
+   * "Brasil" como fallback quando o user não tem country no payload.
+   */
+  const userDefaultNationality = authUser?.country?.trim() || "Brasil";
 
   // Buscar tickets e categorias do servidor
   const { tickets, loading: ticketsLoading } = useTickets(eventId, !!eventId, false, true);
@@ -448,7 +457,7 @@ export function InformationStep({
           birthDate: "",
           phone: "",
           gender: "",
-          nationality: "Brasil",
+          nationality: userDefaultNationality,
           emergencyPhone: "",
           emergencyContactName: "",
           hasEmergencyContact: false,
@@ -608,7 +617,7 @@ export function InformationStep({
         birthDate: "",
         phone: "",
         gender: "",
-        nationality: "Brasil",
+        nationality: userDefaultNationality,
         emergencyPhone: "",
         emergencyContactName: "",
         hasEmergencyContact: false,
@@ -621,7 +630,7 @@ export function InformationStep({
         birthDate: "",
         phone: "",
         gender: "",
-        nationality: "Brasil",
+        nationality: userDefaultNationality,
         emergencyPhone: "",
         emergencyContactName: "",
         hasEmergencyContact: false,
@@ -1558,7 +1567,7 @@ export function InformationStep({
                 birthDate: "",
                 phone: "",
                 gender: "",
-                nationality: "Brasil",
+                nationality: userDefaultNationality,
                 emergencyPhone: "",
                 emergencyContactName: "",
                 hasEmergencyContact: false,
@@ -2140,7 +2149,7 @@ export function InformationStep({
                                     birthDate: p?.birthDate || "",
                                     phone: p?.phone || "",
                                     gender: p?.gender || "",
-                                    nationality: p?.nationality || "Brasil",
+                                    nationality: p?.nationality || userDefaultNationality,
                                     hasEmergencyContact: String(p?.hasEmergencyContact ?? false),
                                     emergencyContactName: p?.emergencyContactName || "",
                                     emergencyPhone: p?.emergencyPhone || "",
