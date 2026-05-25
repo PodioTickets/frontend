@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { ArrowButton } from "../ArrowButton";
 import { lookupCepDigits } from "@/utils/lookupCep";
+import { getPostalCodeConfig } from "@/utils/postalCode";
 import { CountrySearchSelect } from "@/components/CountrySearchSelect";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -40,12 +41,6 @@ const BRAZIL_UFS: Record<string, string> = {
   SE: "Sergipe",
   TO: "Tocantins",
 };
-
-function formatCep(value: string): string {
-  const d = value.replace(/\D/g, "").slice(0, 8);
-  if (d.length <= 5) return d;
-  return `${d.slice(0, 5)}-${d.slice(5)}`;
-}
 
 const selectTriggerClass =
   "w-full h-12 px-3 rounded-lg border border-gray-6 bg-gray-1 text-gray-12 focus:outline-none focus:border-primary-10 transition-colors cursor-pointer hover:border-gray-8 flex items-center justify-between gap-2";
@@ -100,6 +95,11 @@ export function CheckoutAddressSection({
   const [errors, setErrors] = useState<AddressErrors>({});
   const cepLookupSeq = useRef(0);
 
+  // Estrangeiro = qualquer país != Brasil. Define quais campos aparecem
+  // (sem complemento/bairro) e qual config de código postal usar.
+  const isForeign = values.country !== "Brasil";
+  const postalConfig = getPostalCodeConfig(values.country);
+
   const stateOptions = useMemo(
     () =>
       Object.entries(BRAZIL_UFS)
@@ -123,19 +123,22 @@ export function CheckoutAddressSection({
 
   const handleCepChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
-      const formatted = formatCep(e.target.value);
+      const formatted = postalConfig.format(e.target.value);
       onChange({ cep: formatted });
       clearError("cep");
       invalidateConfirm();
 
-      if (raw.length !== 8) {
+      // Lookup automático (ViaCEP) só existe pro Brasil. Estrangeiros digitam
+      // o endereço manualmente.
+      if (values.country !== "Brasil") {
         cepLookupSeq.current += 1;
         setLoadingCep(false);
         return;
       }
 
-      if (values.country !== "Brasil") {
+      const raw = formatted.replace(/\D/g, "");
+      if (raw.length !== 8) {
+        cepLookupSeq.current += 1;
         setLoadingCep(false);
         return;
       }
@@ -169,12 +172,11 @@ export function CheckoutAddressSection({
         }
       }
     },
-    [onChange, invalidateConfirm, values.country]
+    [onChange, invalidateConfirm, values.country, postalConfig, clearError]
   );
 
   const cepDigits = values.cep.replace(/\D/g, "");
-  const showAddressRest =
-    values.country !== "Brasil" || cepDigits.length === 8;
+  const showAddressRest = isForeign || cepDigits.length === 8;
 
   const handleConfirm = () => {
     const newErrors: AddressErrors = {};
@@ -182,15 +184,15 @@ export function CheckoutAddressSection({
     if (!values.country?.trim()) {
       newErrors.country = "Selecione o país.";
     }
-    if (values.country === "Brasil") {
-      if (cepDigits.length !== 8) {
-        newErrors.cep = "Informe um CEP válido.";
-      }
-    } else if (!values.cep.trim()) {
-      newErrors.cep = "Informe o CEP ou código postal.";
+    if (!postalConfig.isValid(values.cep)) {
+      newErrors.cep = isForeign
+        ? "Informe um código postal válido."
+        : "Informe um CEP válido.";
     }
-    if (!values.stateUf) {
-      newErrors.stateUf = "Selecione o estado.";
+    if (!values.stateUf?.trim()) {
+      newErrors.stateUf = isForeign
+        ? "Informe o estado ou província."
+        : "Selecione o estado.";
     }
     if (!values.street.trim()) {
       newErrors.street = "Informe a rua.";
@@ -198,7 +200,8 @@ export function CheckoutAddressSection({
     if (!values.number.trim()) {
       newErrors.number = "Informe o número.";
     }
-    if (!values.neighborhood.trim()) {
+    // Bairro só é obrigatório no Brasil — estrangeiro não tem o campo.
+    if (!isForeign && !values.neighborhood.trim()) {
       newErrors.neighborhood = "Informe o bairro.";
     }
     if (!values.city.trim()) {
@@ -215,6 +218,28 @@ export function CheckoutAddressSection({
     onConfirmedChange(true);
     toast.success("Endereço confirmado.");
   };
+
+  // Campo Cidade compartilhado: pareia com Complemento (BR) ou com Número
+  // (estrangeiro, que não tem complemento/bairro).
+  const cityField = (
+    <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
+      <FieldLabel>Cidade</FieldLabel>
+      <Input
+        type="text"
+        autoComplete="address-level2"
+        placeholder="Digite sua cidade"
+        value={values.city}
+        onChange={(e) => {
+          onChange({ city: e.target.value });
+          clearError("city");
+          invalidateConfirm();
+        }}
+        aria-invalid={!!errors.city}
+        className={inputClass}
+      />
+      {errors.city && <p className="text-sm text-red-11">{errors.city}</p>}
+    </div>
+  );
 
   return (
     <div
@@ -235,20 +260,25 @@ export function CheckoutAddressSection({
             <CountrySearchSelect
               value={values.country}
               onChange={(country) => {
-                onChange({ country });
+                // Limpa código postal e estado: ambos são específicos do país
+                // (formato do CEP / lista de UFs vs. texto livre). Um valor
+                // remanescente ficaria inválido ou passaria na validação errada.
+                onChange({ country, cep: "", stateUf: "" });
                 clearError("country");
+                clearError("cep");
+                clearError("stateUf");
                 invalidateConfirm();
               }}
             />
             {errors.country && <p className="text-sm text-red-11">{errors.country}</p>}
           </div>
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-            <FieldLabel>CEP</FieldLabel>
+            <FieldLabel>{postalConfig.label}</FieldLabel>
             <Input
               type="text"
-              inputMode="numeric"
+              inputMode={postalConfig.inputMode}
               autoComplete="postal-code"
-              placeholder="00000-000"
+              placeholder={postalConfig.placeholder}
               value={values.cep}
               onChange={handleCepChange}
               aria-invalid={!!errors.cep}
@@ -260,7 +290,7 @@ export function CheckoutAddressSection({
               </p>
             ) : errors.cep ? (
               <p className="text-sm text-red-11">{errors.cep}</p>
-            ) : values.country === "Brasil" && cepDigits.length > 0 && cepDigits.length < 8 ? (
+            ) : !isForeign && cepDigits.length > 0 && cepDigits.length < 8 ? (
               <p className="text-sm text-gray-11 font-family-dm-sans">
                 Preencha o CEP com 8 dígitos para liberar o restante do endereço.
               </p>
@@ -283,36 +313,53 @@ export function CheckoutAddressSection({
         {/* Estado + Rua */}
         <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-            <FieldLabel>Estado</FieldLabel>
-            <Dropdown
-              options={stateOptions}
-              selectedIds={values.stateUf ? [values.stateUf] : []}
-              onSelect={(opt) => {
-                onChange({ stateUf: opt.id || "" });
-                clearError("stateUf");
-                invalidateConfirm();
-              }}
-              width="w-full"
-              maxHeight="max-h-240"
-              trigger={(isOpen) => (
-                <button
-                  type="button"
-                  className={cn(selectTriggerClass, errors.stateUf && "border-red-11")}
-                  aria-label="Selecionar estado"
-                >
-                  <span
-                    className={cn(
-                      "text-base font-family-dm-sans truncate text-left",
-                      values.stateUf ? "text-gray-12" : "text-gray-11"
-                    )}
+            <FieldLabel>{isForeign ? "Estado/Província" : "Estado"}</FieldLabel>
+            {isForeign ? (
+              // Estrangeiro: texto livre — não existe lista de UFs fora do Brasil.
+              <Input
+                type="text"
+                autoComplete="address-level1"
+                placeholder="Estado ou província"
+                value={values.stateUf}
+                onChange={(e) => {
+                  onChange({ stateUf: e.target.value });
+                  clearError("stateUf");
+                  invalidateConfirm();
+                }}
+                aria-invalid={!!errors.stateUf}
+                className={inputClass}
+              />
+            ) : (
+              <Dropdown
+                options={stateOptions}
+                selectedIds={values.stateUf ? [values.stateUf] : []}
+                onSelect={(opt) => {
+                  onChange({ stateUf: opt.id || "" });
+                  clearError("stateUf");
+                  invalidateConfirm();
+                }}
+                width="w-full"
+                maxHeight="max-h-240"
+                trigger={(isOpen) => (
+                  <button
+                    type="button"
+                    className={cn(selectTriggerClass, errors.stateUf && "border-red-11")}
+                    aria-label="Selecionar estado"
                   >
-                    {stateOptions.find((o) => o.id === values.stateUf)?.label ??
-                      "Selecione"}
-                  </span>
-                  <ArrowButton isOpen={isOpen} className="size-3 text-gray-12 shrink-0" />
-                </button>
-              )}
-            />
+                    <span
+                      className={cn(
+                        "text-base font-family-dm-sans truncate text-left",
+                        values.stateUf ? "text-gray-12" : "text-gray-11"
+                      )}
+                    >
+                      {stateOptions.find((o) => o.id === values.stateUf)?.label ??
+                        "Selecione"}
+                    </span>
+                    <ArrowButton isOpen={isOpen} className="size-3 text-gray-12 shrink-0" />
+                  </button>
+                )}
+              />
+            )}
             {errors.stateUf && <p className="text-sm text-red-11">{errors.stateUf}</p>}
           </div>
           <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
@@ -334,7 +381,7 @@ export function CheckoutAddressSection({
           </div>
         </div>
 
-        {/* Número + Complemento */}
+        {/* Número + Complemento (BR) | Número + Cidade (estrangeiro) */}
         <div className="flex flex-wrap gap-x-3 gap-y-4 w-full items-start">
           <div className="flex flex-col gap-2 w-full sm:w-[136px] shrink-0">
             <FieldLabel>Número</FieldLabel>
@@ -353,58 +400,48 @@ export function CheckoutAddressSection({
             />
             {errors.number && <p className="text-sm text-red-11">{errors.number}</p>}
           </div>
-          <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
-            <FieldLabel>Complemento (opcional)</FieldLabel>
-            <Input
-              type="text"
-              autoComplete="off"
-              placeholder="Apto, bloco, etc"
-              value={values.complement}
-              onChange={(e) => {
-                onChange({ complement: e.target.value });
-                invalidateConfirm();
-              }}
-              className={inputClass}
-            />
-          </div>
+          {isForeign ? (
+            cityField
+          ) : (
+            <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
+              <FieldLabel>Complemento (opcional)</FieldLabel>
+              <Input
+                type="text"
+                autoComplete="off"
+                placeholder="Apto, bloco, etc"
+                value={values.complement}
+                onChange={(e) => {
+                  onChange({ complement: e.target.value });
+                  invalidateConfirm();
+                }}
+                className={inputClass}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Bairro + Cidade */}
-        <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
-          <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-            <FieldLabel>Bairro</FieldLabel>
-            <Input
-              type="text"
-              placeholder="Digite seu bairro"
-              value={values.neighborhood}
-              onChange={(e) => {
-                onChange({ neighborhood: e.target.value });
-                clearError("neighborhood");
-                invalidateConfirm();
-              }}
-              aria-invalid={!!errors.neighborhood}
-              className={inputClass}
-            />
-            {errors.neighborhood && <p className="text-sm text-red-11">{errors.neighborhood}</p>}
+        {/* Bairro + Cidade — só Brasil (estrangeiro não tem bairro) */}
+        {!isForeign && (
+          <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
+            <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
+              <FieldLabel>Bairro</FieldLabel>
+              <Input
+                type="text"
+                placeholder="Digite seu bairro"
+                value={values.neighborhood}
+                onChange={(e) => {
+                  onChange({ neighborhood: e.target.value });
+                  clearError("neighborhood");
+                  invalidateConfirm();
+                }}
+                aria-invalid={!!errors.neighborhood}
+                className={inputClass}
+              />
+              {errors.neighborhood && <p className="text-sm text-red-11">{errors.neighborhood}</p>}
+            </div>
+            {cityField}
           </div>
-          <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-            <FieldLabel>Cidade</FieldLabel>
-            <Input
-              type="text"
-              autoComplete="address-level2"
-              placeholder="Digite sua cidade"
-              value={values.city}
-              onChange={(e) => {
-                onChange({ city: e.target.value });
-                clearError("city");
-                invalidateConfirm();
-              }}
-              aria-invalid={!!errors.city}
-              className={inputClass}
-            />
-            {errors.city && <p className="text-sm text-red-11">{errors.city}</p>}
-          </div>
-        </div>
+        )}
             </div>
 
             <Button

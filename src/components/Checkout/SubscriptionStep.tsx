@@ -15,6 +15,7 @@ import {
 import {
   computeCouponDiscount,
   formatCouponLineLabel,
+  formatVoucherLineLabel,
 } from "@/lib/orderCouponDiscount";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
@@ -896,12 +897,33 @@ export function SubscriptionStep({
     return computeCouponDiscount(appliedCoupon, totalPrice, totalProductsPrice);
   }, [appliedCoupon, totalPrice, totalProductsPrice]);
   const couponDiscountAmount = showCouponDiscount ? couponBreakdown.totalDiscount : 0;
+  const hasCouponLine = !!appliedCoupon && showCouponDiscount && couponDiscountAmount > 0;
 
-  // Subtotal pós-cupom — base sobre a qual a taxa de serviço incide.
-  // Fórmula: ((tickets + produtos) - cupom) * % + cupom_resultado_zero_clamp.
+  // Voucher (100% sobre os ingressos cobertos) vive em `order.voucher`, separado
+  // do cupom. O desconto já vem calculado pelo backend em `pricing.voucherDiscount`
+  // (centavos): `OrderVoucher` não traz `appliesTo` pra recalcular client-side, e
+  // como o voucher só incide sobre ingressos (que não mudam nesta etapa), o valor
+  // do backend é estável aqui. Clamp no subtotal de ingressos por segurança.
+  const appliedVoucher = timerCurrentOrder?.voucher ?? orderData?.voucher ?? null;
+  const voucherDiscountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    const cents =
+      timerCurrentOrder?.pricing?.voucherDiscount ??
+      orderData?.pricing?.voucherDiscount ??
+      0;
+    return Math.min(totalPrice, Math.max(0, cents / 100));
+  }, [appliedVoucher, timerCurrentOrder, orderData, totalPrice]);
+  const hasVoucherLine = !!appliedVoucher && voucherDiscountAmount > 0;
+
+  // Subtotal pós-desconto — base sobre a qual a taxa de serviço incide.
+  // Abate cupom E voucher: ((tickets + produtos) - cupom - voucher), clamp em 0.
   const subtotalAfterCoupon = useMemo(
-    () => Math.max(0, totalPrice + totalProductsPrice - couponDiscountAmount),
-    [totalPrice, totalProductsPrice, couponDiscountAmount],
+    () =>
+      Math.max(
+        0,
+        totalPrice + totalProductsPrice - couponDiscountAmount - voucherDiscountAmount,
+      ),
+    [totalPrice, totalProductsPrice, couponDiscountAmount, voucherDiscountAmount],
   );
 
   // Taxa de serviço — incide sobre o subtotal JÁ DESCONTADO pelo cupom
@@ -1160,29 +1182,37 @@ export function SubscriptionStep({
                 </div>
               </div>
             ))}
-            {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-              <>
-                <p className="text-sm text-gray-12">
-                  Subtotal:{" "}
-                  <span className="font-semibold">
-                    {formatPrice(totalPrice + totalProductsPrice)}
-                  </span>
-                </p>
-                <p className="text-sm">
-                  {formatCouponLineLabel(appliedCoupon)}:{" "}
-                  <span className="font-semibold">
-                    -{formatPrice(couponDiscountAmount)}
-                  </span>
-                </p>
-              </>
+            {(hasCouponLine || hasVoucherLine) && (
+              <p className="text-sm text-gray-12">
+                Subtotal:{" "}
+                <span className="font-semibold">
+                  {formatPrice(totalPrice + totalProductsPrice)}
+                </span>
+              </p>
+            )}
+            {hasCouponLine && (
+              <p className="text-sm text-gray-12">
+                {formatCouponLineLabel(appliedCoupon!)}:{" "}
+                <span className="font-semibold">
+                  -{formatPrice(couponDiscountAmount)}
+                </span>
+              </p>
+            )}
+            {hasVoucherLine && (
+              <p className="text-sm text-gray-12">
+                {formatVoucherLineLabel(appliedVoucher!.code)}:{" "}
+                <span className="font-semibold">
+                  -{formatPrice(voucherDiscountAmount)}
+                </span>
+              </p>
             )}
             {serviceFee > 0 && (
-              <p className="text-sm">
+              <p className="text-sm text-gray-12">
                 Taxa de serviço:{" "}
                 <span className="font-semibold">{formatPrice(serviceFee)}</span>
               </p>
             )}
-            <p className="text-base">
+            <p className="text-base text-gray-12">
               Total:{" "}
               <span className="font-bold">{formatPrice(totalAmount)}</span>
             </p>
@@ -1407,25 +1437,33 @@ export function SubscriptionStep({
                 })}
               </div>
 
-              {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                <>
-                  <div className="flex flex-col gap-2 mt-6">
-                    <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
-                      Subtotal:
-                      <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2 mt-2">
-                    <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
-                      {formatCouponLineLabel(appliedCoupon)}:
-                      <span className="text-gray-12">-{formatPrice(couponDiscountAmount)}</span>
-                    </p>
-                  </div>
-                </>
+              {(hasCouponLine || hasVoucherLine) && (
+                <div className="flex flex-col gap-2 mt-6">
+                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                    Subtotal:
+                    <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
+                  </p>
+                </div>
+              )}
+              {hasCouponLine && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                    {formatCouponLineLabel(appliedCoupon!)}:
+                    <span className="text-gray-12">-{formatPrice(couponDiscountAmount)}</span>
+                  </p>
+                </div>
+              )}
+              {hasVoucherLine && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                    {formatVoucherLineLabel(appliedVoucher!.code)}:
+                    <span className="text-gray-12">-{formatPrice(voucherDiscountAmount)}</span>
+                  </p>
+                </div>
               )}
               {serviceFee > 0 && (
-                <div className={`flex flex-col gap-2 ${appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 ? "mt-2" : "mt-6"}`}>
-                  <p className="text-sm font-medium text-gray-11 flex items-center justify-between">
+                <div className={`flex flex-col gap-2 ${hasCouponLine || hasVoucherLine ? "mt-2" : "mt-6"}`}>
+                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     Taxa de serviço:
                     <span className="text-gray-12">{formatPrice(serviceFee)}</span>
                   </p>

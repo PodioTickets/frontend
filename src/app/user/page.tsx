@@ -31,6 +31,7 @@ import {
   getPhonePlaceholderForCountry,
   getPhoneMaxLengthForCountry,
   getPhoneDigitsForBackend,
+  isPhoneValidForCountry,
 } from "@/utils/phone";
 import { getAvatarUrl } from "@/utils/avatar";
 import { DatePickerWithConfirm } from "@/components/DateOfBirthPicker/DatePickerWithConfirm";
@@ -502,6 +503,10 @@ export default function UserProfilePage() {
 
     if (!formData.phone?.trim()) {
       errors.phone = "Telefone é obrigatório";
+    } else if (!isPhoneValidForCountry(formData.phone, formData.nationality)) {
+      // Valida formato conforme o país selecionado (libphonenumber-js),
+      // alinhando o perfil ao modal de cadastro e ao checkout.
+      errors.phone = "Informe um telefone válido";
     }
 
     const userIsBr = isBrazilianCountry(formData.nationality);

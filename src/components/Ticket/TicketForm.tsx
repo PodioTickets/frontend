@@ -2,8 +2,12 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/services/cache/QueryClient";
+import {
+  isIsoDateStrictlyBefore,
+  parseIsoDateToLocalDayStart,
+} from "@/utils/registrationPeriod";
 import { organizerService } from "@/services";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
@@ -49,6 +53,9 @@ import {
 } from "./TicketForm.draft";
 
 export type { Batch, TicketFormData, ProductData, Product, TicketFormProps } from "./TicketForm.types";
+
+const SALE_START_BEFORE_REGISTRATION_TOAST =
+  "A data de início da venda do lote não pode ser anterior à data de início das inscrições.";
 
 export function TicketForm({
   eventId,
@@ -128,6 +135,37 @@ export function TicketForm({
   // Data from API
   const [modalityTemplates, setModalityTemplates] = useState<ModalityTemplate[]>([]);
   const [ticketCategories, setTicketCategories] = useState<ModalityGroup[]>([]);
+
+  // Evento: usado para travar a data de início de venda dos lotes — ela não
+  // pode ser anterior ao início das inscrições. Query dedicada (key `detail`)
+  // que deduplica com o resto do app e funciona em todos os fluxos (organizer
+  // e admin compartilham `organizerService`).
+  const { data: eventDetail } = useQuery({
+    queryKey: queryKeys.events.detail(eventId),
+    queryFn: () => organizerService.getEventById(eventId),
+    enabled: !!eventId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // `registrationStartDate` vem como ISO; derivamos o dia civil local (mesma
+  // convenção de `formatDateForInput`) para comparar com o YMD do DatePicker.
+  const registrationStartYmd = useMemo(() => {
+    const iso = eventDetail?.registrationStartDate;
+    if (!iso) return undefined;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return undefined;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }, [eventDetail?.registrationStartDate]);
+
+  // `minDate` do DatePicker de início de venda do lote (dias anteriores ao
+  // início das inscrições ficam desabilitados; o próprio dia segue selecionável).
+  const saleStartMinDate = useMemo(
+    () => parseIsoDateToLocalDayStart(registrationStartYmd ?? "") ?? undefined,
+    [registrationStartYmd],
+  );
 
   // Observação para o cliente (descrição do ingresso)
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -773,6 +811,18 @@ export function TicketForm({
         next = { ...next, endDate: "", endTime: "" };
       }
 
+      // Início da venda do lote não pode ser anterior ao início das inscrições.
+      if (
+        field === "startDate" &&
+        next.startType === "date" &&
+        normalized.trim() &&
+        saleStartMinDate &&
+        isIsoDateStrictlyBefore(normalized.trim(), saleStartMinDate)
+      ) {
+        toast.error(SALE_START_BEFORE_REGISTRATION_TOAST);
+        return prev;
+      }
+
       if (isBatchEndBeforeSaleStart(next)) {
         toast.error("A data de término da venda não pode ser anterior à data de início.");
         return prev;
@@ -817,6 +867,21 @@ export function TicketForm({
         `No lote ${batchWithInvalidPeriod + 1}, a data de término da venda não pode ser anterior à data de início.`,
       );
       return false;
+    }
+
+    // Backstop do minDate do picker: nenhum lote pode iniciar a venda antes do
+    // início das inscrições (cobre drafts hidratados/edições fora do calendário).
+    if (saleStartMinDate) {
+      const batchBeforeRegistration = batches.findIndex(
+        (b) =>
+          b.startType === "date" &&
+          !!b.startDate?.trim() &&
+          isIsoDateStrictlyBefore(b.startDate.trim(), saleStartMinDate),
+      );
+      if (batchBeforeRegistration !== -1) {
+        toast.error(`No lote ${batchBeforeRegistration + 1}, ${SALE_START_BEFORE_REGISTRATION_TOAST.charAt(0).toLowerCase()}${SALE_START_BEFORE_REGISTRATION_TOAST.slice(1)}`);
+        return false;
+      }
     }
 
     if (!eventId) {
@@ -1311,6 +1376,7 @@ export function TicketForm({
           <TicketBatchSection
             batches={batches}
             formErrors={formErrors}
+            saleStartMinDate={saleStartMinDate}
             onAddBatch={handleAddBatch}
             onRemoveBatch={handleRemoveBatch}
             onBatchChange={handleBatchChange}

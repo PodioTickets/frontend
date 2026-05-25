@@ -40,6 +40,7 @@ import {
   getPhonePlaceholderForCountry,
   getPhoneMaxLengthForCountry,
   getPhoneDigitsForBackend,
+  isPhoneValidForCountry,
 } from "@/utils/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X } from "lucide-react";
@@ -995,7 +996,9 @@ export function InformationStep({
 
     if (!phone) {
       errors.phone = "Telefone é obrigatório";
-    } else if ((phone || "").replace(/\D/g, "").length < 10) {
+    } else if (!isPhoneValidForCountry(phone, participant.nationality)) {
+      // Validação por país (libphonenumber-js) — substitui o `< 10` fixo, que
+      // barrava números válidos de países com menos dígitos (Portugal=9, etc.).
       errors.phone = "Informe um telefone válido";
     }
 

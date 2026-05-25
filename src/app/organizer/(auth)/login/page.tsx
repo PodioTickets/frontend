@@ -186,7 +186,7 @@ export default function OrganizerLoginPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-gray-2 flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden">
+    <div className="min-h-dvh bg-gray-2 flex flex-col lg:flex-row lg:min-h-screen">
 
       {/* ─── Mobile: hero image ─── */}
       <div className="relative h-[45vh] shrink-0 lg:hidden">
@@ -215,7 +215,7 @@ export default function OrganizerLoginPage() {
         relative z-10 flex flex-col gap-6
         bg-gray-1 rounded-t-[24px] -mt-6 px-4 pt-5 pb-8
         lg:flex-1 lg:flex lg:flex-col lg:items-center lg:justify-between
-        lg:bg-gray-2 lg:rounded-none lg:mt-0 lg:px-[124px] lg:py-6 xl:py-8 lg:h-full lg:overflow-hidden lg:gap-0
+        lg:bg-gray-2 lg:rounded-none lg:mt-0 lg:px-[124px] lg:py-6 xl:py-8 lg:min-h-screen lg:gap-0
       ">
         {/* Desktop logo */}
         <div className="hidden lg:flex items-center self-center shrink-0">
@@ -227,8 +227,9 @@ export default function OrganizerLoginPage() {
           />
         </div>
 
-        {/* Center block */}
-        <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:min-h-0 lg:gap-6 xl:gap-8">
+        {/* Center block — centralizado verticalmente no desktop; em telas baixas
+            o conteúdo cresce e a página rola (sem clipar). */}
+        <div className="flex flex-col gap-6 w-full lg:max-w-[470px] lg:flex-1 lg:justify-center lg:gap-6 xl:gap-8">
 
           {/* Identity */}
             <div className="flex flex-row items-center gap-3 lg:flex-col lg:items-center lg:gap-4 xl:gap-8">
@@ -345,7 +346,7 @@ export default function OrganizerLoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-center mt-2 lg:mt-0 lg:shrink-0">{footer}</div>
+        <div className="flex justify-center mt-2 lg:mt-6 lg:shrink-0">{footer}</div>
       </div>
 
       {/* ─── Desktop: right image ─── */}

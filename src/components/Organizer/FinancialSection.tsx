@@ -71,7 +71,7 @@ export function FinancialSection({
   return (
     <>
       {/* Card 1 — Divisão da taxa */}
-      <div className="flex flex-col gap-7 rounded-xl border border-gray-6 bg-gray-2 p-5">
+      <div className="flex flex-col gap-7 rounded-xl border border-gray-6 bg-gray-2 p-4">
         <div className="flex flex-col gap-4">
           <h2 className="font-manrope text-xl font-bold leading-[1.1] text-gray-12">
             Divisão da taxa da plataforma
@@ -88,7 +88,7 @@ export function FinancialSection({
           <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between">
               <span className="font-family-dm-sans text-base leading-[1.3] text-gray-11">Organizador absorve</span>
-              <div className="rounded-lg bg-gray-3 px-4 py-2">
+              <div className="rounded-lg bg-gray-3 flex items-center justify-center px-4 py-2">
                 {onTotalFeeChange ? (
                   <div className="flex items-center gap-1">
                     <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12">Total:</span>
@@ -104,15 +104,15 @@ export function FinancialSection({
                     <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12">%</span>
                   </div>
                 ) : (
-                  <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12">
+                  <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-12 max-md:w-max">
                     Total: {totalFeeValue.toFixed(1).replace(".", ",")}%
                   </span>
                 )}
               </div>
-              <span className="font-family-dm-sans text-base leading-[1.3] text-gray-11">Participante paga</span>
+              <span className="font-family-dm-sans text-base max-md:text-right leading-[1.3] text-gray-11">Participante paga</span>
             </div>
 
-            <div className="flex items-center gap-20">
+            <div className="flex items-center md:gap-20">
               <span className="font-manrope text-xl font-bold leading-[1.1] text-gray-12 w-14 shrink-0 text-left">
                 {organizerPercent.toFixed(1)}%
               </span>
@@ -138,7 +138,7 @@ export function FinancialSection({
                   <div
                     className={cn(
                       "absolute inset-y-0 right-0",
-                      readOnly ? "bg-[#7da896]" : "bg-[#30a476]",
+                      readOnly ? "bg-[#9ddde7]" : "bg-[#107d98]",
                     )}
                     style={{ width: `${100 - sliderPosition}%` }}
                   />
@@ -270,7 +270,7 @@ export function FinancialSection({
                   </span>
                 )}
               </div>
-              <div className={cn("flex gap-3", readOnly && "pointer-events-none")}>
+              <div className={cn("flex flex-wrap gap-3", readOnly && "pointer-events-none")}>
                 {([1, 2, 3] as const).map((n) => (
                   <button
                     key={n}

@@ -17,6 +17,14 @@ import { Tooltip } from "@/components/Tooltip";
 import type { Ticket } from "@/hooks/useTickets";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { ticketUnitPriceForPrePaymentCents } from "@/lib/orderAutoCouponDisplay";
+import {
+  computeTicketPricingWithCoupon,
+  computeTicketPricingWithDiscount,
+  computeVoucherTicketsDiscount,
+  couponPreviewToOrderCoupon,
+  formatCouponLineLabel,
+  formatVoucherLineLabel,
+} from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginModal } from "@/stores/modalStore";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
@@ -34,10 +42,13 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const { openLoginModal } = useLoginModal();
   const pendingCoupon = usePendingCouponSnapshot();
   const { data: couponPreview } = useCouponPreview(event?.id, pendingCoupon);
+  // Preview pode ser cupom (percentual/fixo) ou voucher (100% OFF por ticket).
+  const couponData = couponPreview?.kind === "coupon" ? couponPreview : null;
+  const voucherData = couponPreview?.kind === "voucher" ? couponPreview : null;
   /* Sufixo "(X% OFF)" — só pra cupons PERCENTAGE válidos. */
   const couponPercentSuffix =
-    couponPreview && couponPreview.type === "PERCENTAGE" && couponPreview.value > 0
-      ? ` (${couponPreview.value}% OFF)`
+    couponData && couponData.type === "PERCENTAGE" && couponData.value > 0
+      ? ` (${couponData.value}% OFF)`
       : "";
 
   const handleNext = () => {
@@ -132,7 +143,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   // o preço unitário do ticket; quando não, parsing local do `ticket.price`.
   // O total geral continua sendo cálculo local pois depende da seleção atual
   // de quantidades, que ainda não foi enviada via `reserveOrder`.
-  const { orderId } = useCheckoutTimer();
+  const { orderId, currentOrder: timerCurrentOrder } = useCheckoutTimer();
   const { getOrder } = useCheckoutReservation();
   const { data: orderData } = useQuery({
     queryKey: ["checkout-order", orderId],
@@ -192,15 +203,73 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     return { totalParticipants: participants, totalPrice: total };
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
-  // Taxa de serviço aplicada sobre o subtotal dos ingressos (mesma fórmula
-  // do backend e do SubscriptionStep). Mostrada já nesta etapa para que o
-  // participante veja o valor final desde a seleção.
-  const serviceFee = useMemo(() => {
-    const percent = (event.participantFeePercent ?? 0) / 100;
-    return totalPrice * percent;
-  }, [totalPrice, event.participantFeePercent]);
+  // Cupom DISCOUNT "selecionado" nesta etapa: aplicado na reserva
+  // (`timerCurrentOrder`/`orderData`) OU em preview vindo do link `?coupon=`
+  // (`couponPreview`). Cupons automáticos (QUANTITY/AGE) são ignorados aqui — o
+  // desconto deles só é revelado no pagamento.
+  const appliedCoupon = useMemo(
+    () =>
+      timerCurrentOrder?.coupon ??
+      orderData?.coupon ??
+      couponPreviewToOrderCoupon(couponData, pendingCoupon),
+    [timerCurrentOrder, orderData, couponData, pendingCoupon],
+  );
 
-  const totalWithFee = totalPrice + serviceFee;
+  // Voucher do link sempre calcula quando presente (mesma regra do EventInfo
+  // desktop). O preview de voucher e o de cupom são mutuamente exclusivos — o
+  // código do link é um OU outro —, então o voucher tem prioridade aqui.
+  const useVoucher = !!voucherData;
+
+  // Desconto do voucher: soma dos ingressos selecionados que ele cobre (100%).
+  // Sem `useMemo` de propósito: o React Compiler memoiza, e manter manual aqui
+  // conflita com a inferência de `getTicketPrice` (preserve-manual-memoization).
+  let voucherDiscount = 0;
+  if (useVoucher && voucherData) {
+    const selected: Array<{ id: string; price: number; quantity: number }> = [];
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+      });
+    });
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+    });
+    voucherDiscount = computeVoucherTicketsDiscount(voucherData.appliesTo, selected);
+  }
+
+  // Taxa de serviço + total calculados client-side com a MESMA regra do
+  // SubscriptionStep (`/produtos`): a taxa incide sobre o subtotal JÁ
+  // DESCONTADO pelo cupom/voucher. Sem desconto, recai sobre o subtotal cheio.
+  const pricing = useMemo(
+    () =>
+      useVoucher
+        ? computeTicketPricingWithDiscount(
+            voucherDiscount,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          )
+        : computeTicketPricingWithCoupon(
+            appliedCoupon,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          ),
+    [useVoucher, voucherDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
+  );
+  const serviceFee = pricing.serviceFee;
+  const totalWithFee = pricing.total;
+  const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
+  // Label da linha de desconto: "Voucher CÓDIGO" ou "Cupom CÓDIGO (...)".
+  const discountLineLabel = useVoucher
+    ? formatVoucherLineLabel(voucherData?.code)
+    : appliedCoupon
+      ? formatCouponLineLabel(appliedCoupon)
+      : "";
+  // Cupom do link ainda sem desconto calculado ("ao continuar"). Voucher é
+  // calculado client-side, então não usa esse fallback: quando não cobre o
+  // ingresso selecionado (desconto 0), a linha do voucher simplesmente some.
+  const couponPending = !!pendingCoupon && !voucherData;
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
@@ -332,7 +401,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                       position="topRight"
                       trigger="click"
                       usePortal
-                      className="block min-w-0 flex-1"
+                      className="block min-w-0"
                       contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
                     >
                       <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer">
@@ -345,18 +414,25 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   </div>
                 </div>
               ))}
-              {pendingCoupon && (
-                <>
-                  <p className="text-sm">
-                    Subtotal:{" "}
-                    <span className="font-semibold">{formatPrice(totalPrice)}</span>
-                  </p>
-                  <p className="text-sm">
-                    Cupom {pendingCoupon}{couponPercentSuffix}:{" "}
-                    <span className="text-xs font-medium">ao continuar</span>
-                  </p>
-                </>
+              {(hasCouponLine || couponPending) && (
+                <p className="text-sm">
+                  Subtotal:{" "}
+                  <span className="font-semibold">{formatPrice(totalPrice)}</span>
+                </p>
               )}
+              {hasCouponLine ? (
+                <p className="text-sm">
+                  {discountLineLabel}:{" "}
+                  <span className="font-semibold">
+                    -{formatPrice(pricing.couponDiscount)}
+                  </span>
+                </p>
+              ) : couponPending ? (
+                <p className="text-sm">
+                  Cupom {pendingCoupon}{couponPercentSuffix}:{" "}
+                  <span className="text-xs font-medium">ao continuar</span>
+                </p>
+              ) : null}
               {serviceFee > 0 && (
                 <p className="text-sm">
                   Taxa de serviço:{" "}
@@ -441,6 +517,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
               tickets={tickets}
               categorizedTickets={categorizedTickets}
               uncategorizedTickets={uncategorizedTickets}
+              appliedCoupon={appliedCoupon}
             />
           </div>
         </div>

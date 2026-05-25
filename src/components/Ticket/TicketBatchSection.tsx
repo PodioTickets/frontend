@@ -12,6 +12,12 @@ import { parseLocalYmd } from "./TicketForm.utils";
 interface TicketBatchSectionProps {
   batches: Batch[];
   formErrors: Record<string, string>;
+  /**
+   * Data mínima de início de venda do lote (início das inscrições do evento).
+   * Dias anteriores ficam desabilitados no calendário. `undefined` = sem trava
+   * (evento ainda não carregado ou sem data de início).
+   */
+  saleStartMinDate?: Date;
   onAddBatch: () => void;
   onRemoveBatch: (batchId: string) => void;
   onBatchChange: (batchId: string, field: keyof Batch, value: string) => void;
@@ -27,6 +33,7 @@ interface TicketBatchSectionProps {
 export function TicketBatchSection({
   batches,
   formErrors,
+  saleStartMinDate,
   onAddBatch,
   onRemoveBatch,
   onBatchChange,
@@ -207,6 +214,7 @@ export function TicketBatchSection({
                           onChange={(value) =>
                             onBatchSalePeriodChange(batch.id, "startDate", value)
                           }
+                          minDate={saleStartMinDate}
                           maxDate={parseLocalYmd(batch.endDate)}
                           className="w-max"
                         />

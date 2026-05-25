@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidCPF } from "@/utils/cpf";
+import { isPhoneValidForCountry } from "@/utils/phone";
 
 export const loginSchema = z.object({
   email: z
@@ -42,8 +43,15 @@ export function isBrazilianCountry(country: string | undefined | null): boolean 
  * exige CPF válido; caso contrário aceita um documento genérico (passaporte,
  * RNE, identidade estrangeira) entre 4 e 30 caracteres. O campo continua se
  * chamando `cpf` no formData só pra evitar refactor em todo o componente.
+ *
+ * Telefone (fixo e de emergência) também é validado conforme as regras reais
+ * do país selecionado via `isPhoneValidForCountry` (libphonenumber-js) — em vez
+ * do `=== 11` fixo, que só servia pro Brasil e barrava qualquer estrangeiro
+ * (US=10, PT=9, etc.). Para o próprio BR isso ainda corrige o caso do telefone
+ * fixo válido (10 dígitos), antes rejeitado.
+ *
  * A função é definida após `registerStep1bSchema` para reutilizar o shape
- * dos outros campos (dataNascimento, telefone, etc).
+ * dos outros campos (dataNascimento, sexo, etc).
  */
 export function buildRegisterStep1bSchema(country: string | undefined | null) {
   const docSchema = isBrazilianCountry(country)
@@ -53,7 +61,28 @@ export function buildRegisterStep1bSchema(country: string | undefined | null) {
       .min(4, "Documento deve ter pelo menos 4 caracteres")
       .max(30, "Documento deve ter no máximo 30 caracteres");
 
-  return registerStep1bSchema.extend({ cpf: docSchema });
+  const telefoneSchema = z
+    .string()
+    .min(1, "Telefone é obrigatório")
+    .refine((phone) => isPhoneValidForCountry(phone, country), {
+      message: "Telefone inválido para o país selecionado",
+    });
+
+  // Opcional: vazio passa; preenchido precisa ser válido pro país.
+  const telefoneEmergenciaSchema = z
+    .string()
+    .optional()
+    .refine(
+      (phone) =>
+        !phone || phone.trim() === "" || isPhoneValidForCountry(phone, country),
+      { message: "Telefone de emergência inválido para o país selecionado" },
+    );
+
+  return registerStep1bSchema.extend({
+    cpf: docSchema,
+    telefone: telefoneSchema,
+    telefoneEmergencia: telefoneEmergenciaSchema,
+  });
 }
 
 // Step 1b: Documentos + contato — segunda tela de dados pessoais.

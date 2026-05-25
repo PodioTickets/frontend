@@ -2,6 +2,7 @@ import {
   AsYouType,
   getCountryCallingCode,
   getExampleNumber,
+  isPossiblePhoneNumber,
   isValidPhoneNumber,
   parsePhoneNumberFromString,
   type CountryCode,
@@ -130,6 +131,7 @@ export function getCountryCodeFromName(
  *      US "2025550100"       → "(202) 555-0100"
  *      US "12025550100"      → "(202) 555-0100"   (DDI `1` removido — NANP)
  *      PT "351912345678"     → "912 345 678"
+ *      AR "223151234567"     → "0223 15-123-4567" (trunk `0` adicionado p/ formatar)
  *
  * Quando o país não é mapeado (sem ISO), retorna só dígitos limpos.
  */
@@ -157,6 +159,23 @@ export function formatPhoneForCountry(
 
   const maxDigits = exampleDigitsLengthForCountry(isoCode);
 
+  /* Placeholder no formato nacional do país. Reusado em 3 pontos abaixo:
+   * (a) detectar prefixo de tronco `0`, (b) derivar quantos dígitos o usuário
+   * digita no formato nacional, (c) fallback de máscara por template.
+   *
+   * O nº de dígitos do placeholder pode ser MAIOR que o `nationalNumber`
+   * canônico (`maxDigits`): países que exibem trunk prefix `0` e/ou indicador
+   * de móvel no formato nacional (AR usa `0…15…`, GB/DE usam `0…`) têm mais
+   * dígitos digitados do que o número significativo canônico. */
+  const placeholder = getPhonePlaceholderForCountry(countryName);
+  const placeholderDigits = (placeholder.match(/\d/g) || []).length;
+
+  /* Corte final usa o MAIOR entre canônico e placeholder: evita truncar
+   * números nacionais legítimos mais longos (ex.: AR área 3 dígitos + `15`,
+   * que excede o exemplo de área `11`). A validação por país (`isValidPhoneNumber`)
+   * segue barrando o que for de fato inválido. */
+  const cap = Math.max(maxDigits, placeholderDigits);
+
   /* Remove DDI/CC do começo dos dígitos quando inadvertidamente digitado/colado.
    * Sem isso, AsYouType "consome" o CC e formata exibindo-o (`1 (313) 131-31`,
    * `55 11 96123 4567`) — o user espera sempre o formato nacional puro
@@ -183,9 +202,28 @@ export function formatPhoneForCountry(
     }
   }
 
-  /* Limita ao tamanho do placeholder do país — evita digitar a mais. */
-  if (maxDigits > 0 && nationalDigits.length > maxDigits) {
-    nationalDigits = nationalDigits.slice(0, maxDigits);
+  /* Limita ao tamanho do formato nacional do país — evita digitar a mais. */
+  if (cap > 0 && nationalDigits.length > cap) {
+    nationalDigits = nationalDigits.slice(0, cap);
+  }
+
+  /* Número COMPLETO e válido → usa o formato nacional oficial do país
+   * (`formatNational`), que é autoritativo e cobre o que o `AsYouType` erra:
+   *  - forma canônica salva no backend (AR `91123456789` → `011 15-2345-6789`),
+   *    crucial pra exibir corretamente um telefone carregado;
+   *  - agrupamento por código de área em planos de comprimento variável
+   *    (AR/PY/UY têm áreas de 2–4 dígitos, que o `AsYouType` agrupa errado).
+   * Para números incompletos (durante a digitação) o parse falha e seguimos
+   * pro `AsYouType` incremental abaixo. */
+  if (nationalDigits.length > 0) {
+    try {
+      const parsed = parsePhoneNumberFromString(nationalDigits, isoCode);
+      if (parsed?.isValid()) {
+        return parsed.formatNational();
+      }
+    } catch {
+      /* ignora — segue pro AsYouType incremental */
+    }
   }
 
   /* `AsYouType` formata conforme digita — comportamento estilo Stripe.
@@ -202,12 +240,33 @@ export function formatPhoneForCountry(
     formatted = nationalDigits;
   }
 
+  /* Retry com prefixo de tronco: AsYouType de alguns países (AR, GB, DE, …) só
+   * formata o número quando o `0` nacional está presente — sem ele retorna os
+   * dígitos crus. Se a formatação falhou e o placeholder começa com `0`, tenta
+   * de novo com o `0` na frente. O `0` é mantido no resultado, consistente com
+   * o placeholder exibido e com o formato oficial desses países (ex.: AR
+   * `0223 15-123-4567`, GB `07400 123456`). */
+  if (
+    nationalDigits.length > 0 &&
+    !HAS_SEPARATOR_RE.test(formatted) &&
+    placeholder.startsWith("0") &&
+    !nationalDigits.startsWith("0")
+  ) {
+    try {
+      const withTrunk = new AsYouType(isoCode).input("0" + nationalDigits);
+      if (withTrunk && HAS_SEPARATOR_RE.test(withTrunk)) {
+        formatted = withTrunk;
+      }
+    } catch {
+      /* ignora — segue pro fallback de template */
+    }
+  }
+
   /* Fallback: AsYouType só formata prefixos válidos do país (ex.: CM aceita
    * `2` fixo e `6/7` móvel — `3...` retorna dígitos crus sem máscara). Pra
    * garantir feedback visual consistente durante digitação, aplica máscara
    * baseada no template do placeholder quando AsYouType não formatou. */
   if (nationalDigits.length > 0 && !HAS_SEPARATOR_RE.test(formatted)) {
-    const placeholder = getPhonePlaceholderForCountry(countryName);
     if (placeholder && HAS_SEPARATOR_RE.test(placeholder)) {
       return applyTemplateMask(nationalDigits, placeholder);
     }
@@ -293,17 +352,24 @@ export function getPhonePlaceholderForCountry(
   }
 }
 
+/* Folga sobre o comprimento do placeholder. Cobre variações de formato dentro
+ * do mesmo país (ex.: AR tem código de área de 2 a 4 dígitos e adiciona trunk
+ * `0`, deslocando o comprimento além do exemplo de área `11`). O corte real de
+ * dígitos vive em `formatPhoneForCountry` (`cap`), então a folga não permite
+ * digitar além do número nacional — só evita bloqueio prematuro do input. */
+const PHONE_MAXLENGTH_SLACK = 4;
+
 /**
  * Tamanho máximo do input formatado pra o país (`maxLength` do input).
- * Igual ao comprimento exato do placeholder do país — formato padronizado
- * sem folga. Combinado com o corte em `formatPhoneForCountry`, garante que
- * o user não digite além do padrão nacional.
+ * Placeholder do país + folga (`PHONE_MAXLENGTH_SLACK`). A proteção contra
+ * excesso é o corte de dígitos em `formatPhoneForCountry`; aqui só garantimos
+ * que variações de comprimento do mesmo país não travem a digitação.
  */
 export function getPhoneMaxLengthForCountry(
   countryName: string | null | undefined,
 ): number {
   const placeholder = getPhonePlaceholderForCountry(countryName);
-  return placeholder.length;
+  return placeholder.length + PHONE_MAXLENGTH_SLACK;
 }
 
 /**
@@ -333,8 +399,15 @@ export function getPhoneDigitsForBackend(
 }
 
 /**
- * Valida número conforme regras do país (length, prefixos, área codes).
- * `true` quando válido OU quando o país não é mapeado (não bloqueia).
+ * Valida número conforme as regras do país. `true` quando válido OU quando o
+ * país não é mapeado (não bloqueia).
+ *
+ * Usa `isValidPhoneNumber` (faixas/prefixos atribuídos) com fallback pra
+ * `isPossiblePhoneNumber` (só comprimento por país). O `isValid` sozinho é
+ * estrito demais: rejeita números reais quando a metadata da lib está
+ * desatualizada ou quando o formato nacional traz tronco/indicadores (AR usa
+ * `0…15…`, GB/DE usam `0…`). Para um checkout, barrar estrangeiro legítimo é
+ * pior que aceitar um comprimento plausível — então caímos pro "possível".
  */
 export function isPhoneValidForCountry(
   value: string,
@@ -347,7 +420,9 @@ export function isPhoneValidForCountry(
     return value.replace(/\D/g, "").length >= 6;
   }
   try {
-    return isValidPhoneNumber(value, isoCode);
+    return (
+      isValidPhoneNumber(value, isoCode) || isPossiblePhoneNumber(value, isoCode)
+    );
   } catch {
     return false;
   }

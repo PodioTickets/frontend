@@ -11,6 +11,15 @@ import { getEventOrganizer } from "@/utils/organization";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
+import type { OrderCoupon } from "@/interfaces/order";
+import {
+  computeTicketPricingWithCoupon,
+  computeTicketPricingWithDiscount,
+  computeVoucherTicketsDiscount,
+  couponPreviewToOrderCoupon,
+  formatCouponLineLabel,
+  formatVoucherLineLabel,
+} from "@/lib/orderCouponDiscount";
 
 interface EventInfoProps {
   event: Event;
@@ -19,9 +28,12 @@ interface EventInfoProps {
   tickets?: Ticket[];
   categorizedTickets?: Array<{ id: string; name: string; tickets: Ticket[] }>;
   uncategorizedTickets?: Ticket[];
+  /** Cupom resolvido pelo `ModalitiesStep` (reserva ou preview do link). Mantém
+   *  o resumo desktop em sincronia com o mobile. */
+  appliedCoupon?: OrderCoupon | null;
 }
 
-export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [] }: EventInfoProps) {
+export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const pendingCoupon = usePendingCouponSnapshot();
@@ -36,10 +48,15 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     }).format(price);
   };
 
-  const couponPercentSuffix =
-    couponPreview && couponPreview.type === "PERCENTAGE" && couponPreview.value > 0
-      ? ` (${couponPreview.value}% OFF)`
-      : ` (${formatPrice((couponPreview?.value ?? 0) / 100)} OFF)`;
+  // Preview pode ser cupom (percentual/fixo) ou voucher (100% OFF por ticket).
+  const couponData = couponPreview?.kind === "coupon" ? couponPreview : null;
+  const voucherData = couponPreview?.kind === "voucher" ? couponPreview : null;
+
+  const couponPercentSuffix = couponData
+    ? couponData.type === "PERCENTAGE" && couponData.value > 0
+      ? ` (${couponData.value}% OFF)`
+      : ` (${formatPrice((couponData.value ?? 0) / 100)} OFF)`
+    : "";
 
 
   const getTicketPrice = (ticket: Ticket): number => {
@@ -122,10 +139,58 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     return total;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
-  const serviceFee = useMemo(
-    () => totalPrice * ((event.participantFeePercent ?? 0) / 100),
-    [totalPrice, event.participantFeePercent],
+  // Desconto do voucher: soma dos ingressos selecionados que ele cobre (100%).
+  const voucherDiscount = useMemo(() => {
+    if (!voucherData) return 0;
+    const selected: Array<{ id: string; price: number; quantity: number }> = [];
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+      });
+    });
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+    });
+    return computeVoucherTicketsDiscount(voucherData.appliesTo, selected);
+  }, [voucherData, categorizedTickets, uncategorizedTickets, raceQuantities]);
+
+  // Cupom resolvido: prioriza o vindo do ModalitiesStep (reserva); senão, o
+  // preview do link `?coupon=`. Mantém desktop e mobile com o mesmo número.
+  const resolvedCoupon = useMemo(
+    () => appliedCoupon ?? couponPreviewToOrderCoupon(couponData, pendingCoupon),
+    [appliedCoupon, couponData, pendingCoupon],
   );
+
+  // Taxa de serviço sobre o subtotal JÁ DESCONTADO (mesma regra do /produtos).
+  // Voucher entra como desconto pré-calculado; cupom segue o caminho percentual/fixo.
+  const pricing = useMemo(
+    () =>
+      voucherData
+        ? computeTicketPricingWithDiscount(
+            voucherDiscount,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          )
+        : computeTicketPricingWithCoupon(
+            resolvedCoupon,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          ),
+    [voucherData, voucherDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
+  );
+  const serviceFee = pricing.serviceFee;
+  const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
+  // Label da linha de desconto: "Voucher CÓDIGO" ou "Cupom CÓDIGO (...)".
+  const discountLineLabel = voucherData
+    ? formatVoucherLineLabel(voucherData.code)
+    : resolvedCoupon
+      ? formatCouponLineLabel(resolvedCoupon)
+      : "";
+  // Cupom do link sem desconto ainda calculado. Voucher é client-side: quando
+  // não cobre a seleção (desconto 0), a linha do voucher simplesmente não aparece.
+  const couponPending = !!pendingCoupon && !voucherData;
 
   const totalParticipants = useMemo(() => {
     let participants = 0;
@@ -177,7 +242,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                   key={index}
                   className="text-sm font-semibold text-gray-12 flex items-end justify-between w-full"
                 >
-                  <div className="flex items-end gap-1">
+                  <div className="flex items-end">
                     <div className="flex flex-col items-start">
                       <span className="text-gray-11 text-xs truncate">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
                       <span className="text-gray-12 text-sm truncate">({ticket.quantity}x){" "} {ticket.ticketName}:{" "}</span>
@@ -198,18 +263,23 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
 
         {groupedTickets.length > 0 && (
           <>
-            {pendingCoupon && (
-              <>
-                <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
-                  <p className="font-semibold">Subtotal:</p>
-                  <p className="font-bold">{formatPrice(totalPrice)}</p>
-                </div>
-                <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
-                  <p className="font-semibold">Cupom {pendingCoupon}:</p>
-                  <p className="font-bold">{couponPercentSuffix}</p>
-                </div>
-              </>
+            {(hasCouponLine || couponPending) && (
+              <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                <p className="font-semibold">Subtotal:</p>
+                <p className="font-bold">{formatPrice(totalPrice)}</p>
+              </div>
             )}
+            {hasCouponLine ? (
+              <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                <p className="font-semibold">{discountLineLabel}:</p>
+                <p className="font-bold">-{formatPrice(pricing.couponDiscount)}</p>
+              </div>
+            ) : couponPending ? (
+              <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
+                <p className="font-semibold">Cupom {pendingCoupon}:</p>
+                <p className="font-bold">{couponPercentSuffix}</p>
+              </div>
+            ) : null}
             {serviceFee > 0 && (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
                 <p className="font-semibold">Taxa de serviço:</p>
@@ -219,7 +289,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
             <h1 className="text-lg font-bold text-gray-12 flex items-center justify-between w-full mt-4 border-t border-gray-6 pt-4">
               Total:{" "}
               <span className="text-gray-12">
-                {formatPrice(totalPrice + serviceFee)}
+                {formatPrice(pricing.total)}
               </span>
             </h1>
           </>

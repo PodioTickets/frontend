@@ -18,6 +18,7 @@ import { CategoryKitHorizontalCarousel } from "./CategoryKitHorizontalCarousel";
 import { cn } from "@/utils/cn";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
+import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 
 /* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
  * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
@@ -40,6 +41,24 @@ function applyCouponPreviewToPrice(
     return { discounted, original: price, hasDiscount: discounted < price };
   }
   return { discounted: price, original: price, hasDiscount: false };
+}
+
+/* Resolve o preço do ticket considerando o preview da URL — cupom (percentual/
+ * fixo, aplicado a todos) ou voucher (100% OFF só nos ingressos de `appliesTo`).
+ * Voucher zera o preço dos tickets cobertos; os demais ficam intactos. */
+function resolvePreviewPrice(
+  price: number,
+  ticketId: string,
+  preview: CouponPreviewResult | null | undefined,
+): { discounted: number; original: number; hasDiscount: boolean } {
+  if (!preview) return { discounted: price, original: price, hasDiscount: false };
+  if (preview.kind === "voucher") {
+    const applies = preview.appliesTo.includes(ticketId);
+    return applies
+      ? { discounted: 0, original: price, hasDiscount: price > 0 }
+      : { discounted: price, original: price, hasDiscount: false };
+  }
+  return applyCouponPreviewToPrice(price, preview);
 }
 
 interface TicketCategoryCardProps {
@@ -102,7 +121,7 @@ const TicketItemMobile = memo(({
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
   showProductImages?: boolean;
-  couponPreview?: { type: string; value: number } | null;
+  couponPreview?: CouponPreviewResult | null;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -113,8 +132,8 @@ const TicketItemMobile = memo(({
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
-    () => applyCouponPreviewToPrice(price, couponPreview),
-    [price, couponPreview],
+    () => resolvePreviewPrice(price, ticket.id, couponPreview),
+    [price, ticket.id, couponPreview],
   );
 
   const productItems = useMemo(
@@ -445,7 +464,7 @@ const TicketItemDesktop = memo(({
   onIncrease: (id: string) => void;
   kitSelectionDisplay: EventKitSelectionDisplay;
   showProductImages?: boolean;
-  couponPreview?: { type: string; value: number } | null;
+  couponPreview?: CouponPreviewResult | null;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -457,8 +476,8 @@ const TicketItemDesktop = memo(({
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
-    () => applyCouponPreviewToPrice(price, couponPreview),
-    [price, couponPreview],
+    () => resolvePreviewPrice(price, ticket.id, couponPreview),
+    [price, ticket.id, couponPreview],
   );
 
   const productItems = useMemo(
@@ -743,6 +762,20 @@ export function TicketCategoryCard({
     return Math.min(...validTickets.map(getTicketPrice));
   }, [validTickets]);
 
+  // "A partir de" ciente do preview: com voucher, o menor preço efetivo pode
+  // cair pra 0 (ingresso coberto). Reusa o mesmo resolver dos itens.
+  const minPriceBreakdown = useMemo(() => {
+    if (validTickets.length === 0) {
+      return { discounted: 0, original: 0, hasDiscount: false };
+    }
+    let dMin = Infinity;
+    for (const t of validTickets) {
+      dMin = Math.min(dMin, resolvePreviewPrice(getTicketPrice(t), t.id, couponPreview).discounted);
+    }
+    const discounted = dMin === Infinity ? minPrice : dMin;
+    return { discounted, original: minPrice, hasDiscount: discounted < minPrice };
+  }, [validTickets, minPrice, couponPreview]);
+
   const showCategoryLevelKit =
     !!categoryId &&
     kitSelectionDisplay.showKitImagesOnSelection &&
@@ -851,9 +884,9 @@ export function TicketCategoryCard({
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
-                      {formatPrice(applyCouponPreviewToPrice(minPrice, couponPreview).discounted)}
+                      {formatPrice(minPriceBreakdown.discounted)}
                     </span>
-                    {applyCouponPreviewToPrice(minPrice, couponPreview).hasDiscount && (
+                    {minPriceBreakdown.hasDiscount && (
                       <span className="text-gray-11 text-sm font-medium font-manrope leading-[1.1] line-through">
                         {formatPrice(minPrice)}
                       </span>

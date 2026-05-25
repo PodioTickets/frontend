@@ -433,7 +433,7 @@ export default function EventFinancialPage() {
             </div>
 
             {/* Aguardando liberação */}
-            <div className="bg-gray-1 border border-gray-6 rounded-tr-[12px] px-4 py-3">
+            <div className="bg-gray-1 border border-l-0 border-gray-6 rounded-tr-[12px] px-4 py-3">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Aguardando liberação
@@ -496,7 +496,7 @@ export default function EventFinancialPage() {
             </div>
 
             {/* Chargebacks */}
-            <div className="bg-gray-1 border border-gray-6 rounded-br-[12px] px-4 py-3">
+            <div className="bg-gray-1 border-b border-r border-gray-6 rounded-br-[12px] px-4 py-3">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-family-dm-sans font-normal text-[14px] text-gray-11">
                   Chargebacks
@@ -518,21 +518,6 @@ export default function EventFinancialPage() {
               </div>
             </div>
           </div>
-
-
-          <PaymentMethodsCard stats={financialData.paymentMethodStats} />
-
-          {/* Lista "Ingressos de lotes" — componente compartilhado (mobile + desktop). */}
-          <TicketsWithLotsList
-            tickets={ticketsData}
-            expandedRows={expandedRows}
-            onToggleRow={toggleRow}
-            page={ticketsPage}
-            totalPages={ticketsPagination.totalPages}
-            onPageChange={setTicketsPage}
-          />
-
-
         </div>
       </div>
 

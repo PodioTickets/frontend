@@ -10,6 +10,7 @@ import {
   initialBillingAddress,
   type CheckoutBillingAddress,
 } from "./CheckoutAddressSection";
+import { getPostalCodeConfig } from "@/utils/postalCode";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { VisaIcon } from "../Icons/VisaIcon";
@@ -707,14 +708,14 @@ function BillingAddressConfirmedSummary({
             : ""}
         </p>
         <p>
-          {address.neighborhood} — {address.city}
+          {address.neighborhood?.trim() ? `${address.neighborhood} — ` : ""}
+          {address.city}
           {address.stateUf ? `/${address.stateUf}` : ""}
         </p>
         <p className="text-gray-11">
-          CEP {address.cep}
           {address.country?.trim() && address.country !== "Brasil"
-            ? ` · ${address.country}`
-            : ""}
+            ? `Código postal ${address.cep} · ${address.country}`
+            : `CEP ${address.cep}`}
         </p>
       </div>
     </div>
@@ -1436,38 +1437,48 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const buildBillingAddressPayload = (): PatchBillingAddressRequest["billingAddress"] | null => {
     const a = billingAddress;
     const country = a.country?.trim() || "Brasil";
-    const cepDigits = a.cep.replace(/\D/g, "");
+    const isForeign = country !== "Brasil";
+    const postalConfig = getPostalCodeConfig(country);
     if (!country) {
       toast.error("Selecione o país no endereço de cobrança.");
       return null;
     }
-    if (country === "Brasil") {
-      if (cepDigits.length !== 8) {
-        toast.error("Informe um CEP válido (8 dígitos) no endereço de cobrança.");
-        return null;
-      }
-    } else if (!a.cep.trim()) {
-      toast.error("Informe o CEP ou código postal no endereço de cobrança.");
+    if (!postalConfig.isValid(a.cep)) {
+      toast.error(
+        isForeign
+          ? "Informe um código postal válido no endereço de cobrança."
+          : "Informe um CEP válido (8 dígitos) no endereço de cobrança."
+      );
       return null;
     }
     if (!a.stateUf?.trim()) {
       toast.error("Selecione o estado no endereço de cobrança.");
       return null;
     }
-    if (!a.street.trim() || !a.number.trim() || !a.neighborhood.trim() || !a.city.trim()) {
-      toast.error("Preencha rua, número, bairro e cidade no endereço de cobrança.");
+    // Bairro só é exigido no Brasil — estrangeiro não preenche o campo.
+    const missingRequired =
+      !a.street.trim() ||
+      !a.number.trim() ||
+      !a.city.trim() ||
+      (!isForeign && !a.neighborhood.trim());
+    if (missingRequired) {
+      toast.error(
+        isForeign
+          ? "Preencha rua, número e cidade no endereço de cobrança."
+          : "Preencha rua, número, bairro e cidade no endereço de cobrança."
+      );
       return null;
     }
-    const postalCode =
-      country === "Brasil" ? cepDigits : a.cep.trim().replace(/\s+/g, " ");
     return {
       country,
-      postalCode,
-      stateUf: a.stateUf.trim().toUpperCase(),
+      postalCode: postalConfig.toBackend(a.cep),
+      // BR: UF de 2 letras (uppercase). Estrangeiro: nome livre do estado/província.
+      stateUf: isForeign ? a.stateUf.trim() : a.stateUf.trim().toUpperCase(),
       street: a.street.trim(),
       number: a.number.trim(),
-      complement: a.complement?.trim() || undefined,
-      neighborhood: a.neighborhood.trim(),
+      // Estrangeiro: complemento omitido, bairro vai vazio (backend exige a chave).
+      complement: isForeign ? undefined : a.complement?.trim() || undefined,
+      neighborhood: isForeign ? "" : a.neighborhood.trim(),
       city: a.city.trim(),
     };
   };

@@ -131,14 +131,21 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
   const { fromYear, toYear } = React.useContext(YearRangeContext);
   const current = calendarMonth.date;
 
-  const monthOptions: DropdownOption[] = useMemo(
-    () =>
-      monthNames.map((label, i) => ({
-        id: String(i),
-        label,
-      })),
-    []
-  );
+  // Lista de meses começando pelo mês atual e dando a volta (ex.: Maio, …,
+  // Dezembro, Janeiro, …, Abril). Espelha o dropdown de anos, que também começa
+  // pelo ano atual. O `id` continua sendo o índice 0–11 do mês, então
+  // seleção/realce funcionam independentemente da ordem de exibição.
+  const currentMonthIndex = new Date().getMonth();
+  const monthOptions: DropdownOption[] = useMemo(() => {
+    const list: DropdownOption[] = [];
+    for (let i = currentMonthIndex; i < 12; i++) {
+      list.push({ id: String(i), label: monthNames[i] });
+    }
+    for (let i = 0; i < currentMonthIndex; i++) {
+      list.push({ id: String(i), label: monthNames[i] });
+    }
+    return list;
+  }, [currentMonthIndex]);
 
   const yearOptions: DropdownOption[] = useMemo(() => {
     const currentYear = new Date().getFullYear();

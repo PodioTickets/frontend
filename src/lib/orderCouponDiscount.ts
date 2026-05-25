@@ -1,6 +1,49 @@
 import type { OrderCoupon } from "@/interfaces/order";
 
 /**
+ * Resultado normalizado do preview de `/coupons/.../preview`. O endpoint
+ * discrimina por `kind`: cupom tradicional (percentual/fixo) ou voucher
+ * (sempre 100% sobre uma lista de ingressos).
+ */
+export type CouponPreviewResult =
+  | {
+      kind: "coupon";
+      code: string;
+      value: number;
+      type: "PERCENTAGE" | "FIXED";
+      couponType?: string;
+      applyToProducts?: boolean;
+    }
+  | {
+      kind: "voucher";
+      code: string;
+      /** IDs dos ingressos que o voucher zera (100% OFF). */
+      appliesTo: string[];
+    };
+
+/** Label inline do voucher pra linhas de resumo (paralelo a `formatCouponLineLabel`). */
+export function formatVoucherLineLabel(code: string | null | undefined): string {
+  return code ? `Voucher ${code}` : "Voucher aplicado";
+}
+
+/**
+ * Desconto de um voucher (100% OFF) sobre os ingressos selecionados que ele
+ * cobre. Soma `preço × quantidade` de cada ticket cujo `id` está em `appliesTo`.
+ * Valores em REAIS.
+ */
+export function computeVoucherTicketsDiscount(
+  appliesTo: string[] | null | undefined,
+  selected: Array<{ id: string; price: number; quantity: number }>,
+): number {
+  if (!appliesTo?.length) return 0;
+  const set = new Set(appliesTo);
+  return selected.reduce(
+    (acc, t) => acc + (set.has(t.id) ? Math.max(0, t.price) * Math.max(0, t.quantity) : 0),
+    0,
+  );
+}
+
+/**
  * Label inline do cupom aplicado pra uso em linhas de resumo (mesmo padrão do
  * `OrderSummary` desktop). Sem dois-pontos final — quem chama compõe.
  *
@@ -97,4 +140,99 @@ export function computeCouponDiscount(
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Converte o shape do preview de cupom (`/coupons/.../preview`, usado em
+ * `/checkout/ingressos` antes da reserva) para `OrderCoupon`, reaproveitando
+ * `computeCouponDiscount` / `computeTicketPricingWithCoupon`. `null` quando não
+ * há preview. Mantém a mesma convenção de unidade do backend (`value` cru).
+ */
+export function couponPreviewToOrderCoupon(
+  preview:
+    | {
+        code?: string;
+        value: number;
+        type: "PERCENTAGE" | "FIXED";
+        couponType?: string;
+        applyToProducts?: boolean;
+      }
+    | null
+    | undefined,
+  fallbackCode?: string | null,
+): OrderCoupon | null {
+  if (!preview) return null;
+  return {
+    id: "preview",
+    code: preview.code ?? fallbackCode ?? null,
+    couponType: (preview.couponType as OrderCoupon["couponType"]) || "DISCOUNT",
+    type: preview.type,
+    value: preview.value,
+    applyToProducts: preview.applyToProducts,
+  };
+}
+
+export interface TicketPricingWithCoupon {
+  /** Desconto efetivo do cupom sobre os ingressos (0 quando não aplicável). */
+  couponDiscount: number;
+  /** Subtotal de ingressos já descontado pelo cupom (clamp em 0). */
+  subtotalAfterCoupon: number;
+  /** Taxa de serviço incidente sobre o subtotal JÁ DESCONTADO. */
+  serviceFee: number;
+  /** Total final = subtotal descontado + taxa. */
+  total: number;
+  /** True quando há cupom DISCOUNT manual a exibir (auto QUANTITY/AGE → false). */
+  showCouponDiscount: boolean;
+}
+
+/**
+ * Pricing client-side de ingressos com cupom, espelhando a regra do backend e
+ * do `SubscriptionStep` (`/produtos`): a **taxa de serviço incide sobre o
+ * subtotal JÁ DESCONTADO** pelo cupom. Sem produtos nesta etapa — a base é só
+ * ingressos.
+ *
+ * Escopo: só cupom DISCOUNT manual. Cupons automáticos (QUANTITY/AGE) são
+ * ignorados aqui (desconto deles só é revelado no pagamento), então a taxa
+ * recai sobre o subtotal cheio — comportamento idêntico ao atual.
+ *
+ * `feePercent` em pontos percentuais (ex.: `10` = 10%). Valores em REAIS.
+ * Sem arredondamento intermediário (igual ao `SubscriptionStep`): o display
+ * arredonda via `Intl.NumberFormat`.
+ */
+export function computeTicketPricingWithCoupon(
+  coupon: OrderCoupon | null | undefined,
+  ticketsSubtotal: number,
+  feePercent: number,
+): TicketPricingWithCoupon {
+  const isAuto =
+    coupon?.couponType === "QUANTITY" || coupon?.couponType === "AGE";
+  const showCouponDiscount = !!coupon && !isAuto;
+  const couponDiscount = showCouponDiscount
+    ? computeCouponDiscount(coupon, ticketsSubtotal, 0).totalDiscount
+    : 0;
+  return computeTicketPricingWithDiscount(couponDiscount, ticketsSubtotal, feePercent);
+}
+
+/**
+ * Mesma regra de `computeTicketPricingWithCoupon`, mas a partir de um desconto
+ * de ingressos JÁ calculado (em REAIS). Usado pelo voucher (100% OFF sobre os
+ * ingressos cobertos), onde o desconto é por-ticket e não cabe no modelo
+ * percentual/fixo do `OrderCoupon`. A taxa de serviço incide sobre o subtotal
+ * já descontado, idêntico ao fluxo de cupom.
+ */
+export function computeTicketPricingWithDiscount(
+  ticketDiscount: number,
+  ticketsSubtotal: number,
+  feePercent: number,
+): TicketPricingWithCoupon {
+  const couponDiscount = Math.max(0, ticketDiscount);
+  const subtotalAfterCoupon = Math.max(0, ticketsSubtotal - couponDiscount);
+  const serviceFee = subtotalAfterCoupon * ((feePercent || 0) / 100);
+  return {
+    couponDiscount,
+    subtotalAfterCoupon,
+    serviceFee,
+    total: subtotalAfterCoupon + serviceFee,
+    showCouponDiscount: couponDiscount > 0,
+  };
 }

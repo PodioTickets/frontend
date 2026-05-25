@@ -1,4 +1,5 @@
 import type { ApiClient } from "../base/ApiClient";
+import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 
 export interface LoginResponse {
   message?: string;
@@ -460,19 +461,44 @@ export class UserService {
   async previewCoupon(
     eventId: string,
     code: string,
-  ): Promise<{
-    code: string;
-    value: number;
-    type: "PERCENTAGE" | "FIXED";
-    couponType?: string;
-    applyToProducts?: boolean;
-  } | null> {
+  ): Promise<CouponPreviewResult | null> {
     try {
       const { data: response } = await this.apiClient.get<{ data: any }>(
         `/api/v1/coupons/events/${eventId}/preview`,
         { params: { code } },
       );
-      return response.data ?? null;
+      const d = response.data;
+      if (!d) return null;
+
+      // Voucher: 100% OFF sobre uma lista de ingressos. `appliesTo` chega como
+      // string JSON (ex.: '["id1","id2"]') ou já como array — normalizamos.
+      if (d.kind === "voucher") {
+        let appliesTo: string[] = [];
+        const raw = d.appliesTo;
+        if (Array.isArray(raw)) {
+          appliesTo = raw.filter((x: unknown): x is string => typeof x === "string");
+        } else if (typeof raw === "string") {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              appliesTo = parsed.filter((x: unknown): x is string => typeof x === "string");
+            }
+          } catch {
+            /* string malformada — voucher sem ingressos aplicáveis */
+          }
+        }
+        return { kind: "voucher", code: String(d.code ?? code), appliesTo };
+      }
+
+      // Cupom tradicional (backend pode ou não enviar `kind: "coupon"`).
+      return {
+        kind: "coupon",
+        code: String(d.code ?? code),
+        value: Number(d.value) || 0,
+        type: d.type === "FIXED" ? "FIXED" : "PERCENTAGE",
+        couponType: d.couponType,
+        applyToProducts: d.applyToProducts,
+      };
     } catch {
       return null;
     }

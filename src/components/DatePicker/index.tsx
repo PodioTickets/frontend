@@ -73,6 +73,12 @@ interface DatePickerProps {
   fromYear?: number;
   toYear?: number;
   disablePastDates?: boolean;
+  /**
+   * Sempre abrir o calendário no mês atual, ignorando o mês da data já
+   * selecionada. Útil em campos onde o usuário normalmente quer marcar datas
+   * próximas (ex.: data do evento / período de inscrições).
+   */
+  openAtCurrentMonth?: boolean;
 }
 
 export function DatePicker({
@@ -88,6 +94,7 @@ export function DatePicker({
   fromYear,
   toYear,
   disablePastDates = true,
+  openAtCurrentMonth = false,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -244,6 +251,10 @@ export function DatePicker({
             captionLayout="dropdown"
             fromYear={fromYear ?? new Date().getFullYear()}
             toYear={toYear ?? new Date().getFullYear() + 4}
+            // Mês inicial. Reavaliado a cada abertura (o PopoverContent remonta
+            // ao fechar). Com `openAtCurrentMonth`, sempre o mês atual; senão, o
+            // mês do valor já selecionado (ou o atual, quando vazio).
+            defaultMonth={openAtCurrentMonth ? new Date() : (validDate ?? new Date())}
             disablePastDates={disablePastDates}
             selected={tempDate}
             onSelect={(date: Date | undefined) => {

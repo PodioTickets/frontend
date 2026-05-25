@@ -365,6 +365,7 @@ export function InformationForm({
               placeholder={getCurrentDatePlaceholder()}
               className="w-full md:w-max"
               hideIcon={false}
+              openAtCurrentMonth
               minDate={getTodayStartLocal()}
             />
           </div>
@@ -386,7 +387,7 @@ export function InformationForm({
             <label className="text-gray-12 text-base font-family-dm-sans">Data de início das inscrições</label>
             <div className="flex gap-3 items-end w-full">
               <div className="min-w-0 flex-1 md:flex-none">
-                <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} minDate={getTodayStartLocal()} />
+                <DatePicker value={values.registrationStartDate} onChange={(v) => handleDateChange("registrationStartDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationStartDate} openAtCurrentMonth minDate={getTodayStartLocal()} />
               </div>
               <div className="w-[112px] shrink-0 md:w-auto">
                 <TimePicker
@@ -403,7 +404,7 @@ export function InformationForm({
             <label className="text-gray-12 text-base font-family-dm-sans">Data de encerramento das inscrições</label>
             <div className="flex gap-3 items-end w-full">
               <div className="min-w-0 flex-1 md:flex-none">
-                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} minDate={getMinDateForRegistrationEndPicker(values.registrationStartDate)} />
+                <DatePicker value={values.registrationEndDate} onChange={(v) => handleDateChange("registrationEndDate", v || "")} placeholder={getCurrentDatePlaceholder()} className="w-full md:w-max" error={!!errors.registrationEndDate} openAtCurrentMonth minDate={getMinDateForRegistrationEndPicker(values.registrationStartDate)} />
               </div>
               <div className="w-[112px] shrink-0 md:w-auto">
                 <TimePicker

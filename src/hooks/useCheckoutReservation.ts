@@ -74,6 +74,12 @@ async function handleResponse<T>(res: Response): Promise<T> {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toOrderResponse(data: any): OrderResponse {
+  // Voucher e cupom são mutuamente exclusivos. Quando a order tem voucher (e não
+  // cupom), o `discount` da raiz é o desconto do VOUCHER — sem isso ele cairia em
+  // `couponDiscount` e a linha do voucher não apareceria no resumo (o backend
+  // deste shape não manda `appliedDiscount` nem `pricing.voucherDiscount`).
+  const rawDiscount = data.discount ?? 0;
+  const isVoucherOrder = !!data.voucher && !data.coupon;
   return {
     orderId: data.orderId ?? data.id,
     status: data.status,
@@ -81,6 +87,7 @@ function toOrderResponse(data: any): OrderResponse {
     reservedAt: data.reservedAt ?? "",
     expiresAt: data.expiresAt ?? "",
     serverTime: data.serverTime ?? new Date().toISOString(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tickets: (data.tickets ?? data.reservedTickets ?? []).map((t: any) => ({
       id: t.id,
       ticketId: t.ticketId,
@@ -97,8 +104,14 @@ function toOrderResponse(data: any): OrderResponse {
     pricing: {
       subtotal: data.pricing?.subtotal ?? data.totalAmount ?? 0,
       serviceFee: data.pricing?.serviceFee ?? data.serviceFee ?? 0,
-      couponDiscount: data.pricing?.couponDiscount ?? data.discount ?? 0,
-      voucherDiscount: data.pricing?.voucherDiscount ?? (data.appliedDiscount?.type === "voucher" ? data.appliedDiscount.discount : 0),
+      couponDiscount: data.pricing?.couponDiscount ?? (isVoucherOrder ? 0 : rawDiscount),
+      voucherDiscount:
+        data.pricing?.voucherDiscount ??
+        (isVoucherOrder
+          ? rawDiscount
+          : data.appliedDiscount?.type === "voucher"
+            ? data.appliedDiscount.discount
+            : 0),
       // Sempre usa finalAmount da raiz — pricing.total pode ser o bruto sem desconto
       total: data.finalAmount ?? data.pricing?.total ?? data.totalAmount ?? 0,
       currency: "BRL" as const,

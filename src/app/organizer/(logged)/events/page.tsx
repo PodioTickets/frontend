@@ -511,7 +511,7 @@ export default function OrganizerEventsPage() {
                               R$ {(event.totalSales / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </td>
-                          <td className="py-4 px-5 text-center max-w-[130px]">
+                          <td className="py-4 px-5 text-center min-w-[130px] w-[130px]">
                             {isCreationDraft ? (
                               canCreateEvent ? (
                                 <Link
