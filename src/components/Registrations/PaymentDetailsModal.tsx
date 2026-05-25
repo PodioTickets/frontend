@@ -607,7 +607,7 @@ export function PaymentDetailsModal() {
                                     </span>
                                   </div>
                                 )}
-                                <div className="flex flex-col gap-2 min-w-0 flex-1">
+                                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                                   <p className="font-family-dm-sans font-medium text-[16px] leading-[20.8px] text-gray-12 truncate">
                                     {participant.name}
                                   </p>
@@ -617,13 +617,13 @@ export function PaymentDetailsModal() {
                                 </div>
                               </div>
 
-                              {/* Bloco categoria + ingresso (Figma exato):
+                              {/* Bloco categoria + ingresso:
                                * - Linha 1: categoria (fallback "Ingresso avulso")
                                *   12px DM Sans 400 line 15.6 gray-11.
                                * - Linha 2: nome do ingresso (ticket)
                                *   14px Manrope 600 line 15.4 gray-12.
-                               * - Gap label/valor: 8px. */}
-                              <div className="flex flex-col gap-2 w-full">
+                               * - Gap label/valor: 2px (categoria perto do ticket). */}
+                              <div className="flex flex-col gap-0.5 w-full">
                                 <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
                                   {participant.category || "Ingresso avulso"}
                                 </p>
