@@ -54,6 +54,16 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "@fortawesome/react-fontawesome",
       "@fortawesome/free-solid-svg-icons",
+      "lucide-react",
+      "framer-motion",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-slot",
+      "react-svg-credit-card-payment-icons",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+      "@dnd-kit/utilities",
     ],
     // Usa worker threads para paralelizar a compilação webpack — reduz tempo de build
     webpackBuildWorker: true,
