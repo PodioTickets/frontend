@@ -617,16 +617,18 @@ export function PaymentDetailsModal() {
                                 </div>
                               </div>
 
-                              {/* Bloco categoria — valor 16/bold gap-1 da label.
-                               * Mostra NOME DO INGRESSO (ticket) — category vem
-                               * com fallback "Ingresso avulso" quando vazio que
-                               * enganava o organizador. */}
+                              {/* Bloco categoria + ingresso:
+                               * - Linha 1 (onde antes ficava label "Nome da
+                               *   categoria"): nome real da categoria, fallback
+                               *   "Ingresso avulso" quando ingresso nao pertence
+                               *   a categoria.
+                               * - Linha 2: nome do ingresso (ticket), 16/bold. */}
                               <div className="flex flex-col gap-1 w-full">
                                 <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
-                                  Nome da categoria
+                                  {participant.category || "Ingresso avulso"}
                                 </p>
                                 <p className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12 truncate">
-                                  {participant.ticket || participant.category || "—"}
+                                  {participant.ticket || "—"}
                                 </p>
                               </div>
                             </div>

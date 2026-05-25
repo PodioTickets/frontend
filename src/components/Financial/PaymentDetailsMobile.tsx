@@ -387,16 +387,17 @@ export function PaymentDetailsMobile({
                         </div>
                       </div>
 
-                      {/* Bloco categoria — valor maior (16/bold), gap-1 da label.
-                       * Mostra o NOME DO INGRESSO (ticketName) — categoryName e
-                       * raramente preenchido e quando vazio caia no fallback
-                       * "Ingresso avulso" que enganava o organizador. */}
+                      {/* Bloco categoria + ingresso:
+                       * - Linha 1 (onde antes ficava a label "Nome da categoria"):
+                       *   nome real da categoria. Fallback "Ingresso avulso"
+                       *   quando o ingresso nao pertence a nenhuma categoria.
+                       * - Linha 2: nome do ingresso (ticketName), 16/bold. */}
                       <div className="flex flex-col gap-1 w-full">
                         <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
-                          Nome da categoria
+                          {p.categoryName || "Ingresso avulso"}
                         </p>
                         <p className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12 truncate">
-                          {p.ticketName || p.categoryName || "—"}
+                          {p.ticketName || "—"}
                         </p>
                       </div>
                     </div>
