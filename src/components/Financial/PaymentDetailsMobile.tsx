@@ -397,7 +397,7 @@ export function PaymentDetailsMobile({
                         <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
                           {p.categoryName || "Ingresso avulso"}
                         </p>
-                        <p className="font-manrope font-semibold text-[14px] leading-[15.4px] text-gray-12 truncate">
+                        <p className="font-manrope font-semibold text-[14px] leading-[18px] text-gray-12 truncate pb-px">
                           {p.ticketName || "—"}
                         </p>
                       </div>
