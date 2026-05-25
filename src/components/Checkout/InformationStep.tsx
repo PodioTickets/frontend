@@ -1536,7 +1536,7 @@ export function InformationStep({
                       className="flex items-center justify-between text-base text-gray-12"
                     >
                       <div className="flex flex-col max-w-[80%]">
-                        <p className="text-gray-11 text-xs truncate ">{ticket.categoryName ? (
+                        <p className="text-gray-11 text-xs truncate">{ticket.categoryName ? (
                           ticket.categoryName
                         ) : "Ingresso Avulso"}</p>
                         <p className="font-semibold text-gray-12 text-base truncate">
@@ -2283,21 +2283,21 @@ export function InformationStep({
                 <p className="text-xs text-gray-11 leading-[1.3] truncate">
                   {ticket.categoryName || "Ingresso Avulso"}
                 </p>
-                <div className="flex items-baseline justify-between gap-2 min-w-0">
+                <div className="flex items-baseline gap-1 min-w-0">
                   {/* Tooltip click-to-reveal mostra o nome completo quando truncado (mobile sem hover). */}
                   <Tooltip
                     content={`(${ticket.quantity}x) ${ticket.raceName}`}
                     position="topRight"
                     trigger="click"
                     usePortal
-                    className="block min-w-0 flex-1"
+                    className="block min-w-0"
                     contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
                   >
-                    <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer">
-                      ({ticket.quantity}x) {ticket.raceName}
+                    <p className="text-sm text-gray-12 truncate min-w-0 cursor-pointer">
+                      ({ticket.quantity}x) {ticket.raceName}:
                     </p>
                   </Tooltip>
-                  <p className="text-sm font-semibold text-gray-12 shrink-0">
+                  <p className="text-sm font-semibold text-gray-12">
                     {formatPrice(ticket.total)}
                   </p>
                 </div>
