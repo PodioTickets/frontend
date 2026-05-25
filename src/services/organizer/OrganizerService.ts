@@ -737,6 +737,20 @@ export interface DashboardRankingsData {
   };
   topProductVariations: TopProductVariation[];
   lotsNearDepletion: LotNearDepletion[];
+  /**
+   * Distribuição de vendas por método de pagamento (PIX, CREDIT_CARD, etc).
+   * Cada item carrega count, valor bruto (centavos) e percentual sobre o total.
+   * Backend: buildSalesByPaymentMethod em dashboard.service.ts.
+   */
+  salesByPaymentMethod: {
+    items: Array<{
+      method: string;
+      salesCount: number;
+      totalAmount: number;
+      percentage: number;
+    }>;
+    totals: { salesCount: number; totalAmount: number };
+  };
 }
 
 export interface DashboardSecondaryData {
@@ -999,6 +1013,7 @@ export interface PaymentDetails {
     id: string;
     name: string;
     email: string;
+    avatarUrl?: string | null;
     ticket?: {
       id: string;
       name: string;

@@ -220,14 +220,13 @@ export function PaymentSuccessStep({
         <div className="flex flex-col items-center pb-24 pt-0 px-4 w-full">
           {/* Success Header */}
           <div className="flex flex-col items-center justify-center pb-12 pt-10 w-full">
-            <div className="flex flex-col gap-2 items-center">
+            <div className="flex flex-col gap-8 items-center">
               <Image
-                src="/images/approved_payment.png"
+                src="/images/approved-payment-badge.png"
                 alt="Success Icon"
-                width={158}
-                height={158}
+                width={96}
+                height={96}
                 draggable={false}
-                className="mb-2"
               />
               <div className="flex flex-col gap-4 items-center text-gray-12 text-center">
                 <h1 className="font-extrabold text-xl leading-[1.1] font-manrope">
@@ -748,12 +747,12 @@ export function PaymentSuccessStep({
         <div className="flex flex-col h-auto items-center pb-[176px] pt-[56px] px-0 w-full">
           {/* Header */}
           <div className="flex flex-col items-center justify-center pb-[52px] pt-0 px-[168px] w-full">
-            <div className="flex flex-col gap-[8px] items-center">
+            <div className="flex flex-col gap-8 items-center">
               <Image
-                src="/images/approved_payment.png"
+                src="/images/approved-payment-badge.png"
                 alt="Success Icon"
-                width={117}
-                height={88}
+                width={96}
+                height={96}
                 draggable={false}
               />
               <div className="flex flex-col gap-[16px] items-center text-gray-12 text-center">
