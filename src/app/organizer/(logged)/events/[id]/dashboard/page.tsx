@@ -37,6 +37,7 @@ import { CartIcon } from "@/components/Icons/CartIcon";
 import { CheckIcon } from "@/components/Icons/Organizer/CheckIcon";
 import { DolarIcon } from "@/components/Icons/Organizer/DolarIcon";
 import { BestSellingVariations } from "@/components/Organizer/BestSellingVariations";
+import { SalesByPaymentMethod } from "@/components/Organizer/SalesByPaymentMethod";
 import { QuestionsListing } from "@/components/Organizer/QuestionsListing";
 import { QuestionDetailsDrawer, type TextAnswerRow } from "@/components/Organizer/QuestionDetailsDrawer";
 import { ProductDetailsDrawer } from "@/components/Organizer/ProductDetailsDrawer";
@@ -429,6 +430,12 @@ export default function EventDashboardPage() {
           })),
         }),
       ),
+      /* Distribuição de vendas por método de pagamento — vem do endpoint
+       * de rankings (buildSalesByPaymentMethod no backend). */
+      salesByPaymentMethod: rankings?.salesByPaymentMethod ?? {
+        items: [],
+        totals: { salesCount: 0, totalAmount: 0 },
+      },
     };
   }, [overviewQuery.data, rankingsQuery.data, secondaryQuery.data, periodFilter]);
 
@@ -970,10 +977,7 @@ export default function EventDashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8 w-full">
           <div className="min-h-[311px]">
-            <BestSellingVariations
-              items={bestSellingVariations}
-              onItemClick={(item) => setSelectedProductName(item.productName)}
-            />
+            <SalesByPaymentMethod data={dashboardData.salesByPaymentMethod} />
           </div>
           <div className="min-h-[311px]">
             <QuestionsListing
@@ -1311,13 +1315,9 @@ export default function EventDashboardPage() {
           />
         </div>
 
-        {/* Variações mais vendidas - mobile */}
+        {/* Vendas por forma de pagamento — mobile */}
         <div className="mb-6">
-          <BestSellingVariations
-            items={bestSellingVariations}
-            paginationCompact
-            onItemClick={(item) => setSelectedProductName(item.productName)}
-          />
+          <SalesByPaymentMethod data={dashboardData.salesByPaymentMethod} />
         </div>
 
         {/* Perguntas - mobile */}
