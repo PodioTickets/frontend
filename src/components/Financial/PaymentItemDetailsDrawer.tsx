@@ -196,6 +196,7 @@ export function PaymentItemDetailsDrawer({
       registrationCode: reg.id ? reg.id.slice(0, 8) : "—",
       name: reg.name || "Participante",
       email: reg.email || "",
+      avatarUrl: reg.avatarUrl ?? null,
       ticketName: reg.ticket?.name || "—",
       categoryName: reg.ticketCategory?.name || "Ingresso avulso",
     }));
@@ -233,6 +234,7 @@ export function PaymentItemDetailsDrawer({
     id: p.id,
     name: p.name,
     email: p.email,
+    avatarUrl: (p as any).avatarUrl ?? null,
     ticketName: p.ticketName,
     categoryName: p.categoryName,
   }));

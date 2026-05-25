@@ -6,6 +6,7 @@ import { X, Copy, CheckCircle, FileText, ChevronLeft, ChevronRight, ChevronDown,
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { getAvatarUrl } from "@/utils/avatar";
 import { Button } from "../Button";
 import { organizerService } from "@/services";
 import type { PaymentDetails } from "@/services/organizer/OrganizerService";
@@ -240,6 +241,7 @@ export function PaymentDetailsModal() {
       registrationId: reg.id?.slice(0, 8) || "—",
       name: reg.name || "Participante",
       email: reg.email || "",
+      avatarUrl: reg.avatarUrl ?? null,
       ticket: reg.ticket?.name || "Ticket",
       category: reg.ticketCategory?.name || "Ingresso avulso",
     }))
@@ -586,14 +588,26 @@ export function PaymentDetailsModal() {
                             }`}
                           >
                             <div className="flex flex-col gap-5 w-full">
-                              {/* Header: avatar + nome/email */}
+                              {/* Header: avatar + nome/email — email com gap menor
+                               * (mais perto do nome). Avatar usa Image real quando
+                               * avatarUrl existir; fallback pra inicial em circulo gray. */}
                               <div className="flex items-center gap-2 w-full">
-                                <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
-                                  <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
-                                    {(participant.name || "P").charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                                <div className="flex flex-col gap-2 min-w-0 flex-1">
+                                {participant.avatarUrl ? (
+                                  <Image
+                                    src={getAvatarUrl(participant.avatarUrl) as string}
+                                    alt={participant.name}
+                                    width={36}
+                                    height={36}
+                                    className="size-9 rounded-full object-cover shrink-0"
+                                  />
+                                ) : (
+                                  <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                                    <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
+                                      {(participant.name || "P").charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                                   <p className="font-family-dm-sans font-medium text-[16px] leading-[20.8px] text-gray-12 truncate">
                                     {participant.name}
                                   </p>
@@ -603,12 +617,12 @@ export function PaymentDetailsModal() {
                                 </div>
                               </div>
 
-                              {/* Bloco categoria */}
-                              <div className="flex flex-col gap-2 w-full">
+                              {/* Bloco categoria — valor maior (16/bold) e perto da label (gap-1) */}
+                              <div className="flex flex-col gap-1 w-full">
                                 <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
                                   Nome da categoria
                                 </p>
-                                <p className="font-manrope font-semibold text-[14px] leading-[15.4px] text-gray-12 truncate">
+                                <p className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12 truncate">
                                   {participant.category || participant.ticket}
                                 </p>
                               </div>

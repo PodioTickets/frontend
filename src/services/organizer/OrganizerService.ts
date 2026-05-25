@@ -999,6 +999,7 @@ export interface PaymentDetails {
     id: string;
     name: string;
     email: string;
+    avatarUrl?: string | null;
     ticket?: {
       id: string;
       name: string;

@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import Image from "next/image";
+import { getAvatarUrl } from "@/utils/avatar";
 import { Copy, CheckCircle, ChevronLeft, ChevronRight, FileText, Star, X } from "lucide-react";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
@@ -29,6 +30,7 @@ export interface MobileParticipantItem {
   email: string;
   ticketName: string;
   categoryName: string;
+  avatarUrl?: string | null;
   amount?: number;
 }
 
@@ -356,14 +358,26 @@ export function PaymentDetailsMobile({
                     }`}
                   >
                     <div className="flex flex-col gap-5 w-full">
-                      {/* Header: avatar + nome/email */}
+                      {/* Header: avatar + nome/email — email com gap menor pra
+                       * ficar mais perto do nome (Figma). Avatar usa Image
+                       * real quando avatarUrl existir; fallback pra inicial. */}
                       <div className="flex items-center gap-2 w-full">
-                        <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
-                          <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
-                            {p.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-2 min-w-0 flex-1">
+                        {p.avatarUrl ? (
+                          <Image
+                            src={getAvatarUrl(p.avatarUrl) as string}
+                            alt={p.name}
+                            width={36}
+                            height={36}
+                            className="size-9 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                            <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
+                              {p.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                           <p className="font-family-dm-sans font-medium text-[16px] leading-[20.8px] text-gray-12 truncate">
                             {p.name}
                           </p>
@@ -373,12 +387,12 @@ export function PaymentDetailsMobile({
                         </div>
                       </div>
 
-                      {/* Bloco categoria */}
-                      <div className="flex flex-col gap-2 w-full">
+                      {/* Bloco categoria — valor maior (16/bold) e mais perto da label (gap 1) */}
+                      <div className="flex flex-col gap-1 w-full">
                         <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
                           Nome da categoria
                         </p>
-                        <p className="font-manrope font-semibold text-[14px] leading-[15.4px] text-gray-12 truncate">
+                        <p className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12 truncate">
                           {p.categoryName || p.ticketName}
                         </p>
                       </div>
