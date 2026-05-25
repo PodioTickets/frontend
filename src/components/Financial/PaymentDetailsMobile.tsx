@@ -318,14 +318,25 @@ export function PaymentDetailsMobile({
           </div>
         </div>
 
-        {/* Ingressos vinculados — modelo Figma:
-         * - Outer card Gray-2 com outline 1.5px Gray-6, radius 8.
-         * - Cada item: bg Gray-1, outline 1px Gray-6, padding 12/16, gap 24.
-         * - Header: avatar 36px + nome (16/500) + email (14/400). Sem bandeira do cartão.
-         * - Bloco categoria: label "Nome da categoria" (12/400) + valor (14/600 Manrope).
-         * - Divider 1px Gray-6.
-         * - Botão "Ver ingresso" com TicketIcon, h-44, outline 1px Gray-6, radius 8.
-         * - Sem display de valor R$ por participante (movido p/ outras seções). */}
+        {/* Ingressos vinculados — Figma do zero.
+         * Estrutura:
+         *   - Wrapper externo: px-4 py-5, gap 20 entre titulo e card.
+         *   - Titulo: 18px Manrope 700, line 19.8.
+         *   - Outer card: bg #F9F9F9 (gray-2), border 1.5px #D9D9D9 (gray-6),
+         *     radius 8, overflow-hidden (pra cantos arredondarem os items).
+         *   - Items: bg #FCFCFC (gray-1), px 12, py 16, gap 24 interno.
+         *     Items adjacentes separados por border-b (em vez de border full
+         *     em cada — evita linha dupla no encontro).
+         *   - Header item: avatar 36px round + nome (16/500 DM Sans) + email
+         *     (14/400 DM Sans). Gap 8 horizontal, 8 vertical.
+         *   - Bloco categoria: label 12/400 #646464 + valor 14/600 Manrope.
+         *     Gap 8.
+         *   - Divider 1px #D9D9D9 full-width.
+         *   - Botao "Ver ingresso": h 44, border 1px #D9D9D9, radius 8,
+         *     icone Ticket 20px + texto 16/700 Manrope. Gap 8.
+         *   - Paginacao DENTRO do outer card, px-4 py-5. Botoes pagina
+         *     32x32, gap 4 entre paginas. Ativo bg primary-11 #308737 +
+         *     texto branco. Inativo bg gray-4 #E8E8E8 + texto gray-12. */}
         {participants.length > 0 && (
           <div className="px-4 py-5 flex flex-col gap-5">
             <h3 className="font-manrope font-bold text-[18px] leading-[19.8px] text-gray-12">
@@ -333,67 +344,76 @@ export function PaymentDetailsMobile({
             </h3>
 
             <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden flex flex-col">
-              {paginatedParticipants.map((p) => (
-                <article
-                  key={p.id}
-                  className="bg-gray-1 border border-gray-6 px-3 py-4 flex flex-col gap-6"
-                >
-                  <div className="flex flex-col gap-5 w-full">
-                    {/* Avatar + nome/email — sem bandeira do cartão (atende Figma) */}
-                    <div className="flex items-center gap-2 w-full">
-                      <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
-                        <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
-                          {p.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-2 min-w-0 flex-1">
-                        <p className="font-family-dm-sans font-medium text-[16px] leading-[20.8px] text-gray-12 truncate">
-                          {p.name}
-                        </p>
-                        <p className="font-family-dm-sans text-[14px] leading-[18.2px] text-gray-11 truncate">
-                          {p.email}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Bloco categoria: label + valor */}
-                    <div className="flex flex-col gap-2 w-full">
-                      <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
-                        Nome da categoria
-                      </p>
-                      <p className="font-manrope font-semibold text-[14px] leading-[15.4px] text-gray-12 truncate">
-                        {p.categoryName || p.ticketName}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-gray-6 w-full" />
-
-                  <button
-                    onClick={() => onViewParticipant?.(p)}
-                    className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 w-full hover:bg-gray-3 transition-colors cursor-pointer"
+              {/* Lista de items — border-b entre items (exceto ultimo da pagina) */}
+              <div className="flex flex-col">
+                {paginatedParticipants.map((p, idx) => (
+                  <article
+                    key={p.id}
+                    className={`bg-gray-1 px-3 py-4 flex flex-col gap-6 ${
+                      idx < paginatedParticipants.length - 1
+                        ? "border-b border-gray-6"
+                        : ""
+                    }`}
                   >
-                    <TicketIcon className="size-5 text-gray-12" />
-                    <span className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12">
-                      Ver ingresso
-                    </span>
-                  </button>
-                </article>
-              ))}
+                    <div className="flex flex-col gap-5 w-full">
+                      {/* Header: avatar + nome/email */}
+                      <div className="flex items-center gap-2 w-full">
+                        <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                          <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
+                            {p.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-2 min-w-0 flex-1">
+                          <p className="font-family-dm-sans font-medium text-[16px] leading-[20.8px] text-gray-12 truncate">
+                            {p.name}
+                          </p>
+                          <p className="font-family-dm-sans text-[14px] leading-[18.2px] text-gray-11 truncate">
+                            {p.email}
+                          </p>
+                        </div>
+                      </div>
 
-              {/* Paginação */}
+                      {/* Bloco categoria */}
+                      <div className="flex flex-col gap-2 w-full">
+                        <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
+                          Nome da categoria
+                        </p>
+                        <p className="font-manrope font-semibold text-[14px] leading-[15.4px] text-gray-12 truncate">
+                          {p.categoryName || p.ticketName}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-gray-6 w-full" />
+
+                    {/* Botao Ver ingresso */}
+                    <button
+                      onClick={() => onViewParticipant?.(p)}
+                      className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 w-full hover:bg-gray-3 transition-colors cursor-pointer"
+                    >
+                      <TicketIcon className="size-5 text-gray-12" />
+                      <span className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12">
+                        Ver ingresso
+                      </span>
+                    </button>
+                  </article>
+                ))}
+              </div>
+
+              {/* Paginacao — DENTRO do outer card, separada da lista */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center px-4 py-5 w-full">
-                  <div className="flex h-8 items-start gap-1">
+                <div className="flex items-center justify-center px-4 py-5 w-full bg-gray-2 border-t border-gray-6">
+                  <div className="flex h-8 items-center gap-0">
                     <button
                       onClick={() => onPageChange(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
                       className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       aria-label="Página anterior"
                     >
-                      <ChevronLeft className="size-5 text-gray-12" />
+                      <ChevronLeft className="size-5 text-gray-11" />
                     </button>
-                    <div className="flex gap-1 items-start">
+                    <div className="flex gap-1 items-center">
                       {(() => {
                         const WINDOW = 6;
                         const start = Math.min(
@@ -409,7 +429,7 @@ export function PaymentDetailsMobile({
                             <button
                               key={pageNum}
                               onClick={() => onPageChange(pageNum)}
-                              className={`size-8 flex items-center justify-center rounded-lg px-1 py-2.5 font-family-dm-sans font-medium text-sm leading-[1.3] transition-colors cursor-pointer ${
+                              className={`size-8 flex items-center justify-center rounded-lg font-family-dm-sans font-medium text-[14px] leading-[18.2px] transition-colors cursor-pointer ${
                                 isActive
                                   ? "bg-primary-11 text-primary-1"
                                   : "bg-gray-4 text-gray-12 hover:bg-gray-5"
@@ -427,7 +447,7 @@ export function PaymentDetailsMobile({
                       className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       aria-label="Próxima página"
                     >
-                      <ChevronRight className="size-5 text-gray-12" />
+                      <ChevronRight className="size-5 text-gray-11" />
                     </button>
                   </div>
                 </div>
