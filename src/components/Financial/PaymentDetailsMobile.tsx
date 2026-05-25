@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Copy, CheckCircle, ChevronLeft, ChevronRight, FileText, Star, X } from "lucide-react";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
+import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { ArrowButton } from "../ArrowButton";
 import { XCircleIcon } from "lucide-react";
@@ -317,10 +318,17 @@ export function PaymentDetailsMobile({
           </div>
         </div>
 
-        {/* Ingressos vinculados */}
+        {/* Ingressos vinculados — modelo Figma:
+         * - Outer card Gray-2 com outline 1.5px Gray-6, radius 8.
+         * - Cada item: bg Gray-1, outline 1px Gray-6, padding 12/16, gap 24.
+         * - Header: avatar 36px + nome (16/500) + email (14/400). Sem bandeira do cartão.
+         * - Bloco categoria: label "Nome da categoria" (12/400) + valor (14/600 Manrope).
+         * - Divider 1px Gray-6.
+         * - Botão "Ver ingresso" com TicketIcon, h-44, outline 1px Gray-6, radius 8.
+         * - Sem display de valor R$ por participante (movido p/ outras seções). */}
         {participants.length > 0 && (
           <div className="px-4 py-5 flex flex-col gap-5">
-            <h3 className="font-manrope font-bold text-lg leading-[1.1] text-gray-12">
+            <h3 className="font-manrope font-bold text-[18px] leading-[19.8px] text-gray-12">
               Ingressos vinculados a este pedido
             </h3>
 
@@ -331,49 +339,32 @@ export function PaymentDetailsMobile({
                   className="bg-gray-1 border border-gray-6 px-3 py-4 flex flex-col gap-6"
                 >
                   <div className="flex flex-col gap-5 w-full">
-                    {/* Avatar + nome/email + bandeira (right) */}
-                    <div className="flex items-center justify-between gap-2 w-full">
-                      <div className="flex gap-2 items-center min-w-0 flex-1">
-                        <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
-                          <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
-                            {p.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-2 min-w-0">
-                          <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12 truncate">
-                            {p.name}
-                          </p>
-                          <p className="font-family-dm-sans text-sm leading-[1.3] text-gray-11 truncate">
-                            {p.email}
-                          </p>
-                        </div>
+                    {/* Avatar + nome/email — sem bandeira do cartão (atende Figma) */}
+                    <div className="flex items-center gap-2 w-full">
+                      <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                        <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
+                          {p.name.charAt(0).toUpperCase()}
+                        </span>
                       </div>
-                      {/* Bandeira do cartão (espelhando paymentMethod do pedido) */}
-                      <div className="shrink-0">
-                        {paymentMethod === "PIX" ? (
-                          <PixIcon className="size-6 text-gray-12" />
-                        ) : cardBrand ? (
-                          <PaymentIcon type={cardBrand as any} className="h-4 w-auto" />
-                        ) : null}
+                      <div className="flex flex-col gap-2 min-w-0 flex-1">
+                        <p className="font-family-dm-sans font-medium text-[16px] leading-[20.8px] text-gray-12 truncate">
+                          {p.name}
+                        </p>
+                        <p className="font-family-dm-sans text-[14px] leading-[18.2px] text-gray-11 truncate">
+                          {p.email}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Categoria + ticket */}
-                    <div className="flex flex-col gap-1 w-full">
-                      <p className="font-family-dm-sans text-sm leading-[1.3] text-gray-11 truncate">
-                        {p.categoryName}
+                    {/* Bloco categoria: label + valor */}
+                    <div className="flex flex-col gap-2 w-full">
+                      <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
+                        Nome da categoria
                       </p>
-                      <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 truncate">
-                        {p.ticketName}
+                      <p className="font-manrope font-semibold text-[14px] leading-[15.4px] text-gray-12 truncate">
+                        {p.categoryName || p.ticketName}
                       </p>
                     </div>
-
-                    {/* Valor — quando disponível por participante (ex.: split do pedido) */}
-                    {p.amount != null && (
-                      <p className="font-manrope font-extrabold text-xl leading-[1.1] text-gray-12">
-                        R$ {formatBRL(p.amount)}
-                      </p>
-                    )}
                   </div>
 
                   <div className="h-px bg-gray-6 w-full" />
@@ -382,9 +373,9 @@ export function PaymentDetailsMobile({
                     onClick={() => onViewParticipant?.(p)}
                     className="border border-gray-6 rounded-lg h-11 flex items-center justify-center gap-2 w-full hover:bg-gray-3 transition-colors cursor-pointer"
                   >
-                    <FileText className="size-5 text-gray-12" />
-                    <span className="font-manrope font-bold text-base leading-[1.1] text-gray-12">
-                      Ver detalhes
+                    <TicketIcon className="size-5 text-gray-12" />
+                    <span className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12">
+                      Ver ingresso
                     </span>
                   </button>
                 </article>
