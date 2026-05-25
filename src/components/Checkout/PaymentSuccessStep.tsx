@@ -221,14 +221,30 @@ export function PaymentSuccessStep({
           {/* Success Header */}
           <div className="flex flex-col items-center justify-center pb-12 pt-10 w-full">
             <div className="flex flex-col gap-2 items-center">
-              <Image
-                src="/images/approved_payment.png"
-                alt="Success Icon"
+              {/* Badge verde estrelar com check branco — substitui o
+               * /images/approved_payment.png. SVG inline pra evitar criar
+               * novo asset PNG e manter visual nitido em qualquer DPR. */}
+              <svg
+                className="mb-2"
                 width={158}
                 height={158}
-                draggable={false}
-                className="mb-2"
-              />
+                viewBox="0 0 96 96"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label="Success Icon"
+              >
+                <path
+                  d="M48 4l8.7 6.5 10.8-1.7 5.2 9.6 9.6 5.2-1.7 10.8L87 43.3v9.4l-6.4 8.9 1.7 10.8-9.6 5.2-5.2 9.6-10.8-1.7L48 92l-8.7-6.5-10.8 1.7-5.2-9.6-9.6-5.2 1.7-10.8L9 52.7v-9.4l6.4-8.9-1.7-10.8 9.6-5.2L28.5 8.8l10.8 1.7L48 4z"
+                  fill="#308737"
+                />
+                <path
+                  d="M34 49.5l9.5 9.5L63 39.5"
+                  stroke="#FFFFFF"
+                  strokeWidth={6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
               <div className="flex flex-col gap-4 items-center text-gray-12 text-center">
                 <h1 className="font-extrabold text-xl leading-[1.1] font-manrope">
                   Pagamento aprovado
@@ -749,13 +765,27 @@ export function PaymentSuccessStep({
           {/* Header */}
           <div className="flex flex-col items-center justify-center pb-[52px] pt-0 px-[168px] w-full">
             <div className="flex flex-col gap-[8px] items-center">
-              <Image
-                src="/images/approved_payment.png"
-                alt="Success Icon"
+              {/* Badge verde estrelar com check branco (desktop). */}
+              <svg
                 width={117}
-                height={88}
-                draggable={false}
-              />
+                height={117}
+                viewBox="0 0 96 96"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label="Success Icon"
+              >
+                <path
+                  d="M48 4l8.7 6.5 10.8-1.7 5.2 9.6 9.6 5.2-1.7 10.8L87 43.3v9.4l-6.4 8.9 1.7 10.8-9.6 5.2-5.2 9.6-10.8-1.7L48 92l-8.7-6.5-10.8 1.7-5.2-9.6-9.6-5.2 1.7-10.8L9 52.7v-9.4l6.4-8.9-1.7-10.8 9.6-5.2L28.5 8.8l10.8 1.7L48 4z"
+                  fill="#308737"
+                />
+                <path
+                  d="M34 49.5l9.5 9.5L63 39.5"
+                  stroke="#FFFFFF"
+                  strokeWidth={6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
               <div className="flex flex-col gap-[16px] items-center text-gray-12 text-center">
                 <h1 className="font-extrabold text-[32px] leading-[1.1] font-manrope">
                   Pagamento aprovado
