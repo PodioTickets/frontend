@@ -555,74 +555,133 @@ export function PaymentDetailsModal() {
                       </p>
                     </div>
                   ) : null}
-                  {/* Ingressos vinculados */}
-                  <div className="flex flex-col gap-4">
-                    <h3 className="font-manrope font-bold text-lg text-gray-12">Ingressos vinculados a este pedido</h3>
-                    <div className="flex flex-col gap-0 border border-gray-6 rounded-lg overflow-hidden bg-gray-1">
-                      {paginatedParticipants.map((participant: any) => (
-                        <div key={participant.id} className="flex flex-col border-b border-gray-6 last:border-b-0">
-                          <div className="flex flex-col gap-5 px-3 py-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex gap-2 items-center min-w-0 flex-1">
-                                <div className="size-9 rounded-full bg-primary-10/20 flex items-center justify-center shrink-0">
-                                  <span className="text-primary-11 font-semibold text-sm">{(participant.name || "P").charAt(0).toUpperCase()}</span>
+                  {/* Ingressos vinculados — Figma do zero.
+                   * Spec:
+                   *   - Titulo 18px Manrope 700 line 19.8.
+                   *   - Outer card bg gray-2 border 1.5px gray-6 radius 8.
+                   *   - Items bg gray-1 px-3 py-4 gap 24. Separador entre items
+                   *     via border-b (sem dupla linha).
+                   *   - Header: avatar 36px + nome (16/500 DM Sans) + email
+                   *     (14/400). Sem bandeira do cartao.
+                   *   - Bloco categoria: label 12/400 gray-11 + valor 14/600
+                   *     Manrope.
+                   *   - Sem display de valor R$ por participante.
+                   *   - Divider 1px gray-6.
+                   *   - Botao 'Ver ingresso' com TicketIcon 20px + texto 16/700.
+                   *   - Paginacao dentro do outer card com border-t gray-6.
+                   *     Ativo bg primary-11 + branco. Inativo bg gray-4. */}
+                  <div className="flex flex-col gap-5">
+                    <h3 className="font-manrope font-bold text-[18px] leading-[19.8px] text-gray-12">
+                      Ingressos vinculados a este pedido
+                    </h3>
+                    <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden flex flex-col">
+                      <div className="flex flex-col">
+                        {paginatedParticipants.map((participant: any, idx: number) => (
+                          <article
+                            key={participant.id}
+                            className={`bg-gray-1 px-3 py-4 flex flex-col gap-6 ${
+                              idx < paginatedParticipants.length - 1
+                                ? "border-b border-gray-6"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex flex-col gap-5 w-full">
+                              {/* Header: avatar + nome/email */}
+                              <div className="flex items-center gap-2 w-full">
+                                <div className="size-9 rounded-full bg-gray-6 flex items-center justify-center shrink-0 overflow-hidden">
+                                  <span className="text-gray-12 font-semibold text-sm font-family-dm-sans">
+                                    {(participant.name || "P").charAt(0).toUpperCase()}
+                                  </span>
                                 </div>
-                                <div className="flex flex-col gap-1 min-w-0">
-                                  <p className="font-family-dm-sans font-medium text-base text-gray-12 truncate">{participant.name}</p>
-                                  <p className="font-family-dm-sans font-normal text-sm text-gray-11 truncate">{participant.email}</p>
+                                <div className="flex flex-col gap-2 min-w-0 flex-1">
+                                  <p className="font-family-dm-sans font-medium text-[16px] leading-[20.8px] text-gray-12 truncate">
+                                    {participant.name}
+                                  </p>
+                                  <p className="font-family-dm-sans text-[14px] leading-[18.2px] text-gray-11 truncate">
+                                    {participant.email}
+                                  </p>
                                 </div>
                               </div>
-                              <div className="shrink-0">
-                                {isCardPayment ? (
-                                  <CardIcon className="size-6 text-gray-11" />
-                                ) : isPixPayment ? (
-                                  <PixIcon className="size-5 text-gray-11" />
-                                ) : (
-                                  <CardIcon className="size-6 text-gray-11" />
-                                )}
+
+                              {/* Bloco categoria */}
+                              <div className="flex flex-col gap-2 w-full">
+                                <p className="font-family-dm-sans text-[12px] leading-[15.6px] text-gray-11">
+                                  Nome da categoria
+                                </p>
+                                <p className="font-manrope font-semibold text-[14px] leading-[15.4px] text-gray-12 truncate">
+                                  {participant.category || participant.ticket}
+                                </p>
                               </div>
                             </div>
-                            <p className="font-manrope font-extrabold text-xl text-gray-12">
-                              {formatPrice((registration?.finalAmount ?? paymentInfo.totalAmount) / (participants.length || 1) / 100)}
-                            </p>
-                          </div>
-                          <div className="h-px bg-gray-6" />
-                          <div className="p-3">
+
+                            {/* Divider */}
+                            <div className="h-px bg-gray-6 w-full" />
+
+                            {/* Botao Ver ingresso */}
                             <button
                               type="button"
                               onClick={() =>
                                 goToParticipantDetails(
-                                  participant.viewRegistrationId || participant.id
+                                  participant.viewRegistrationId || participant.id,
                                 )
                               }
-                              className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border border-gray-6 font-manrope font-bold text-base text-gray-12 hover:bg-gray-3 transition-colors"
+                              className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border border-gray-6 hover:bg-gray-3 transition-colors cursor-pointer"
                             >
-                              <TicketIcon className="size-5" />
-                              Ver detalhes
+                              <TicketIcon className="size-5 text-gray-12" />
+                              <span className="font-manrope font-bold text-[16px] leading-[17.6px] text-gray-12">
+                                Ver ingresso
+                              </span>
+                            </button>
+                          </article>
+                        ))}
+                      </div>
+
+                      {/* Paginacao dentro do outer card */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-center px-4 py-5 w-full bg-gray-2 border-t border-gray-6">
+                          <div className="flex h-8 items-center gap-0">
+                            <button
+                              type="button"
+                              onClick={() => setTicketsPage((p) => Math.max(1, p - 1))}
+                              disabled={ticketsPage === 1}
+                              className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                              aria-label="Página anterior"
+                            >
+                              <ChevronLeft className="size-5 text-gray-11" />
+                            </button>
+                            <div className="flex items-center gap-1">
+                              {Array.from({ length: Math.min(totalPages, 6) }, (_, i) => {
+                                const pageNum = i + 1;
+                                const isActive = pageNum === ticketsPage;
+                                return (
+                                  <button
+                                    key={pageNum}
+                                    type="button"
+                                    onClick={() => setTicketsPage(pageNum)}
+                                    className={`size-8 flex items-center justify-center rounded-lg font-family-dm-sans font-medium text-[14px] leading-[18.2px] transition-colors cursor-pointer ${
+                                      isActive
+                                        ? "bg-primary-11 text-primary-1"
+                                        : "bg-gray-4 text-gray-12 hover:bg-gray-5"
+                                    }`}
+                                  >
+                                    {pageNum}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setTicketsPage((p) => Math.min(totalPages, p + 1))}
+                              disabled={ticketsPage >= totalPages}
+                              className="size-8 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                              aria-label="Próxima página"
+                            >
+                              <ChevronRight className="size-5 text-gray-11" />
                             </button>
                           </div>
                         </div>
-                      ))}
+                      )}
                     </div>
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2">
-                        <button type="button" onClick={() => setTicketsPage((p) => Math.max(1, p - 1))} disabled={ticketsPage === 1} className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50">
-                          <ChevronLeft className="size-4" />
-                        </button>
-                        {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                          const pageNum = i + 1;
-                          const isActive = pageNum === ticketsPage;
-                          return (
-                            <button key={pageNum} type="button" onClick={() => setTicketsPage(pageNum)} className={`size-8 flex items-center justify-center rounded-lg text-sm font-family-dm-sans font-medium ${isActive ? "bg-primary-11 text-primary-2" : "bg-gray-4 border border-gray-6 text-gray-12"}`}>
-                              {pageNum}
-                            </button>
-                          );
-                        })}
-                        <button type="button" onClick={() => setTicketsPage((p) => Math.min(totalPages, p + 1))} disabled={ticketsPage >= totalPages} className="size-8 flex items-center justify-center rounded-lg border border-gray-6 disabled:opacity-50">
-                          <ChevronRight className="size-4" />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
