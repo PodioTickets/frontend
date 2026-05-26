@@ -142,15 +142,6 @@ export function formatPhoneForCountry(
   const isoCode = getCountryCodeFromName(countryName);
   if (!isoCode) return value.replace(/\D/g, "");
 
-  /* Estrangeiro (nao-BR) sem `+` no input: numero nacional cru nao
-   * eh suficiente pra desambiguar formato e AsYouType produz mascaras
-   * erradas (ex: AR 10 digitos vira "(92) 02564-818" tipo BR). Preserva
-   * apenas digitos limpos. Quando o phone vem em E.164 (com '+'), continua
-   * formatando — AsYouType extrai DDI corretamente. */
-  if (isoCode !== "BR" && !value.includes("+")) {
-    return value.replace(/\D/g, "");
-  }
-
   /* Pega só os dígitos nacionais — se o user colou com `+55` ou `+1`,
    * `parsePhoneNumberFromString` extrai o nationalNumber. Sem DDI no input,
    * formatNational do AsYouType fica padronizado por país. */
