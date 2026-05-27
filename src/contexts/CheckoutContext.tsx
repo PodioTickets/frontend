@@ -73,11 +73,48 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
     DEFAULT_PARTICIPANT,
   ]);
 
-  // Reset ao trocar de evento — estado de checkout é por-evento e nunca persistido.
+  // Chaves de sessionStorage por evento. Estado persiste enquanto a aba
+  // estiver aberta — sobrevive a navegacao (login modal/redirect) mas nao
+  // a fechar a aba. SessionStorage > localStorage: nao polui storage entre
+  // visitas, e cada aba/evento tem escopo proprio.
+  const rqStorageKey = eventId ? `checkout:raceQuantities:${eventId}` : null;
+  const pStorageKey = eventId ? `checkout:participants:${eventId}` : null;
+
+  // Hidrata do sessionStorage ao trocar de evento. Se nao tem nada salvo,
+  // reseta. Roda so no client (sessionStorage indefinido no SSR).
   useEffect(() => {
-    setRaceQuantities({});
-    setParticipants([DEFAULT_PARTICIPANT]);
+    if (!eventId) return;
+    if (typeof window === "undefined") return;
+    try {
+      const savedRq = rqStorageKey ? window.sessionStorage.getItem(rqStorageKey) : null;
+      setRaceQuantities(savedRq ? JSON.parse(savedRq) : {});
+      const savedP = pStorageKey ? window.sessionStorage.getItem(pStorageKey) : null;
+      setParticipants(savedP ? JSON.parse(savedP) : [DEFAULT_PARTICIPANT]);
+    } catch {
+      setRaceQuantities({});
+      setParticipants([DEFAULT_PARTICIPANT]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
+
+  // Persiste mudancas. Skip quando nao tem eventId (preview/SSR).
+  useEffect(() => {
+    if (!rqStorageKey || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(rqStorageKey, JSON.stringify(raceQuantities));
+    } catch {
+      /* quota/disabled storage — ignora */
+    }
+  }, [rqStorageKey, raceQuantities]);
+
+  useEffect(() => {
+    if (!pStorageKey || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(pStorageKey, JSON.stringify(participants));
+    } catch {
+      /* quota/disabled storage — ignora */
+    }
+  }, [pStorageKey, participants]);
 
   const updateRaceQuantity = useCallback((raceId: string, quantity: number) => {
     const newQuantity = Math.max(0, quantity);
@@ -117,7 +154,15 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
   const resetCheckout = useCallback(() => {
     setRaceQuantities({});
     setParticipants([DEFAULT_PARTICIPANT]);
-  }, []);
+    if (typeof window !== "undefined") {
+      try {
+        if (rqStorageKey) window.sessionStorage.removeItem(rqStorageKey);
+        if (pStorageKey) window.sessionStorage.removeItem(pStorageKey);
+      } catch {
+        /* ignora */
+      }
+    }
+  }, [rqStorageKey, pStorageKey]);
 
   const contextValue = useMemo(
     () => ({
