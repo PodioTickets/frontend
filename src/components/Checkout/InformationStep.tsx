@@ -748,10 +748,11 @@ export function InformationStep({
         };
         const next = findNextPending();
         if (next !== null) {
-          // Dois RAFs garantem que o reflow do colapso ocorreu antes da
-          // medicao. window.scrollTo com offset manual evita scrollIntoView
-          // pular alem do alvo (ex: ultimo card + safe-area do summary bar).
-          const HEADER_OFFSET = 96;
+          // Card colapsado tem transicao CSS max-h de 300ms. Mede a posicao
+          // SO depois da transicao terminar, senao rect.top usa altura
+          // intermediaria do card atual e o scroll vai pra coordenada errada
+          // (geralmente alem do alvo, parando no rodape da pagina).
+          const HEADER_OFFSET = 16;
           const scrollNow = () => {
             const el = document.querySelector<HTMLElement>(
               `[data-participant-index="${next}"]`,
@@ -761,7 +762,7 @@ export function InformationStep({
             const top = window.scrollY + rect.top - HEADER_OFFSET;
             window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
           };
-          requestAnimationFrame(() => requestAnimationFrame(scrollNow));
+          setTimeout(scrollNow, 350);
         }
       }
     }
