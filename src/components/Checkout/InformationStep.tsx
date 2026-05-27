@@ -715,10 +715,40 @@ export function InformationStep({
     }
 
     // Fechar/abrir o participante (sempre permite abrir, só valida ao fechar)
+    const willClose = isCurrentlyExpanded;
     setExpandedParticipants((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
+
+    // Mobile: depois de salvar (fechar) um participante, rola para o proximo
+    // pendente em vez de deixar o usuario perdido no rodape. Desktop nao muda
+    // pq cards ficam lado a lado sem deslocamento vertical.
+    if (willClose && typeof window !== "undefined") {
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      if (isMobile) {
+        const total = participants.length;
+        const findNextPending = () => {
+          // Procura proximo a partir do indice atual (wrap-around).
+          for (let step = 1; step <= total; step++) {
+            const i = (index + step) % total;
+            const incomplete = !savedParticipants[i] || !!participantDirtyMap[i];
+            if (incomplete) return i;
+          }
+          return null;
+        };
+        const next = findNextPending();
+        if (next !== null) {
+          // Aguarda reflow do colapso pra coordenadas serem atualizadas.
+          setTimeout(() => {
+            const el = document.querySelector<HTMLElement>(
+              `[data-participant-index="${next}"]`,
+            );
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 80);
+        }
+      }
+    }
   };
 
   const clearParticipantFieldError = (participantIndex: number, field: string) => {
@@ -1681,6 +1711,7 @@ export function InformationStep({
               return (
                 <div
                   key={`${ticket.id}-${index}`}
+                  data-participant-index={participantIndex}
                   className={`flex flex-col w-full rounded-lg border border-gray-6 ${!isExpanded ? "overflow-hidden" : ""
                     }`}
                 >
