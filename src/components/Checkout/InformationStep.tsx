@@ -47,6 +47,8 @@ import { Search, X } from "lucide-react";
 import { isHiddenPrePaymentCoupon } from "@/lib/orderAutoCouponDisplay";
 import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
+import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
+import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
 
 interface InformationStepProps {
   event: Event;
@@ -585,6 +587,27 @@ export function InformationStep({
     return cents / 100;
   }, [appliedVoucher, orderData, timerCurrentOrder]);
   const hasVoucherLine = !!appliedVoucher && voucherDiscountAmount > 0;
+
+  // Cupom AUTOMÁTICO de idade: a order NÃO o tem aplicado pré-pagamento (só no
+  // pagamento), então é previsto pelo endpoint de elegibilidade (igual /ingressos)
+  // e mostrado como já aplicado quando NÃO há cupom/voucher (de link). Calculado
+  // client-side sobre os ingressos da order; o backend reconcilia no pagamento.
+  const { data: ageEligibility } = useAgeCouponEligibility(eventId, !!authUser);
+  const ageCoupon =
+    !appliedCoupon && !appliedVoucher && ageEligibility?.applicable
+      ? ageEligibility.appliedCoupon
+      : null;
+  const ageDiscount = useMemo(() => {
+    if (!ageCoupon) return 0;
+    const selected = (orderData?.tickets ?? []).map((t) => ({
+      id: t.ticketId,
+      price: (t.unitPrice ?? 0) / 100,
+      quantity: t.quantity,
+    }));
+    return computeAgeCouponTicketDiscount(ageCoupon, selected, totalPrice);
+  }, [ageCoupon, orderData, totalPrice]);
+  // Total exibido já abate o cupom de idade (a order ainda não o reflete).
+  const totalAmountWithAge = totalAmount - ageDiscount;
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
@@ -1604,6 +1627,16 @@ export function InformationStep({
                       </p>
                     </div>
                   )}
+                  {ageCoupon && ageDiscount > 0 && (
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">
+                        {formatAgeCouponLineLabel(ageCoupon)}:
+                      </p>
+                      <p className="font-bold">
+                        -{formatPrice(ageDiscount)}
+                      </p>
+                    </div>
+                  )}
                   {serviceFee > 0 && (
                     <div className="flex items-center justify-between text-base text-gray-12">
                       <p className="font-semibold">Taxa de serviço:</p>
@@ -1615,7 +1648,7 @@ export function InformationStep({
                 </div>
                 <div className="flex items-center justify-between text-xl font-bold text-gray-12 border-t border-gray-6 pt-6">
                   <p>Total:</p>
-                  <p>{formatPrice(totalAmount)}</p>
+                  <p>{formatPrice(totalAmountWithAge)}</p>
                 </div>
               </div>
             </div>
@@ -2315,10 +2348,12 @@ export function InformationStep({
             ? { label: formatCouponLineLabel(appliedCoupon), amount: couponDiscountAmount }
             : hasVoucherLine
               ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
-              : null
+              : ageCoupon && ageDiscount > 0
+                ? { label: formatAgeCouponLineLabel(ageCoupon), amount: ageDiscount }
+                : null
         }
         serviceFee={serviceFee}
-        total={totalAmount}
+        total={totalAmountWithAge}
         cta={{
           label: "Confirmar dados",
           loading: isSubmitting,
@@ -2434,6 +2469,16 @@ export function InformationStep({
                         </p>
                       </div>
                     )}
+                    {ageCoupon && ageDiscount > 0 && (
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">
+                          {formatAgeCouponLineLabel(ageCoupon)}:
+                        </p>
+                        <p className="font-bold">
+                          -{formatPrice(ageDiscount)}
+                        </p>
+                      </div>
+                    )}
                     {serviceFee > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">Taxa de serviço:</p>
@@ -2444,7 +2489,7 @@ export function InformationStep({
                     )}
                     <div className="flex items-center justify-between text-xl font-bold text-gray-12 pt-4 border-t border-gray-6">
                       <p>Total:</p>
-                      <p>{formatPrice(totalAmount)}</p>
+                      <p>{formatPrice(totalAmountWithAge)}</p>
                     </div>
                   </div>
                 </div>

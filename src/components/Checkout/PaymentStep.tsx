@@ -848,10 +848,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
    *   que faz a conta estrangeira já abrir o form no modo "gringo": toda a
    *   lógica downstream (esconder complemento/bairro, estado vira texto livre,
    *   payload com `neighborhood: ""`) deriva de `billingAddress.country`.
-   * - `city`/`state` vêm de uma confirmação de endereço anterior (o backend
-   *   persiste o billing no usuário e devolve no profile). `stateUf` faz
-   *   round-trip do nosso próprio formato (UF p/ BR, texto livre p/ estrangeiro),
-   *   então é seguro reaplicar no dropdown/input.
+   * - `city`/`state` (e, quando o backend persistir, o endereço COMPLETO —
+   *   CEP/rua/número/bairro/complemento) vêm da conta e voltam no profile.
+   *   `stateUf` faz round-trip do nosso próprio formato (UF p/ BR, texto livre
+   *   p/ estrangeiro), então é seguro reaplicar no dropdown/input.
+   *
+   * O tipo `User` declara só country/city/state, mas `getProfile` é `any` — o
+   * backend pode trazer o endereço completo. Lemos os campos extras
+   * defensivamente (cast): ausentes ficam undefined e os guards `!prev.X` não
+   * tocam nada. Nomes espelham o payload de billing
+   * (`postalCode`/`street`/`number`/`neighborhood`/`complement`).
    *
    * Roda uma única vez (ref) e só toca campos ainda no default — não sobrescreve
    * o que o usuário já digitou na janela de corrida do useAuth nem um endereço
@@ -863,10 +869,30 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     billingPrefillRef.current = true;
     if (billingAddressConfirmed) return;
 
-    const accountCountry = authUser.country?.trim();
-    const accountCity = authUser.city?.trim();
-    const accountState = authUser.state?.trim();
-    if (!accountCountry && !accountCity && !accountState) return;
+    const acct = authUser as typeof authUser & {
+      postalCode?: string | null;
+      zipCode?: string | null;
+      cep?: string | null;
+      street?: string | null;
+      number?: string | null;
+      neighborhood?: string | null;
+      complement?: string | null;
+    };
+
+    const accountCountry = acct.country?.trim();
+    const accountCity = acct.city?.trim();
+    const accountState = acct.state?.trim();
+    const accountCep = (acct.postalCode ?? acct.zipCode ?? acct.cep)?.trim();
+    const accountStreet = acct.street?.trim();
+    const accountNumber = acct.number?.trim();
+    const accountNeighborhood = acct.neighborhood?.trim();
+    const accountComplement = acct.complement?.trim();
+
+    if (
+      !accountCountry && !accountCity && !accountState && !accountCep &&
+      !accountStreet && !accountNumber && !accountNeighborhood && !accountComplement
+    )
+      return;
 
     setBillingAddress((prev) => ({
       ...prev,
@@ -875,6 +901,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         accountCountry && prev.country === "Brasil" ? accountCountry : prev.country,
       city: accountCity && !prev.city ? accountCity : prev.city,
       stateUf: accountState && !prev.stateUf ? accountState : prev.stateUf,
+      cep: accountCep && !prev.cep ? accountCep : prev.cep,
+      street: accountStreet && !prev.street ? accountStreet : prev.street,
+      number: accountNumber && !prev.number ? accountNumber : prev.number,
+      neighborhood:
+        accountNeighborhood && !prev.neighborhood
+          ? accountNeighborhood
+          : prev.neighborhood,
+      complement:
+        accountComplement && !prev.complement
+          ? accountComplement
+          : prev.complement,
     }));
   }, [authUser, billingAddressConfirmed]);
 
