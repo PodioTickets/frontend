@@ -40,7 +40,7 @@ const exportOptions = [
 const ALL_FIELDS = [
   { id: "nome", label: "Nome" },
   { id: "email", label: "E-mail" },
-  { id: "cpf", label: "CPF" },
+  { id: "cpf", label: "Documento" },
   { id: "dataNascimento", label: "Data de Nascimento" },
   { id: "telefone", label: "Telefone" },
   { id: "sexo", label: "Sexo" },
