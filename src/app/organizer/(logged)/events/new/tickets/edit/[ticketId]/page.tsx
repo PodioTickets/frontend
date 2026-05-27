@@ -34,7 +34,7 @@ export default function EditTicketPage() {
       ticketId={ticketId}
       backUrl="/organizer/events/new/tickets"
       mode="edit"
-      className="bg-gray-2 flex-1 px-4 pb-28 pt-[52px] md:px-[124px]"
+      className="bg-gray-2 flex-1 px-4 md:px-5 pb-28 pt-[52px]"
     />
   );
 }

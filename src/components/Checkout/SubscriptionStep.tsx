@@ -24,7 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { Loading } from "../Loading";
-import { Tooltip } from "@/components/Tooltip";
+import { MobileSummaryBar } from "./MobileSummaryBar";
 import { ImageCarouselModal } from "./ImageCarouselModal";
 import {
   type Product,
@@ -1149,87 +1149,36 @@ export function SubscriptionStep({
       </div>
 
       {/* Mobile Footer Summary */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
-        <div className="flex items-end justify-between gap-3 text-gray-12 font-family-dm-sans">
-          <div className="flex flex-col gap-2 min-w-0 flex-1">
-            <h1 className="text-base font-bold">{event.name}</h1>
-            <p className="text-sm">
-              Participantes: <span className="font-semibold">{totalParticipants}</span>
-            </p>
-            {/* Categoria acima, nome do ingresso bold abaixo — mesmo padrão do OrderSummary desktop */}
-            {groupedTickets.map((ticket, index) => (
-              <div key={index} className="flex flex-col gap-0.5 min-w-0">
-                <p className="text-xs text-gray-11 leading-[1.3] truncate">
-                  {ticket.categoryName || "Ingresso Avulso"}
-                </p>
-                <div className="flex items-baseline gap-1 min-w-0">
-                  {/* Tooltip click-to-reveal mostra o nome completo quando truncado (mobile sem hover). */}
-                  <Tooltip
-                    content={`(${ticket.quantity}x) ${ticket.raceName}`}
-                    position="topRight"
-                    trigger="click"
-                    usePortal
-                    className="block min-w-0 flex-1"
-                    contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
-                  >
-                    <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer">
-                      ({ticket.quantity}x) {ticket.raceName}:
-                    </p>
-                  </Tooltip>
-                  <p className="text-sm font-semibold text-gray-12 shrink-0">
-                    {formatPrice(ticket.total)}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {(hasCouponLine || hasVoucherLine) && (
-              <p className="text-sm text-gray-12">
-                Subtotal:{" "}
-                <span className="font-semibold">
-                  {formatPrice(totalPrice + totalProductsPrice)}
-                </span>
-              </p>
-            )}
-            {hasCouponLine && (
-              <p className="text-sm text-gray-12">
-                {formatCouponLineLabel(appliedCoupon!)}:{" "}
-                <span className="font-semibold">
-                  -{formatPrice(couponDiscountAmount)}
-                </span>
-              </p>
-            )}
-            {hasVoucherLine && (
-              <p className="text-sm text-gray-12">
-                {formatVoucherLineLabel(appliedVoucher!.code)}:{" "}
-                <span className="font-semibold">
-                  -{formatPrice(voucherDiscountAmount)}
-                </span>
-              </p>
-            )}
-            {serviceFee > 0 && (
-              <p className="text-sm text-gray-12">
-                Taxa de serviço:{" "}
-                <span className="font-semibold">{formatPrice(serviceFee)}</span>
-              </p>
-            )}
-            <p className="text-base text-gray-12">
-              Total:{" "}
-              <span className="font-bold">{formatPrice(totalAmount)}</span>
-            </p>
-          </div>
-          <Button
-            onClick={onNext}
-            disabled={
-              totalParticipants === 0 ||
-              !participantsWithTickets.every(({ participantIndex }) =>
-                isParticipantComplete(participantIndex)
-              )
-            }
-          >
-            Salvar e próximo
-          </Button>
-        </div>
-      </div>
+      <MobileSummaryBar
+        eventName={event.name}
+        totalParticipants={totalParticipants}
+        tickets={groupedTickets.map((t) => ({
+          categoryName: t.categoryName,
+          name: t.raceName,
+          quantity: t.quantity,
+          total: t.total,
+        }))}
+        subtotal={totalPrice + totalProductsPrice}
+        discount={
+          hasCouponLine
+            ? { label: formatCouponLineLabel(appliedCoupon!), amount: couponDiscountAmount }
+            : hasVoucherLine
+              ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
+              : null
+        }
+        additionalProducts={totalProductsPrice > 0 ? { total: totalProductsPrice } : null}
+        serviceFee={serviceFee}
+        total={totalAmount}
+        cta={{
+          label: "Salvar e próximo",
+          onClick: onNext,
+          disabled:
+            totalParticipants === 0 ||
+            !participantsWithTickets.every(({ participantIndex }) =>
+              isParticipantComplete(participantIndex)
+            ),
+        }}
+      />
 
       {/* Desktop Layout */}
       <div className="hidden md:flex w-full items-start gap-11">

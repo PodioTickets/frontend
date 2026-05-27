@@ -510,18 +510,33 @@ export default function OrganizationSettingsPage() {
                   />
                 </div>
 
+                {/* Razão social (nome legal) — vem do cadastro fiscal (campo `name`), read-only */}
                 <div className="flex flex-col gap-2 items-start">
                   <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
                     Razão social
                   </label>
                   <Input
                     type="text"
-                    name="tradeName"
-                    value={formData.tradeName}
-                    onChange={handleInputChange}
+                    name="name"
+                    value={organizer.name ?? ""}
                     placeholder="Digite a razão social"
                     disabled
                     className="disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-black bg-gray-6"
+                  />
+                </div>
+
+                {/* Nome fantasia (campo `tradeName`) — editável pelo organizador.
+                    Antes estava rotulado "Razão social" por engano. */}
+                <div className="flex flex-col gap-2 items-start">
+                  <label className="font-family-dm-sans font-normal leading-[1.3] text-sm text-gray-12">
+                    Nome fantasia
+                  </label>
+                  <Input
+                    type="text"
+                    name="tradeName"
+                    value={formData.tradeName}
+                    onChange={handleInputChange}
+                    placeholder="Digite o nome fantasia"
                   />
                 </div>
 

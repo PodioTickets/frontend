@@ -8,6 +8,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Ticket } from "@/hooks/useTickets";
 import { DistanceIcon } from "../Icons/DistanceIcon";
 import { ProductCardGallery } from "./ProductCardGallery";
+import { formatPhoneForCountry } from "@/utils/phone";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 
 interface Product {
   id: string;
@@ -34,6 +36,8 @@ interface ParticipantModalData {
     birthDate: string;
     phone: string;
     gender?: string;
+    /** Nome do país em PT-BR; decide label do documento e máscara de telefone/CPF. */
+    nationality?: string;
     emergencyPhone?: string;
     emergencyContactName?: string;
     productVariations?: Record<string, string | null>;
@@ -89,6 +93,10 @@ export function ParticipantSummaryModal({
 
   const { participant, ticket, event } = currentParticipant;
 
+  // Brasileiro vs estrangeiro — mesmo critério do preenchimento (InformationStep).
+  // Decide o label do documento ("CPF"/"Documento") e se aplica máscara de CPF.
+  const isBr = isBrazilianCountry(participant.nationality);
+
   const formatDate = (date?: string) => {
     if (!date) return "";
     return new Intl.DateTimeFormat("pt-BR", {
@@ -135,18 +143,6 @@ export function ParticipantSummaryModal({
       outro: "Outro",
     };
     return labels[gender.toLowerCase()] || gender;
-  };
-
-  const formatPhone = (phone?: string) => {
-    if (!phone) return "";
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 3)} ${cleaned.slice(3, 7)}-${cleaned.slice(7)}`;
-    }
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-    }
-    return phone;
   };
 
   const handlePrevious = () => {
@@ -268,7 +264,7 @@ export function ParticipantSummaryModal({
                       )}
                       {participant.cpf && (
                         <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11">
-                          {maskCPF(participant.cpf)}
+                          {isBr ? maskCPF(participant.cpf) : participant.cpf}
                         </p>
                       )}
                     </div>
@@ -295,10 +291,14 @@ export function ParticipantSummaryModal({
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 py-4">
-                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">CPF</p>
+                    <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
+                      {isBr ? "CPF" : "Documento"}
+                    </p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
                       {participant.cpf
-                        ? participant.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                        ? isBr
+                          ? participant.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                          : participant.cpf
                         : "Não informado"}
                     </p>
                   </div>
@@ -313,7 +313,7 @@ export function ParticipantSummaryModal({
                   <div className="flex flex-col gap-2 py-4">
                     <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">Telefone</p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {formatPhone(participant.phone) || "Não informado"}
+                      {formatPhoneForCountry(participant.phone, participant.nationality) || "Não informado"}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 py-4">

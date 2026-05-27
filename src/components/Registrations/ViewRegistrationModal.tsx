@@ -18,6 +18,11 @@ import { DistanceIcon } from "../Icons/DistanceIcon";
 import { ArrowButton } from "../ArrowButton";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
+import {
+  isPersonBr,
+  documentLabel,
+  formatPersonPhone,
+} from "@/utils/documentDisplay";
 
 function formatAnswer(answer: any): string {
   if (answer == null) return "—";
@@ -118,13 +123,6 @@ export function ViewRegistrationModal() {
     return labels[gender] || labels[gender.toLowerCase()] || gender;
   };
 
-  const formatCPF = (cpf?: string | null) => {
-    if (!cpf) return "";
-    const numbers = cpf.replace(/\D/g, "");
-    if (numbers.length !== 11) return cpf;
-    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
-  };
-
   // Se não houver registration, não renderizar nada
   if (!currentRegistration && !loadingRegistration) {
     return null;
@@ -169,18 +167,6 @@ export function ViewRegistrationModal() {
     return null;
   }
 
-  const formatPhone = (phone?: string | null) => {
-    if (!phone) return "—";
-    const numbers = phone.replace(/\D/g, "");
-    if (numbers.length === 11) {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3, 7)}-${numbers.slice(7)}`;
-    }
-    if (numbers.length === 10) {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
-    }
-    return phone;
-  };
-
   const ticketName = currentRegistration?.ticket?.name || currentRegistration?.modalities?.[0]?.modality?.name || "—";
   const categoryName = currentRegistration?.ticket?.category?.name || currentRegistration?.modalities?.[0]?.modality?.category?.name || "Ingresso avulso";
   const user = currentRegistration?.user || currentRegistration?.buyer;
@@ -190,14 +176,21 @@ export function ViewRegistrationModal() {
   const participantEmail = user?.email || "—";
   const participantCPFRaw = user?.documentNumber || null;
 
-  // Mascarar CPF: mostrar apenas primeiros 3 e últimos 2 dígitos
-  const maskCPF = (cpf?: string | null) => {
-    if (!cpf) return "—";
-    const numbers = cpf.replace(/\D/g, "");
-    if (numbers.length !== 11) return cpf;
-    return `${numbers.slice(0, 3)}.***.***-${numbers.slice(-2)}`;
-  };
-  const participantCPF = maskCPF(participantCPFRaw);
+  /* Nacionalidade do participante pra exibir documento/telefone i18n. O backend
+   * pode não enviar `country`/`documentType` neste endpoint — a heurística cai
+   * pro shape do doc (11 dígitos = CPF) com segurança. */
+  const participantCountry = user?.country ?? user?.nationality ?? null;
+  const participantIsBr = isPersonBr({
+    country: participantCountry,
+    documentType: user?.documentType,
+    document: participantCPFRaw,
+  });
+
+  // Documento exibido CRU (sem máscara/formatação) — só o label muda por país.
+  // Telefone recebe a máscara via util i18n (libphonenumber por país).
+  const formatPhone = (phone?: string | null) =>
+    formatPersonPhone(phone, participantCountry);
+  const participantCPF = participantCPFRaw || "—";
 
   const participantBirthDate = user?.dateOfBirth
     ? (() => {
@@ -444,7 +437,7 @@ export function ViewRegistrationModal() {
                     {[
                       { label: "Nome", value: participantName },
                       { label: "Email", value: participantEmail },
-                      { label: "CPF", value: formatCPF(participantCPFRaw) || "—" },
+                      { label: documentLabel(participantIsBr), value: participantCPFRaw || "—" },
                       { label: "Data de nascimento", value: participantBirthDate },
                       { label: "Telefone", value: formatPhone(participantPhone) || "—" },
                       { label: "Telefone de emergência", value: emergencyPhone || "—" },
@@ -683,10 +676,10 @@ export function ViewRegistrationModal() {
                         </div>
                         <div className="flex flex-col py-4">
                           <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                            CPF
+                            {documentLabel(participantIsBr)}
                           </p>
                           <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {formatCPF(participantCPFRaw) || "—"}
+                            {participantCPFRaw || "—"}
                           </p>
                         </div>
                         <div className="flex flex-col py-4">

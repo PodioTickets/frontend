@@ -27,7 +27,7 @@ import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { UserAutocomplete } from "../UserAutocomplete";
-import { Tooltip } from "@/components/Tooltip";
+import { MobileSummaryBar } from "./MobileSummaryBar";
 import type { LinkedUser } from "@/hooks/useLinkedUsers";
 import toast from "react-hot-toast";
 import { Loading } from "../Loading";
@@ -2269,102 +2269,54 @@ export function InformationStep({
       </div>
 
       {/* Mobile Footer Summary - Same style as ModalitiesStep */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-4 z-50 md:hidden">
-        <div className="flex items-end justify-between gap-3 text-gray-12 font-family-dm-sans">
-          <div className="flex flex-col gap-2 min-w-0 flex-1">
-            <h1 className="text-base font-bold">{event.name}</h1>
-            <p className="text-sm">
-              Participantes:{" "}
-              <span className="font-semibold">{totalParticipants}</span>
-            </p>
-            {/* Categoria acima, nome do ingresso bold abaixo — mesmo padrão do OrderSummary desktop / SubscriptionStep mobile */}
-            {groupedTickets.map((ticket, index) => (
-              <div key={index} className="flex flex-col gap-0.5 min-w-0">
-                <p className="text-xs text-gray-11 leading-[1.3] truncate">
-                  {ticket.categoryName || "Ingresso Avulso"}
-                </p>
-                <div className="flex items-baseline gap-1 min-w-0">
-                  {/* Tooltip click-to-reveal mostra o nome completo quando truncado (mobile sem hover). */}
-                  <Tooltip
-                    content={`(${ticket.quantity}x) ${ticket.raceName}`}
-                    position="topRight"
-                    trigger="click"
-                    usePortal
-                    className="block min-w-0"
-                    contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
-                  >
-                    <p className="text-sm text-gray-12 truncate min-w-0 cursor-pointer">
-                      ({ticket.quantity}x) {ticket.raceName}:
-                    </p>
-                  </Tooltip>
-                  <p className="text-sm font-semibold text-gray-12">
-                    {formatPrice(ticket.total)}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-              <>
-                <p className="text-sm text-gray-12">
-                  Subtotal:{" "}
-                  <span className="font-semibold">{formatPrice(totalPrice)}</span>
-                </p>
-                <p className="text-sm">
-                  {formatCouponLineLabel(appliedCoupon)}:{" "}
-                  <span className="font-semibold">
-                    -{formatPrice(couponDiscountAmount)}
-                  </span>
-                </p>
-              </>
-            )}
-            {serviceFee > 0 && (
-              <p className="text-sm">
-                Taxa de serviço:{" "}
-                <span className="font-semibold">
-                  {formatPrice(serviceFee)}
-                </span>
-              </p>
-            )}
-            <p className="text-base">
-              Valor total:{" "}
-              <span className="font-bold">
-                {formatPrice(totalAmount)}
-              </span>
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              if (participantsWithRaces.length === 0) return;
-              const allErrors: Record<number, Record<string, string>> = {};
-              let firstInvalidIndex: number | null = null;
-              participantsWithRaces.forEach(({ participantIndex, ticket }) => {
-                const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
-                if (Object.keys(errors).length > 0) {
-                  allErrors[participantIndex] = errors;
-                  if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
-                }
-              });
-              if (Object.keys(allErrors).length > 0) {
-                setFieldErrors(allErrors);
-                if (firstInvalidIndex !== null) {
-                  setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
-                }
-                toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
-                return;
+      <MobileSummaryBar
+        eventName={event.name}
+        totalParticipants={totalParticipants}
+        tickets={groupedTickets.map((t) => ({
+          categoryName: t.categoryName,
+          name: t.raceName,
+          quantity: t.quantity,
+          total: t.total,
+        }))}
+        subtotal={totalPrice}
+        discount={
+          appliedCoupon && showCouponDiscount && couponDiscountAmount > 0
+            ? { label: formatCouponLineLabel(appliedCoupon), amount: couponDiscountAmount }
+            : null
+        }
+        serviceFee={serviceFee}
+        total={totalAmount}
+        cta={{
+          label: "Confirmar dados",
+          loading: isSubmitting,
+          disabled: isSubmitting,
+          onClick: () => {
+            if (participantsWithRaces.length === 0) return;
+            const allErrors: Record<number, Record<string, string>> = {};
+            let firstInvalidIndex: number | null = null;
+            participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+              const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
+              if (Object.keys(errors).length > 0) {
+                allErrors[participantIndex] = errors;
+                if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
               }
-              if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
-                toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
-                return;
+            });
+            if (Object.keys(allErrors).length > 0) {
+              setFieldErrors(allErrors);
+              if (firstInvalidIndex !== null) {
+                setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
               }
-              onNext();
-            }}
-            isLoading={isSubmitting}
-            disabled={isSubmitting}
-          >
-            Confirmar dados
-          </Button>
-        </div>
-      </div>
+              toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
+              return;
+            }
+            if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
+              toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
+              return;
+            }
+            onNext();
+          },
+        }}
+      />
 
       {/* Modal para mostrar todos os ingressos */}
       <AnimatePresence>

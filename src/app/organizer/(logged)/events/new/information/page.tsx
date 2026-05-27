@@ -151,7 +151,7 @@ export default function InformacoesPage() {
           <Button
             form="create-event-information-form"
             type="submit"
-            disabled={loading || !canSave}
+            disabled={loading}
             className="hidden h-[52px] px-11 text-xl font-bold font-manrope md:block"
           >
             {loading ? "Salvando..." : "Próxima etapa"}
@@ -159,7 +159,7 @@ export default function InformacoesPage() {
           <Button
             form="create-event-information-form"
             type="submit"
-            disabled={loading || !canSave}
+            disabled={loading}
             className="h-12 w-full text-base font-bold font-manrope md:hidden"
           >
             {loading ? "Salvando..." : "Próxima etapa"}

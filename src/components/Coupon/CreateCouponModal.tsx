@@ -1086,105 +1086,6 @@ export function CreateCouponModal() {
                                 >
                                   {/* Validade do cupom */}
                                   <div className="flex flex-col gap-5">
-                                    <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                        Validade do cupom
-                                      </h3>
-                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        Após essa data, o cupom não poderá ser usado
-                                      </p>
-                                    </div>
-                                    <div className="flex gap-6">
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={!expiryEnabled}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) { setExpiryEnabled(false); setExpiryDate(null); }
-                                          }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
-                                      </label>
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={expiryEnabled}
-                                          onCheckedChange={(checked) => { if (checked) setExpiryEnabled(true); }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
-                                      </label>
-                                    </div>
-                                    {expiryEnabled && (
-                                      <div className="flex flex-col gap-2">
-                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                          Expira em:
-                                        </label>
-                                        <DatePicker
-                                          value={expiryDate || undefined}
-                                          onChange={setExpiryDate}
-                                          minDate={minSelectableExpiryDate}
-                                          placeholder="00/00/2026"
-                                          className="w-full md:w-auto"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Limite por cupom */}
-                                  <div className="flex flex-col gap-5">
-                                    <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                        Limite por cupom
-                                      </h3>
-                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        Número máximo de vezes que esse cupom pode ser utilizado
-                                      </p>
-                                    </div>
-                                    <div className="flex gap-6">
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={!usageLimitEnabled}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) { setUsageLimitEnabled(false); setUsageLimit(""); setUsageLimitError(""); }
-                                          }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
-                                      </label>
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={usageLimitEnabled}
-                                          onCheckedChange={(checked) => { if (checked) setUsageLimitEnabled(true); }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
-                                      </label>
-                                    </div>
-                                    {usageLimitEnabled && (
-                                      <div className="flex flex-col gap-2 w-full md:w-[259px]">
-                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                          Limite
-                                        </label>
-                                        <Input
-                                          type="text"
-                                          placeholder="Ex: 45"
-                                          value={usageLimit}
-                                          onChange={(e) => {
-                                            const num = e.target.value.replace(/[^0-9]/g, "");
-                                            setUsageLimit(num);
-                                            const currentUsageCount = data?.coupon?.usageCount ?? 0;
-                                            if (num && parseInt(num) < currentUsageCount) {
-                                              setUsageLimitError(`O limite não pode ser menor que o uso atual (${currentUsageCount})`);
-                                            } else {
-                                              setUsageLimitError("");
-                                            }
-                                          }}
-                                          className={`h-12 ${usageLimitError ? "border-red-6 focus:border-red-10" : ""}`}
-                                        />
-                                        {usageLimitError && (
-                                          <p className="text-sm text-red-11">{usageLimitError}</p>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Lista exclusiva por CPF */}
                                   <div className="flex flex-col gap-4">
                                     <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
@@ -1381,6 +1282,107 @@ export function CreateCouponModal() {
                                       </label>
                                     </div>
                                   </div>
+                                  
+                                    <div className="flex flex-col gap-2">
+                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                        Validade do cupom
+                                      </h3>
+                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                        Após essa data, o cupom não poderá ser usado
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-6">
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={!expiryEnabled}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) { setExpiryEnabled(false); setExpiryDate(null); }
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                      </label>
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={expiryEnabled}
+                                          onCheckedChange={(checked) => { if (checked) setExpiryEnabled(true); }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                      </label>
+                                    </div>
+                                    {expiryEnabled && (
+                                      <div className="flex flex-col gap-2">
+                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                          Expira em:
+                                        </label>
+                                        <DatePicker
+                                          value={expiryDate || undefined}
+                                          onChange={setExpiryDate}
+                                          minDate={minSelectableExpiryDate}
+                                          placeholder="00/00/2026"
+                                          className="w-full md:w-auto"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Limite por cupom */}
+                                  <div className="flex flex-col gap-5">
+                                    <div className="flex flex-col gap-2">
+                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                        Limite por cupom
+                                      </h3>
+                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                        Número máximo de vezes que esse cupom pode ser utilizado
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-6">
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={!usageLimitEnabled}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) { setUsageLimitEnabled(false); setUsageLimit(""); setUsageLimitError(""); }
+                                          }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                      </label>
+                                      <label className="flex items-center gap-2 cursor-pointer">
+                                        <Checkbox
+                                          checked={usageLimitEnabled}
+                                          onCheckedChange={(checked) => { if (checked) setUsageLimitEnabled(true); }}
+                                        />
+                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                      </label>
+                                    </div>
+                                    {usageLimitEnabled && (
+                                      <div className="flex flex-col gap-2 w-full md:w-[259px]">
+                                        <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                          Limite
+                                        </label>
+                                        <Input
+                                          type="text"
+                                          placeholder="Ex: 45"
+                                          value={usageLimit}
+                                          onChange={(e) => {
+                                            const num = e.target.value.replace(/[^0-9]/g, "");
+                                            setUsageLimit(num);
+                                            const currentUsageCount = data?.coupon?.usageCount ?? 0;
+                                            if (num && parseInt(num) < currentUsageCount) {
+                                              setUsageLimitError(`O limite não pode ser menor que o uso atual (${currentUsageCount})`);
+                                            } else {
+                                              setUsageLimitError("");
+                                            }
+                                          }}
+                                          className={`h-12 ${usageLimitError ? "border-red-6 focus:border-red-10" : ""}`}
+                                        />
+                                        {usageLimitError && (
+                                          <p className="text-sm text-red-11">{usageLimitError}</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Lista exclusiva por CPF */}
+                                
                                 </motion.div>
                               )}
                             </AnimatePresence>

@@ -11,6 +11,8 @@ import {
   type CheckoutBillingAddress,
 } from "./CheckoutAddressSection";
 import { getPostalCodeConfig } from "@/utils/postalCode";
+import { MobileSummaryBar, SummaryRow } from "./MobileSummaryBar";
+import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { VisaIcon } from "../Icons/VisaIcon";
@@ -64,6 +66,7 @@ import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import toast from "react-hot-toast";
 import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PaymentStepProps {
   event: Event;
@@ -827,6 +830,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const checkoutLoadingRef = useRef(false);
 
   const { participants, raceQuantities } = useCheckout();
+  const { user: authUser } = useAuth();
   const eventId = event?.id;
   const { orderId, syncFromOrder, clearTimer, pauseVisibilityRefresh, resumeVisibilityRefresh } = useCheckoutTimer();
   const {
@@ -835,6 +839,44 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     patchCoupon,
     payOrder,
   } = useCheckoutReservation();
+
+  /**
+   * Pré-preenche o endereço de cobrança a partir da conta logada quando o
+   * profile (useAuth, assíncrono) chega DEPOIS do mount inicial.
+   *
+   * - `country` sempre vem do cadastro (nacionalidade) — pré-selecioná-lo é o
+   *   que faz a conta estrangeira já abrir o form no modo "gringo": toda a
+   *   lógica downstream (esconder complemento/bairro, estado vira texto livre,
+   *   payload com `neighborhood: ""`) deriva de `billingAddress.country`.
+   * - `city`/`state` vêm de uma confirmação de endereço anterior (o backend
+   *   persiste o billing no usuário e devolve no profile). `stateUf` faz
+   *   round-trip do nosso próprio formato (UF p/ BR, texto livre p/ estrangeiro),
+   *   então é seguro reaplicar no dropdown/input.
+   *
+   * Roda uma única vez (ref) e só toca campos ainda no default — não sobrescreve
+   * o que o usuário já digitou na janela de corrida do useAuth nem um endereço
+   * já confirmado.
+   */
+  const billingPrefillRef = useRef(false);
+  useEffect(() => {
+    if (billingPrefillRef.current || !authUser) return;
+    billingPrefillRef.current = true;
+    if (billingAddressConfirmed) return;
+
+    const accountCountry = authUser.country?.trim();
+    const accountCity = authUser.city?.trim();
+    const accountState = authUser.state?.trim();
+    if (!accountCountry && !accountCity && !accountState) return;
+
+    setBillingAddress((prev) => ({
+      ...prev,
+      // country só substitui o default "Brasil" — preserva troca manual feita antes do profile chegar.
+      country:
+        accountCountry && prev.country === "Brasil" ? accountCountry : prev.country,
+      city: accountCity && !prev.city ? accountCity : prev.city,
+      stateUf: accountState && !prev.stateUf ? accountState : prev.stateUf,
+    }));
+  }, [authUser, billingAddressConfirmed]);
 
   // Busca o pedido do servidor no mount para obter pricing, coupon e voucher atualizados.
   // Ao final, tenta auto-aplicar cupom pendente capturado da URL via `?coupon=` —
@@ -1184,6 +1226,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         birthDate: string;
         phone: string;
         gender?: string;
+        nationality?: string;
       };
       couponCode?: string;
       couponDiscount?: number;
@@ -1225,6 +1268,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             birthDate: participant.birthDate || "",
             phone: participant.phone || "",
             gender: participant.gender,
+            nationality: participant.nationality,
           },
           additionalProducts: products.length > 0 ? products : undefined,
           couponCode: hasCoupon ? (orderCoupon!.code ?? "Desconto automático") : undefined,
@@ -1858,11 +1902,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const pixValue = calculatePixValue();
   const additionalProductsCount = orderItems.length;
 
-  const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
-  const [isModalAnimating, setIsModalAnimating] = useState(false);
-  const [expandedProducts, setExpandedProducts] = useState<
-    Record<number, boolean>
-  >({});
+  // Expand/collapse dos produtos por participante no detalhe do resumo mobile.
+  const [expandedProducts, setExpandedProducts] = useState<Record<number, boolean>>({});
 
   // Participant Summary Modal state
   const [isParticipantSummaryModalOpen, setIsParticipantSummaryModalOpen] = useState(false);
@@ -1872,21 +1913,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const handleParticipantClick = (participantIndex: number) => {
     setSelectedParticipantIndex(participantIndex);
     setIsParticipantSummaryModalOpen(true);
-  };
-
-  const openModal = () => {
-    setIsParticipantsModalOpen(true);
-    // Trigger animation after modal is mounted
-    setTimeout(() => {
-      setIsModalAnimating(true);
-    }, 10);
-  };
-
-  const closeModal = () => {
-    setIsModalAnimating(false);
-    setTimeout(() => {
-      setIsParticipantsModalOpen(false);
-    }, 300);
   };
 
   // Generate participants with tickets dynamically.
@@ -1939,6 +1965,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         birthDate: participant.birthDate || "",
         phone: participant.phone || "",
         gender: participant.gender,
+        // Nacionalidade decide label do documento (CPF/Documento) e máscara de
+        // telefone/CPF no resumo — mesmo critério do preenchimento (InformationStep).
+        nationality: participant.nationality,
         emergencyPhone: participant.emergencyPhone,
         emergencyContactName: participant.emergencyContactName,
         productVariations: participant.productVariations,
@@ -1962,14 +1991,193 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     }).format(new Date(date));
   };
 
-  const maskCPF = (cpf: string) => {
-    if (!cpf) return "";
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4");
-  };
-
   if (loading) {
     return <Loading />;
   }
+
+  // Detalhe rico do resumo mobile (cards de participante + imagens dos produtos),
+  // renderizado dentro do bottom-sheet do MobileSummaryBar via `extraDetails`.
+  const paymentSummaryDetails = (
+    <div className="flex flex-col">
+      {participantsWithTicketsForDisplay.map(
+        (
+          { participantIndex, participant, ticket, categoryName, additionalProducts },
+          index
+        ) => (
+          <div
+            key={participantIndex}
+            className={`${index > 0 ? "border-t border-gray-6 pt-4" : "pb-4"}`}
+          >
+            <p className="text-sm font-semibold text-gray-12 mb-4 font-family-dm-sans">
+              Participante {participantIndex + 1}
+            </p>
+
+            {/* Card do participante */}
+            <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
+              <div className="flex items-center gap-2">
+                <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
+                  {participant.name ? (
+                    <span className="text-sm font-bold text-gray-12">
+                      {participant.name.charAt(0).toUpperCase()}
+                    </span>
+                  ) : (
+                    <ImageWithInitialFallback
+                      src={event.bannerUrl}
+                      alt={event.name}
+                      name={event.name}
+                      fallbackId={event.id}
+                      fill
+                      sizes="40px"
+                      className="size-full"
+                      imgClassName="object-cover"
+                      letterClassName="text-sm font-bold"
+                    />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                    {participant.name || `Participante ${participantIndex + 1}`}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-11 font-family-dm-sans">
+                    {participant.birthDate && (
+                      <>
+                        {formatDateShort(participant.birthDate)}
+                        <span className="size-1 bg-gray-11 rounded-full" />
+                      </>
+                    )}
+                    {participant.gender && (
+                      <>
+                        {participant.gender}
+                        {participant.cpf && (
+                          <span className="size-1 bg-gray-11 rounded-full" />
+                        )}
+                      </>
+                    )}
+                    {participant.cpf &&
+                      formatDocumentDisplay(
+                        participant.cpf,
+                        isPersonBr({
+                          country: participant.nationality,
+                          document: participant.cpf,
+                        })
+                      )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Ingresso — categoria acima do nome */}
+            <div className="flex items-end justify-between gap-3 mb-3">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11 truncate">
+                  {categoryName || "Ingresso Avulso"}
+                </p>
+                <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 truncate">
+                  {ticket.name}
+                </p>
+              </div>
+              <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 shrink-0">
+                {formatPrice(getTicketPrice(ticket))}
+              </p>
+            </div>
+
+            {/* Resumo de produtos: adicionais (cobrados) + inclusos (grátis). */}
+            {(() => {
+              const optionalProducts =
+                additionalProducts?.filter((p) => !p.isIncluded) ?? [];
+              const includedProducts =
+                additionalProducts?.filter((p) => p.isIncluded) ?? [];
+              const optionalTotal = optionalProducts.reduce(
+                (sum, item) => sum + (item.price / 100) * item.quantity,
+                0
+              );
+              const hasAnyProduct =
+                optionalProducts.length > 0 || includedProducts.length > 0;
+
+              return (
+                <>
+                  {optionalProducts.length > 0 && (
+                    <div className="mb-3">
+                      <SummaryRow
+                        label={`${optionalProducts.length}x Itens adicionais`}
+                        value={formatPrice(optionalTotal)}
+                      />
+                    </div>
+                  )}
+                  {includedProducts.length > 0 && (
+                    <div className="mb-3">
+                      <SummaryRow
+                        label={`${includedProducts.length}x Itens inclusos`}
+                        value="Grátis"
+                      />
+                    </div>
+                  )}
+
+                  {/* Lista expandida — todos os produtos com imagem (ProductCardGallery) */}
+                  {expandedProducts[participantIndex] && hasAnyProduct && (
+                    <div className="mb-4">
+                      {additionalProducts!.map((product, productIndex) => (
+                        <div
+                          key={product.productId ?? productIndex}
+                          className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
+                        >
+                          <div className="flex gap-3 p-4 border-b border-gray-6">
+                            <ProductCardGallery
+                              productId={product.productId ?? String(productIndex)}
+                              productName={product.name}
+                              image={product.image}
+                              images={product.images}
+                            />
+                            <div className="flex flex-col justify-between flex-1 min-w-0">
+                              <div className="flex items-start gap-2">
+                                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2 flex-1 min-w-0">
+                                  {product.name}
+                                </p>
+                              </div>
+                              <p className="text-sm font-semibold text-gray-12 font-manrope">
+                                {product.isIncluded
+                                  ? "Grátis"
+                                  : formatPrice(product.price / 100)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            <div className="flex gap-1 items-center">
+                              <p className="text-sm text-gray-12 font-family-dm-sans">
+                                Tamanho:
+                              </p>
+                              <p className="text-sm font-semibold text-gray-12 font-manrope">
+                                {product.size || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {hasAnyProduct && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpandedProducts((prev) => ({
+                          ...prev,
+                          [participantIndex]: !prev[participantIndex],
+                        }));
+                      }}
+                      className="text-sm font-medium text-gray-11 font-family-dm-sans underline"
+                    >
+                      {expandedProducts[participantIndex] ? "Mostrar menos" : "Mostrar mais"}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -2217,121 +2425,60 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         ) : null}
       </div>
 
-      {/* Mobile Footer Summary - Always Visible */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-        {/* Toggle Button */}
-        <div
-          className="bg-gray-2 place-self-end w-1/3 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 cursor-pointer transition-transform"
-          onClick={openModal}
-        >
-          <p className="text-xs font-medium text-gray-11 text-center font-family-dm-sans">
-            Mostrar resumo
-          </p>
-        </div>
-
-        {/* Summary Content - Always Visible */}
-        <div className="bg-gray-1 border-t border-gray-6 px-4 py-5">
-          <div className="flex flex-col gap-2 items-start justify-between mb-4">
-            <h1 className="text-base font-bold">{event.name}</h1>
-            <div className="flex gap-1 items-center">
-              <p className="text-sm text-gray-12 font-family-dm-sans">
-                Participantes:
-              </p>
-              <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                {totalParticipants}
-              </p>
-            </div>
-
-            {groupedTickets.map((ticket, index) => (
-              <div key={index} className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-family-dm-sans">
-                  ({ticket.quantity}x) {ticket.raceName}:
-                </p>
-                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  {formatPrice(ticket.total)}
-                </p>
-              </div>
-            ))}
-
-            {additionalProductsCount > 0 && (
-              <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-family-dm-sans">
-                  Produtos adicionais:
-                </p>
-                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  {formatPrice(additionalProductsTotal)}
-                </p>
-              </div>
-            )}
-            {isCouponApplied && couponDiscount > 0 && (
-              <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-family-dm-sans">Subtotal:</p>
-                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  {formatPrice(ticketSubtotalLocal + additionalProductsTotal)}
-                </p>
-              </div>
-            )}
-            {isCouponApplied && couponDiscount > 0 && (
-              <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-family-dm-sans">
-                  {isAutomaticCoupon
+      {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
+      <MobileSummaryBar
+        eventName={event.name}
+        totalParticipants={totalParticipants}
+        tickets={groupedTickets.map((t) => ({
+          name: t.raceName,
+          quantity: t.quantity,
+          total: t.total,
+        }))}
+        subtotal={ticketSubtotalLocal + additionalProductsTotal}
+        discount={
+          isCouponApplied && couponDiscount > 0
+            ? {
+                label: `${
+                  isAutomaticCoupon
                     ? "Cupom automático"
                     : appliedCouponName
                       ? `Cupom ${appliedCouponName}`
-                      : "Cupom"}
-                  {couponPercent != null && couponPercent > 0
-                    ? ` (-${couponPercent}%)`
-                    : ""}
-                  :
-                </p>
-                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  -{formatPrice(couponDiscount)}
-                </p>
-              </div>
-            )}
-            {serviceFee > 0 && (
-              <div className="flex gap-1 items-center">
-                <p className="text-sm text-gray-12 font-family-dm-sans">
-                  Taxa de serviço:
-                </p>
-                <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                  {formatPrice(serviceFee)}
-                </p>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex gap-1 items-center">
-              <p className="text-base text-gray-12 font-family-dm-sans">Total:</p>
-              <p className="text-base font-bold text-gray-12 font-manrope">
-                {formatPrice(totalValue)}
-              </p>
-            </div>
-            <Button
-              onClick={() => {
-                if (isFreeOrder) {
-                  handleProcessFreeCheckout();
-                } else if (selectedPaymentMethod === "credit") {
-                  handleProcessCreditCardCheckout();
-                } else if (selectedPaymentMethod === "debit") {
-                  handleProcessDebitCardCheckout();
-                } else if (selectedPaymentMethod === "pix") {
-                  handleProcessPixCheckout();
-                }
-              }}
-              disabled={
-                totalParticipants === 0 ||
-                checkoutLoading ||
-                !billingAddressConfirmed
+                      : "Cupom"
+                }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}`,
+                amount: couponDiscount,
               }
-              isLoading={checkoutLoading}
-              className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isFreeOrder ? "Finalizar pedido" : "Finalizar compra"}
-            </Button>
-          </div>
-        </div>
-      </div>
+            : isVoucherApplied && voucherDiscount > 0
+              ? {
+                  label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
+                  amount: voucherDiscount,
+                }
+              : null
+        }
+        additionalProducts={
+          additionalProductsCount > 0
+            ? { count: additionalProductsCount, total: additionalProductsTotal }
+            : null
+        }
+        serviceFee={serviceFee}
+        total={totalValue}
+        cta={{
+          label: isFreeOrder ? "Finalizar pedido" : "Finalizar compra",
+          loading: checkoutLoading,
+          disabled: totalParticipants === 0 || checkoutLoading || !billingAddressConfirmed,
+          onClick: () => {
+            if (isFreeOrder) {
+              handleProcessFreeCheckout();
+            } else if (selectedPaymentMethod === "credit") {
+              handleProcessCreditCardCheckout();
+            } else if (selectedPaymentMethod === "debit") {
+              handleProcessDebitCardCheckout();
+            } else if (selectedPaymentMethod === "pix") {
+              handleProcessPixCheckout();
+            }
+          },
+        }}
+        extraDetails={paymentSummaryDetails}
+      />
 
       {/* Desktop Layout */}
       <div className="hidden md:flex w-full items-start justify-between gap-11">
@@ -2532,366 +2679,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           />
         </div>
       </div>
-
-      {/* Participants Summary Modal */}
-      {isParticipantsModalOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className={`fixed inset-0 z-50 bg-black/90 md:hidden transition-opacity duration-300 ease-out ${isModalAnimating ? "opacity-100" : "opacity-0"
-              }`}
-            onClick={closeModal}
-          />
-
-          {/* Modal Content */}
-          <div
-            className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-xl max-h-[90vh] flex flex-col md:hidden transition-transform duration-300 ease-out ${isModalAnimating ? "translate-y-0" : "translate-y-full"
-              }`}
-          >
-            {/* Close Button */}
-            <div className="bg-gray-1 w-1/3 border-b place-self-end border-t border-l border-r border-gray-6 rounded-tl-xl px-4 py-2 flex items-center justify-center shrink-0">
-              <button
-                onClick={closeModal}
-                className="text-xs font-medium text-gray-11 font-family-dm-sans transition-colors hover:text-gray-12 active:scale-95"
-              >
-                Fechar resumo
-              </button>
-            </div>
-
-            {/* Scrollable Content */}
-            <div
-              className={`flex-1 overflow-y-auto transition-opacity duration-300 ${isModalAnimating ? "opacity-100" : "opacity-0"
-                }`}
-            >
-              <div className="bg-gray-1">
-                {/* Participants List */}
-                <div className="px-4 flex flex-col">
-                  {participantsWithTicketsForDisplay.map(
-                    (
-                      {
-                        participantIndex,
-                        participant,
-                        ticket,
-                        categoryName,
-                        additionalProducts,
-                      },
-                      index
-                    ) => (
-                      <div
-                        key={participantIndex}
-                        className={`py-5 transition-all duration-300 ease-out ${index > 0 ? "border-t border-gray-6" : ""
-                          } ${isModalAnimating
-                            ? "opacity-100 translate-y-0"
-                            : "opacity-0 translate-y-4"
-                          }`}
-                        style={{
-                          transitionDelay: `${index * 50}ms`,
-                        }}
-                      >
-                        <p className="text-base font-semibold text-gray-12 mb-5 font-family-dm-sans">
-                          Participantes {participantIndex + 1}
-                        </p>
-
-                        {/* Participant Card */}
-                        <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
-                          <div className="flex items-center gap-2">
-                            <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
-                              {participant.name ? (
-                                <span className="text-sm font-bold text-gray-12">
-                                  {participant.name.charAt(0).toUpperCase()}
-                                </span>
-                              ) : (
-                                <ImageWithInitialFallback
-                                  src={event.bannerUrl}
-                                  alt={event.name}
-                                  name={event.name}
-                                  fallbackId={event.id}
-                                  fill
-                                  sizes="40px"
-                                  className="size-full"
-                                  imgClassName="object-cover"
-                                  letterClassName="text-sm font-bold"
-                                />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                                {participant.name ||
-                                  `Participante ${participantIndex + 1}`}
-                              </p>
-                              <div className="flex items-center gap-2 text-xs text-gray-11 font-family-dm-sans">
-                                {participant.birthDate && (
-                                  <>
-                                    {formatDateShort(participant.birthDate)}
-                                    <span className="size-1 bg-gray-11 rounded-full" />
-                                  </>
-                                )}
-                                {participant.gender && (
-                                  <>
-                                    {participant.gender}
-                                    {participant.cpf && (
-                                      <span className="size-1 bg-gray-11 rounded-full" />
-                                    )}
-                                  </>
-                                )}
-                                {participant.cpf && maskCPF(participant.cpf)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Ticket Info — categoria acima do nome do ingresso (mesmo padrão do OrderSummary desktop) */}
-                        <div className="flex items-end justify-between gap-3 mb-3">
-                          <div className="flex flex-col gap-1 min-w-0">
-                            <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
-                              {categoryName || "Ingresso Avulso"}
-                            </p>
-                            <p className="font-manrope font-bold text-base leading-[1.1] text-gray-12 truncate">
-                              {ticket.name}
-                            </p>
-                          </div>
-                          <p className="font-manrope font-bold text-base leading-[1.1] text-gray-12 shrink-0">
-                            {formatPrice(getTicketPrice(ticket))}
-                          </p>
-                        </div>
-
-                        {/* Resumo de produtos: linha de adicionais (cobrados) e/ou de inclusos.
-                            Inclusos têm price=0, então não afetam a soma — entram só na contagem visual. */}
-                        {(() => {
-                          const optionalProducts =
-                            additionalProducts?.filter((p) => !p.isIncluded) ?? [];
-                          const includedProducts =
-                            additionalProducts?.filter((p) => p.isIncluded) ?? [];
-                          const optionalTotal = optionalProducts.reduce(
-                            (sum, item) => sum + (item.price / 100) * item.quantity,
-                            0
-                          );
-                          const hasAnyProduct =
-                            optionalProducts.length > 0 || includedProducts.length > 0;
-
-                          return (
-                            <>
-                              {optionalProducts.length > 0 && (
-                                <div className="flex items-center justify-between mb-3">
-                                  <p className="text-base font-semibold text-gray-12 font-manrope">
-                                    {optionalProducts.length}x Itens adicionais:
-                                  </p>
-                                  <p className="text-base font-bold text-gray-12 font-manrope">
-                                    {formatPrice(optionalTotal)}
-                                  </p>
-                                </div>
-                              )}
-                              {includedProducts.length > 0 && (
-                                <div className="flex items-center justify-between mb-3">
-                                  <p className="text-base font-semibold text-gray-12 font-manrope">
-                                    {includedProducts.length}x Itens inclusos:
-                                  </p>
-                                  <p className="text-base font-bold text-gray-12 font-manrope">
-                                    Grátis
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Expanded Products — lista todos (adicionais + inclusos) */}
-                              {expandedProducts[participantIndex] && hasAnyProduct && (
-                                <div className="mb-4">
-                                  {additionalProducts!.map((product, productIndex) => (
-                                    <div
-                                      key={product.productId ?? productIndex}
-                                      className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
-                                    >
-                                      {/* Product Header */}
-                                      <div className="flex gap-3 p-4 border-b border-gray-6">
-                                        <ProductCardGallery
-                                          productId={product.productId ?? String(productIndex)}
-                                          productName={product.name}
-                                          image={product.image}
-                                          images={product.images}
-                                        />
-                                        <div className="flex flex-col justify-between flex-1 min-w-0">
-                                          <div className="flex items-start gap-2">
-                                            <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2 flex-1 min-w-0">
-                                              {product.name}
-                                            </p>
-                                          </div>
-                                          <p className="text-base font-semibold text-gray-12 font-manrope">
-                                            {product.isIncluded
-                                              ? "Grátis"
-                                              : formatPrice(product.price / 100)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      {/* Product Size */}
-                                      <div className="p-4">
-                                        <div className="flex gap-1 items-center">
-                                          <p className="text-base text-gray-12 font-family-dm-sans">
-                                            Tamanho:
-                                          </p>
-                                          <p className="text-base font-semibold text-gray-12 font-manrope">
-                                            {product.size || "N/A"}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Show More/Less Button — visível se houver qualquer produto (incluso ou adicional) */}
-                              {hasAnyProduct && (
-                                <button
-                                  onClick={() => {
-                                    setExpandedProducts((prev) => ({
-                                      ...prev,
-                                      [participantIndex]: !prev[participantIndex],
-                                    }));
-                                  }}
-                                  className="text-base font-medium text-gray-11 font-family-dm-sans underline mb-4"
-                                >
-                                  {expandedProducts[participantIndex]
-                                    ? "Mostrar menos"
-                                    : "Mostrar mais"}
-                                </button>
-                              )}
-
-                              {/* Participant Total — soma só os opcionais (inclusos não cobram). */}
-                              <div className="flex items-center justify-between w-full">
-                                <p className="text-base font-semibold text-gray-12 font-manrope">
-                                  Total:
-                                </p>
-                                <p className="text-base font-bold text-gray-12 font-manrope">
-                                  {formatPrice(getTicketPrice(ticket) + optionalTotal)}
-                                </p>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-
-              {/* Summary Footer - Fixed */}
-              <div
-                className={`bg-gray-1 border-t border-gray-6 px-4 py-5 shrink-0 transition-opacity duration-300 delay-200 ${isModalAnimating ? "opacity-100" : "opacity-0"
-                  }`}
-              >
-                <div className="flex flex-col gap-2 items-start justify-between mb-4">
-                  <h1 className="text-base font-bold">{event.name}</h1>
-                  <div className="flex gap-1 items-center">
-                    <p className="text-sm text-gray-12 font-family-dm-sans">
-                      Participantes:
-                    </p>
-                    <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                      {totalParticipants}
-                    </p>
-                  </div>
-
-                  {groupedTickets.map((ticket, index) => (
-                    <div key={index} className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-family-dm-sans">
-                        ({ticket.quantity}x) {ticket.raceName}:
-                      </p>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {formatPrice(ticket.total)}
-                      </p>
-                    </div>
-                  ))}
-
-                  {additionalProductsCount > 0 && (
-                    <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-family-dm-sans">
-                        Produtos adicionais:
-                      </p>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {formatPrice(additionalProductsTotal)}
-                      </p>
-                    </div>
-                  )}
-                  {isCouponApplied && couponDiscount > 0 && (
-                    <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-family-dm-sans">Subtotal:</p>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {formatPrice(ticketSubtotalLocal + additionalProductsTotal)}
-                      </p>
-                    </div>
-                  )}
-                  {isCouponApplied && couponDiscount > 0 && (
-                    <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-family-dm-sans">
-                        {isAutomaticCoupon
-                          ? "Cupom automático"
-                          : appliedCouponName
-                            ? `Cupom ${appliedCouponName}`
-                            : "Cupom"}
-                        {couponPercent != null && couponPercent > 0
-                          ? ` (-${couponPercent}%)`
-                          : ""}
-                        :
-                      </p>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        -{formatPrice(couponDiscount)}
-                      </p>
-                    </div>
-                  )}
-                  {serviceFee > 0 && (
-                    <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-family-dm-sans">
-                        Taxa de serviço:
-                      </p>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        {formatPrice(serviceFee)}
-                      </p>
-                    </div>
-                  )}
-                  {isVoucherApplied && voucherDiscount > 0 && (
-                    <div className="flex gap-1 items-center">
-                      <p className="text-sm text-gray-12 font-family-dm-sans">
-                        Voucher:
-                      </p>
-                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                        -{formatPrice(voucherDiscount)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-1 items-center">
-                    <p className="text-base text-gray-12 font-family-dm-sans">
-                      Total:
-                    </p>
-                    <p className="text-base font-bold text-gray-12 font-manrope">
-                      {formatPrice(totalValue)}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      closeModal();
-                      if (isFreeOrder) {
-                        handleProcessFreeCheckout();
-                      } else if (selectedPaymentMethod === "credit") {
-                        handleProcessCreditCardCheckout();
-                      } else if (selectedPaymentMethod === "pix") {
-                        handleProcessPixCheckout();
-                      }
-                    }}
-                    disabled={
-                      totalParticipants === 0 ||
-                      checkoutLoading ||
-                      !billingAddressConfirmed
-                    }
-                    isLoading={checkoutLoading}
-                    className="bg-primary-11 text-primary-2 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isFreeOrder ? "Finalizar pedido" : "Finalizar compra"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* PIX Modal */}
       <PixModal

@@ -1,5 +1,6 @@
 import type { ApiClient } from "../base/ApiClient";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
+import type { AgeCouponEligibility } from "@/lib/ageCoupon";
 
 export interface LoginResponse {
   message?: string;
@@ -498,6 +499,48 @@ export class UserService {
         type: d.type === "FIXED" ? "FIXED" : "PERCENTAGE",
         couponType: d.couponType,
         applyToProducts: d.applyToProducts,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Elegibilidade do cupom AUTOMÁTICO de idade pro usuário logado, já em
+   * `/checkout/ingressos`. `OptionalJwtAuthGuard`: anônimo / sem dateOfBirth
+   * recebe `applicable: false` (não 401). `age` = idade na data do EVENTO.
+   * Retorna `null` em qualquer erro pra não quebrar a tela.
+   */
+  async getAgeCouponEligibility(
+    eventId: string,
+  ): Promise<AgeCouponEligibility | null> {
+    try {
+      const { data: response } = await this.apiClient.get<{ data: any }>(
+        `/api/v1/coupons/events/${eventId}/age-eligibility`,
+      );
+      const d = response.data;
+      if (!d) return null;
+      const c = d.appliedCoupon;
+      return {
+        applicable: !!d.applicable,
+        age: typeof d.age === "number" ? d.age : null,
+        eventDate: d.eventDate ?? null,
+        appliedCoupon: c
+          ? {
+              id: String(c.id),
+              couponType: "AGE",
+              type: c.type === "FIXED" ? "FIXED" : "PERCENTAGE",
+              value: Number(c.value) || 0,
+              ageRule: c.ageRule ?? null,
+              ageValue: c.ageValue ?? null,
+              minAge: c.minAge ?? null,
+              maxAge: c.maxAge ?? null,
+              appliesTo: c.appliesTo ?? null,
+              minCartValue: c.minCartValue ?? null,
+              applyToProducts: !!c.applyToProducts,
+              note: c.note ?? null,
+            }
+          : null,
       };
     } catch {
       return null;

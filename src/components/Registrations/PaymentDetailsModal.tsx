@@ -19,6 +19,11 @@ import { ArrowButton } from '../ArrowButton';
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { EventMobileTabs, getEventTabs } from "@/components/Organizer/EventMobileTabs";
 import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext";
+import {
+  isPersonBr,
+  documentLabel,
+  formatPersonPhone,
+} from "@/utils/documentDisplay";
 
 export function PaymentDetailsModal() {
   const { isOpen, closePaymentDetailsModal, data } = usePaymentDetailsModal();
@@ -181,10 +186,6 @@ export function PaymentDetailsModal() {
 
   const coupon = paymentDetails?.coupon ?? null;
   const voucher = paymentDetails?.voucher ?? null;
-  const totalDiscount = paymentDetails?.totalDiscount ?? null;
-  const hasDiscount = !!(coupon || voucher);
-  // Pedido gratuito (cortesia / voucher 100%): esconder método de pagamento e
-  // detalhes de transação, que não fazem sentido sem cobrança real.
   const isFreeOrder = (paymentInfo.totalAmount ?? 0) === 0;
 
   // Usar dados reais do buyer (paymentDetails tem buyer, registration tem user)
@@ -206,6 +207,16 @@ export function PaymentDetailsModal() {
     reservePhone: buyer?.reservePhone || registrationUser?.reservePhone,
 
   };
+
+  /* Nacionalidade do comprador pra exibir documento/telefone i18n. O backend
+   * pode não enviar `country`/`documentType` neste endpoint — a heurística cai
+   * pro shape do doc (11 dígitos = CPF) com segurança. */
+  const buyerCountry = buyerData?.country ?? buyerData?.nationality ?? null;
+  const buyerIsBr = isPersonBr({
+    country: buyerCountry,
+    documentType: buyerData?.documentType,
+    document: buyerData?.documentNumber,
+  });
 
   const formatBillingCep = (code?: string | null) => {
     if (!code) return "";
@@ -282,19 +293,9 @@ export function PaymentDetailsModal() {
     }
   };
 
-  const formatCPF = (cpf?: string) => {
-    if (!cpf) return "";
-    const numbers = cpf.replace(/\D/g, "");
-    if (numbers.length !== 11) return cpf;
-    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
-  };
-
-  const formatPhone = (phone?: string) => {
-    if (!phone) return "";
-    const numbers = phone.replace(/\D/g, "");
-    if (numbers.length !== 11) return phone;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3, 7)}-${numbers.slice(7)}`;
-  };
+  // Documento exibido CRU (só o label muda por país). Telefone recebe máscara.
+  const formatPhone = (phone?: string | null) =>
+    formatPersonPhone(phone, buyerCountry);
 
   const formatBirthDate = (dateString?: string) => {
     if (!dateString) return "";
@@ -433,7 +434,7 @@ export function PaymentDetailsModal() {
                     {[
                       { label: "Nome", value: buyerData?.firstName && buyerData?.lastName ? `${buyerData.firstName} ${buyerData.lastName}` : buyerData?.fullName || "—" },
                       { label: "Email", value: buyerData?.email || "—" },
-                      { label: "CPF", value: formatCPF(buyerData?.documentNumber || null) || "—" },
+                      { label: documentLabel(buyerIsBr), value: buyerData?.documentNumber || "—" },
                       { label: "Data de nascimento:", value: formatBirthDate(buyerData?.dateOfBirth || null) || "—" },
                       { label: "Telefone:", value: formatPhone(buyerData?.phone || null) || "—" },
                       { label: "Sexo", value: buyerData?.gender === "MALE" || buyerData?.gender === "male" ? "Masculino" : buyerData?.gender === "FEMALE" || buyerData?.gender === "female" ? "Feminino" : buyerData?.gender === "OTHER" || buyerData?.gender === "other" ? "Outro" : buyerData?.gender || "—" },
@@ -775,10 +776,10 @@ export function PaymentDetailsModal() {
                           </div>
                           <div className="flex flex-col py-2">
                             <p className="font-family-dm-sans font-normal text-[16px] leading-[1.3] text-gray-12">
-                              CPF
+                              {documentLabel(buyerIsBr)}
                             </p>
                             <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {formatCPF(buyerData?.documentNumber || null) || "—"}
+                              {buyerData?.documentNumber || "—"}
                             </p>
                           </div>
                           <div className="flex flex-col py-2">

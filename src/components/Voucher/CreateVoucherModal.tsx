@@ -632,51 +632,6 @@ export function CreateVoucherModal() {
                                 });
                               }}
                             >
-                              {/* Validade do voucher */}
-                              <div className="flex flex-col gap-5">
-                                <div className="flex flex-col gap-2">
-                                  <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                    Validade do voucher
-                                  </h3>
-                                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                    Após essa data, o voucher não poderá ser usado
-                                  </p>
-                                </div>
-                                <div className="flex gap-6">
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <Checkbox
-                                      checked={expiryStatus === "DISABLED"}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) { setExpiryStatus("DISABLED"); setExpiryDate(null); }
-                                      }}
-                                    />
-                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
-                                  </label>
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <Checkbox
-                                      checked={expiryStatus === "ENABLED"}
-                                      onCheckedChange={(checked) => { if (checked) setExpiryStatus("ENABLED"); }}
-                                    />
-                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
-                                  </label>
-                                </div>
-                                {expiryStatus === "ENABLED" && (
-                                  <div className="flex flex-col gap-2">
-                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
-                                      Expira em:
-                                    </label>
-                                    <DatePicker
-                                      value={expiryDate || undefined}
-                                      onChange={setExpiryDate}
-                                      minDate={minSelectableExpiryDate}
-                                      placeholder="00/00/2026"
-                                      className="w-full md:w-auto"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Lista exclusiva por CPF — idêntica ao cupom */}
                               <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
                                   <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
@@ -842,6 +797,49 @@ export function CreateVoucherModal() {
                                         Limpar lista
                                       </button>
                                     </div>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Validade do voucher */}
+                              <div className="flex flex-col gap-5">
+                                <div className="flex flex-col gap-2">
+                                  <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                    Validade do voucher
+                                  </h3>
+                                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                    Após essa data, o voucher não poderá ser usado
+                                  </p>
+                                </div>
+                                <div className="flex gap-6">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <Checkbox
+                                      checked={expiryStatus === "DISABLED"}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) { setExpiryStatus("DISABLED"); setExpiryDate(null); }
+                                      }}
+                                    />
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <Checkbox
+                                      checked={expiryStatus === "ENABLED"}
+                                      onCheckedChange={(checked) => { if (checked) setExpiryStatus("ENABLED"); }}
+                                    />
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                  </label>
+                                </div>
+                                {expiryStatus === "ENABLED" && (
+                                  <div className="flex flex-col gap-2">
+                                    <label className="text-gray-12 text-base font-family-dm-sans leading-[1.3]">
+                                      Expira em:
+                                    </label>
+                                    <DatePicker
+                                      value={expiryDate || undefined}
+                                      onChange={setExpiryDate}
+                                      minDate={minSelectableExpiryDate}
+                                      placeholder="00/00/2026"
+                                      className="w-full md:w-auto"
+                                    />
                                   </div>
                                 )}
                               </div>

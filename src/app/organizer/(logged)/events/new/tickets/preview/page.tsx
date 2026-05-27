@@ -82,7 +82,7 @@ export default function CreateTicketsCheckoutPreviewPage() {
   }
 
   return (
-    <div className="pb-24 pt-6 w-full max-w-7xl mx-auto">
+    <div className="pb-24 pt-6 max-w-7xl w-full mx-auto">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-14">
         <div className="flex items-center gap-3">
           <button

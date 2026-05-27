@@ -752,7 +752,8 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
                 <SectionTitle icon={<Building2 className="size-5" />} label="Detalhes da organização" />
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
                   <FieldInput label="CNPJ" value={cnpjValue} onChange={(v) => setCnpjValue(formatCNPJ(v))} placeholder="00.000.000/0000-00" className="min-w-[284px]" />
-                  <FieldInput label="Razão social" value={tradeName} onChange={setTradeName} placeholder="Razão social" className="min-w-[284px]" />
+                  <FieldInput label="Razão social" value={name} onChange={setName} placeholder="Razão social" className="min-w-[284px]" />
+                  <FieldInput label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
                   <FieldInput label="Nome do responsável" value={ownerName} onChange={setOwnerName} placeholder="Nome completo" className="min-w-[284px]" />
                   <FieldInput label="CPF do responsável" value={ownerDocument} onChange={(v) => setOwnerDocument(formatCPF(v))} placeholder="000.000.000-00" className="min-w-[284px]" />
                   <FieldInput label="E-mail fiscal" value={fiscalEmail} onChange={setFiscalEmail} placeholder="fiscal@org.com" type="email" className="min-w-[284px]" />

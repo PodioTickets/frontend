@@ -142,8 +142,8 @@ export default function IngressosPage() {
   );
 
   return (
-    <div className="flex-1 bg-gray-2 px-4 pb-4 mt-0 pt-0 md:px-5 md:pb-20 md:pt-10 md:px-[124px]">
-      <div className="mx-auto max-w-[1060px]">
+    <div className="flex-1 bg-gray-2 px-4 pb-4 mt-0 pt-0 md:px-5 md:pb-20 md:pt-10">
+      <div className="max-w-7xl w-full mx-auto">
         <TicketsSection
           ref={ticketsSectionRef}
           eventId={eventId}

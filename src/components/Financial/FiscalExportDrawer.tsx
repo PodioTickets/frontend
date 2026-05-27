@@ -100,13 +100,6 @@ const formatCurrency = (cents: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-const maskCPF = (cpf: string) => {
-  if (!cpf) return "";
-  const digits = cpf.replace(/\D/g, "");
-  if (digits.length !== 11) return cpf;
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-};
-
 const formatPurchaseDate = (iso: string) => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return { day: "—", time: "" };
@@ -381,7 +374,7 @@ export function FiscalExportDrawer({
                             {order.buyer.name}
                           </span>
                           <span className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                            {maskCPF(order.buyer.cpf)}
+                            {order.buyer.cpf}
                           </span>
                         </div>
                       </div>
@@ -453,7 +446,7 @@ export function FiscalExportDrawer({
                           {order.buyer.name}
                         </span>
                         <span className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                          {maskCPF(order.buyer.cpf)}
+                          {order.buyer.cpf}
                         </span>
                       </div>
                     </div>

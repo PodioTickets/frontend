@@ -135,6 +135,10 @@ function CheckoutSucessoContent() {
         name: p.fullName || [p.firstName, p.lastName].filter(Boolean).join(" ") || "",
         email: p.email || "",
         cpf: p.documentNumber || "",
+        // Decide label do documento (CPF/Documento) e máscara de CPF/telefone —
+        // mesma heurística da tela de ingresso (country → documentType → shape).
+        documentType: p.documentType ?? null,
+        country: p.country ?? null,
         phone: p.phone || "",
         birthDate: p.dateOfBirth || p.birthDate || "",
         gender: (p.gender ?? null) as "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY" | null,

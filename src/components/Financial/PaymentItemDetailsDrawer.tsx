@@ -19,6 +19,11 @@ import { Loading } from "@/components/Loading";
 import { Pagination } from "@/components/Pagination";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { PaymentDetailsMobile, type MobileParticipantItem } from "./PaymentDetailsMobile";
+import {
+  isPersonBr,
+  documentLabel,
+  formatPersonPhone,
+} from "@/utils/documentDisplay";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -96,28 +101,6 @@ export function PaymentItemDetailsDrawer({
     } catch {
       return dateString;
     }
-  };
-
-  const formatDocument = (document?: string | null) => {
-    if (!document) return "—";
-    const cleaned = document.replace(/\D/g, "");
-    if (cleaned.length === 11) {
-      return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-    } else if (cleaned.length === 14) {
-      return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-    }
-    return document;
-  };
-
-  const formatPhone = (phone?: string | null) => {
-    if (!phone) return "—";
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 11) {
-      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    } else if (cleaned.length === 10) {
-      return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    }
-    return phone;
   };
 
   const formatGender = (gender?: string | null) => {
@@ -228,6 +211,22 @@ export function PaymentItemDetailsDrawer({
 
   const { buyer, payment, event, coupon } = paymentDetails;
 
+  /* Nacionalidade do comprador pra exibir documento/telefone i18n. O tipo do
+   * backend não declara country/documentType; lemos defensivamente e a
+   * heurística cai pro shape do doc (11 dígitos = CPF) quando ausentes. */
+  const buyerCountry =
+    (buyer as { country?: string | null; nationality?: string | null }).country ??
+    (buyer as { nationality?: string | null }).nationality ??
+    null;
+  const buyerIsBr = isPersonBr({
+    country: buyerCountry,
+    documentType: (buyer as { documentType?: string | null }).documentType,
+    document: buyer.documentNumber,
+  });
+  // Telefone do comprador via util i18n; "—" quando vazio (mantém o layout).
+  const formatPhone = (phone?: string | null) =>
+    formatPersonPhone(phone, buyerCountry) || "—";
+
   /* Props normalizadas pro mobile — derivar a partir do paymentDetails
    * (mesmo shape do desktop) num lugar só pra evitar dessincronia. */
   const mobileParticipants: MobileParticipantItem[] = paginatedParticipants.map((p) => ({
@@ -248,7 +247,7 @@ export function PaymentItemDetailsDrawer({
         "—",
     },
     { label: "Email", value: buyer.email || "—" },
-    { label: "CPF", value: formatDocument(buyer.documentNumber) },
+    { label: documentLabel(buyerIsBr), value: buyer.documentNumber || "—" },
     {
       label: "Data de nascimento:",
       value: buyer.dateOfBirth ? formatDate(buyer.dateOfBirth).split(" - ")[0] : "—",
@@ -338,7 +337,7 @@ export function PaymentItemDetailsDrawer({
                   },
                   { label: "Email", value: buyer.email || "—" },
                   { label: "Telefone:", value: formatPhone(buyer.phone) },
-                  { label: "CPF", value: formatDocument(buyer.documentNumber) },
+                  { label: documentLabel(buyerIsBr), value: buyer.documentNumber || "—" },
                   { label: "Data de nascimento:", value: formatBirthDate(buyer.dateOfBirth) },
                   { label: "Sexo", value: formatGender(buyer.gender) },
                 ].map(({ label, value }) => (

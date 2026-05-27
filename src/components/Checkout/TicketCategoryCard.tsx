@@ -19,6 +19,7 @@ import { cn } from "@/utils/cn";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
+import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
 
 /* Aplica preview de cupom (`?coupon=` na URL) ao preço base do ticket pra
  * exibir "R$ X (com desconto)  R$ Y (riscado)" nos cards. Backend é fonte
@@ -70,6 +71,11 @@ interface TicketCategoryCardProps {
   expandedByDefault?: boolean;
   event: Event;
   kitSelectionDisplay?: EventKitSelectionDisplay;
+  /** Idade da conta na data do evento (ModalitiesStep). Omitido = badge sempre. */
+  userAge?: number | null;
+  /** Preview de cupom injetado (ex.: cupom automático de idade) quando não há
+   *  cupom de link na URL — desconta os preços dos cards igual ao cupom de link. */
+  couponPreviewOverride?: CouponPreviewResult | null;
 }
 
 const formatPrice = (price: number) => {
@@ -112,6 +118,7 @@ const TicketItemMobile = memo(({
   kitSelectionDisplay,
   showProductImages = true,
   couponPreview,
+  userAge,
 }: {
   ticket: Ticket;
   event: Event;
@@ -122,6 +129,7 @@ const TicketItemMobile = memo(({
   kitSelectionDisplay: EventKitSelectionDisplay;
   showProductImages?: boolean;
   couponPreview?: CouponPreviewResult | null;
+  userAge?: number | null;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -130,6 +138,14 @@ const TicketItemMobile = memo(({
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
+  // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
+  // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
+  const showAgeLimit =
+    !!ageLimitText &&
+    (userAge === undefined
+      ? true
+      : userAge !== null && !isAgeWithinTicketLimit(userAge, ticket.ageLimit));
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
     () => resolvePreviewPrice(price, ticket.id, couponPreview),
@@ -360,7 +376,7 @@ const TicketItemMobile = memo(({
                   </div>
                 )}
               </div>
-              {ageLimitText ? (
+              {showAgeLimit ? (
                 <div className="bg-yellow-3 rounded-full px-4 py-2 shrink-0 max-w-full">
                   <p className="text-sm font-medium text-yellow-12 font-family-dm-sans">
                     Limite de idade: {ageLimitText}
@@ -373,7 +389,7 @@ const TicketItemMobile = memo(({
       )}
 
       {/* Tag de idade em linha própria — só no layout single-image (Figma). */}
-      {isSingleImageLayout && ageLimitText ? (
+      {isSingleImageLayout && showAgeLimit ? (
         <div className="bg-yellow-3 rounded-full px-4 py-3 self-start max-w-full">
           <p className="text-xs font-medium text-yellow-12 font-family-dm-sans leading-[1.3]">
             Limite de idade: {ageLimitText}
@@ -455,6 +471,7 @@ const TicketItemDesktop = memo(({
   kitSelectionDisplay,
   showProductImages = true,
   couponPreview,
+  userAge,
 }: {
   ticket: Ticket;
   event: Event;
@@ -465,6 +482,7 @@ const TicketItemDesktop = memo(({
   kitSelectionDisplay: EventKitSelectionDisplay;
   showProductImages?: boolean;
   couponPreview?: CouponPreviewResult | null;
+  userAge?: number | null;
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -474,6 +492,14 @@ const TicketItemDesktop = memo(({
   const distanceKm = getDistanceKm(ticket);
   const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
+  // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
+  // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
+  // nascimento) → esconde; número → mostra só se a idade estiver FORA do limite.
+  const showAgeLimit =
+    !!ageLimitText &&
+    (userAge === undefined
+      ? true
+      : userAge !== null && !isAgeWithinTicketLimit(userAge, ticket.ageLimit));
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
     () => resolvePreviewPrice(price, ticket.id, couponPreview),
@@ -614,7 +640,7 @@ const TicketItemDesktop = memo(({
       )}
       <div className={cn("min-w-0", productItems.length > 0 ? "row-start-1 col-start-2" : "w-full")}>
         <div className="relative bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-2 w-full">
-          {ageLimitText ? (
+          {showAgeLimit ? (
             <div className="absolute top-5 right-5 bg-yellow-3 text-yellow-12 rounded-full px-3 py-1">
               <p className="text-xs font-medium font-family-dm-sans whitespace-nowrap">
                 Limite de idade: {ageLimitText}
@@ -737,6 +763,8 @@ export function TicketCategoryCard({
   expandedByDefault,
   event,
   kitSelectionDisplay: kitSelectionDisplayProp,
+  userAge,
+  couponPreviewOverride,
 }: TicketCategoryCardProps) {
   const kitSelectionDisplay = kitSelectionDisplayProp ?? defaultEventKitSelectionDisplay();
   const [isExpanded, setIsExpanded] = useState(expandedByDefault ?? index === 0);
@@ -745,6 +773,8 @@ export function TicketCategoryCard({
   // Backend reconcilia no PaymentStep; aqui é só feedback visual no /ingressos.
   const pendingCoupon = usePendingCouponSnapshot();
   const { data: couponPreview } = useCouponPreview(event?.id, pendingCoupon);
+  // Cupom de link (URL) tem prioridade; senão usa o override injetado (idade).
+  const effectivePreview = couponPreview ?? couponPreviewOverride ?? null;
 
   const totalQuantity = useMemo(
     () => Object.values(raceQuantities).reduce((s, q) => s + q, 0),
@@ -828,7 +858,8 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
-              couponPreview={couponPreview ?? null}
+              couponPreview={effectivePreview}
+              userAge={userAge}
             />
           ))}
         </div>
@@ -844,7 +875,8 @@ export function TicketCategoryCard({
               onIncrease={handleIncrease}
               kitSelectionDisplay={kitSelectionDisplay}
               showProductImages={showTicketLevelImages}
-              couponPreview={couponPreview ?? null}
+              couponPreview={effectivePreview}
+              userAge={userAge}
             />
           ))}
         </div>
@@ -928,7 +960,8 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
-                    couponPreview={couponPreview ?? null}
+                    couponPreview={effectivePreview}
+                    userAge={userAge}
                   />
                 ))}
               </div>
@@ -1006,7 +1039,8 @@ export function TicketCategoryCard({
                     onIncrease={handleIncrease}
                     kitSelectionDisplay={kitSelectionDisplay}
                     showProductImages={showTicketLevelImages}
-                    couponPreview={couponPreview ?? null}
+                    couponPreview={effectivePreview}
+                    userAge={userAge}
                   />
                 ))}
               </div>

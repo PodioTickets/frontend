@@ -310,7 +310,7 @@ export default function AdminEventsPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [page, debouncedSearch, statusFilter, sortBy, sortOrder, fetchKey]);
+  }, [page, debouncedSearch, statusFilter, sortBy, sortOrder]);
 
   const openSuspendModal = (ev: AdminEvent) => {
     setSuspendModalEvent(ev);

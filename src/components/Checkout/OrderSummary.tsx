@@ -5,6 +5,7 @@ import { ArrowButton } from "../ArrowButton";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { StarIcon } from "../Icons/StarIcon";
 import type { Event } from "@/interfaces/event";
+import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 
 interface OrderItem {
   name: string;
@@ -38,6 +39,8 @@ interface ParticipantData {
     birthDate: string;
     phone: string;
     gender?: string;
+    /** Nacionalidade (PT-BR) — decide formatação do documento (CPF vs cru). */
+    nationality?: string;
   };
   couponCode?: string;
   couponDiscount?: number;
@@ -405,7 +408,13 @@ export function OrderSummary({
                                   )}
                                   {participantData.participant.cpf && (
                                     <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                                      {participantData.participant.cpf}
+                                      {formatDocumentDisplay(
+                                        participantData.participant.cpf,
+                                        isPersonBr({
+                                          country: participantData.participant.nationality,
+                                          document: participantData.participant.cpf,
+                                        })
+                                      )}
                                     </p>
                                   )}
                                 </div>

@@ -11,6 +11,8 @@ import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { EventInfoCard } from "@/components/Event/EventInfoCard";
 import { Tooltip } from "@/components/Tooltip";
+import { formatPhoneForCountry } from "@/utils/phone";
+import { isBrazilianCountry } from "@/validators/Auth.validator";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -52,6 +54,9 @@ interface PaymentSuccessStepProps {
     name: string;
     email: string;
     cpf: string;
+    /** Tipo de documento e país do participante — definem label/máscara do doc. */
+    documentType?: string | null;
+    country?: string | null;
     phone: string;
     birthDate: string;
     gender: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | null;
@@ -124,6 +129,8 @@ export function PaymentSuccessStep({
   const participants = participantsInfo.map(p => ({
     name: p.name,
     cpf: p.cpf,
+    documentType: p.documentType ?? null,
+    country: p.country ?? null,
     email: p.email,
     birthDate: p.birthDate,
     phone: p.phone,
@@ -156,8 +163,30 @@ export function PaymentSuccessStep({
     }).format(value);
   };
 
-  const maskCPF = (cpf: string) => {
+  /* Brasileiro quando: (1) country bate com BR/Brasil/Brazil (sinal mais
+   * confiável, vem do cadastro internacional), (2) country null mas
+   * documentType === "CPF" (registros legados), ou (3) ambos null + shape do
+   * doc (CPF = 11 dígitos puros). Mesma heurística da tela de ingresso —
+   * NÃO confiar em documentType primeiro (contas pre-migration têm
+   * documentType="CPF" mesmo com country estrangeiro). */
+  const isParticipantBr = (p: {
+    country?: string | null;
+    documentType?: string | null;
+    cpf?: string | null;
+  }): boolean => {
+    if (p.country) return isBrazilianCountry(p.country);
+    if (p.documentType) return p.documentType === "CPF";
+    const raw = (p.cpf || "").trim();
+    if (!raw) return true;
+    if (/[A-Za-z]/.test(raw)) return false;
+    return raw.replace(/\D/g, "").length === 11;
+  };
+
+  // Máscara parcial de PII só pra CPF brasileiro; estrangeiro (passaporte/RNE)
+  // exibe cru (não há padrão de mascaramento e o doc tem letras essenciais).
+  const maskCPF = (cpf: string, isBr: boolean = true) => {
     if (!cpf) return "";
+    if (!isBr) return cpf;
     const cleaned = cpf.replace(/\D/g, "");
     if (cleaned.length !== 11) return cpf;
     return `${cleaned.slice(0, 2)}.***.***-${cleaned.slice(9)}`;
@@ -170,16 +199,11 @@ export function PaymentSuccessStep({
     return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;
   };
 
-  const formatPhone = (phone: string) => {
+  // Formata pelo país do participante via libphonenumber (mesmo helper do
+  // cadastro/preenchimento). Sem país mapeado, fallback retorna dígitos limpos.
+  const formatPhone = (phone: string, country?: string | null) => {
     if (!phone) return "";
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    }
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-    }
-    return phone;
+    return formatPhoneForCountry(phone, country ?? null) || phone;
   };
 
   const getGenderLabel = (gender: string) => {
@@ -498,7 +522,7 @@ export function PaymentSuccessStep({
                                   )}
                                   {participant.cpf && (
                                     <span className="font-normal text-xs leading-[1.3] text-gray-11 font-family-dm-sans flex-1 truncate">
-                                      {maskCPF(participant.cpf)}
+                                      {maskCPF(participant.cpf, isParticipantBr(participant))}
                                     </span>
                                   )}
                                 </div>
@@ -556,8 +580,10 @@ export function PaymentSuccessStep({
                                     value: participant.email || "",
                                   },
                                   {
-                                    label: "CPF",
-                                    value: formatCPF(participant.cpf || ""),
+                                    label: isParticipantBr(participant) ? "CPF" : "Documento",
+                                    value: isParticipantBr(participant)
+                                      ? formatCPF(participant.cpf || "")
+                                      : participant.cpf || "",
                                   },
                                   {
                                     label: "Data de nascimento",
@@ -567,7 +593,7 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "Telefone",
-                                    value: formatPhone(participant.phone || ""),
+                                    value: formatPhone(participant.phone || "", participant.country),
                                   },
                                   {
                                     label: "Sexo",
@@ -578,8 +604,8 @@ export function PaymentSuccessStep({
                                   {
                                     label: "Contato de emergência",
                                     value: participant.emergencyContactName && participant.emergencyPhone
-                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone)}`
-                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "") || "",
+                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone, participant.country)}`
+                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "", participant.country) || "",
                                   },
                                 ].map((field, idx) => {
                                   if (!field.value) return null
@@ -1026,7 +1052,7 @@ export function PaymentSuccessStep({
                                   )}
                                   {participant.cpf && (
                                     <span className="font-normal text-[14px] leading-[1.3] text-gray-11 font-family-dm-sans">
-                                      {maskCPF(participant.cpf)}
+                                      {maskCPF(participant.cpf, isParticipantBr(participant))}
                                     </span>
                                   )}
 
@@ -1091,8 +1117,10 @@ export function PaymentSuccessStep({
                                     value: participant.email || "",
                                   },
                                   {
-                                    label: "CPF",
-                                    value: formatCPF(participant.cpf || ""),
+                                    label: isParticipantBr(participant) ? "CPF" : "Documento",
+                                    value: isParticipantBr(participant)
+                                      ? formatCPF(participant.cpf || "")
+                                      : participant.cpf || "",
                                   },
                                   {
                                     label: "Data de nascimento",
@@ -1102,7 +1130,7 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "Telefone",
-                                    value: formatPhone(participant.phone || ""),
+                                    value: formatPhone(participant.phone || "", participant.country),
                                   },
                                   {
                                     label: "Sexo",
@@ -1113,8 +1141,8 @@ export function PaymentSuccessStep({
                                   {
                                     label: "Contato de emergência",
                                     value: participant.emergencyContactName && participant.emergencyPhone
-                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone)}`
-                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "") || "",
+                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone, participant.country)}`
+                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "", participant.country) || "",
                                   },
                                 ].map((field, idx) => {
                                   if (!field.value) return null
