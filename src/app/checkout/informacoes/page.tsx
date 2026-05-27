@@ -71,6 +71,7 @@ function CheckoutInformacoesContent() {
           email: string;
           birthDate: string;
           phone: string;
+          country?: string;
           gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
           emergencyContactName?: string;
           emergencyPhone?: string;
@@ -87,6 +88,12 @@ function CheckoutInformacoesContent() {
           birthDate: p.birthDate,
           /* Extrai dígitos nacionais (BR: 11, US: 10, etc.) via libphonenumber-js. */
           phone: p.phone ? getPhoneDigitsForBackend(p.phone, p.nationality) : "",
+          /* Nacionalidade escolhida pelo participante no checkout — backend
+           * salva no receiptSnapshot.participant.country e usa pra formatar
+           * telefone e decidir label do documento no PDF/email. Sem isso,
+           * o snapshot fica null e o PDF cai no billingCountry (que pode
+           * estar errado: front default 'Brasil' mesmo p/ argentino). */
+          country: p.nationality || undefined,
         };
         const gender = mapGender(p.gender);
         if (gender) mapped.gender = gender;
