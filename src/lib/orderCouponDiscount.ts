@@ -27,9 +27,10 @@ export function formatVoucherLineLabel(code: string | null | undefined): string 
 }
 
 /**
- * Desconto de um voucher (100% OFF) sobre os ingressos selecionados que ele
- * cobre. Soma `preço × quantidade` de cada ticket cujo `id` está em `appliesTo`.
- * Valores em REAIS.
+ * Desconto de um voucher (100% OFF). Um voucher cobre APENAS UMA unidade de
+ * ingresso: dentre os ingressos selecionados cujo `id` está em `appliesTo` (com
+ * quantidade > 0), libera a unidade de MAIOR valor. Retorna o preço dessa única
+ * unidade (REAIS) — 0 quando nada elegível foi selecionado.
  */
 export function computeVoucherTicketsDiscount(
   appliesTo: string[] | null | undefined,
@@ -37,10 +38,13 @@ export function computeVoucherTicketsDiscount(
 ): number {
   if (!appliesTo?.length) return 0;
   const set = new Set(appliesTo);
-  return selected.reduce(
-    (acc, t) => acc + (set.has(t.id) ? Math.max(0, t.price) * Math.max(0, t.quantity) : 0),
-    0,
-  );
+  let maxUnit = 0;
+  for (const t of selected) {
+    if (set.has(t.id) && t.quantity > 0) {
+      maxUnit = Math.max(maxUnit, Math.max(0, t.price));
+    }
+  }
+  return maxUnit;
 }
 
 /**

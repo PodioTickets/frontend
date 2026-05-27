@@ -45,17 +45,21 @@ function applyCouponPreviewToPrice(
 }
 
 /* Resolve o preço do ticket considerando o preview da URL — cupom (percentual/
- * fixo, aplicado a todos) ou voucher (100% OFF só nos ingressos de `appliesTo`).
- * Voucher zera o preço dos tickets cobertos; os demais ficam intactos. */
+ * fixo, aplicado a todos) ou voucher (100% OFF). O voucher cobre 1 UNIDADE: o
+ * ingresso elegível (`appliesTo`) fica grátis enquanto a qtd selecionada for ≤ 1
+ * (0 = preview ao navegar, igual ao cupom; 1 = a unidade gratuita). Com qtd > 1,
+ * mantém o preço cheio — só 1 unidade é grátis e o desconto vai pro resumo. */
 function resolvePreviewPrice(
   price: number,
   ticketId: string,
   preview: CouponPreviewResult | null | undefined,
+  ticketQuantity?: number,
 ): { discounted: number; original: number; hasDiscount: boolean } {
   if (!preview) return { discounted: price, original: price, hasDiscount: false };
   if (preview.kind === "voucher") {
-    const applies = preview.appliesTo.includes(ticketId);
-    return applies
+    const isFree =
+      preview.appliesTo.includes(ticketId) && (ticketQuantity ?? 0) <= 1;
+    return isFree
       ? { discounted: 0, original: price, hasDiscount: price > 0 }
       : { discounted: price, original: price, hasDiscount: false };
   }
@@ -80,13 +84,29 @@ interface TicketCategoryCardProps {
 
 const formatPrice = (price: number) => {
   if (price === 0) return "Gratuito";
-  return new Intl.NumberFormat("pt-BR", {
+  return formatPriceCurrency(price);
+};
+
+/* Sempre formata como moeda (R$ 0,00 pra zero) — usado no preço DESCONTADO.
+ * Quando o voucher zera o ingresso, mostra "R$ 0,00" em vez de "Gratuito"
+ * (decisão do usuário: deixa claro que ficou grátis por conta do voucher). */
+const formatPriceCurrency = (price: number) =>
+  new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(price);
-};
+
+/* Preço a exibir no card: com desconto ativo usa moeda (voucher → "R$ 0,00");
+ * sem desconto, mantém "Gratuito" pra ingresso naturalmente gratuito. */
+const formatDisplayPrice = (breakdown: {
+  discounted: number;
+  hasDiscount: boolean;
+}) =>
+  breakdown.hasDiscount
+    ? formatPriceCurrency(breakdown.discounted)
+    : formatPrice(breakdown.discounted);
 
 const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
   if (!ageLimit) return null;
@@ -148,8 +168,8 @@ const TicketItemMobile = memo(({
       : userAge !== null && !isAgeWithinTicketLimit(userAge, ticket.ageLimit));
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
-    () => resolvePreviewPrice(price, ticket.id, couponPreview),
-    [price, ticket.id, couponPreview],
+    () => resolvePreviewPrice(price, ticket.id, couponPreview, quantity),
+    [price, ticket.id, couponPreview, quantity],
   );
 
   const productItems = useMemo(
@@ -400,7 +420,7 @@ const TicketItemMobile = memo(({
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
           <p className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-            {formatPrice(priceBreakdown.discounted)}
+            {formatDisplayPrice(priceBreakdown)}
           </p>
           {priceBreakdown.hasDiscount && (
             <p className="text-sm font-medium text-gray-11 font-manrope leading-[1.1] line-through">
@@ -502,8 +522,8 @@ const TicketItemDesktop = memo(({
       : userAge !== null && !isAgeWithinTicketLimit(userAge, ticket.ageLimit));
   const modalityInfo = useMemo(() => getCheckoutModalityInfo(ticket, event), [ticket, event]);
   const priceBreakdown = useMemo(
-    () => resolvePreviewPrice(price, ticket.id, couponPreview),
-    [price, ticket.id, couponPreview],
+    () => resolvePreviewPrice(price, ticket.id, couponPreview, quantity),
+    [price, ticket.id, couponPreview, quantity],
   );
 
   const productItems = useMemo(
@@ -682,7 +702,7 @@ const TicketItemDesktop = memo(({
 
           <div className="flex items-end justify-between">
             <div className="flex items-baseline gap-2">
-              <p className="text-xl font-bold text-gray-12">{formatPrice(priceBreakdown.discounted)}</p>
+              <p className="text-xl font-bold text-gray-12">{formatDisplayPrice(priceBreakdown)}</p>
               {priceBreakdown.hasDiscount && (
                 <p className="text-sm font-medium text-gray-11 line-through">
                   {formatPrice(priceBreakdown.original)}
@@ -800,11 +820,14 @@ export function TicketCategoryCard({
     }
     let dMin = Infinity;
     for (const t of validTickets) {
-      dMin = Math.min(dMin, resolvePreviewPrice(getTicketPrice(t), t.id, couponPreview).discounted);
+      dMin = Math.min(
+        dMin,
+        resolvePreviewPrice(getTicketPrice(t), t.id, effectivePreview, raceQuantities[t.id] || 0).discounted,
+      );
     }
     const discounted = dMin === Infinity ? minPrice : dMin;
     return { discounted, original: minPrice, hasDiscount: discounted < minPrice };
-  }, [validTickets, minPrice, couponPreview]);
+  }, [validTickets, minPrice, effectivePreview, raceQuantities]);
 
   const showCategoryLevelKit =
     !!categoryId &&
@@ -916,7 +939,7 @@ export function TicketCategoryCard({
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
                     <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
-                      {formatPrice(minPriceBreakdown.discounted)}
+                      {formatDisplayPrice(minPriceBreakdown)}
                     </span>
                     {minPriceBreakdown.hasDiscount && (
                       <span className="text-gray-11 text-sm font-medium font-manrope leading-[1.1] line-through">

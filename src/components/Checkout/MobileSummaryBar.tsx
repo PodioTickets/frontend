@@ -272,7 +272,9 @@ export function MobileSummaryBar({
                       value={formatPrice(additionalProducts.total)}
                     />
                   )}
-                  {(discount || (additionalProducts && additionalProducts.total > 0)) && (
+                  {/* Subtotal só faz sentido quando há mais de um ingresso diferente
+                      pra somar — com um único, a linha do ingresso já é o subtotal. */}
+                  {tickets.length > 1 && (
                     <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
                   )}
                   {discountRow}

@@ -44,8 +44,8 @@ import {
 } from "@/utils/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X } from "lucide-react";
-import { isAutoCoupon } from "@/lib/orderAutoCouponDisplay";
-import { formatCouponLineLabel } from "@/lib/orderCouponDiscount";
+import { isHiddenPrePaymentCoupon } from "@/lib/orderAutoCouponDisplay";
+import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
 
 interface InformationStepProps {
@@ -565,11 +565,26 @@ export function InformationStep({
   // response do `patchCoupon` (que garante `applyToProducts`). O GET /orders
   // pode omitir esse campo em algumas versões do backend.
   const appliedCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
-  const showCouponDiscount = !!appliedCoupon && !isAutoCoupon(appliedCoupon);
+  // Revela AGE (cupom de idade) pré-pagamento; só QUANTITY fica escondido.
+  const showCouponDiscount = !!appliedCoupon && !isHiddenPrePaymentCoupon(appliedCoupon);
   const couponDiscountAmount = useMemo(() => {
     if (!showCouponDiscount) return 0;
     return (orderData?.pricing?.couponDiscount ?? 0) / 100;
   }, [orderData, showCouponDiscount]);
+
+  // Voucher aplicado na order (via `?voucher=` no /ingressos). Valor autoritativo
+  // do `pricing.voucherDiscount` (centavos). Cupom e voucher são mutuamente
+  // exclusivos, então só um aparece. Sem isso o voucher sumia a partir daqui.
+  const appliedVoucher = timerCurrentOrder?.voucher ?? orderData?.voucher ?? null;
+  const voucherDiscountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    const cents =
+      orderData?.pricing?.voucherDiscount ??
+      timerCurrentOrder?.pricing?.voucherDiscount ??
+      0;
+    return cents / 100;
+  }, [appliedVoucher, orderData, timerCurrentOrder]);
+  const hasVoucherLine = !!appliedVoucher && voucherDiscountAmount > 0;
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
@@ -1557,21 +1572,32 @@ export function InformationStep({
                       Ver mais {groupedTickets.length - 3} ingresso{groupedTickets.length - 3 > 1 ? "s" : ""}
                     </button>
                   )}
+                  {/* Subtotal só com mais de um ingresso diferente pra somar. */}
+                  {groupedTickets.length > 1 && (
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">Subtotal:</p>
+                      <p className="font-bold">{formatPrice(totalPrice)}</p>
+                    </div>
+                  )}
                   {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                    <>
-                      <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">Subtotal:</p>
-                        <p className="font-bold">{formatPrice(totalPrice)}</p>
-                      </div>
-                      <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">
-                          {formatCouponLineLabel(appliedCoupon)}:
-                        </p>
-                        <p className="font-bold">
-                          -{formatPrice(couponDiscountAmount)}
-                        </p>
-                      </div>
-                    </>
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">
+                        {formatCouponLineLabel(appliedCoupon)}:
+                      </p>
+                      <p className="font-bold">
+                        -{formatPrice(couponDiscountAmount)}
+                      </p>
+                    </div>
+                  )}
+                  {hasVoucherLine && (
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">
+                        {formatVoucherLineLabel(appliedVoucher!.code)}:
+                      </p>
+                      <p className="font-bold">
+                        -{formatPrice(voucherDiscountAmount)}
+                      </p>
+                    </div>
                   )}
                   {serviceFee > 0 && (
                     <div className="flex items-center justify-between text-base text-gray-12">
@@ -2282,7 +2308,9 @@ export function InformationStep({
         discount={
           appliedCoupon && showCouponDiscount && couponDiscountAmount > 0
             ? { label: formatCouponLineLabel(appliedCoupon), amount: couponDiscountAmount }
-            : null
+            : hasVoucherLine
+              ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
+              : null
         }
         serviceFee={serviceFee}
         total={totalAmount}
@@ -2374,21 +2402,32 @@ export function InformationStep({
                         </p>
                       </div>
                     ))}
+                    {/* Subtotal só com mais de um ingresso diferente pra somar. */}
+                    {groupedTickets.length > 1 && (
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">Subtotal:</p>
+                        <p className="font-bold">{formatPrice(totalPrice)}</p>
+                      </div>
+                    )}
                     {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                      <>
-                        <div className="flex items-center justify-between text-base text-gray-12">
-                          <p className="font-semibold">Subtotal:</p>
-                          <p className="font-bold">{formatPrice(totalPrice)}</p>
-                        </div>
-                        <div className="flex items-center justify-between text-base text-gray-12">
-                          <p className="font-semibold">
-                            {formatCouponLineLabel(appliedCoupon)}:
-                          </p>
-                          <p className="font-bold">
-                            -{formatPrice(couponDiscountAmount)}
-                          </p>
-                        </div>
-                      </>
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">
+                          {formatCouponLineLabel(appliedCoupon)}:
+                        </p>
+                        <p className="font-bold">
+                          -{formatPrice(couponDiscountAmount)}
+                        </p>
+                      </div>
+                    )}
+                    {hasVoucherLine && (
+                      <div className="flex items-center justify-between text-base text-gray-12">
+                        <p className="font-semibold">
+                          {formatVoucherLineLabel(appliedVoucher!.code)}:
+                        </p>
+                        <p className="font-bold">
+                          -{formatPrice(voucherDiscountAmount)}
+                        </p>
+                      </div>
                     )}
                     {serviceFee > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">

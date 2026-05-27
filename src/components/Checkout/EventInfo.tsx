@@ -300,7 +300,8 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
 
         {groupedTickets.length > 0 && (
           <>
-            {(hasCouponLine || couponPending) && (
+            {/* Subtotal só quando há mais de um ingresso diferente pra somar. */}
+            {groupedTickets.length > 1 && (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
                 <p className="font-semibold">Subtotal:</p>
                 <p className="font-bold">{formatPrice(totalPrice)}</p>

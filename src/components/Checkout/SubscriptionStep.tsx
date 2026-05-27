@@ -10,7 +10,7 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import {
   ticketUnitPriceForPrePaymentCents,
-  isAutoCoupon,
+  isHiddenPrePaymentCoupon,
 } from "@/lib/orderAutoCouponDisplay";
 import {
   computeCouponDiscount,
@@ -892,7 +892,8 @@ export function SubscriptionStep({
   // O GET /orders pode omitir esse campo em algumas versões do backend, então
   // usamos o snapshot do timer como fonte primária e o orderData como fallback.
   const appliedCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
-  const showCouponDiscount = !!appliedCoupon && !isAutoCoupon(appliedCoupon);
+  // Revela AGE (cupom de idade) pré-pagamento; só QUANTITY fica escondido.
+  const showCouponDiscount = !!appliedCoupon && !isHiddenPrePaymentCoupon(appliedCoupon);
   const couponBreakdown = useMemo(() => {
     return computeCouponDiscount(appliedCoupon, totalPrice, totalProductsPrice);
   }, [appliedCoupon, totalPrice, totalProductsPrice]);
@@ -1386,7 +1387,8 @@ export function SubscriptionStep({
                 })}
               </div>
 
-              {(hasCouponLine || hasVoucherLine) && (
+              {/* Subtotal só com mais de um ingresso diferente pra somar. */}
+              {groupedTickets.length > 1 && (
                 <div className="flex flex-col gap-2 mt-6">
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     Subtotal:

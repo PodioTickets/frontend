@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -179,10 +179,6 @@ const STATUS_OPTIONS = [
   { value: "COMPLETED", label: "Concluído" },
 ];
 
-const ALL_ADMIN_STATUS_VALUES = STATUS_OPTIONS
-  .filter((o) => o.value)
-  .map((o) => o.value);
-
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: "createdAt", label: "Data de criação" },
   { value: "eventDate", label: "Data do evento" },
@@ -214,11 +210,6 @@ export default function AdminEventsPage() {
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspendModalEvent, setSuspendModalEvent] = useState<AdminEvent | null>(null);
   const [resumeModalEvent, setResumeModalEvent] = useState<AdminEvent | null>(null);
-  // Status que realmente existem na plataforma. Inicializa com todos pra UI
-  // não piscar enquanto a checagem roda em background.
-  const [availableStatuses, setAvailableStatuses] = useState<Set<string>>(
-    () => new Set(ALL_ADMIN_STATUS_VALUES),
-  );
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -226,58 +217,6 @@ export default function AdminEventsPage() {
   }, [search]);
 
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, sortBy, sortOrder]);
-
-  // Descobre quais status têm pelo menos 1 evento. 5 chamadas paralelas
-  // com `limit: 1` — leve no backend (COUNT) e robusto contra paginação.
-  const refreshAvailableStatuses = useCallback(async () => {
-    try {
-      const results = await Promise.all(
-        ALL_ADMIN_STATUS_VALUES.map(async (status) => {
-          try {
-            const params = new URLSearchParams({
-              page: "1",
-              limit: "1",
-              status,
-            });
-            const res = await getApiClient().get<{
-              data: { events: AdminEvent[]; pagination: Pagination };
-            }>(`/api/v1/admin/events?${params.toString()}`);
-            const total =
-              res.data.data.pagination?.total ??
-              res.data.data.events?.length ??
-              0;
-            return { status, has: total > 0 };
-          } catch {
-            return { status, has: false };
-          }
-        }),
-      );
-      setAvailableStatuses(
-        new Set(results.filter((r) => r.has).map((r) => r.status)),
-      );
-    } catch (e) {
-      console.error("Erro ao verificar status disponíveis:", e);
-    }
-  }, []);
-
-  // Reconcilia sempre que a lista é refetched (inclui após suspend/resume,
-  // que incrementam `fetchKey`). 5 requests COUNT são baratos vs ler tudo.
-  useEffect(() => {
-    void refreshAvailableStatuses();
-  }, [refreshAvailableStatuses, fetchKey]);
-
-  // Reseta filtro se o status selecionado deixou de existir.
-  useEffect(() => {
-    if (!statusFilter) return;
-    if (availableStatuses.size === 0) return;
-    if (!availableStatuses.has(statusFilter)) {
-      setStatusFilter("");
-    }
-  }, [availableStatuses, statusFilter]);
-
-  const visibleStatusOptions = STATUS_OPTIONS.filter(
-    (opt) => !opt.value || availableStatuses.has(opt.value),
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -310,7 +249,7 @@ export default function AdminEventsPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [page, debouncedSearch, statusFilter, sortBy, sortOrder]);
+  }, [page, debouncedSearch, statusFilter, sortBy, sortOrder, fetchKey]);
 
   const openSuspendModal = (ev: AdminEvent) => {
     setSuspendModalEvent(ev);
@@ -523,7 +462,7 @@ export default function AdminEventsPage() {
                 className={cn(inputShell, "cursor-pointer appearance-none bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-10")}
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")` }}
               >
-                {visibleStatusOptions.map((o) => (
+                {STATUS_OPTIONS.map((o) => (
                   <option key={o.value || "all"} value={o.value}>{o.label}</option>
                 ))}
               </select>

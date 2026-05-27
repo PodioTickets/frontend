@@ -203,11 +203,13 @@ export function OrderSummary({
             </div>
           )}
 
-          {/* Subtotal */}
-          <div className="flex items-center justify-between text-base text-gray-12">
-            <p className="font-manrope font-semibold">Subtotal:</p>
-            <p className="font-manrope font-bold">{formatPrice(subtotal)}</p>
-          </div>
+          {/* Subtotal só com mais de um ingresso diferente pra somar. */}
+          {groupedTickets.length > 1 && (
+            <div className="flex items-center justify-between text-base text-gray-12">
+              <p className="font-manrope font-semibold">Subtotal:</p>
+              <p className="font-manrope font-bold">{formatPrice(subtotal)}</p>
+            </div>
+          )}
 
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (

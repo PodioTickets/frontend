@@ -61,7 +61,7 @@ const COUPON_ERROR_MESSAGES: Record<string, string> = {
 };
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
-import { getPendingCoupon, clearPendingCoupon } from "@/hooks/usePendingCoupon";
+import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import toast from "react-hot-toast";
 import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
@@ -889,17 +889,21 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         setCurrentOrder(order);
 
         const pending = getPendingCoupon();
-        if (!pending || order.coupon) return;
+        // Já tem cupom OU voucher na order → não reaplica.
+        if (!pending || order.coupon || order.voucher) return;
+        const payload =
+          getPendingCouponKind() === "voucher"
+            ? { voucherCode: pending }
+            : { couponCode: pending };
         try {
-          const updated = await patchCoupon(orderId, { couponCode: pending });
+          const updated = await patchCoupon(orderId, payload);
           syncFromOrder(updated);
           setCurrentOrder(updated);
           setCouponCode(pending);
         } catch {
-          /* silencioso por design — cupom de link inválido não interrompe o fluxo */
-        } finally {
-          clearPendingCoupon();
+          /* silencioso por design — código de link inválido não interrompe o fluxo */
         }
+        // NÃO limpa o pendente: o link (`?coupon=`/`?voucher=`) persiste na URL.
       })
       .catch(() => { /* ignora — usa valores locais como fallback */ });
   }, [orderId, getOrder, patchCoupon, syncFromOrder]);

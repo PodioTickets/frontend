@@ -12,7 +12,7 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useTickets } from "@/hooks/useTickets";
 import { OrderApiError } from "@/interfaces/order";
-import { getPendingCoupon, clearPendingCoupon } from "@/hooks/usePendingCoupon";
+import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
 import toast from "react-hot-toast";
 import CheckoutIngressosLoading from "./loading";
 
@@ -67,18 +67,24 @@ function CheckoutIngressosContent() {
       const fallbackUrl = slug ? `/events/${slug}` : `/`;
       startTimer(order, fallbackUrl);
 
-      // Aplica cupom vindo do link (?coupon=) silenciosamente — falha não
-      // interrompe o fluxo (cupom errado pro evento, expirado, etc.).
+      // Aplica cupom/voucher vindo do link (?coupon= / ?voucher=) silenciosamente
+      // — falha não interrompe o fluxo (código errado pro evento, expirado, etc.).
+      // A chave (couponCode vs voucherCode) segue o TIPO capturado do link.
       const pending = getPendingCoupon();
       if (pending) {
+        const payload =
+          getPendingCouponKind() === "voucher"
+            ? { voucherCode: pending }
+            : { couponCode: pending };
         try {
-          const updated = await patchCoupon(order.orderId, { couponCode: pending });
+          const updated = await patchCoupon(order.orderId, payload);
           syncFromOrder(updated);
         } catch {
           /* silencioso por design */
-        } finally {
-          clearPendingCoupon();
         }
+        // NÃO limpa o pendente: mantém `?coupon=`/`?voucher=` na URL (via
+        // CouponLinkCapture) pra o link persistir ao voltar pro /ingressos e
+        // trocar de páginas. A reaplicação é idempotente/guardada.
       }
 
       startNavigation(() => {

@@ -16,12 +16,39 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const COUPON_QUERY_PARAM = "coupon";
+const VOUCHER_QUERY_PARAM = "voucher";
+
+/** Tipo do código capturado pelo link. Decide a CHAVE no apply
+ *  (`couponCode` vs `voucherCode`) e o NOME do param re-anexado em navegações
+ *  internas — sem isso um `?voucher=` viraria `?coupon=` e seria aplicado como
+ *  cupom. */
+export type CouponParamKind = "coupon" | "voucher";
+
+/** Lê o código E o tipo do param do link. `?coupon=` tem precedência sobre
+ *  `?voucher=` quando ambos estão presentes. */
+export function readCouponParamEntry(
+  searchParams: { get(name: string): string | null },
+): { code: string; kind: CouponParamKind } | null {
+  const coupon = searchParams.get(COUPON_QUERY_PARAM);
+  if (coupon) return { code: coupon, kind: "coupon" };
+  const voucher = searchParams.get(VOUCHER_QUERY_PARAM);
+  if (voucher) return { code: voucher, kind: "voucher" };
+  return null;
+}
+
+/** Só o código (compat). Use `readCouponParamEntry` quando precisar do tipo. */
+export function readCouponParam(
+  searchParams: { get(name: string): string | null },
+): string | null {
+  return readCouponParamEntry(searchParams)?.code ?? null;
+}
 
 /** Comprimento máximo defensivo (códigos reais raramente passam de 30 chars). */
 const MAX_COUPON_LENGTH = 30;
 
-/* Buffer volátil — zera quando o JS da página é recarregado. */
-let pendingCouponMemory: string | null = null;
+/* Buffer volátil — zera quando o JS da página é recarregado. Guarda código +
+ * tipo pra preservar a distinção cupom/voucher entre navegações SPA. */
+let pendingCouponMemory: { code: string; kind: CouponParamKind } | null = null;
 
 export function normalizeCouponCode(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -31,13 +58,21 @@ export function normalizeCouponCode(raw: string | null | undefined): string | nu
 }
 
 export function getPendingCoupon(): string | null {
-  return pendingCouponMemory;
+  return pendingCouponMemory?.code ?? null;
 }
 
-export function setPendingCoupon(code: string): void {
+/** Tipo do código pendente (`coupon` por padrão p/ compat). */
+export function getPendingCouponKind(): CouponParamKind | null {
+  return pendingCouponMemory?.kind ?? null;
+}
+
+export function setPendingCoupon(
+  code: string,
+  kind: CouponParamKind = "coupon",
+): void {
   const normalized = normalizeCouponCode(code);
   if (!normalized) return;
-  pendingCouponMemory = normalized;
+  pendingCouponMemory = { code: normalized, kind };
 }
 
 export function clearPendingCoupon(): void {
@@ -53,7 +88,7 @@ export function clearPendingCoupon(): void {
  */
 export function usePendingCouponSnapshot(): string | null {
   const searchParams = useSearchParams();
-  const urlCode = normalizeCouponCode(searchParams.get(COUPON_QUERY_PARAM));
+  const urlCode = normalizeCouponCode(readCouponParam(searchParams));
   const [memoryCode, setMemoryCode] = useState<string | null>(null);
 
   useEffect(() => {
