@@ -752,9 +752,11 @@ export function InformationStep({
           // SO depois da transicao terminar, senao rect.top usa altura
           // intermediaria do card atual e o scroll vai pra coordenada errada
           // (geralmente alem do alvo, parando no rodape da pagina).
-          // Offset compensa header sticky mobile (~64px) + folga visual (~56px)
-          // pra mostrar o card inteiro logo abaixo do header sem cortar a borda.
-          const HEADER_OFFSET = 120;
+          // Mede altura real do header global fixed (varia entre breakpoints).
+          // Adiciona folga visual de 12px pra borda do card nao colar no header.
+          const headerEl = document.querySelector("header");
+          const headerH = headerEl?.getBoundingClientRect().height ?? 64;
+          const HEADER_OFFSET = headerH + 12;
           const scrollNow = () => {
             const el = document.querySelector<HTMLElement>(
               `[data-participant-index="${next}"]`,
