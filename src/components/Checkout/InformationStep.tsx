@@ -727,25 +727,41 @@ export function InformationStep({
     if (willClose && typeof window !== "undefined") {
       const isMobile = window.matchMedia("(max-width: 767px)").matches;
       if (isMobile) {
-        const total = participants.length;
+        // Usa total real de participantes visiveis (raceQuantities) — array
+        // `participants` pode ter slots stale de quantidades anteriores.
+        const totalVisible = Object.values(raceQuantities).reduce(
+          (sum, q) => sum + (q > 0 ? q : 0),
+          0,
+        );
         const findNextPending = () => {
-          // Procura proximo a partir do indice atual (wrap-around).
-          for (let step = 1; step <= total; step++) {
-            const i = (index + step) % total;
-            const incomplete = !savedParticipants[i] || !!participantDirtyMap[i];
+          // Procura a partir do indice atual (wrap-around). Considera saved
+          // como "true" pro indice que acabou de ser salvo — state ainda nao
+          // reflete o `setSavedParticipants` do click que disparou esse toggle.
+          for (let step = 1; step <= totalVisible; step++) {
+            const i = (index + step) % totalVisible;
+            if (i === index) continue;
+            const isThisOne = i === index;
+            const incomplete = !isThisOne && (!savedParticipants[i] || !!participantDirtyMap[i]);
             if (incomplete) return i;
           }
           return null;
         };
         const next = findNextPending();
         if (next !== null) {
-          // Aguarda reflow do colapso pra coordenadas serem atualizadas.
-          setTimeout(() => {
+          // Dois RAFs garantem que o reflow do colapso ocorreu antes da
+          // medicao. window.scrollTo com offset manual evita scrollIntoView
+          // pular alem do alvo (ex: ultimo card + safe-area do summary bar).
+          const HEADER_OFFSET = 96;
+          const scrollNow = () => {
             const el = document.querySelector<HTMLElement>(
               `[data-participant-index="${next}"]`,
             );
-            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-          }, 80);
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const top = window.scrollY + rect.top - HEADER_OFFSET;
+            window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+          };
+          requestAnimationFrame(() => requestAnimationFrame(scrollNow));
         }
       }
     }
