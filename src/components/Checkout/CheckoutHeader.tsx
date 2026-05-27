@@ -7,6 +7,7 @@ import { Fragment } from "react/jsx-runtime";
 import { ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckoutTimer } from "./CheckoutTimer";
+import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 
 export interface CheckoutHeaderProps {
   activeStep: number;
@@ -19,25 +20,26 @@ export default function CheckoutHeader({
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
 
+  // Esconde a etapa de Produtos quando nenhum ingresso selecionado tem produto
+  // que exija escolha do usuário. `null` (carregando/indefinido) mantém a tab.
+  const { hasSelectableProducts } = useCheckoutProductStep(eventId);
+  const visibleOptions =
+    hasSelectableProducts === false
+      ? checkoutHeaderOptions.filter((opt) => opt.path !== "produtos")
+      : checkoutHeaderOptions;
+
   const currentStepLabel = checkoutHeaderOptions.find(
     (opt) => opt.id === activeStep
   )?.label || "Ingressos";
 
-  const handleStepClick = (stepId: number) => {
-    if (!eventId) return;
-    const option = checkoutHeaderOptions.find((opt) => opt.id === stepId);
-    if (option) {
-      router.push(`/checkout/${option.path}?eventId=${eventId}`);
-    }
-  };
-
+  // "Voltar" navega para a etapa visível anterior — assim pula Produtos
+  // automaticamente quando ela está oculta (ex.: Pagamento → Informações).
   const handleBack = () => {
-    if (activeStep > 1) {
-      const prevStep = activeStep - 1;
-      const option = checkoutHeaderOptions.find((opt) => opt.id === prevStep);
-      if (option && eventId) {
-        router.push(`/checkout/${option.path}?eventId=${eventId}`);
-      }
+    if (!eventId) return;
+    const currentIndex = visibleOptions.findIndex((opt) => opt.id === activeStep);
+    const previous = currentIndex > 0 ? visibleOptions[currentIndex - 1] : null;
+    if (previous) {
+      router.push(`/checkout/${previous.path}?eventId=${eventId}`);
     }
   };
 
@@ -66,7 +68,7 @@ export default function CheckoutHeader({
       {/* Desktop Header */}
       <div className="hidden md:flex w-full items-center justify-between max-w-7xl mx-auto gap-4 py-11 border-b border-gray-6">
         <div className="flex items-center gap-4">
-          {checkoutHeaderOptions.map((option, index) => (
+          {visibleOptions.map((option, index) => (
             <Fragment key={option.id}>
               {index > 0 && <ArrowButton isOpen={false} />}
               <button

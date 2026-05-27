@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
 
@@ -102,9 +103,24 @@ export function MobileSummaryBar({
   extraDetails,
 }: MobileSummaryBarProps) {
   const [open, setOpen] = useState(false);
+  // Portal só monta no client (document indisponível no SSR), igual ao padrão
+  // de modais do projeto.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const closeSheet = useCallback(() => setOpen(false), []);
-  const openSheet = useCallback(() => setOpen(true), []);
+  // A aba "Ver detalhes" alterna o sheet (abre/fecha no mesmo controle).
+  const toggleSheet = useCallback(() => setOpen((prev) => !prev), []);
+
+  // Drag-to-dismiss: o gesto é disparado SÓ pelo header/grabber (via
+  // dragControls + dragListener={false}) pra não competir com o scroll do
+  // corpo do sheet. Soltar abaixo do limiar (deslocamento ou velocidade)
+  // fecha; senão volta pra posição.
+  const dragControls = useDragControls();
+  const startDrag = useCallback(
+    (event: React.PointerEvent) => dragControls.start(event),
+    [dragControls]
+  );
 
   // CTA disparado de dentro do sheet: fecha primeiro pra revelar a tela (ex.:
   // campos com erro de validação destacados pelo handler do step).
@@ -148,14 +164,25 @@ export function MobileSummaryBar({
         {/* Aba "Ver detalhes" acima do card (mesmo formato da tela de pagamento). */}
         <button
           type="button"
-          onClick={openSheet}
+          onClick={toggleSheet}
+          aria-expanded={open}
           className="self-end w-1/3 bg-gray-2 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 text-xs font-medium text-gray-11 text-center font-family-dm-sans hover:text-gray-12 active:scale-95 transition-transform"
         >
-          Ver detalhes
+          {open ? "Ocultar detalhes" : "Ver detalhes"}
         </button>
 
         <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3">
           <div className="flex flex-col gap-2">
+            {/* Identificação do pedido também na barra minimizada. */}
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <h3 className="min-w-0 truncate font-manrope font-bold text-sm text-gray-12">
+                {eventName}
+              </h3>
+              <span className="shrink-0 text-xs text-gray-11 font-family-dm-sans">
+                {totalParticipants}{" "}
+                {totalParticipants === 1 ? "participante" : "participantes"}
+              </span>
+            </div>
             {discountRow}
             {feeRow}
             <div className="flex items-center justify-between gap-3">
@@ -173,33 +200,53 @@ export function MobileSummaryBar({
         </div>
       </div>
 
-      {/* Bottom-sheet com os detalhes completos. */}
-      <AnimatePresence>
-        {open && (
-          <div className="md:hidden">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/50 z-[60]"
-              onClick={closeSheet}
-            />
-
-            {/* Painel */}
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "tween", duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-              className="fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[88vh] flex flex-col shadow-2xl"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Detalhes do pedido"
-            >
-              {/* Grabber + header */}
-              <div className="shrink-0 pt-3 px-4 pb-3 border-b border-gray-6">
+      {/* Bottom-sheet com os detalhes completos — portado pro document.body
+          (padrão de modais do projeto) pra escapar de stacking contexts /
+          transforms dos ancestrais do step, que prendiam o sheet atrás do
+          conteúdo. Backdrop e painel são filhos motion KEYADOS do
+          AnimatePresence pra que a animação de entrada E saída funcione. */}
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                key="mobile-summary-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="md:hidden fixed inset-0 bg-black/50 z-[60]"
+                onClick={closeSheet}
+              />
+            )}
+            {open && (
+              <motion.div
+                key="mobile-summary-panel"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "tween", duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                drag="y"
+                dragControls={dragControls}
+                dragListener={false}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.6 }}
+                dragMomentum={false}
+                onDragEnd={(_, info) => {
+                  // Fecha se arrastou o suficiente pra baixo ou com velocidade.
+                  if (info.offset.y > 120 || info.velocity.y > 600) closeSheet();
+                }}
+                className="md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[88vh] flex flex-col shadow-2xl"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Detalhes do pedido"
+              >
+                {/* Grabber + header — área de arrasto pra fechar (touch-none
+                    impede o navegador de tratar o gesto como scroll). */}
+              <div
+                onPointerDown={startDrag}
+                className="shrink-0 pt-3 px-4 pb-3 border-b border-gray-6 cursor-grab active:cursor-grabbing touch-none select-none"
+              >
                 <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-6" />
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -295,9 +342,10 @@ export function MobileSummaryBar({
                 </Button>
               </div>
             </motion.div>
-          </div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </>
   );
 }

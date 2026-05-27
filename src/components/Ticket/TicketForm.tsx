@@ -1184,7 +1184,7 @@ export function TicketForm({
             </label>
             <div className="flex flex-col gap-2">
               <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">
-                Esse evento tem restrição de idade?
+                Esse ingresso tem restrição de idade?
               </p>
               <div className="flex gap-4 mt-2">
                 <div className="flex items-center gap-2">

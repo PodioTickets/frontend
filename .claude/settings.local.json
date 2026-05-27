@@ -71,7 +71,8 @@
       "Bash(sed -i '2518,2877d' src/components/Checkout/PaymentStep.tsx)",
       "Bash(sed -n '2513,2522p' src/components/Checkout/PaymentStep.tsx)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\app\\\\checkout\" -Recurse -Include \"*.tsx\", \"*.ts\", \"*.json\")"
     ]
   },
   "disabledMcpjsonServers": [

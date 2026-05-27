@@ -121,7 +121,7 @@ export interface UserItem {
 }
 
 export class UserService {
-  constructor(private apiClient: ApiClient) {}
+  constructor(private apiClient: ApiClient) { }
 
   async login(data: { emailOrCpf: string; password: string; accountType?: "USER" | "ORGANIZER"; turnstileToken?: string }): Promise<{
     success: boolean;
@@ -527,19 +527,19 @@ export class UserService {
         eventDate: d.eventDate ?? null,
         appliedCoupon: c
           ? {
-              id: String(c.id),
-              couponType: "AGE",
-              type: c.type === "FIXED" ? "FIXED" : "PERCENTAGE",
-              value: Number(c.value) || 0,
-              ageRule: c.ageRule ?? null,
-              ageValue: c.ageValue ?? null,
-              minAge: c.minAge ?? null,
-              maxAge: c.maxAge ?? null,
-              appliesTo: c.appliesTo ?? null,
-              minCartValue: c.minCartValue ?? null,
-              applyToProducts: !!c.applyToProducts,
-              note: c.note ?? null,
-            }
+            id: String(c.id),
+            couponType: "AGE",
+            type: c.type === "FIXED" ? "FIXED" : "PERCENTAGE",
+            value: Number(c.value) || 0,
+            ageRule: c.ageRule ?? null,
+            ageValue: c.ageValue ?? null,
+            minAge: c.minAge ?? null,
+            maxAge: c.maxAge ?? null,
+            appliesTo: c.appliesTo ?? null,
+            minCartValue: c.minCartValue ?? null,
+            applyToProducts: !!c.applyToProducts,
+            note: c.note ?? null,
+          }
           : null,
       };
     } catch {
@@ -938,7 +938,7 @@ export class UserService {
         };
         error?: string;
       }>("/api/v1/user/linked-users", data);
-      
+
       return response.data;
     } catch (error: any) {
       let errorMessage = "Erro ao salvar usuário. Tente novamente.";
@@ -973,14 +973,14 @@ export class UserService {
     if (
       /user\s+with\s+this\s+document\s+number\s+already\s+exists/i.test(m)
     ) {
-      return "Já existe um usuário cadastrado com este CPF.";
+      return "Já existe um usuário cadastrado com este documento.";
     }
     if (
       httpStatus === 409 &&
       /document/i.test(m) &&
       /already\s+exists|already registered/i.test(m)
     ) {
-      return "Já existe um usuário cadastrado com este CPF.";
+      return "Já existe um usuário cadastrado com este documento.";
     }
     if (
       httpStatus === 409 &&

@@ -5,11 +5,12 @@ import { SubscriptionStep } from "@/components/Checkout/SubscriptionStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { Suspense, useState, useRef, useTransition } from "react";
+import { Suspense, useState, useRef, useTransition, useEffect } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import { OrderApiError } from "@/interfaces/order";
 import toast from "react-hot-toast";
 import CheckoutProdutosLoading from "./loading";
@@ -27,6 +28,30 @@ function CheckoutProdutosContent() {
   // useTransition mantém o botão pendente durante a transição de rota,
   // evitando o "freeze" entre clique e render da próxima página.
   const [isNavigating, startNavigation] = useTransition();
+
+  // Backstop de auto-skip: se a etapa de Produtos não tem escolha do usuário
+  // (navegação direta por URL, ou Informações ainda indefinido ao sair), persiste
+  // as variações auto-selecionadas e segue pro pagamento via `replace` — assim a
+  // etapa não fica no histórico e o "voltar" do pagamento cai em Informações.
+  const { hasSelectableProducts, autoSelectedProducts } = useCheckoutProductStep(eventId);
+  const autoSkipRef = useRef(false);
+
+  useEffect(() => {
+    if (hasSelectableProducts !== false || autoSkipRef.current) return;
+    if (!eventId || !orderId) return;
+    autoSkipRef.current = true;
+    (async () => {
+      try {
+        const updated = await patchProducts(orderId, { products: autoSelectedProducts });
+        syncFromOrder(updated);
+      } catch {
+        // Falha ao persistir produtos auto-selecionados: segue pro pagamento
+        // mesmo assim — a tela de pagamento revalida o pedido no servidor.
+      } finally {
+        router.replace(`/checkout/pagamento?eventId=${eventId}`);
+      }
+    })();
+  }, [hasSelectableProducts, autoSelectedProducts, eventId, orderId, patchProducts, syncFromOrder, router]);
 
   const handleNext = async () => {
     if (!eventId || isSubmittingRef.current) return;
@@ -120,6 +145,12 @@ function CheckoutProdutosContent() {
         </Link>
       </div>
     );
+  }
+
+  // Etapa sem escolha de produto: o efeito de auto-skip acima já redireciona pro
+  // pagamento — exibe o loading no lugar da etapa vazia durante a transição.
+  if (hasSelectableProducts === false) {
+    return <CheckoutProdutosLoading />;
   }
 
   return (

@@ -10,6 +10,7 @@ import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import { OrderApiError } from "@/interfaces/order";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { getPhoneDigitsForBackend } from "@/utils/phone";
@@ -32,7 +33,11 @@ function CheckoutInformacoesContent() {
   const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { participants, raceQuantities } = useCheckout();
   const { orderId, syncFromOrder } = useCheckoutTimer();
-  const { patchParticipants } = useCheckoutReservation();
+  const { patchParticipants, patchProducts } = useCheckoutReservation();
+  // Decide se a etapa de Produtos deve ser pulada (e quais variações
+  // auto-selecionadas persistir nesse caso). `null` = ainda indefinido → segue
+  // o fluxo padrão (vai pra /produtos, que tem o backstop de auto-skip).
+  const { hasSelectableProducts, autoSelectedProducts } = useCheckoutProductStep(eventId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   // useTransition mantém o botão pendente durante a transição de rota,
@@ -113,9 +118,21 @@ function CheckoutInformacoesContent() {
     try {
       const updated = await patchParticipants(orderId, payload);
       syncFromOrder(updated);
-      startNavigation(() => {
-        router.push(`/checkout/produtos?eventId=${eventId}`);
-      });
+
+      if (hasSelectableProducts === false) {
+        // Sem escolha de produto: persiste as variações auto-selecionadas
+        // (inclusos/obrigatórios de variação única) — mesmo contrato que a etapa
+        // de Produtos cumpriria — e pula direto pro pagamento.
+        const afterProducts = await patchProducts(orderId, { products: autoSelectedProducts });
+        syncFromOrder(afterProducts);
+        startNavigation(() => {
+          router.push(`/checkout/pagamento?eventId=${eventId}`);
+        });
+      } else {
+        startNavigation(() => {
+          router.push(`/checkout/produtos?eventId=${eventId}`);
+        });
+      }
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (err.code === "ORDER_NOT_PENDING" || err.code === "ORDER_NOT_FOUND") {

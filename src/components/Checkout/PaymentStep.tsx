@@ -2162,12 +2162,14 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           key={product.productId ?? productIndex}
                           className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
                         >
-                          <div className="flex gap-3 p-4 border-b border-gray-6">
+                          <div className="flex gap-3 p-3 border-b border-gray-6">
                             <ProductCardGallery
                               productId={product.productId ?? String(productIndex)}
                               productName={product.name}
                               image={product.image}
                               images={product.images}
+                              containerClassName="w-[64px] h-[64px]"
+                              sizes="64px"
                             />
                             <div className="flex flex-col justify-between flex-1 min-w-0">
                               <div className="flex items-start gap-2">
@@ -2182,7 +2184,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               </p>
                             </div>
                           </div>
-                          <div className="p-4">
+                          <div className="px-3 py-2.5">
                             <div className="flex gap-1 items-center">
                               <p className="text-sm text-gray-12 font-family-dm-sans">
                                 Tamanho:

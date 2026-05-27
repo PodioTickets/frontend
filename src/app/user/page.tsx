@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 import { userService } from "@/services";
 import toast from "react-hot-toast";
 import {
@@ -132,6 +133,7 @@ const formatGenderToBackend = (
 export default function UserProfilePage() {
   const router = useRouter();
   const { user, refetchUser } = useAuth();
+  const queryClient = useQueryClient();
   const { openChangeEmailModal } = useChangeEmailModal();
   const { openChangePasswordModal } = useChangePasswordModal();
   const avatarCropRef = useRef<ImageUploadWithCropRef>(null);
@@ -582,6 +584,12 @@ export default function UserProfilePage() {
 
       await userService.updateUser(user.id, updateData);
       await refetchUser();
+
+      /* A idade exibida nos cards de limite de idade do /checkout/ingressos vem
+       * do endpoint de elegibilidade (`useAgeCouponEligibility`, staleTime 60s).
+       * Sem invalidar, voltar pra seleção de ingressos dentro de 1 min mostra a
+       * idade ANTIGA até dar refresh. Invalida pra refazer no próximo mount. */
+      queryClient.invalidateQueries({ queryKey: ["age-coupon-eligibility"] });
 
       toast.success("Dados atualizados com sucesso!");
     } catch (error: any) {

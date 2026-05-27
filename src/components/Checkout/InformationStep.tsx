@@ -2278,7 +2278,11 @@ export function InformationStep({
                                 }).catch(() => { });
                               }
                             }}
-                            disabled={savedParticipants[participantIndex] && !participantDirtyMap[participantIndex] || previewMode}
+                            // Habilitado sempre que o participante está aberto —
+                            // reabrir um já salvo permite "salvar" de novo
+                            // (re-snapshot + colapsa). `!isExpanded` evita foco por
+                            // teclado no botão enquanto o card está colapsado.
+                            disabled={!isExpanded || previewMode}
                             variant="default"
                             className="font-bold"
                           >

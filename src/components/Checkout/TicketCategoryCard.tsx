@@ -83,7 +83,6 @@ interface TicketCategoryCardProps {
 }
 
 const formatPrice = (price: number) => {
-  if (price === 0) return "Gratuito";
   return formatPriceCurrency(price);
 };
 

@@ -19,8 +19,13 @@ export function useAgeCouponEligibility(
     queryFn: () =>
       eventId ? userService.getAgeCouponEligibility(eventId) : null,
     enabled: !!eventId && enabled,
-    staleTime: 60_000,
-    gcTime: 60_000,
+    // Server-driven, igual às demais queries do checkout: SEMPRE refaz no mount.
+    // Sem isso, a query herda o default global (`refetchOnMount: false` +
+    // `staleTime` alto) e, ao voltar pro /ingressos após alterar a idade da
+    // conta, o React Query serve o cache stale (idade antiga) até dar refresh.
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
     retry: false,
   });
 }

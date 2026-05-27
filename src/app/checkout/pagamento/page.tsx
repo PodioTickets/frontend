@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
 import { Suspense } from "react";
 import { Loading } from "@/components/Loading";
+import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import CheckoutPagamentoLoading from "./loading";
 
 function CheckoutPagamentoContent() {
@@ -14,11 +15,14 @@ function CheckoutPagamentoContent() {
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
+  const { hasSelectableProducts } = useCheckoutProductStep(eventId);
 
   const handleBack = () => {
-    if (eventId) {
-      router.push(`/checkout/produtos?eventId=${eventId}`);
-    }
+    if (!eventId) return;
+    // Pula a etapa de Produtos quando ela está oculta (sem escolha do usuário).
+    // `null` (indefinido) mantém o destino padrão /produtos, que tem auto-skip.
+    const target = hasSelectableProducts === false ? "informacoes" : "produtos";
+    router.push(`/checkout/${target}?eventId=${eventId}`);
   };
 
   const handleSuccess = (orderId: string) => {
