@@ -170,7 +170,11 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
 
   const handleYearSelect = (option: DropdownOption) => {
     const year = parseInt(option.id ?? "0", 10);
-    goToMonth(new Date(year, current.getMonth(), 1));
+    // Mudar de ano reseta o mes pra Janeiro quando alvo nao for o ano atual.
+    // Manter o mes corrente so faz sentido pro ano atual (usuario provavelmente
+    // continua olhando perto do "agora"). Anos diferentes → ordem natural.
+    const month = year === today.getFullYear() ? current.getMonth() : 0;
+    goToMonth(new Date(year, month, 1));
   };
 
   const monthLabel = monthNames[current.getMonth()];
