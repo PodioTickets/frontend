@@ -23,18 +23,19 @@ export function ToasterWrapper() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // No checkout mobile há uma barra de resumo FIXA no rodapé (MobileSummaryBar),
-  // que ficava por baixo dos toasts (em cima do botão "Continuar"). Levanta o
-  // container dos toasts pra eles aparecerem um pouco acima da barra. Limitado
-  // a /checkout no mobile pra não deslocar os toasts nas demais telas.
+  // No checkout mobile ha uma barra de resumo FIXA no rodape (MobileSummaryBar)
+  // com tab "Ver detalhes" no topo. Toasts devem aparecer ACIMA dessa tab pra
+  // nao ficarem escondidos. Posicao center pra ficar visivel no meio da tela
+  // mobile (bottom-right cortava o toast com a barra).
+  // Altura tab (~32px) + barra principal (~70px) + folga (~16px) ≈ 120px.
   const liftAboveFixedBar = isMobile && !!pathname?.startsWith("/checkout");
 
   return (
     <Toaster
-      position="bottom-right"
+      position={liftAboveFixedBar ? "bottom-center" : "bottom-right"}
       containerStyle={
         liftAboveFixedBar
-          ? { bottom: "calc(150px + env(safe-area-inset-bottom, 0px))" }
+          ? { bottom: "calc(120px + env(safe-area-inset-bottom, 0px))" }
           : undefined
       }
     />

@@ -131,21 +131,24 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
   const { fromYear, toYear } = React.useContext(YearRangeContext);
   const current = calendarMonth.date;
 
-  // Lista de meses começando pelo mês atual e dando a volta (ex.: Maio, …,
-  // Dezembro, Janeiro, …, Abril). Espelha o dropdown de anos, que também começa
-  // pelo ano atual. O `id` continua sendo o índice 0–11 do mês, então
-  // seleção/realce funcionam independentemente da ordem de exibição.
-  const currentMonthIndex = new Date().getMonth();
+  // Quando o ano exibido for o atual, lista comeca pelo mes atual e da a volta
+  // (ex.: Maio, ..., Dezembro, Janeiro, ..., Abril) — usuario provavelmente
+  // quer agendar pra frente. Quando for outro ano, ordem natural (Janeiro
+  // ..Dezembro) — meses passados ou futuros nao tem ancora no "agora".
+  // `id` continua o indice 0-11 do mes — selecao/realce independem da ordem.
+  const today = new Date();
+  const isCurrentYear = current.getFullYear() === today.getFullYear();
+  const startIdx = isCurrentYear ? today.getMonth() : 0;
   const monthOptions: DropdownOption[] = useMemo(() => {
     const list: DropdownOption[] = [];
-    for (let i = currentMonthIndex; i < 12; i++) {
+    for (let i = startIdx; i < 12; i++) {
       list.push({ id: String(i), label: monthNames[i] });
     }
-    for (let i = 0; i < currentMonthIndex; i++) {
+    for (let i = 0; i < startIdx; i++) {
       list.push({ id: String(i), label: monthNames[i] });
     }
     return list;
-  }, [currentMonthIndex]);
+  }, [startIdx]);
 
   const yearOptions: DropdownOption[] = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -167,7 +170,11 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
 
   const handleYearSelect = (option: DropdownOption) => {
     const year = parseInt(option.id ?? "0", 10);
-    goToMonth(new Date(year, current.getMonth(), 1));
+    // Mudar de ano reseta o mes pra Janeiro quando alvo nao for o ano atual.
+    // Manter o mes corrente so faz sentido pro ano atual (usuario provavelmente
+    // continua olhando perto do "agora"). Anos diferentes → ordem natural.
+    const month = year === today.getFullYear() ? current.getMonth() : 0;
+    goToMonth(new Date(year, month, 1));
   };
 
   const monthLabel = monthNames[current.getMonth()];
