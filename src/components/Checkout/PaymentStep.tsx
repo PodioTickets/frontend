@@ -2385,11 +2385,29 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
               {/* PIX Option */}
               <div
+                data-payment-method="pix"
                 className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "pix"
                   ? "border-blue-8 bg-blue-3"
                   : "border-gray-6 bg-gray-3"
                   }`}
-                onClick={() => setSelectedPaymentMethod("pix")}
+                onClick={() => {
+                  setSelectedPaymentMethod("pix");
+                  // Mobile: depois de expandir o card PIX, autofocus de input
+                  // dentro do PixForm puxa o scroll pra baixo (foco em campo
+                  // longe do topo). Rola pro proprio card abaixo do header
+                  // global pra mostrar o titulo "PIX" + formulario.
+                  if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+                    setTimeout(() => {
+                      const card = document.querySelector<HTMLElement>('[data-payment-method="pix"]');
+                      if (!card) return;
+                      const headerEl = document.querySelector("header");
+                      const headerH = headerEl?.getBoundingClientRect().height ?? 64;
+                      const rect = card.getBoundingClientRect();
+                      const top = window.scrollY + rect.top - (headerH + 12);
+                      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+                    }, 80);
+                  }
+                }}
               >
                 <div className="flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-3">
