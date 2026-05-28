@@ -817,14 +817,18 @@ export function InformationStep({
    * retornado pelo lookup. Extraído pra reuso entre fluxo BR e estrangeiro. */
   const applyLookedUpUser = (
     index: number,
-    looked: { firstName?: string; lastName?: string; email?: string; phone?: string; dateOfBirth?: string; gender?: string },
+    looked: { firstName?: string; lastName?: string; email?: string; phone?: string; dateOfBirth?: string; gender?: string; country?: string },
   ) => {
     const fullName = [looked.firstName, looked.lastName].filter(Boolean).join(" ");
-    const nationality = participants[index]?.nationality;
+    // Nacionalidade do usuario encontrado tem prioridade — define o formato do
+    // telefone e o label do documento. Sem isso, telefone de argentino vinha
+    // mascarado como BR. Mantem a atual quando o lookup nao traz country.
+    const lookedNationality = looked.country?.trim() || participants[index]?.nationality;
     updateParticipant(index, {
       name: fullName,
       email: looked.email || "",
-      phone: looked.phone ? formatPhoneForCountry(looked.phone, nationality) : "",
+      nationality: lookedNationality,
+      phone: looked.phone ? formatPhoneForCountry(looked.phone, lookedNationality) : "",
       birthDate: looked.dateOfBirth || "",
       gender: looked.gender || "",
     });
