@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { organizerExternalHref } from "@/lib/organizerPathPresentation";
+import { EventTabLabel } from "@/components/Icons/EventTabLabel";
 import {
   useRef,
   useState,
@@ -358,7 +359,7 @@ export function EventMobileTabs({
                     }}
                     className={menuTriggerClass(isDiscountActive || descontoOpen)}
                   >
-                    <span>{tab.label}</span>
+                    <EventTabLabel label={tab.label} />
                   </button>
                 </div>
               );
@@ -373,7 +374,7 @@ export function EventMobileTabs({
                       href={navHref(tab.href)}
                       className={`${linkTabClass(isEditActive)} hidden md:block`}
                     >
-                      {tab.label}
+                      <EventTabLabel label={tab.label} />
                     </Link>
                     <div className="shrink-0 md:hidden" ref={editarTriggerRef}>
                       <button
@@ -384,7 +385,7 @@ export function EventMobileTabs({
                         }}
                         className={menuTriggerClass(isEditActive || editarOpen)}
                       >
-                        <span>{tab.label}</span>
+                        <EventTabLabel label={tab.label} />
                       </button>
                     </div>
                   </Fragment>
@@ -400,7 +401,7 @@ export function EventMobileTabs({
                     }}
                     className={menuTriggerClass(isEditActive || editarOpen)}
                   >
-                    <span>{tab.label}</span>
+                    <EventTabLabel label={tab.label} />
                   </button>
                 </div>
               );
@@ -420,7 +421,7 @@ export function EventMobileTabs({
                 onClick={onLinkClick}
                 className={linkTabClass(isActive)}
               >
-                {tab.label}
+                <EventTabLabel label={tab.label} />
               </Link>
             );
           })}

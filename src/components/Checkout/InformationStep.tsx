@@ -1549,7 +1549,7 @@ export function InformationStep({
 
           <div className="w-full">
             <div className="hidden md:flex gap-2 items-stretch rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
-              <div className="h-auto w-1/3 relative shrink-0 min-h-[200px]">
+              <div className="h-auto w-2/5 relative shrink-0">
                 <ImageWithInitialFallback
                   src={event.bannerUrl}
                   alt={event.name}
@@ -1557,12 +1557,12 @@ export function InformationStep({
                   fallbackId={event.id}
                   fill
                   sizes="(max-width: 768px) 33vw, 320px"
-                  className="size-full rounded-tr-xl rounded-br-xl border-transparent border-0"
+                  className="size-full w-full h-full rounded-xl border-0 object-center"
                   letterClassName="text-5xl"
                 />
               </div>
 
-              <div className="flex flex-col justify-center items-center px-4 border-r border-gray-6 flex-1 min-w-0">
+              <div className="flex flex-col justify-center items-center px-4 border-r border-gray-6 min-w-0">
                 <div className="flex flex-col gap-4">
                   <p className="text-base text-gray-11">Seu pedido:</p>
                   <h1 className="text-xl font-bold text-gray-12 leading-tight">
@@ -1571,7 +1571,7 @@ export function InformationStep({
                 </div>
               </div>
 
-              <div className="w-2/5 shrink-0 flex flex-col justify-center px-4 py-6">
+              <div className="w-2/5 shrink-0 flex flex-col justify-center p-4">
                 <div className="flex flex-col gap-2 pb-6">
                   {groupedTickets.slice(0, 3).map((ticket, index) => (
                     <div
@@ -1602,7 +1602,7 @@ export function InformationStep({
                   )}
                   {/* Subtotal só com mais de um ingresso diferente pra somar. */}
                   {groupedTickets.length > 1 && (
-                    <div className="flex items-center justify-between text-base text-gray-12">
+                    <div className="flex items-center justify-between text-base text-gray-12 mt-4">
                       <p className="font-semibold">Subtotal:</p>
                       <p className="font-bold">{formatPrice(totalPrice)}</p>
                     </div>

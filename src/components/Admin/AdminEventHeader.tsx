@@ -7,6 +7,7 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { adminExternalHref } from "@/lib/adminPathPresentation";
 import { useAdminPathname } from "@/hooks/useAdminPathname";
+import { EventTabLabel } from "@/components/Icons/EventTabLabel";
 
 interface AdminEventHeaderProps {
   eventId: string;
@@ -269,7 +270,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
                     onClick={() => { setEditarOpen(false); setDescontoOpen((o) => !o); }}
                     className={menuTriggerCls(isDiscountActive || descontoOpen)}
                   >
-                    <span>{tab.label}</span>
+                    <EventTabLabel label={tab.label} />
                   </button>
                 </div>
               );
@@ -284,7 +285,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
                       href={navHref(tab.href)}
                       className={`${linkTabCls(isEditActive)} hidden md:block`}
                     >
-                      {tab.label}
+                      <EventTabLabel label={tab.label} />
                     </Link>
                     <div className="shrink-0 md:hidden" ref={editarTriggerRef}>
                       <button
@@ -292,7 +293,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
                         onClick={() => { setDescontoOpen(false); setEditarOpen((o) => !o); }}
                         className={menuTriggerCls(isEditActive || editarOpen)}
                       >
-                        <span>{tab.label}</span>
+                        <EventTabLabel label={tab.label} />
                       </button>
                     </div>
                   </Fragment>
@@ -305,7 +306,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
                     onClick={() => { setDescontoOpen(false); setEditarOpen((o) => !o); }}
                     className={menuTriggerCls(isEditActive || editarOpen)}
                   >
-                    <span>{tab.label}</span>
+                    <EventTabLabel label={tab.label} />
                   </button>
                 </div>
               );
@@ -320,7 +321,7 @@ function AdminEventTabs({ eventId, activeHref, variant, onLinkClick }: TabsProps
                 onClick={onLinkClick}
                 className={linkTabCls(isActive)}
               >
-                {tab.label}
+                <EventTabLabel label={tab.label} />
               </Link>
             );
           })}

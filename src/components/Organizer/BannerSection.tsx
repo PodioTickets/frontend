@@ -7,7 +7,6 @@ import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
-import { MessageIcon } from "@/components/Icons/MessageIcon";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
 import {
   ImageUploadWithCrop,
@@ -25,18 +24,6 @@ function formatDate(dateString: string) {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${day}/${month}/${date.getFullYear()}`;
-}
-
-function formatOrgDocument(raw: string | null | undefined): { label: string; formatted: string } | null {
-  if (!raw?.trim()) return null;
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length === 14) {
-    return { label: "CNPJ", formatted: digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") };
-  }
-  if (digits.length === 11) {
-    return { label: "CPF", formatted: digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4") };
-  }
-  return { label: "Documento", formatted: raw.trim() };
 }
 
 function StatusPill({ done }: { done: boolean }) {
@@ -130,7 +117,10 @@ export function BannerSection({
 
   const eventLocation = street && city && state ? `${street}, ${city}, ${state}` : "";
   const listingLocation = city && state ? `${city}, ${state}` : eventLocation;
-  const orgDocDisplay = formatOrgDocument(organizer.document);
+  // Local no formato do card da página pública do evento: "Cidade - UF, rua".
+  const infoCardLocation = city && state
+    ? [`${city} - ${state}`, street].filter(Boolean).join(", ")
+    : eventLocation;
 
   const uploadImageFile = useCallback(async (file: File): Promise<string> => {
     const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
@@ -303,51 +293,56 @@ export function BannerSection({
             </div>
           </div>
 
-          <div className="w-72 flex flex-col gap-4 shrink-0 xl:sticky xl:top-4 mx-auto xl:mx-0">
-            <div className="bg-gray-2 flex flex-col gap-4 p-4 rounded-xl shadow-[0px_2px_6px_0px_rgba(17,17,17,0.25)]">
-              <h3 className="text-gray-12 text-base font-extrabold font-manrope leading-[1.1]">{eventName || "Nome do evento"}</h3>
-              <div className="flex flex-col gap-3">
-                {eventLocation && (
-                  <div className="flex gap-2 items-center">
-                    <LocationIcon className="size-4 text-gray-12 shrink-0" />
-                    <p className="text-gray-12 text-sm font-medium font-family-dm-sans leading-[1.3] flex-1">{eventLocation}</p>
-                  </div>
-                )}
+          <div className="w-auto md:w-72 flex flex-col gap-4 shrink-0 xl:sticky xl:top-4 mx-auto xl:mx-0">
+            {/* Espelha o card lateral da página pública do evento (events/[slug]). */}
+            <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
+              <h1 className="text-lg font-bold mb-4">{eventName || "Nome do evento"}</h1>
+              <div className="flex flex-col gap-4">
                 {eventDate && (
-                  <div className="flex gap-2 items-center">
-                    <CalendarIcon className="size-4 text-gray-12 shrink-0" />
-                    <p className="text-gray-12 text-sm font-medium font-family-dm-sans leading-[1.3]">{formatDate(eventDate)}</p>
-                  </div>
+                  <p className="flex items-center gap-2 text-sm text-gray-12 font-medium">
+                    <CalendarIcon className="size-5 shrink-0" />
+                    <span>Acontece em {formatDate(eventDate)}</span>
+                  </p>
                 )}
-                <div className="bg-gray-3 border border-gray-6 rounded-lg p-3 flex flex-col gap-3">
-                  <p className="text-gray-11 text-sm font-family-dm-sans leading-[1.3]">Organizador</p>
-                  <div className="flex gap-2 items-center">
-                    {organizer.logoSrc ? (
-                      <ImageWithInitialFallback src={organizer.logoSrc} alt={organizer.name} name={organizer.name} width={32} height={32} className="size-8 rounded-full shrink-0 object-cover" fallbackId="org-logo" />
-                    ) : null}
-                    <div className="flex flex-col min-w-0">
-                      <p className="text-gray-12 text-sm font-semibold font-family-dm-sans leading-[1.3] truncate">{organizer.name}</p>
-                      {organizer.showLegalSubtitle && organizer.legalName ? (
-                        <p className="text-gray-11 text-xs font-family-dm-sans leading-[1.3] truncate" title={organizer.legalName}>{organizer.legalName}</p>
-                      ) : null}
-                      {orgDocDisplay ? (
-                        <p className="text-gray-11 text-xs font-family-dm-sans leading-[1.3]">{orgDocDisplay.label}: {orgDocDisplay.formatted}</p>
-                      ) : null}
+                {infoCardLocation && (
+                  <p className="flex items-center gap-2 text-gray-12 font-medium">
+                    <LocationIcon className="size-5 shrink-0" />
+                    <span className="text-sm underline">{infoCardLocation}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
+                <p className="text-sm font-medium text-gray-11 mb-3">Organizador</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative shrink-0 size-10 rounded-full overflow-hidden bg-primary-10/20 flex items-center justify-center">
+                      {organizer.logoSrc ? (
+                        <Image src={organizer.logoSrc} alt="" width={40} height={40} className="size-full object-cover" unoptimized />
+                      ) : (
+                        <span className="text-primary-11 font-semibold text-sm">
+                          {(organizer.name?.charAt(0) || "O").toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <p className="text-sm font-semibold text-gray-12 truncate">{organizer.name}</p>
                     </div>
                   </div>
-                  <Button variant="outline" disabled className="w-full h-10 text-xs text-gray-12 border-gray-6">
-                    <MessageIcon className="size-4" />
-                    Falar com organizador
+                  <Button variant="outline" disabled className="w-full text-gray-12 border-gray-6">
+                    Falar com o organizador
                   </Button>
                 </div>
               </div>
-              <Button className="w-full h-10 text-sm" disabled>Inscrever-se</Button>
+
+              <Button disabled className="w-full mt-8">Inscreva-se</Button>
             </div>
-            <div className="hidden md:flex flex-col items-center justify-center gap-3">
-              <Button variant="outline" disabled className="h-10 text-sm text-gray-11 border-gray-6">
-                <ShareIcon className="size-4" />
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Button variant="outline" className="mt-8 text-gray-11 border-gray-6">
+                <ShareIcon className="size-5" />
                 Compartilhar
               </Button>
+              <p className="underline font-semibold text-gray-11 text-sm cursor-pointer">Denunciar evento</p>
             </div>
           </div>
         </div>
@@ -431,7 +426,7 @@ export function BannerSection({
 
   return (
     <>
-      <div className="flex w-full max-w-[1059px] flex-col gap-6 md:mx-auto md:px-0">
+      <div className="flex w-full max-w-7xl flex-col gap-6 mx-auto md:px-0">
         {/* Banner accordion */}
         <div className="border border-gray-6 rounded-2xl overflow-hidden bg-gray-1">
           <button

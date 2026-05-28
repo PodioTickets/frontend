@@ -16,6 +16,11 @@ import {
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { RemoveCircleIcon } from "@/components/Icons/RemoveCircleIcon";
+import { UndoCircleIcon } from "@/components/Icons/UndoCircleIcon";
+import { BadgePercentIcon } from "@/components/Icons/BadgePercentIcon";
+import { AnnouncementIcon } from "@/components/Icons/AnnouncementIcon";
+import { NotificationIcon } from "@/components/Icons/NotificationIcon";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { LoadingAnimation } from "@/components/Loading";
 import { MoneyIcon } from "@/components/Icons/MoneyIcon";
@@ -583,8 +588,9 @@ export default function OrganizerEventsPage() {
                                         <Link
                                           href={`/organizer/events/${event.id}/discount/cupom`}
                                           onClick={() => setMenuOpenForId(null)}
-                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                          className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                         >
+                                          <BadgePercentIcon className="size-4 shrink-0 text-gray-11" />
                                           Cupom
                                         </Link>
                                       )}
@@ -592,8 +598,9 @@ export default function OrganizerEventsPage() {
                                         <Link
                                           href={`/organizer/events/${event.id}/discount/voucher`}
                                           onClick={() => setMenuOpenForId(null)}
-                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                          className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                         >
+                                          <BadgePercentIcon className="size-4 shrink-0 text-gray-11" />
                                           Voucher
                                         </Link>
                                       )}
@@ -601,8 +608,9 @@ export default function OrganizerEventsPage() {
                                         <Link
                                           href={`/organizer/events/${event.id}/ads`}
                                           onClick={() => setMenuOpenForId(null)}
-                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                          className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                         >
+                                          <AnnouncementIcon className="size-4 shrink-0 text-gray-11" />
                                           ADS
                                         </Link>
                                       )}
@@ -610,8 +618,9 @@ export default function OrganizerEventsPage() {
                                         <Link
                                           href={`/organizer/events/${event.id}/notifications`}
                                           onClick={() => setMenuOpenForId(null)}
-                                          className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                          className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                         >
+                                          <NotificationIcon className="size-4 shrink-0 text-gray-11" />
                                           Notificação
                                         </Link>
                                       )}
@@ -630,11 +639,16 @@ export default function OrganizerEventsPage() {
                                               : openSuspendModal(event)
                                           }
                                           className={cn(
-                                            "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
+                                            "w-full flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
                                             "hover:bg-gray-3 text-gray-12",
                                             "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                           )}
                                         >
+                                          {isEventSuspended(event) ? (
+                                            <UndoCircleIcon className="size-4 shrink-0 text-gray-11" />
+                                          ) : (
+                                            <RemoveCircleIcon className="size-4 shrink-0 text-gray-11" />
+                                          )}
                                           {isEventSuspended(event)
                                             ? "Reativar evento"
                                             : "Suspender evento"}
@@ -798,8 +812,9 @@ export default function OrganizerEventsPage() {
                                   <Link
                                     href={`/organizer/events/${event.id}/discount/cupom`}
                                     onClick={() => setMobileMenuOpenForId(null)}
-                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                   >
+                                    <BadgePercentIcon className="size-4 shrink-0 text-gray-11" />
                                     Cupom
                                   </Link>
                                 )}
@@ -807,8 +822,9 @@ export default function OrganizerEventsPage() {
                                   <Link
                                     href={`/organizer/events/${event.id}/discount/voucher`}
                                     onClick={() => setMobileMenuOpenForId(null)}
-                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                   >
+                                    <BadgePercentIcon className="size-4 shrink-0 text-gray-11" />
                                     Voucher
                                   </Link>
                                 )}
@@ -816,8 +832,9 @@ export default function OrganizerEventsPage() {
                                   <Link
                                     href={`/organizer/events/${event.id}/ads`}
                                     onClick={() => setMobileMenuOpenForId(null)}
-                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                   >
+                                    <AnnouncementIcon className="size-4 shrink-0 text-gray-11" />
                                     ADS
                                   </Link>
                                 )}
@@ -825,8 +842,9 @@ export default function OrganizerEventsPage() {
                                   <Link
                                     href={`/organizer/events/${event.id}/notifications`}
                                     onClick={() => setMobileMenuOpenForId(null)}
-                                    className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
+                                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12"
                                   >
+                                    <NotificationIcon className="size-4 shrink-0 text-gray-11" />
                                     Notificação
                                   </Link>
                                 )}
@@ -851,6 +869,11 @@ export default function OrganizerEventsPage() {
                                       "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                     )}
                                   >
+                                    {isEventSuspended(event) ? (
+                                      <UndoCircleIcon className="size-4 shrink-0 text-gray-11" />
+                                    ) : (
+                                      <RemoveCircleIcon className="size-4 shrink-0 text-gray-11" />
+                                    )}
                                     {isEventSuspended(event)
                                       ? "Reativar evento"
                                       : "Suspender evento"}

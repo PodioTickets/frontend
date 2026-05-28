@@ -15,6 +15,11 @@ import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { RemoveCircleIcon } from "@/components/Icons/RemoveCircleIcon";
+import { UndoCircleIcon } from "@/components/Icons/UndoCircleIcon";
+import { BadgePercentIcon } from "@/components/Icons/BadgePercentIcon";
+import { AnnouncementIcon } from "@/components/Icons/AnnouncementIcon";
+import { NotificationIcon } from "@/components/Icons/NotificationIcon";
 import { MoneyIcon } from "@/components/Icons/MoneyIcon";
 import { DashboardIcon } from "@/components/Icons/Organizer/DashboardIcon";
 import { UsersIcon } from "@/components/Icons/Organizer/UsersIcon";
@@ -389,20 +394,25 @@ export default function AdminEventsPage() {
               className="z-50 w-52 rounded-md border border-gray-6 bg-gray-1 p-1 shadow-lg outline-none"
             >
               <DropdownMenu.Item asChild>
-                <Link href={`/admin/events/${ev.id}/discount/cupom`} className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">Cupom</Link>
+                <Link href={`/admin/events/${ev.id}/discount/cupom`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"><BadgePercentIcon className="size-4 shrink-0 text-gray-11" />Cupom</Link>
               </DropdownMenu.Item>
               <DropdownMenu.Item asChild>
-                <Link href={`/admin/events/${ev.id}/discount/voucher`} className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">Voucher</Link>
+                <Link href={`/admin/events/${ev.id}/discount/voucher`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"><BadgePercentIcon className="size-4 shrink-0 text-gray-11" />Voucher</Link>
               </DropdownMenu.Item>
               <DropdownMenu.Item asChild>
-                <Link href={`/admin/events/${ev.id}/ads`} className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none">ADS</Link>
+                <Link href={`/admin/events/${ev.id}/ads`} className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"><AnnouncementIcon className="size-4 shrink-0 text-gray-11" />ADS</Link>
               </DropdownMenu.Item>
               {(ev.status === "PUBLISHED" || ev.status === "SUSPENDED") && (
                 <DropdownMenu.Item
                   disabled={suspendingId === ev.id}
                   onSelect={() => ev.status === "SUSPENDED" ? openResumeModal(ev) : openSuspendModal(ev)}
-                  className="px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
                 >
+                  {ev.status === "SUSPENDED" ? (
+                    <UndoCircleIcon className="size-4 shrink-0 text-gray-11" />
+                  ) : (
+                    <RemoveCircleIcon className="size-4 shrink-0 text-gray-11" />
+                  )}
                   {ev.status === "SUSPENDED" ? "Reativar evento" : "Suspender evento"}
                 </DropdownMenu.Item>
               )}
@@ -690,32 +700,36 @@ export default function AdminEventsPage() {
                                     <DropdownMenu.Item asChild>
                                       <Link
                                         href={`/admin/events/${event.id}/discount/cupom`}
-                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                        className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
                                       >
+                                        <BadgePercentIcon className="size-4 shrink-0 text-gray-11" />
                                         Cupom
                                       </Link>
                                     </DropdownMenu.Item>
                                     <DropdownMenu.Item asChild>
                                       <Link
                                         href={`/admin/events/${event.id}/discount/voucher`}
-                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                        className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
                                       >
+                                        <BadgePercentIcon className="size-4 shrink-0 text-gray-11" />
                                         Voucher
                                       </Link>
                                     </DropdownMenu.Item>
                                     <DropdownMenu.Item asChild>
                                       <Link
                                         href={`/admin/events/${event.id}/ads`}
-                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                        className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
                                       >
+                                        <AnnouncementIcon className="size-4 shrink-0 text-gray-11" />
                                         ADS
                                       </Link>
                                     </DropdownMenu.Item>
                                     <DropdownMenu.Item asChild>
                                       <Link
                                         href={`/admin/events/${event.id}/notifications`}
-                                        className="flex px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
+                                        className="flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md hover:bg-gray-3 text-gray-12 cursor-pointer outline-none"
                                       >
+                                        <NotificationIcon className="size-4 shrink-0 text-gray-11" />
                                         Notificação
                                       </Link>
                                     </DropdownMenu.Item>
@@ -729,11 +743,16 @@ export default function AdminEventsPage() {
                                             : openSuspendModal(event)
                                         }
                                         className={cn(
-                                          "px-3 py-2.5 text-sm font-family-dm-sans rounded-md cursor-pointer outline-none",
+                                          "flex items-center gap-2 px-3 py-2.5 text-sm font-family-dm-sans rounded-md cursor-pointer outline-none",
                                           "hover:bg-gray-3 text-gray-12",
                                           "data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
                                         )}
                                       >
+                                        {event.status === "SUSPENDED" ? (
+                                          <UndoCircleIcon className="size-4 shrink-0 text-gray-11" />
+                                        ) : (
+                                          <RemoveCircleIcon className="size-4 shrink-0 text-gray-11" />
+                                        )}
                                         {event.status === "SUSPENDED"
                                           ? "Reativar evento"
                                           : "Suspender evento"}

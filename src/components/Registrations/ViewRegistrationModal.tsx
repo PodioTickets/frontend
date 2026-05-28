@@ -21,6 +21,7 @@ import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext"
 import {
   isPersonBr,
   documentLabel,
+  formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 
@@ -437,7 +438,7 @@ export function ViewRegistrationModal() {
                     {[
                       { label: "Nome", value: participantName },
                       { label: "Email", value: participantEmail },
-                      { label: documentLabel(participantIsBr), value: participantCPFRaw || "—" },
+                      { label: documentLabel(participantIsBr), value: formatDocumentDisplay(participantCPFRaw, participantIsBr) || "—" },
                       { label: "Data de nascimento", value: participantBirthDate },
                       { label: "Telefone", value: formatPhone(participantPhone) || "—" },
                       { label: "Telefone de emergência", value: emergencyPhone || "—" },
@@ -679,7 +680,7 @@ export function ViewRegistrationModal() {
                             {documentLabel(participantIsBr)}
                           </p>
                           <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                            {participantCPFRaw || "—"}
+                            {formatDocumentDisplay(participantCPFRaw, participantIsBr) || "—"}
                           </p>
                         </div>
                         <div className="flex flex-col py-4">

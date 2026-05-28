@@ -46,8 +46,8 @@ export default function EditBannerPage() {
       title="Banner"
       description="Imagens principais do evento que aparecem na página pública."
       showDescriptionOnMobile
-      className="bg-gray-2 flex-1 pb-28 md:pb-44 md:px-[124px] pt-0 mt-0 min-w-0"
-      maxWidth="max-w-[1100px]"
+      className="bg-gray-2 flex-1 pb-5 -mx-4 md:px-5 pt-0 mt-0 min-w-0"
+      maxWidth="max-w-7xl"
     >
       <BannerSection
         bannerUrl={formData.bannerUrl}

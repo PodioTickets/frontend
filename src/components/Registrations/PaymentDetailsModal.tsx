@@ -22,6 +22,7 @@ import { useOrganizerPermissions } from "@/contexts/OrganizerPermissionsContext"
 import {
   isPersonBr,
   documentLabel,
+  formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 
@@ -293,7 +294,8 @@ export function PaymentDetailsModal() {
     }
   };
 
-  // Documento exibido CRU (só o label muda por país). Telefone recebe máscara.
+  // Documento: brasileiro → CPF formatado (xxx.xxx.xxx-xx); estrangeiro → cru
+  // (passaporte/RNE não têm formatação). Label muda por país. Telefone com máscara.
   const formatPhone = (phone?: string | null) =>
     formatPersonPhone(phone, buyerCountry);
 
@@ -434,7 +436,7 @@ export function PaymentDetailsModal() {
                     {[
                       { label: "Nome", value: buyerData?.firstName && buyerData?.lastName ? `${buyerData.firstName} ${buyerData.lastName}` : buyerData?.fullName || "—" },
                       { label: "Email", value: buyerData?.email || "—" },
-                      { label: documentLabel(buyerIsBr), value: buyerData?.documentNumber || "—" },
+                      { label: documentLabel(buyerIsBr), value: formatDocumentDisplay(buyerData?.documentNumber, buyerIsBr) || "—" },
                       { label: "Data de nascimento:", value: formatBirthDate(buyerData?.dateOfBirth || null) || "—" },
                       { label: "Telefone:", value: formatPhone(buyerData?.phone || null) || "—" },
                       { label: "Sexo", value: buyerData?.gender === "MALE" || buyerData?.gender === "male" ? "Masculino" : buyerData?.gender === "FEMALE" || buyerData?.gender === "female" ? "Feminino" : buyerData?.gender === "OTHER" || buyerData?.gender === "other" ? "Outro" : buyerData?.gender || "—" },
@@ -779,7 +781,7 @@ export function PaymentDetailsModal() {
                               {documentLabel(buyerIsBr)}
                             </p>
                             <p className="font-family-dm-sans font-medium text-[16px] leading-[1.3] text-gray-12">
-                              {buyerData?.documentNumber || "—"}
+                              {formatDocumentDisplay(buyerData?.documentNumber, buyerIsBr) || "—"}
                             </p>
                           </div>
                           <div className="flex flex-col py-2">

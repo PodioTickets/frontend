@@ -72,7 +72,9 @@
       "Bash(sed -n '2513,2522p' src/components/Checkout/PaymentStep.tsx)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\app\\\\checkout\" -Recurse -Include \"*.tsx\", \"*.ts\", \"*.json\")"
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\app\\\\checkout\" -Recurse -Include \"*.tsx\", \"*.ts\", \"*.json\")",
+      "mcp__claude_ai_Figma__get_metadata",
+      "PowerShell(Join-Path *)"
     ]
   },
   "disabledMcpjsonServers": [

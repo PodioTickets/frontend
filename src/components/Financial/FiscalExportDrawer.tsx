@@ -29,6 +29,7 @@ import {
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { Tooltip } from "../Tooltip";
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
+import { isPersonBr, formatDocumentDisplay } from "@/utils/documentDisplay";
 
 type PaymentDetailsItem = {
   orderId: string;
@@ -374,7 +375,7 @@ export function FiscalExportDrawer({
                             {order.buyer.name}
                           </span>
                           <span className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                            {order.buyer.cpf}
+                            {formatDocumentDisplay(order.buyer.cpf, isPersonBr({ document: order.buyer.cpf }))}
                           </span>
                         </div>
                       </div>
@@ -446,7 +447,7 @@ export function FiscalExportDrawer({
                           {order.buyer.name}
                         </span>
                         <span className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                          {order.buyer.cpf}
+                          {formatDocumentDisplay(order.buyer.cpf, isPersonBr({ document: order.buyer.cpf }))}
                         </span>
                       </div>
                     </div>

@@ -22,6 +22,7 @@ import { PaymentDetailsMobile, type MobileParticipantItem } from "./PaymentDetai
 import {
   isPersonBr,
   documentLabel,
+  formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 
@@ -247,7 +248,7 @@ export function PaymentItemDetailsDrawer({
         "—",
     },
     { label: "Email", value: buyer.email || "—" },
-    { label: documentLabel(buyerIsBr), value: buyer.documentNumber || "—" },
+    { label: documentLabel(buyerIsBr), value: formatDocumentDisplay(buyer.documentNumber, buyerIsBr) || "—" },
     {
       label: "Data de nascimento:",
       value: buyer.dateOfBirth ? formatDate(buyer.dateOfBirth).split(" - ")[0] : "—",
@@ -337,7 +338,7 @@ export function PaymentItemDetailsDrawer({
                   },
                   { label: "Email", value: buyer.email || "—" },
                   { label: "Telefone:", value: formatPhone(buyer.phone) },
-                  { label: documentLabel(buyerIsBr), value: buyer.documentNumber || "—" },
+                  { label: documentLabel(buyerIsBr), value: formatDocumentDisplay(buyer.documentNumber, buyerIsBr) || "—" },
                   { label: "Data de nascimento:", value: formatBirthDate(buyer.dateOfBirth) },
                   { label: "Sexo", value: formatGender(buyer.gender) },
                 ].map(({ label, value }) => (

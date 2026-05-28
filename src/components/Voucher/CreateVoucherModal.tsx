@@ -33,6 +33,7 @@ export function CreateVoucherModal() {
   const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
   const [cpfList, setCpfList] = useState<string[]>([]);
   const [cpfSearch, setCpfSearch] = useState("");
+  const [applyToProducts, setApplyToProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
 
@@ -94,8 +95,11 @@ export function CreateVoucherModal() {
         setExpiryDate(v.expiryDate || null);
         setCpfListStatus(v.cpfListStatus || "DISABLED");
         setCpfList(v.cpfList || []);
+        setApplyToProducts(!!(v as { applyToProducts?: boolean }).applyToProducts);
         // Abre painel avançado automaticamente se houver configurações ativas
-        setShowAdvanced(!!(v.expiryDate || v.cpfListStatus === "ENABLED"));
+        setShowAdvanced(
+          !!(v.expiryDate || v.cpfListStatus === "ENABLED" || (v as { applyToProducts?: boolean }).applyToProducts)
+        );
       } else {
         setName("");
         setQuantity("");
@@ -106,6 +110,7 @@ export function CreateVoucherModal() {
         setExpiryDate(null);
         setCpfListStatus("DISABLED");
         setCpfList([]);
+        setApplyToProducts(false);
         setCpfSearch("");
         setCpfListError("");
       }
@@ -311,6 +316,7 @@ export function CreateVoucherModal() {
         expiryDate: expiryStatus === "ENABLED" && expiryDate ? expiryDate : undefined,
         cpfListStatus,
         cpfList: cpfListStatus === "ENABLED" ? cpfList : undefined,
+        applyToProducts,
       };
 
       if (isEditing && data?.voucherId) {
@@ -799,6 +805,33 @@ export function CreateVoucherModal() {
                                     </div>
                                   </div>
                                 )}
+                              </div>
+                              {/* Aplicar voucher nos adicionais */}
+                              <div className="flex flex-col gap-5">
+                                <div className="flex flex-col gap-2">
+                                  <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                    Aplicar voucher nos adicionais?
+                                  </h3>
+                                  <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                    O voucher também cobrirá os produtos adicionais que não estão inclusos no ingresso
+                                  </p>
+                                </div>
+                                <div className="flex gap-6">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <Checkbox
+                                      checked={!applyToProducts}
+                                      onCheckedChange={(checked) => { if (checked) setApplyToProducts(false); }}
+                                    />
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <Checkbox
+                                      checked={applyToProducts}
+                                      onCheckedChange={(checked) => { if (checked) setApplyToProducts(true); }}
+                                    />
+                                    <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                  </label>
+                                </div>
                               </div>
                               {/* Validade do voucher */}
                               <div className="flex flex-col gap-5">
