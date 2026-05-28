@@ -1636,18 +1636,18 @@ export function InformationStep({
               </div>
 
               <div className="w-2/5 shrink-0 flex flex-col justify-between p-2 border-l border-gray-6">
-                <div className="grid grid-cols-2 gap-4 pb-6">
-                  <div className="flex flex-col items-start ">
+                <div className="grid grid-cols-2 gap-4 pb-6 w-full">
+                  <div className="flex flex-col items-start w-full gap-2">
                     {groupedTickets.slice(0, 2).map((ticket, index) => (
                       <div
                         key={index}
                         className="flex items-end justify-between w-full text-base text-gray-12 gap-2"
                       >
-                        <div className="flex flex-col max-w-[80%]">
+                        <div className="flex flex-col w-[70%]">
                           <p className="text-gray-11 text-[10px] truncate">{ticket.categoryName ? (
                             ticket.categoryName
                           ) : "Ingresso Avulso"}</p>
-                          <p className="font-semibold text-gray-12 text-sm truncate">
+                          <p className="font-semibold text-gray-12 text-sm line-clamp-2 break-words">
                             ({ticket.quantity}x){" "}
                             {ticket.raceName ? `${ticket.raceName}: ` : ""}
                           </p>
