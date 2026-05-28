@@ -2404,8 +2404,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       const headerH = headerEl?.getBoundingClientRect().height ?? 64;
                       const rect = card.getBoundingClientRect();
                       const top = window.scrollY + rect.top - (headerH + 12);
-                      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-                    }, 80);
+                      // Instant: expandir o card + autofocus ja mexem o scroll;
+                      // smooth por cima fica "desce e sobe", parece travado.
+                      window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+                    }, 120);
                   }
                 }}
               >

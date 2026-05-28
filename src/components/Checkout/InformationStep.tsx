@@ -759,8 +759,10 @@ export function InformationStep({
           const headerH = headerEl?.getBoundingClientRect().height ?? 64;
           const rect = anchor.getBoundingClientRect();
           const top = window.scrollY + rect.top - (headerH + 12);
-          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-        }, 350);
+          // Instant (auto): o colapso do card ja deslocou o viewport; um scroll
+          // suave por cima disso fica "desce e sobe" e parece travado. Snap seco.
+          window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+        }, 320);
         return;
       }
       const next = findNextPending() ?? index;
@@ -781,9 +783,10 @@ export function InformationStep({
           if (!el) return;
           const rect = el.getBoundingClientRect();
           const top = window.scrollY + rect.top - HEADER_OFFSET;
-          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+          // Instant (auto): evita o "desce e sobe" sobre o reflow do colapso.
+          window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
         };
-        setTimeout(scrollNow, 350);
+        setTimeout(scrollNow, 320);
       }
     }
   };
