@@ -49,6 +49,7 @@ import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCoupon
 import { useAuth } from "@/hooks/useAuth";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
+import Image from "next/image";
 
 interface InformationStepProps {
   event: Event;
@@ -1614,21 +1615,18 @@ export function InformationStep({
           )}
 
           <div className="w-full">
-            <div className="hidden md:flex gap-2 items-stretch rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
-              <div className="h-auto w-2/5 relative shrink-0">
-                <ImageWithInitialFallback
+            <div className="hidden md:flex gap-2 items-center justify-between rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
+              <div className="h-full w-2/5 relative shrink-0 flex items-center justify-center">
+                <Image
                   src={event.bannerUrl}
                   alt={event.name}
-                  name={event.name}
-                  fallbackId={event.id}
-                  fill
-                  sizes="(max-width: 768px) 33vw, 320px"
-                  className="size-full w-full h-full rounded-xl border-0 object-center"
-                  letterClassName="text-5xl"
+                  height={10000}
+                  width={100000}
+                  className="w-full h-full rounded-r-xl border-0 object-center object-contain"
                 />
               </div>
 
-              <div className="flex flex-col justify-center items-center px-4 border-r border-gray-6 min-w-0">
+              <div className="flex flex-col justify-center items-center px-4 min-w-0">
                 <div className="flex flex-col gap-4">
                   <p className="text-base text-gray-11">Seu pedido:</p>
                   <h1 className="text-xl font-bold text-gray-12 leading-tight">
@@ -1637,80 +1635,84 @@ export function InformationStep({
                 </div>
               </div>
 
-              <div className="w-2/5 shrink-0 flex flex-col justify-center p-4">
-                <div className="flex flex-col gap-2 pb-6">
-                  {groupedTickets.slice(0, 3).map((ticket, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between text-base text-gray-12"
-                    >
-                      <div className="flex flex-col max-w-[80%]">
-                        <p className="text-gray-11 text-xs truncate">{ticket.categoryName ? (
-                          ticket.categoryName
-                        ) : "Ingresso Avulso"}</p>
-                        <p className="font-semibold text-gray-12 text-base truncate">
-                          ({ticket.quantity}x){" "}
-                          {ticket.raceName ? `${ticket.raceName} ` : ""}
+              <div className="w-2/5 shrink-0 flex flex-col justify-between p-2 border-l border-gray-6">
+                <div className="grid grid-cols-2 gap-4 pb-6">
+                  <div className="flex flex-col items-start ">
+                    {groupedTickets.slice(0, 2).map((ticket, index) => (
+                      <div
+                        key={index}
+                        className="flex items-end justify-between w-full text-base text-gray-12 gap-2"
+                      >
+                        <div className="flex flex-col max-w-[80%]">
+                          <p className="text-gray-11 text-[10px] truncate">{ticket.categoryName ? (
+                            ticket.categoryName
+                          ) : "Ingresso Avulso"}</p>
+                          <p className="font-semibold text-gray-12 text-sm truncate">
+                            ({ticket.quantity}x){" "}
+                            {ticket.raceName ? `${ticket.raceName}: ` : ""}
+                          </p>
+                        </div>
+                        <p className="font-bold text-sm">
+                          {formatPrice(ticket.total)}
                         </p>
                       </div>
-                      <p className="font-bold">
-                        {formatPrice(ticket.total)}
-                      </p>
-                    </div>
-                  ))}
-                  {groupedTickets.length > 3 && (
-                    <button
-                      onClick={() => setShowAllTicketsModal(true)}
-                      className="text-base text-primary-11 font-semibold hover:text-primary-12 transition-colors text-left"
-                    >
-                      Ver mais {groupedTickets.length - 3} ingresso{groupedTickets.length - 3 > 1 ? "s" : ""}
-                    </button>
-                  )}
+                    ))}
+                    {groupedTickets.length > 2 && (
+                      <button
+                        onClick={() => setShowAllTicketsModal(true)}
+                        className="text-sm mt-2 text-primary-11 font-semibold hover:text-primary-12 transition-colors text-left"
+                      >
+                        Ver mais {groupedTickets.length - 2} ingresso{groupedTickets.length - 2 > 1 ? "s" : ""}
+                      </button>
+                    )}
+                  </div>
                   {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-                  {groupedTickets.length > 1 && (
-                    <div className="flex items-center justify-between text-base text-gray-12 mt-4">
-                      <p className="font-semibold">Subtotal:</p>
-                      <p className="font-bold">{formatPrice(totalPrice)}</p>
-                    </div>
-                  )}
-                  {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                    <div className="flex items-center justify-between text-base text-gray-12">
-                      <p className="font-semibold">
-                        {formatCouponLineLabel(appliedCoupon)}:
-                      </p>
-                      <p className="font-bold">
-                        -{formatPrice(couponDiscountAmount)}
-                      </p>
-                    </div>
-                  )}
-                  {hasVoucherLine && (
-                    <div className="flex items-center justify-between text-base text-gray-12">
-                      <p className="font-semibold">
-                        {formatVoucherLineLabel(appliedVoucher!.code)}:
-                      </p>
-                      <p className="font-bold">
-                        -{formatPrice(voucherDiscountAmount)}
-                      </p>
-                    </div>
-                  )}
-                  {ageCoupon && ageDiscount > 0 && (
-                    <div className="flex items-center justify-between text-base text-gray-12">
-                      <p className="font-semibold">
-                        {formatAgeCouponLineLabel(ageCoupon)}:
-                      </p>
-                      <p className="font-bold">
-                        -{formatPrice(ageDiscount)}
-                      </p>
-                    </div>
-                  )}
-                  {serviceFee > 0 && (
-                    <div className="flex items-center justify-between text-base text-gray-12">
-                      <p className="font-semibold">Taxa de serviço:</p>
-                      <p className="font-bold">
-                        {formatPrice(serviceFee)}
-                      </p>
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-2">
+                    {groupedTickets.length > 1 && (
+                      <div className="flex items-center justify-between text-sm text-gray-12">
+                        <p className="font-semibold">Subtotal:</p>
+                        <p className="font-bold text-sm">{formatPrice(totalPrice)}</p>
+                      </div>
+                    )}
+                    {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
+                      <div className="flex items-center justify-between text-sm text-gray-12">
+                        <p className="font-semibold">
+                          {formatCouponLineLabel(appliedCoupon)}:
+                        </p>
+                        <p className="font-bold text-sm">
+                          {formatPrice(couponDiscountAmount)}
+                        </p>
+                      </div>
+                    )}
+                    {hasVoucherLine && (
+                      <div className="flex items-center justify-between text-sm text-gray-12">
+                        <p className="font-semibold">
+                          {formatVoucherLineLabel(appliedVoucher!.code)}:
+                        </p>
+                        <p className="font-bold text-sm">
+                          -{formatPrice(voucherDiscountAmount)}
+                        </p>
+                      </div>
+                    )}
+                    {ageCoupon && ageDiscount > 0 && (
+                      <div className="flex items-center justify-between text-sm text-gray-12">
+                        <p className="font-semibold">
+                          {formatAgeCouponLineLabel(ageCoupon)}:
+                        </p>
+                        <p className="font-bold text-sm">
+                          {formatPrice(ageDiscount)}
+                        </p>
+                      </div>
+                    )}
+                    {serviceFee > 0 && (
+                      <div className="flex items-center justify-between text-sm text-gray-12">
+                        <p className="font-semibold">Taxa de serviço:</p>
+                        <p className="font-bold text-sm">
+                          {formatPrice(serviceFee)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-xl font-bold text-gray-12 border-t border-gray-6 pt-6">
                   <p>Total:</p>
