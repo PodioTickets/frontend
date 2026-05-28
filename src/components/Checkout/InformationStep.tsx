@@ -747,6 +747,21 @@ export function InformationStep({
       // Sem proximo pendente (ex: unico participante ou ultimo a salvar) cai
       // de volta pro proprio indice — sem isso o colapso encurta o body e o
       // navegador deixa o usuario perto do rodape, parecendo "perdido".
+      // Desktop com 1 participante: rola pro topo "Informacoes basicas" pra
+      // dar contexto do form todo visivel apos o save.
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+      if (isDesktop && totalVisible === 1) {
+        setTimeout(() => {
+          const anchor = document.querySelector<HTMLElement>('[data-info-anchor="true"]');
+          if (!anchor) return;
+          const headerEl = document.querySelector("header");
+          const headerH = headerEl?.getBoundingClientRect().height ?? 64;
+          const rect = anchor.getBoundingClientRect();
+          const top = window.scrollY + rect.top - (headerH + 12);
+          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        }, 350);
+        return;
+      }
       const next = findNextPending() ?? index;
       if (next !== null) {
         // Card colapsado tem transicao CSS max-h de 300ms. Mede a posicao
@@ -1582,7 +1597,7 @@ export function InformationStep({
         {/* Coluna esquerda - Formulários */}
         <div className="flex-1 flex flex-col gap-2 md:gap-6">
           {!previewMode && (
-            <div className="w-full">
+            <div className="w-full" data-info-anchor="true">
               <div className="hidden md:flex items-center gap-2 text-2xl font-bold">
                 <button
                   className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6"
