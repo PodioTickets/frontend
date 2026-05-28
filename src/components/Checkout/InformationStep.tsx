@@ -744,7 +744,10 @@ export function InformationStep({
         }
         return null;
       };
-      const next = findNextPending();
+      // Sem proximo pendente (ex: unico participante ou ultimo a salvar) cai
+      // de volta pro proprio indice — sem isso o colapso encurta o body e o
+      // navegador deixa o usuario perto do rodape, parecendo "perdido".
+      const next = findNextPending() ?? index;
       if (next !== null) {
         // Card colapsado tem transicao CSS max-h de 300ms. Mede a posicao
         // SO depois da transicao terminar, senao rect.top usa altura
