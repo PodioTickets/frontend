@@ -715,10 +715,61 @@ export function InformationStep({
     }
 
     // Fechar/abrir o participante (sempre permite abrir, só valida ao fechar)
+    const willClose = isCurrentlyExpanded;
     setExpandedParticipants((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
+
+    // Mobile: depois de salvar (fechar) um participante, rola para o proximo
+    // pendente em vez de deixar o usuario perdido no rodape. Desktop nao muda
+    // pq cards ficam lado a lado sem deslocamento vertical.
+    if (willClose && typeof window !== "undefined") {
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      if (isMobile) {
+        // Usa total real de participantes visiveis (raceQuantities) — array
+        // `participants` pode ter slots stale de quantidades anteriores.
+        const totalVisible = Object.values(raceQuantities).reduce(
+          (sum, q) => sum + (q > 0 ? q : 0),
+          0,
+        );
+        const findNextPending = () => {
+          // Procura a partir do indice atual (wrap-around). Considera saved
+          // como "true" pro indice que acabou de ser salvo — state ainda nao
+          // reflete o `setSavedParticipants` do click que disparou esse toggle.
+          for (let step = 1; step <= totalVisible; step++) {
+            const i = (index + step) % totalVisible;
+            if (i === index) continue;
+            const isThisOne = i === index;
+            const incomplete = !isThisOne && (!savedParticipants[i] || !!participantDirtyMap[i]);
+            if (incomplete) return i;
+          }
+          return null;
+        };
+        const next = findNextPending();
+        if (next !== null) {
+          // Card colapsado tem transicao CSS max-h de 300ms. Mede a posicao
+          // SO depois da transicao terminar, senao rect.top usa altura
+          // intermediaria do card atual e o scroll vai pra coordenada errada
+          // (geralmente alem do alvo, parando no rodape da pagina).
+          // Mede altura real do header global fixed (varia entre breakpoints).
+          // Adiciona folga visual de 12px pra borda do card nao colar no header.
+          const headerEl = document.querySelector("header");
+          const headerH = headerEl?.getBoundingClientRect().height ?? 64;
+          const HEADER_OFFSET = headerH + 12;
+          const scrollNow = () => {
+            const el = document.querySelector<HTMLElement>(
+              `[data-participant-index="${next}"]`,
+            );
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const top = window.scrollY + rect.top - HEADER_OFFSET;
+            window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+          };
+          setTimeout(scrollNow, 350);
+        }
+      }
+    }
   };
 
   const clearParticipantFieldError = (participantIndex: number, field: string) => {
@@ -1681,6 +1732,7 @@ export function InformationStep({
               return (
                 <div
                   key={`${ticket.id}-${index}`}
+                  data-participant-index={participantIndex}
                   className={`flex flex-col w-full rounded-lg border border-gray-6 ${!isExpanded ? "overflow-hidden" : ""
                     }`}
                 >
