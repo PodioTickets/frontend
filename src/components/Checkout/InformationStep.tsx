@@ -1594,7 +1594,7 @@ export function InformationStep({
 
   return (
     <>
-      <div className="w-full flex items-start gap-11 pb-24 md:pb-0">
+      <div className="w-full flex items-start gap-10 pb-24 md:pb-0">
         {/* Coluna esquerda - Formulários */}
         <div className="flex-1 flex flex-col gap-2 md:gap-6">
           {!previewMode && (
@@ -1629,25 +1629,25 @@ export function InformationStep({
               <div className="flex flex-col justify-center items-center px-4 min-w-0">
                 <div className="flex flex-col gap-4">
                   <p className="text-base text-gray-11">Seu pedido:</p>
-                  <h1 className="text-xl font-bold text-gray-12 leading-tight">
+                  <h1 className="text-lg font-bold text-gray-12 leading-tight line-clamp-4 break-words">
                     {event.name}
                   </h1>
                 </div>
               </div>
 
-              <div className="w-2/5 shrink-0 flex flex-col justify-between p-2 border-l border-gray-6">
-                <div className="grid grid-cols-2 gap-4 pb-6 w-full">
+              <div className="w-[45%] shrink-0 flex flex-col justify-between h-full p-2 border-l border-gray-6">
+                <div className="grid grid-cols-2 divide-x divide-gray-6 gap-2 pb-6 w-full">
                   <div className="flex flex-col items-start w-full gap-2">
                     {groupedTickets.slice(0, 2).map((ticket, index) => (
                       <div
                         key={index}
-                        className="flex items-end justify-between w-full text-base text-gray-12 gap-2"
+                        className="flex items-end justify-between w-full text-base text-gray-12 gap-2 pr-2"
                       >
-                        <div className="flex flex-col w-[70%]">
-                          <p className="text-gray-11 text-[10px] truncate">{ticket.categoryName ? (
+                        <div className="flex flex-col w-full">
+                          <p className="text-gray-11 text-xs truncate">{ticket.categoryName ? (
                             ticket.categoryName
                           ) : "Ingresso Avulso"}</p>
-                          <p className="font-semibold text-gray-12 text-sm line-clamp-2 break-words">
+                          <p className="font-semibold text-gray-12 text-sm line-clamp-1 break-words">
                             ({ticket.quantity}x){" "}
                             {ticket.raceName ? `${ticket.raceName}: ` : ""}
                           </p>
