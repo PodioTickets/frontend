@@ -750,43 +750,51 @@ export function InformationStep({
       // navegador deixa o usuario perto do rodape, parecendo "perdido".
       // Desktop com 1 participante: rola pro topo "Informacoes basicas" pra
       // dar contexto do form todo visivel apos o save.
+      const headerEl = document.querySelector("header");
+      const headerH = headerEl?.getBoundingClientRect().height ?? 64;
+      const HEADER_OFFSET = headerH + 12;
+
+      // Scroll suave SEM o "desce e sobe": em vez de esperar a transicao do
+      // colapso (que desloca o layout e exige um segundo scroll por cima),
+      // calculamos a posicao FINAL do alvo descontando a altura que o card
+      // recem-salvo vai perder ao colapsar, e disparamos UM unico scroll suave
+      // concorrente com a animacao. O alvo "assenta" exatamente onde paramos.
+      const savedEl = document.querySelector<HTMLElement>(
+        `[data-participant-index="${index}"]`,
+      );
+      // Altura aproximada de um card colapsado (so o cabecalho). Usada pra
+      // estimar o quanto o conteudo abaixo sobe quando o card colapsa.
+      const COLLAPSED_CARD_H = 88;
+      const collapseDelta = savedEl
+        ? Math.max(0, savedEl.getBoundingClientRect().height - COLLAPSED_CARD_H)
+        : 0;
+
+      const smoothTo = (el: HTMLElement | null, subtractDelta: boolean) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        // Alvo abaixo do card que colapsa sobe por `collapseDelta`; alvo acima
+        // (wrap-around / ancora) nao se move, entao delta = 0.
+        const top =
+          window.scrollY + rect.top - HEADER_OFFSET - (subtractDelta ? collapseDelta : 0);
+        // rAF: dispara no mesmo quadro do colapso → uma glide unica e fluida.
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        });
+      };
+
       const isDesktop = window.matchMedia("(min-width: 768px)").matches;
       if (isDesktop && totalVisible === 1) {
-        setTimeout(() => {
-          const anchor = document.querySelector<HTMLElement>('[data-info-anchor="true"]');
-          if (!anchor) return;
-          const headerEl = document.querySelector("header");
-          const headerH = headerEl?.getBoundingClientRect().height ?? 64;
-          const rect = anchor.getBoundingClientRect();
-          const top = window.scrollY + rect.top - (headerH + 12);
-          // Instant (auto): o colapso do card ja deslocou o viewport; um scroll
-          // suave por cima disso fica "desce e sobe" e parece travado. Snap seco.
-          window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
-        }, 320);
+        // Ancora "Informacoes basicas" fica ACIMA do card — colapso nao a move.
+        smoothTo(document.querySelector<HTMLElement>('[data-info-anchor="true"]'), false);
         return;
       }
       const next = findNextPending() ?? index;
       if (next !== null) {
-        // Card colapsado tem transicao CSS max-h de 300ms. Mede a posicao
-        // SO depois da transicao terminar, senao rect.top usa altura
-        // intermediaria do card atual e o scroll vai pra coordenada errada
-        // (geralmente alem do alvo, parando no rodape da pagina).
-        // Mede altura real do header global fixed (varia entre breakpoints).
-        // Adiciona folga visual de 12px pra borda do card nao colar no header.
-        const headerEl = document.querySelector("header");
-        const headerH = headerEl?.getBoundingClientRect().height ?? 64;
-        const HEADER_OFFSET = headerH + 12;
-        const scrollNow = () => {
-          const el = document.querySelector<HTMLElement>(
-            `[data-participant-index="${next}"]`,
-          );
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          const top = window.scrollY + rect.top - HEADER_OFFSET;
-          // Instant (auto): evita o "desce e sobe" sobre o reflow do colapso.
-          window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
-        };
-        setTimeout(scrollNow, 320);
+        const nextEl = document.querySelector<HTMLElement>(
+          `[data-participant-index="${next}"]`,
+        );
+        // Desconta o delta so quando o proximo esta ABAIXO do que colapsou.
+        smoothTo(nextEl, next > index);
       }
     }
   };

@@ -2397,17 +2397,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   // longe do topo). Rola pro proprio card abaixo do header
                   // global pra mostrar o titulo "PIX" + formulario.
                   if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
-                    setTimeout(() => {
-                      const card = document.querySelector<HTMLElement>('[data-payment-method="pix"]');
-                      if (!card) return;
+                    // O topo do card PIX nao se move ao expandir (expansao e pra
+                    // baixo), entao a posicao alvo ja e final. rAF dispara o
+                    // scroll suave no mesmo quadro da expansao → glide unica,
+                    // sem o "desce e sobe" do autofocus.
+                    const card = document.querySelector<HTMLElement>('[data-payment-method="pix"]');
+                    if (card) {
                       const headerEl = document.querySelector("header");
                       const headerH = headerEl?.getBoundingClientRect().height ?? 64;
                       const rect = card.getBoundingClientRect();
                       const top = window.scrollY + rect.top - (headerH + 12);
-                      // Instant: expandir o card + autofocus ja mexem o scroll;
-                      // smooth por cima fica "desce e sobe", parece travado.
-                      window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
-                    }, 120);
+                      requestAnimationFrame(() => {
+                        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+                      });
+                    }
                   }
                 }}
               >
