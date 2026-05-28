@@ -157,7 +157,7 @@ export function Footer() {
         </div>
 
         <p className="text-[#B4B4B4] text-sm mt-10">
-          © {currentYear} - Todos os direitos reservados para PódioTicket
+          © {currentYear} - Todos os direitos reservados para PódioTicket - 28.095.402/0001-36
         </p>
       </div>
     </footer>
