@@ -864,7 +864,7 @@ export default function OrganizerEventsPage() {
                                         : openSuspendModal(event);
                                     }}
                                     className={cn(
-                                      "w-full text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
+                                      "w-full flex items-center gap-2 text-left px-3 py-2.5 text-sm font-family-dm-sans rounded-md transition-colors",
                                       "hover:bg-gray-3 text-gray-12",
                                       "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                     )}

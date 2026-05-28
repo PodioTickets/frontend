@@ -178,11 +178,8 @@ export function MobileSummaryBar({
               <h3 className="min-w-0 truncate font-manrope font-bold text-sm text-gray-12">
                 {eventName}
               </h3>
-              <span className="shrink-0 text-xs text-gray-11 font-family-dm-sans">
-                {totalParticipants}{" "}
-                {totalParticipants === 1 ? "participante" : "participantes"}
-              </span>
             </div>
+            <SummaryRow label="Participantes" value={totalParticipants} />
             {discountRow}
             {feeRow}
             <div className="flex items-center justify-between gap-3">
@@ -243,105 +240,105 @@ export function MobileSummaryBar({
               >
                 {/* Grabber + header — área de arrasto pra fechar (touch-none
                     impede o navegador de tratar o gesto como scroll). */}
-              <div
-                onPointerDown={startDrag}
-                className="shrink-0 pt-3 px-4 pb-3 border-b border-gray-6 cursor-grab active:cursor-grabbing touch-none select-none"
-              >
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-6" />
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="font-manrope font-bold text-lg leading-[1.1] text-gray-12 truncate">
-                      {eventName}
-                    </h2>
-                    <p className="text-sm text-gray-11 font-family-dm-sans mt-1">
-                      Participantes:{" "}
-                      <span className="font-semibold text-gray-12">{totalParticipants}</span>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={closeSheet}
-                    className="shrink-0 text-sm font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 active:scale-95 transition"
-                  >
-                    Fechar
-                  </button>
-                </div>
-              </div>
-
-              {/* Corpo rolável */}
-              <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
-                {/* Detalhe rico do step (cards de participante + imagens dos
-                    produtos) quando fornecido; senão, a lista flat de ingressos. */}
-                {extraDetails ? (
-                  extraDetails
-                ) : (
-                  tickets.length > 0 && (
-                    <div className="flex flex-col gap-3">
-                      <p className="font-manrope font-bold text-base text-gray-12">
-                        Ingressos no pedido
-                      </p>
-                      {tickets.map((ticket, index) => (
-                        <div key={index} className="flex flex-col gap-0.5 min-w-0">
-                          <p className="text-xs text-gray-11 leading-[1.3] truncate font-family-dm-sans">
-                            {ticket.categoryName || "Ingresso Avulso"}
-                          </p>
-                          <div className="flex items-baseline gap-2 min-w-0">
-                            {/* Tooltip click-to-reveal: nome completo quando truncado (mobile sem hover). */}
-                            <Tooltip
-                              content={`(${ticket.quantity}x) ${ticket.name}`}
-                              position="topRight"
-                              trigger="click"
-                              usePortal
-                              className="block min-w-0 flex-1"
-                              contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
-                            >
-                              <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer font-family-dm-sans">
-                                ({ticket.quantity}x) {ticket.name}:
-                              </p>
-                            </Tooltip>
-                            <p className="text-sm font-semibold text-gray-12 shrink-0 font-family-dm-sans">
-                              {formatPrice(ticket.total)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                )}
-
-                {/* Breakdown completo */}
-                <div className="flex flex-col gap-2 border-t border-gray-6 pt-4">
-
-                  {additionalProducts && additionalProducts.total > 0 && (
-                    <SummaryRow
-                      label={`${additionalProducts.count ? ` (${additionalProducts.count}x)` : ""
-                        } Produtos adicionais`}
-                      value={formatPrice(additionalProducts.total)}
-                    />
-                  )}
-                  {/* Subtotal só faz sentido quando há mais de um ingresso diferente
-                      pra somar — com um único, a linha do ingresso já é o subtotal. */}
-                  {tickets.length > 1 && (
-                    <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
-                  )}
-                  {discountRow}
-                  {feeRow}
-                  <SummaryRow label="Total" value={formatPrice(total)} emphasize />
-                </div>
-              </div>
-
-              {/* Rodapé fixo com CTA */}
-              <div className="shrink-0 border-t border-gray-6 px-4 py-3 bg-gray-1">
-                <Button
-                  onClick={handleSheetCta}
-                  disabled={cta.disabled}
-                  isLoading={cta.loading}
-                  className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                <div
+                  onPointerDown={startDrag}
+                  className="shrink-0 pt-3 px-4 pb-3 border-b border-gray-6 cursor-grab active:cursor-grabbing touch-none select-none"
                 >
-                  {cta.label}
-                </Button>
-              </div>
-            </motion.div>
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-6" />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="font-manrope font-bold text-lg leading-[1.1] text-gray-12 truncate">
+                        {eventName}
+                      </h2>
+                      <p className="text-sm text-gray-11 font-family-dm-sans mt-1">
+                        Participantes:{" "}
+                        <span className="font-semibold text-gray-12">{totalParticipants}</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeSheet}
+                      className="shrink-0 text-sm font-semibold text-gray-11 font-family-dm-sans hover:text-gray-12 active:scale-95 transition"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Corpo rolável */}
+                <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
+                  {/* Detalhe rico do step (cards de participante + imagens dos
+                    produtos) quando fornecido; senão, a lista flat de ingressos. */}
+                  {extraDetails ? (
+                    extraDetails
+                  ) : (
+                    tickets.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <p className="font-manrope font-bold text-base text-gray-12">
+                          Ingressos no pedido
+                        </p>
+                        {tickets.map((ticket, index) => (
+                          <div key={index} className="flex flex-col gap-0.5 min-w-0">
+                            <p className="text-xs text-gray-11 leading-[1.3] truncate font-family-dm-sans">
+                              {ticket.categoryName || "Ingresso Avulso"}
+                            </p>
+                            <div className="flex items-baseline gap-2 min-w-0">
+                              {/* Tooltip click-to-reveal: nome completo quando truncado (mobile sem hover). */}
+                              <Tooltip
+                                content={`(${ticket.quantity}x) ${ticket.name}`}
+                                position="topRight"
+                                trigger="click"
+                                usePortal
+                                className="block min-w-0 flex-1"
+                                contentClassName="!w-auto max-w-[calc(100vw-32px)] text-left text-sm text-gray-12 font-family-dm-sans !py-2 !px-3"
+                              >
+                                <p className="text-sm font-semibold text-gray-12 truncate min-w-0 cursor-pointer font-family-dm-sans">
+                                  ({ticket.quantity}x) {ticket.name}:
+                                </p>
+                              </Tooltip>
+                              <p className="text-sm font-semibold text-gray-12 shrink-0 font-family-dm-sans">
+                                {formatPrice(ticket.total)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  )}
+
+                  {/* Breakdown completo */}
+                  <div className="flex flex-col gap-2 border-t border-gray-6 pt-4">
+
+                    {additionalProducts && additionalProducts.total > 0 && (
+                      <SummaryRow
+                        label={`${additionalProducts.count ? ` (${additionalProducts.count}x)` : ""
+                          } Produtos adicionais`}
+                        value={formatPrice(additionalProducts.total)}
+                      />
+                    )}
+                    {/* Subtotal só faz sentido quando há mais de um ingresso diferente
+                      pra somar — com um único, a linha do ingresso já é o subtotal. */}
+                    {tickets.length > 1 && (
+                      <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
+                    )}
+                    {discountRow}
+                    {feeRow}
+                    <SummaryRow label="Total" value={formatPrice(total)} emphasize />
+                  </div>
+                </div>
+
+                {/* Rodapé fixo com CTA */}
+                <div className="shrink-0 border-t border-gray-6 px-4 py-3 bg-gray-1">
+                  <Button
+                    onClick={handleSheetCta}
+                    disabled={cta.disabled}
+                    isLoading={cta.loading}
+                    className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {cta.label}
+                  </Button>
+                </div>
+              </motion.div>
             )}
           </AnimatePresence>,
           document.body
