@@ -844,40 +844,51 @@ export function InformationStep({
       // navegador deixa o usuario perto do rodape, parecendo "perdido".
       // Desktop com 1 participante: rola pro topo "Informacoes basicas" pra
       // dar contexto do form todo visivel apos o save.
+      const headerEl = document.querySelector("header");
+      const headerH = headerEl?.getBoundingClientRect().height ?? 64;
+      const HEADER_OFFSET = headerH + 12;
+
+      // Scroll suave SEM o "desce e sobe": em vez de esperar a transicao do
+      // colapso (que desloca o layout e exige um segundo scroll por cima),
+      // calculamos a posicao FINAL do alvo descontando a altura que o card
+      // recem-salvo vai perder ao colapsar, e disparamos UM unico scroll suave
+      // concorrente com a animacao. O alvo "assenta" exatamente onde paramos.
+      const savedEl = document.querySelector<HTMLElement>(
+        `[data-participant-index="${index}"]`,
+      );
+      // Altura aproximada de um card colapsado (so o cabecalho). Usada pra
+      // estimar o quanto o conteudo abaixo sobe quando o card colapsa.
+      const COLLAPSED_CARD_H = 88;
+      const collapseDelta = savedEl
+        ? Math.max(0, savedEl.getBoundingClientRect().height - COLLAPSED_CARD_H)
+        : 0;
+
+      const smoothTo = (el: HTMLElement | null, subtractDelta: boolean) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        // Alvo abaixo do card que colapsa sobe por `collapseDelta`; alvo acima
+        // (wrap-around / ancora) nao se move, entao delta = 0.
+        const top =
+          window.scrollY + rect.top - HEADER_OFFSET - (subtractDelta ? collapseDelta : 0);
+        // rAF: dispara no mesmo quadro do colapso → uma glide unica e fluida.
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        });
+      };
+
       const isDesktop = window.matchMedia("(min-width: 768px)").matches;
       if (isDesktop && totalVisible === 1) {
-        setTimeout(() => {
-          const anchor = document.querySelector<HTMLElement>('[data-info-anchor="true"]');
-          if (!anchor) return;
-          const headerEl = document.querySelector("header");
-          const headerH = headerEl?.getBoundingClientRect().height ?? 64;
-          const rect = anchor.getBoundingClientRect();
-          const top = window.scrollY + rect.top - (headerH + 12);
-          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-        }, 350);
+        // Ancora "Informacoes basicas" fica ACIMA do card — colapso nao a move.
+        smoothTo(document.querySelector<HTMLElement>('[data-info-anchor="true"]'), false);
         return;
       }
       const next = findNextPending() ?? index;
       if (next !== null) {
-        // Card colapsado tem transicao CSS max-h de 300ms. Mede a posicao
-        // SO depois da transicao terminar, senao rect.top usa altura
-        // intermediaria do card atual e o scroll vai pra coordenada errada
-        // (geralmente alem do alvo, parando no rodape da pagina).
-        // Mede altura real do header global fixed (varia entre breakpoints).
-        // Adiciona folga visual de 12px pra borda do card nao colar no header.
-        const headerEl = document.querySelector("header");
-        const headerH = headerEl?.getBoundingClientRect().height ?? 64;
-        const HEADER_OFFSET = headerH + 12;
-        const scrollNow = () => {
-          const el = document.querySelector<HTMLElement>(
-            `[data-participant-index="${next}"]`,
-          );
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          const top = window.scrollY + rect.top - HEADER_OFFSET;
-          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-        };
-        setTimeout(scrollNow, 350);
+        const nextEl = document.querySelector<HTMLElement>(
+          `[data-participant-index="${next}"]`,
+        );
+        // Desconta o delta so quando o proximo esta ABAIXO do que colapsou.
+        smoothTo(nextEl, next > index);
       }
     }
   };
@@ -922,10 +933,15 @@ export function InformationStep({
     const fullName = [looked.firstName, looked.lastName].filter(Boolean).join(" ");
     const lookedCountry = looked.country?.trim();
     const nextNationality = lookedCountry || participants[index]?.nationality;
+    // Nacionalidade do usuario encontrado tem prioridade — define o formato do
+    // telefone e o label do documento. Sem isso, telefone de argentino vinha
+    // mascarado como BR. Mantem a atual quando o lookup nao traz country.
+    const lookedNationality = looked.country?.trim() || participants[index]?.nationality;
     updateParticipant(index, {
       name: fullName,
       email: looked.email || "",
-      phone: looked.phone ? formatPhoneForCountry(looked.phone, nextNationality) : "",
+      nationality: lookedNationality,
+      phone: looked.phone ? formatPhoneForCountry(looked.phone, lookedNationality) : "",
       birthDate: looked.dateOfBirth || "",
       gender: looked.gender || "",
       ...(lookedCountry ? { nationality: lookedCountry } : {}),
@@ -2112,7 +2128,7 @@ export function InformationStep({
                                     });
                                   }
                                 }}
-                                onSelectUser={(user: LinkedUser) => {
+                                onSelectUser={async (user: LinkedUser) => {
                                   /* `formattedPhone` recalculado depois que sabemos a
                                    * nacionalidade herdada — máscara depende dela. */
 
@@ -2179,6 +2195,37 @@ export function InformationStep({
                                     ...prev,
                                     [participantIndex]: user.id,
                                   }));
+
+                                  /* LinkedUser.country e herdado do MAIN user (Brasil),
+                                   * nao do proprio perfil — por isso um vinculado
+                                   * estrangeiro vinha como brasileiro. Busca os dados
+                                   * AUTORITATIVOS pelo documento no backend (retorna o
+                                   * country real, telefone e tipo de doc) e sobrescreve.
+                                   * Best-effort: se o lookup falhar (perfil sem conta),
+                                   * mantem o que veio do linked. */
+                                  const lookupDoc = (user.documentNumber || "").trim();
+                                  if (lookupDoc.length >= 4) {
+                                    try {
+                                      const looked = await userService.getUserByCpf(lookupDoc);
+                                      if (looked) {
+                                        const realNationality =
+                                          (looked as any).country?.trim() || inheritedNationality;
+                                        const realIsBr = isBrazilianCountry(realNationality);
+                                        const realDocRaw = (looked as any).documentNumber || docValue;
+                                        updateParticipant(participantIndex, {
+                                          nationality: realNationality,
+                                          // Reformata o doc conforme o pais real (CPF mascara
+                                          // so BR; estrangeiro fica cru).
+                                          cpf: realIsBr ? maskCPF(realDocRaw) : String(realDocRaw).slice(0, 30),
+                                          phone: (looked as any).phone
+                                            ? formatPhoneForCountry((looked as any).phone, realNationality)
+                                            : formattedPhone,
+                                        });
+                                      }
+                                    } catch {
+                                      /* sem conta vinculada no backend — mantem linked data */
+                                    }
+                                  }
                                 }}
                                 placeholder="Digite seu nome completo"
                                 className={`w-full ${selectedLinkedUserIds[participantIndex] ? "pr-9" : ""} ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}

@@ -163,7 +163,7 @@ export function MobileSummaryBar({
   return (
     <>
       {/* Barra minimizada — só cupom/voucher + taxa + total + CTA. */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
+      <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
         {/* Aba "Ver detalhes" acima do card (mesmo formato da tela de pagamento). */}
         <button
           type="button"

@@ -149,6 +149,14 @@ export function DatePicker({
     validDate || undefined
   );
 
+  // Mes em exibicao (controlado). Necessario pra que trocar ano/mes no dropdown
+  // mova a propria data selecionada (preservando o dia), nao so navegue a view.
+  // Sem isso, mudar ano+mes e clicar Confirmar sem clicar num dia mantinha a
+  // data antiga no input.
+  const [viewMonth, setViewMonth] = React.useState<Date>(
+    () => validDate ?? (openAtCurrentMonth ? new Date() : new Date()),
+  );
+
   React.useEffect(() => {
     if (value) {
       const parsed = parseValueToDate(value);
@@ -157,6 +165,20 @@ export function DatePicker({
       setTempDate(undefined);
     }
   }, [value]);
+
+  const daysInMonth = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+
+  // Dropdown de mes/ano muda a view E reposiciona a data selecionada no mesmo
+  // dia do novo mes (clamp pro ultimo dia quando o mes e mais curto).
+  const handleViewMonthChange = (newMonth: Date) => {
+    setViewMonth(newMonth);
+    setTempDate((prev) => {
+      if (!prev) return prev;
+      const day = Math.min(prev.getDate(), daysInMonth(newMonth));
+      return new Date(newMonth.getFullYear(), newMonth.getMonth(), day);
+    });
+  };
 
   const rangeMatchers = React.useMemo((): Matcher | Matcher[] | undefined => {
     const list: Matcher[] = [];
@@ -197,10 +219,16 @@ export function DatePicker({
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
-    if (open && value) {
-      const parsed = parseValueToDate(value);
-      if (parsed && !isSelectionAllowed(parsed)) {
-        setTempDate(undefined);
+    if (open) {
+      // Reseta a view ao abrir: mes atual (openAtCurrentMonth) ou o mes do
+      // valor selecionado. PopoverContent remonta, mas o state do componente
+      // persiste — sem reset, a view ficaria no ultimo mes navegado.
+      setViewMonth(openAtCurrentMonth ? new Date() : (validDate ?? new Date()));
+      if (value) {
+        const parsed = parseValueToDate(value);
+        if (parsed && !isSelectionAllowed(parsed)) {
+          setTempDate(undefined);
+        }
       }
     }
   };
@@ -251,15 +279,16 @@ export function DatePicker({
             captionLayout="dropdown"
             fromYear={fromYear ?? new Date().getFullYear()}
             toYear={toYear ?? new Date().getFullYear() + 4}
-            // Mês inicial. Reavaliado a cada abertura (o PopoverContent remonta
-            // ao fechar). Com `openAtCurrentMonth`, sempre o mês atual; senão, o
-            // mês do valor já selecionado (ou o atual, quando vazio).
-            defaultMonth={openAtCurrentMonth ? new Date() : (validDate ?? new Date())}
+            // Mes controlado: dropdown de ano/mes move a data selecionada
+            // (handleViewMonthChange), nao so navega.
+            month={viewMonth}
+            onMonthChange={handleViewMonthChange}
             disablePastDates={disablePastDates}
             selected={tempDate}
             onSelect={(date: Date | undefined) => {
               if (date && isSelectionAllowed(date)) {
                 setTempDate(date);
+                setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
               } else if (!date) {
                 setTempDate(undefined);
               }
