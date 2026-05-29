@@ -28,54 +28,62 @@ export function ToasterWrapper() {
   }, []);
 
   const inCheckout = !!pathname?.startsWith("/checkout");
-  const inOrganizer = !!pathname?.startsWith("/organizer");
-  // Telas que podem ter barra fixa no rodape mobile: checkout (resumo) e
-  // organizador (barra de acoes do wizard/edicao). Medimos em ambas.
-  const shouldTrackBar = isMobile && (inCheckout || inOrganizer);
 
-  // Observa a barra fixa do rodape. Re-mede em mudancas de tamanho
-  // (ResizeObserver) e quando ela aparece/some (MutationObserver no body).
-  // Cobre tanto a do checkout quanto a do organizador. Desktop/outras rotas: zera.
+  // Detecta a barra fixa do rodape PELO DOM (nao pelo pathname): o organizador
+  // roda sob URL curta via rewrite (/organizer/events -> /events), entao o
+  // pathname nao contem "/organizer". Qualquer barra marcada com os data-attrs
+  // abaixo levanta o toast — funciona em qualquer surface (checkout, organizador,
+  // admin, modais). Mede em todo mobile.
   useEffect(() => {
-    if (!shouldTrackBar) {
+    if (!isMobile) {
       setBarHeight(0);
       return;
     }
+    const SELECTOR =
+      '[data-mobile-summary-bar="true"],[data-organizer-action-bar="true"],[data-fixed-bottom-bar="true"]';
     let ro: ResizeObserver | null = null;
     const measure = () => {
-      const el = document.querySelector<HTMLElement>(
-        '[data-mobile-summary-bar="true"],[data-organizer-action-bar="true"]',
-      );
-      if (!el) {
+      if (ro) {
+        ro.disconnect();
+        ro = null;
+      }
+      const els = Array.from(document.querySelectorAll<HTMLElement>(SELECTOR));
+      if (!els.length) {
         setBarHeight(0);
         return;
       }
-      setBarHeight(el.getBoundingClientRect().height);
-      if (ro) ro.disconnect();
-      ro = new ResizeObserver(() => {
-        setBarHeight(el.getBoundingClientRect().height);
-      });
-      ro.observe(el);
+      const compute = () => {
+        let h = 0;
+        for (const el of els) {
+          const r = el.getBoundingClientRect();
+          // So conta barra realmente visivel encostada no rodape (height > 0 e
+          // colada na base da viewport). Evita levantar por elemento solto.
+          if (r.height > 0 && r.bottom >= window.innerHeight - 1) {
+            h = Math.max(h, r.height);
+          }
+        }
+        setBarHeight(h);
+      };
+      compute();
+      ro = new ResizeObserver(compute);
+      els.forEach((el) => ro!.observe(el));
     };
     measure();
-    // Barra monta/desmonta entre steps/paginas — observa o DOM.
+    // Barra monta/desmonta entre steps/paginas/modais — observa o DOM.
     const mo = new MutationObserver(measure);
     mo.observe(document.body, { childList: true, subtree: true });
     return () => {
       if (ro) ro.disconnect();
       mo.disconnect();
     };
-  }, [shouldTrackBar]);
+  }, [isMobile]);
 
-  // Checkout: a barra aparece de forma confiavel -> levanta sempre (fallback 120
-  // no 1o paint). Organizador: muitas telas NAO tem barra fixa, entao so levanta
-  // quando ela existe de fato no DOM (barHeight medido > 0).
-  const liftAboveFixedBar =
-    isMobile && (inCheckout || (inOrganizer && barHeight > 0));
-
-  // bottom = altura real da barra + folga 12px. Fallback 120px se ainda nao
-  // mediu (primeiro paint do checkout).
-  const liftBottom = barHeight > 0 ? barHeight + 12 : 120;
+  // Levanta o toast quando ha barra fixa no rodape (medida no DOM). Checkout
+  // tambem levanta no 1o paint (fallback 120) antes de medir, pois a barra
+  // sempre existe la.
+  const hasBar = barHeight > 0;
+  const liftAboveFixedBar = isMobile && (hasBar || inCheckout);
+  const liftBottom = hasBar ? barHeight + 12 : 120;
 
   return (
     <Toaster

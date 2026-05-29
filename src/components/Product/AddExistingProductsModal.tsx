@@ -561,6 +561,7 @@ export function AddExistingProductsModal() {
               </div>
 
               <div
+                data-fixed-bottom-bar="true"
                 className={cn(
                   "flex shrink-0 items-center gap-3 border-t border-gray-6",
                   "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-60 max-md:flex-col max-md:bg-gray-1 max-md:p-4",
