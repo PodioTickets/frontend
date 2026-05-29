@@ -2380,14 +2380,22 @@ export function InformationStep({
                                 const genderOption = sexoOptions.find(
                                   (opt) => opt.label === p.gender || opt.id === p.gender?.toLowerCase()
                                 );
+                                // Persiste nacionalidade + tipo de doc no linked user.
+                                // Brasileiro: doc clean (so digitos). Estrangeiro: doc
+                                // cru (passaporte/RNE tem letras — nao pode .replace).
+                                const linkedIsBr = isBrazilianCountry(p.nationality);
                                 userService.createOrLinkUser({
                                   firstName,
                                   lastName,
                                   email: p.email || "",
-                                  documentNumber: (p.cpf || "").replace(/\D/g, ""),
+                                  documentType: linkedIsBr ? "CPF" : "PASSPORT",
+                                  documentNumber: linkedIsBr
+                                    ? (p.cpf || "").replace(/\D/g, "")
+                                    : (p.cpf || "").trim(),
                                   phone: (p.phone || "").replace(/\D/g, ""),
                                   dateOfBirth: p.birthDate || "",
                                   gender: genderOption?.id || p.gender || "",
+                                  country: p.nationality || undefined,
                                 }).then(() => {
                                   queryClient.invalidateQueries({ queryKey: ["linked-users"] });
                                 }).catch(() => { });

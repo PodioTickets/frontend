@@ -905,6 +905,8 @@ export class UserService {
     phone: string;
     dateOfBirth: string;
     gender: string;
+    documentType?: "CPF" | "PASSPORT";
+    country?: string;
   }): Promise<{
     success: boolean;
     data?: {
