@@ -105,7 +105,7 @@ export function EventCarousel({
         <ChevronRight className="size-5 text-gray-12" />
       </button>
 
-      <div ref={emblaRef} className="overflow-hidden px-1 md:p-4">
+      <div ref={emblaRef} className="overflow-hidden px-1 py-4 md:p-4">
         <div className="flex gap-4">
           {events?.map((event) => (
             <div key={event.id} style={slideStyle}>
