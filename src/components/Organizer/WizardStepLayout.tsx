@@ -169,6 +169,7 @@ export function WizardStepLayout({
         {/* Bottom action bar — fixed on mobile, inline on desktop */}
         {actions && (
           <div
+            data-organizer-action-bar="true"
             className={cn(
               "mt-10 flex w-full items-start gap-2 pb-4",
               "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30",

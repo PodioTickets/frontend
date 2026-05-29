@@ -28,19 +28,24 @@ export function ToasterWrapper() {
   }, []);
 
   const inCheckout = !!pathname?.startsWith("/checkout");
-  const liftAboveFixedBar = isMobile && inCheckout;
+  const inOrganizer = !!pathname?.startsWith("/organizer");
+  // Telas que podem ter barra fixa no rodape mobile: checkout (resumo) e
+  // organizador (barra de acoes do wizard/edicao). Medimos em ambas.
+  const shouldTrackBar = isMobile && (inCheckout || inOrganizer);
 
-  // Observa a barra de resumo. Re-mede em mudancas de tamanho (ResizeObserver)
-  // e quando a barra aparece/some (MutationObserver no body). Fora do checkout
-  // ou desktop, zera.
+  // Observa a barra fixa do rodape. Re-mede em mudancas de tamanho
+  // (ResizeObserver) e quando ela aparece/some (MutationObserver no body).
+  // Cobre tanto a do checkout quanto a do organizador. Desktop/outras rotas: zera.
   useEffect(() => {
-    if (!liftAboveFixedBar) {
+    if (!shouldTrackBar) {
       setBarHeight(0);
       return;
     }
     let ro: ResizeObserver | null = null;
     const measure = () => {
-      const el = document.querySelector<HTMLElement>('[data-mobile-summary-bar="true"]');
+      const el = document.querySelector<HTMLElement>(
+        '[data-mobile-summary-bar="true"],[data-organizer-action-bar="true"]',
+      );
       if (!el) {
         setBarHeight(0);
         return;
@@ -53,17 +58,23 @@ export function ToasterWrapper() {
       ro.observe(el);
     };
     measure();
-    // Barra monta/desmonta entre steps do checkout — observa o DOM.
+    // Barra monta/desmonta entre steps/paginas — observa o DOM.
     const mo = new MutationObserver(measure);
     mo.observe(document.body, { childList: true, subtree: true });
     return () => {
       if (ro) ro.disconnect();
       mo.disconnect();
     };
-  }, [liftAboveFixedBar]);
+  }, [shouldTrackBar]);
+
+  // Checkout: a barra aparece de forma confiavel -> levanta sempre (fallback 120
+  // no 1o paint). Organizador: muitas telas NAO tem barra fixa, entao so levanta
+  // quando ela existe de fato no DOM (barHeight medido > 0).
+  const liftAboveFixedBar =
+    isMobile && (inCheckout || (inOrganizer && barHeight > 0));
 
   // bottom = altura real da barra + folga 12px. Fallback 120px se ainda nao
-  // mediu (primeiro paint).
+  // mediu (primeiro paint do checkout).
   const liftBottom = barHeight > 0 ? barHeight + 12 : 120;
 
   return (
