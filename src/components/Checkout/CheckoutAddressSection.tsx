@@ -441,13 +441,13 @@ export function CheckoutAddressSection({
             <div className="flex flex-col w-full gap-4">
               {/* Linha 1: Rua + Cidade */}
               <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
-                {streetField}
+                {stateField}
                 {cityField}
               </div>
 
               {/* Linha 2: Estado + Complemento (BR) | Estado + Número (estrangeiro) */}
               <div className="flex flex-wrap gap-x-3 gap-y-4 w-full items-start">
-                {stateField}
+                {streetField}
                 {isForeign ? numberField : complementField}
               </div>
 
