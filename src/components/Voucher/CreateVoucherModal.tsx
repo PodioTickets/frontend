@@ -590,9 +590,8 @@ export function CreateVoucherModal() {
                         </label>
                         <button
                           type="button"
-                          onClick={() => !isEditing && setShowSelectTicketsModal(true)}
-                          disabled={isEditing}
-                          className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:bg-gray-3"
+                          onClick={() => setShowSelectTicketsModal(true)}
+                          className="border border-gray-6 rounded-lg h-12 flex items-center justify-between px-3 transition-colors text-left cursor-pointer hover:bg-gray-3"
                         >
                           <span className="text-base font-family-dm-sans leading-[1.3] text-gray-11">
                             {appliesTo === "all"
@@ -930,6 +929,7 @@ export function CreateVoucherModal() {
         eventId={eventId}
         selectedTicketIds={appliesTo === "specific" ? selectedTicketIds : []}
         singleSelect
+        readOnly={isEditing}
       />
     </>
   );

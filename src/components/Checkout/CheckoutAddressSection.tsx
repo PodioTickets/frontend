@@ -219,8 +219,28 @@ export function CheckoutAddressSection({
     toast.success("Endereço confirmado.");
   };
 
-  // Campo Cidade compartilhado: pareia com Complemento (BR) ou com Número
-  // (estrangeiro, que não tem complemento/bairro).
+  /* Campos pré-montados — facilita reordenar entre layouts (BR / estrangeiro)
+   * mantendo as mesmas larguras (flex-1 / 136px) independente da posição. */
+  const streetField = (
+    <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
+      <FieldLabel>Rua</FieldLabel>
+      <Input
+        type="text"
+        autoComplete="street-address"
+        placeholder="Nome da sua rua"
+        value={values.street}
+        onChange={(e) => {
+          onChange({ street: e.target.value });
+          clearError("street");
+          invalidateConfirm();
+        }}
+        aria-invalid={!!errors.street}
+        className={inputClass}
+      />
+      {errors.street && <p className="text-sm text-red-11">{errors.street}</p>}
+    </div>
+  );
+
   const cityField = (
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
       <FieldLabel>Cidade</FieldLabel>
@@ -238,6 +258,115 @@ export function CheckoutAddressSection({
         className={inputClass}
       />
       {errors.city && <p className="text-sm text-red-11">{errors.city}</p>}
+    </div>
+  );
+
+  const stateField = (
+    <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
+      <FieldLabel>{isForeign ? "Estado/Província" : "Estado"}</FieldLabel>
+      {isForeign ? (
+        // Estrangeiro: texto livre — não existe lista de UFs fora do Brasil.
+        <Input
+          type="text"
+          autoComplete="address-level1"
+          placeholder="Estado ou província"
+          value={values.stateUf}
+          onChange={(e) => {
+            onChange({ stateUf: e.target.value });
+            clearError("stateUf");
+            invalidateConfirm();
+          }}
+          aria-invalid={!!errors.stateUf}
+          className={inputClass}
+        />
+      ) : (
+        <Dropdown
+          options={stateOptions}
+          selectedIds={values.stateUf ? [values.stateUf] : []}
+          onSelect={(opt) => {
+            onChange({ stateUf: opt.id || "" });
+            clearError("stateUf");
+            invalidateConfirm();
+          }}
+          width="w-full"
+          maxHeight="max-h-240"
+          trigger={(isOpen) => (
+            <button
+              type="button"
+              className={cn(selectTriggerClass, errors.stateUf && "border-red-11")}
+              aria-label="Selecionar estado"
+            >
+              <span
+                className={cn(
+                  "text-base font-family-dm-sans truncate text-left",
+                  values.stateUf ? "text-gray-12" : "text-gray-11"
+                )}
+              >
+                {stateOptions.find((o) => o.id === values.stateUf)?.label ??
+                  "Selecione"}
+              </span>
+              <ArrowButton isOpen={isOpen} className="size-3 text-gray-12 shrink-0" />
+            </button>
+          )}
+        />
+      )}
+      {errors.stateUf && <p className="text-sm text-red-11">{errors.stateUf}</p>}
+    </div>
+  );
+
+  const numberField = (
+    <div className="flex flex-col gap-2 w-full sm:w-[136px] shrink-0">
+      <FieldLabel>Número</FieldLabel>
+      <Input
+        type="text"
+        autoComplete="off"
+        placeholder="Nº"
+        value={values.number}
+        onChange={(e) => {
+          onChange({ number: e.target.value });
+          clearError("number");
+          invalidateConfirm();
+        }}
+        aria-invalid={!!errors.number}
+        className={inputClass}
+      />
+      {errors.number && <p className="text-sm text-red-11">{errors.number}</p>}
+    </div>
+  );
+
+  const complementField = (
+    <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
+      <FieldLabel>Complemento (opcional)</FieldLabel>
+      <Input
+        type="text"
+        autoComplete="off"
+        placeholder="Apto, bloco, etc"
+        value={values.complement}
+        onChange={(e) => {
+          onChange({ complement: e.target.value });
+          invalidateConfirm();
+        }}
+        className={inputClass}
+      />
+    </div>
+  );
+
+  const neighborhoodField = (
+    <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
+      <FieldLabel>Bairro</FieldLabel>
+      <Input
+        type="text"
+        placeholder="Digite seu bairro"
+        value={values.neighborhood}
+        onChange={(e) => {
+          onChange({ neighborhood: e.target.value });
+          clearError("neighborhood");
+          invalidateConfirm();
+        }}
+        aria-invalid={!!errors.neighborhood}
+        className={inputClass}
+      />
+      {errors.neighborhood && <p className="text-sm text-red-11">{errors.neighborhood}</p>}
     </div>
   );
 
@@ -310,138 +439,25 @@ export function CheckoutAddressSection({
             className="flex flex-col gap-6 w-full"
           >
             <div className="flex flex-col w-full gap-4">
-        {/* Estado + Rua */}
-        <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
-          <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-            <FieldLabel>{isForeign ? "Estado/Província" : "Estado"}</FieldLabel>
-            {isForeign ? (
-              // Estrangeiro: texto livre — não existe lista de UFs fora do Brasil.
-              <Input
-                type="text"
-                autoComplete="address-level1"
-                placeholder="Estado ou província"
-                value={values.stateUf}
-                onChange={(e) => {
-                  onChange({ stateUf: e.target.value });
-                  clearError("stateUf");
-                  invalidateConfirm();
-                }}
-                aria-invalid={!!errors.stateUf}
-                className={inputClass}
-              />
-            ) : (
-              <Dropdown
-                options={stateOptions}
-                selectedIds={values.stateUf ? [values.stateUf] : []}
-                onSelect={(opt) => {
-                  onChange({ stateUf: opt.id || "" });
-                  clearError("stateUf");
-                  invalidateConfirm();
-                }}
-                width="w-full"
-                maxHeight="max-h-240"
-                trigger={(isOpen) => (
-                  <button
-                    type="button"
-                    className={cn(selectTriggerClass, errors.stateUf && "border-red-11")}
-                    aria-label="Selecionar estado"
-                  >
-                    <span
-                      className={cn(
-                        "text-base font-family-dm-sans truncate text-left",
-                        values.stateUf ? "text-gray-12" : "text-gray-11"
-                      )}
-                    >
-                      {stateOptions.find((o) => o.id === values.stateUf)?.label ??
-                        "Selecione"}
-                    </span>
-                    <ArrowButton isOpen={isOpen} className="size-3 text-gray-12 shrink-0" />
-                  </button>
-                )}
-              />
-            )}
-            {errors.stateUf && <p className="text-sm text-red-11">{errors.stateUf}</p>}
-          </div>
-          <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-            <FieldLabel>Rua</FieldLabel>
-            <Input
-              type="text"
-              autoComplete="street-address"
-              placeholder="Nome da sua rua"
-              value={values.street}
-              onChange={(e) => {
-                onChange({ street: e.target.value });
-                clearError("street");
-                invalidateConfirm();
-              }}
-              aria-invalid={!!errors.street}
-              className={inputClass}
-            />
-            {errors.street && <p className="text-sm text-red-11">{errors.street}</p>}
-          </div>
-        </div>
+              {/* Linha 1: Rua + Cidade */}
+              <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
+                {streetField}
+                {cityField}
+              </div>
 
-        {/* Número + Complemento (BR) | Número + Cidade (estrangeiro) */}
-        <div className="flex flex-wrap gap-x-3 gap-y-4 w-full items-start">
-          <div className="flex flex-col gap-2 w-full sm:w-[136px] shrink-0">
-            <FieldLabel>Número</FieldLabel>
-            <Input
-              type="text"
-              autoComplete="off"
-              placeholder="Nº"
-              value={values.number}
-              onChange={(e) => {
-                onChange({ number: e.target.value });
-                clearError("number");
-                invalidateConfirm();
-              }}
-              aria-invalid={!!errors.number}
-              className={inputClass}
-            />
-            {errors.number && <p className="text-sm text-red-11">{errors.number}</p>}
-          </div>
-          {isForeign ? (
-            cityField
-          ) : (
-            <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
-              <FieldLabel>Complemento (opcional)</FieldLabel>
-              <Input
-                type="text"
-                autoComplete="off"
-                placeholder="Apto, bloco, etc"
-                value={values.complement}
-                onChange={(e) => {
-                  onChange({ complement: e.target.value });
-                  invalidateConfirm();
-                }}
-                className={inputClass}
-              />
-            </div>
-          )}
-        </div>
+              {/* Linha 2: Estado + Complemento (BR) | Estado + Número (estrangeiro) */}
+              <div className="flex flex-wrap gap-x-3 gap-y-4 w-full items-start">
+                {stateField}
+                {isForeign ? numberField : complementField}
+              </div>
 
-        {/* Bairro + Cidade — só Brasil (estrangeiro não tem bairro) */}
-        {!isForeign && (
-          <div className="flex flex-wrap gap-x-3 gap-y-4 w-full">
-            <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
-              <FieldLabel>Bairro</FieldLabel>
-              <Input
-                type="text"
-                placeholder="Digite seu bairro"
-                value={values.neighborhood}
-                onChange={(e) => {
-                  onChange({ neighborhood: e.target.value });
-                  clearError("neighborhood");
-                  invalidateConfirm();
-                }}
-                aria-invalid={!!errors.neighborhood}
-                className={inputClass}
-              />
-              {errors.neighborhood && <p className="text-sm text-red-11">{errors.neighborhood}</p>}
-            </div>
-            {cityField}
-          </div>
-        )}
+              {/* Linha 3: BR só — Bairro + Número (estrangeiro não tem bairro) */}
+              {!isForeign && (
+                <div className="flex flex-wrap gap-x-3 gap-y-4 w-full items-start">
+                  {neighborhoodField}
+                  {numberField}
+                </div>
+              )}
             </div>
 
             <Button

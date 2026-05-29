@@ -83,7 +83,7 @@ export default function UserTicketsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-8 md:gap-4 px-8 md:px-0">
               {tickets.map((ticket) => (
                 <TicketCard key={ticket.id} ticket={ticket} />
               ))}

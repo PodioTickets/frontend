@@ -104,7 +104,13 @@ function toOrderResponse(data: any): OrderResponse {
     pricing: {
       subtotal: data.pricing?.subtotal ?? data.totalAmount ?? 0,
       serviceFee: data.pricing?.serviceFee ?? data.serviceFee ?? 0,
-      couponDiscount: data.pricing?.couponDiscount ?? (isVoucherOrder ? 0 : rawDiscount),
+      couponDiscount:
+        data.pricing?.couponDiscount ??
+        (isVoucherOrder
+          ? 0
+          : data.appliedDiscount?.type === "coupon"
+            ? data.appliedDiscount.discount
+            : rawDiscount),
       voucherDiscount:
         data.pricing?.voucherDiscount ??
         (isVoucherOrder

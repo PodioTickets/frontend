@@ -15,6 +15,11 @@ interface SelectTicketsModalProps {
   eventId: string | null;
   selectedTicketIds?: string[];
   singleSelect?: boolean;
+  /**
+   * Somente leitura: exibe os ingressos vinculados sem permitir alteração.
+   * Usado ao editar um voucher (a vinculação é imutável no backend).
+   */
+  readOnly?: boolean;
 }
 
 export function SelectTicketsModal({
@@ -24,6 +29,7 @@ export function SelectTicketsModal({
   eventId,
   selectedTicketIds = [],
   singleSelect = false,
+  readOnly = false,
 }: SelectTicketsModalProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(selectedTicketIds);
   const { tickets, loading } = useTickets(eventId, isOpen);
@@ -39,6 +45,7 @@ export function SelectTicketsModal({
   }, [isOpen, selectedTicketIds]);
 
   const handleToggleTicket = (ticketId: string) => {
+    if (readOnly) return;
     if (singleSelect) {
       setSelectedIds((prev) => (prev.includes(ticketId) ? [] : [ticketId]));
     } else {
@@ -54,6 +61,9 @@ export function SelectTicketsModal({
     onConfirm(selectedIds);
     onClose();
   };
+
+  // Voucher sem ingressos específicos vinculados (appliesTo "all") quando em leitura.
+  const appliesToAll = readOnly && selectedIds.length === 0;
 
   if (!isOpen) return null;
 
@@ -78,7 +88,7 @@ export function SelectTicketsModal({
               <ArrowLeft className="size-5 text-gray-12" />
             </button>
             <h2 className="text-gray-12 text-lg md:text-xl font-semibold font-family-dm-sans leading-[1.3] truncate">
-              Vincular ingressos
+              {readOnly ? "Ingressos vinculados" : "Vincular ingressos"}
             </h2>
           </div>
           <button
@@ -96,9 +106,11 @@ export function SelectTicketsModal({
             {/* Info bar */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 mb-5 md:mb-7">
               <p className="text-gray-11 text-sm md:text-base font-family-dm-sans leading-[1.3]">
-                {singleSelect
-                  ? "Selecione o ingresso que deseja vincular a este voucher"
-                  : "Selecione os ingressos que deseja vincular a este cupom"}
+                {readOnly
+                  ? "Ingressos vinculados a este voucher (somente leitura)"
+                  : singleSelect
+                    ? "Selecione o ingresso que deseja vincular a este voucher"
+                    : "Selecione os ingressos que deseja vincular a este cupom"}
               </p>
               <div className="flex items-center gap-4 md:gap-6 shrink-0">
                 <div className="flex items-center gap-1">
@@ -137,30 +149,46 @@ export function SelectTicketsModal({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                {tickets.map((ticket) => (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    categoryName={categoryMap.get(ticket.groupId) || "Ingresso avulso"}
-                    isSelected={selectedIds.includes(ticket.id)}
-                    onToggle={() => handleToggleTicket(ticket.id)}
-                  />
-                ))}
-              </div>
+              <>
+                {appliesToAll && (
+                  <div className="mb-4 md:mb-5 rounded-lg border border-primary-6 bg-primary-3 px-4 py-3">
+                    <p className="text-gray-12 text-sm md:text-base font-family-dm-sans leading-[1.3]">
+                      Este voucher se aplica a <strong>todos os ingressos</strong> do evento.
+                    </p>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  {tickets.map((ticket) => (
+                    <TicketCard
+                      key={ticket.id}
+                      ticket={ticket}
+                      categoryName={categoryMap.get(ticket.groupId) || "Ingresso avulso"}
+                      isSelected={appliesToAll || selectedIds.includes(ticket.id)}
+                      onToggle={() => handleToggleTicket(ticket.id)}
+                      readOnly={readOnly}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
 
         {/* Footer */}
         <div className="bg-gray-2 border-t border-gray-6 px-4 py-3 flex items-center justify-end shrink-0">
-          <Button
-            onClick={handleConfirm}
-            disabled={selectedIds.length === 0}
-            className="w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Adicionar ao cupom
-          </Button>
+          {readOnly ? (
+            <Button onClick={onClose} className="w-full md:w-auto">
+              Fechar
+            </Button>
+          ) : (
+            <Button
+              onClick={handleConfirm}
+              disabled={selectedIds.length === 0}
+              className="w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Adicionar ao cupom
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -172,16 +200,19 @@ interface TicketCardProps {
   categoryName: string;
   isSelected: boolean;
   onToggle: () => void;
+  readOnly?: boolean;
 }
 
-function TicketCard({ ticket, categoryName, isSelected, onToggle }: TicketCardProps) {
+function TicketCard({ ticket, categoryName, isSelected, onToggle, readOnly = false }: TicketCardProps) {
   return (
     <div
-      className={`bg-gray-2 border rounded-xl p-4 flex flex-col cursor-pointer transition-colors ${isSelected
+      className={`bg-gray-2 border rounded-xl p-4 flex flex-col transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"} ${isSelected
         ? "border-primary-8 bg-primary-4"
-        : "border-gray-6 hover:bg-gray-3"
+        : readOnly
+          ? "border-gray-6"
+          : "border-gray-6 hover:bg-gray-3"
         }`}
-      onClick={onToggle}
+      onClick={readOnly ? undefined : onToggle}
     >
       <div className="flex flex-col gap-2 mb-4">
         <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3] truncate">
@@ -200,7 +231,8 @@ function TicketCard({ ticket, categoryName, isSelected, onToggle }: TicketCardPr
         </p>
         <Checkbox
           checked={isSelected}
-          onCheckedChange={onToggle}
+          onCheckedChange={readOnly ? undefined : onToggle}
+          disabled={readOnly}
           onClick={(e) => e.stopPropagation()}
         />
       </div>

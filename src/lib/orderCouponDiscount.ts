@@ -80,11 +80,14 @@ export function formatCouponLineLabel(coupon: OrderCoupon): string {
  * Regras (espelham o backend):
  * - `type: "PERCENTAGE"`: aplica `value%` sobre a base. Base = tickets (sempre) +
  *   produtos quando `applyToProducts` é true.
- * - `type: "FIXED"`: subtrai `value` (em reais) da base, sem partir em dois;
- *   prioriza tickets e só "transborda" pra produtos quando o subtotal de tickets
- *   é menor que o valor fixo E `applyToProducts` é true.
+ * - `type: "FIXED"`: subtrai `value` da base, sem partir em dois; prioriza
+ *   tickets e só "transborda" pra produtos quando o subtotal de tickets é menor
+ *   que o valor fixo E `applyToProducts` é true.
  *
- * Todos os valores em REAIS (não centavos).
+ * UNIDADES: `ticketsSubtotal`/`productsSubtotal` em REAIS. O `coupon.value`
+ * segue a convenção do backend: PERCENTAGE = pontos percentuais (ex.: 10 = 10%);
+ * FIXED = CENTAVOS (ex.: 5000 = R$ 50,00) — convertido pra reais internamente,
+ * igual aos demais call sites (ageCoupon, TicketCategoryCard, PaymentStep).
  */
 export interface CouponDiscountBreakdown {
   /** Desconto incidente sobre o subtotal dos ingressos. */
@@ -129,10 +132,12 @@ export function computeCouponDiscount(
     };
   }
 
-  // FIXED — consome tickets primeiro, transborda pra produtos só se o cupom
-  // permitir. Evita produzir desconto > base (clamp).
-  const ticketDiscount = Math.min(value, safeTickets);
-  const remaining = value - ticketDiscount;
+  // FIXED — `value` vem em CENTAVOS (convenção do backend); converte pra reais
+  // antes de comparar com os subtotais (que estão em reais). Consome tickets
+  // primeiro, transborda pra produtos só se o cupom permitir. Clamp na base.
+  const fixedReais = value / 100;
+  const ticketDiscount = Math.min(fixedReais, safeTickets);
+  const remaining = fixedReais - ticketDiscount;
   const productDiscount = appliesToProducts ? Math.min(remaining, safeProducts) : 0;
   return {
     ticketDiscount: round2(ticketDiscount),

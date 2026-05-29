@@ -222,10 +222,17 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     [timerCurrentOrder, orderData, couponData, pendingCoupon],
   );
 
-  // Voucher do link sempre calcula quando presente (mesma regra do EventInfo
-  // desktop). O preview de voucher e o de cupom são mutuamente exclusivos — o
-  // código do link é um OU outro —, então o voucher tem prioridade aqui.
-  const useVoucher = !!voucherData;
+  // Voucher pode vir do link (`?voucher=`, preview) OU já estar aplicado na
+  // order de uma reserva anterior. Sem considerar a order, voltar pra /ingressos
+  // sem o param escondia a linha do voucher e o desconto. Voucher e cupom são
+  // mutuamente exclusivos; o voucher tem prioridade aqui.
+  const orderVoucher = timerCurrentOrder?.voucher ?? orderData?.voucher ?? null;
+  // Cupom REAL já aplicado na order (não o preview do link). Voucher e cupom são
+  // exclusivos: voucher da ORDER sempre vale; voucher de LINK só vale se a order
+  // ainda não tem um cupom real — senão o display do voucher sobreporia o cupom
+  // autoritativo que o backend vai cobrar.
+  const orderCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
+  const useVoucher = !!orderVoucher || (!!voucherData && !orderCoupon);
 
   // Ingressos selecionados (id/preço/qtd) — base do voucher e do cupom de idade.
   // Sem `useMemo` de propósito: o React Compiler memoiza, e manter manual aqui
@@ -242,11 +249,43 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
     if (quantity > 0) selectedTickets.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
   });
 
-  // Desconto do voucher: soma dos ingressos selecionados que ele cobre (100%).
-  const voucherDiscount =
-    useVoucher && voucherData
-      ? computeVoucherTicketsDiscount(voucherData.appliesTo, selectedTickets)
-      : 0;
+  // Desconto autoritativo do voucher já aplicado na order (centavos → reais).
+  const orderVoucherDiscount = orderVoucher
+    ? (orderData?.pricing?.voucherDiscount ??
+        timerCurrentOrder?.pricing?.voucherDiscount ??
+        0) / 100
+    : 0;
+  // Desconto do voucher: do preview do link calcula client-side (1 unidade de
+  // maior valor entre os selecionados); da order usa o valor autoritativo.
+  const voucherDiscount = voucherData
+    ? computeVoucherTicketsDiscount(voucherData.appliesTo, selectedTickets)
+    : orderVoucherDiscount;
+
+  // Ingresso "vencedor" do voucher de LINK: o de MAIOR valor entre os elegíveis
+  // (selecionados; se nada selecionado ainda, o de maior valor da lista). Só ele
+  // é zerado no card — sem isso, com voucher cobrindo vários ingressos, TODOS os
+  // cards mostravam R$ 0,00 enquanto o resumo descontava só 1. Plain (sem
+  // useMemo) igual `selectedTickets`, pra não conflitar com o React Compiler.
+  let voucherFreeTicketId: string | null = null;
+  if (voucherData?.appliesTo?.length && !orderCoupon) {
+    const set = new Set(voucherData.appliesTo);
+    const candidates: Array<{ id: string; price: number; qty: number }> = [];
+    categorizedTickets.forEach((c) =>
+      c.tickets.forEach((t) => {
+        if (set.has(t.id))
+          candidates.push({ id: t.id, price: getTicketPrice(t), qty: raceQuantities[t.id] || 0 });
+      }),
+    );
+    uncategorizedTickets.forEach((t) => {
+      if (set.has(t.id))
+        candidates.push({ id: t.id, price: getTicketPrice(t), qty: raceQuantities[t.id] || 0 });
+    });
+    if (candidates.length > 0) {
+      const selectedPool = candidates.filter((t) => t.qty > 0);
+      const pool = selectedPool.length > 0 ? selectedPool : candidates;
+      voucherFreeTicketId = pool.reduce((best, t) => (t.price > best.price ? t : best)).id;
+    }
+  }
 
   // Cupom AUTOMÁTICO de idade (elegibilidade do backend). Só entra quando não há
   // voucher nem cupom manual de link — esses são intenção explícita do usuário e
@@ -306,7 +345,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou
   // "Cupom CÓDIGO (...)".
   const discountLineLabel = useVoucher
-    ? formatVoucherLineLabel(voucherData?.code)
+    ? formatVoucherLineLabel(voucherData?.code ?? orderVoucher?.code)
     : ageCoupon
       ? formatAgeCouponLineLabel(ageCoupon)
       : appliedCoupon
@@ -391,6 +430,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
                   couponPreviewOverride={ageCouponPreview}
+                  voucherFreeTicketId={voucherFreeTicketId}
                 />
               ))}
               {categorizedTickets.map((category, index) => (
@@ -407,6 +447,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                   kitSelectionDisplay={kitSelectionDisplay}
                   userAge={userAge}
                   couponPreviewOverride={ageCouponPreview}
+                  voucherFreeTicketId={voucherFreeTicketId}
                 />
               ))}
             </>
@@ -473,6 +514,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
                         couponPreviewOverride={ageCouponPreview}
+                        voucherFreeTicketId={voucherFreeTicketId}
                       />
                       {!isLast && <div className="w-full h-px bg-gray-6" />}
                     </Fragment>
@@ -495,6 +537,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                         kitSelectionDisplay={kitSelectionDisplay}
                         userAge={userAge}
                         couponPreviewOverride={ageCouponPreview}
+                        voucherFreeTicketId={voucherFreeTicketId}
                       />
                       {!isLastCategory && (
                         <div className="w-full h-px bg-gray-6" />
@@ -520,6 +563,8 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
               categorizedTickets={categorizedTickets}
               uncategorizedTickets={uncategorizedTickets}
               appliedCoupon={appliedCoupon}
+              appliedVoucher={orderVoucher}
+              voucherDiscountOverride={orderVoucherDiscount}
             />
           </div>
         </div>

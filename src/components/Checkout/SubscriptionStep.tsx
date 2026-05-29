@@ -17,6 +17,9 @@ import {
   formatCouponLineLabel,
   formatVoucherLineLabel,
 } from "@/lib/orderCouponDiscount";
+import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
+import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
+import { useAuth } from "@/hooks/useAuth";
 import type { Ticket } from "@/hooks/useTickets";
 import { buildParticipantTicketSlots } from "@/lib/checkoutProductStep";
 import { useSubscriptionData } from "@/hooks/useSubscriptionData";
@@ -325,6 +328,7 @@ export function SubscriptionStep({
 }: SubscriptionStepProps) {
   const { raceQuantities, participants, updateParticipant } = useCheckout();
   const eventId = event?.id;
+  const { user: authUser } = useAuth();
 
   const {
     loading,
@@ -596,6 +600,29 @@ export function SubscriptionStep({
     return hasAllRequiredVariations(participantIndex);
   };
 
+  /* Ao montar a página, se o primeiro participante já está completo (ex.:
+   * todos os produtos têm variação única auto-preenchida pelo effect da linha
+   * 495, ou usuário voltou da próxima etapa com seleções salvas), abre o
+   * primeiro pendente em vez de manter o 0 expandido. Roda uma única vez por
+   * mount — depois disso, navegação entre cards fica nas mãos do usuário
+   * (toggle/save-and-next). */
+  const initialFocusRef = useRef(false);
+  useEffect(() => {
+    if (initialFocusRef.current) return;
+    if (loading) return;
+    if (participantsWithTickets.length === 0) return;
+
+    const firstPending = participantsWithTickets.find(
+      (p) => !hasAllRequiredVariations(p.participantIndex)
+    );
+    if (firstPending && firstPending.participantIndex !== selectedParticipant) {
+      setSelectedParticipant(firstPending.participantIndex);
+      setExpandedParticipants({ [firstPending.participantIndex]: true });
+    }
+    initialFocusRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, participantsWithTickets, selectedVariations]);
+
   const handleSaveAndNext = (participantIndex: number) => {
     if (!isParticipantComplete(participantIndex)) return;
 
@@ -742,15 +769,47 @@ export function SubscriptionStep({
   }, [appliedVoucher, timerCurrentOrder, orderData, totalPrice]);
   const hasVoucherLine = !!appliedVoucher && voucherDiscountAmount > 0;
 
+  /* Cupom AUTOMÁTICO de idade (AGE) — mesmo pattern do InformationStep.
+   * `pricing` da order pode ou não refletir o AGE (depende da versão do
+   * backend); enquanto isso usamos a previsão do endpoint de elegibilidade.
+   * Só ativa quando NÃO há cupom/voucher de link (são exclusivos na order). */
+  const { data: ageEligibility } = useAgeCouponEligibility(eventId, !!authUser);
+  const ageCoupon =
+    !appliedCoupon && !appliedVoucher && ageEligibility?.applicable
+      ? ageEligibility.appliedCoupon
+      : null;
+  const ageDiscount = useMemo(() => {
+    if (!ageCoupon) return 0;
+    const selected = (orderData?.tickets ?? []).map((t) => ({
+      id: t.ticketId,
+      price: (t.unitPrice ?? 0) / 100,
+      quantity: t.quantity,
+    }));
+    return computeAgeCouponTicketDiscount(ageCoupon, selected, totalPrice);
+  }, [ageCoupon, orderData, totalPrice]);
+  const hasAgeCouponLine = !!ageCoupon && ageDiscount > 0;
+
   // Subtotal pós-desconto — base sobre a qual a taxa de serviço incide.
-  // Abate cupom E voucher: ((tickets + produtos) - cupom - voucher), clamp em 0.
+  // Abate cupom (manual), voucher E cupom de idade (automático): ((tickets +
+  // produtos) - cupom - voucher - idade), clamp em 0. AGE só incide sobre
+  // tickets — produtos seguem cheios no carrinho.
   const subtotalAfterCoupon = useMemo(
     () =>
       Math.max(
         0,
-        totalPrice + totalProductsPrice - couponDiscountAmount - voucherDiscountAmount,
+        totalPrice +
+          totalProductsPrice -
+          couponDiscountAmount -
+          voucherDiscountAmount -
+          ageDiscount,
       ),
-    [totalPrice, totalProductsPrice, couponDiscountAmount, voucherDiscountAmount],
+    [
+      totalPrice,
+      totalProductsPrice,
+      couponDiscountAmount,
+      voucherDiscountAmount,
+      ageDiscount,
+    ],
   );
 
   // Taxa de serviço — incide sobre o subtotal JÁ DESCONTADO pelo cupom
@@ -991,7 +1050,9 @@ export function SubscriptionStep({
             ? { label: formatCouponLineLabel(appliedCoupon!), amount: couponDiscountAmount }
             : hasVoucherLine
               ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
-              : null
+              : hasAgeCouponLine
+                ? { label: formatAgeCouponLineLabel(ageCoupon!), amount: ageDiscount }
+                : null
         }
         additionalProducts={totalProductsPrice > 0 ? { total: totalProductsPrice } : null}
         serviceFee={serviceFee}
@@ -999,10 +1060,15 @@ export function SubscriptionStep({
         cta={{
           label: "Salvar e próximo",
           onClick: onNext,
+          /* Desabilitado até CADA participante ter passado pelo "Salvar e
+           * próximo" do card (= `completedParticipants[idx]`). `isParticipantComplete`
+           * também conta auto-fill de variação única, o que liberaria o
+           * avanço sem o usuário confirmar cada card — aqui exigimos a
+           * confirmação explícita. */
           disabled:
             totalParticipants === 0 ||
-            !participantsWithTickets.every(({ participantIndex }) =>
-              isParticipantComplete(participantIndex)
+            !participantsWithTickets.every(
+              ({ participantIndex }) => completedParticipants[participantIndex],
             ),
         }}
       />
@@ -1238,8 +1304,16 @@ export function SubscriptionStep({
                   </p>
                 </div>
               )}
+              {hasAgeCouponLine && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                    {formatAgeCouponLineLabel(ageCoupon!)}:
+                    <span className="text-gray-12">-{formatPrice(ageDiscount)}</span>
+                  </p>
+                </div>
+              )}
               {serviceFee > 0 && (
-                <div className={`flex flex-col gap-2 ${hasCouponLine || hasVoucherLine ? "mt-2" : "mt-6"}`}>
+                <div className={`flex flex-col gap-2 ${hasCouponLine || hasVoucherLine || hasAgeCouponLine ? "mt-2" : "mt-6"}`}>
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     Taxa de serviço:
                     <span className="text-gray-12">{formatPrice(serviceFee)}</span>

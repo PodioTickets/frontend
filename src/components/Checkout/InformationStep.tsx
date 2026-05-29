@@ -45,10 +45,10 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X } from "lucide-react";
 import { isHiddenPrePaymentCoupon } from "@/lib/orderAutoCouponDisplay";
-import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCouponDiscount";
+import { formatCouponLineLabel, formatVoucherLineLabel, computeTicketPricingWithDiscount } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
-import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
+import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel, isAgeWithinTicketLimit } from "@/lib/ageCoupon";
 import Image from "next/image";
 
 interface InformationStepProps {
@@ -406,14 +406,77 @@ export function InformationStep({
     return m;
   }, [orderData]);
 
-  const getTicketPrice = (ticket: Ticket): number => {
-    const fromOrder = orderTicketPriceById.get(ticket.id);
-    if (typeof fromOrder === "number") return fromOrder;
+  const getTicketOriginalPrice = (ticket: Ticket): number => {
     try {
       return parseFloat(ticket.price.replace(/[^\d,]/g, "").replace(",", "."));
     } catch {
       return 0;
     }
+  };
+
+  const getTicketPrice = (ticket: Ticket): number => {
+    const fromOrder = orderTicketPriceById.get(ticket.id);
+    if (typeof fromOrder === "number") return fromOrder;
+    return getTicketOriginalPrice(ticket);
+  };
+
+  /* Breakdown pra renderizar strike-through quando há desconto ativo no card.
+   * Preview client-side igual ao /ingressos (`resolvePreviewPrice` do
+   * TicketCategoryCard) — `ticketUnitPriceForPrePaymentCents` sempre retorna
+   * `unitPrice` cheio (convenção: desconto vai em linha separada no resumo),
+   * então NÃO dá pra derivar `hasDiscount` da order direto.
+   *
+   * Precedência (espelha /ingressos): cupom manual de link > cupom automático
+   * de idade. Voucher é tratado separado no resumo (cobre 1 unidade só, sem
+   * mapeamento natural pro card individual aqui).
+   *
+   * Só desconta o card quando `appliesTo` cobre o ticket (null/"all" → todos;
+   * JSON com ticketIds → checagem por ID). Caso contrário o resumo já tem o
+   * desconto correto e o preço unitário segue cheio. */
+  const couponAppliesToTicket = (
+    appliesTo: string | null | undefined,
+    ticketId: string,
+  ): boolean => {
+    if (!appliesTo || appliesTo === "all") return true;
+    try {
+      const parsed = JSON.parse(appliesTo);
+      return Array.isArray(parsed) && parsed.includes(ticketId);
+    } catch {
+      return false;
+    }
+  };
+
+  const applyCouponToPrice = (
+    price: number,
+    type: string,
+    value: number,
+  ): number => {
+    if (!(value > 0)) return price;
+    if (type === "PERCENTAGE") return Math.max(0, price * (1 - value / 100));
+    if (type === "FIXED") return Math.max(0, price - value / 100);
+    return price;
+  };
+
+  const getTicketPriceBreakdown = (
+    ticket: Ticket,
+  ): { discounted: number; original: number; hasDiscount: boolean } => {
+    const original = getTicketOriginalPrice(ticket);
+    let discounted = original;
+
+    if (
+      appliedCoupon &&
+      showCouponDiscount &&
+      couponAppliesToTicket(appliedCoupon.appliesTo, ticket.id)
+    ) {
+      discounted = applyCouponToPrice(original, appliedCoupon.type, appliedCoupon.value);
+    } else if (
+      ageCoupon &&
+      couponAppliesToTicket(ageCoupon.appliesTo, ticket.id)
+    ) {
+      discounted = applyCouponToPrice(original, ageCoupon.type, ageCoupon.value);
+    }
+
+    return { discounted, original, hasDiscount: discounted < original };
   };
 
   // Criar lista de participantes baseada nos tickets selecionados
@@ -453,6 +516,16 @@ export function InformationStep({
 
     return result;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
+
+  /* True quando TODOS os participantes da reserva já passaram pelo "Salvar e
+   * próximo" (= `savedParticipants[idx]`). Usado pra desabilitar o botão final
+   * "Confirmar dados" no desktop e no CTA mobile — alinha o gate visual com a
+   * validação que já existia no onClick (toast "Clique em Salvar e próximo"). */
+  const allParticipantsSaved =
+    participantsWithRaces.length > 0 &&
+    participantsWithRaces.every(
+      ({ participantIndex }) => savedParticipants[participantIndex],
+    );
 
   // Detecta remoção de todos os ingressos: cancela reserva no servidor e volta
   const hadParticipantsRef = useRef(false);
@@ -607,8 +680,29 @@ export function InformationStep({
     }));
     return computeAgeCouponTicketDiscount(ageCoupon, selected, totalPrice);
   }, [ageCoupon, orderData, totalPrice]);
+
+  // Cupom AGE não está na order pré-pagamento, então a taxa autoritativa
+  // (`serviceFee`) incide sobre o subtotal CHEIO. Pra ficar consistente com
+  // /ingressos e /produtos (taxa sobre o subtotal JÁ DESCONTADO), recomputamos
+  // a taxa e o total sobre a base descontada quando há cupom de idade.
+  const ageAdjustedPricing = useMemo(
+    () =>
+      ageDiscount > 0
+        ? computeTicketPricingWithDiscount(
+            ageDiscount,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          )
+        : null,
+    [ageDiscount, totalPrice, event.participantFeePercent],
+  );
+  const displayedServiceFee = ageAdjustedPricing
+    ? ageAdjustedPricing.serviceFee
+    : serviceFee;
   // Total exibido já abate o cupom de idade (a order ainda não o reflete).
-  const totalAmountWithAge = totalAmount - ageDiscount;
+  const totalAmountWithAge = ageAdjustedPricing
+    ? ageAdjustedPricing.total
+    : totalAmount - ageDiscount;
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
@@ -813,20 +907,28 @@ export function InformationStep({
    * do último keystroke pra evitar 1 request por tecla. */
   const docLookupTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
-  /* Popula nome/email/telefone/birthDate/gênero a partir de um usuário
-   * retornado pelo lookup. Extraído pra reuso entre fluxo BR e estrangeiro. */
+  /* Popula nome/email/telefone/birthDate/gênero/nacionalidade a partir de um
+   * usuário retornado pelo lookup. Extraído pra reuso entre fluxo BR e
+   * estrangeiro.
+   *
+   * Quando o backend devolve `country` (já normalizado em `UserService` pro
+   * nome canônico do select — ex.: "Brasileira" → "Brasil"), sobrescreve a
+   * nacionalidade do participante. Telefone reformata com o país correto,
+   * porque a máscara/validação dependem da nacionalidade. */
   const applyLookedUpUser = (
     index: number,
-    looked: { firstName?: string; lastName?: string; email?: string; phone?: string; dateOfBirth?: string; gender?: string },
+    looked: { firstName?: string; lastName?: string; email?: string; phone?: string; dateOfBirth?: string; gender?: string; country?: string },
   ) => {
     const fullName = [looked.firstName, looked.lastName].filter(Boolean).join(" ");
-    const nationality = participants[index]?.nationality;
+    const lookedCountry = looked.country?.trim();
+    const nextNationality = lookedCountry || participants[index]?.nationality;
     updateParticipant(index, {
       name: fullName,
       email: looked.email || "",
-      phone: looked.phone ? formatPhoneForCountry(looked.phone, nationality) : "",
+      phone: looked.phone ? formatPhoneForCountry(looked.phone, nextNationality) : "",
       birthDate: looked.dateOfBirth || "",
       gender: looked.gender || "",
+      ...(lookedCountry ? { nationality: lookedCountry } : {}),
     });
   };
 
@@ -920,6 +1022,38 @@ export function InformationStep({
       year: "numeric",
     }).format(new Date(date));
   };
+
+  /* Idade na DATA DO EVENTO a partir de uma data de nascimento ISO. Mesmo
+   * algoritmo do validador (`getParticipantValidationErrors`) — alinha o que
+   * o badge mostra com o que a validação cobra na hora do submit. Parse manual
+   * evita off-by-one de timezone que `new Date("YYYY-MM-DD")` causa em fusos
+   * a oeste de UTC. */
+  const computeAgeOnEvent = (birthIso: string | undefined | null): number | null => {
+    if (!birthIso) return null;
+    const parseYmd = (iso: string) => {
+      const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return match
+        ? { y: Number(match[1]), m: Number(match[2]), d: Number(match[3]) }
+        : null;
+    };
+    const ref =
+      (event?.eventDate ? parseYmd(event.eventDate) : null) ?? (() => {
+        const now = new Date();
+        return { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
+      })();
+    const birth = parseYmd(birthIso);
+    if (!birth) return null;
+    let age = ref.y - birth.y;
+    if (ref.m < birth.m || (ref.m === birth.m && ref.d < birth.d)) age--;
+    return age;
+  };
+
+  /* Idade do COMPRADOR (conta logada) na data do evento. Vem do endpoint de
+   * elegibilidade de cupom de idade — backend usa o mesmo `computeAgeAt`, então
+   * idade aqui = idade que o backend cobrará no pagamento. `null` quando
+   * anonimo / sem dateOfBirth → não há como afirmar que o comprador encaixa,
+   * caímos no comportamento padrão de mostrar o badge. */
+  const buyerAge = ageEligibility?.age ?? null;
 
   const formatAgeLimit = (ageLimit?: { min?: number; max?: number }) => {
     if (!ageLimit) return null;
@@ -1704,11 +1838,11 @@ export function InformationStep({
                         </p>
                       </div>
                     )}
-                    {serviceFee > 0 && (
+                    {displayedServiceFee > 0 && (
                       <div className="flex items-center justify-between text-sm text-gray-12">
                         <p className="font-semibold">Taxa de serviço:</p>
                         <p className="font-bold text-sm">
-                          {formatPrice(serviceFee)}
+                          {formatPrice(displayedServiceFee)}
                         </p>
                       </div>
                     )}
@@ -1745,6 +1879,18 @@ export function InformationStep({
                 expandedParticipants[participantIndex] ?? false;
               const isComplete = !!savedParticipants[participantIndex] && !participantDirtyMap[participantIndex];
               const ageLimitText = formatAgeLimit(ticket.ageLimit);
+              /* Badge de limite de idade só aparece quando há ALGUMA dúvida
+               * sobre a aderência ao limite. Esconde quando comprador E
+               * participante preenchido encaixam (= idade conhecida + dentro
+               * do range). Idade desconhecida (anônimo ou birthDate vazio)
+               * conta como "não encaixa" pra preservar o aviso. */
+              const participantAge = computeAgeOnEvent(participant.birthDate);
+              const buyerFits =
+                buyerAge !== null && isAgeWithinTicketLimit(buyerAge, ticket.ageLimit);
+              const participantFits =
+                participantAge !== null && isAgeWithinTicketLimit(participantAge, ticket.ageLimit);
+              const showAgeBadge = !!ageLimitText && !(buyerFits && participantFits);
+              const priceBreakdown = getTicketPriceBreakdown(ticket);
 
               return (
                 <div
@@ -1865,9 +2011,16 @@ export function InformationStep({
                                 <TrashIcon className="size-4 text-red-6 cursor-pointer" />
                               </button>
                             </div>
-                            <h1 className="hidden md:block text-xl font-bold text-gray-12">
-                              {formatPrice(getTicketPrice(ticket))}
-                            </h1>
+                            <div className="hidden md:flex items-baseline gap-2">
+                              <h1 className="text-xl font-bold text-gray-12">
+                                {formatPrice(priceBreakdown.discounted)}
+                              </h1>
+                              {priceBreakdown.hasDiscount && (
+                                <p className="text-sm font-medium text-gray-11 line-through">
+                                  {formatPrice(priceBreakdown.original)}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1901,7 +2054,7 @@ export function InformationStep({
                               </p>
                               <h1 className="text-lg font-bold">{ticket.name}</h1>
                             </div>
-                            {ageLimitText && (
+                            {showAgeBadge && (
                               <div className="bg-yellow-3 text-yellow-12 rounded-full px-3 py-2 w-fit text-xs">
                                 Limite de idade: {ageLimitText}
                               </div>
@@ -1987,15 +2140,20 @@ export function InformationStep({
                                    * - Fallback por `documentType` quando o country não foi carregado
                                    *   (CPF → Brasil, PASSPORT → mantém atual pra usuário escolher).
                                    * Default: Brasil. */
+                                  const isPassport = user.documentType === "PASSPORT";
                                   const inheritedNationality =
                                     user.country?.trim() ||
-                                    (user.documentType === "PASSPORT"
+                                    (isPassport
                                       ? participant.nationality || ""
                                       : "Brasil");
-                                  const userIsBr = isBrazilianCountry(inheritedNationality);
+                                  /* PASSAPORTE é documento estrangeiro por definição: nunca tratar como
+                                   * BR aqui, mesmo que a nacionalidade herdada caia no default "Brasil"
+                                   * (sem country). Senão `maskCPF` faz `replace(/\D/g)` e APAGA as letras
+                                   * do passaporte ("AB123456" → "123456"). */
+                                  const userIsBr = !isPassport && isBrazilianCountry(inheritedNationality);
 
                                   /* Documento: pra brasileiro aplica máscara CPF (igual handleCPFChange).
-                                   * Pra estrangeiro mantém cru (preserva letras de passaporte). */
+                                   * Pra estrangeiro/passaporte mantém cru (preserva letras). */
                                   const docValue = user.documentNumber || "";
                                   const docFormatted = userIsBr
                                     ? maskCPF(docValue)
@@ -2287,9 +2445,16 @@ export function InformationStep({
                         )}
 
                         <div className="flex items-center justify-between gap-2 mt-10">
-                          <h1 className="text-xl font-bold text-gray-12">
-                            {formatPrice(getTicketPrice(ticket))}
-                          </h1>
+                          <div className="flex items-baseline gap-2">
+                            <h1 className="text-xl font-bold text-gray-12">
+                              {formatPrice(priceBreakdown.discounted)}
+                            </h1>
+                            {priceBreakdown.hasDiscount && (
+                              <p className="text-sm font-medium text-gray-11 line-through">
+                                {formatPrice(priceBreakdown.original)}
+                              </p>
+                            )}
+                          </div>
                           <Button
                             onClick={async () => {
                               const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
@@ -2331,17 +2496,34 @@ export function InformationStep({
                                 const nameParts = (p.name || "").trim().split(/\s+/);
                                 const firstName = nameParts[0] || "";
                                 const lastName = nameParts.slice(1).join(" ") || "";
-                                const genderOption = sexoOptions.find(
-                                  (opt) => opt.label === p.gender || opt.id === p.gender?.toLowerCase()
-                                );
+                                /* Envia o enum canônico do backend (igual
+                                 * register/profile), não o id PT ("masculino")
+                                 * do select — evita dados de gênero heterogêneos. */
+                                const genderEnum = ((g?: string) => {
+                                  if (!g) return "";
+                                  const v = g.toLowerCase();
+                                  if (v.startsWith("m")) return "MALE";
+                                  if (v.startsWith("f")) return "FEMALE";
+                                  if (v.includes("prefir") || v.includes("prefer")) return "PREFER_NOT_TO_SAY";
+                                  return "OTHER";
+                                })(p.gender);
+                                /* Estrangeiro: doc cru (preserva letras de
+                                 * passaporte) + telefone com DDI; backend usa
+                                 * documentType + country pra normalizar. */
+                                const linkedIsBr = isBrazilianCountry(p.nationality);
+                                const linkedDoc = linkedIsBr
+                                  ? (p.cpf || "").replace(/\D/g, "")
+                                  : (p.cpf || "").trim();
                                 userService.createOrLinkUser({
                                   firstName,
                                   lastName,
                                   email: p.email || "",
-                                  documentNumber: (p.cpf || "").replace(/\D/g, ""),
-                                  phone: (p.phone || "").replace(/\D/g, ""),
+                                  documentNumber: linkedDoc,
+                                  documentType: linkedIsBr ? "CPF" : "PASSPORT",
+                                  phone: p.phone ? getPhoneDigitsForBackend(p.phone, p.nationality) : "",
                                   dateOfBirth: p.birthDate || "",
-                                  gender: genderOption?.id || p.gender || "",
+                                  gender: genderEnum,
+                                  country: p.nationality || undefined,
                                 }).then(() => {
                                   queryClient.invalidateQueries({ queryKey: ["linked-users"] });
                                 }).catch(() => { });
@@ -2366,7 +2548,8 @@ export function InformationStep({
             }
           )}
 
-          {/* Botão Confirmar dados */}
+          {/* Botão Confirmar dados — desabilitado até cada participante ter
+              clicado em "Salvar e próximo" (mesmo critério aplicado no CTA mobile). */}
           <div className="hidden md:flex items-center justify-center w-full mt-6">
             <Button
               onClick={() => {
@@ -2394,7 +2577,7 @@ export function InformationStep({
                 }
                 onNext();
               }}
-              disabled={previewMode || isSubmitting}
+              disabled={previewMode || isSubmitting || !allParticipantsSaved}
               isLoading={isSubmitting}
               variant="default"
               className="w-1/4 font-bold"
@@ -2425,12 +2608,12 @@ export function InformationStep({
                 ? { label: formatAgeCouponLineLabel(ageCoupon), amount: ageDiscount }
                 : null
         }
-        serviceFee={serviceFee}
+        serviceFee={displayedServiceFee}
         total={totalAmountWithAge}
         cta={{
           label: "Confirmar dados",
           loading: isSubmitting,
-          disabled: isSubmitting,
+          disabled: isSubmitting || !allParticipantsSaved,
           onClick: () => {
             if (participantsWithRaces.length === 0) return;
             const allErrors: Record<number, Record<string, string>> = {};
@@ -2552,11 +2735,11 @@ export function InformationStep({
                         </p>
                       </div>
                     )}
-                    {serviceFee > 0 && (
+                    {displayedServiceFee > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">Taxa de serviço:</p>
                         <p className="font-bold">
-                          {formatPrice(serviceFee)}
+                          {formatPrice(displayedServiceFee)}
                         </p>
                       </div>
                     )}

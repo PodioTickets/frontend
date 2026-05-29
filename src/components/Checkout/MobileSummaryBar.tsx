@@ -50,7 +50,10 @@ export interface MobileSummaryBarProps {
   additionalProducts?: { count?: number; total: number } | null;
   serviceFee: number;
   total: number;
-  cta: {
+  /** CTA principal da barra. OPCIONAL: o PaymentStep finaliza pelos botões do
+   *  próprio formulário de pagamento (cartão/Pix/free), então passa sem CTA e a
+   *  barra fica só como resumo (sem botão na barra fixa nem no bottom-sheet). */
+  cta?: {
     label: string;
     onClick: () => void;
     disabled?: boolean;
@@ -126,7 +129,7 @@ export function MobileSummaryBar({
   // campos com erro de validação destacados pelo handler do step).
   const handleSheetCta = useCallback(() => {
     setOpen(false);
-    cta.onClick();
+    cta?.onClick();
   }, [cta]);
 
   // Trava o scroll do fundo enquanto o bottom-sheet está aberto (UX de modal).
@@ -184,14 +187,16 @@ export function MobileSummaryBar({
             {feeRow}
             <div className="flex items-center justify-between gap-3">
               <SummaryRow label="Total" value={formatPrice(total)} emphasize />
-              <Button
-                onClick={cta.onClick}
-                disabled={cta.disabled}
-                isLoading={cta.loading}
-                className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {cta.label}
-              </Button>
+              {cta && (
+                <Button
+                  onClick={cta.onClick}
+                  disabled={cta.disabled}
+                  isLoading={cta.loading}
+                  className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cta.label}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -327,17 +332,19 @@ export function MobileSummaryBar({
                   </div>
                 </div>
 
-                {/* Rodapé fixo com CTA */}
-                <div className="shrink-0 border-t border-gray-6 px-4 py-3 bg-gray-1">
-                  <Button
-                    onClick={handleSheetCta}
-                    disabled={cta.disabled}
-                    isLoading={cta.loading}
-                    className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {cta.label}
-                  </Button>
-                </div>
+                {/* Rodapé fixo com CTA (omitido quando a barra é só resumo). */}
+                {cta && (
+                  <div className="shrink-0 border-t border-gray-6 px-4 py-3 bg-gray-1">
+                    <Button
+                      onClick={handleSheetCta}
+                      disabled={cta.disabled}
+                      isLoading={cta.loading}
+                      className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {cta.label}
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>,

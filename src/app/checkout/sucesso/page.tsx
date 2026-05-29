@@ -149,6 +149,12 @@ function CheckoutSucessoContent() {
     });
 
     const coupon = order?.coupon ?? null;
+    const voucher = order?.voucher ?? null;
+    // Cupom e voucher são mutuamente exclusivos. Quando há voucher (e não cupom),
+    // o `pricing.discount` é o desconto do VOUCHER — roteia pra voucherDiscount,
+    // senão a linha de desconto aparece como "Cupom" indevidamente.
+    const isVoucherOrder = !!voucher && !coupon;
+    const discountReais = (order?.pricing?.discount ?? 0) / 100;
     const couponPercent =
       coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
 
@@ -160,11 +166,12 @@ function CheckoutSucessoContent() {
       participantsInfo,
       productsSubtotal: (order.pricing.productsSubtotal ?? 0) / 100,
       serviceFee: (order?.pricing?.serviceFee ?? 0) / 100,
-      couponDiscount: (order?.pricing?.discount ?? 0) / 100,
+      couponDiscount: isVoucherOrder ? 0 : discountReais,
       couponName: coupon?.code ?? undefined,
       couponType: coupon?.couponType as "DISCOUNT" | "QUANTITY" | "AGE" | undefined,
       couponPercent,
-      voucherDiscount: 0,
+      voucherDiscount: isVoucherOrder ? discountReais : 0,
+      voucherName: voucher?.code ?? undefined,
       date: payment?.paymentDate,
     };
   }, [orderDetails]);
@@ -226,6 +233,7 @@ function CheckoutSucessoContent() {
           couponType={successData.couponType}
           couponPercent={successData.couponPercent}
           voucherDiscount={successData.voucherDiscount}
+          voucherName={successData.voucherName}
           date={successData.date}
         />
       </div>

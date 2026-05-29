@@ -673,6 +673,17 @@ export function CreateProductModal() {
       setMobileVariationDraftError("Informe o nome da variação.");
       return;
     }
+    // Nome único dentro do produto (ignora a própria variação ao editar).
+    const nameKey = name.toLocaleLowerCase("pt-BR");
+    const isDuplicateName = variations.some(
+      (v) =>
+        v.id !== mobileVariationDraft.target &&
+        v.name.trim().toLocaleLowerCase("pt-BR") === nameKey,
+    );
+    if (isDuplicateName) {
+      setMobileVariationDraftError("Já existe uma variação com esse nome.");
+      return;
+    }
     if (mobileVariationDraft.target === "new") {
       const newVariation: ProductVariation = {
         id: Date.now().toString(),
@@ -715,6 +726,23 @@ export function CreateProductModal() {
     if (!hasMinVariations) {
       toast.error("Preencha o nome de pelo menos uma variação");
       return false;
+    }
+
+    // Nomes de variação devem ser únicos dentro do produto.
+    // Comparação normalizada (trim + case-insensitive pt-BR): duas variações que
+    // diferem só por maiúscula/espaço seriam indistinguíveis para o comprador.
+    const seenVariationNames = new Set<string>();
+    for (const v of variations) {
+      const trimmed = v.name.trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLocaleLowerCase("pt-BR");
+      if (seenVariationNames.has(key)) {
+        toast.error(
+          `Variação duplicada: "${trimmed}". Cada variação deve ter um nome único.`,
+        );
+        return false;
+      }
+      seenVariationNames.add(key);
     }
 
     if (!eventId) {

@@ -74,6 +74,7 @@ interface PaymentSuccessStepProps {
   couponType?: "DISCOUNT" | "QUANTITY" | "AGE";
   couponPercent?: number;
   voucherDiscount?: number;
+  voucherName?: string;
   date?: string;
 }
 
@@ -115,6 +116,7 @@ export function PaymentSuccessStep({
   couponPercent,
   productsSubtotal,
   voucherDiscount: propVoucherDiscount = 0,
+  voucherName,
   date: paymentDate,
 }: PaymentSuccessStepProps) {
   const isAutomaticCoupon = couponType === "QUANTITY" || couponType === "AGE";
@@ -124,6 +126,7 @@ export function PaymentSuccessStep({
       ? `Cupom ${couponName}`
       : "Cupom"
     }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
+  const voucherLabel = voucherName ? `Voucher ${voucherName}:` : "Desconto voucher:";
   const router = useRouter();
 
   const participants = participantsInfo.map(p => ({
@@ -205,6 +208,15 @@ export function PaymentSuccessStep({
     if (!phone) return "";
     return formatPhoneForCountry(phone, country ?? null) || phone;
   };
+
+  // País efetivo pro telefone do participante: BR legado (country null) usa
+  // "Brasil" — mesma heurística do documento — pra mascarar igual ao resto, em
+  // vez de exibir dígitos crus. Estrangeiro conhecido usa o próprio país.
+  const phoneCountry = (p: {
+    country?: string | null;
+    documentType?: string | null;
+    cpf?: string | null;
+  }): string | null => (isParticipantBr(p) ? p.country || "Brasil" : p.country ?? null);
 
   const getGenderLabel = (gender: string) => {
     const labels: Record<string, string> = {
@@ -378,7 +390,7 @@ export function PaymentSuccessStep({
                     {voucherDiscount > 0 && (
                       <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
                         <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
-                          Desconto voucher:
+                          {voucherLabel}
                         </p>
                         <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope">
                           – {formatCurrency(voucherDiscount)}
@@ -431,7 +443,7 @@ export function PaymentSuccessStep({
               <div className="flex flex-col gap-5 items-start w-full">
                 {displayParticipants.map((participantData, index) => {
                   const participant = participants[participantData.participantIndex] || {};
-                  const qrCode = `$${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderNumber}`;
+                  const qrCode = `${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderNumber}`;
                   const isExpanded = expandedParticipants[index] || false;
 
                   return (
@@ -593,7 +605,7 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "Telefone",
-                                    value: formatPhone(participant.phone || "", participant.country),
+                                    value: formatPhone(participant.phone || "", phoneCountry(participant)),
                                   },
                                   {
                                     label: "Sexo",
@@ -604,8 +616,8 @@ export function PaymentSuccessStep({
                                   {
                                     label: "Contato de emergência",
                                     value: participant.emergencyContactName && participant.emergencyPhone
-                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone, participant.country)}`
-                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "", participant.country) || "",
+                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone, phoneCountry(participant))}`
+                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "", phoneCountry(participant)) || "",
                                   },
                                 ].map((field, idx) => {
                                   if (!field.value) return null
@@ -907,7 +919,7 @@ export function PaymentSuccessStep({
                     {voucherDiscount > 0 && (
                       <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
                         <p className="font-semibold text-[16px] leading-[1.1] text-gray-12 font-manrope">
-                          Desconto voucher:
+                          {voucherLabel}
                         </p>
                         <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope">
                           – {formatCurrency(voucherDiscount)}
@@ -960,7 +972,7 @@ export function PaymentSuccessStep({
               <div className="flex flex-col gap-[20px] items-center w-full">
                 {displayParticipants.map((participantData, index) => {
                   const participant = participants[participantData.participantIndex] || {};
-                  const qrCode = `$${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderNumber}`;
+                  const qrCode = `${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderNumber}`;
                   const isExpanded = expandedParticipants[index] || false;
 
                   return (
@@ -1130,7 +1142,7 @@ export function PaymentSuccessStep({
                                   },
                                   {
                                     label: "Telefone",
-                                    value: formatPhone(participant.phone || "", participant.country),
+                                    value: formatPhone(participant.phone || "", phoneCountry(participant)),
                                   },
                                   {
                                     label: "Sexo",
@@ -1141,8 +1153,8 @@ export function PaymentSuccessStep({
                                   {
                                     label: "Contato de emergência",
                                     value: participant.emergencyContactName && participant.emergencyPhone
-                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone, participant.country)}`
-                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "", participant.country) || "",
+                                      ? `${participant.emergencyContactName} - ${formatPhone(participant.emergencyPhone, phoneCountry(participant))}`
+                                      : participant.emergencyContactName || formatPhone(participant.emergencyPhone || "", phoneCountry(participant)) || "",
                                   },
                                 ].map((field, idx) => {
                                   if (!field.value) return null

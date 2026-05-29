@@ -21,8 +21,6 @@ import { EloIcon } from "../Icons/EloIcon";
 import { HelpIcon } from "../Icons/HelpIcon";
 import { ArrowButton } from "../ArrowButton";
 import { RemoveIcon } from "../Icons/RemoveIcon";
-import { TrashIcon } from "../Icons/TrashIcon";
-import { PencilIcon } from "../Icons/PencilIcon";
 import Image from "next/image";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { ProductCardGallery } from "./ProductCardGallery";
@@ -419,7 +417,6 @@ function PixModal({
   onPaymentConfirmed?: () => void;
 }) {
   const [timeLeft, setTimeLeft] = useState(30 * 60);
-  const expirationDate = pixData ? new Date(pixData.expiresAt) : null;
   const [status, setStatus] = useState<"PENDING" | "PAID" | "CANCELLED" | null>(null);
 
   // Refs estáveis — nunca mudam de referência, evitam re-execução dos effects
@@ -465,12 +462,19 @@ function PixModal({
   }, [isOpen, orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-  // Countdown baseado no expiresAt vindo do servidor
+  // Countdown baseado no expiresAt do servidor. Fallback de 30min quando o
+  // backend omite/manda expiresAt inválido (espelha usePixPayment) — sem isso o
+  // contador exibia "NaN:NaN" e o modal nunca fechava por expiração. Depende de
+  // `pixData` (ref estável), então o interval é montado uma vez por PIX.
   useEffect(() => {
-    if (!isOpen || !expirationDate) return;
+    if (!isOpen || !pixData) return;
+    const parsed = new Date(pixData.expiresAt);
+    const expiration = isNaN(parsed.getTime())
+      ? new Date(Date.now() + 30 * 60 * 1000)
+      : parsed;
 
     const updateTimeLeft = () => {
-      const diff = Math.max(0, Math.floor((expirationDate.getTime() - Date.now()) / 1000));
+      const diff = Math.max(0, Math.floor((expiration.getTime() - Date.now()) / 1000));
       setTimeLeft(diff);
       if (diff <= 0) onClose();
     };
@@ -478,7 +482,7 @@ function PixModal({
     updateTimeLeft();
     const timer = setInterval(updateTimeLeft, 1000);
     return () => clearInterval(timer);
-  }, [isOpen, expirationDate, onClose]);
+  }, [isOpen, pixData, onClose]);
 
   // Reset ao fechar/abrir
   useEffect(() => {
@@ -1438,7 +1442,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const serviceFee = serverServiceFee > 0
     ? serverServiceFee / 100
     : (ticketSubtotalLocal + additionalProductsTotal) *
-      ((event.participantFeePercent ?? 0) / 100);
+    ((event.participantFeePercent ?? 0) / 100);
   // Subtotal e desconto de cupom vêm direto do backend — não recalcular no frontend
   const subtotalValue = currentOrder
     ? currentOrder.pricing.subtotal / 100
@@ -1462,7 +1466,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const isVoucherApplied = !!currentOrder?.voucher;
   const isAutomaticCoupon = currentOrder?.coupon?.couponType === "QUANTITY" || currentOrder?.coupon?.couponType === "AGE";
   const appliedCouponName = currentOrder?.coupon?.code ?? (isCouponApplied ? (isAutomaticCoupon ? "Cupom automático" : "Desconto automático") : undefined);
-  const appliedVoucherName = currentOrder?.voucher?.name ?? currentOrder?.voucher?.code;
+  const appliedVoucherName = currentOrder?.voucher?.code
 
   // Percentual do cupom vem diretamente do objeto coupon da API.
   const couponPercent = useMemo(() => {
@@ -1488,10 +1492,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return options;
   }, [totalValue, event.maxInstallments]);
 
-  const calculatePixValue = () => {
-    const discount = totalValue * 0.05;
-    return totalValue - discount;
-  };
+  // PIX não tem desconto no produto: o valor à vista é o total cheio (o backend
+  // cobra `pricing.total` e o payload de /pay não envia nenhum desconto de PIX).
+  // Antes havia um 5% hardcoded que exibia um valor menor do que o cobrado.
+  const calculatePixValue = () => totalValue;
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -2145,12 +2149,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       />
                     </div>
                   )}
+
                   {includedProducts.length > 0 && (
-                    <div className="mb-3">
-                      <SummaryRow
-                        label={`${includedProducts.length}x Itens inclusos`}
-                        value="Grátis"
-                      />
+                    <div className="mb-3 flex items-baseline gap-1 text-gray-12 font-family-manrope">
+                      <span className={"text-sm font-medium"}>{includedProducts.length}x Itens inclusos</span>
                     </div>
                   )}
 
@@ -2179,7 +2181,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                               </div>
                               <p className="text-sm font-semibold text-gray-12 font-manrope">
                                 {product.isIncluded
-                                  ? "Grátis"
+                                  ? "Incluso"
                                   : formatPrice(product.price / 100)}
                               </p>
                             </div>
@@ -2275,6 +2277,43 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 </Button>
               </div>
             )}
+
+            {/* Coupon Section */}
+            <div className="pb-6">
+              <div className="flex flex-col gap-3">
+                <Input
+                  type="text"
+                  placeholder="Código de cupom"
+                  value={couponCode}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase().substring(0, 30);
+                    setCouponCode(value);
+                    setCouponError(null);
+                  }}
+                  maxLength={30}
+                  className={
+                    couponError
+                      ? "border-red-6"
+                      : isCouponApplied
+                        ? "border-primary-8 bg-primary-3"
+                        : ""
+                  }
+                />
+                {couponError && (
+                  <p className="text-base font-medium text-red-11 font-family-dm-sans">
+                    {couponError}
+                  </p>
+                )}
+                {!isCouponApplied && (
+                  <Button
+                    onClick={handleApplyCoupon}
+                    className="w-full font-bold font-manrope"
+                  >
+                    Aplicar cupom
+                  </Button>
+                )}
+              </div>
+            </div>
             {!isFreeOrder && <div className="pb-6 flex flex-col gap-3">
               {/* Card Option (crédito + débito unificados) */}
               <div
@@ -2284,6 +2323,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   }`}
                 onClick={() => { if (!isCardSelected) setSelectedPaymentMethod("credit"); }}
               >
+
                 <div className="flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-3">
                     <div
@@ -2348,7 +2388,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           onClick={handleProcessCreditCardCheckout}
                           disabled={checkoutLoading || !billingAddressConfirmed}
                           isLoading={checkoutLoading}
-                          className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Finalizar compra
                         </Button>
@@ -2373,7 +2413,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                           onClick={handleProcessDebitCardCheckout}
                           disabled={checkoutLoading || !billingAddressConfirmed}
                           isLoading={debitLoading}
-                          className="w-full mt-4 bg-gray-12 text-gray-1 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full mt-4 font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Finalizar compra
                         </Button>
@@ -2392,10 +2432,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   }`}
                 onClick={() => {
                   setSelectedPaymentMethod("pix");
-                  // Mobile: depois de expandir o card PIX, autofocus de input
-                  // dentro do PixForm puxa o scroll pra baixo (foco em campo
-                  // longe do topo). Rola pro proprio card abaixo do header
-                  // global pra mostrar o titulo "PIX" + formulario.
                   if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
                     setTimeout(() => {
                       const card = document.querySelector<HTMLElement>('[data-payment-method="pix"]');
@@ -2437,7 +2473,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       onClick={handleProcessPixCheckout}
                       disabled={checkoutLoading || !billingAddressConfirmed}
                       isLoading={checkoutLoading}
-                      className="w-full bg-gray-12 text-gray-1 font-bold font-manrope"
+                      className="w-full font-bold font-manrope"
                     >
                       Gerar QR CODE
                     </Button>
@@ -2446,42 +2482,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               </div>
             </div>}
 
-            {/* Coupon Section */}
-            <div className="pt-6 border-t border-gray-8">
-              <div className="flex flex-col gap-3">
-                <Input
-                  type="text"
-                  placeholder="Código de cupom"
-                  value={couponCode}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase().substring(0, 30);
-                    setCouponCode(value);
-                    setCouponError(null);
-                  }}
-                  maxLength={30}
-                  className={
-                    couponError
-                      ? "border-red-6"
-                      : isCouponApplied
-                        ? "border-primary-8 bg-primary-3"
-                        : ""
-                  }
-                />
-                {couponError && (
-                  <p className="text-base font-medium text-red-11 font-family-dm-sans">
-                    {couponError}
-                  </p>
-                )}
-                {!isCouponApplied && (
-                  <Button
-                    onClick={handleApplyCoupon}
-                    className="w-full bg-primary-11 text-primary-2 font-bold font-manrope"
-                  >
-                    Aplicar cupom
-                  </Button>
-                )}
-              </div>
-            </div>
+
           </>
         ) : null}
       </div>
@@ -2499,20 +2500,19 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         discount={
           isCouponApplied && couponDiscount > 0
             ? {
-                label: `${
-                  isAutomaticCoupon
-                    ? "Cupom automático"
-                    : appliedCouponName
-                      ? `Cupom ${appliedCouponName}`
-                      : "Cupom"
+              label: `${isAutomaticCoupon
+                ? "Cupom automático"
+                : appliedCouponName
+                  ? `Cupom ${appliedCouponName}`
+                  : "Cupom"
                 }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}`,
-                amount: couponDiscount,
-              }
+              amount: couponDiscount,
+            }
             : isVoucherApplied && voucherDiscount > 0
               ? {
-                  label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
-                  amount: voucherDiscount,
-                }
+                label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
+                amount: voucherDiscount,
+              }
               : null
         }
         additionalProducts={
@@ -2522,22 +2522,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         }
         serviceFee={serviceFee}
         total={totalValue}
-        cta={{
-          label: isFreeOrder ? "Finalizar pedido" : "Finalizar compra",
-          loading: checkoutLoading,
-          disabled: totalParticipants === 0 || checkoutLoading || !billingAddressConfirmed,
-          onClick: () => {
-            if (isFreeOrder) {
-              handleProcessFreeCheckout();
-            } else if (selectedPaymentMethod === "credit") {
-              handleProcessCreditCardCheckout();
-            } else if (selectedPaymentMethod === "debit") {
-              handleProcessDebitCardCheckout();
-            } else if (selectedPaymentMethod === "pix") {
-              handleProcessPixCheckout();
-            }
-          },
-        }}
+        /* Sem CTA: no mobile o PaymentStep finaliza pelos botões do próprio
+         * formulário (Finalizar pedido/compra por método). A barra fixa aqui é
+         * só resumo — evita botão de finalizar duplicado/conflitante. */
         extraDetails={paymentSummaryDetails}
       />
 

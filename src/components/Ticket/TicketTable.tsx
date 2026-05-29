@@ -264,7 +264,7 @@ function SortableTicketRow({
 
         <div className="flex h-full min-h-px min-w-px flex-1 items-center justify-center p-4">
           <p className="font-inter text-sm font-semibold leading-[1.3] text-gray-12">
-            {ticket?.price !== "R$ 0,00" ? formatPrice(ticket.price) : "Gratuito"}
+            {formatPrice(ticket.price)}
           </p>
         </div>
 

@@ -311,7 +311,7 @@ export default function TicketDetailsPage() {
             {participants.map((participant: any, index: number) => {
               const isExpanded = expandedParticipants[index] || false;
               const tab = activeTab[index] || "info";
-              const qrCode = `$${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderId}`;
+              const qrCode = `${process.env.NEXT_PUBLIC_ROOT_SITE_URL}/user/tickets/${orderId}`;
               const ticket = participant.ticket || {};
 
               const distance = ticket.distance
@@ -705,19 +705,25 @@ export default function TicketDetailsPage() {
 
                 {(pricing.discount ?? 0) > 0 && (() => {
                   const coupon = order.coupon ?? null;
+                  const voucher = order.voucher ?? null;
+                  // Cupom e voucher são exclusivos: com voucher, o desconto é do
+                  // voucher — rotula "Voucher CÓDIGO", não "Cupom".
+                  const isVoucher = !!voucher && !coupon;
                   const isAutomaticCoupon = coupon?.couponType === "QUANTITY" || coupon?.couponType === "AGE";
                   const couponPercent = coupon?.type === "PERCENTAGE" && coupon?.value > 0 ? coupon.value : undefined;
-                  const couponLabel = `${isAutomaticCoupon
-                    ? "Cupom automático"
-                    : coupon?.code
-                      ? `Cupom ${coupon.code}`
-                      : "Cupom"
-                    }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
+                  const discountLabel = isVoucher
+                    ? `${voucher?.code ? `Voucher ${voucher.code}` : "Voucher"}:`
+                    : `${isAutomaticCoupon
+                      ? "Cupom automático"
+                      : coupon?.code
+                        ? `Cupom ${coupon.code}`
+                        : "Cupom"
+                      }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
 
                   return (
                     <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                       <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                        {couponLabel}
+                        {discountLabel}
                       </p>
                       <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
                         – {formatPrice(pricing.discount ?? 0)}

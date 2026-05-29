@@ -1,5 +1,6 @@
 import { isBrazilianCountry } from "@/validators/Auth.validator";
 import { formatPhoneForCountry } from "@/utils/phone";
+import { normalizeNationality } from "@/utils/nationality";
 
 /**
  * Exibição i18n de documento + telefone de uma pessoa (comprador/participante).
@@ -42,7 +43,12 @@ export interface PersonDocumentInfo {
  * Documento ausente → assume brasileiro (comportamento histórico do produto).
  */
 export function isPersonBr(info: PersonDocumentInfo): boolean {
-  if (info.country) return isBrazilianCountry(info.country);
+  if (info.country) {
+    // Normaliza gentílico/legado ("Brasileira"/"Brazil"/"BR") antes de decidir —
+    // o backend persiste esses valores e `isBrazilianCountry` sozinho não os cobre.
+    const normalized = normalizeNationality(info.country) ?? info.country;
+    return isBrazilianCountry(normalized);
+  }
   if (info.documentType) return info.documentType === "CPF";
   const raw = (info.document || "").trim();
   if (!raw) return true;

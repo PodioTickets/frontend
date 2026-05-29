@@ -245,7 +245,7 @@ export function Header() {
                   {
                     id: "tickets",
                     icon: TicketIcon,
-                    label: "Ingressos",
+                    label: "Meus ingressos",
                     onClick: () => {
                       push("/user/tickets");
                     },
@@ -392,7 +392,7 @@ export function Header() {
                       >
                         <TicketIcon className="w-5 h-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
-                          Ingressos
+                          Meus ingressos
                         </span>
                       </button>
                       <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">

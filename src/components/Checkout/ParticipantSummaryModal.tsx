@@ -313,7 +313,7 @@ export function ParticipantSummaryModal({
                   <div className="flex flex-col gap-2 py-4">
                     <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">Telefone</p>
                     <p className="font-family-dm-sans font-medium text-base leading-[1.3] text-gray-12">
-                      {formatPhoneForCountry(participant.phone, participant.nationality) || "Não informado"}
+                      {formatPhoneForCountry(participant.phone, isBr ? participant.nationality || "Brasil" : participant.nationality) || "Não informado"}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 py-4">

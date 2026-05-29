@@ -7,9 +7,21 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   ReactNode,
 } from "react";
 import { useSearchParams } from "next/navigation";
+
+/** Le um JSON do sessionStorage com fallback SSR-safe e tolerante a parse error. */
+function readStoredJson<T>(key: string | null, fallback: T): T {
+  if (typeof window === "undefined" || !key) return fallback;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 interface ParticipantFormData {
   name: string;
@@ -68,34 +80,43 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
 
-  const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>({});
-  const [participants, setParticipants] = useState<ParticipantFormData[]>([
-    DEFAULT_PARTICIPANT,
-  ]);
-
   // Chaves de sessionStorage por evento. Estado persiste enquanto a aba
-  // estiver aberta — sobrevive a navegacao (login modal/redirect) mas nao
-  // a fechar a aba. SessionStorage > localStorage: nao polui storage entre
-  // visitas, e cada aba/evento tem escopo proprio.
+  // estiver aberta — sobrevive a navegacao (login modal/redirect, sair do
+  // checkout e voltar) mas nao a fechar a aba. SessionStorage > localStorage:
+  // nao polui storage entre visitas, e cada aba/evento tem escopo proprio.
   const rqStorageKey = eventId ? `checkout:raceQuantities:${eventId}` : null;
   const pStorageKey = eventId ? `checkout:participants:${eventId}` : null;
 
-  // Hidrata do sessionStorage ao trocar de evento. Se nao tem nada salvo,
-  // reseta. Roda so no client (sessionStorage indefinido no SSR).
+  /* Hidratacao SINCRONA no mount via useState initializer.
+   *
+   * Por que nao via useEffect: o provider vive apenas no layout `/checkout/*`,
+   * entao sair pra outra rota (ex.: /user) e voltar remonta o provider. Se a
+   * hidratacao roda em useEffect, o effect de persist (que tem deps em
+   * `raceQuantities`/`participants`) tambem dispara no mesmo turno com o
+   * state inicial vazio capturado no closure, sobrescrevendo o storage com
+   * `{}` antes do effect de hidratacao terminar o setState. Resultado: os
+   * ingressos selecionados somem ao voltar pro checkout.
+   *
+   * Initializer roda 1x por mount e ja popula com o valor canonico do storage,
+   * eliminando a janela de race. SSR-safe via check de `window`. */
+  const [raceQuantities, setRaceQuantities] = useState<Record<string, number>>(
+    () => readStoredJson<Record<string, number>>(rqStorageKey, {})
+  );
+  const [participants, setParticipants] = useState<ParticipantFormData[]>(
+    () => readStoredJson<ParticipantFormData[]>(pStorageKey, [DEFAULT_PARTICIPANT])
+  );
+
+  /* Re-hidrata quando o eventId muda DURANTE a vida do provider (caso raro de
+   * troca de evento sem desmontar). Skip no primeiro render — useState
+   * initializer ja cuidou disso. */
+  const lastHydratedEventIdRef = useRef<string | null>(eventId);
   useEffect(() => {
-    if (!eventId) return;
-    if (typeof window === "undefined") return;
-    try {
-      const savedRq = rqStorageKey ? window.sessionStorage.getItem(rqStorageKey) : null;
-      setRaceQuantities(savedRq ? JSON.parse(savedRq) : {});
-      const savedP = pStorageKey ? window.sessionStorage.getItem(pStorageKey) : null;
-      setParticipants(savedP ? JSON.parse(savedP) : [DEFAULT_PARTICIPANT]);
-    } catch {
-      setRaceQuantities({});
-      setParticipants([DEFAULT_PARTICIPANT]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId]);
+    if (lastHydratedEventIdRef.current === eventId) return;
+    lastHydratedEventIdRef.current = eventId;
+    if (!eventId || typeof window === "undefined") return;
+    setRaceQuantities(readStoredJson<Record<string, number>>(rqStorageKey, {}));
+    setParticipants(readStoredJson<ParticipantFormData[]>(pStorageKey, [DEFAULT_PARTICIPANT]));
+  }, [eventId, rqStorageKey, pStorageKey]);
 
   // Persiste mudancas. Skip quando nao tem eventId (preview/SSR).
   useEffect(() => {

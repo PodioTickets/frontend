@@ -14,7 +14,7 @@ import { useCouponPreview } from "@/hooks/useCouponPreview";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
 import { useAuth } from "@/hooks/useAuth";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
-import type { OrderCoupon } from "@/interfaces/order";
+import type { OrderCoupon, OrderVoucher } from "@/interfaces/order";
 import {
   computeTicketPricingWithCoupon,
   computeTicketPricingWithDiscount,
@@ -34,9 +34,15 @@ interface EventInfoProps {
   /** Cupom resolvido pelo `ModalitiesStep` (reserva ou preview do link). Mantém
    *  o resumo desktop em sincronia com o mobile. */
   appliedCoupon?: OrderCoupon | null;
+  /** Voucher já aplicado na order (reserva anterior), quando não há voucher de
+   *  link. Sem isso o resumo desktop esconde a linha do voucher ao voltar. */
+  appliedVoucher?: OrderVoucher | null;
+  /** Desconto autoritativo (REAIS) do voucher da order — usado quando o desconto
+   *  não vem do preview do link. */
+  voucherDiscountOverride?: number;
 }
 
-export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null }: EventInfoProps) {
+export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], categorizedTickets = [], uncategorizedTickets = [], appliedCoupon = null, appliedVoucher = null, voucherDiscountOverride = 0 }: EventInfoProps) {
   const { raceQuantities } = useCheckout();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const pendingCoupon = usePendingCouponSnapshot();
@@ -56,6 +62,10 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   // Preview pode ser cupom (percentual/fixo) ou voucher (100% OFF por ticket).
   const couponData = couponPreview?.kind === "coupon" ? couponPreview : null;
   const voucherData = couponPreview?.kind === "voucher" ? couponPreview : null;
+  // Voucher ativo = já aplicado na order (sempre) OU preview do link quando a
+  // order ainda não tem um cupom real (exclusividade cupom/voucher — não deixar
+  // o voucher de link sobrepor o cupom autoritativo).
+  const useVoucher = !!appliedVoucher || (!!voucherData && !appliedCoupon);
 
   const couponPercentSuffix = couponData
     ? couponData.type === "PERCENTAGE" && couponData.value > 0
@@ -144,22 +154,26 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     return total;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
 
-  // Desconto do voucher: soma dos ingressos selecionados que ele cobre (100%).
+  // Desconto do voucher: do preview do link calcula client-side (1 unidade de
+  // maior valor entre os selecionados); da order usa o valor autoritativo.
   const voucherDiscount = useMemo(() => {
-    if (!voucherData) return 0;
-    const selected: Array<{ id: string; price: number; quantity: number }> = [];
-    categorizedTickets.forEach((category) => {
-      category.tickets.forEach((ticket) => {
+    if (voucherData) {
+      const selected: Array<{ id: string; price: number; quantity: number }> = [];
+      categorizedTickets.forEach((category) => {
+        category.tickets.forEach((ticket) => {
+          const quantity = raceQuantities[ticket.id] || 0;
+          if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+        });
+      });
+      uncategorizedTickets.forEach((ticket) => {
         const quantity = raceQuantities[ticket.id] || 0;
         if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
       });
-    });
-    uncategorizedTickets.forEach((ticket) => {
-      const quantity = raceQuantities[ticket.id] || 0;
-      if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
-    });
-    return computeVoucherTicketsDiscount(voucherData.appliesTo, selected);
-  }, [voucherData, categorizedTickets, uncategorizedTickets, raceQuantities]);
+      return computeVoucherTicketsDiscount(voucherData.appliesTo, selected);
+    }
+    if (appliedVoucher) return voucherDiscountOverride;
+    return 0;
+  }, [voucherData, appliedVoucher, voucherDiscountOverride, categorizedTickets, uncategorizedTickets, raceQuantities]);
 
   // Cupom resolvido: prioriza o vindo do ModalitiesStep (reserva); senão, o
   // preview do link `?coupon=`. Mantém desktop e mobile com o mesmo número.
@@ -172,7 +186,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   // Espelha o ModalitiesStep pra desktop e mobile mostrarem o mesmo desconto.
   const hasManualCoupon = !!resolvedCoupon && resolvedCoupon.couponType === "DISCOUNT";
   const ageCoupon =
-    !voucherData && !hasManualCoupon && ageEligibility?.applicable
+    !useVoucher && !hasManualCoupon && ageEligibility?.applicable
       ? ageEligibility.appliedCoupon
       : null;
   const ageDiscount = useMemo(() => {
@@ -196,7 +210,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
   // segue o caminho percentual/fixo.
   const pricing = useMemo(
     () =>
-      voucherData
+      useVoucher
         ? computeTicketPricingWithDiscount(
             voucherDiscount,
             totalPrice,
@@ -213,13 +227,13 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
               totalPrice,
               event.participantFeePercent ?? 0,
             ),
-    [voucherData, voucherDiscount, ageCoupon, ageDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
+    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
   // Label da linha de desconto: "Voucher CÓDIGO", "Cupom idade (X% OFF)" ou "Cupom CÓDIGO (...)".
-  const discountLineLabel = voucherData
-    ? formatVoucherLineLabel(voucherData.code)
+  const discountLineLabel = useVoucher
+    ? formatVoucherLineLabel(voucherData?.code ?? appliedVoucher?.code)
     : ageCoupon
       ? formatAgeCouponLineLabel(ageCoupon)
       : resolvedCoupon
@@ -227,7 +241,7 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         : "";
   // Cupom do link sem desconto ainda calculado. Voucher é client-side: quando
   // não cobre a seleção (desconto 0), a linha do voucher simplesmente não aparece.
-  const couponPending = !!pendingCoupon && !voucherData;
+  const couponPending = !!pendingCoupon && !useVoucher;
 
   const totalParticipants = useMemo(() => {
     let participants = 0;

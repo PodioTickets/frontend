@@ -158,8 +158,10 @@ export function OrderSummary({
     (sum, ticket) => sum + ticket.total,
     0,
   );
+  // Subtotal = soma dos itens ANTES da taxa. A taxa é exibida em linha própria,
+  // então não pode entrar aqui (senão é contada duas vezes no fallback).
   const subtotal =
-    subtotalOverride ?? ticketsSubtotal + productsSubtotal + serviceFee;
+    subtotalOverride ?? ticketsSubtotal + productsSubtotal;
 
   const toggleParticipant = (index: number) => {
     setExpandedParticipants((prev) => ({
@@ -215,14 +217,6 @@ export function OrderSummary({
           {isCouponApplied && couponDiscount > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">
-                {(() => {
-                  const coveredCount = participantsData.filter(
-                    (p) => p.couponDiscount && p.couponDiscount > 0,
-                  ).length;
-                  return couponValueType === "FIXED" && coveredCount > 1
-                    ? `${coveredCount}x `
-                    : "";
-                })()}
                 {couponType === "QUANTITY" || couponType === "AGE"
                   ? "Cupom automático"
                   : couponName
@@ -243,7 +237,7 @@ export function OrderSummary({
           {voucherCode && voucherDiscount > 0 && (
             <div className="flex items-center justify-between text-base text-gray-12">
               <p className="font-manrope font-semibold">
-                {voucherName ? `Voucher ${voucherName}` : "Voucher aplicado"}:
+                {voucherCode ? `Voucher ${voucherCode}` : "Voucher aplicado"}:
               </p>
               <p className="font-manrope font-bold">
                 -{formatPrice(voucherDiscount)}
@@ -385,7 +379,7 @@ export function OrderSummary({
                                   {participantData.participant.name ||
                                     `Participante ${participantData.participantIndex + 1}`}
                                 </p>
-                                <div className="flex gap-1 items-center min-w-0 overflow-hidden">
+                                <div className="flex gap-1 items-center min-w-0 overflow-hidden w-full">
                                   {participantData.participant.birthDate && (
                                     <>
                                       <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">

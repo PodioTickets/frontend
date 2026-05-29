@@ -1,6 +1,7 @@
 import type { ApiClient } from "../base/ApiClient";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import type { AgeCouponEligibility } from "@/lib/ageCoupon";
+import { normalizeNationality } from "@/utils/nationality";
 
 export interface LoginResponse {
   message?: string;
@@ -446,7 +447,16 @@ export class UserService {
   async getProfile(): Promise<any> {
     try {
       const response = await this.apiClient.get("/api/v1/auth/profile");
-      return response.data;
+      const payload = response.data;
+      /* Backend pode persistir gentílico/legado ("Brasileira"/"Brazil"/"BR") em
+       * `country`. Normaliza no boundary (igual `getUserByCpf`/`createOrLinkUser`)
+       * pro valor canônico do select — senão o checkout trata brasileiro como
+       * estrangeiro (CEP/UF/bairro) e exibe documento/telefone errados. O user
+       * vem em `payload.data` (useAuth lê `const { data } = getProfile()`). */
+      if (payload?.data?.country) {
+        payload.data.country = normalizeNationality(payload.data.country) ?? payload.data.country;
+      }
+      return payload;
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -866,10 +876,18 @@ export class UserService {
     phone: string;
     dateOfBirth: string;
     gender: string;
+    country?: string;
+    documentType?: string;
   } | null> {
     try {
       const response = await this.apiClient.get(`/api/v1/user/by-cpf/${cpf}`);
-      return response.data.data || null;
+      const data = response.data?.data ?? null;
+      if (!data) return null;
+      /* Backend pode persistir gentílico ("Brasileira") em vez do nome do
+       * país ("Brasil"). Normaliza no boundary pra qualquer consumidor já
+       * receber o valor canônico do select de nacionalidade. */
+      if (data.country) data.country = normalizeNationality(data.country);
+      return data;
     } catch (error: any) {
       if (error?.response?.status === 404) return null;
       throw this.handleError(error);
@@ -886,12 +904,25 @@ export class UserService {
       phone: string;
       dateOfBirth: string;
       gender: string;
+      country?: string;
+      documentType?: string;
       isMainUser?: boolean;
     }>;
   }> {
     try {
       const response = await this.apiClient.get("/api/v1/user/linked-users");
-      return response.data.data || { users: [] };
+      const body = response.data.data || { users: [] };
+      /* Normaliza gentílico/legado em `country` por usuário (igual
+       * `getUserByCpf`/`createOrLinkUser`) — senão selecionar um usuário
+       * vinculado com country não-canônico quebra o select de nacionalidade,
+       * tira a máscara do CPF e envia documentType errado no submit. */
+      if (Array.isArray(body.users)) {
+        body.users = body.users.map((u: { country?: string }) => ({
+          ...u,
+          country: u.country ? (normalizeNationality(u.country) ?? u.country) : u.country,
+        }));
+      }
+      return body;
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -905,6 +936,12 @@ export class UserService {
     phone: string;
     dateOfBirth: string;
     gender: string;
+    /** Nacionalidade canônica (nome do país no `COUNTRIES_PT_BR`). Sem isso o
+     *  backend salva como "Brasil" por default, ignorando estrangeiros. */
+    country?: string;
+    /** "CPF" pra brasileiro, "PASSPORT" pra estrangeiro — backend usa pra
+     *  normalizar documentNumber via cleanDocumentNumber. */
+    documentType?: "CPF" | "PASSPORT";
   }): Promise<{
     success: boolean;
     data?: {
@@ -916,6 +953,8 @@ export class UserService {
       phone: string;
       dateOfBirth: string;
       gender: string;
+      country?: string;
+      documentType?: string;
       wasCreated: boolean;
       wasLinked: boolean;
     };
@@ -933,11 +972,19 @@ export class UserService {
           phone: string;
           dateOfBirth: string;
           gender: string;
+          country?: string;
+          documentType?: string;
           wasCreated: boolean;
           wasLinked: boolean;
         };
         error?: string;
       }>("/api/v1/user/linked-users", data);
+
+      // Normaliza gentílico → nome canônico (igual `getUserByCpf`) pra qualquer
+      // consumidor já receber o valor pronto pro select de nacionalidade.
+      if (response.data.data?.country) {
+        response.data.data.country = normalizeNationality(response.data.data.country);
+      }
 
       return response.data;
     } catch (error: any) {

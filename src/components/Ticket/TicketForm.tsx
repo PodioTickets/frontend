@@ -502,7 +502,6 @@ export function TicketForm({
               return {
                 id: b.id || `batch-${index}`,
                 quantity: b.quantity?.toString() || "",
-                // Aceita 0 como valor válido (lote gratuito/cortesia).
                 price:
                   typeof b.price === "number"
                     ? `R$${(b.price / 100).toFixed(2).replace(".", ",")}`

@@ -75,6 +75,10 @@ const PT_BR_ALIASES: Record<string, string> = {
   "Palestina": "PS",
   "Polônia": "PL",
   "Quênia": "KE",
+  // i18n-iso-countries (pt) tem os Congos TROCADOS: resolve esta string p/ CG
+  // (Congo-Brazzaville, +242). A RDC é CD (+243). Alias explícito corrige o
+  // código de discagem/máscara/validação de telefone. "Congo" → CG segue certo.
+  "República Democrática do Congo": "CD",
   "Romênia": "RO",
   "São Cristóvão e Nevis": "KN",
   "Seicheles": "SC",
