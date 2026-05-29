@@ -1974,7 +1974,7 @@ export function InformationStep({
                                     });
                                   }
                                 }}
-                                onSelectUser={(user: LinkedUser) => {
+                                onSelectUser={async (user: LinkedUser) => {
                                   /* `formattedPhone` recalculado depois que sabemos a
                                    * nacionalidade herdada — máscara depende dela. */
 
@@ -2036,6 +2036,37 @@ export function InformationStep({
                                     ...prev,
                                     [participantIndex]: user.id,
                                   }));
+
+                                  /* LinkedUser.country e herdado do MAIN user (Brasil),
+                                   * nao do proprio perfil — por isso um vinculado
+                                   * estrangeiro vinha como brasileiro. Busca os dados
+                                   * AUTORITATIVOS pelo documento no backend (retorna o
+                                   * country real, telefone e tipo de doc) e sobrescreve.
+                                   * Best-effort: se o lookup falhar (perfil sem conta),
+                                   * mantem o que veio do linked. */
+                                  const lookupDoc = (user.documentNumber || "").trim();
+                                  if (lookupDoc.length >= 4) {
+                                    try {
+                                      const looked = await userService.getUserByCpf(lookupDoc);
+                                      if (looked) {
+                                        const realNationality =
+                                          (looked as any).country?.trim() || inheritedNationality;
+                                        const realIsBr = isBrazilianCountry(realNationality);
+                                        const realDocRaw = (looked as any).documentNumber || docValue;
+                                        updateParticipant(participantIndex, {
+                                          nationality: realNationality,
+                                          // Reformata o doc conforme o pais real (CPF mascara
+                                          // so BR; estrangeiro fica cru).
+                                          cpf: realIsBr ? maskCPF(realDocRaw) : String(realDocRaw).slice(0, 30),
+                                          phone: (looked as any).phone
+                                            ? formatPhoneForCountry((looked as any).phone, realNationality)
+                                            : formattedPhone,
+                                        });
+                                      }
+                                    } catch {
+                                      /* sem conta vinculada no backend — mantem linked data */
+                                    }
+                                  }
                                 }}
                                 placeholder="Digite seu nome completo"
                                 className={`w-full ${selectedLinkedUserIds[participantIndex] ? "pr-9" : ""} ${fieldErrors[participantIndex]?.name ? "border-red-6 rounded-lg" : ""}`}
