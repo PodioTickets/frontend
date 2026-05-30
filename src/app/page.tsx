@@ -30,8 +30,8 @@ export default function Home() {
       </div>
 
       {/* Sombreamento full-width (de ponta a ponta) separando a secao de eventos do resto.
-          bg transparente + box-shadow borrada = sombra difusa, nao uma linha solida. */}
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-4 md:mt-6 h-px bg-transparent shadow-[0_4px_16px_rgba(0,0,0,0.08)]" />
+          Gradiente vertical (escuro no topo -> transparente) = sombra difusa VISIVEL, sem linha. */}
+      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-3 md:mt-5 h-4 md:h-6 bg-gradient-to-b from-black/10 to-transparent" />
     </section>
   );
 }
