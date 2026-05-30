@@ -28,6 +28,9 @@ export default function Home() {
           />
         </div>
       </div>
+
+      {/* Linha full-width (de ponta a ponta da pagina) separando a secao de eventos do resto */}
+      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-10 md:mt-16 h-px bg-gray-6 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06)]" />
     </section>
   );
 }
