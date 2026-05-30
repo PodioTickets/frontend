@@ -27,6 +27,7 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
+import { YoutubeIcon } from "../Icons/YoutubeIcon";
 
 function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
   const { language, setLanguage } = useLanguage();
@@ -481,22 +482,25 @@ export function Header() {
                   </div>
                   <div className="flex items-center justify-center gap-2 whitespace-nowrap shrink-0 mb-4">
                     <Link
-                      href="https://www.instagram.com/podiotickets/"
+                      target="_blank"
+                      href="https://www.instagram.com/podioticket"
                       className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
                     >
                       <InstagramIcon className="w-full h-full text-gray-2" />
                     </Link>
                     <Link
+                      target="_blank"
                       href="https://x.com/podiotickets"
                       className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
                     >
                       <TwitterIcon className="w-full h-full text-gray-2" />
                     </Link>
                     <Link
-                      href="https://www.facebook.com/podiotickets"
+                      target="_blank"
+                      href="https://www.youtube.com/channel/UCqBDBJJiUulbW2iplU_8SvQ"
                       className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
                     >
-                      <FacebookIcon className="w-full h-full text-gray-2" />
+                      <YoutubeIcon className="w-full h-full text-gray-2" />
                     </Link>
                   </div>
 

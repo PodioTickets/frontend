@@ -94,7 +94,8 @@ export function Footer() {
 
         {/* Copyright Mobile */}
         <p className="text-white text-xs text-center">
-          © {currentYear} - Todos os direitos reservados para PódioTicket - 65.174.909/0001-01
+          © {currentYear} - Todos os direitos reservados para PódioTicket
+          <br /> CNPJ: 65.174.909/0001-01
         </p>
       </div>
 
@@ -163,8 +164,9 @@ export function Footer() {
           </div>
         </div>
 
-        <p className="text-[#B4B4B4] text-sm mt-10">
-          © {currentYear} - Todos os direitos reservados para PódioTicket - 65.174.909/0001-01
+        <p className="text-[#B4B4B4] text-sm text-center mt-10">
+          © {currentYear} - Todos os direitos reservados para PódioTicket
+          <br /> CNPJ: 65.174.909/0001-01
         </p>
       </div>
     </footer>
