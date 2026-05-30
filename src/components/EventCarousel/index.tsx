@@ -42,9 +42,8 @@ export function EventCarousel({
     align: "start",
     loop: false,
     containScroll: "trimSnaps",
-    // Arrasto livre com inercia: scroll horizontal fluido no mobile (segue o dedo
-    // com momentum) em vez de travar parcela a parcela. Setas/dots seguem usando snaps.
-    dragFree: true,
+    // Sem dragFree: com snap o ultimo card sempre assenta (flush-right). dragFree +
+    // trimSnaps nao alcancava o ultimo (puxava de volta pro penultimo). Snap e suave.
   });
 
   const [selectedIndex, setSelectedIndex] = useState(0);
