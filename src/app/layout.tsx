@@ -80,7 +80,7 @@ export default async function RootLayout({
           <OrganizerAppSurfaceProvider value={isAppOrganizerSurface}>
             <ToasterWrapper />
             <Providers>
-              <div className="flex flex-col min-h-screen bg-gray-2 overflow-x-clip">
+              <div className="flex flex-col min-h-screen bg-gray-2">
                 <Header />
 
                 <Suspense fallback={<Loading />}>
