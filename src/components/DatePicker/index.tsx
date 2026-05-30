@@ -220,10 +220,10 @@ export function DatePicker({
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (open) {
-      // Reseta a view ao abrir: mes atual (openAtCurrentMonth) ou o mes do
-      // valor selecionado. PopoverContent remonta, mas o state do componente
-      // persiste — sem reset, a view ficaria no ultimo mes navegado.
-      setViewMonth(openAtCurrentMonth ? new Date() : (validDate ?? new Date()));
+      // Ao abrir, mostra o mes/ano da data ja escrita no input (validDate); se
+      // vazio, mes atual. PopoverContent remonta mas o state persiste — sem este
+      // reset a view ficaria no ultimo mes navegado em vez da data selecionada.
+      setViewMonth(validDate ?? new Date());
       if (value) {
         const parsed = parseValueToDate(value);
         if (parsed && !isSelectionAllowed(parsed)) {

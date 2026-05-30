@@ -42,6 +42,9 @@ export function EventCarousel({
     align: "start",
     loop: false,
     containScroll: "trimSnaps",
+    // Arrasto livre com inercia: scroll horizontal fluido no mobile (segue o dedo
+    // com momentum) em vez de travar parcela a parcela. Setas/dots seguem usando snaps.
+    dragFree: true,
   });
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -102,7 +105,7 @@ export function EventCarousel({
         <ChevronRight className="size-5 text-gray-12" />
       </button>
 
-      <div ref={emblaRef} className="overflow-hidden px-1 md:p-4">
+      <div ref={emblaRef} className="overflow-hidden px-1 py-4 md:p-4">
         <div className="flex gap-4">
           {events?.map((event) => (
             <div key={event.id} style={slideStyle}>

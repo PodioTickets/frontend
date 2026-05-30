@@ -1420,6 +1420,7 @@ export function TicketForm({
 
       {/* Footer */}
       <div
+        data-fixed-bottom-bar="true"
         className={cn(
           "fixed inset-x-0 bottom-0 z-40 flex flex-col gap-3 border-t border-gray-6 bg-gray-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:static md:z-auto md:mt-9 md:flex-row md:items-center md:justify-between md:border-0 md:bg-transparent md:p-0 md:pb-0",
           mode === "edit" && ticketId ? "" : "md:justify-end",
