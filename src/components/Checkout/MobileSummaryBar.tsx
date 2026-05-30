@@ -317,7 +317,7 @@ export function MobileSummaryBar({
                     {additionalProducts && additionalProducts.total > 0 && (
                       <SummaryRow
                         label={`${additionalProducts.count ? ` (${additionalProducts.count}x)` : ""
-                          } Produtos adicionais`}
+                          } ${additionalProducts.count === 1 ? "Produto adicional" : "Produtos adicionais"}`}
                         value={formatPrice(additionalProducts.total)}
                       />
                     )}

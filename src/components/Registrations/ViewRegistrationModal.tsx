@@ -25,6 +25,16 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 
+/** Badge exibido quando o organizador trocou a variação do produto do
+ *  participante (snapshot `variationEdited: true`). */
+function VariationEditedBadge() {
+  return (
+    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-yellow-3 px-2 py-0.5 text-xs font-medium text-yellow-12">
+      Variação alterada
+    </span>
+  );
+}
+
 function formatAnswer(answer: any): string {
   if (answer == null) return "—";
   if (Array.isArray(answer)) return answer.join(", ");
@@ -168,22 +178,35 @@ export function ViewRegistrationModal() {
     return null;
   }
 
+  /* Novo endpoint (`registrations-get-by-id.md`): os dados vêm do
+   * `receiptSnapshot` congelado, com o participante em `participant` (string
+   * única `name`, `documentNumber`/`documentType`/`country`, `birthDate`).
+   * Mantemos fallback pro shape LEGADO (findOneLive — inscrições sem snapshot):
+   * `user`/`buyer` (first/last/fullName), `modalities`, `kitItems`,
+   * `emergencyContact`. Chaves nulas/vazias são removidas pelo backend, então
+   * todo acesso é opcional. */
+  const snapshotParticipant = currentRegistration?.participant ?? null;
+  const user = currentRegistration?.user || currentRegistration?.buyer || null;
+
   const ticketName = currentRegistration?.ticket?.name || currentRegistration?.modalities?.[0]?.modality?.name || "—";
   const categoryName = currentRegistration?.ticket?.category?.name || currentRegistration?.modalities?.[0]?.modality?.category?.name || "Ingresso avulso";
-  const user = currentRegistration?.user || currentRegistration?.buyer;
-  const participantName = user
-    ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.fullName || "—"
-    : "—";
-  const participantEmail = user?.email || "—";
-  const participantCPFRaw = user?.documentNumber || null;
+  const participantName =
+    snapshotParticipant?.name ||
+    (user
+      ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.fullName
+      : "") ||
+    "—";
+  const participantEmail = snapshotParticipant?.email || user?.email || "—";
+  const participantCPFRaw = snapshotParticipant?.documentNumber || user?.documentNumber || null;
+  const participantDocumentType = snapshotParticipant?.documentType || user?.documentType || null;
 
-  /* Nacionalidade do participante pra exibir documento/telefone i18n. O backend
-   * pode não enviar `country`/`documentType` neste endpoint — a heurística cai
-   * pro shape do doc (11 dígitos = CPF) com segurança. */
-  const participantCountry = user?.country ?? user?.nationality ?? null;
+  /* Nacionalidade do participante pra exibir documento/telefone i18n. Quando o
+   * backend não envia `country`/`documentType`, a heurística cai pro shape do
+   * doc (11 dígitos = CPF) com segurança. */
+  const participantCountry = snapshotParticipant?.country ?? user?.country ?? user?.nationality ?? null;
   const participantIsBr = isPersonBr({
     country: participantCountry,
-    documentType: user?.documentType,
+    documentType: participantDocumentType,
     document: participantCPFRaw,
   });
 
@@ -193,44 +216,50 @@ export function ViewRegistrationModal() {
     formatPersonPhone(phone, participantCountry);
   const participantCPF = participantCPFRaw || "—";
 
-  const participantBirthDate = user?.dateOfBirth
-    ? (() => {
-      try {
-        const date = new Date(user.dateOfBirth);
-        const day = date.getDate().toString().padStart(2, "0");
-        const month = (date.getMonth() + 1).toString().padStart(2, "0");
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-      } catch {
-        return "—";
-      }
-    })()
-    : "—";
-  const participantGender = getGenderLabel(user?.gender);
-  const participantPhone = user?.phone || null;
+  /* birthDate: o snapshot manda date-only "YYYY-MM-DD". `new Date(date-only)` é
+   * interpretado como UTC meia-noite → em BRT (UTC-3) volta pro dia anterior.
+   * Por isso parseamos YMD manualmente; só caímos no `new Date` pra ISO completo
+   * (legado `user.dateOfBirth`). */
+  const rawBirthDate = snapshotParticipant?.birthDate || user?.dateOfBirth || null;
+  const participantBirthDate = (() => {
+    if (!rawBirthDate) return "—";
+    const ymd = String(rawBirthDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (ymd) return `${ymd[3]}/${ymd[2]}/${ymd[1]}`;
+    try {
+      const date = new Date(rawBirthDate);
+      if (isNaN(date.getTime())) return "—";
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      return `${day}/${month}/${date.getFullYear()}`;
+    } catch {
+      return "—";
+    }
+  })();
+  const participantGender = getGenderLabel(snapshotParticipant?.gender || user?.gender);
+  const participantPhone = snapshotParticipant?.phone || user?.phone || null;
   const emergencyPhone = currentRegistration.emergencyContact?.name
     ? currentRegistration.emergencyContact.name + " - " + formatPhone((currentRegistration.emergencyContact.phone ?? "").toString())
     : null;
 
-  // Obter distância do ticket
-  const ticketDistance = currentRegistration?.ticket?.distance
-    ? (() => {
-      // Se distance for uma string como "5 KM", extrair o número
-      const distanceStr = String(currentRegistration.ticket.distance);
-      const distanceMatch = distanceStr.match(/(\d+(?:\.\d+)?)/);
-      if (distanceMatch) {
-        return `${distanceMatch[1]} Km`;
-      }
-      // Se for número em metros, converter para km
-      const distanceNum = parseFloat(distanceStr);
-      if (!isNaN(distanceNum)) {
-        return distanceNum >= 1000 ? `${(distanceNum / 1000).toFixed(1)} Km` : `${distanceNum} m`;
-      }
-      return distanceStr;
-    })()
-    : currentRegistration?.modalities?.[0]?.modality?.distance
-      ? `${(parseFloat(String(currentRegistration.modalities[0].modality.distance)) / 1000).toFixed(1)} Km`
-      : "—";
+  /* Distância: o snapshot manda `distance` ("14") + `distanceUnit` ("KM")
+   * separados → juntamos. Legado pode vir embutido ("5 KM") ou em metros nas
+   * `modalities`. */
+  const ticketDistance = (() => {
+    const ticket = currentRegistration?.ticket;
+    const dist = ticket?.distance;
+    if (dist != null && String(dist).trim() !== "") {
+      const distanceStr = String(dist).trim();
+      // Legado já vinha com a unidade embutida (ex.: "5 KM") — não duplica.
+      if (/[a-zA-Z]/.test(distanceStr)) return distanceStr;
+      const unit = ticket?.distanceUnit || "Km";
+      return `${distanceStr} ${unit}`;
+    }
+    const modalityDist = currentRegistration?.modalities?.[0]?.modality?.distance;
+    if (modalityDist != null) {
+      return `${(parseFloat(String(modalityDist)) / 1000).toFixed(1)} Km`;
+    }
+    return "—";
+  })();
 
   // Obter perguntas e produtos reais
   const questions = currentRegistration?.questionAnswers || [];
@@ -243,8 +272,35 @@ export function ViewRegistrationModal() {
   const kitItems = currentRegistration?.kitItems || [];
   const includedProducts = currentRegistration?.ticket?.includedProducts || [];
 
-  // Mapear registration.products para o formato esperado
+  // Mapear registration.products para o formato esperado. O snapshot novo traz
+  // os campos NO TOPO do item (`name`, `images[]` + `primaryImageIndex`,
+  // `selectedVariation`, `unitPrice`); o legado (findOneLive) aninha em
+  // `item.product`/`item.variation`. Detectamos pelo shape e tratamos ambos.
   const mappedRegistrationProducts = registrationProducts.map((item: any) => {
+    const isSnapshot =
+      item?.name !== undefined ||
+      item?.images !== undefined ||
+      item?.selectedVariation !== undefined;
+
+    if (isSnapshot) {
+      const images = Array.isArray(item.images) ? item.images : [];
+      const image = images[item.primaryImageIndex ?? 0] ?? images[0];
+      const unitPrice = item.unitPrice ?? item.basePrice ?? 0;
+      return {
+        id: item.id,
+        productName: item.name || "Produto",
+        productImage: image || "/banners/card_placeholder.png",
+        variationType: item.variationType || null,
+        variationName: item.selectedVariation?.name || null,
+        price: unitPrice,
+        quantity: item.quantity || 1,
+        isIncluded: unitPrice === 0,
+        // Backend sinaliza quando o organizador trocou a variação do participante.
+        variationEdited: item.variationEdited === true,
+      };
+    }
+
+    // Legado (findOneLive)
     return {
       id: item.id,
       productName: item.product?.name || "Produto",
@@ -253,7 +309,8 @@ export function ViewRegistrationModal() {
       variationName: item.variation?.name || item.variationName || null,
       price: item.unitPrice || item.totalPrice || 0,
       quantity: item.quantity || 1,
-      isIncluded: item.unitPrice === 0 && item.totalPrice === 0
+      isIncluded: item.unitPrice === 0 && item.totalPrice === 0,
+      variationEdited: item.variationEdited === true,
     };
   });
 
@@ -514,6 +571,11 @@ export function ViewRegistrationModal() {
                                   <p className="font-family-dm-sans font-normal text-sm text-gray-11">
                                     {product.variationType || "Variação"}: {product.variationName}
                                   </p>
+                                )}
+                                {product.variationEdited && (
+                                  <div className="mt-1">
+                                    <VariationEditedBadge />
+                                  </div>
                                 )}
                                 <p className="font-manrope font-semibold text-base text-gray-12 mt-1">
                                   {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
@@ -804,18 +866,26 @@ export function ViewRegistrationModal() {
                                       <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
                                         {product.productName}
                                       </p>
-                                      <div className="flex items-center justify-between">
+
+                                      <div className="flex items-end justify-between">
                                         <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
                                           {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}
                                         </p>
                                         {product.variationName && (
-                                          <div className="flex gap-1 items-center">
-                                            <p className="font-family-dm-sans font-normal text-base leading-[1.3] text-gray-12">
-                                              {product.variationType || "Variação"}:
-                                            </p>
-                                            <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                                              {product.variationName}
-                                            </p>
+                                          <div className="flex flex-col items-end">
+                                            {product.variationEdited && (
+                                              <div className="mb-2">
+                                                <VariationEditedBadge />
+                                              </div>
+                                            )}
+                                            <div className="flex gap-1 items-center">
+                                              <p className="font-family-dm-sans font-normal text-base leading-[1.1] text-gray-12">
+                                                {product.variationType || "Variação"}:
+                                              </p>
+                                              <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                                                {product.variationName}
+                                              </p>
+                                            </div>
                                           </div>
                                         )}
                                       </div>
@@ -961,6 +1031,11 @@ export function ViewRegistrationModal() {
                                 <p className="font-family-dm-sans font-semibold text-base leading-[1.3] text-gray-12 line-clamp-2 mb-2">
                                   {product.productName}
                                 </p>
+                                {product.variationEdited && (
+                                  <div className="mb-2">
+                                    <VariationEditedBadge />
+                                  </div>
+                                )}
                                 <div className="flex items-center justify-between">
                                   <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
                                     {product.isIncluded ? "Incluído" : `R$ ${typeof product.price === "number" ? (product.price / 100).toFixed(2).replace(".", ",") : product.price}`}

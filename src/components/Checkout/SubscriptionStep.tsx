@@ -947,7 +947,7 @@ export function SubscriptionStep({
                     {getAdditionalProductsCount(participantIndex) > 0 && (
                       <div className="flex items-center justify-between mb-6">
                         <p className="text-sm font-semibold text-gray-12">
-                          {getAdditionalProductsCount(participantIndex)}x Itens adicionais:
+                          {getAdditionalProductsCount(participantIndex)}x {getAdditionalProductsCount(participantIndex) > 1 ? "Itens adicionais" : "Item adicional"}:
                         </p>
                         <p className="text-base font-bold text-gray-12">
                           {formatPrice(getAdditionalProductsTotal(participantIndex))}
@@ -1012,7 +1012,7 @@ export function SubscriptionStep({
                       {getAdditionalProductsCount(participantIndex) > 0 && (
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-sm font-semibold text-gray-12">
-                            {getAdditionalProductsCount(participantIndex)}x Itens adicionais:
+                            {getAdditionalProductsCount(participantIndex)}x {getAdditionalProductsCount(participantIndex) > 1 ? "Itens adicionais" : "Item adicional"}:
                           </p>
                           <p className="text-base font-bold text-gray-12">
                             {formatPrice(getAdditionalProductsTotal(participantIndex))}
@@ -1277,7 +1277,7 @@ export function SubscriptionStep({
                         </p>
                         {getAdditionalProductsCount(participantIndex) > 0 && (
                           <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
-                            {getAdditionalProductsCount(participantIndex)}x Itens adicionais:
+                            {getAdditionalProductsCount(participantIndex)}x {getAdditionalProductsCount(participantIndex) > 1 ? "Itens adicionais" : "Item adicional"}:
                             <span className="text-gray-12 font-bold">
                               {formatPrice(getAdditionalProductsTotal(participantIndex))}
                             </span>

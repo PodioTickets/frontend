@@ -91,7 +91,7 @@ function ParticipantCard({
           {additionalProducts.length > 0 && (
             <div className="flex items-end justify-between w-full text-gray-12">
               <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
-                Produtos adicionais ({additionalProducts.length}):
+                {additionalProducts.length > 1 ? "Produtos adicionais" : "Produto adicional"} ({additionalProducts.length}):
               </p>
               <p className="font-manrope font-bold text-lg leading-[1.1]">
                 {formatCurrency(totalAdditionalProducts)}

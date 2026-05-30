@@ -421,64 +421,18 @@ export function InformationStep({
     return getTicketOriginalPrice(ticket);
   };
 
-  /* Breakdown pra renderizar strike-through quando há desconto ativo no card.
-   * Preview client-side igual ao /ingressos (`resolvePreviewPrice` do
-   * TicketCategoryCard) — `ticketUnitPriceForPrePaymentCents` sempre retorna
-   * `unitPrice` cheio (convenção: desconto vai em linha separada no resumo),
-   * então NÃO dá pra derivar `hasDiscount` da order direto.
-   *
-   * Precedência (espelha /ingressos): cupom manual de link > cupom automático
-   * de idade. Voucher é tratado separado no resumo (cobre 1 unidade só, sem
-   * mapeamento natural pro card individual aqui).
-   *
-   * Só desconta o card quando `appliesTo` cobre o ticket (null/"all" → todos;
-   * JSON com ticketIds → checagem por ID). Caso contrário o resumo já tem o
-   * desconto correto e o preço unitário segue cheio. */
-  const couponAppliesToTicket = (
-    appliesTo: string | null | undefined,
-    ticketId: string,
-  ): boolean => {
-    if (!appliesTo || appliesTo === "all") return true;
-    try {
-      const parsed = JSON.parse(appliesTo);
-      return Array.isArray(parsed) && parsed.includes(ticketId);
-    } catch {
-      return false;
-    }
-  };
-
-  const applyCouponToPrice = (
-    price: number,
-    type: string,
-    value: number,
-  ): number => {
-    if (!(value > 0)) return price;
-    if (type === "PERCENTAGE") return Math.max(0, price * (1 - value / 100));
-    if (type === "FIXED") return Math.max(0, price - value / 100);
-    return price;
-  };
-
-  const getTicketPriceBreakdown = (
-    ticket: Ticket,
-  ): { discounted: number; original: number; hasDiscount: boolean } => {
-    const original = getTicketOriginalPrice(ticket);
-    let discounted = original;
-
-    // Só corta o card quando o SERVIDOR confirma desconto de cupom
-    // (`couponDiscountAmount > 0`) E o cupom cobre este ticket — evita o card
-    // cortar (preview client-side) sem o resumo mostrar nada. Cupom de idade
-    // entra aqui via `appliedCoupon` (couponType AGE) quando o servidor o aplica.
-    if (
-      appliedCoupon &&
-      showCouponDiscount &&
-      couponDiscountAmount > 0 &&
-      couponAppliesToTicket(appliedCoupon.appliesTo, ticket.id)
-    ) {
-      discounted = applyCouponToPrice(original, appliedCoupon.type, appliedCoupon.value);
-    }
-
-    return { discounted, original, hasDiscount: discounted < original };
-  };
+  /* Reservas da order agrupadas por `ticketId`. O backend devolve UMA entrada
+   * por unidade reservada (não agregada por tipo), cada uma já com o desconto
+   * que será cobrado (`unitDiscount`/`finalUnitPrice` por reserva). Mesma fonte
+   * que o `OrderSummary`/`PaymentStep` usam — server é a única verdade. */
+  const reservedTicketsByTicketId = useMemo(() => {
+    type ReservedTicket = NonNullable<typeof orderData>["tickets"][number];
+    const map: Record<string, ReservedTicket[]> = {};
+    orderData?.tickets?.forEach((t) => {
+      (map[t.ticketId] ??= []).push(t);
+    });
+    return map;
+  }, [orderData]);
 
   // Criar lista de participantes baseada nos tickets selecionados
   const participantsWithRaces = useMemo(() => {
@@ -517,6 +471,34 @@ export function InformationStep({
 
     return result;
   }, [raceQuantities, categorizedTickets, uncategorizedTickets]);
+
+  /* Breakdown do strike-through por CARD, 100% server-driven (sem recálculo de
+   * cupom/idade no cliente). Cada card consome a n-ésima reserva do seu
+   * `ticketId` (contador posicional, igual `OrderSummary`/`PaymentStep`): o
+   * backend já decidiu QUAL unidade recebeu o desconto, então só corta o card
+   * cuja reserva tem `unitDiscount > 0`. `original` = `unitPrice` cheio;
+   * `discounted` = `unitPrice - unitDiscount` (cobre cupom AGE/DISCOUNT e
+   * voucher de forma uniforme). Sem reserva (order ainda carregando) → fallback
+   * pro preço cheio do catálogo, sem corte. */
+  const ticketPriceBreakdownByCard = useMemo(() => {
+    const counters: Record<string, number> = {};
+    return participantsWithRaces.map(({ ticket, ticketId }) => {
+      const reservations = reservedTicketsByTicketId[ticketId] ?? [];
+      const idx = counters[ticketId] ?? 0;
+      counters[ticketId] = idx + 1;
+      const reserved = reservations[idx];
+
+      if (!reserved) {
+        const original = getTicketOriginalPrice(ticket);
+        return { discounted: original, original, hasDiscount: false };
+      }
+      const unitPriceCents = reserved.unitPrice ?? 0;
+      const unitDiscountCents = reserved.unitDiscount ?? 0;
+      const original = unitPriceCents / 100;
+      const discounted = Math.max(0, unitPriceCents - unitDiscountCents) / 100;
+      return { discounted, original, hasDiscount: unitDiscountCents > 0 };
+    });
+  }, [participantsWithRaces, reservedTicketsByTicketId]);
 
   /* True quando TODOS os participantes da reserva já passaram pelo "Salvar e
    * próximo" (= `savedParticipants[idx]`). Usado pra desabilitar o botão final
@@ -1899,7 +1881,12 @@ export function InformationStep({
                 participantAge !== null && isAgeWithinTicketLimit(participantAge, ticket.ageLimit);
               const showAgeBadge =
                 !!ageLimitText && (participantAge !== null ? !participantFits : !buyerFits);
-              const priceBreakdown = getTicketPriceBreakdown(ticket);
+              const priceBreakdown =
+                ticketPriceBreakdownByCard[index] ?? {
+                  discounted: getTicketOriginalPrice(ticket),
+                  original: getTicketOriginalPrice(ticket),
+                  hasDiscount: false,
+                };
 
               return (
                 <div

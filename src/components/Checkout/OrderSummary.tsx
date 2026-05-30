@@ -16,6 +16,7 @@ interface OrderItem {
 
 interface GroupedTicket {
   quantity: number;
+  categoryName?: string;
   raceName: string;
   distance: string;
   price: number;
@@ -179,12 +180,38 @@ export function OrderSummary({
             {event.name}
           </p>
 
+          {/* Ingressos da compra — nomes acima de itens adicionais e cupom,
+              espelhando o resumo da etapa /informacoes. `groupedTickets` vem
+              da order (server-driven); `total` já é o valor cobrado da linha. */}
+          {groupedTickets.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {groupedTickets.map((ticket, index) => (
+                <div
+                  key={index}
+                  className="flex items-end justify-between gap-3 w-full"
+                >
+                  <div className="flex flex-1 flex-col min-w-0">
+                    <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
+                      {ticket.categoryName || "Ingresso avulso"}
+                    </p>
+                    <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12 truncate">
+                      {ticket.quantity}x {ticket.raceName}
+                    </p>
+                  </div>
+                  <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12 shrink-0">
+                    {formatPrice(ticket.total)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Itens adicionais */}
           {items.length > 0 && (
             <div className="flex gap-8 items-center">
               <div className="flex flex-1 flex-col">
                 <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                  {items.length}x Itens adicionais:
+                  {items.length}x {items.length > 1 ? "Itens adicionais" : "Item adicional"}:
                 </p>
               </div>
               <div className="flex flex-col items-end">
@@ -344,8 +371,10 @@ export function OrderSummary({
                         participantData.additionalProducts.length > 0 && (
                           <div className="flex items-end justify-between w-full text-gray-12">
                             <p className="font-family-dm-sans font-normal text-base leading-[1.3]">
-                              Produtos adicionais (
-                              {participantData.additionalProducts.length}):
+                              {participantData.additionalProducts.length > 1
+                                ? "Produtos adicionais"
+                                : "Produto adicional"}{" "}
+                              ({participantData.additionalProducts.length}):
                             </p>
                             <p className="font-manrope font-bold text-lg leading-[1.1]">
                               {formatPrice(additionalProductsTotal)}

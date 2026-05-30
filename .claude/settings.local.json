@@ -76,7 +76,9 @@
       "mcp__claude_ai_Figma__get_metadata",
       "PowerShell(Join-Path *)",
       "Bash(awk '{print $NF}')",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(sed -n '345,350p;874,880p' src/components/Checkout/PaymentSuccessStep.tsx)",
+      "Bash(sed -n '447,451p' src/components/Checkout/ParticipantSummaryModal.tsx)"
     ]
   },
   "disabledMcpjsonServers": [

@@ -1057,10 +1057,15 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     return map;
   }, [categorizedTickets, uncategorizedTickets]);
 
+  const categoryNameMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories]
+  );
+
   // Agrupa ingressos por ticket para exibição — usa valores do servidor quando disponíveis
   const groupedTickets = useMemo(() => {
     if (currentOrder?.tickets?.length) {
-      const map = new Map<string, { quantity: number; raceName: string; distance: string; price: number; total: number }>();
+      const map = new Map<string, { quantity: number; categoryName?: string; raceName: string; distance: string; price: number; total: number }>();
       currentOrder.tickets.forEach((t) => {
         const local = localTicketLookup.get(t.ticketId);
         const unitPrice = (t.finalUnitPrice ?? t.unitPrice) / 100;
@@ -1072,6 +1077,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         } else {
           map.set(t.ticketId, {
             quantity: t.quantity,
+            categoryName: local?.groupId ? categoryNameMap.get(local.groupId) : undefined,
             raceName: t.batchName ?? local?.name ?? "",
             distance: local?.distance ? `${local.distance} ${local.distanceUnit || ""}` : "",
             price: unitPrice,
@@ -1104,12 +1110,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     });
     return Array.from(map.values()).map(({ ticket, quantity }) => ({
       quantity,
+      categoryName: ticket.groupId ? categoryNameMap.get(ticket.groupId) : undefined,
       raceName: ticket.name,
       distance: ticket.distance ? `${ticket.distance} ${ticket.distanceUnit || ""}` : "",
       price: getTicketPrice(ticket),
       total: getTicketPrice(ticket) * quantity,
     }));
-  }, [currentOrder, localTicketLookup, raceQuantities, categorizedTickets, uncategorizedTickets]);
+  }, [currentOrder, localTicketLookup, categoryNameMap, raceQuantities, categorizedTickets, uncategorizedTickets]);
 
   // Criar lista de participantes baseada nos tickets selecionados
   const participantsWithTickets = useMemo(() => {
@@ -1229,11 +1236,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   };
 
   // Generate participants data for the list
-  const categoryNameMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, c.name])),
-    [categories]
-  );
-
   // Agrupa reservas por ticketId como array (preserva ordem do servidor).
   // Múltiplos participantes do mesmo tipo de ingresso podem ter cupom aplicado de forma independente.
   const reservedTicketsByTicketId = useMemo(() => {
@@ -1644,6 +1646,21 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       syncFromOrder(updated);
       setCurrentOrder(updated);
       setBillingAddressConfirmed(true);
+      // Meta Pixel: InitiateCheckout = usuário confirmou o endereço (CEP) e a
+      // área de pagamento abriu. Disparamos AQUI (não no mount da etapa), pois
+      // só nesse ponto ele de fato "iniciou o checkout" de pagamento. Usamos o
+      // `updated` (order fresca do servidor) pro valor; dedup por order
+      // (`onceKey`) garante 1 disparo mesmo que ele edite e reconfirme.
+      trackMetaPixel(
+        metaPixelId,
+        "InitiateCheckout",
+        {
+          currency: "BRL",
+          value: updated.pricing.total / 100,
+          num_items: totalParticipants,
+        },
+        { onceKey: `ic:${orderId}` },
+      );
     } catch (err) {
       if (err instanceof OrderApiError) {
         if (
@@ -1665,25 +1682,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   // Processar checkout PIX
   // ── Meta Pixel (Facebook) ──────────────────────────────────────────────
-  // Pixel por-evento. InitiateCheckout dispara quando a tela de pagamento abre
-  // com a reserva já carregada; AddPaymentInfo quando o usuário submete o
-  // pagamento (dentro de cada handler de processamento). Dedup por order
-  // garante 1 disparo por pedido mesmo com F5/retentativa.
+  // Pixel por-evento. InitiateCheckout dispara ao CONFIRMAR O ENDEREÇO (ver
+  // `handleBillingAddressConfirmedChange`, quando a área de pagamento abre);
+  // AddPaymentInfo quando o usuário submete o pagamento (dentro de cada handler
+  // de processamento). Dedup por order garante 1 disparo por pedido mesmo com
+  // F5/retentativa.
   const metaPixelId = event.tracking?.metaPixelId;
-
-  useEffect(() => {
-    if (!metaPixelId || !orderId || !currentOrder) return;
-    trackMetaPixel(
-      metaPixelId,
-      "InitiateCheckout",
-      {
-        currency: "BRL",
-        value: currentOrder.pricing.total / 100,
-        num_items: totalParticipants,
-      },
-      { onceKey: `ic:${orderId}` },
-    );
-  }, [metaPixelId, orderId, currentOrder, totalParticipants]);
 
   const fireAddPaymentInfo = () => {
     trackMetaPixel(
