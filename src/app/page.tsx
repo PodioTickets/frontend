@@ -22,9 +22,9 @@ export default function Home() {
         <div className="mt-4 md:mt-8">
           <EventCarousel
             items={20}
-            itemsPerView={4}
-            itemsPerViewMobile={1}
-            itemsPerViewTablet={2}
+            itemsPerView={4.1}
+            itemsPerViewMobile={1.8}
+            itemsPerViewTablet={2.5}
           />
         </div>
       </div>
