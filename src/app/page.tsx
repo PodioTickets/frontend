@@ -22,7 +22,7 @@ export default function Home() {
         {/* Sombra difusa: full-bleed (ponta a ponta) no mobile; contida e simetrica
             no desktop. O carousel (scroll nativo) fica no inner content-width. */}
         <div className="mt-4 md:mt-8 shadow-[0_0_40px_rgba(0,0,0,0.06)] md:rounded-2xl max-md:relative max-md:left-1/2 max-md:right-1/2 max-md:-mx-[50vw] max-md:w-screen">
-          <div className="mx-auto w-full max-w-[1280px] px-4 md:px-8">
+          <div className="mx-auto w-full max-w-[1280px] px-4 md:px-10">
             <EventCarousel
               items={20}
               itemsPerView={4.1}

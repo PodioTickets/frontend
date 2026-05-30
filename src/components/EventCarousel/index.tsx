@@ -88,7 +88,7 @@ export function EventCarousel({
       <button
         onClick={() => scrollByDir(-1)}
         disabled={!canPrev}
-        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
+        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
         aria-label="Slide anterior"
       >
         <ChevronLeft className="size-5 text-gray-12" />
@@ -97,7 +97,7 @@ export function EventCarousel({
       <button
         onClick={() => scrollByDir(1)}
         disabled={!canNext}
-        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
+        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-full z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
         aria-label="Próximo slide"
       >
         <ChevronRight className="size-5 text-gray-12" />
