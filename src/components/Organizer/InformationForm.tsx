@@ -549,7 +549,6 @@ export function InformationForm({
               );
             })}
           </div>
-          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">Clique para adicionar uma rede social</p>
         </div>
       </div>
 
