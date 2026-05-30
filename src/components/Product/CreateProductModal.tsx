@@ -1603,7 +1603,7 @@ export function CreateProductModal() {
                               aria-label="Dias antes do evento para alterar variação"
                             />
                             <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                              dias antes do evento
+                              Dias antes do evento
                             </span>
                           </div>
                         </div>
