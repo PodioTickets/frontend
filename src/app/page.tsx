@@ -20,18 +20,17 @@ export default function Home() {
           Eventos em destaque
         </h1>
         <div className="mt-4 md:mt-8">
-          <EventCarousel
-            items={20}
-            itemsPerView={4.1}
-            itemsPerViewMobile={1.8}
-            itemsPerViewTablet={2.5}
-          />
+          {/* Sombreamento em volta de todos os cards — retangulo desenhado pela sombra nos 4 lados */}
+          <div className="rounded-2xl shadow-[0_0_24px_2px_rgba(0,0,0,0.08)]">
+            <EventCarousel
+              items={20}
+              itemsPerView={4.1}
+              itemsPerViewMobile={1.8}
+              itemsPerViewTablet={2.5}
+            />
+          </div>
         </div>
       </div>
-
-      {/* Sombreamento full-width (de ponta a ponta) separando a secao de eventos do resto.
-          Gradiente vertical (escuro no topo -> transparente) = sombra difusa VISIVEL, sem linha. */}
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-3 md:mt-5 h-4 md:h-6 bg-gradient-to-b from-black/10 to-transparent" />
     </section>
   );
 }
