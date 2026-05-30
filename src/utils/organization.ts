@@ -111,5 +111,13 @@ export function getEventOrganizer(event: Event): {
  * Obtém o ID da organização/organizador do evento
  */
 export function getEventOrganizationId(event: Event): string | null {
-  return event.organizationId || event.organizer?.id || null;
+  // `organizationId` (scalar de topo) não vem no payload público da rota slug;
+  // o id da org está em `event.organization.id`. Mantém o legado `organizer`
+  // como último fallback.
+  return (
+    event.organizationId ||
+    event.organization?.id ||
+    event.organizer?.id ||
+    null
+  );
 }

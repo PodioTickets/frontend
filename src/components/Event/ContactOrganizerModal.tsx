@@ -234,6 +234,14 @@ export function ContactOrganizerModal({
         new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
       setSent(true);
+      // Limpa o formulário após enviar — assunto/mensagem não são re-preenchidos
+      // pelo effect de abertura (só dados do usuário), então sem isso a mensagem
+      // anterior reaparece ao reabrir. Os campos do usuário voltam no próximo open.
+      setForm({ name: "", cpf: "", email: "", phone: "", subject: "", message: "" });
+      setErrors({});
+      setTurnstileToken(null);
+      mobileTurnstileRef.current?.reset();
+      desktopTurnstileRef.current?.reset();
     } catch {
       toast.error("Erro ao enviar mensagem. Tente novamente.");
     } finally {

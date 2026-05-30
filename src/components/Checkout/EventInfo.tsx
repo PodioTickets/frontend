@@ -7,7 +7,7 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useMemo } from "react";
 import type { Ticket } from "@/hooks/useTickets";
-import { getEventOrganizer } from "@/utils/organization";
+import { getEventOrganizer, getEventOrganizationId } from "@/utils/organization";
 import { ContactOrganizerModal } from "@/components/Event/ContactOrganizerModal";
 import { usePendingCouponSnapshot } from "@/hooks/usePendingCoupon";
 import { useCouponPreview } from "@/hooks/useCouponPreview";
@@ -362,6 +362,8 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         onClose={() => setIsContactModalOpen(false)}
         organizerEmail={getEventOrganizer(event)?.email ?? ""}
         eventName={event.name}
+        organizationId={getEventOrganizationId(event) ?? undefined}
+        eventId={event.id}
       />
     </div>
   );
