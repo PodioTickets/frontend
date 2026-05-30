@@ -211,7 +211,7 @@ function ProductCard({
 
   if (variant === "mobile") {
     return (
-      <div className="bg-gray-2 border border-gray-6 rounded-xl overflow-hidden">
+      <div className="bg-gray-2 border border-gray-6 rounded-xl">
         <div className="flex flex-col gap-3 p-4 border-b border-gray-6">
           {product.isIncludedInTicket && !selectedVariation && (
             <span className="self-start inline-flex items-center gap-1.5 h-[27px] px-3 rounded-xl bg-[#fff7c2] border border-[#f3d673]">
