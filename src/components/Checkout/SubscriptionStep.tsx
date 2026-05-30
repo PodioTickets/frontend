@@ -8,6 +8,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import { buildProductsPatchPayload } from "@/lib/checkoutParticipants";
 import {
   ticketUnitPriceForPrePaymentCents,
   isHiddenPrePaymentCoupon,
@@ -17,13 +18,10 @@ import {
   formatCouponLineLabel,
   formatVoucherLineLabel,
 } from "@/lib/orderCouponDiscount";
-import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
-import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
-import { useAuth } from "@/hooks/useAuth";
 import type { Ticket } from "@/hooks/useTickets";
 import { buildParticipantTicketSlots } from "@/lib/checkoutProductStep";
 import { useSubscriptionData } from "@/hooks/useSubscriptionData";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loading } from "../Loading";
 import { MobileSummaryBar } from "./MobileSummaryBar";
 import { ImageCarouselModal } from "./ImageCarouselModal";
@@ -328,7 +326,6 @@ export function SubscriptionStep({
 }: SubscriptionStepProps) {
   const { raceQuantities, participants, updateParticipant } = useCheckout();
   const eventId = event?.id;
-  const { user: authUser } = useAuth();
 
   const {
     loading,
@@ -347,8 +344,9 @@ export function SubscriptionStep({
   // Cálculo local (parsing de `ticket.price`, % do evento) fica apenas como
   // fallback enquanto a query carrega — o estado autoritativo de quanto será
   // cobrado é sempre o do servidor (evita divergência com o que o usuário paga).
-  const { orderId, currentOrder: timerCurrentOrder } = useCheckoutTimer();
-  const { getOrder } = useCheckoutReservation();
+  const { orderId, currentOrder: timerCurrentOrder, syncFromOrder } = useCheckoutTimer();
+  const { getOrder, patchProducts } = useCheckoutReservation();
+  const queryClient = useQueryClient();
   const { data: orderData } = useQuery({
     queryKey: ["checkout-order", orderId],
     queryFn: async () => (orderId ? getOrder(orderId) : null),
@@ -358,6 +356,35 @@ export function SubscriptionStep({
     gcTime: 0,
     refetchOnMount: "always",
   });
+
+  /* Eager-patch server-driven dos PRODUTOS: ao mudar variação/produto, envia o
+   * PATCH /products (mesmo builder do "próximo") com DEBOUNCE e refetch da order
+   * — o `pricing` do servidor (taxa/cupom sobre o subtotal com produtos) passa a
+   * refletir a escolha sem esperar o "próximo". Guarda por assinatura evita
+   * patch idêntico; falha é silenciosa (o "próximo" reenvia). */
+  const lastProductsSigRef = useRef<string | null>(null);
+  const productsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!orderId) return;
+    const payload = buildProductsPatchPayload(participants);
+    const sig = JSON.stringify(payload);
+    if (lastProductsSigRef.current === sig) return;
+    lastProductsSigRef.current = sig;
+    if (productsDebounceRef.current) clearTimeout(productsDebounceRef.current);
+    productsDebounceRef.current = setTimeout(() => {
+      patchProducts(orderId, payload)
+        .then((updated) => {
+          syncFromOrder(updated);
+          queryClient.invalidateQueries({ queryKey: ["checkout-order", orderId] });
+        })
+        .catch(() => {
+          lastProductsSigRef.current = null; // libera retry
+        });
+    }, 400);
+    return () => {
+      if (productsDebounceRef.current) clearTimeout(productsDebounceRef.current);
+    };
+  }, [orderId, participants, patchProducts, syncFromOrder, queryClient]);
 
   // Map ticketId → preço unitário (em reais) vindo da order.
   const orderTicketPriceById = useMemo(() => {
@@ -667,6 +694,13 @@ export function SubscriptionStep({
     } else if (advanceOnComplete) {
       onNext();
     }
+
+    // Mobile: ao salvar, sobe o scroll da tela (após o reflow do colapso/expansão).
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
   };
 
   const getAdditionalProductsTotal = (participantIndex: number): number => {
@@ -762,21 +796,23 @@ export function SubscriptionStep({
   // O GET /orders pode omitir esse campo em algumas versões do backend, então
   // usamos o snapshot do timer como fonte primária e o orderData como fallback.
   const appliedCoupon = timerCurrentOrder?.coupon ?? orderData?.coupon ?? null;
-  // Revela AGE (cupom de idade) pré-pagamento; só QUANTITY fica escondido.
+  // Revela AGE pré-pagamento; só QUANTITY fica escondido. Cupom é UMA linha só
+  // (qualquer tipo): valor de `pricing.couponDiscount`, rótulo por `couponType`.
   const showCouponDiscount = !!appliedCoupon && !isHiddenPrePaymentCoupon(appliedCoupon);
-  const couponBreakdown = useMemo(() => {
-    return computeCouponDiscount(appliedCoupon, totalPrice, totalProductsPrice);
-  }, [appliedCoupon, totalPrice, totalProductsPrice]);
-  const couponDiscountAmount = showCouponDiscount ? couponBreakdown.totalDiscount : 0;
-  const hasCouponLine = !!appliedCoupon && showCouponDiscount && couponDiscountAmount > 0;
-
-  // Voucher (100% sobre os ingressos cobertos) vive em `order.voucher`, separado
-  // do cupom. O desconto já vem calculado pelo backend em `pricing.voucherDiscount`
-  // (centavos): `OrderVoucher` não traz `appliesTo` pra recalcular client-side, e
-  // como o voucher só incide sobre ingressos (que não mudam nesta etapa), o valor
-  // do backend é estável aqui. Clamp no subtotal de ingressos por segurança.
   const appliedVoucher = timerCurrentOrder?.voucher ?? orderData?.voucher ?? null;
-  const voucherDiscountAmount = useMemo(() => {
+
+  // Pricing do servidor (centavos). O backend recomputa a cada PATCH /products
+  // (debounce acima) e devolve a linha de cupom + voucher + taxa + total. Usa
+  // server sempre que há pricing; o fallback client-side cobre só o load.
+  const serverPricing = orderData?.pricing ?? timerCurrentOrder?.pricing ?? null;
+  const useServerPricing = !!serverPricing;
+
+  // ── Fallback client-side (só durante o load, antes do 1º pricing) ──
+  const couponBreakdown = useMemo(
+    () => computeCouponDiscount(appliedCoupon, totalPrice, totalProductsPrice),
+    [appliedCoupon, totalPrice, totalProductsPrice],
+  );
+  const voucherFallback = useMemo(() => {
     if (!appliedVoucher) return 0;
     const cents =
       timerCurrentOrder?.pricing?.voucherDiscount ??
@@ -784,61 +820,38 @@ export function SubscriptionStep({
       0;
     return Math.min(totalPrice, Math.max(0, cents / 100));
   }, [appliedVoucher, timerCurrentOrder, orderData, totalPrice]);
+
+  // ── Valores exibidos: SERVER quando há pricing, senão fallback ──
+  const couponDiscountAmount = !showCouponDiscount
+    ? 0
+    : useServerPricing
+      ? (serverPricing!.couponDiscount ?? 0) / 100
+      : couponBreakdown.totalDiscount;
+  const hasCouponLine = !!appliedCoupon && showCouponDiscount && couponDiscountAmount > 0;
+
+  const voucherDiscountAmount = useServerPricing
+    ? (serverPricing!.voucherDiscount ?? 0) / 100
+    : voucherFallback;
   const hasVoucherLine = !!appliedVoucher && voucherDiscountAmount > 0;
 
-  /* Cupom AUTOMÁTICO de idade (AGE) — mesmo pattern do InformationStep.
-   * `pricing` da order pode ou não refletir o AGE (depende da versão do
-   * backend); enquanto isso usamos a previsão do endpoint de elegibilidade.
-   * Só ativa quando NÃO há cupom/voucher de link (são exclusivos na order). */
-  const { data: ageEligibility } = useAgeCouponEligibility(eventId, !!authUser);
-  const ageCoupon =
-    !appliedCoupon && !appliedVoucher && ageEligibility?.applicable
-      ? ageEligibility.appliedCoupon
-      : null;
-  const ageDiscount = useMemo(() => {
-    if (!ageCoupon) return 0;
-    const selected = (orderData?.tickets ?? []).map((t) => ({
-      id: t.ticketId,
-      price: (t.unitPrice ?? 0) / 100,
-      quantity: t.quantity,
-    }));
-    return computeAgeCouponTicketDiscount(ageCoupon, selected, totalPrice);
-  }, [ageCoupon, orderData, totalPrice]);
-  const hasAgeCouponLine = !!ageCoupon && ageDiscount > 0;
-
-  // Subtotal pós-desconto — base sobre a qual a taxa de serviço incide.
-  // Abate cupom (manual), voucher E cupom de idade (automático): ((tickets +
-  // produtos) - cupom - voucher - idade), clamp em 0. AGE só incide sobre
-  // tickets — produtos seguem cheios no carrinho.
+  // Subtotal pós-desconto — base da taxa no FALLBACK ((tickets+produtos) -
+  // cupom - voucher), clamp em 0.
   const subtotalAfterCoupon = useMemo(
     () =>
       Math.max(
         0,
-        totalPrice +
-          totalProductsPrice -
-          couponDiscountAmount -
-          voucherDiscountAmount -
-          ageDiscount,
+        totalPrice + totalProductsPrice - couponDiscountAmount - voucherDiscountAmount,
       ),
-    [
-      totalPrice,
-      totalProductsPrice,
-      couponDiscountAmount,
-      voucherDiscountAmount,
-      ageDiscount,
-    ],
+    [totalPrice, totalProductsPrice, couponDiscountAmount, voucherDiscountAmount],
   );
 
-  // Taxa de serviço — incide sobre o subtotal JÁ DESCONTADO pelo cupom
-  // (mesma regra do backend pra cupons DISCOUNT). Sempre client-side: o
-  // backend pode estar stale enquanto o user mexe nos produtos.
-  const serviceFee = useMemo(() => {
-    const percent = (event.participantFeePercent ?? 0) / 100;
-    return subtotalAfterCoupon * percent;
-  }, [subtotalAfterCoupon, event.participantFeePercent]);
-
-  // Total = ((tickets + produtos) - cupom) + taxa.
-  const totalAmount = subtotalAfterCoupon + serviceFee;
+  // Taxa e total: no caminho SERVER vêm direto da order; no FALLBACK, recomputa.
+  const serviceFee = useServerPricing
+    ? (serverPricing!.serviceFee ?? 0) / 100
+    : subtotalAfterCoupon * ((event.participantFeePercent ?? 0) / 100);
+  const totalAmount = useServerPricing
+    ? (serverPricing!.total ?? 0) / 100
+    : subtotalAfterCoupon + serviceFee;
 
   if (loading) return <Loading />;
 
@@ -1067,9 +1080,7 @@ export function SubscriptionStep({
             ? { label: formatCouponLineLabel(appliedCoupon!), amount: couponDiscountAmount }
             : hasVoucherLine
               ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
-              : hasAgeCouponLine
-                ? { label: formatAgeCouponLineLabel(ageCoupon!), amount: ageDiscount }
-                : null
+              : null
         }
         additionalProducts={totalProductsPrice > 0 ? { total: totalProductsPrice } : null}
         serviceFee={serviceFee}
@@ -1077,13 +1088,14 @@ export function SubscriptionStep({
         cta={{
           label: "Confirmar produtos",
           onClick: onNext,
-          /* Desabilitado até CADA participante ter passado pelo "Salvar e
-           * próximo" do card (= `completedParticipants[idx]`). `isParticipantComplete`
-           * também conta auto-fill de variação única, o que liberaria o
-           * avanço sem o usuário confirmar cada card — aqui exigimos a
-           * confirmação explícita. */
+          /* Desabilitado quando: (a) há algum card de participante ABERTO
+           * (força o usuário a salvar/minimizar antes de confirmar); ou (b)
+           * algum participante ainda não passou pelo "Salvar e próximo" do card
+           * (= `completedParticipants[idx]`). `isParticipantComplete` conta
+           * auto-fill de variação única, então exigimos confirmação explícita. */
           disabled:
             totalParticipants === 0 ||
+            Object.values(expandedParticipants).some(Boolean) ||
             !participantsWithTickets.every(
               ({ participantIndex }) => completedParticipants[participantIndex],
             ),
@@ -1321,16 +1333,8 @@ export function SubscriptionStep({
                   </p>
                 </div>
               )}
-              {hasAgeCouponLine && (
-                <div className="flex flex-col gap-2 mt-2">
-                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
-                    {formatAgeCouponLineLabel(ageCoupon!)}:
-                    <span className="text-gray-12">-{formatPrice(ageDiscount)}</span>
-                  </p>
-                </div>
-              )}
               {serviceFee > 0 && (
-                <div className={`flex flex-col gap-2 ${hasCouponLine || hasVoucherLine || hasAgeCouponLine ? "mt-2" : "mt-6"}`}>
+                <div className={`flex flex-col gap-2 ${hasCouponLine || hasVoucherLine ? "mt-2" : "mt-6"}`}>
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     Taxa de serviço:
                     <span className="text-gray-12">{formatPrice(serviceFee)}</span>

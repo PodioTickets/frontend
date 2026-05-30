@@ -55,6 +55,14 @@ interface CheckoutState {
   addParticipant: () => void;
   removeParticipant: (index: number) => void;
   resetCheckout: () => void;
+  /**
+   * Vincula os participantes a um pedido. Se o `orderId` difere do pedido a que
+   * os participantes pertenciam (pedido NOVO — reserva idempotente devolve o
+   * mesmo id; concluído/expirado gera um novo), reseta os participantes para
+   * não vazar dados de um pedido anterior. Mantém `raceQuantities` (é a seleção
+   * do pedido atual). Chamado ao reservar o pedido em `/ingressos`.
+   */
+  bindOrder: (orderId: string) => void;
 }
 
 const CheckoutContext = createContext<CheckoutState | undefined>(undefined);
@@ -86,6 +94,8 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
   // nao polui storage entre visitas, e cada aba/evento tem escopo proprio.
   const rqStorageKey = eventId ? `checkout:raceQuantities:${eventId}` : null;
   const pStorageKey = eventId ? `checkout:participants:${eventId}` : null;
+  // Marcador do pedido a que os participantes pertencem (ver `bindOrder`).
+  const pOrderIdKey = eventId ? `checkout:participantsOrderId:${eventId}` : null;
 
   /* Hidratacao SINCRONA no mount via useState initializer.
    *
@@ -179,11 +189,33 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
       try {
         if (rqStorageKey) window.sessionStorage.removeItem(rqStorageKey);
         if (pStorageKey) window.sessionStorage.removeItem(pStorageKey);
+        if (pOrderIdKey) window.sessionStorage.removeItem(pOrderIdKey);
       } catch {
         /* ignora */
       }
     }
-  }, [rqStorageKey, pStorageKey]);
+  }, [rqStorageKey, pStorageKey, pOrderIdKey]);
+
+  const bindOrder = useCallback((orderId: string) => {
+    if (!orderId || typeof window === "undefined" || !pOrderIdKey) return;
+    const prev = readStoredJson<string | null>(pOrderIdKey, null);
+    if (prev === orderId) return; // mesmo pedido (reserva idempotente) → preserva
+    // Pedido diferente. Se HAVIA um anterior, os participantes eram dele →
+    // reseta. Na primeira reserva (prev null) não mexe nos defaults/preenchidos.
+    if (prev) {
+      setParticipants([DEFAULT_PARTICIPANT]);
+      try {
+        if (pStorageKey) window.sessionStorage.removeItem(pStorageKey);
+      } catch {
+        /* ignora */
+      }
+    }
+    try {
+      window.sessionStorage.setItem(pOrderIdKey, JSON.stringify(orderId));
+    } catch {
+      /* ignora */
+    }
+  }, [pOrderIdKey, pStorageKey]);
 
   const contextValue = useMemo(
     () => ({
@@ -194,8 +226,9 @@ function CheckoutProviderContent({ children }: { children: ReactNode }) {
       addParticipant,
       removeParticipant,
       resetCheckout,
+      bindOrder,
     }),
-    [raceQuantities, participants, updateRaceQuantity, updateParticipant, addParticipant, removeParticipant, resetCheckout]
+    [raceQuantities, participants, updateRaceQuantity, updateParticipant, addParticipant, removeParticipant, resetCheckout, bindOrder]
   );
 
   return (
@@ -250,6 +283,9 @@ export function CheckoutPreviewProvider({ children }: { children: ReactNode }) {
     setParticipants([{ ...DEFAULT_PARTICIPANT }]);
   }, []);
 
+  // Preview é em memória e efêmero — sem pedido real pra vincular.
+  const bindOrder = useCallback(() => {}, []);
+
   const contextValue = useMemo(
     () => ({
       raceQuantities,
@@ -259,6 +295,7 @@ export function CheckoutPreviewProvider({ children }: { children: ReactNode }) {
       addParticipant,
       removeParticipant,
       resetCheckout,
+      bindOrder,
     }),
     [
       raceQuantities,
@@ -268,6 +305,7 @@ export function CheckoutPreviewProvider({ children }: { children: ReactNode }) {
       addParticipant,
       removeParticipant,
       resetCheckout,
+      bindOrder,
     ],
   );
 

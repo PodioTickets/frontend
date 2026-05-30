@@ -24,7 +24,7 @@ function CheckoutIngressosContent() {
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { isAuthenticated } = useAuth();
-  const { raceQuantities, updateRaceQuantity } = useCheckout();
+  const { raceQuantities, updateRaceQuantity, bindOrder } = useCheckout();
   const { startTimer, syncFromOrder } = useCheckoutTimer();
   const { reserveOrder, patchCoupon } = useCheckoutReservation();
   const [reserving, setReserving] = useState(false);
@@ -65,6 +65,10 @@ function CheckoutIngressosContent() {
     setReserving(true);
     try {
       const order = await reserveOrder({ eventId, tickets });
+      // Vincula os participantes a este pedido: se for um pedido NOVO (id
+      // diferente do anterior), limpa participantes do pedido passado — evita
+      // herdar dados de uma inscrição anterior do mesmo evento.
+      bindOrder(order.orderId);
       // Fallback quando o timer expirar: volta pro evento.
       const slug = (event as { slug?: string } | null)?.slug;
       const fallbackUrl = slug ? `/events/${slug}` : `/`;

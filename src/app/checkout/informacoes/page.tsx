@@ -12,19 +12,9 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import { OrderApiError } from "@/interfaces/order";
-import { isBrazilianCountry } from "@/validators/Auth.validator";
-import { getPhoneDigitsForBackend } from "@/utils/phone";
+import { buildParticipantsPatchPayload } from "@/lib/checkoutParticipants";
 import toast from "react-hot-toast";
 import CheckoutInformacoesLoading from "./loading";
-
-function mapGender(value?: string) {
-  if (!value) return undefined;
-  const v = value.toLowerCase();
-  if (v.startsWith("m")) return "MALE" as const;
-  if (v.startsWith("f")) return "FEMALE" as const;
-  if (v.includes("prefere") || v.includes("prefer")) return "PREFER_NOT_TO_SAY" as const;
-  return "OTHER" as const;
-}
 
 function CheckoutInformacoesContent() {
   const searchParams = useSearchParams();
@@ -59,67 +49,11 @@ function CheckoutInformacoesContent() {
     );
     const activeParticipants = participants.slice(0, totalParticipantsNeeded);
 
-    const payload = {
-      participants: activeParticipants.map((p) => {
-        const participantIsBr = isBrazilianCountry(p.nationality);
-        /* Brasileiros: strip de máscara (CPF clean). Estrangeiros: documento
-         * cru — passaporte/RNE pode ter letras que não podem ser removidas.
-         * Backend usa documentType pra normalizar corretamente
-         * (cleanDocumentNumber preserva letras pra PASSPORT). */
-        const documentNumber = participantIsBr
-          ? (p.cpf || "").replace(/\D/g, "")
-          : (p.cpf || "").trim();
-        const mapped: {
-          name: string;
-          documentType: "CPF" | "PASSPORT";
-          documentNumber: string;
-          email: string;
-          birthDate: string;
-          phone: string;
-          country?: string;
-          gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
-          emergencyContactName?: string;
-          emergencyPhone?: string;
-          hasEmergencyContact?: boolean;
-          questionAnswers?: Array<{
-            questionId: string;
-            answer: string | boolean | number;
-          }>;
-        } = {
-          name: p.name,
-          documentType: participantIsBr ? "CPF" : "PASSPORT",
-          documentNumber,
-          email: p.email,
-          birthDate: p.birthDate,
-          /* Extrai dígitos nacionais (BR: 11, US: 10, etc.) via libphonenumber-js. */
-          phone: p.phone ? getPhoneDigitsForBackend(p.phone, p.nationality) : "",
-          /* Nacionalidade escolhida pelo participante no checkout — backend
-           * salva no receiptSnapshot.participant.country e usa pra formatar
-           * telefone e decidir label do documento no PDF/email. Sem isso,
-           * o snapshot fica null e o PDF cai no billingCountry (que pode
-           * estar errado: front default 'Brasil' mesmo p/ argentino). */
-          country: p.nationality || undefined,
-        };
-        const gender = mapGender(p.gender);
-        if (gender) mapped.gender = gender;
-        if (p.emergencyContactName?.trim())
-          mapped.emergencyContactName = p.emergencyContactName.trim();
-        if (p.emergencyPhone?.trim())
-          mapped.emergencyPhone = getPhoneDigitsForBackend(p.emergencyPhone, p.nationality);
-        if (p.hasEmergencyContact) mapped.hasEmergencyContact = true;
-        if (p.questionAnswers && Object.keys(p.questionAnswers).length > 0) {
-          mapped.questionAnswers = Object.entries(p.questionAnswers).map(
-            ([questionId, answer]) => ({
-              questionId,
-              answer: Array.isArray(answer)
-                ? JSON.stringify(answer)
-                : (answer as string | boolean | number),
-            }),
-          );
-        }
-        return mapped;
-      }),
-    };
+    // Mesmo builder do eager-sync do InformationStep — não pode divergir.
+    const payload = buildParticipantsPatchPayload(
+      activeParticipants,
+      totalParticipantsNeeded,
+    );
 
     setIsSubmitting(true);
     try {

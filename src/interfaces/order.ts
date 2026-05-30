@@ -52,7 +52,13 @@ export interface OrderVoucher {
 
 export interface OrderPricing {
   subtotal: number;
+  /** Subtotal só dos ingressos (antes de desconto). Opcional até o backend expor. */
+  ticketsSubtotal?: number;
+  /** Subtotal só dos produtos (antes de desconto). Opcional até o backend expor. */
+  productsSubtotal?: number;
   serviceFee: number;
+  /** Desconto de QUALQUER cupom (manual/link DISCOUNT, AGE, QUANTITY). O tipo é
+   *  lido em `coupon.couponType` para o rótulo. */
   couponDiscount?: number;
   voucherDiscount?: number;
   total: number;
@@ -106,7 +112,14 @@ export interface OrderResponse {
   registrations?: OrderRegistration[];
   cancelledAt?: string;
   cancelledReason?: OrderCancelledReason;
+  /** Cupom AUTOMÁTICO (AGE/QUANTITY) caiu por mudança de carrinho/participantes. */
   couponAutoRemoved?: boolean;
+  /**
+   * Cupom/voucher MANUAL submetido foi rejeitado (inválido/expirado/abaixo do
+   * mínimo/CPF/esgotado). O backend devolve HTTP 200 com o pedido INALTERADO +
+   * este campo — o front exibe `reason` (mapeado por `COUPON_ERROR_MESSAGES`).
+   */
+  couponRejected?: { code?: string; reason: string } | null;
 }
 
 // ---- Request bodies ----

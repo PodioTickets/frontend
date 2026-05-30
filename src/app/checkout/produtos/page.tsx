@@ -12,6 +12,7 @@ import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import { OrderApiError } from "@/interfaces/order";
+import { buildProductsPatchPayload } from "@/lib/checkoutParticipants";
 import toast from "react-hot-toast";
 import CheckoutProdutosLoading from "./loading";
 
@@ -62,20 +63,8 @@ function CheckoutProdutosContent() {
       return;
     }
 
-    // Agrega as variações de produto escolhidas por cada participante.
-    const products: Array<{
-      productId: string;
-      variationId?: string;
-      quantity: number;
-      participantEmail: string;
-    }> = [];
-    participants.forEach((p) => {
-      if (!p.productVariations) return;
-      Object.entries(p.productVariations).forEach(([productId, variationId]) => {
-        if (!variationId) return;
-        products.push({ productId, variationId, quantity: 1, participantEmail: p.email });
-      });
-    });
+    // Mesmo builder do eager-patch do SubscriptionStep — não pode divergir.
+    const { products } = buildProductsPatchPayload(participants);
 
     setIsSubmitting(true);
     try {

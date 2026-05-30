@@ -25,6 +25,7 @@ import {
 import { queryKeys } from "@/services/cache/QueryClient";
 import { useDeleteParticipantModal } from "@/stores/modalStore";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
+import { buildParticipantsPatchPayload } from "@/lib/checkoutParticipants";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { UserAutocomplete } from "../UserAutocomplete";
 import { MobileSummaryBar } from "./MobileSummaryBar";
@@ -45,10 +46,10 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X } from "lucide-react";
 import { isHiddenPrePaymentCoupon } from "@/lib/orderAutoCouponDisplay";
-import { formatCouponLineLabel, formatVoucherLineLabel, computeTicketPricingWithDiscount } from "@/lib/orderCouponDiscount";
+import { formatCouponLineLabel, formatVoucherLineLabel } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
 import { useAgeCouponEligibility } from "@/hooks/useAgeCouponEligibility";
-import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel, isAgeWithinTicketLimit } from "@/lib/ageCoupon";
+import { isAgeWithinTicketLimit } from "@/lib/ageCoupon";
 import Image from "next/image";
 
 interface InformationStepProps {
@@ -202,7 +203,7 @@ export function InformationStep({
   } = useCheckout();
 
   const eventId = event?.id;
-  const { clearTimer, orderId, currentOrder: timerCurrentOrder } = useCheckoutTimer();
+  const { clearTimer, orderId, currentOrder: timerCurrentOrder, syncFromOrder } = useCheckoutTimer();
   const { patchParticipants, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth();
@@ -463,17 +464,17 @@ export function InformationStep({
     const original = getTicketOriginalPrice(ticket);
     let discounted = original;
 
+    // Só corta o card quando o SERVIDOR confirma desconto de cupom
+    // (`couponDiscountAmount > 0`) E o cupom cobre este ticket — evita o card
+    // cortar (preview client-side) sem o resumo mostrar nada. Cupom de idade
+    // entra aqui via `appliedCoupon` (couponType AGE) quando o servidor o aplica.
     if (
       appliedCoupon &&
       showCouponDiscount &&
+      couponDiscountAmount > 0 &&
       couponAppliesToTicket(appliedCoupon.appliesTo, ticket.id)
     ) {
       discounted = applyCouponToPrice(original, appliedCoupon.type, appliedCoupon.value);
-    } else if (
-      ageCoupon &&
-      couponAppliesToTicket(ageCoupon.appliesTo, ticket.id)
-    ) {
-      discounted = applyCouponToPrice(original, ageCoupon.type, ageCoupon.value);
     }
 
     return { discounted, original, hasDiscount: discounted < original };
@@ -526,6 +527,35 @@ export function InformationStep({
     participantsWithRaces.every(
       ({ participantIndex }) => savedParticipants[participantIndex],
     );
+
+  /* Eager-sync server-driven do cupom: a CADA "Salvar e próximo" de um
+   * participante, envia o `PATCH /participants` com a lista PARCIAL dos já
+   * salvos (o backend aceita lista parcial — §3.5 — sem liberar vagas) e dá
+   * refetch da order, pro `pricing` (cupom de idade reavaliado por participante)
+   * refletir já no /informacoes, sem esperar o "próximo". Guarda por assinatura
+   * evita re-patch idêntico; falha é silenciosa (o "próximo" reenvia a lista
+   * completa). */
+  const lastSyncedSigRef = useRef<string | null>(null);
+  const syncSavedParticipantsToServer = (savedMap: Record<number, boolean>) => {
+    if (!orderId) return;
+    const savedList = participantsWithRaces
+      .map(({ participantIndex }) => participantIndex)
+      .filter((i) => savedMap[i])
+      .map((i) => participants[i] ?? {});
+    if (savedList.length === 0) return;
+    const payload = buildParticipantsPatchPayload(savedList, savedList.length);
+    const sig = JSON.stringify(payload);
+    if (lastSyncedSigRef.current === sig) return;
+    lastSyncedSigRef.current = sig;
+    patchParticipants(orderId, payload)
+      .then((updated) => {
+        syncFromOrder(updated);
+        queryClient.invalidateQueries({ queryKey: ["checkout-order", orderId] });
+      })
+      .catch(() => {
+        lastSyncedSigRef.current = null; // libera retry
+      });
+  };
 
   // Detecta remoção de todos os ingressos: cancela reserva no servidor e volta
   const hadParticipantsRef = useRef(false);
@@ -645,8 +675,15 @@ export function InformationStep({
   const showCouponDiscount = !!appliedCoupon && !isHiddenPrePaymentCoupon(appliedCoupon);
   const couponDiscountAmount = useMemo(() => {
     if (!showCouponDiscount) return 0;
-    return (orderData?.pricing?.couponDiscount ?? 0) / 100;
-  }, [orderData, showCouponDiscount]);
+    // Fallback pro snapshot do timer (resposta do `patchCoupon`) quando o GET
+    // /orders omite `couponDiscount` — mesma estratégia do voucher abaixo. Sem
+    // isso, o cupom do link (já aplicado no /ingressos) somia aqui.
+    const cents =
+      orderData?.pricing?.couponDiscount ??
+      timerCurrentOrder?.pricing?.couponDiscount ??
+      0;
+    return cents / 100;
+  }, [orderData, timerCurrentOrder, showCouponDiscount]);
 
   // Voucher aplicado na order (via `?voucher=` no /ingressos). Valor autoritativo
   // do `pricing.voucherDiscount` (centavos). Cupom e voucher são mutuamente
@@ -662,47 +699,18 @@ export function InformationStep({
   }, [appliedVoucher, orderData, timerCurrentOrder]);
   const hasVoucherLine = !!appliedVoucher && voucherDiscountAmount > 0;
 
-  // Cupom AUTOMÁTICO de idade: a order NÃO o tem aplicado pré-pagamento (só no
-  // pagamento), então é previsto pelo endpoint de elegibilidade (igual /ingressos)
-  // e mostrado como já aplicado quando NÃO há cupom/voucher (de link). Calculado
-  // client-side sobre os ingressos da order; o backend reconcilia no pagamento.
+  // Cupom (qualquer tipo: DISCOUNT/AGE/QUANTITY) é UMA linha só, server-driven:
+  // o valor vem de `pricing.couponDiscount` (via `couponDiscountAmount` acima) e
+  // o rótulo de `formatCouponLineLabel` (que já trata AGE/QUANTITY → "Cupom
+  // automático"). Sem cálculo client-side de idade no resumo. A elegibilidade
+  // segue só pra derivar a idade do comprador (`buyerAge`, badge de limite).
   const { data: ageEligibility } = useAgeCouponEligibility(eventId, !!authUser);
-  const ageCoupon =
-    !appliedCoupon && !appliedVoucher && ageEligibility?.applicable
-      ? ageEligibility.appliedCoupon
-      : null;
-  const ageDiscount = useMemo(() => {
-    if (!ageCoupon) return 0;
-    const selected = (orderData?.tickets ?? []).map((t) => ({
-      id: t.ticketId,
-      price: (t.unitPrice ?? 0) / 100,
-      quantity: t.quantity,
-    }));
-    return computeAgeCouponTicketDiscount(ageCoupon, selected, totalPrice);
-  }, [ageCoupon, orderData, totalPrice]);
 
-  // Cupom AGE não está na order pré-pagamento, então a taxa autoritativa
-  // (`serviceFee`) incide sobre o subtotal CHEIO. Pra ficar consistente com
-  // /ingressos e /produtos (taxa sobre o subtotal JÁ DESCONTADO), recomputamos
-  // a taxa e o total sobre a base descontada quando há cupom de idade.
-  const ageAdjustedPricing = useMemo(
-    () =>
-      ageDiscount > 0
-        ? computeTicketPricingWithDiscount(
-            ageDiscount,
-            totalPrice,
-            event.participantFeePercent ?? 0,
-          )
-        : null,
-    [ageDiscount, totalPrice, event.participantFeePercent],
-  );
-  const displayedServiceFee = ageAdjustedPricing
-    ? ageAdjustedPricing.serviceFee
-    : serviceFee;
-  // Total exibido já abate o cupom de idade (a order ainda não o reflete).
-  const totalAmountWithAge = ageAdjustedPricing
-    ? ageAdjustedPricing.total
-    : totalAmount - ageDiscount;
+  // Taxa e total exibidos = autoritativos da order. `serviceFee`/`totalAmount`
+  // já leem `pricing.*` (com fallback durante o load) e `orderTotalForPrePayment`
+  // já trata o cupom escondido QUANTITY.
+  const displayedServiceFee = serviceFee;
+  const totalAmountWithAge = totalAmount;
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {
@@ -1840,12 +1848,6 @@ export function InformationStep({
                       <p className="font-semibold font-family-dm-sans">- {formatPrice(voucherDiscountAmount)}</p>
                     </div>
                   )}
-                  {ageCoupon && ageDiscount > 0 && (
-                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">{formatAgeCouponLineLabel(ageCoupon)}:</p>
-                      <p className="font-semibold font-family-dm-sans">- {formatPrice(ageDiscount)}</p>
-                    </div>
-                  )}
                   {displayedServiceFee > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">Taxa de serviço:</p>
@@ -2527,6 +2529,8 @@ export function InformationStep({
                                 },
                               }));
                               setSavedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
+                              // Reavalia o cupom (idade por participante) no servidor já neste save.
+                              syncSavedParticipantsToServer({ ...savedParticipants, [participantIndex]: true });
                               toggleParticipant(participantIndex);
 
                               // Salvar como linked-user em background e atualizar lista
@@ -2642,9 +2646,7 @@ export function InformationStep({
             ? { label: formatCouponLineLabel(appliedCoupon), amount: couponDiscountAmount }
             : hasVoucherLine
               ? { label: formatVoucherLineLabel(appliedVoucher!.code), amount: voucherDiscountAmount }
-              : ageCoupon && ageDiscount > 0
-                ? { label: formatAgeCouponLineLabel(ageCoupon), amount: ageDiscount }
-                : null
+              : null
         }
         serviceFee={displayedServiceFee}
         total={totalAmountWithAge}
@@ -2760,16 +2762,6 @@ export function InformationStep({
                         </p>
                         <p className="font-bold">
                           -{formatPrice(voucherDiscountAmount)}
-                        </p>
-                      </div>
-                    )}
-                    {ageCoupon && ageDiscount > 0 && (
-                      <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">
-                          {formatAgeCouponLineLabel(ageCoupon)}:
-                        </p>
-                        <p className="font-bold">
-                          -{formatPrice(ageDiscount)}
                         </p>
                       </div>
                     )}

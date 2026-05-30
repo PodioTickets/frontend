@@ -1505,8 +1505,16 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     setCouponError(null);
     try {
       const updated = await patchCoupon(orderId, { couponCode: couponCode.trim().toUpperCase() });
+      // Mantém o pedido fresco (o backend devolve inalterado quando rejeita).
       syncFromOrder(updated);
       setCurrentOrder(updated);
+      // Rejeição manual vem com HTTP 200 + `couponRejected` (pedido inalterado):
+      // mostra o motivo e NÃO trata como aplicado.
+      if (updated.couponRejected) {
+        const reason = updated.couponRejected.reason;
+        setCouponError(COUPON_ERROR_MESSAGES[reason] ?? reason ?? "Cupom inválido.");
+        return;
+      }
     } catch (err) {
       if (err instanceof OrderApiError) {
         setCouponError(COUPON_ERROR_MESSAGES[err.code] ?? err.message ?? "Cupom inválido.");
@@ -1684,6 +1692,25 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       { currency: "BRL", value: (currentOrder?.pricing.total ?? 0) / 100 },
       { onceKey: `api:${orderId}` },
     );
+  };
+
+  /**
+   * Mobile: ao selecionar um método de pagamento, rola até deixar o topo do
+   * card rente ao header (em vez de overscroll). Mede a posição num rAF duplo,
+   * DEPOIS do reflow — ao trocar de método, o anterior colapsa e o card alvo
+   * muda de posição; medir antes do re-render levaria a posição defasada.
+   */
+  const scrollPaymentMethodIntoView = (method: "card" | "pix") => {
+    if (typeof window === "undefined" || !window.matchMedia("(max-width: 767px)").matches) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(`[data-payment-method="${method}"]`);
+        if (!el) return;
+        const headerH = document.querySelector("header")?.getBoundingClientRect().height ?? 64;
+        const top = window.scrollY + el.getBoundingClientRect().top - (headerH + 12);
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      });
+    });
   };
 
   const handleProcessPixCheckout = async () => {
@@ -2344,8 +2371,12 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             {!isFreeOrder && <div className="pb-6 flex flex-col gap-3">
               {/* Card Option (crédito + débito unificados) */}
               <div
+                data-payment-method="card"
                 className={`border rounded-lg p-4 transition-colors border-gray-6 bg-gray-3`}
-                onClick={() => { if (!isCardSelected) setSelectedPaymentMethod("credit"); }}
+                onClick={() => {
+                  if (!isCardSelected) setSelectedPaymentMethod("credit");
+                  scrollPaymentMethodIntoView("card");
+                }}
               >
 
                 <div className="flex items-center justify-between cursor-pointer">
@@ -2456,22 +2487,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   }`}
                 onClick={() => {
                   setSelectedPaymentMethod("pix");
-                  if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
-                    // O topo do card PIX nao se move ao expandir (expansao e pra
-                    // baixo), entao a posicao alvo ja e final. rAF dispara o
-                    // scroll suave no mesmo quadro da expansao → glide unica,
-                    // sem o "desce e sobe" do autofocus.
-                    const card = document.querySelector<HTMLElement>('[data-payment-method="pix"]');
-                    if (card) {
-                      const headerEl = document.querySelector("header");
-                      const headerH = headerEl?.getBoundingClientRect().height ?? 64;
-                      const rect = card.getBoundingClientRect();
-                      const top = window.scrollY + rect.top - (headerH + 12);
-                      requestAnimationFrame(() => {
-                        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-                      });
-                    }
-                  }
+                  scrollPaymentMethodIntoView("pix");
                 }}
               >
                 <div className="flex items-center justify-between cursor-pointer">

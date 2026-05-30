@@ -75,7 +75,8 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\app\\\\checkout\" -Recurse -Include \"*.tsx\", \"*.ts\", \"*.json\")",
       "mcp__claude_ai_Figma__get_metadata",
       "PowerShell(Join-Path *)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(npx vitest *)"
     ]
   },
   "disabledMcpjsonServers": [

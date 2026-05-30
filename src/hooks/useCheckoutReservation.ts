@@ -103,6 +103,10 @@ function toOrderResponse(data: any): OrderResponse {
     })),
     pricing: {
       subtotal: data.pricing?.subtotal ?? data.totalAmount ?? 0,
+      // Subtotais por categoria (server-driven). `undefined` se o backend não os
+      // expõe — o front usa o `subtotal` agregado nesse caso.
+      ticketsSubtotal: data.pricing?.ticketsSubtotal,
+      productsSubtotal: data.pricing?.productsSubtotal,
       serviceFee: data.pricing?.serviceFee ?? data.serviceFee ?? 0,
       couponDiscount:
         data.pricing?.couponDiscount ??
@@ -129,6 +133,7 @@ function toOrderResponse(data: any): OrderResponse {
     cancelledAt: data.cancelledAt,
     cancelledReason: data.cancelledReason,
     couponAutoRemoved: data.couponAutoRemoved ?? false,
+    couponRejected: data.couponRejected ?? null,
   };
 }
 
