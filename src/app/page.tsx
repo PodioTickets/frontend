@@ -20,8 +20,9 @@ export default function Home() {
           Eventos em destaque
         </h1>
         <div className="mt-4 md:mt-8">
-          {/* Sombreamento em volta de todos os cards — retangulo desenhado pela sombra nos 4 lados */}
-          <div className="rounded-2xl shadow-[0_0_24px_2px_rgba(0,0,0,0.08)]">
+          {/* Sombreamento em volta de todos os cards — retangulo desenhado pela sombra nos 4 lados.
+              md:px-8 traz as setas (que ficam ~24px fora do carousel, so no desktop) pra dentro do frame. */}
+          <div className="rounded-2xl shadow-[0_0_24px_2px_rgba(0,0,0,0.08)] md:px-8">
             <EventCarousel
               items={20}
               itemsPerView={4.1}
