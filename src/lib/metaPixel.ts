@@ -106,8 +106,17 @@ export function trackMetaPixel(
   params?: Record<string, unknown>,
   options?: TrackOptions,
 ): void {
-  if (!pixelId || typeof window === "undefined") return;
-  if (options?.onceKey && alreadyFired(options.onceKey, options.persist)) return;
+  // [DEBUG TEMP] remover depois de validar o tracking.
+  console.log("[metaPixel] trackMetaPixel chamado", { pixelId, event, params, onceKey: options?.onceKey });
+  if (!pixelId || typeof window === "undefined") {
+    console.log("[metaPixel] NO-OP: pixelId ausente", { pixelId, event });
+    return;
+  }
+  if (options?.onceKey && alreadyFired(options.onceKey, options.persist)) {
+    console.log("[metaPixel] DEDUP: já disparado", { event, onceKey: options.onceKey });
+    return;
+  }
   initMetaPixel(pixelId);
+  console.log("[metaPixel] DISPARANDO trackSingle", { pixelId, event });
   window.fbq?.("trackSingle", pixelId, event, params ?? {});
 }
