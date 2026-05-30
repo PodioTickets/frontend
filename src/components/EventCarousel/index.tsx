@@ -105,7 +105,7 @@ export function EventCarousel({
 
       <div
         ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-1 py-4 md:p-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex gap-4 overflow-x-auto overscroll-x-contain px-1 py-4 md:p-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {events?.map((event) => (
           <div key={event.id} data-slide style={slideStyle}>
