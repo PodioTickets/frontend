@@ -19,10 +19,9 @@ export default function Home() {
         <h1 className="text-xl md:text-[28px] font-extrabold text-left md:text-center text-gray-12 px-0 md:px-4">
           Eventos em destaque
         </h1>
-        {/* Faixa de sombra full-bleed (ponta a ponta da tela): simetrica por natureza
-            e cobre toda a largura. Sombra difusa (blur alto, opacidade baixa).
-            Cards reconstrangidos a 1280 dentro; md:px-8 mantem as setas dentro. */}
-        <div className="mt-4 md:mt-8 relative left-1/2 right-1/2 -mx-[50vw] w-screen shadow-[0_0_40px_rgba(0,0,0,0.06)]">
+        {/* Sombra difusa: full-bleed (ponta a ponta) SO no mobile; no desktop fica
+            contida e simetrica (retangulo arredondado em volta dos cards). */}
+        <div className="mt-4 md:mt-8 shadow-[0_0_40px_rgba(0,0,0,0.06)] md:rounded-2xl max-md:relative max-md:left-1/2 max-md:right-1/2 max-md:-mx-[50vw] max-md:w-screen">
           <div className="mx-auto w-full max-w-[1280px] px-4 md:px-8">
             <EventCarousel
               items={20}

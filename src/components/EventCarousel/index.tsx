@@ -106,7 +106,8 @@ export function EventCarousel({
       </button>
 
       <div ref={emblaRef} className="overflow-hidden px-1 py-4 md:p-4">
-        <div className="flex gap-4">
+        {/* Sem scroll (poucos eventos) -> centraliza pra nao sobrar espaco so de um lado */}
+        <div className={`flex gap-4 ${prevDisabled && nextDisabled ? "justify-center" : ""}`}>
           {events?.map((event) => (
             <div key={event.id} style={slideStyle}>
               <EventCard event={event} />
