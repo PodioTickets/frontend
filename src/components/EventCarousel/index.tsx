@@ -78,10 +78,15 @@ export function EventCarousel({
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
   const scrollTo = useCallback((i: number) => emblaApi?.scrollTo(i), [emblaApi]);
 
-  // Slide width accounts for gap-4 (16px) between items
+  // Gap entre slides via padding-left (box-border) + margin-left negativa no
+  // container. Embla mede o slide outer corretamente e ALCANCA o ultimo card.
+  // (O modelo antigo subtraia o gap do basis E usava flex gap-4 = gap dobrado,
+  // empurrando o ultimo card pra fora do alcance -> puxava pro penultimo.)
+  const SLIDE_GAP = 16;
   const slideStyle = {
-    flex: `0 0 calc((100% - ${(currentItemsPerView - 1) * 16}px) / ${currentItemsPerView})`,
+    flex: `0 0 ${100 / currentItemsPerView}%`,
     minWidth: 0,
+    paddingLeft: `${SLIDE_GAP}px`,
   };
 
   return (
@@ -105,8 +110,9 @@ export function EventCarousel({
       </button>
 
       <div ref={emblaRef} className="overflow-hidden px-1 py-4 md:p-4">
-        {/* Sem scroll (poucos eventos) -> centraliza pra nao sobrar espaco so de um lado */}
-        <div className={`flex gap-4 ${prevDisabled && nextDisabled ? "justify-center" : ""}`}>
+        {/* Sem scroll (poucos eventos) -> centraliza pra nao sobrar espaco so de um lado.
+            marginLeft negativa compensa o padding-left do primeiro slide (gap pattern). */}
+        <div className={`flex ${prevDisabled && nextDisabled ? "justify-center" : ""}`} style={{ marginLeft: `-${SLIDE_GAP}px` }}>
           {events?.map((event) => (
             <div key={event.id} style={slideStyle}>
               <EventCard event={event} />
