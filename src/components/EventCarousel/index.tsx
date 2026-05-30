@@ -88,7 +88,7 @@ export function EventCarousel({
       <button
         onClick={() => scrollByDir(-1)}
         disabled={!canPrev}
-        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
+        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
         aria-label="Slide anterior"
       >
         <ChevronLeft className="size-5 text-gray-12" />
@@ -97,23 +97,28 @@ export function EventCarousel({
       <button
         onClick={() => scrollByDir(1)}
         disabled={!canNext}
-        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-full z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
+        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
         aria-label="Próximo slide"
       >
         <ChevronRight className="size-5 text-gray-12" />
       </button>
 
-      <div
-        ref={scrollerRef}
-        className={`flex gap-4 overflow-x-auto overscroll-x-contain px-1 py-4 md:p-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-          !canPrev && !canNext ? "justify-center" : ""
-        }`}
-      >
-        {events?.map((event) => (
-          <div key={event.id} data-slide style={slideStyle}>
-            <EventCard event={event} />
-          </div>
-        ))}
+      {/* Frame com sombra ABRAÇA os cards (sem gutter vazio dentro). No desktop o frame
+          tem margem lateral (md:mx-14) onde as setas ficam — FORA do frame, sem cobrir
+          card. Mobile: full-bleed (ponta a ponta), sem setas. */}
+      <div className="shadow-[0_0_40px_rgba(0,0,0,0.06)] md:rounded-2xl md:mx-14 max-md:relative max-md:left-1/2 max-md:right-1/2 max-md:-mx-[50vw] max-md:w-screen">
+        <div
+          ref={scrollerRef}
+          className={`flex gap-4 overflow-x-auto overscroll-x-contain px-4 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+            !canPrev && !canNext ? "justify-center" : ""
+          }`}
+        >
+          {events?.map((event) => (
+            <div key={event.id} data-slide style={slideStyle}>
+              <EventCard event={event} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {events && events.length > perView && (

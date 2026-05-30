@@ -19,17 +19,13 @@ export default function Home() {
         <h1 className="text-xl md:text-[28px] font-extrabold text-left md:text-center text-gray-12 px-0 md:px-4">
           Eventos em destaque
         </h1>
-        {/* Sombra difusa: full-bleed (ponta a ponta) no mobile; contida e simetrica
-            no desktop. O carousel (scroll nativo) fica no inner content-width. */}
-        <div className="mt-4 md:mt-8 shadow-[0_0_40px_rgba(0,0,0,0.06)] md:rounded-2xl max-md:relative max-md:left-1/2 max-md:right-1/2 max-md:-mx-[50vw] max-md:w-screen">
-          <div className="mx-auto w-full max-w-[1280px] px-4 md:px-10">
-            <EventCarousel
-              items={20}
-              itemsPerView={4.1}
-              itemsPerViewMobile={1.8}
-              itemsPerViewTablet={2.5}
-            />
-          </div>
+        <div className="mt-4 md:mt-8">
+          <EventCarousel
+            items={20}
+            itemsPerView={4}
+            itemsPerViewMobile={1}
+            itemsPerViewTablet={2}
+          />
         </div>
       </div>
     </section>
