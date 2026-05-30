@@ -194,11 +194,11 @@ export function OrderSummary({
                     <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
                       {ticket.categoryName || "Ingresso avulso"}
                     </p>
-                    <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12 truncate">
-                      {ticket.quantity}x {ticket.raceName}
+                    <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12 truncate">
+                     ({ticket.quantity}x) {ticket.raceName}
                     </p>
                   </div>
-                  <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12 shrink-0">
+                  <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12 shrink-0">
                     {formatPrice(ticket.total)}
                   </p>
                 </div>
@@ -210,12 +210,12 @@ export function OrderSummary({
           {items.length > 0 && (
             <div className="flex gap-8 items-center">
               <div className="flex flex-1 flex-col">
-                <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
-                  {items.length}x {items.length > 1 ? "Itens adicionais" : "Item adicional"}:
+                <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12">
+                  ({items.length}x) {items.length > 1 ? "Itens adicionais" : "Item adicional"}:
                 </p>
               </div>
               <div className="flex flex-col items-end">
-                <p className="font-manrope font-semibold text-base leading-[1.1] text-gray-12">
+                <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12">
                   {formatPrice(productsSubtotal)}
                 </p>
               </div>
@@ -225,7 +225,7 @@ export function OrderSummary({
 
           {/* Subtotal só com mais de um ingresso diferente pra somar. */}
           {groupedTickets.length > 1 && (
-            <div className="flex items-center justify-between text-base text-gray-12">
+            <div className="flex items-center justify-between text-sm text-gray-12">
               <p className="font-manrope font-semibold">Subtotal:</p>
               <p className="font-manrope font-bold">{formatPrice(subtotal)}</p>
             </div>
@@ -233,7 +233,7 @@ export function OrderSummary({
 
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (
-            <div className="flex items-center justify-between text-base text-gray-12">
+            <div className="flex items-center justify-between text-sm text-gray-12">
               <p className="font-manrope font-semibold">
                 {couponType === "QUANTITY" || couponType === "AGE"
                   ? "Cupom automático"
@@ -253,7 +253,7 @@ export function OrderSummary({
 
           {/* Voucher aplicado */}
           {voucherCode && voucherDiscount > 0 && (
-            <div className="flex items-center justify-between text-base text-gray-12">
+            <div className="flex items-center justify-between text-sm text-gray-12">
               <p className="font-manrope font-semibold">
                 {voucherCode ? `Voucher ${voucherCode}` : "Voucher aplicado"}:
               </p>
@@ -265,7 +265,7 @@ export function OrderSummary({
 
           {/* Taxa de serviço — só renderiza quando > 0 */}
           {serviceFee > 0 && (
-            <div className="flex items-center justify-between text-base text-gray-12">
+            <div className="flex items-center justify-between text-sm text-gray-12">
               <p className="font-manrope font-semibold">Taxa de serviço:</p>
               <p className="font-manrope font-bold">
                 {formatPrice(serviceFee)}
