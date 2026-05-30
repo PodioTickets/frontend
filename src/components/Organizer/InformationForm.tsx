@@ -523,15 +523,13 @@ export function InformationForm({
           </p>
         </div>
         <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
             {SOCIAL_NETWORKS.map(({ key, prefix, base, placeholder, Icon }) => {
               const handle = socialHandle((values as any)[key], base, prefix);
               return (
-                <div key={key} className="flex items-center gap-3 min-w-0">
-                  <div className="size-11 shrink-0 flex items-center justify-center rounded-lg border border-gray-6 text-gray-12">
-                    <Icon className="size-5" />
-                  </div>
-                  <div className="flex flex-1 min-w-0 h-12 items-stretch rounded-lg border border-gray-6 overflow-hidden focus-within:border-gray-8 transition-colors">
+                <div key={key} className="flex items-center gap-4 min-w-0">
+                  <Icon className="size-8 shrink-0 text-gray-12" />
+                  <div className="flex flex-1 min-w-0 h-11 items-stretch rounded-lg border border-gray-6 overflow-hidden focus-within:border-gray-8 transition-colors">
                     <span className="flex items-center px-3 bg-gray-3 text-gray-12 font-family-dm-sans text-base whitespace-nowrap border-r border-gray-6 select-none">
                       {prefix}
                     </span>
@@ -544,7 +542,7 @@ export function InformationForm({
                         onChange({ [key]: h ? base + h : "" } as any);
                       }}
                       placeholder={placeholder}
-                      className="flex-1 min-w-0 px-3 bg-transparent outline-none text-gray-12 placeholder:text-gray-10 font-family-dm-sans text-base"
+                      className="flex-1 min-w-0 px-3 bg-transparent outline-none text-gray-12 placeholder:text-gray-11 font-family-dm-sans text-base"
                     />
                   </div>
                 </div>
