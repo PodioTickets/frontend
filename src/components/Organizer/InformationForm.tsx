@@ -11,7 +11,6 @@ import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
 import { TiktokIcon } from "@/components/Icons/TiktokIcon";
-import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { EmailIcon } from "@/components/Icons/EmailIcon";
 import { GoogleMapsUrlHelpTooltip } from "@/components/Organizer/GoogleMapsUrlHelpTooltip";
 import { ContactEmailHelpTooltip } from "@/components/Organizer/ContactEmailHelpTooltip";
@@ -34,22 +33,28 @@ import toast from "react-hot-toast";
 const EVENT_NAME_MAX_LENGTH = 100;
 
 const SOCIAL_NETWORKS = [
-  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/seuevento", Icon: InstagramIcon },
-  { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/seuevento", Icon: FacebookIcon },
-  { key: "youtube", label: "Youtube", placeholder: "https://youtube.com/seuevento", Icon: YoutubeIcon },
-  { key: "tiktok", label: "Tiktok", placeholder: "https://tiktok.com/seuevento", Icon: TiktokIcon },
-  { key: "website", label: "Site oficial", placeholder: "https://seusite.com.br", Icon: Globe },
+  { key: "instagram", prefix: "instagram.com/", base: "https://instagram.com/", placeholder: "seuperfil", Icon: InstagramIcon },
+  { key: "facebook", prefix: "facebook.com/", base: "https://facebook.com/", placeholder: "suapágina", Icon: FacebookIcon },
+  { key: "youtube", prefix: "youtube.com/@", base: "https://youtube.com/@", placeholder: "seucanal", Icon: YoutubeIcon },
+  { key: "tiktok", prefix: "tiktok.com/@", base: "https://tiktok.com/@", placeholder: "seuperfil", Icon: TiktokIcon },
+  { key: "website", prefix: "https://", base: "https://", placeholder: "suapágina", Icon: Globe },
 ];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function isValidUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+// Extrai o "handle" (parte editavel depois do prefixo) de um valor salvo,
+// tolerando protocolo/www e valores legados (URL completa). A reconstrucao
+// para salvar e sempre `base + handle` — mantemos URL completa no estado.
+function socialHandle(value: string | undefined, base: string, prefix: string): string {
+  if (!value) return "";
+  const v = value.trim().replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+  const p = prefix.replace(/^https?:\/\//i, ""); // ex.: "youtube.com/@", "instagram.com/", "" (website)
+  if (!p) return v; // website: handle é o domínio/caminho digitado
+  // dominio do prefixo sem "/" e "@" finais (ex.: "youtube.com"). Removemos esse
+  // dominio + "/" e "@" opcionais — tolera legados salvos sem "@".
+  const domain = p.replace(/[@/]+$/g, "");
+  const re = new RegExp("^" + domain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\/?@?", "i");
+  return re.test(v) ? v.replace(re, "") : v;
 }
 
 function formatCEP(value: string): string {
@@ -137,14 +142,6 @@ export function InformationForm({
     onHasPendingPdfChange?.(pdfFile !== null);
   }, [pdfFile, onHasPendingPdfChange]);
 
-  const [openSocials, setOpenSocials] = useState<Set<string>>(() => {
-    const open = new Set<string>();
-    for (const { key } of SOCIAL_NETWORKS) {
-      if ((values as unknown as Record<string, unknown>)[key]) open.add(key);
-    }
-    return open;
-  });
-  const [socialErrors, setSocialErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cepDigits = (values.cep ?? "").replace(/\D/g, "");
@@ -526,67 +523,32 @@ export function InformationForm({
           </p>
         </div>
         <div className="bg-gray-2 border border-gray-6 rounded-xl p-5 flex flex-col gap-5">
-          {SOCIAL_NETWORKS.some(({ key }) => openSocials.has(key) || !!(values as any)[key]) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {SOCIAL_NETWORKS.filter(({ key }) => openSocials.has(key) || !!(values as any)[key]).map(({ key, label, placeholder, Icon }) => (
-                <div key={key} className="flex flex-col gap-1">
-                  <div className="flex gap-4 items-center">
-                    <div className="flex flex-1 gap-4 items-center min-w-0">
-                      <Icon className="size-8 shrink-0 text-gray-12" />
-                      <Input
-                        type="url"
-                        value={(values as any)[key] || ""}
-                        onChange={(e) => {
-                          onChange({ [key]: e.target.value } as any);
-                          if (socialErrors[key]) setSocialErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
-                        }}
-                        onBlur={(e) => {
-                          const val = e.target.value.trim();
-                          if (val && !isValidUrl(val)) setSocialErrors((prev) => ({ ...prev, [key]: "URL inválida. Use o formato https://..." }));
-                        }}
-                        placeholder={placeholder}
-                        className={`h-12 flex-1 ${socialErrors[key] ? "border-red-10" : ""}`}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onChange({ [key]: "" } as any);
-                        setOpenSocials((prev) => { const s = new Set(prev); s.delete(key); return s; });
-                        setSocialErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+            {SOCIAL_NETWORKS.map(({ key, prefix, base, placeholder, Icon }) => {
+              const handle = socialHandle((values as any)[key], base, prefix);
+              return (
+                <div key={key} className="flex items-center gap-4 min-w-0">
+                  <Icon className="size-8 shrink-0 text-gray-12" />
+                  <div className="flex flex-1 min-w-0 h-11 items-stretch rounded-lg border border-gray-6 overflow-hidden focus-within:border-gray-8 transition-colors">
+                    <span className="flex items-center px-3 bg-gray-3 text-gray-12 font-family-dm-sans text-base whitespace-nowrap border-r border-gray-6 select-none">
+                      {prefix}
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="url"
+                      value={handle}
+                      onChange={(e) => {
+                        const h = socialHandle(e.target.value, base, prefix);
+                        onChange({ [key]: h ? base + h : "" } as any);
                       }}
-                      className="size-8 flex items-center justify-center rounded-lg bg-red-2 border-[1.5px] border-red-6 shrink-0 hover:bg-red-3 transition-colors"
-                      aria-label={`Remover ${label}`}
-                    >
-                      <TrashIcon className="size-5" />
-                    </button>
+                      placeholder={placeholder}
+                      className="flex-1 min-w-0 px-3 bg-transparent outline-none text-gray-12 placeholder:text-gray-11 font-family-dm-sans text-base"
+                    />
                   </div>
-                  {socialErrors[key] && <p className="text-red-10 text-sm pl-12">{socialErrors[key]}</p>}
                 </div>
-              ))}
-            </div>
-          )}
-          {SOCIAL_NETWORKS.some(({ key }) => openSocials.has(key) || !!(values as any)[key]) &&
-            SOCIAL_NETWORKS.some(({ key }) => !openSocials.has(key) && !(values as any)[key]) && (
-              <div className="bg-gray-6 h-px w-full shrink-0" />
-            )}
-          {SOCIAL_NETWORKS.some(({ key }) => !openSocials.has(key) && !(values as any)[key]) && (
-            <div className="flex flex-wrap gap-3">
-              {SOCIAL_NETWORKS.filter(({ key }) => !openSocials.has(key) && !(values as any)[key]).map(({ key, label, Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setOpenSocials((prev) => new Set([...prev, key]))}
-                  className="flex items-center gap-2 border border-gray-6 rounded-lg px-4 py-3 text-gray-12 hover:bg-gray-3 transition-colors"
-                >
-                  <Icon className="size-6 shrink-0" />
-                  <span className="font-manrope font-semibold text-base leading-[1.1]">{label}</span>
-                  <Plus className="size-6 shrink-0" />
-                </button>
-              ))}
-            </div>
-          )}
-          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">Clique para adicionar uma rede social</p>
+              );
+            })}
+          </div>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 import { Button } from "../Button";
 import type { Event } from "@/interfaces/event";
 import { ArrowButton } from "../ArrowButton";
+import { ChevronDown } from "lucide-react";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -156,20 +157,16 @@ function DropdownTrigger({
 }) {
   if (variant === "mobile") {
     return (
-      <div className="w-full h-12 px-3 py-4 border border-gray-6 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
-        {selected ? (
-          <>
-            <p className="text-base text-gray-11 truncate min-w-0">{selected.name}</p>
-            {sideLabel != null ? (
-              <p className="text-base font-bold text-gray-12 shrink-0 tabular-nums">{sideLabel}</p>
-            ) : null}
-          </>
-        ) : (
-          <>
-            <p className="text-base text-gray-11">Selecione a opção</p>
-            <span className="text-gray-12 shrink-0">›</span>
-          </>
-        )}
+      <div className="w-full h-12 px-3 py-4 border border-gray-7 rounded-lg cursor-pointer hover:border-gray-8 transition-colors flex items-center justify-between gap-2 min-w-0">
+        <p className={`text-base truncate min-w-0 ${selected ? "text-gray-12" : "text-gray-11"}`}>
+          {selected ? selected.name : "Selecione a opção"}
+        </p>
+        <div className="flex items-center gap-2 shrink-0">
+          {selected && sideLabel != null ? (
+            <p className="text-base font-bold text-gray-12 tabular-nums">{sideLabel}</p>
+          ) : null}
+          <ChevronDown className="size-5 text-gray-11" />
+        </div>
       </div>
     );
   }
@@ -215,13 +212,21 @@ function ProductCard({
   if (variant === "mobile") {
     return (
       <div className="bg-gray-2 border border-gray-6 rounded-xl">
-        <div className="flex gap-3 p-4 border-b border-gray-6">
-          <ProductCardGallery product={product} />
-          <div className="flex flex-col justify-between flex-1 min-w-0">
-            <p className="text-base font-semibold text-gray-12">{product.name}</p>
-            <p className="text-sm font-semibold text-gray-11">
-              {formatProductCardBasePriceLabel(product)}
-            </p>
+        <div className="flex flex-col gap-3 p-4 border-b border-gray-6">
+          {product.isIncludedInTicket && !selectedVariation && (
+            <span className="self-start inline-flex items-center gap-1.5 h-[27px] px-3 rounded-xl bg-[#fff7c2] border border-[#f3d673]">
+              <span className="size-1.5 rounded-full bg-[#4f3422]" />
+              <span className="text-xs font-semibold leading-none text-[#4f3422]">Falta escolher a variação</span>
+            </span>
+          )}
+          <div className="flex gap-3">
+            <ProductCardGallery product={product} />
+            <div className="flex flex-col justify-between flex-1 min-w-0">
+              <p className="text-base font-semibold text-gray-12">{product.name}</p>
+              <p className="text-sm font-semibold text-gray-11">
+                {formatProductCardBasePriceLabel(product)}
+              </p>
+            </div>
           </div>
         </div>
         <div className="p-4">

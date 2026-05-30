@@ -1232,16 +1232,18 @@ export function CreateCouponModal() {
                                               </svg>
                                               <span className="truncate">Importar arquivo</span>
                                             </button>
-                                            <button
-                                              type="button"
-                                              onClick={handleAddCPF}
-                                              className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
-                                            >
-                                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                              </svg>
-                                              <span className="truncate">Adicionar campo</span>
-                                            </button>
+                                            {!isAddingCpf && (
+                                              <button
+                                                type="button"
+                                                onClick={handleAddCPF}
+                                                className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
+                                              >
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                  <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                                <span className="truncate">Adicionar campo</span>
+                                              </button>
+                                            )}
                                           </div>
                                           <button
                                             type="button"
