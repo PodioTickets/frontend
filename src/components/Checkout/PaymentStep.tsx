@@ -40,6 +40,7 @@ import {
   generateIdempotencyKey,
 } from "@/hooks/useCheckoutReservation";
 import { useCheckoutTimer } from "@/contexts/CheckoutTimerContext";
+import { trackMetaPixel } from "@/lib/metaPixel";
 import {
   OrderApiError,
   type OrderPixInfo,
@@ -616,9 +617,6 @@ function PixForm({
           Prazo de até 30 minutos para compensar
         </p>
       </div>
-      <p className="text-base font-medium text-gray-12 text-center font-family-dm-sans">
-        Clique em "finalizar compra" para gerar o PIX
-      </p>
       {!isMobile && (
         <Button
           onClick={onProcessCheckout}
@@ -626,7 +624,7 @@ function PixForm({
           isLoading={loading}
           className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Finalizar compra
+          Gerar QR Code
         </Button>
       )}
     </div>
@@ -645,10 +643,7 @@ function PaymentMethodOption({
   return (
     <div
       onClick={onSelect}
-      className={`flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer ${isSelected
-        ? "border border-blue-8 bg-blue-3"
-        : "border border-gray-5 hover:bg-gray-2"
-        }`}
+      className={`flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer border border-gray-6 bg-gray-3`}
     >
       <div className="flex items-center gap-3">
         <div
@@ -1661,6 +1656,36 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   };
 
   // Processar checkout PIX
+  // ── Meta Pixel (Facebook) ──────────────────────────────────────────────
+  // Pixel por-evento. InitiateCheckout dispara quando a tela de pagamento abre
+  // com a reserva já carregada; AddPaymentInfo quando o usuário submete o
+  // pagamento (dentro de cada handler de processamento). Dedup por order
+  // garante 1 disparo por pedido mesmo com F5/retentativa.
+  const metaPixelId = event.tracking?.metaPixelId;
+
+  useEffect(() => {
+    if (!metaPixelId || !orderId || !currentOrder) return;
+    trackMetaPixel(
+      metaPixelId,
+      "InitiateCheckout",
+      {
+        currency: "BRL",
+        value: currentOrder.pricing.total / 100,
+        num_items: totalParticipants,
+      },
+      { onceKey: `ic:${orderId}` },
+    );
+  }, [metaPixelId, orderId, currentOrder, totalParticipants]);
+
+  const fireAddPaymentInfo = () => {
+    trackMetaPixel(
+      metaPixelId,
+      "AddPaymentInfo",
+      { currency: "BRL", value: (currentOrder?.pricing.total ?? 0) / 100 },
+      { onceKey: `api:${orderId}` },
+    );
+  };
+
   const handleProcessPixCheckout = async () => {
     if (checkoutLoadingRef.current) return;
     if (!orderId) {
@@ -1671,6 +1696,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       toast.error("Confirme o endereço de cobrança antes de pagar.");
       return;
     }
+    fireAddPaymentInfo();
     checkoutLoadingRef.current = true;
     setPixLoading(true);
     setCheckoutLoading(true);
@@ -1713,6 +1739,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       toast.error("Confirme o endereço de cobrança antes de finalizar.");
       return;
     }
+    fireAddPaymentInfo();
     checkoutLoadingRef.current = true;
     setCheckoutLoading(true);
     try {
@@ -1773,6 +1800,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       return;
     }
 
+    fireAddPaymentInfo();
     checkoutLoadingRef.current = true;
     setCheckoutLoading(true);
     try {
@@ -1852,6 +1880,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       return;
     }
 
+    fireAddPaymentInfo();
     checkoutLoadingRef.current = true;
     setDebitLoading(true);
     setCheckoutLoading(true);
@@ -2144,7 +2173,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   {optionalProducts.length > 0 && (
                     <div className="mb-3">
                       <SummaryRow
-                        label={`${optionalProducts.length}x Itens adicionais`}
+                        label={`${optionalProducts.length}x ${optionalProducts.length > 1 ? "Itens adicionais" : "Item adicional"}`}
                         value={formatPrice(optionalTotal)}
                       />
                     </div>
@@ -2152,7 +2181,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
                   {includedProducts.length > 0 && (
                     <div className="mb-3 flex items-baseline gap-1 text-gray-12 font-family-manrope">
-                      <span className={"text-sm font-medium"}>{includedProducts.length}x Itens inclusos</span>
+                      <span className={"text-sm font-medium"}>{includedProducts.length}x {includedProducts.length > 1 ? "Itens inclusos" : "Item incluso"}</span>
                     </div>
                   )}
 
@@ -2304,23 +2333,18 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     {couponError}
                   </p>
                 )}
-                {!isCouponApplied && (
-                  <Button
-                    onClick={handleApplyCoupon}
-                    className="w-full font-bold font-manrope"
-                  >
-                    Aplicar cupom
-                  </Button>
-                )}
+                <Button
+                  onClick={handleApplyCoupon}
+                  className="w-full bg-gray-12 text-gray-2 font-bold font-manrope"
+                >
+                  Aplicar cupom
+                </Button>
               </div>
             </div>
             {!isFreeOrder && <div className="pb-6 flex flex-col gap-3">
               {/* Card Option (crédito + débito unificados) */}
               <div
-                className={`border rounded-lg p-4 transition-colors ${isCardSelected
-                  ? "border-blue-8 bg-blue-3"
-                  : "border-gray-6 bg-gray-3"
-                  }`}
+                className={`border rounded-lg p-4 transition-colors border-gray-6 bg-gray-3`}
                 onClick={() => { if (!isCardSelected) setSelectedPaymentMethod("credit"); }}
               >
 
@@ -2427,7 +2451,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               <div
                 data-payment-method="pix"
                 className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "pix"
-                  ? "border-blue-8 bg-blue-3"
+                  ? "border-blue-6 bg-gray-3"
                   : "border-gray-6 bg-gray-3"
                   }`}
                 onClick={() => {

@@ -59,6 +59,18 @@ export interface Event {
   registrationsCount?: number;
   /** Exibição do kit na escolha de ingressos (organizer). Opcional até o backend expor o campo. */
   kitSelectionDisplay?: EventKitSelectionDisplay | null;
+  /**
+   * IDs de rastreamento expostos no payload público do evento (página do
+   * evento + checkout). Usado pelo Meta Pixel; GA/Ads ficam disponíveis para
+   * integrações futuras. Opcional — só vem quando configurado pelo organizador.
+   */
+  tracking?: EventTracking;
+}
+
+export interface EventTracking {
+  metaPixelId?: string;
+  googleAnalyticsId?: string;
+  googleAdsId?: string;
 }
 
 export interface Question {

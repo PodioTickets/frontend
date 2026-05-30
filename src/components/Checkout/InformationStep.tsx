@@ -1765,106 +1765,96 @@ export function InformationStep({
           )}
 
           <div className="w-full">
-            <div className="hidden md:flex gap-2 items-center justify-between rounded-xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
-              <div className="h-full w-2/5 relative shrink-0 flex items-center justify-center">
+            {/* Resumo do pedido (desktop) — layout horizontal: banner à
+                esquerda com overlay do nome, resumo à direita. */}
+            <div className="hidden md:flex items-stretch gap-11 rounded-2xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
+              {/* Banner + gradiente + nome do evento */}
+              <div className="relative w-1/2 shrink-0 self-stretch min-h-[200px]">
                 <Image
                   src={event.bannerUrl}
                   alt={event.name}
-                  height={10000}
-                  width={100000}
-                  className="w-full h-full rounded-r-xl border-0 object-center object-contain"
+                  fill
+                  sizes="50vw"
+                  className="object-cover rounded-r-2xl border-0"
+                  unoptimized
                 />
-              </div>
-
-              <div className="flex flex-col justify-center items-center px-4 min-w-0">
-                <div className="flex flex-col gap-4">
-                  <p className="text-base text-gray-11">Seu pedido:</p>
-                  <h1 className="text-lg font-bold text-gray-12 leading-tight line-clamp-4 break-words">
+                {/* Gradiente de baixo p/ cima garante legibilidade do nome
+                    sobre imagens claras (transparente no topo → escuro embaixo). */}
+                <div className="absolute inset-0 rounded-r-2xl bg-linear-to-b from-transparent from-50% to-black/70" />
+                <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1">
+                  <p className="text-sm text-gray-2 font-family-dm-sans">Seu pedido:</p>
+                  <h1 className="text-lg font-bold text-gray-1 leading-tight line-clamp-3 wrap-break-word">
                     {event.name}
                   </h1>
                 </div>
               </div>
 
-              <div className="w-[45%] shrink-0 flex flex-col justify-between h-full p-2 border-l border-gray-6">
-                <div className="grid grid-cols-2 divide-x divide-gray-6 gap-2 pb-6 w-full">
-                  <div className="flex flex-col items-start w-full gap-2">
-                    {groupedTickets.slice(0, 2).map((ticket, index) => (
-                      <div
-                        key={index}
-                        className="flex items-end justify-between w-full text-base text-gray-12 gap-2 pr-2"
-                      >
-                        <div className="flex flex-col w-full">
-                          <p className="text-gray-11 text-xs truncate">{ticket.categoryName ? (
-                            ticket.categoryName
-                          ) : "Ingresso Avulso"}</p>
-                          <p className="font-semibold text-gray-12 text-sm line-clamp-1 break-words">
-                            ({ticket.quantity}x){" "}
-                            {ticket.raceName ? `${ticket.raceName}: ` : ""}
-                          </p>
-                        </div>
-                        <p className="font-bold text-sm">
-                          {formatPrice(ticket.total)}
+              {/* Valores */}
+              <div className="flex-1 min-w-0 flex flex-col justify-between py-5 pr-5">
+                <div className="flex flex-col gap-2 pb-5">
+                  {groupedTickets.slice(0, 2).map((ticket, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between gap-2 w-full"
+                    >
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-sm text-gray-11 font-family-dm-sans">
+                          {ticket.categoryName || "Ingresso avulso"}
+                        </p>
+                        <p className="text-sm font-semibold text-gray-12 truncate">
+                          ({ticket.quantity}x)
+                          {ticket.raceName ? ` ${ticket.raceName}` : ""}
                         </p>
                       </div>
-                    ))}
-                    {groupedTickets.length > 2 && (
-                      <button
-                        onClick={() => setShowAllTicketsModal(true)}
-                        className="text-sm mt-2 text-primary-11 font-semibold hover:text-primary-12 transition-colors text-left"
-                      >
-                        Ver mais {groupedTickets.length - 2} ingresso{groupedTickets.length - 2 > 1 ? "s" : ""}
-                      </button>
-                    )}
-                  </div>
+                      <p className="text-sm font-semibold text-gray-12 font-family-dm-sans shrink-0">
+                        {formatPrice(ticket.total)}
+                      </p>
+                    </div>
+                  ))}
+
+                  {groupedTickets.length > 2 && (
+                    <button
+                      onClick={() => setShowAllTicketsModal(true)}
+                      className="text-sm font-semibold text-primary-11 hover:text-primary-12 transition-colors text-left"
+                    >
+                      Ver mais ingresso{groupedTickets.length - 2 > 1 ? "s" : ""} ({groupedTickets.length - 2})
+                    </button>
+                  )}
+
                   {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-                  <div className="flex flex-col gap-2">
-                    {groupedTickets.length > 1 && (
-                      <div className="flex items-center justify-between text-sm text-gray-12">
-                        <p className="font-semibold">Subtotal:</p>
-                        <p className="font-bold text-sm">{formatPrice(totalPrice)}</p>
-                      </div>
-                    )}
-                    {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
-                      <div className="flex items-center justify-between text-sm text-gray-12">
-                        <p className="font-semibold">
-                          {formatCouponLineLabel(appliedCoupon)}:
-                        </p>
-                        <p className="font-bold text-sm">
-                          {formatPrice(couponDiscountAmount)}
-                        </p>
-                      </div>
-                    )}
-                    {hasVoucherLine && (
-                      <div className="flex items-center justify-between text-sm text-gray-12">
-                        <p className="font-semibold">
-                          {formatVoucherLineLabel(appliedVoucher!.code)}:
-                        </p>
-                        <p className="font-bold text-sm">
-                          -{formatPrice(voucherDiscountAmount)}
-                        </p>
-                      </div>
-                    )}
-                    {ageCoupon && ageDiscount > 0 && (
-                      <div className="flex items-center justify-between text-sm text-gray-12">
-                        <p className="font-semibold">
-                          {formatAgeCouponLineLabel(ageCoupon)}:
-                        </p>
-                        <p className="font-bold text-sm">
-                          {formatPrice(ageDiscount)}
-                        </p>
-                      </div>
-                    )}
-                    {displayedServiceFee > 0 && (
-                      <div className="flex items-center justify-between text-sm text-gray-12">
-                        <p className="font-semibold">Taxa de serviço:</p>
-                        <p className="font-bold text-sm">
-                          {formatPrice(displayedServiceFee)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  {groupedTickets.length > 1 && (
+                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">Subtotal:</p>
+                      <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
+                    </div>
+                  )}
+                  {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
+                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">{formatCouponLineLabel(appliedCoupon)}:</p>
+                      <p className="font-semibold font-family-dm-sans">- {formatPrice(couponDiscountAmount)}</p>
+                    </div>
+                  )}
+                  {hasVoucherLine && (
+                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">{formatVoucherLineLabel(appliedVoucher!.code)}:</p>
+                      <p className="font-semibold font-family-dm-sans">- {formatPrice(voucherDiscountAmount)}</p>
+                    </div>
+                  )}
+                  {ageCoupon && ageDiscount > 0 && (
+                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">{formatAgeCouponLineLabel(ageCoupon)}:</p>
+                      <p className="font-semibold font-family-dm-sans">- {formatPrice(ageDiscount)}</p>
+                    </div>
+                  )}
+                  {displayedServiceFee > 0 && (
+                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                      <p className="font-semibold">Taxa de serviço:</p>
+                      <p className="font-semibold font-family-dm-sans">{formatPrice(displayedServiceFee)}</p>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-between text-xl font-bold text-gray-12 border-t border-gray-6 pt-6">
+
+                <div className="flex items-center justify-between border-t border-gray-6 pt-5 text-base font-bold text-gray-12">
                   <p>Total:</p>
                   <p>{formatPrice(totalAmountWithAge)}</p>
                 </div>
@@ -1895,17 +1885,18 @@ export function InformationStep({
                 expandedParticipants[participantIndex] ?? false;
               const isComplete = !!savedParticipants[participantIndex] && !participantDirtyMap[participantIndex];
               const ageLimitText = formatAgeLimit(ticket.ageLimit);
-              /* Badge de limite de idade só aparece quando há ALGUMA dúvida
-               * sobre a aderência ao limite. Esconde quando comprador E
-               * participante preenchido encaixam (= idade conhecida + dentro
-               * do range). Idade desconhecida (anônimo ou birthDate vazio)
-               * conta como "não encaixa" pra preservar o aviso. */
+              /* Badge de limite de idade: a idade do PARTICIPANTE manda quando
+               * já foi preenchida — mostra o aviso só se ele estiver FORA do
+               * limite. Enquanto não há data do participante, cai no fallback
+               * do comprador (mostra se o comprador está fora). Idade
+               * desconhecida (anônimo / birthDate vazio) conta como "fora". */
               const participantAge = computeAgeOnEvent(participant.birthDate);
               const buyerFits =
                 buyerAge !== null && isAgeWithinTicketLimit(buyerAge, ticket.ageLimit);
               const participantFits =
                 participantAge !== null && isAgeWithinTicketLimit(participantAge, ticket.ageLimit);
-              const showAgeBadge = !!ageLimitText && !(buyerFits && participantFits);
+              const showAgeBadge =
+                !!ageLimitText && (participantAge !== null ? !participantFits : !buyerFits);
               const priceBreakdown = getTicketPriceBreakdown(ticket);
 
               return (

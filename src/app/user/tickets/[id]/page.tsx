@@ -147,37 +147,55 @@ export default function TicketDetailsPage() {
       const p = reg.participant || {};
       const ticket = reg.ticket || {};
 
-      // `reg.products` = carrinho de produtos adicionais comprados. Estrutura:
-      // { product, variation, variationName, quantity, unitPrice, totalPrice }.
-      // Aceitar `reg.additionalProducts` também (alias defensivo se o contrato mudar).
+      // O backend manda TODOS os produtos do participante em `reg.products`
+      // (inclusos no ingresso + opcionais comprados), cada item já com os dados
+      // de edição de variação: `product` (catálogo, com `isIncludedInTicket`),
+      // `variation` (selecionada), `variations` (opções), `buyerVariationEditAllowed`,
+      // `canEditVariation`, `variationEdited` e `variationEditDeadline` (ISO).
+      // Diferenciamos incluso × opcional pela flag `product.isIncludedInTicket`.
       const rawProducts = (reg.products || reg.additionalProducts || []) as any[];
-      const additionalProducts = rawProducts.filter((item: any) => {
+
+      // Normaliza um item do carrinho pro shape consumido pelo ProductVariationCard.
+      // `price` é o valor exibido: 0/base pro incluso, valor pago (unitPrice) pro opcional.
+      const toIncludedProduct = (item: any, price: number): IncludedProduct => {
+        const prod = item.product || {};
+        return {
+          // O endpoint de update é keyed pelo id do PRODUTO (catálogo).
+          id: prod.id ?? item.id,
+          name: prod.name ?? "Produto",
+          image: prod.image,
+          basePrice: price,
+          variationType: prod.variationType,
+          buyerVariationEditAllowed: item.buyerVariationEditAllowed === true,
+          canEditVariation: item.canEditVariation === true,
+          variationEdited: item.variationEdited === true,
+          variationEditDeadline: item.variationEditDeadline,
+          selectedVariation: item.variation
+            ? {
+                id: item.variation.id,
+                name: item.variation.name,
+                price: item.variation.price ?? 0,
+              }
+            : undefined,
+          variations: item.variations,
+        };
+      };
+
+      // Esconde variação "sem interesse" (opt-out de produto opcional).
+      const visibleProducts = rawProducts.filter((item: any) => {
         const variationName = item.variation?.name ?? item.variationName ?? null;
-        if (variationName && isSemInteresseVariation({ name: variationName })) return false;
-        return true;
+        return !(variationName && isSemInteresseVariation({ name: variationName }));
       });
 
-      // ProductIds que estão no carrinho — não devem aparecer também em
-      // "Inclusos no ingresso" senão duplica visualmente (o backend devolve
-      // o produto opcional comprado em ambas as listas).
-      const cartProductIds = new Set<string>(
-        rawProducts
-          .map((item: any) => item.product?.id)
-          .filter((id: any): id is string => typeof id === "string" && id.length > 0),
-      );
+      const includedProducts: IncludedProduct[] = visibleProducts
+        .filter((item: any) => item.product?.isIncludedInTicket === true)
+        .map((item: any) => toIncludedProduct(item, item.product?.basePrice ?? 0));
 
-      // `ticket.includedProducts` é o CATÁLOGO de produtos configurados pro tipo de
-      // ingresso. Só são realmente "incluídos no ingresso" (grátis, recebidos
-      // automaticamente) os com `isIncludedInTicket: true` E que NÃO estejam no
-      // carrinho. Os demais são opcionais que o usuário pode ter pago — esses
-      // aparecem em `reg.products` (carrinho) e renderizam na seção "Adicionais".
-      const includedProducts: IncludedProduct[] = (ticket.includedProducts || []).filter((item: any) => {
-        if (item.isIncludedInTicket !== true) return false;
-        const selectedName = item.selectedVariation?.name ?? null;
-        if (selectedName && isSemInteresseVariation({ name: selectedName })) return false;
-        if (item.id && cartProductIds.has(item.id)) return false;
-        return true;
-      });
+      const additionalProducts: IncludedProduct[] = visibleProducts
+        .filter((item: any) => item.product?.isIncludedInTicket !== true)
+        .map((item: any) =>
+          toIncludedProduct(item, item.unitPrice ?? item.product?.basePrice ?? 0),
+        );
 
       return {
         id: reg.id,
@@ -535,7 +553,7 @@ export default function TicketDetailsPage() {
                               <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                                 Incluídos no ingresso
                               </h3>
-                              <div className="flex flex-wrap gap-3">
+                              <div className="grid grid-cols-2 gap-3 w-full">
                                 {participant.includedProducts.map((product: IncludedProduct) => (
                                   <ProductVariationCard
                                     key={product.id}
@@ -553,54 +571,15 @@ export default function TicketDetailsPage() {
                               <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                                 Adicionais
                               </h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {participant.additionalProducts.map((item: any, productIndex: number) => {
-                                  const productData = item.product || {};
-                                  const variationData = item.variation || null;
-                                  const price =
-                                    item.totalPrice ?? (item.unitPrice ?? 0) * (item.quantity ?? 1);
-                                  return (
-                                    <div
-                                      key={item.id || `add-${productIndex}`}
-                                      className="bg-gray-2 border border-gray-6 rounded-xl"
-                                    >
-                                      <div className="flex gap-3 p-4">
-                                        {productData.image && (
-                                          <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0">
-                                            <Image
-                                              src={productData.image}
-                                              alt={productData.name || "Produto"}
-                                              width={100}
-                                              height={100}
-                                              className="w-full h-full object-cover"
-                                            />
-                                          </div>
-                                        )}
-                                        <div className="flex flex-col justify-between flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2">
-                                            {productData.name || "Produto"}
-                                            {item.quantity > 1 && (
-                                              <span className="text-gray-11 font-normal"> x{item.quantity}</span>
-                                            )}
-                                          </p>
-                                          <p className="text-base font-semibold text-gray-12 font-manrope">
-                                            {formatPrice(price)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      {variationData && (
-                                        <div className="border-t border-gray-6 p-4">
-                                          <p className="text-base font-semibold text-gray-12 font-manrope">
-                                            <span className="font-normal">
-                                              {productData.variationType || "Variação"}:
-                                            </span>{" "}
-                                            {variationData.name}
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                              <div className="grid grid-cols-2 gap-3 w-full">
+                                {participant.additionalProducts.map((product: IncludedProduct) => (
+                                  <ProductVariationCard
+                                    key={product.id}
+                                    product={product}
+                                    orderCreatedAt={order.createdAt}
+                                    registrationId={participant.id}
+                                  />
+                                ))}
                               </div>
                             </div>
                           )}

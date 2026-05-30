@@ -9,6 +9,7 @@ import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { userService } from "@/services";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { trackMetaPixel } from "@/lib/metaPixel";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CREDIT_CARD: "Cartão de crédito",
@@ -48,6 +49,24 @@ function CheckoutSucessoContent() {
   useEffect(() => {
     resetCheckout();
   }, [resetCheckout]);
+
+  // Meta Pixel — Purchase: dispara quando a página de confirmação carrega.
+  // Browser-only (sem Conversions API). Dedup PERSISTENTE (localStorage) por
+  // pedido → a conversão conta no MÁXIMO 1 vez, mesmo com F5 ou revisita.
+  useEffect(() => {
+    const orderNumber = orderDetails?.order?.id;
+    if (!orderNumber) return;
+    trackMetaPixel(
+      event?.tracking?.metaPixelId,
+      "Purchase",
+      {
+        currency: "BRL",
+        value: (orderDetails?.order?.pricing?.total ?? 0) / 100,
+        content_type: "product",
+      },
+      { onceKey: `purchase:${orderNumber}`, persist: true },
+    );
+  }, [orderDetails, event?.tracking?.metaPixelId]);
 
   const successData = useMemo(() => {
     if (!orderDetails) return null;

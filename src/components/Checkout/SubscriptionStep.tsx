@@ -600,6 +600,18 @@ export function SubscriptionStep({
     return hasAllRequiredVariations(participantIndex);
   };
 
+  /* Existe outro participante PENDENTE além deste? Usado pra decidir o label do
+   * botão do card no mobile: "Salvar e próximo" quando há um próximo pra abrir,
+   * "Salvar" no último/único. Espelha exatamente o filtro de `nextParticipant`
+   * em `handleSaveAndNext` (exclui o atual + os já confirmados + os que já têm
+   * todas as variações). */
+  const hasNextPendingParticipant = (participantIndex: number): boolean =>
+    participantsWithTickets.some((p) => {
+      if (p.participantIndex === participantIndex) return false;
+      if (completedParticipants[p.participantIndex]) return false;
+      return !hasAllRequiredVariations(p.participantIndex);
+    });
+
   /* Ao montar a página, se o primeiro participante já está completo (ex.:
    * todos os produtos têm variação única auto-preenchida pelo effect da linha
    * 495, ou usuário voltou da próxima etapa com seleções salvas), abre o
@@ -623,7 +635,12 @@ export function SubscriptionStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, participantsWithTickets, selectedVariations]);
 
-  const handleSaveAndNext = (participantIndex: number) => {
+  /* `advanceOnComplete`: quando NÃO há próximo pendente (último/único
+   * participante), avança a etapa via `onNext()`. O desktop usa o default
+   * `true` (o botão do resumo é o único meio de avançar). No mobile passamos
+   * `false`: o card apenas salva/minimiza e o avanço fica a cargo do botão
+   * "Confirmar produtos" do menu fixo. */
+  const handleSaveAndNext = (participantIndex: number, advanceOnComplete = true) => {
     if (!isParticipantComplete(participantIndex)) return;
 
     const newCompleted = { ...completedParticipants, [participantIndex]: true };
@@ -647,7 +664,7 @@ export function SubscriptionStep({
         ...prev,
         [nextParticipant.participantIndex]: true,
       }));
-    } else {
+    } else if (advanceOnComplete) {
       onNext();
     }
   };
@@ -1021,10 +1038,10 @@ export function SubscriptionStep({
 
                     <Button
                       className="w-full mt-4"
-                      onClick={() => handleSaveAndNext(participantIndex)}
+                      onClick={() => handleSaveAndNext(participantIndex, false)}
                       disabled={!isParticipantComplete(participantIndex)}
                     >
-                      Salvar e próximo
+                      {hasNextPendingParticipant(participantIndex) ? "Salvar e próximo" : "Salvar"}
                     </Button>
                   </div>
                 </div>
@@ -1058,7 +1075,7 @@ export function SubscriptionStep({
         serviceFee={serviceFee}
         total={totalAmount}
         cta={{
-          label: "Salvar e próximo",
+          label: "Confirmar produtos",
           onClick: onNext,
           /* Desabilitado até CADA participante ter passado pelo "Salvar e
            * próximo" do card (= `completedParticipants[idx]`). `isParticipantComplete`

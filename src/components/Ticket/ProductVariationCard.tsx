@@ -22,7 +22,10 @@ export interface IncludedProduct {
   basePrice: number;
   variationType?: string;
   buyerVariationEditAllowed: boolean;
+  /** Dias de prazo a partir da criação da order (contrato antigo). */
   variationEditDeadlineDays?: number;
+  /** Data-limite absoluta de edição em ISO (contrato novo). Tem prioridade. */
+  variationEditDeadline?: string;
   variationEdited: boolean;
   canEditVariation: boolean;
   selectedVariation?: { id: string; name: string; price: number };
@@ -38,20 +41,45 @@ interface Props {
 
 function computeBanner(
   product: IncludedProduct,
-  orderCreatedAt?: string
-): { type: "ok" | "warning" | "expired"; text: string } | null {
+  orderCreatedAt: string | undefined,
+  isEdited: boolean
+): { type: "ok" | "warning" | "expired" | "edited"; text: string } | null {
   if (!product.buyerVariationEditAllowed) return null;
 
-  if (!product.canEditVariation) {
+  // Já editou: estado final ("Variação editada"), independe do prazo. Tem
+  // prioridade sobre "Prazo encerrado" — `canEditVariation` vem false tanto
+  // após editar quanto quando o prazo acaba, então checamos o editado antes.
+  if (isEdited) {
+    return { type: "edited", text: "Variação editada" };
+  }
+
+  // Prazo: o contrato novo manda a data absoluta (`variationEditDeadline`); o
+  // antigo mandava só os dias (`variationEditDeadlineDays`) a partir da criação
+  // da order. Damos prioridade à data absoluta.
+  let deadline: Date | null = null;
+  if (product.variationEditDeadline) {
+    const d = new Date(product.variationEditDeadline);
+    if (!Number.isNaN(d.getTime())) deadline = d;
+  } else if (orderCreatedAt && product.variationEditDeadlineDays) {
+    deadline = new Date(
+      new Date(orderCreatedAt).getTime() +
+        product.variationEditDeadlineDays * 24 * 60 * 60 * 1000
+    );
+  }
+
+  // "Prazo encerrado" SÓ quando a data-limite realmente passou.
+  if (deadline && deadline.getTime() <= Date.now()) {
     return { type: "expired", text: "Prazo de edição encerrado" };
   }
 
-  if (!orderCreatedAt || !product.variationEditDeadlineDays) return null;
+  // Sem data conhecida: se o backend já travou a edição (`canEditVariation`
+  // false) e não foi editada, tratamos como prazo encerrado; senão sem banner.
+  if (!deadline) {
+    return product.canEditVariation
+      ? null
+      : { type: "expired", text: "Prazo de edição encerrado" };
+  }
 
-  const deadline = new Date(
-    new Date(orderCreatedAt).getTime() +
-      product.variationEditDeadlineDays * 24 * 60 * 60 * 1000
-  );
   const deadlineStr = deadline.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -96,9 +124,11 @@ export function ProductVariationCard({
     product.variationEdited
   );
 
-  const banner = computeBanner(product, orderCreatedAt);
+  const banner = computeBanner(product, orderCreatedAt, localVariationEdited);
   const imageSrc = resolveImageSrc(product.image);
-  const canAlter = product.canEditVariation && !localVariationEdited;
+  const isEditExpired = banner?.type === "expired";
+  const canAlter =
+    product.canEditVariation && !localVariationEdited && !isEditExpired;
 
   const handleSelectVariation = async (variation: ProductVariation) => {
     if (isSaving || localSelected?.id === variation.id) {
@@ -125,7 +155,7 @@ export function ProductVariationCard({
   };
 
   return (
-    <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col flex-1 min-w-[314px] max-w-[466px]">
+    <div className="bg-gray-2 border border-gray-6 rounded-xl flex flex-col w-full">
       {/* Top: image + name + price + banner */}
       <div className="border-b border-gray-6 flex flex-col gap-3 p-4">
         <div className="flex gap-3 h-[100px] items-center">
@@ -155,7 +185,8 @@ export function ProductVariationCard({
               "flex items-center justify-center p-3 rounded-lg w-full",
               banner.type === "ok" && "bg-primary-3",
               banner.type === "warning" && "bg-yellow-3",
-              banner.type === "expired" && "bg-red-3"
+              banner.type === "expired" && "bg-red-3",
+              banner.type === "edited" && "bg-gray-4"
             )}
           >
             <p
@@ -163,7 +194,8 @@ export function ProductVariationCard({
                 "text-sm font-medium leading-[1.3] font-family-dm-sans text-center",
                 banner.type === "ok" && "text-primary-12",
                 banner.type === "warning" && "text-yellow-12",
-                banner.type === "expired" && "text-red-12"
+                banner.type === "expired" && "text-red-12",
+                banner.type === "edited" && "text-gray-12"
               )}
             >
               {banner.text}

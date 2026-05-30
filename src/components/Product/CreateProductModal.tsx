@@ -159,6 +159,25 @@ export function CreateProductModal() {
   /** Criar e editar: no mínimo 1 nome de variação preenchido. */
   const hasMinVariations = filledVariationsCount >= 1;
 
+  /**
+   * Primeiro nome de variação duplicado (trim + case-insensitive pt-BR), ou
+   * null se todos são únicos. Detecção em tempo real para o erro inline abaixo
+   * da lista — espelha a regra do `validateBeforeSave` (que só avisa via toast
+   * no save). Plain const (React Compiler memoiza) — evita o lint de
+   * `preserve-manual-memoization` com função local.
+   */
+  const duplicateVariationName: string | null = (() => {
+    const seen = new Set<string>();
+    for (const v of variations) {
+      const trimmed = v.name.trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLocaleLowerCase("pt-BR");
+      if (seen.has(key)) return trimmed;
+      seen.add(key);
+    }
+    return null;
+  })();
+
   /** Valor em reais a partir do texto "10,50" / "0,00". */
   const parsePriceReais = (formatted: string): number => {
     const n = parseFloat(
@@ -1508,6 +1527,14 @@ export function CreateProductModal() {
                           </button>
                         </div>
                       </div>
+
+                      {/* Erro de validação: nome de variação duplicado — abaixo
+                          do componente de variações, acima da prévia. */}
+                      {duplicateVariationName && (
+                        <p className="font-family-dm-sans text-sm text-red-11">
+                          Já existe uma variação com o nome &quot;{duplicateVariationName}&quot;. Cada variação deve ter um nome único.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1870,20 +1897,22 @@ export function CreateProductModal() {
                     </div>
                   </div>
                   <div className="flex gap-2 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-                    <button
+                    <Button
                       type="button"
+                      variant={"outline"}
                       onClick={closeMobileVariationDraft}
                       className="flex h-12 flex-1 items-center justify-center rounded-lg border border-gray-6 font-manrope text-base font-bold leading-[1.1] text-gray-12 transition-colors hover:bg-gray-3"
                     >
                       Cancelar
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant={"default"}
                       onClick={saveMobileVariationDraft}
-                      className="flex h-12 flex-1 items-center justify-center rounded-lg bg-primary-11 font-manrope text-base font-bold leading-[1.1] text-primary-2 transition-colors hover:bg-primary-10"
+                      className="flex h-12 flex-1 items-center justify-center rounded-lg font-manrope text-base font-bold leading-[1.1] transition-colors"
                     >
                       {mobileVariationDraft.target === "new" ? "Adicionar" : "Salvar"}
-                    </button>
+                    </Button>
                   </div>
                 </motion.div>
               </>

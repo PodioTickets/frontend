@@ -195,15 +195,6 @@ export function OrderSummary({
             </div>
           )}
 
-          {/* Taxa de serviço — só renderiza quando > 0 */}
-          {serviceFee > 0 && (
-            <div className="flex items-center justify-between text-base text-gray-12">
-              <p className="font-manrope font-semibold">Taxa de serviço:</p>
-              <p className="font-manrope font-bold">
-                {formatPrice(serviceFee)}
-              </p>
-            </div>
-          )}
 
           {/* Subtotal só com mais de um ingresso diferente pra somar. */}
           {groupedTickets.length > 1 && (
@@ -244,6 +235,17 @@ export function OrderSummary({
               </p>
             </div>
           )}
+
+          {/* Taxa de serviço — só renderiza quando > 0 */}
+          {serviceFee > 0 && (
+            <div className="flex items-center justify-between text-base text-gray-12">
+              <p className="font-manrope font-semibold">Taxa de serviço:</p>
+              <p className="font-manrope font-bold">
+                {formatPrice(serviceFee)}
+              </p>
+            </div>
+          )}
+
         </div>
 
         {/* Total */}
@@ -358,115 +360,115 @@ export function OrderSummary({
                     participantData.couponCode ||
                     (isCouponApplied && participantData.couponDiscount) ||
                     participantData.voucherCode) && (
-                    <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
-                      {participantData.participant && (
-                        <div className="flex items-center justify-between w-full gap-2">
-                          <div className="border border-gray-6 flex items-center p-3 rounded-xl flex-1 min-w-0">
-                            <div className="flex gap-2 items-center min-w-0">
-                              <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
-                                {participantData.participant.name ? (
-                                  <span className="text-sm font-bold text-gray-12">
-                                    {participantData.participant.name
-                                      .charAt(0)
-                                      .toUpperCase()}
-                                  </span>
-                                ) : (
-                                  <div className="size-10 rounded-full bg-gray-5" />
-                                )}
-                              </div>
-                              <div className="flex flex-col gap-1 items-start justify-center min-w-0">
-                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate w-full">
-                                  {participantData.participant.name ||
-                                    `Participante ${participantData.participantIndex + 1}`}
-                                </p>
-                                <div className="flex gap-1 items-center min-w-0 overflow-hidden w-full">
-                                  {participantData.participant.birthDate && (
-                                    <>
-                                      <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
-                                        {formatDate(
-                                          participantData.participant.birthDate,
-                                        )}
-                                      </p>
-                                      <div className="size-1 bg-gray-11 rounded-full shrink-0" />
-                                    </>
+                      <div className="border-b border-gray-6 flex flex-col gap-3 items-start pb-5 px-4 w-full">
+                        {participantData.participant && (
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <div className="border border-gray-6 flex items-center p-3 rounded-xl flex-1 min-w-0">
+                              <div className="flex gap-2 items-center min-w-0">
+                                <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden">
+                                  {participantData.participant.name ? (
+                                    <span className="text-sm font-bold text-gray-12">
+                                      {participantData.participant.name
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                    </span>
+                                  ) : (
+                                    <div className="size-10 rounded-full bg-gray-5" />
                                   )}
-                                  {participantData.participant.gender && (
-                                    <>
-                                      <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
-                                        {getGenderLabel(
-                                          participantData.participant.gender,
-                                        )}
-                                      </p>
-                                      {participantData.participant.cpf && (
+                                </div>
+                                <div className="flex flex-col gap-1 items-start justify-center min-w-0">
+                                  <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-gray-12 truncate w-full">
+                                    {participantData.participant.name ||
+                                      `Participante ${participantData.participantIndex + 1}`}
+                                  </p>
+                                  <div className="flex gap-1 items-center min-w-0 overflow-hidden w-full">
+                                    {participantData.participant.birthDate && (
+                                      <>
+                                        <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
+                                          {formatDate(
+                                            participantData.participant.birthDate,
+                                          )}
+                                        </p>
                                         <div className="size-1 bg-gray-11 rounded-full shrink-0" />
-                                      )}
-                                    </>
-                                  )}
-                                  {participantData.participant.cpf && (
-                                    <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
-                                      {formatDocumentDisplay(
-                                        participantData.participant.cpf,
-                                        isPersonBr({
-                                          country: participantData.participant.nationality,
-                                          document: participantData.participant.cpf,
-                                        })
-                                      )}
-                                    </p>
-                                  )}
+                                      </>
+                                    )}
+                                    {participantData.participant.gender && (
+                                      <>
+                                        <p className="font-family-dm-sans font-normal text-xs text-gray-11 shrink-0">
+                                          {getGenderLabel(
+                                            participantData.participant.gender,
+                                          )}
+                                        </p>
+                                        {participantData.participant.cpf && (
+                                          <div className="size-1 bg-gray-11 rounded-full shrink-0" />
+                                        )}
+                                      </>
+                                    )}
+                                    {participantData.participant.cpf && (
+                                      <p className="font-family-dm-sans font-normal text-xs text-gray-11 truncate">
+                                        {formatDocumentDisplay(
+                                          participantData.participant.cpf,
+                                          isPersonBr({
+                                            country: participantData.participant.nationality,
+                                            document: participantData.participant.cpf,
+                                          })
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                          <button
-                            onClick={() => toggleParticipant(index)}
-                            className="flex items-center justify-center size-6 shrink-0"
-                          >
-                            <ArrowButton isOpen={false} />
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Badge de Cupom */}
-                      {(participantData.couponCode || isCouponApplied) &&
-                        participantData.couponDiscount && (
-                          <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
-                            <div className="flex gap-1 items-center">
-                              <TicketIcon className="size-4 text-yellow-12" />
-                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                                {couponType === "QUANTITY" ||
-                                couponType === "AGE" ||
-                                !participantData.couponCode
-                                  ? "Cupom automático"
-                                  : `Cupom: ${participantData.couponCode}`}
-                              </p>
-                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                                {couponValueType === "PERCENTAGE" &&
-                                  `(-${couponPercent}%)`}
-                              </p>
-                            </div>
-                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                              -{formatPrice(participantData.couponDiscount!)}
-                            </p>
+                            <button
+                              onClick={() => toggleParticipant(index)}
+                              className="flex items-center justify-center size-6 shrink-0"
+                            >
+                              <ArrowButton isOpen={false} />
+                            </button>
                           </div>
                         )}
 
-                      {/* Badge de Voucher */}
-                      {participantData.voucherCode &&
-                        participantData.voucherDiscount && (
-                          <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
-                            <div className="flex gap-1 items-center">
-                              <StarIcon className="size-4 text-yellow-12" />
-                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
-                                Voucher: {participantData.voucherCode}
+                        {/* Badge de Cupom */}
+                        {(participantData.couponCode || isCouponApplied) &&
+                          participantData.couponDiscount && (
+                            <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                              <div className="flex gap-1 items-center">
+                                <TicketIcon className="size-4 text-yellow-12" />
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                  {couponType === "QUANTITY" ||
+                                    couponType === "AGE" ||
+                                    !participantData.couponCode
+                                    ? "Cupom automático"
+                                    : `Cupom: ${participantData.couponCode}`}
+                                </p>
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                  {couponValueType === "PERCENTAGE" &&
+                                    `(-${couponPercent}%)`}
+                                </p>
+                              </div>
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
+                                -{formatPrice(participantData.couponDiscount!)}
                               </p>
                             </div>
-                            <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
-                              100% Cortesia
-                            </p>
-                          </div>
-                        )}
-                    </div>
-                  )}
+                          )}
+
+                        {/* Badge de Voucher */}
+                        {participantData.voucherCode &&
+                          participantData.voucherDiscount && (
+                            <div className="bg-yellow-4 flex items-center justify-between p-3 rounded-lg w-full">
+                              <div className="flex gap-1 items-center">
+                                <StarIcon className="size-4 text-yellow-12" />
+                                <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12">
+                                  Voucher: {participantData.voucherCode}
+                                </p>
+                              </div>
+                              <p className="font-family-dm-sans font-semibold text-sm leading-[1.3] text-yellow-12 whitespace-nowrap">
+                                100% Cortesia
+                              </p>
+                            </div>
+                          )}
+                      </div>
+                    )}
                 </div>
               );
             })}

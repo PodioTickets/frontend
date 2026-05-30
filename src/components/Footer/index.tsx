@@ -10,6 +10,7 @@ import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
+import { YoutubeIcon } from "../Icons/YoutubeIcon";
 
 export function Footer() {
   const pathname = usePathname();
@@ -68,29 +69,32 @@ export function Footer() {
         </div>
         <div className="flex items-center justify-center gap-2 whitespace-nowrap shrink-0 mb-4">
           <Link
-            href="https://www.instagram.com/podiotickets/"
+            target="_blank"
+            href="https://www.instagram.com/podioticket"
             className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
           >
             <InstagramIcon className="w-full h-full text-gray-2" />
           </Link>
           <Link
+            target="_blank"
             href="https://x.com/podiotickets"
             className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
           >
             <TwitterIcon className="w-full h-full text-gray-2" />
           </Link>
           <Link
-            href="https://www.facebook.com/podiotickets"
+            target="_blank"
+            href="https://www.youtube.com/channel/UCqBDBJJiUulbW2iplU_8SvQ"
             className="size-12 border border-[#3A3A3A] p-3 rounded-full flex items-center justify-center"
           >
-            <FacebookIcon className="w-full h-full text-gray-2" />
+            <YoutubeIcon className="w-full h-full text-gray-2" />
           </Link>
         </div>
 
 
         {/* Copyright Mobile */}
         <p className="text-white text-xs text-center">
-          © {currentYear} - Todos os direitos reservados para PódioTicket
+          © {currentYear} - Todos os direitos reservados para PódioTicket - 65.174.909/0001-01
         </p>
       </div>
 
@@ -136,28 +140,31 @@ export function Footer() {
           <div className="flex-1 h-px bg-[#606060] min-w-0" />
           <div className="flex items-center justify-end gap-2 whitespace-nowrap shrink-0">
             <Link
-              href="https://www.instagram.com/podiotickets/"
+              target="_blank"
+              href="https://www.instagram.com/podioticket"
               className="w-8 h-8 border border-[#3A3A3A] p-2 rounded-full flex items-center justify-center"
             >
               <InstagramIcon className="w-full h-full text-gray-2" />
             </Link>
             <Link
+              target="_blank"
               href="https://x.com/podiotickets"
               className="w-8 h-8 border border-[#3A3A3A] p-2 rounded-full flex items-center justify-center"
             >
               <TwitterIcon className="w-full h-full text-gray-2" />
             </Link>
             <Link
-              href="https://www.facebook.com/podiotickets"
+              target="_blank"
+              href="https://www.youtube.com/channel/UCqBDBJJiUulbW2iplU_8SvQ"
               className="w-8 h-8 border border-[#3A3A3A] p-2 rounded-full flex items-center justify-center"
             >
-              <FacebookIcon className="w-full h-full text-gray-2" />
+              <YoutubeIcon className="w-full h-full text-gray-2" />
             </Link>
           </div>
         </div>
 
         <p className="text-[#B4B4B4] text-sm mt-10">
-          © {currentYear} - Todos os direitos reservados para PódioTicket - 28.095.402/0001-36
+          © {currentYear} - Todos os direitos reservados para PódioTicket - 65.174.909/0001-01
         </p>
       </div>
     </footer>

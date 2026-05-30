@@ -27,6 +27,7 @@ import { cn } from "@/utils/cn";
 import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import { TopicRichContent } from "@/components/TopicRichContent";
+import { trackMetaPixel } from "@/lib/metaPixel";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
@@ -107,6 +108,22 @@ export default function EventPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [eventSlug]);
+
+  // Meta Pixel — ViewContent: abriu a página do evento. Dedup por evento na
+  // sessão (sessionStorage) → não re-dispara em F5 na mesma aba.
+  useEffect(() => {
+    if (!event?.id) return;
+    trackMetaPixel(
+      event.tracking?.metaPixelId,
+      "ViewContent",
+      {
+        content_type: "product",
+        content_ids: [event.id],
+        content_name: event.name,
+      },
+      { onceKey: `vc:${event.id}` },
+    );
+  }, [event?.id, event?.tracking?.metaPixelId, event?.name]);
 
   // Resetar estado da imagem quando o evento mudar
   useEffect(() => {
@@ -203,6 +220,9 @@ export default function EventPage() {
     event.status === "SUSPENDED" || event.isSuspended === true;
 
   const mapsUrl = event.googleMapsLink?.trim() ?? ""
+
+  // Banner visível (desktop): controla a coluna esquerda (banner + tópicos).
+  const hasBanner = !!event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError;
 
   return (
     <>
@@ -650,231 +670,31 @@ export default function EventPage() {
         )}
 
         <section className="flex flex-col min-h-screen items-center max-w-[1280px] mx-auto px-4 lg:px-8 pt-20 relative">
-          {/* Banner Image Section - Only when image exists */}
-          {(() => {
-            const hasBannerUrl = event.bannerUrl && event.bannerUrl.trim() !== "";
-            const shouldShowImage = hasBannerUrl && !imageError;
-
-            if (!shouldShowImage) {
-              return null;
-            }
-
-            return (
-              <div className="w-full z-10 relative flex flex-col items-center justify-center mt-0 2xl:mt-14">
-                <div className="w-full flex items-start justify-center gap-8">
-                  <div className="relative w-full h-[400px]">
-                    <Image
-                      src={event.bannerUrl}
-                      alt={event.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 66vw"
-                      style={{ position: 'absolute' }}
-                      onError={(e) => {
-                        setImageError(true);
-                      }}
-                      onLoad={() => {
-                        setImageError(false);
-                      }}
-                      className="object-cover rounded-xl"
-                      priority
-                      unoptimized
-                    />
-                  </div>
-
-                  <div className="min-w-1/4 w-1/4">
-                    <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] h-full">
-                      <h1 className="text-lg font-bold mb-4">{event.name}</h1>
-                      <div className="flex flex-col gap-4">
-                        <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
-                          <CalendarIcon className="size-5" />{" "}
-                          <span>Acontece em {formatDate(new Date(event.eventDate))}</span>
-                        </h1>
-                        {event.registrationEndDate && (
-                          <div className="flex items-center gap-2 text-sm text-gray-12 font-medium">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-                              <path d="M6.6665 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                              <path d="M13.3335 1.66699V4.16699" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                              <path d="M2.5 6.91699C2.5 4.70786 4.29086 2.91699 6.5 2.91699H13.5C15.7091 2.91699 17.5 4.70785 17.5 6.91699V14.3337C17.5 16.5428 15.7091 18.3337 13.5 18.3337H6.5C4.29086 18.3337 2.5 16.5428 2.5 14.3337V6.91699Z" stroke="#202020" strokeWidth="1" />
-                              <path d="M7.5 12.4997L8.83616 13.5686C9.25403 13.9029 9.86103 13.849 10.2134 13.4462L12.5 10.833" stroke="#202020" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                              <path d="M2.5 7.5H17.5" stroke="#202020" strokeWidth="1" strokeLinecap="round" />
-                            </svg>
-                            <span>Inscrições até {formatDate(new Date(event.registrationEndDate))}</span>
-                          </div>
-                        )}
-                        <h1 className="flex items-center gap-2 text-gray-12 font-medium">
-                          <LocationIcon className="size-5 shrink-0" />{" "}
-                          <Link href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
-                            {[`${event.city} - ${event.state}`, event.neighborhood, event.location].filter(Boolean).join(", ")}{event.zipCode && <span className="whitespace-nowrap">, {event.zipCode}</span>}
-                          </Link>
-                        </h1>
-                      </div>
-
-                      <div className="bg-gray-3 border border-gray-6 rounded-xl p-3 mt-6">
-                        <p className="text-sm font-medium text-gray-11 mb-3">
-                          Organizador
-                        </p>
-
-                        {(() => {
-                          const organizer = getEventOrganizer(event);
-                          if (!organizer) return null;
-
-                          const socialLinks = [
-                            { url: event.instagram, icon: InstagramIcon },
-                            { url: event.facebook, icon: FacebookIcon },
-                            { url: event.youtube, icon: YoutubeIcon },
-                            { url: event.tiktok, icon: TiktokIcon },
-                            { url: event.website, icon: GlobeIcon },
-                          ]
-
-
-                          return (
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-3">
-                                <OrganizerAvatar logoUrl={organizer.logoUrl} name={organizer.name} />
-                                <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                  <p className="text-sm font-semibold text-gray-12 truncate">
-                                    {organizer.name}
-                                  </p>
-                                  <div className="flex items-center gap-1">
-                                    {socialLinks.map(({ url, icon: Icon }, index) => {
-                                      if (!url) return null
-
-                                      return (
-                                        <Link
-                                          key={index}
-                                          href={url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="border border-gray-6 size-8 rounded-full text-gray-12 flex items-center justify-center"
-                                        >
-                                          <Icon className="size-4" />
-                                        </Link>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <Button
-                                variant="outline"
-                                className="w-full text-gray-12 border-gray-6"
-                                onClick={() => setIsContactModalOpen(true)}
-                              >
-                                Falar com o organizador
-                              </Button>
-                            </div>
-                          );
-                        })()}
-                        {!getEventOrganizer(event) && (
-                          <p className="text-xs text-gray-11">
-                            Informações não disponíveis
-                          </p>
-                        )}
-                      </div>
-
-                      {eventRealizationPassed ? (
-                        <>
-                          <Button
-                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                            disabled
-                            variant="outline"
-                          >
-                            Evento realizado
-                          </Button>
-                          <p className="text-sm text-gray-11 text-center mt-2">
-                            Este evento já foi realizado.
-                          </p>
-                        </>
-                      ) : registrationPeriodEnded ? (
-                        <>
-                          <Button className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed" disabled variant="outline">
-                            Inscrições encerradas!
-                          </Button>
-                          <p className="text-sm text-gray-11 text-center mt-2">
-                            O prazo de inscrições para este evento foi encerrado.
-                          </p>
-                        </>
-                      ) : eventSuspendedByOrganizer ? (
-                        <>
-                          <Button
-                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                            disabled
-                            variant="outline"
-                          >
-                            Inscreva-se
-                          </Button>
-                          <p className="text-sm text-gray-11 text-center mt-2">
-                            As inscrições para este evento não estão disponíveis no momento.
-                          </p>
-                        </>
-                      ) : registrationSlotsSoldOut ? (
-                        <>
-                          <Button
-                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                            disabled
-                            variant="outline"
-                          >
-                            Esgotado!
-                          </Button>
-                          <p className="text-sm text-gray-11 text-center mt-2">
-                            Este evento não possui mais vagas disponíveis.
-                          </p>
-                        </>
-                      ) : registrationsNotOpenYet ? (
-                        <>
-                          <Button
-                            className="w-full mt-8 bg-gray-4 text-gray-10 border-0 disabled:opacity-100 disabled:cursor-not-allowed"
-                            disabled
-                            variant="outline"
-                          >
-                            Em breve!
-                          </Button>
-                          <p className="text-sm text-gray-11 text-center mt-2">
-                            Inscrições abrem em{" "}
-                            <br /> <RegistrationCountdown
-                              targetDate={registrationOpensAt}
-                              fallbackText={registrationOpensDateText}
-                              onExpire={handleRegistrationCountdownExpire}
-                              className="font-semibold"
-                            />
-                          </p>
-                        </>
-                      ) : (
-                        <Button onClick={handleCheckoutClick} className="w-full mt-8">
-                          Inscreva-se
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-center justify-center gap-4">
-                      <Button
-                        variant="outline"
-                        className="mt-8 text-gray-11 border-gray-6"
-                        onClick={() => setIsShareModalOpen(true)}
-                      >
-                        <ShareIcon className="size-5" />
-                        Compartilhar
-                      </Button>
-
-                      <h1 className="underline font-semibold text-gray-11 text-sm cursor-pointer">
-                        Denunciar evento
-                      </h1>
-                    </div>
-                  </div>
+          {/* Layout 2 colunas: esquerda = banner + tópicos (1º tópico logo
+              abaixo do banner), direita = card de informações.
+              Sem `items-start`: as colunas esticam (stretch) para a mesma
+              altura, então a coluna direita fica tão alta quanto os tópicos e
+              o card `sticky` acompanha o scroll até o fim da página. */}
+          <div className="w-full z-10 relative flex gap-8 mt-0 2xl:mt-14">
+            {/* Coluna esquerda: banner + tópicos */}
+            <div className={hasBanner ? "w-3/4" : "flex-1"}>
+              {hasBanner && (
+                <div className="relative w-full h-[400px] mb-10">
+                  <Image
+                    src={event.bannerUrl}
+                    alt={event.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 66vw"
+                    style={{ position: 'absolute' }}
+                    onError={() => setImageError(true)}
+                    onLoad={() => setImageError(false)}
+                    className="object-cover rounded-xl"
+                    priority
+                    unoptimized
+                  />
                 </div>
-              </div>
-            );
-          })()}
+              )}
 
-          {/* Content Layout - Different when no image */}
-          <div
-            className={`w-full z-10 flex items-start gap-8 ${event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "mt-0 2xl:mt-0" : "mt-0 2xl:mt-14"
-              }`}
-          >
-            {/* Topics Section */}
-            <div
-              className={`${event.bannerUrl && event.bannerUrl.trim() !== "" && !imageError ? "-mt-14 w-3/4 pr-8" : "flex-1 pr-8"
-                }`}
-            >
               {topicSections.map((section, index) => (
                 <Fragment key={section.id}>
                   <div
@@ -953,10 +773,12 @@ export default function EventPage() {
               )}
             </div>
 
-            {/* Info Card Section - Only shown when no image */}
-            {(!event.bannerUrl || event.bannerUrl.trim() === "" || imageError) && (
-              <div className="min-w-1/4 w-1/4 shrink-0">
-                <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)] sticky top-24">
+            {/* Coluna direita: card de informações (sempre visível no desktop).
+                Wrapper `sticky` engloba o card E os botões (Compartilhar/
+                Denunciar) para que acompanhem o scroll juntos. */}
+            <div className="min-w-1/4 w-1/4 shrink-0">
+              <div className="sticky top-24">
+                <div className="rounded-xl overflow-hidden bg-gray-2 p-5 shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
                   <h1 className="text-lg font-bold mb-4">{event.name}</h1>
                   <div className="flex flex-col gap-4">
                     <h1 className="flex items-center gap-2 text-sm text-gray-12 font-medium">
@@ -1127,7 +949,7 @@ export default function EventPage() {
                   </h1>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </section>
       </div>

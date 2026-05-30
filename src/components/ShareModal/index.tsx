@@ -41,15 +41,30 @@ export function ShareModal({
 
   const shareOptions = [
     {
-      id: "twitter",
-      label: "Twitter",
-      icon: TwitterIcon,
+      id: "instagram",
+      label: "Instagram",
+      icon: InstagramIcon,
       outline: true,
-      onClick: () => {
-        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          eventName
-        )}&url=${encodeURIComponent(fullUrl)}`;
-        window.open(url, "_blank");
+      // Instagram NÃO tem endpoint web de compartilhamento de link (ao
+      // contrário de FB/Twitter/Telegram). No mobile o Web Share API abre a
+      // folha nativa do SO — que lista o Instagram. No desktop (sem Web Share)
+      // copiamos o link e abrimos o Instagram pra o usuário colar.
+      onClick: async () => {
+        if (typeof navigator !== "undefined" && navigator.share) {
+          try {
+            await navigator.share({ title: eventName, text: eventName, url: fullUrl });
+          } catch {
+            /* usuário cancelou a folha de compartilhamento — sem ação */
+          }
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(fullUrl);
+          toast.success("Link copiado! Cole no seu story ou perfil do Instagram.");
+        } catch {
+          toast.error("Erro ao copiar link");
+        }
+        window.open("https://www.instagram.com/", "_blank");
       },
     },
     {
@@ -77,17 +92,15 @@ export function ShareModal({
       },
     },
     {
-      id: "instagram",
-      label: "Instagram",
-      icon: InstagramIcon,
+      id: "twitter",
+      label: "Twitter",
+      icon: TwitterIcon,
       outline: true,
       onClick: () => {
-        window.open(
-          `https://www.instagram.com/sharer/sharer.php?u=${encodeURIComponent(
-            fullUrl
-          )}&text=${encodeURIComponent(eventName)}`,
-          "_blank"
-        );
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+          eventName
+        )}&url=${encodeURIComponent(fullUrl)}`;
+        window.open(url, "_blank");
       },
     },
     {

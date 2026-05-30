@@ -13,6 +13,8 @@ import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
 import { useTickets } from "@/hooks/useTickets";
 import { OrderApiError } from "@/interfaces/order";
 import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
+import { useAuth } from "@/hooks/useAuth";
+import { trackMetaPixel } from "@/lib/metaPixel";
 import toast from "react-hot-toast";
 import CheckoutIngressosLoading from "./loading";
 
@@ -21,6 +23,7 @@ function CheckoutIngressosContent() {
   const router = useRouter();
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
+  const { isAuthenticated } = useAuth();
   const { raceQuantities, updateRaceQuantity } = useCheckout();
   const { startTimer, syncFromOrder } = useCheckoutTimer();
   const { reserveOrder, patchCoupon } = useCheckoutReservation();
@@ -66,6 +69,23 @@ function CheckoutIngressosContent() {
       const slug = (event as { slug?: string } | null)?.slug;
       const fallbackUrl = slug ? `/events/${slug}` : `/`;
       startTimer(order, fallbackUrl);
+
+      // Meta Pixel — AddToCart: selecionou ingressos e avançou. Só captamos
+      // quando o usuário está LOGADO (regra do produto). Dedup por order.
+      if (isAuthenticated) {
+        trackMetaPixel(
+          event?.tracking?.metaPixelId,
+          "AddToCart",
+          {
+            content_type: "product",
+            content_ids: tickets.map((t) => t.ticketId),
+            currency: "BRL",
+            value: (order.pricing?.total ?? 0) / 100,
+            num_items: tickets.reduce((sum, t) => sum + t.quantity, 0),
+          },
+          { onceKey: `atc:${order.orderId}` },
+        );
+      }
 
       // Aplica cupom/voucher vindo do link (?coupon= / ?voucher=) silenciosamente
       // — falha não interrompe o fluxo (código errado pro evento, expirado, etc.).
