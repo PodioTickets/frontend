@@ -1699,16 +1699,17 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   };
 
   /**
-   * Mobile: ao selecionar um método de pagamento, rola até deixar o topo do
-   * card rente ao header (em vez de overscroll). Mede a posição num rAF duplo,
-   * DEPOIS do reflow — ao trocar de método, o anterior colapsa e o card alvo
-   * muda de posição; medir antes do re-render levaria a posição defasada.
+   * Mobile: ao selecionar QUALQUER método de pagamento (cartão ou PIX), rola até
+   * deixar o topo da SEÇÃO DE CUPOM rente ao header. Assim o campo de código de
+   * cupom (sobre o botão preto "Aplicar cupom") fica sempre visível no topo, com
+   * os métodos logo abaixo — em vez de pinar o card selecionado e esconder o
+   * cupom acima. Mede num rAF duplo, DEPOIS do reflow da expansão do método.
    */
-  const scrollPaymentMethodIntoView = (method: "card" | "pix") => {
+  const scrollPaymentMethodIntoView = () => {
     if (typeof window === "undefined" || !window.matchMedia("(max-width: 767px)").matches) return;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const el = document.querySelector<HTMLElement>(`[data-payment-method="${method}"]`);
+        const el = document.querySelector<HTMLElement>("[data-coupon-section]");
         if (!el) return;
         const headerH = document.querySelector("header")?.getBoundingClientRect().height ?? 64;
         const top = window.scrollY + el.getBoundingClientRect().top - (headerH + 12);
@@ -2339,7 +2340,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             )}
 
             {/* Coupon Section */}
-            <div className="pb-6">
+            <div className="pb-6" data-coupon-section>
               <div className="flex flex-col gap-3">
                 <Input
                   type="text"
@@ -2379,7 +2380,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                 className={`border rounded-lg p-4 transition-colors border-gray-6 bg-gray-3`}
                 onClick={() => {
                   if (!isCardSelected) setSelectedPaymentMethod("credit");
-                  scrollPaymentMethodIntoView("card");
+                  scrollPaymentMethodIntoView();
                 }}
               >
 
@@ -2491,7 +2492,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                   }`}
                 onClick={() => {
                   setSelectedPaymentMethod("pix");
-                  scrollPaymentMethodIntoView("pix");
+                  scrollPaymentMethodIntoView();
                 }}
               >
                 <div className="flex items-center justify-between cursor-pointer">
