@@ -101,7 +101,9 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
 
       <div
         ref={scrollerRef}
-        className="flex items-start gap-4 overflow-x-auto overscroll-x-contain py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`flex items-start gap-4 overflow-x-auto overscroll-x-contain py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          scrollable ? "" : "justify-center"
+        }`}
       >
         {/* respiro leve no inicio/fim sem cortar (scroller sem padding -> peek natural na borda) */}
         <span aria-hidden className="w-1 shrink-0" />
