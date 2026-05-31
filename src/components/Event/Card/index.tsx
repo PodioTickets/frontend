@@ -54,29 +54,19 @@ export function EventCard({ event }: EventCardProps) {
     !inscricoesEmBreve &&
     !inscricoesEncerradas;
 
-  const getStatusText = (status: Event["status"]) => {
-    switch (status) {
-      case "PUBLISHED":
-        return "Inscrições abertas";
-      case "DRAFT":
-        return "Rascunho";
-      case "CANCELLED":
-        return "Cancelado";
-      default:
-        return "Inscrições abertas";
-      case "COMPLETED":
-        return "Evento realizado";
-    }
-  };
+  // Estado "aberto" = verde (design Figma). Demais estados reaproveitam a mesma
+  // forma de tag (rounded-tr, borda topo+direita) com cores próprias.
+  const statusLabel = inscricoesEncerradas
+    ? "Inscrições encerradas"
+    : inscricoesEmBreve
+      ? "Inscrições em breve"
+      : vagasEsgotadas
+        ? "Vagas esgotadas!"
+        : event.status === "COMPLETED"
+          ? "Evento realizado"
+          : "Inscrições abertas";
 
-  const isOpen =
-    (event.status === "PUBLISHED" || event.status === "SUSPENDED") &&
-    !inscricoesEncerradas &&
-    !inscricoesEmBreve &&
-    !vagasEsgotadas;
-
-  // Cores da tag de status (canto inferior esquerdo). Aberto = verde (design Figma).
-  const tagColor = inscricoesEncerradas
+  const tagBg = inscricoesEncerradas
     ? "bg-red-50 border-red-200"
     : inscricoesEmBreve
       ? "bg-amber-50 border-amber-300"
@@ -84,9 +74,9 @@ export function EventCard({ event }: EventCardProps) {
         ? "bg-violet-50 border-violet-200"
         : event.status === "COMPLETED"
           ? "bg-[#F4F0FE] border-[#D4CAFE]"
-          : "bg-primary-5 border-primary-7";
+          : "bg-[#c4e8d1] border-[#94ce9a]"; // verde Figma
 
-  const tagTextColor = inscricoesEncerradas
+  const tagText = inscricoesEncerradas
     ? "text-red-900"
     : inscricoesEmBreve
       ? "text-amber-950"
@@ -94,115 +84,103 @@ export function EventCard({ event }: EventCardProps) {
         ? "text-violet-900"
         : event.status === "COMPLETED"
           ? "text-[#5B3FBF]"
-          : "text-primary-12";
+          : "text-[#203c25]"; // verde Figma
 
-  const statusLabel = inscricoesEncerradas
-    ? "Inscrições encerradas"
+  const dotColor = inscricoesEncerradas
+    ? "bg-red-600"
     : inscricoesEmBreve
-      ? "Inscrições em breve"
+      ? "bg-amber-500"
       : vagasEsgotadas
-        ? "Vagas esgotadas!"
-        : getStatusText(event.status);
+        ? "bg-violet-600"
+        : event.status === "COMPLETED"
+          ? "bg-[#5B3FBF]"
+          : "bg-[#3e9b4f]"; // verde Figma
 
   const organizer = getEventOrganizer(event);
+  const organizerImg = organizer?.logoUrl
+    ? getAvatarUrl(organizer.logoUrl)
+    : event.organizer?.user?.avatarUrl
+      ? getAvatarUrl(event.organizer.user.avatarUrl)
+      : null;
 
-  const cardContent = (
-    <>
-      {/* Imagem (landscape) */}
-      <div className="relative w-full h-[232px] overflow-hidden bg-gray-4">
-        <ImageWithInitialFallback
-          src={(event as any).logoUrl}
-          alt={event.name}
-          name={event.name}
-          fallbackId={event.id}
-          fill
-          sizes="(max-width: 768px) 90vw, 308px"
-          className="size-full border-0 object-cover"
-          letterClassName="text-6xl"
-        />
-      </div>
-
-      {/* Título + local */}
-      <div className="flex flex-col gap-3 px-3 pt-4 pb-3 border-b border-gray-6">
-        <h1 className="font-manrope font-bold text-base leading-[1.1] text-gray-12 truncate">
-          {event.name}
-        </h1>
-        <div className="flex items-center gap-1 text-gray-12">
-          <LocationIcon className="size-5 shrink-0" />
-          <span className="text-sm font-family-dm-sans text-gray-12">
-            {event.city}, {event.state}
-          </span>
-        </div>
-      </div>
-
-      {/* Organizador + data */}
-      <div className="flex flex-col gap-4 pt-3">
-        <div className="flex flex-col gap-3 px-3">
-          <div className="flex items-center gap-1 text-sm font-family-dm-sans text-gray-12">
-            {organizer?.logoUrl ? (
-              <ImageWithInitialFallback
-                src={getAvatarUrl(organizer.logoUrl)}
-                alt={organizer.name}
-                name={organizer.name}
-                width={20}
-                height={20}
-                className="shrink-0 rounded-full size-5"
-                imgClassName="object-cover"
-                letterClassName="text-xs"
-              />
-            ) : event.organizer?.user?.avatarUrl ? (
-              <ImageWithInitialFallback
-                src={getAvatarUrl(event.organizer.user.avatarUrl)}
-                alt={organizer?.name ?? "Organizador"}
-                name={organizer?.name ?? "Organizador"}
-                width={20}
-                height={20}
-                className="shrink-0 rounded-full size-5"
-                imgClassName="object-cover"
-                letterClassName="text-xs"
-              />
-            ) : (
-              <FlagIcon className="size-5 shrink-0" />
-            )}
-            <span className="truncate">{organizer?.name || "Organizador"}</span>
-          </div>
-          <div className="flex items-center gap-1 text-sm font-family-dm-sans text-gray-12">
-            <CalendarIcon className="size-5 shrink-0" />
-            <span>{formattedDate}</span>
-          </div>
+  return (
+    <Link href={`/events/${event.slug}`} className="block">
+      <div className="flex w-full flex-col items-start overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
+        {/* Imagem (banner) */}
+        <div className="relative h-[232px] w-full shrink-0 bg-gray-4">
+          <ImageWithInitialFallback
+            src={(event as any).logoUrl}
+            alt={event.name}
+            name={event.name}
+            fallbackId={event.id}
+            fill
+            sizes="(max-width: 768px) 90vw, 308px"
+            className="size-full border-0 object-cover"
+            letterClassName="text-6xl"
+          />
         </div>
 
-        {/* Tag de status — canto inferior esquerdo */}
-        <div className="flex items-center">
-          <div
-            className={cn(
-              "flex items-center gap-1 p-3 rounded-tr-[16px] border-t border-r",
-              tagColor,
-            )}
-          >
-            {isOpen && (
-              <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
-                <div className="bg-primary-12 rounded-full size-1" />
-              </div>
-            )}
-            <span className={cn("text-sm font-semibold font-family-dm-sans leading-[1.3]", tagTextColor)}>
-              {statusLabel}
+        {/* Título + local */}
+        <div className="flex w-full flex-col items-start gap-3 border-b border-[#d9d9d9] px-3 pb-3 pt-4">
+          <p className="w-full truncate font-manrope text-base font-bold leading-[1.1] text-[#202020]">
+            {event.name}
+          </p>
+          <div className="flex items-center gap-1">
+            <LocationIcon className="size-5 shrink-0 text-[#202020]" />
+            <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
+              {event.city}, {event.state}
             </span>
           </div>
         </div>
-      </div>
-    </>
-  );
 
-  return (
-    <div className="rounded-lg overflow-hidden bg-gray-2 border border-gray-7 shadow-[0_2px_6px_rgba(17,17,17,0.3)] transition-transform hover:scale-[1.02] duration-200">
-      {event ? (
-        <Link href={`/events/${event.slug}`} className="block">
-          {cardContent}
-        </Link>
-      ) : (
-        cardContent
-      )}
-    </div>
+        {/* Infos: organizador + data + tag de status */}
+        <div className="flex w-full flex-col items-start gap-4 pt-3">
+          <div className="flex w-full flex-col items-start gap-3 px-3">
+            {/* Organizador */}
+            <div className="flex items-center gap-1">
+              {organizerImg ? (
+                <ImageWithInitialFallback
+                  src={organizerImg}
+                  alt={organizer?.name ?? "Organizador"}
+                  name={organizer?.name ?? "Organizador"}
+                  width={20}
+                  height={20}
+                  className="size-5 shrink-0 rounded-full"
+                  imgClassName="object-cover"
+                  letterClassName="text-xs"
+                />
+              ) : (
+                <FlagIcon className="size-5 shrink-0" />
+              )}
+              <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
+                {organizer?.name || "Organizador"}
+              </span>
+            </div>
+            {/* Data */}
+            <div className="flex items-center gap-1">
+              <CalendarIcon className="size-5 shrink-0 text-[#202020]" />
+              <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
+                {formattedDate}
+              </span>
+            </div>
+          </div>
+
+          {/* Tag de status — colada no canto inferior esquerdo */}
+          <div className="flex w-full items-center pr-3">
+            <div
+              className={cn(
+                "flex items-center gap-1 rounded-tr-[16px] border-r border-t p-3",
+                tagBg,
+              )}
+            >
+              <span className={cn("size-3 shrink-0 rounded-full", dotColor)} />
+              <span className={cn("font-family-dm-sans text-sm font-semibold leading-[1.3]", tagText)}>
+                {statusLabel}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
