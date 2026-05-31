@@ -34,6 +34,7 @@ import toast from "react-hot-toast";
 import { Loading } from "../Loading";
 import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { OrderApiError } from "@/interfaces/order";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { FlagIcon } from "../Icons/FlagIcon";
 import {
@@ -186,6 +187,22 @@ function NationalitySelect({
   );
 }
 
+/** Leitura SSR-safe de JSON do sessionStorage (estado "salvo" dos participantes). */
+function readSavedState<T>(key: string | null, fallback: T): T {
+  if (typeof window === "undefined" || !key) return fallback;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+type SavedSnapshotMap = Record<
+  number,
+  { participant: Record<string, string>; questionAnswers: Record<string, string | string[]> }
+>;
+
 export function InformationStep({
   event,
   onNext,
@@ -204,7 +221,7 @@ export function InformationStep({
 
   const eventId = event?.id;
   const { clearTimer, orderId, currentOrder: timerCurrentOrder, syncFromOrder } = useCheckoutTimer();
-  const { patchParticipants, getOrder } = useCheckoutReservation();
+  const { patchParticipants, removeReservedSlot, getOrder } = useCheckoutReservation();
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth();
 
@@ -286,10 +303,20 @@ export function InformationStep({
     Record<number, string>
   >({});
 
-  // Estado para rastrear quais participantes foram salvos clicando em "Salvar e próximo"
+  /* Estado "salvo/Concluído" = participantes que passaram pelo clique explícito
+   * em "Salvar e próximo". PERSISTE por evento no sessionStorage (hidratação
+   * síncrona) pra sobreviver a sair/voltar do step SEM marcar como concluído
+   * algo que o usuário não salvou (não derivamos da mera completude dos dados —
+   * isso fazia o 2º participante aparecer "Concluído" sem clique). */
+  const savedParticipantsKey = eventId
+    ? `checkout:savedParticipants:${eventId}`
+    : null;
+  const savedSnapshotsKey = eventId
+    ? `checkout:savedSnapshots:${eventId}`
+    : null;
   const [savedParticipants, setSavedParticipants] = useState<
     Record<number, boolean>
-  >({});
+  >(() => readSavedState<Record<number, boolean>>(savedParticipantsKey, {}));
 
   /* Hidrata nacionalidade quando o `authUser` chega DEPOIS do mount inicial.
    * Cenário: primeiro render tem `authUser=null` (useAuth async) → useEffect
@@ -315,10 +342,36 @@ export function InformationStep({
     nationalityHydrationRef.current = true;
   }, [authUser?.country, participants, savedParticipants, updateParticipant]);
 
-  // Snapshot dos dados do participante no momento em que foi salvo — usado para detectar mudanças
-  const [savedSnapshots, setSavedSnapshots] = useState<
-    Record<number, { participant: Record<string, string>; questionAnswers: Record<string, string | string[]> }>
-  >({});
+  // Snapshot dos dados do participante no momento em que foi salvo — usado para
+  // detectar mudanças (dirty). Persiste junto do "salvo" pra o dirty-check
+  // funcionar ao voltar pro step.
+  const [savedSnapshots, setSavedSnapshots] = useState<SavedSnapshotMap>(() =>
+    readSavedState<SavedSnapshotMap>(savedSnapshotsKey, {}),
+  );
+
+  // Persiste o estado de "salvo" + snapshots por evento (write-through).
+  useEffect(() => {
+    if (!savedParticipantsKey || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(
+        savedParticipantsKey,
+        JSON.stringify(savedParticipants),
+      );
+    } catch {
+      /* quota/disabled — ignora */
+    }
+  }, [savedParticipantsKey, savedParticipants]);
+  useEffect(() => {
+    if (!savedSnapshotsKey || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(
+        savedSnapshotsKey,
+        JSON.stringify(savedSnapshots),
+      );
+    } catch {
+      /* quota/disabled — ignora */
+    }
+  }, [savedSnapshotsKey, savedSnapshots]);
 
   // Erros de validação por participante e campo (ex: { 0: { name: "Informe nome e sobrenome", email: "Campo obrigatório" } })
   const [fieldErrors, setFieldErrors] = useState<
@@ -1278,74 +1331,53 @@ export function InformationStep({
     return errors;
   };
 
-  /* Re-hidrata o estado "confirmado/colapsado" ao REMONTAR a etapa.
+  /* Reconciliação 1x no mount do estado "salvo" hidratado do sessionStorage.
    *
-   * Problema: os dados dos participantes persistem no CheckoutContext
-   * (sessionStorage), mas `savedParticipants`/`savedSnapshots`/`expandedParticipants`
-   * são estado LOCAL — ao avançar pro próximo step e voltar (ou ir pra /user e
-   * voltar), o componente remonta e esse estado zera, forçando o usuário a
-   * reconfirmar tudo.
+   * As flags de "salvo" refletem cliques REAIS em "Salvar e próximo" (persistidos
+   * por evento). Aqui NÃO adicionamos nada por completude — só PODAMOS flags
+   * obsoletas: índice que não existe mais OU participante cujos dados não passam
+   * mais na validação (ex.: pedido trocado e participantes resetados, dados
+   * limpos). Sem isso, uma flag antiga mostraria "Concluído" num card vazio.
    *
-   * Solução: derivamos o "salvo" da completude dos dados JÁ persistidos. Todo
-   * participante que passa na MESMA validação do "Salvar e próximo" volta como
-   * confirmado (card colapsado), com snapshot = dados atuais (→ dirty=false,
-   * "Concluído"). Roda 1x, só no mount e só quando ainda não há nada salvo nesta
-   * sessão — não atropela edições/saves em curso. Participantes incompletos
-   * seguem pendentes; o primeiro deles fica aberto. */
-  const savedHydrationRef = useRef(false);
+   * Também ajusta o card aberto: abre o 1º participante PENDENTE (não salvo). Se
+   * todos já estão salvos (voltou de etapa posterior), colapsa todos. */
+  const savedPruneRef = useRef(false);
   useEffect(() => {
-    if (savedHydrationRef.current) return;
+    if (savedPruneRef.current) return;
     if (loading || participantsWithRaces.length === 0) return;
-    savedHydrationRef.current = true;
-    if (Object.keys(savedParticipants).length > 0) return;
+    savedPruneRef.current = true;
 
-    const nextSaved: Record<number, boolean> = {};
-    const nextSnapshots: Record<
-      number,
-      { participant: Record<string, string>; questionAnswers: Record<string, string | string[]> }
-    > = {};
-    let firstPendingIndex: number | null = null;
+    const isValid = (participantIndex: number, ticket: Ticket): boolean =>
+      Object.keys(
+        getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender),
+      ).length === 0;
 
-    participantsWithRaces.forEach(({ participantIndex, ticket }) => {
-      const errors = getParticipantValidationErrors(
-        participantIndex,
-        ticket.ageLimit,
-        ticket.gender,
-      );
-      if (Object.keys(errors).length === 0) {
-        const p = participants[participantIndex];
-        nextSaved[participantIndex] = true;
-        nextSnapshots[participantIndex] = {
-          participant: {
-            name: p?.name || "",
-            cpf: p?.cpf || "",
-            email: p?.email || "",
-            birthDate: p?.birthDate || "",
-            phone: p?.phone || "",
-            gender: p?.gender || "",
-            nationality: p?.nationality || userDefaultNationality,
-            hasEmergencyContact: String(p?.hasEmergencyContact ?? false),
-            emergencyContactName: p?.emergencyContactName || "",
-            emergencyPhone: p?.emergencyPhone || "",
-          },
-          questionAnswers: { ...(questionAnswers[participantIndex] || {}) },
-        };
-      } else if (firstPendingIndex === null) {
-        firstPendingIndex = participantIndex;
+    // Poda flags obsoletas — nunca adiciona.
+    setSavedParticipants((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      const next: Record<number, boolean> = {};
+      let changed = false;
+      participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+        if (prev[participantIndex] && isValid(participantIndex, ticket)) {
+          next[participantIndex] = true;
+        }
+      });
+      // Detecta remoção (chaves que existiam em prev mas não em next).
+      for (const k of Object.keys(prev)) {
+        if (!next[Number(k)]) changed = true;
       }
+      return changed ? next : prev;
     });
 
-    // Nada completo (fluxo novo / dados vazios) → mantém o default ({0: true}).
-    if (Object.keys(nextSaved).length === 0) return;
-
-    setSavedParticipants(nextSaved);
-    setSavedSnapshots(nextSnapshots);
-    // Colapsa os confirmados; abre só o primeiro pendente (se houver).
+    // Abre o 1º pendente (não salvo); todos salvos → colapsa.
+    const firstPending = participantsWithRaces.find(
+      ({ participantIndex }) => !savedParticipants[participantIndex],
+    );
     setExpandedParticipants(
-      firstPendingIndex === null ? {} : { [firstPendingIndex]: true },
+      firstPending ? { [firstPending.participantIndex]: true } : {},
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, participantsWithRaces, participants, questionAnswers, userDefaultNationality]);
+  }, [loading, participantsWithRaces]);
 
   const handleDeleteParticipant = (
     participantIndex: number,
@@ -1354,97 +1386,54 @@ export function InformationStep({
     openDeleteParticipantModal({
       participantIndex,
       raceId: ticketId,
-      onConfirm: () => {
-        const currentQuantity = raceQuantities[ticketId] || 0;
-        const newQuantity = Math.max(0, currentQuantity - 1);
+      onConfirm: async () => {
+        /* Reflete a remoção no estado LOCAL que renderiza os slots
+         * (participantsWithRaces deriva de raceQuantities/participants). */
+        const applyLocalRemoval = () => {
+          const currentQuantity = raceQuantities[ticketId] || 0;
+          removeParticipant(participantIndex);
+          setSavedParticipants((prev) => {
+            const updated = { ...prev };
+            delete updated[participantIndex];
+            return updated;
+          });
+          setFieldErrors((prev) => {
+            const updated = { ...prev };
+            delete updated[participantIndex];
+            return updated;
+          });
+          updateRaceQuantity(ticketId, Math.max(0, currentQuantity - 1));
+        };
 
-        // Atualiza estado local imediatamente
-        removeParticipant(participantIndex);
+        // Sem pedido reservado ainda (raro nesta etapa) → só estado local.
+        if (!orderId) {
+          applyLocalRemoval();
+          return;
+        }
 
-        setSavedParticipants((prev) => {
-          const updated = { ...prev };
-          delete updated[participantIndex];
-          return updated;
-        });
-        setFieldErrors((prev) => {
-          const updated = { ...prev };
-          delete updated[participantIndex];
-          return updated;
-        });
-
-        updateRaceQuantity(ticketId, newQuantity);
-
-        // Devolve a vaga reservada no servidor via PATCH /participants
-        if (orderId) {
-          const mapGender = (value?: string) => {
-            if (!value) return undefined;
-            const v = value.toLowerCase();
-            if (v.startsWith("m")) return "MALE" as const;
-            if (v.startsWith("f")) return "FEMALE" as const;
-            if (v.includes("prefere") || v.includes("prefer")) return "PREFER_NOT_TO_SAY" as const;
-            return "OTHER" as const;
-          };
-
-          const remaining = participants.filter((_, i) => i !== participantIndex);
-
-          const payload = {
-            participants: remaining.map((p) => {
-              /* Brasileiros: doc clean (só dígitos). Estrangeiros: doc cru
-               * (preserva letras de passaporte/RNE). Backend usa
-               * documentType pra normalizar via cleanDocumentNumber. */
-              const participantIsBr = isBrazilianCountry(p.nationality);
-              const docForBackend = participantIsBr
-                ? (p.cpf || "").replace(/\D/g, "")
-                : (p.cpf || "").trim();
-              const mapped: {
-                name: string;
-                documentType: "CPF" | "PASSPORT";
-                documentNumber: string;
-                email: string;
-                birthDate: string; phone: string;
-                country?: string;
-                gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
-                emergencyContactName?: string; emergencyPhone?: string;
-                hasEmergencyContact?: boolean;
-                questionAnswers?: Array<{ questionId: string; answer: string | boolean | number }>;
-              } = {
-                name: p.name,
-                documentType: participantIsBr ? "CPF" : "PASSPORT",
-                documentNumber: docForBackend,
-                email: p.email,
-                birthDate: p.birthDate,
-                phone: p.phone ? getPhoneDigitsForBackend(p.phone, p.nationality) : "",
-                /* Nacionalidade escolhida pelo participante no checkout — backend
-                 * salva no receiptSnapshot.participant.country e usa pra formatar
-                 * telefone e decidir label do documento no PDF/email. */
-                country: p.nationality || undefined,
-              };
-              const gender = mapGender(p.gender);
-              if (gender) mapped.gender = gender;
-              if (p.emergencyContactName?.trim()) mapped.emergencyContactName = p.emergencyContactName.trim();
-              if (p.emergencyPhone?.trim()) mapped.emergencyPhone = getPhoneDigitsForBackend(p.emergencyPhone, p.nationality);
-              if (p.hasEmergencyContact) mapped.hasEmergencyContact = true;
-              if (p.questionAnswers && Object.keys(p.questionAnswers).length > 0) {
-                mapped.questionAnswers = Object.entries(p.questionAnswers).map(
-                  ([questionId, answer]) => ({
-                    questionId,
-                    answer: Array.isArray(answer) ? JSON.stringify(answer) : (answer as string | boolean | number),
-                  }),
-                );
-              }
-              return mapped;
-            }),
-          };
-
-          patchParticipants(orderId, payload)
-            .then((res) => {
-              if (res.couponAutoRemoved) {
-                toast("Cupom de quantidade removido: carrinho abaixo do mínimo exigido.", { icon: "ℹ️" });
-              }
-            })
-            .catch(() => {
-              toast.error("Erro ao devolver a vaga. Tente novamente.");
-            });
+        try {
+          /* REDUZ a quantidade reservada de fato: `DELETE /orders/:id/participants/:slot`
+           * (libera estoque + cancela o placeholder PENDING). `slot` = participantIndex
+           * (mesma ordem do array de participantes do backend). NÃO usar PATCH
+           * /participants aqui — ele não diminui a quantidade. */
+          const updated = await removeReservedSlot(orderId, participantIndex);
+          // Pedido já vem recalculado (pricing/cupom) — usa direto, sem refetch.
+          syncFromOrder(updated);
+          queryClient.setQueryData(["checkout-order", orderId], updated);
+          applyLocalRemoval();
+        } catch (err) {
+          const code = err instanceof OrderApiError ? err.code : null;
+          if (code === "LAST_TICKET") {
+            toast.error(
+              "Este é o último ingresso do pedido. Para remover, cancele o pedido inteiro.",
+            );
+          } else if (code === "ORDER_NOT_PENDING") {
+            toast.error("Este pedido não está mais pendente.");
+          } else if (code === "INVALID_SLOT") {
+            toast.error("Não foi possível identificar o ingresso. Recarregue a página e tente de novo.");
+          } else {
+            toast.error("Erro ao remover o participante. Tente novamente.");
+          }
         }
       },
     });

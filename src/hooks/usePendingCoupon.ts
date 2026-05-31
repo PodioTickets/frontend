@@ -15,8 +15,17 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-const COUPON_QUERY_PARAM = "coupon";
+/* Param canônico do cupom no link: `?cupom=` (PT-BR). `?coupon=` (inglês) é
+ * mantido como LEGADO na leitura pra não quebrar links já distribuídos — mas o
+ * que re-anexamos/escrevemos é sempre `cupom`. */
+const CUPOM_QUERY_PARAM = "cupom";
+const COUPON_QUERY_PARAM_LEGACY = "coupon";
 const VOUCHER_QUERY_PARAM = "voucher";
+
+/** Nome do query param a usar ao (re)escrever na URL, por tipo de código. */
+export function couponParamName(kind: CouponParamKind): string {
+  return kind === "voucher" ? VOUCHER_QUERY_PARAM : CUPOM_QUERY_PARAM;
+}
 
 /** Tipo do código capturado pelo link. Decide a CHAVE no apply
  *  (`couponCode` vs `voucherCode`) e o NOME do param re-anexado em navegações
@@ -24,13 +33,15 @@ const VOUCHER_QUERY_PARAM = "voucher";
  *  cupom. */
 export type CouponParamKind = "coupon" | "voucher";
 
-/** Lê o código E o tipo do param do link. `?coupon=` tem precedência sobre
- *  `?voucher=` quando ambos estão presentes. */
+/** Lê o código E o tipo do param do link. Cupom (`?cupom=`, ou o legado
+ *  `?coupon=`) tem precedência sobre `?voucher=` quando ambos estão presentes. */
 export function readCouponParamEntry(
   searchParams: { get(name: string): string | null },
 ): { code: string; kind: CouponParamKind } | null {
-  const coupon = searchParams.get(COUPON_QUERY_PARAM);
-  if (coupon) return { code: coupon, kind: "coupon" };
+  const cupom =
+    searchParams.get(CUPOM_QUERY_PARAM) ??
+    searchParams.get(COUPON_QUERY_PARAM_LEGACY);
+  if (cupom) return { code: cupom, kind: "coupon" };
   const voucher = searchParams.get(VOUCHER_QUERY_PARAM);
   if (voucher) return { code: voucher, kind: "voucher" };
   return null;

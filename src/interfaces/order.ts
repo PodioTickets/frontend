@@ -261,6 +261,11 @@ export type OrderErrorCode =
   | "VOUCHER_NOT_FOUND"
   | "VOUCHER_EXPIRED"
   | "DISCOUNT_CONFLICT"
+  // Remoção de slot reservado (`DELETE /orders/:id/participants/:slot`)
+  | "INVALID_SLOT"
+  | "LAST_TICKET"
+  // `POST /pay` quando há participante em branco
+  | "INCOMPLETE_PARTICIPANTS"
   | "VALIDATION_ERROR";
 
 export interface OrderErrorResponse {

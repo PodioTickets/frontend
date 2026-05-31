@@ -108,10 +108,15 @@ export function TicketForm({
     initialData?.distanceUnit || "KM",
   );
   const [gender, setGender] = useState(initialData?.gender || "all");
+  /* Criação de ingresso: a Restrição de idade já vem ATIVA com mínimo de 18 anos
+   * como padrão (regra de produto). Na edição, respeita exatamente o que o
+   * ingresso tem (`??`/`||` preservam `false`/"" vindos do `initialData`). */
   const [hasAgeRestriction, setHasAgeRestriction] = useState(
-    initialData?.hasAgeRestriction || false,
+    initialData?.hasAgeRestriction ?? mode === "create",
   );
-  const [minAge, setMinAge] = useState(initialData?.minAge || "");
+  const [minAge, setMinAge] = useState(
+    initialData?.minAge || (mode === "create" ? "18" : ""),
+  );
   const [maxAge, setMaxAge] = useState(initialData?.maxAge || "");
   const [hasKit, setHasKit] = useState(initialData?.hasKit || false);
   const [selectedGroupId, setSelectedGroupId] = useState(

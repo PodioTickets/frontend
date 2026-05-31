@@ -1090,207 +1090,207 @@ export function CreateCouponModal() {
                                 >
                                   {/* Validade do cupom */}
                                   <div className="flex flex-col gap-5">
-                                  {couponType !== "QUANTITY" && (
-                                  <div className="flex flex-col gap-4">
-                                    <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
-                                        Deseja ativar lista exclusiva por CPF?
-                                      </h3>
-                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        Restrinja o cupom para uma lista específica de CPFs
-                                      </p>
-                                    </div>
-                                    <div className="flex gap-6">
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={cpfListStatus === "DISABLED"}
-                                          onCheckedChange={(checked) => { if (checked) { setCpfListStatus("DISABLED"); setCpfListError(""); } }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitado</span>
-                                      </label>
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={cpfListStatus === "ENABLED"}
-                                          onCheckedChange={(checked) => { if (checked) { setCpfListStatus("ENABLED"); setCpfListError(""); } }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
-                                      </label>
-                                    </div>
-
-                                    {cpfListError && (
-                                      <p className="text-red-11 text-sm font-family-dm-sans leading-[1.3]">{cpfListError}</p>
-                                    )}
-
-                                    {cpfListStatus === "ENABLED" && (
-                                      <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden flex flex-col">
-                                        {/* Search field */}
-                                        <div className="p-3 border-b border-gray-6">
-                                          <div className="relative">
-                                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-10 pointer-events-none" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                              <path d="M7.333 12.667A5.333 5.333 0 1 0 7.333 2a5.333 5.333 0 0 0 0 10.667ZM14 14l-2.9-2.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                            <input
-                                              type="text"
-                                              placeholder="Busque um cpf..."
-                                              value={cpfSearch}
-                                              onChange={(e) => setCpfSearch(e.target.value)}
-                                              className="w-full h-10 pl-9 pr-3 bg-gray-1 border border-gray-6 rounded-lg text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none focus:border-gray-8"
+                                    {couponType !== "QUANTITY" && (
+                                      <div className="flex flex-col gap-4">
+                                        <div className="flex flex-col gap-2">
+                                          <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
+                                            Deseja ativar lista exclusiva por CPF?
+                                          </h3>
+                                          <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                            Restrinja o cupom para uma lista específica de CPFs
+                                          </p>
+                                        </div>
+                                        <div className="flex gap-6">
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox
+                                              checked={cpfListStatus === "DISABLED"}
+                                              onCheckedChange={(checked) => { if (checked) { setCpfListStatus("DISABLED"); setCpfListError(""); } }}
                                             />
-                                          </div>
+                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitado</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                            <Checkbox
+                                              checked={cpfListStatus === "ENABLED"}
+                                              onCheckedChange={(checked) => { if (checked) { setCpfListStatus("ENABLED"); setCpfListError(""); } }}
+                                            />
+                                            <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                          </label>
                                         </div>
-                                        {/* Table */}
-                                        <div className="flex flex-col">
-                                          <div className="bg-gray-3 border-b border-gray-6 flex h-11 items-center">
-                                            <div className="flex-1 px-4">
-                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">CPFs autorizados</p>
-                                            </div>
-                                            <div className="border-l border-gray-6 h-full flex items-center justify-center px-4 w-[74px]">
-                                              <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">Ações</p>
-                                            </div>
-                                          </div>
-                                          {cpfList.length === 0 ? (
-                                            <div className="p-8 text-center">
-                                              <p className="text-gray-11 text-sm">Nenhum CPF adicionado</p>
-                                            </div>
-                                          ) : (() => {
-                                            const filtered = cpfList.filter((cpf) => {
-                                              const query = cpfSearch.replace(/\D/g, "");
-                                              return formatCPF(cpf).includes(cpfSearch) || cpf.includes(query);
-                                            });
-                                            return filtered.length === 0 ? (
-                                              <div className="p-8 text-center">
-                                                <p className="text-gray-11 text-sm">Nenhum CPF encontrado</p>
+
+                                        {cpfListError && (
+                                          <p className="text-red-11 text-sm font-family-dm-sans leading-[1.3]">{cpfListError}</p>
+                                        )}
+
+                                        {cpfListStatus === "ENABLED" && (
+                                          <div className="bg-gray-2 border-[1.5px] border-gray-6 rounded-lg overflow-hidden flex flex-col">
+                                            {/* Search field */}
+                                            <div className="p-3 border-b border-gray-6">
+                                              <div className="relative">
+                                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-10 pointer-events-none" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                  <path d="M7.333 12.667A5.333 5.333 0 1 0 7.333 2a5.333 5.333 0 0 0 0 10.667ZM14 14l-2.9-2.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                                <input
+                                                  type="text"
+                                                  placeholder="Busque um cpf..."
+                                                  value={cpfSearch}
+                                                  onChange={(e) => setCpfSearch(e.target.value)}
+                                                  className="w-full h-10 pl-9 pr-3 bg-gray-1 border border-gray-6 rounded-lg text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none focus:border-gray-8"
+                                                />
                                               </div>
-                                            ) : (
-                                              filtered.map((cpf) => {
-                                                const realIndex = cpfList.indexOf(cpf);
-                                                return (
-                                                  <div key={realIndex} className="border-b border-gray-6 h-[52px] flex items-center">
-                                                    <div className="flex-1 px-4">
-                                                      <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
-                                                        {formatCPF(cpf)}
-                                                      </p>
-                                                    </div>
-                                                    <div className="flex items-center justify-center px-4 w-[74px]">
-                                                      <button
-                                                        type="button"
-                                                        title="Remover CPF"
-                                                        onClick={() => handleRemoveCPF(realIndex)}
-                                                        className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
-                                                      >
-                                                        <TrashIcon className="size-5 text-red-12" />
-                                                      </button>
-                                                    </div>
+                                            </div>
+                                            {/* Table */}
+                                            <div className="flex flex-col">
+                                              <div className="bg-gray-3 border-b border-gray-6 flex h-11 items-center">
+                                                <div className="flex-1 px-4">
+                                                  <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">CPFs autorizados</p>
+                                                </div>
+                                                <div className="border-l border-gray-6 h-full flex items-center justify-center px-4 w-[74px]">
+                                                  <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">Ações</p>
+                                                </div>
+                                              </div>
+                                              {cpfList.length === 0 ? (
+                                                <div className="p-8 text-center">
+                                                  <p className="text-gray-11 text-sm">Nenhum CPF adicionado</p>
+                                                </div>
+                                              ) : (() => {
+                                                const filtered = cpfList.filter((cpf) => {
+                                                  const query = cpfSearch.replace(/\D/g, "");
+                                                  return formatCPF(cpf).includes(cpfSearch) || cpf.includes(query);
+                                                });
+                                                return filtered.length === 0 ? (
+                                                  <div className="p-8 text-center">
+                                                    <p className="text-gray-11 text-sm">Nenhum CPF encontrado</p>
                                                   </div>
+                                                ) : (
+                                                  filtered.map((cpf) => {
+                                                    const realIndex = cpfList.indexOf(cpf);
+                                                    return (
+                                                      <div key={realIndex} className="border-b border-gray-6 h-[52px] flex items-center">
+                                                        <div className="flex-1 px-4">
+                                                          <p className="text-gray-12 text-sm font-medium font-inter leading-[1.3]">
+                                                            {formatCPF(cpf)}
+                                                          </p>
+                                                        </div>
+                                                        <div className="flex items-center justify-center px-4 w-[74px]">
+                                                          <button
+                                                            type="button"
+                                                            title="Remover CPF"
+                                                            onClick={() => handleRemoveCPF(realIndex)}
+                                                            className="size-9 rounded-lg bg-red-2 border border-red-6 hover:bg-red-3 flex items-center justify-center transition-colors"
+                                                          >
+                                                            <TrashIcon className="size-5 text-red-12" />
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    );
+                                                  })
                                                 );
-                                              })
-                                            );
-                                          })()}
-                                        </div>
-                                        {/* Inline add CPF row */}
-                                        {isAddingCpf && (
-                                          <div className="px-4 py-2 border-t border-gray-6 flex flex-col gap-1">
-                                            {/* Mobile: input ocupa linha inteira (min-w-full + flex-wrap), botões dividem a 2ª linha; desktop: tudo inline. */}
-                                            <div className="flex items-center gap-2 max-md:flex-wrap">
-                                              <input
-                                                type="text"
-                                                value={newCpfInput}
-                                                onChange={handleNewCpfInputChange}
-                                                onKeyDown={(e) => {
-                                                  if (e.key === "Enter") { e.preventDefault(); handleConfirmAddCPF(); }
-                                                  if (e.key === "Escape") { setIsAddingCpf(false); setNewCpfInput(""); setNewCpfError(""); }
-                                                }}
-                                                autoFocus
-                                                placeholder="000.000.000-00"
-                                                className={cn("flex-1 h-9 px-3 rounded-lg border bg-gray-1 text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none max-md:min-w-full", newCpfError ? "border-red-8 focus:border-red-8" : "border-gray-6 focus:border-green-8")}
-                                              />
+                                              })()}
+                                            </div>
+                                            {/* Inline add CPF row */}
+                                            {isAddingCpf && (
+                                              <div className="px-4 py-2 border-t border-gray-6 flex flex-col gap-1">
+                                                {/* Mobile: input ocupa linha inteira (min-w-full + flex-wrap), botões dividem a 2ª linha; desktop: tudo inline. */}
+                                                <div className="flex items-center gap-2 max-md:flex-wrap">
+                                                  <input
+                                                    type="text"
+                                                    value={newCpfInput}
+                                                    onChange={handleNewCpfInputChange}
+                                                    onKeyDown={(e) => {
+                                                      if (e.key === "Enter") { e.preventDefault(); handleConfirmAddCPF(); }
+                                                      if (e.key === "Escape") { setIsAddingCpf(false); setNewCpfInput(""); setNewCpfError(""); }
+                                                    }}
+                                                    autoFocus
+                                                    placeholder="000.000.000-00"
+                                                    className={cn("flex-1 h-9 px-3 rounded-lg border bg-gray-1 text-sm text-gray-12 placeholder:text-gray-9 focus:outline-none max-md:min-w-full", newCpfError ? "border-red-8 focus:border-red-8" : "border-gray-6 focus:border-green-8")}
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={handleConfirmAddCPF}
+                                                    className="h-9 px-3 rounded-lg border border-gray-6 text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors max-md:flex-1"
+                                                  >
+                                                    Confirmar
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => { setIsAddingCpf(false); setNewCpfInput(""); setNewCpfError(""); }}
+                                                    className="h-9 px-3 rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-11 hover:bg-gray-3 transition-colors max-md:flex-1"
+                                                  >
+                                                    Cancelar
+                                                  </button>
+                                                </div>
+                                                {newCpfError && (
+                                                  <p className="text-xs text-red-9 px-1">{newCpfError}</p>
+                                                )}
+                                              </div>
+                                            )}
+                                            {/* Footer actions — mobile empilha: [Importar | Adicionar] em linha, "Limpar lista" centralizado abaixo. */}
+                                            <div className="px-4 py-3 border-t border-gray-6 flex items-center justify-between gap-3 max-md:flex-col max-md:items-stretch">
+                                              <div className="flex md:flex-row flex-col items-center gap-2 max-md:w-full">
+                                                <button
+                                                  type="button"
+                                                  onClick={handleImportCSV}
+                                                  className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
+                                                >
+                                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M13.333 10v1.333A2 2 0 0 1 11.333 13.333H4.667A2 2 0 0 1 2.667 11.333V10M5.333 6.667 8 9.333m0 0 2.667-2.666M8 9.333V2.667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                  </svg>
+                                                  <span className="truncate">Importar arquivo</span>
+                                                </button>
+                                                {!isAddingCpf && (
+                                                  <button
+                                                    type="button"
+                                                    onClick={handleAddCPF}
+                                                    className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
+                                                  >
+                                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                      <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    <span className="truncate">Adicionar campo</span>
+                                                  </button>
+                                                )}
+                                              </div>
                                               <button
                                                 type="button"
-                                                onClick={handleConfirmAddCPF}
-                                                className="h-9 px-3 rounded-lg border border-gray-6 text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors max-md:flex-1"
+                                                onClick={handleClearList}
+                                                className="text-sm font-semibold font-family-dm-sans text-gray-11 hover:text-red-11 transition-colors max-md:self-center"
                                               >
-                                                Confirmar
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => { setIsAddingCpf(false); setNewCpfInput(""); setNewCpfError(""); }}
-                                                className="h-9 px-3 rounded-lg border border-gray-6 text-sm font-semibold font-family-dm-sans text-gray-11 hover:bg-gray-3 transition-colors max-md:flex-1"
-                                              >
-                                                Cancelar
+                                                Limpar lista
                                               </button>
                                             </div>
-                                            {newCpfError && (
-                                              <p className="text-xs text-red-9 px-1">{newCpfError}</p>
-                                            )}
                                           </div>
                                         )}
-                                        {/* Footer actions — mobile empilha: [Importar | Adicionar] em linha, "Limpar lista" centralizado abaixo. */}
-                                        <div className="px-4 py-3 border-t border-gray-6 flex items-center justify-between gap-3 max-md:flex-col max-md:items-stretch">
-                                          <div className="flex md:flex-row flex-col items-center gap-2 max-md:w-full">
-                                            <button
-                                              type="button"
-                                              onClick={handleImportCSV}
-                                              className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
-                                            >
-                                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M13.333 10v1.333A2 2 0 0 1 11.333 13.333H4.667A2 2 0 0 1 2.667 11.333V10M5.333 6.667 8 9.333m0 0 2.667-2.666M8 9.333V2.667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                              </svg>
-                                              <span className="truncate">Importar arquivo</span>
-                                            </button>
-                                            {!isAddingCpf && (
-                                              <button
-                                                type="button"
-                                                onClick={handleAddCPF}
-                                                className="flex h-10 w-full items-center justify-center gap-1.5 px-3 border border-gray-6 rounded-lg text-gray-12 text-sm font-semibold font-family-dm-sans hover:bg-gray-3 transition-colors"
-                                              >
-                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                  <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                                <span className="truncate">Adicionar campo</span>
-                                              </button>
-                                            )}
-                                          </div>
-                                          <button
-                                            type="button"
-                                            onClick={handleClearList}
-                                            className="text-sm font-semibold font-family-dm-sans text-gray-11 hover:text-red-11 transition-colors max-md:self-center"
-                                          >
-                                            Limpar lista
-                                          </button>
-                                        </div>
                                       </div>
                                     )}
-                                  </div>
-                                  )}
 
-                                  {/* Aplicar cupom nos adicionais */}
-                                  <div className="flex flex-col gap-5">
-                                    <div className="flex flex-col gap-2">
-                                      <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
-                                        Aplicar cupom nos adicionais?
-                                      </h3>
-                                      <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        O desconto também será aplicado aos produtos adicionais que não estão inclusos no ingresso
-                                      </p>
+                                    {/* Aplicar cupom nos adicionais */}
+                                    <div className="flex flex-col gap-5">
+                                      <div className="flex flex-col gap-2">
+                                        <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
+                                          Aplicar cupom nos adicionais?
+                                        </h3>
+                                        <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
+                                          O desconto também será aplicado aos produtos adicionais que não estão inclusos no ingresso
+                                        </p>
+                                      </div>
+                                      <div className="flex gap-6">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <Checkbox
+                                            checked={!applyToProducts}
+                                            onCheckedChange={(checked) => { if (checked) setApplyToProducts(false); }}
+                                          />
+                                          <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <Checkbox
+                                            checked={applyToProducts}
+                                            onCheckedChange={(checked) => { if (checked) setApplyToProducts(true); }}
+                                          />
+                                          <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
+                                        </label>
+                                      </div>
                                     </div>
-                                    <div className="flex gap-6">
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={!applyToProducts}
-                                          onCheckedChange={(checked) => { if (checked) setApplyToProducts(false); }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Desabilitar</span>
-                                      </label>
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <Checkbox
-                                          checked={applyToProducts}
-                                          onCheckedChange={(checked) => { if (checked) setApplyToProducts(true); }}
-                                        />
-                                        <span className="text-sm font-family-dm-sans leading-[1.3] text-gray-12">Habilitar</span>
-                                      </label>
-                                    </div>
-                                  </div>
-                                  
+
                                     <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-semibold font-manrope leading-[1.1]">
                                         Validade do cupom
@@ -1340,7 +1340,7 @@ export function CreateCouponModal() {
                                         Limite por cupom
                                       </h3>
                                       <p className="text-gray-11 text-base font-family-dm-sans leading-[1.3]">
-                                        Número máximo de vezes que esse cupom pode ser utilizado
+                                        Número máximo de vezes que esse cupom pode ser utilizado {couponType !== "QUANTITY" ? "por ingresso" : "por pedido"}
                                       </p>
                                     </div>
                                     <div className="flex gap-6">
@@ -1390,7 +1390,7 @@ export function CreateCouponModal() {
                                   </div>
 
                                   {/* Lista exclusiva por CPF */}
-                                
+
                                 </motion.div>
                               )}
                             </AnimatePresence>

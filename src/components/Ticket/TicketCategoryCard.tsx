@@ -247,15 +247,14 @@ export function TicketCategoryCard({
 
       {/* Tickets Content */}
       {tickets.length === 0 ? (
-        <div className="flex w-full flex-wrap items-center justify-center gap-6 rounded-xl border border-gray-6 bg-gray-1 p-5 md:bg-gray-3">
+        <div className="flex w-full flex-wrap items-center justify-center gap-6 rounded-xl border border-gray-6 bg-gray-3 p-5">
           <div className="flex flex-1 flex-col items-center justify-center min-h-px min-w-px py-0">
             <div className="bg-gray-3 flex flex-col items-start justify-center">
-              <div className={`border-2 border-dashed flex gap-4 items-center justify-center overflow-clip p-4 rounded-xl w-full transition-colors ${isOver ? "border-primary-11 bg-primary-2" : "border-gray-6"
+              <div className={`border-2 border-dashed  flex gap-4 items-center justify-center overflow-clip p-4 rounded-xl w-full transition-colors ${isOver ? "border-primary-11 bg-primary-2" : "border-gray-6"
                 }`}>
-                <Plus className="size-10 text-primary-11" />
                 <div className="flex flex-col items-start justify-center shrink-0">
                   <div className="flex flex-col gap-2 items-start justify-center whitespace-pre-wrap">
-                    <p className="font-manrope font-bold leading-[1.1] text-lg text-primary-11 w-full">
+                    <p className="font-manrope font-bold leading-[1.1] text-xs md:text-lg text-primary-11 w-full">
                       Arraste um ingresso para essa categoria
                     </p>
                   </div>

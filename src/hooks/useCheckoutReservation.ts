@@ -200,6 +200,29 @@ export function useCheckoutReservation() {
     [],
   );
 
+  /**
+   * `DELETE /orders/{id}/participants/{slot}` — REDUZ a quantidade reservada em
+   * 1 unidade (libera estoque + cancela o placeholder PENDING do slot). Diferente
+   * do PATCH /participants, que só preenche/esvazia slots SEM mexer na quantidade.
+   * `slot` = índice 0-based na ordem de `reservedTickets` (expandido) /
+   * `pendingParticipants`. Retorna o pedido já recalculado (use direto, sem refetch).
+   * Erros relevantes: `422 LAST_TICKET` (último ingresso → cancelar o pedido),
+   * `422 INVALID_SLOT`, `409 ORDER_NOT_PENDING`.
+   */
+  const removeReservedSlot = useCallback(
+    async (orderId: string, slot: number): Promise<OrderResponse> => {
+      const res = await fetch(
+        `${API_BASE_URL}${ORDERS_PATH}/${orderId}/participants/${slot}`,
+        {
+          method: "DELETE",
+          headers: authHeaders(),
+        },
+      );
+      return handleOrderResponse(res);
+    },
+    [],
+  );
+
   /** `PATCH /orders/{id}/products` — chamado uma vez ao avançar. */
   const patchProducts = useCallback(
     async (
@@ -304,6 +327,7 @@ export function useCheckoutReservation() {
     reserveOrder,
     getOrder,
     patchParticipants,
+    removeReservedSlot,
     patchProducts,
     patchBillingAddress,
     patchCoupon,

@@ -8,21 +8,22 @@ import {
   normalizeCouponCode,
   readCouponParamEntry,
   setPendingCoupon,
+  couponParamName,
 } from "@/hooks/usePendingCoupon";
 
 /**
- * Captura `?coupon=CODIGO` em qualquer rota e mantém na URL.
- * A URL é a ÚNICA fonte duradoura: recarregar uma rota sem `?coupon=`
- * descarta o cupom. Não usa sessionStorage nem localStorage — só um buffer
- * volátil em memória JS (`pendingCouponMemory` em `usePendingCoupon.ts`)
- * pra propagar o param em navegações SPA que destruiriam a query string
- * (router.push / <Link> sem o coupon). No reload da página o buffer zera.
+ * Captura `?cupom=CODIGO` (ou o legado `?coupon=`) em qualquer rota e mantém na
+ * URL. A URL é a ÚNICA fonte duradoura: recarregar uma rota sem o param descarta
+ * o cupom. Não usa sessionStorage nem localStorage — só um buffer volátil em
+ * memória JS (`pendingCouponMemory` em `usePendingCoupon.ts`) pra propagar o
+ * param em navegações SPA que destruiriam a query string (router.push / <Link>
+ * sem o cupom). No reload da página o buffer zera.
  *
  * Quando o usuário avança no checkout o cupom/voucher é aplicado
  * automaticamente (silencioso em caso de erro).
  *
- * Preserva o TIPO do param: um `?voucher=` continua `?voucher=` ao re-anexar —
- * sem isso viraria `?coupon=` e seria aplicado como cupom.
+ * Preserva o TIPO do param: um `?voucher=` continua `?voucher=` ao re-anexar;
+ * cupom é re-anexado como `?cupom=` (migra links legados `?coupon=`).
  */
 export function CouponLinkCapture() {
   const searchParams = useSearchParams();
@@ -49,7 +50,9 @@ export function CouponLinkCapture() {
 
     const kind = getPendingCouponKind() ?? "coupon";
     const params = new URLSearchParams(searchParams.toString());
-    params.set(kind, buffered);
+    // Re-anexa com o nome canônico (`cupom`/`voucher`) — migra links legados
+    // (`?coupon=`) pro `?cupom=` na primeira navegação interna.
+    params.set(couponParamName(kind), buffered);
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [searchParams, pathname, router]);
