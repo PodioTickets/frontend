@@ -23,13 +23,11 @@ export function EventCarousel({
   const { events } = useEvents({ page: 1, limit: items });
 
   const [perView, setPerView] = useState(itemsPerView);
-  // Scroll horizontal NATIVO (sem embla): momentum de fabrica e SEMPRE alcanca o
-  // ultimo card (scrollLeft chega em scrollWidth - clientWidth). Sem snap pra nao
-  // "puxar de volta" no fim. Setas/dots controlam o scroll nativo.
+  // Scroll horizontal NATIVO: momentum de fabrica, sempre alcanca o ultimo card.
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activePage, setActivePage] = useState(0);
 
   useEffect(() => {
     const onResize = () => {
@@ -41,6 +39,9 @@ export function EventCarousel({
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [itemsPerView, itemsPerViewMobile, itemsPerViewTablet]);
+
+  const total = events?.length ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / Math.max(1, Math.round(perView))));
 
   const stepSize = useCallback(() => {
     const el = scrollerRef.current;
@@ -54,9 +55,9 @@ export function EventCarousel({
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
     setCanNext(el.scrollLeft < max - 1);
-    const step = stepSize();
-    setActiveIndex(step > 0 ? Math.round(el.scrollLeft / step) : 0);
-  }, [stepSize]);
+    const pageW = el.clientWidth || 1;
+    setActivePage(Math.round(el.scrollLeft / pageW));
+  }, []);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -73,8 +74,10 @@ export function EventCarousel({
   const scrollByDir = (dir: number) => {
     scrollerRef.current?.scrollBy({ left: dir * stepSize(), behavior: "smooth" });
   };
-  const scrollToIndex = (i: number) => {
-    scrollerRef.current?.scrollTo({ left: i * stepSize(), behavior: "smooth" });
+  const scrollToPage = (i: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
   };
 
   // Largura do slide pra mostrar ~perView itens, descontando os gaps.
@@ -83,54 +86,51 @@ export function EventCarousel({
     minWidth: 0,
   };
 
+  const arrowClass =
+    "hidden md:flex absolute top-1/2 -translate-y-1/2 z-10 size-9 items-center justify-center rounded-full bg-gray-2 border border-gray-6 shadow-md hover:bg-gray-3 transition-all duration-200 disabled:opacity-0 disabled:pointer-events-none";
+
   return (
     <div className="relative w-full">
       <button
         onClick={() => scrollByDir(-1)}
         disabled={!canPrev}
-        className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
+        className={`${arrowClass} left-0 -translate-x-1/2`}
         aria-label="Slide anterior"
       >
         <ChevronLeft className="size-5 text-gray-12" />
       </button>
-
       <button
         onClick={() => scrollByDir(1)}
         disabled={!canNext}
-        className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 size-10 rounded-full bg-gray-2 border border-gray-6 items-center justify-center hover:bg-gray-4 transition-all duration-200 shadow-lg disabled:opacity-0 disabled:pointer-events-none"
+        className={`${arrowClass} right-0 translate-x-1/2`}
         aria-label="Próximo slide"
       >
         <ChevronRight className="size-5 text-gray-12" />
       </button>
 
-      {/* Frame com sombra ABRAÇA os cards (sem gutter vazio dentro). No desktop o frame
-          tem margem lateral (md:mx-14) onde as setas ficam — FORA do frame, sem cobrir
-          card. Mobile: full-bleed (ponta a ponta), sem setas. */}
-      <div className="shadow-[0_0_40px_rgba(0,0,0,0.06)] md:rounded-2xl md:mx-14 max-md:relative max-md:left-1/2 max-md:right-1/2 max-md:-mx-[50vw] max-md:w-screen">
-        <div
-          ref={scrollerRef}
-          className={`flex gap-4 overflow-x-auto overscroll-x-contain px-4 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-            !canPrev && !canNext ? "justify-center" : ""
-          }`}
-        >
-          {events?.map((event) => (
-            <div key={event.id} data-slide style={slideStyle}>
-              <EventCard event={event} />
-            </div>
-          ))}
-        </div>
+      <div
+        ref={scrollerRef}
+        className="flex items-stretch gap-4 overflow-x-auto overscroll-x-contain px-1 py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {events?.map((event) => (
+          <div key={event.id} data-slide style={slideStyle} className="flex">
+            <EventCard event={event} />
+          </div>
+        ))}
       </div>
 
-      {events && events.length > perView && (
-        <div className="hidden md:flex items-center justify-center gap-2 mt-6">
-          {events.map((_, i) => (
+      {pageCount > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6 md:mt-8">
+          {Array.from({ length: pageCount }).map((_, i) => (
             <button
               key={i}
-              onClick={() => scrollToIndex(i)}
-              className={`h-2 rounded-full transition-all duration-200 ${
-                i === activeIndex ? "w-8 bg-primary-12" : "w-2 bg-gray-6 hover:bg-gray-8"
-              }`}
-              aria-label={`Ir para slide ${i + 1}`}
+              onClick={() => scrollToPage(i)}
+              aria-label={`Ir para página ${i + 1}`}
+              className={
+                i === activePage
+                  ? "h-2 w-12 rounded-full bg-[#3e9b4f] transition-all duration-200"
+                  : "size-2 rounded-full bg-[#e0e0e0] transition-all duration-200 hover:bg-gray-8"
+              }
             />
           ))}
         </div>

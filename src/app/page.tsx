@@ -16,10 +16,10 @@ export default function Home() {
 
       {/* Featured Events Section */}
       <div className="flex flex-col w-full mt-8 md:mt-16">
-        <h1 className="text-xl md:text-[28px] font-extrabold text-left md:text-center text-gray-12 px-0 md:px-4">
+        <h1 className="font-manrope text-2xl md:text-[28px] font-extrabold text-center text-gray-12">
           Eventos em destaque
         </h1>
-        <div className="mt-4 md:mt-8">
+        <div className="mt-6 md:mt-8">
           <EventCarousel
             items={20}
             itemsPerView={4.1}
