@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { CheckRectangleIcon } from "@/components/Icons/CheckRectangleIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { TicketTable } from "./TicketTable";
@@ -170,14 +171,23 @@ export function TicketCategoryCard({
               )}
               <button
                 type="button"
-                title="Editar"
+                title={isEditing ? "Salvar" : "Editar"}
+                onMouseDown={isEditing ? (e) => e.preventDefault() : undefined}
                 onClick={() => {
-                  setIsEditing(true);
-                  setEditingName(category.name);
+                  if (isEditing) {
+                    handleSave();
+                  } else {
+                    setIsEditing(true);
+                    setEditingName(category.name);
+                  }
                 }}
                 className="shrink-0 bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
               >
-                <PencilIcon className="size-5 text-gray-11" />
+                {isEditing ? (
+                  <CheckRectangleIcon className="size-5 text-gray-11" />
+                ) : (
+                  <PencilIcon className="size-5 text-gray-11" />
+                )}
               </button>
             </div>
             <div className="flex items-center">
