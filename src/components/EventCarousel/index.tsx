@@ -98,13 +98,16 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
 
       <div
         ref={scrollerRef}
-        className="flex items-start gap-4 overflow-x-auto overscroll-x-contain px-1 py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex items-start gap-4 overflow-x-auto overscroll-x-contain py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
+        {/* respiro leve no inicio/fim sem cortar (scroller sem padding -> peek natural na borda) */}
+        <span aria-hidden className="w-1 shrink-0" />
         {events?.map((event) => (
           <div key={event.id} data-slide style={slideStyle}>
             <EventCard event={event} />
           </div>
         ))}
+        <span aria-hidden className="w-1 shrink-0" />
       </div>
 
       {scrollable && pageCount > 1 && (
