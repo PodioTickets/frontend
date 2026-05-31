@@ -7,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { categorySortableId } from "@/lib/ticketCategoryOrder";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { CheckRectangleIcon } from "@/components/Icons/CheckRectangleIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { DeleteTicketCategoryModal } from "./DeleteTicketCategoryModal";
 import { CategoryDeleteBlockedModal } from "./CategoryDeleteBlockedModal";
@@ -160,16 +161,25 @@ export function SortableTicketCategoryItem({
             )}
             <button
               type="button"
-              title="Editar"
+              title={isEditing ? "Salvar" : "Editar"}
               onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={isEditing ? (e) => e.preventDefault() : undefined}
               onClick={() => {
-                setIsEditing(true);
-                setEditingName(category.name);
+                if (isEditing) {
+                  handleSave();
+                } else {
+                  setIsEditing(true);
+                  setEditingName(category.name);
+                }
               }}
               className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-gray-6 bg-gray-2 p-1 transition-colors hover:bg-gray-3"
-              aria-label="Editar nome da categoria"
+              aria-label={isEditing ? "Salvar nome da categoria" : "Editar nome da categoria"}
             >
-              <PencilIcon className="size-5 text-gray-11" />
+              {isEditing ? (
+                <CheckRectangleIcon className="size-5 text-gray-11" />
+              ) : (
+                <PencilIcon className="size-5 text-gray-11" />
+              )}
             </button>
           </div>
           <button
