@@ -104,8 +104,8 @@ export function EventCard({ event }: EventCardProps) {
   const eventImg = (event as any).logoUrl;
 
   return (
-    <Link href={`/events/${event.slug}`} className="block h-full">
-      <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
+    <Link href={`/events/${event.slug}`} className="block">
+      <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
         {/* Imagem (proporção landscape do Figma: 308x232) */}
         <div className="relative aspect-[308/232] w-full shrink-0 bg-gray-4">
           <ImageWithInitialFallback
@@ -133,8 +133,8 @@ export function EventCard({ event }: EventCardProps) {
           </div>
         </div>
 
-        {/* Organizador + data + tag (empurrada pro fundo) */}
-        <div className="mt-auto flex flex-col gap-4 pt-3">
+        {/* Organizador + data + tag */}
+        <div className="flex flex-col gap-4 pt-3">
           <div className="flex flex-col gap-3 px-3">
             <div className="flex items-center gap-1">
               <ImageWithInitialFallback

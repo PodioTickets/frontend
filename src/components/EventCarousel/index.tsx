@@ -7,80 +7,68 @@ import { useEvents } from "@/hooks/useEvents";
 
 interface EventCarouselProps {
   items?: number;
-  itemsPerView?: number;
-  itemsPerViewMobile?: number;
-  itemsPerViewTablet?: number;
 }
 
 const GAP = 16;
+const TARGET_CARD = 300; // largura-alvo do card (Figma ~308). Cards preenchem a largura.
 
-export function EventCarousel({
-  items = 10,
-  itemsPerView = 4,
-  itemsPerViewMobile = 1,
-  itemsPerViewTablet = 2,
-}: EventCarouselProps) {
+export function EventCarousel({ items = 20 }: EventCarouselProps) {
   const { events } = useEvents({ page: 1, limit: items });
 
-  const [perView, setPerView] = useState(itemsPerView);
-  // Scroll horizontal NATIVO: momentum de fabrica, sempre alcanca o ultimo card.
+  // Scroll horizontal NATIVO (momentum, sempre alcança o último card).
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const [perView, setPerView] = useState(4);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
-  const [activePage, setActivePage] = useState(0);
+  const [progress, setProgress] = useState(0); // 0..1 (posição no scroll)
 
-  useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth < 768) setPerView(itemsPerViewMobile);
-      else if (window.innerWidth < 1024) setPerView(itemsPerViewTablet);
-      else setPerView(itemsPerView);
-    };
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [itemsPerView, itemsPerViewMobile, itemsPerViewTablet]);
-
-  const total = events?.length ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / Math.max(1, Math.round(perView))));
-
-  const stepSize = useCallback(() => {
-    const el = scrollerRef.current;
-    const card = el?.querySelector<HTMLElement>("[data-slide]");
-    return card ? card.offsetWidth + GAP : (el?.clientWidth ?? 0) * 0.8;
-  }, []);
-
-  const update = useCallback(() => {
+  const recalc = useCallback(() => {
     const el = scrollerRef.current;
     if (!el) return;
+    const w = el.clientWidth || 1;
+    // Quantos cards de ~300px cabem na largura (preenche a tela). Mínimo 1.1 (peek no mobile).
+    setPerView(Math.max(1.1, w / (TARGET_CARD + GAP)));
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
     setCanNext(el.scrollLeft < max - 1);
-    const pageW = el.clientWidth || 1;
-    setActivePage(Math.round(el.scrollLeft / pageW));
+    setProgress(max > 0 ? el.scrollLeft / max : 0);
   }, []);
 
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    update();
-    el.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
+    recalc();
+    el.addEventListener("scroll", recalc, { passive: true });
+    window.addEventListener("resize", recalc);
+    const ro = new ResizeObserver(recalc);
+    ro.observe(el);
     return () => {
-      el.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      el.removeEventListener("scroll", recalc);
+      window.removeEventListener("resize", recalc);
+      ro.disconnect();
     };
-  }, [update, events, perView]);
+  }, [recalc, events]);
 
+  const total = events?.length ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / Math.max(1, Math.floor(perView))));
+  const activePage = Math.round(progress * (pageCount - 1));
+  const scrollable = canPrev || canNext;
+
+  const stepSize = () => {
+    const el = scrollerRef.current;
+    const card = el?.querySelector<HTMLElement>("[data-slide]");
+    return card ? card.offsetWidth + GAP : (el?.clientWidth ?? 0) * 0.8;
+  };
   const scrollByDir = (dir: number) => {
     scrollerRef.current?.scrollBy({ left: dir * stepSize(), behavior: "smooth" });
   };
   const scrollToPage = (i: number) => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+    const max = el.scrollWidth - el.clientWidth;
+    el.scrollTo({ left: pageCount > 1 ? (i / (pageCount - 1)) * max : 0, behavior: "smooth" });
   };
 
-  // Largura do slide pra mostrar ~perView itens, descontando os gaps.
   const slideStyle = {
     flex: `0 0 calc((100% - ${(perView - 1) * GAP}px) / ${perView})`,
     minWidth: 0,
@@ -110,16 +98,16 @@ export function EventCarousel({
 
       <div
         ref={scrollerRef}
-        className="flex items-stretch gap-4 overflow-x-auto overscroll-x-contain px-1 py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex items-start gap-4 overflow-x-auto overscroll-x-contain px-1 py-3 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {events?.map((event) => (
-          <div key={event.id} data-slide style={slideStyle} className="flex">
+          <div key={event.id} data-slide style={slideStyle}>
             <EventCard event={event} />
           </div>
         ))}
       </div>
 
-      {pageCount > 1 && (
+      {scrollable && pageCount > 1 && (
         <div className="flex items-center justify-center gap-2 mt-6 md:mt-8">
           {Array.from({ length: pageCount }).map((_, i) => (
             <button
