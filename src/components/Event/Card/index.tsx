@@ -69,139 +69,133 @@ export function EventCard({ event }: EventCardProps) {
     }
   };
 
-  const getStatusColor = (status: Event["status"]) => {
-    switch (status) {
-      case "PUBLISHED":
-        return "bg-primary-5 border-primary-7";
-      case "COMPLETED":
-        return "bg-[#F4F0FE] border-[#D4CAFE]";
-      case "CANCELLED":
-        return "bg-red-3 border-red-6";
-      case "SUSPENDED":
-        return "bg-primary-5 border-primary-7";
-      default:
-        return "bg-primary-5";
-    }
-  };
+  const isOpen =
+    (event.status === "PUBLISHED" || event.status === "SUSPENDED") &&
+    !inscricoesEncerradas &&
+    !inscricoesEmBreve &&
+    !vagasEsgotadas;
+
+  // Cores da tag de status (canto inferior esquerdo). Aberto = verde (design Figma).
+  const tagColor = inscricoesEncerradas
+    ? "bg-red-50 border-red-200"
+    : inscricoesEmBreve
+      ? "bg-amber-50 border-amber-300"
+      : vagasEsgotadas
+        ? "bg-violet-50 border-violet-200"
+        : event.status === "COMPLETED"
+          ? "bg-[#F4F0FE] border-[#D4CAFE]"
+          : "bg-primary-5 border-primary-7";
+
+  const tagTextColor = inscricoesEncerradas
+    ? "text-red-900"
+    : inscricoesEmBreve
+      ? "text-amber-950"
+      : vagasEsgotadas
+        ? "text-violet-900"
+        : event.status === "COMPLETED"
+          ? "text-[#5B3FBF]"
+          : "text-primary-12";
+
+  const statusLabel = inscricoesEncerradas
+    ? "Inscrições encerradas"
+    : inscricoesEmBreve
+      ? "Inscrições em breve"
+      : vagasEsgotadas
+        ? "Vagas esgotadas!"
+        : getStatusText(event.status);
+
+  const organizer = getEventOrganizer(event);
 
   const cardContent = (
     <>
-      <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-4">
+      {/* Imagem (landscape) */}
+      <div className="relative w-full h-[232px] overflow-hidden bg-gray-4">
         <ImageWithInitialFallback
           src={(event as any).logoUrl}
           alt={event.name}
           name={event.name}
           fallbackId={event.id}
           fill
-          sizes="(max-width: 768px) 100vw, 300px"
-          className="size-full border-transparent border-0 aspect-square"
+          sizes="(max-width: 768px) 90vw, 308px"
+          className="size-full border-0 object-cover"
           letterClassName="text-6xl"
         />
       </div>
 
-      <div className="flex flex-col gap-2 px-3 mt-2">
-        <h1 className="font-bold truncate">{event.name}</h1>
-        <h1 className="flex items-center gap-2 text-gray-12">
-          <LocationIcon className="size-5" />{" "}
-          <span className="text-sm text-gray-12">
+      {/* Título + local */}
+      <div className="flex flex-col gap-3 px-3 pt-4 pb-3 border-b border-gray-6">
+        <h1 className="font-manrope font-bold text-base leading-[1.1] text-gray-12 truncate">
+          {event.name}
+        </h1>
+        <div className="flex items-center gap-1 text-gray-12">
+          <LocationIcon className="size-5 shrink-0" />
+          <span className="text-sm font-family-dm-sans text-gray-12">
             {event.city}, {event.state}
           </span>
-        </h1>
+        </div>
       </div>
 
-      <div className="h-px w-full bg-gray-6 my-3" />
+      {/* Organizador + data */}
+      <div className="flex flex-col gap-4 pt-3">
+        <div className="flex flex-col gap-3 px-3">
+          <div className="flex items-center gap-1 text-sm font-family-dm-sans text-gray-12">
+            {organizer?.logoUrl ? (
+              <ImageWithInitialFallback
+                src={getAvatarUrl(organizer.logoUrl)}
+                alt={organizer.name}
+                name={organizer.name}
+                width={20}
+                height={20}
+                className="shrink-0 rounded-full size-5"
+                imgClassName="object-cover"
+                letterClassName="text-xs"
+              />
+            ) : event.organizer?.user?.avatarUrl ? (
+              <ImageWithInitialFallback
+                src={getAvatarUrl(event.organizer.user.avatarUrl)}
+                alt={organizer?.name ?? "Organizador"}
+                name={organizer?.name ?? "Organizador"}
+                width={20}
+                height={20}
+                className="shrink-0 rounded-full size-5"
+                imgClassName="object-cover"
+                letterClassName="text-xs"
+              />
+            ) : (
+              <FlagIcon className="size-5 shrink-0" />
+            )}
+            <span className="truncate">{organizer?.name || "Organizador"}</span>
+          </div>
+          <div className="flex items-center gap-1 text-sm font-family-dm-sans text-gray-12">
+            <CalendarIcon className="size-5 shrink-0" />
+            <span>{formattedDate}</span>
+          </div>
+        </div>
 
-      <div className="flex flex-col justify-between px-3 gap-3">
-        <h1 className="flex items-center gap-2 text-sm text-gray-12">
-          {(() => {
-            const organizer = getEventOrganizer(event);
-            if (!organizer) return <FlagIcon className="size-5" />;
-
-            // Se tiver logoUrl (organization), usa ela, senão usa avatar do user (organizer antigo)
-            if (organizer.logoUrl) {
-              return (
-                <ImageWithInitialFallback
-                  src={getAvatarUrl(organizer.logoUrl)}
-                  alt={organizer.name}
-                  name={organizer.name}
-                  width={20}
-                  height={20}
-                  className="hrink-0 rounded-full size-5"
-                  imgClassName="object-cover"
-                  letterClassName="text-xs"
-                />
-              );
-            }
-
-            // Fallback para formato antigo
-            if (event.organizer?.user?.avatarUrl) {
-              return (
-                <ImageWithInitialFallback
-                  src={getAvatarUrl(event.organizer.user.avatarUrl)}
-                  alt={organizer.name}
-                  name={organizer.name}
-                  width={20}
-                  height={20}
-                  className="rounded-sm shrink-0"
-                  imgClassName="object-cover"
-                  letterClassName="text-xs"
-                />
-              );
-            }
-
-            return <FlagIcon className="size-5" />;
-          })()}
-          <span>{getEventOrganizer(event)?.name || "Organizador"}</span>
-        </h1>
-        <h1 className="flex items-center gap-2 text-sm text-gray-12">
-          <CalendarIcon className="size-5" /> <span>{formattedDate}</span>
-        </h1>
-      </div>
-
-      <div className="flex items-center justify-between mt-3">
-        <div
-          className={cn(
-            "w-auto flex items-center justify-center gap-2 border rounded-tr-xl rounded-bl-xl p-2",
-            inscricoesEncerradas
-              ? "bg-red-50 border-red-200"
-              : inscricoesEmBreve
-                ? "bg-amber-50 border-amber-300"
-                : vagasEsgotadas
-                  ? "bg-violet-50 border-violet-200"
-                  : getStatusColor(event.status)
-          )}
-        >
-          {(event.status === "PUBLISHED" || event.status === "SUSPENDED") && !inscricoesEncerradas && !inscricoesEmBreve && !vagasEsgotadas && (
-            <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
-              <div className="bg-primary-12 rounded-full size-1" />
-            </div>)}
-          <h1
+        {/* Tag de status — canto inferior esquerdo */}
+        <div className="flex items-center">
+          <div
             className={cn(
-              "text-sm font-semibold font-family-dm-sans",
-              inscricoesEncerradas
-                ? "text-red-900"
-                : inscricoesEmBreve
-                  ? "text-amber-950"
-                  : vagasEsgotadas
-                    ? "text-violet-900"
-                    : "text-gray-12"
+              "flex items-center gap-1 p-3 rounded-tr-[16px] border-t border-r",
+              tagColor,
             )}
           >
-            {inscricoesEncerradas
-              ? "Inscrições encerradas"
-              : inscricoesEmBreve
-                ? "Inscrições em breve"
-                : vagasEsgotadas
-                  ? "Vagas esgotadas!"
-                  : getStatusText(event.status)}
-          </h1>
+            {isOpen && (
+              <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
+                <div className="bg-primary-12 rounded-full size-1" />
+              </div>
+            )}
+            <span className={cn("text-sm font-semibold font-family-dm-sans leading-[1.3]", tagTextColor)}>
+              {statusLabel}
+            </span>
+          </div>
         </div>
       </div>
     </>
   );
 
   return (
-    <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_-2px_8px_rgba(0,0,0,0.06),0_2px_8px_rgba(0,0,0,0.06)] transition-transform hover:scale-[1.02] duration-200">
+    <div className="rounded-lg overflow-hidden bg-gray-2 border border-gray-7 shadow-[0_2px_6px_rgba(17,17,17,0.3)] transition-transform hover:scale-[1.02] duration-200">
       {event ? (
         <Link href={`/events/${event.slug}`} className="block">
           {cardContent}
