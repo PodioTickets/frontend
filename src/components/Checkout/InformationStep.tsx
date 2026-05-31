@@ -1817,7 +1817,7 @@ export function InformationStep({
                 esquerda com overlay do nome, resumo à direita. */}
             <div className="hidden md:flex items-stretch gap-11 rounded-2xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
               {/* Banner + gradiente + nome do evento */}
-              <div className="relative w-1/2 shrink-0 self-stretch min-h-[200px]">
+              <div className="relative w-1/2 shrink-0 self-stretch min-h-[250px]">
                 <Image
                   src={event.bannerUrl}
                   alt={event.name}

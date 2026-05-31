@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRegisterModal, useLoginModal } from "@/stores/modalStore";
+import { clearReturnPath } from "@/utils/authRedirect";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services";
 import type { AuthError } from "@/services/user/UserService";
@@ -348,9 +349,7 @@ export function RegisterModal() {
           toast.success("Cadastro finalizado com sucesso!");
           setTimeout(() => {
             closeRegisterModal();
-            if (typeof window !== "undefined") {
-              sessionStorage.removeItem("redirectAfterLogin");
-            }
+            clearReturnPath();
           }, 1500);
           return;
         }
