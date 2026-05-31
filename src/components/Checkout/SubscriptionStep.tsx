@@ -249,6 +249,12 @@ function ProductCard({
 
   return (
     <div className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4">
+      {product.isIncludedInTicket && !selectedVariation && (
+        <span className="self-start inline-flex items-center gap-1.5 h-[27px] px-3 rounded-xl bg-[#fff7c2] border border-[#f3d673]">
+          <span className="size-1.5 rounded-full bg-[#4f3422]" />
+          <span className="text-xs font-semibold leading-none text-[#4f3422]">Falta escolher a variação</span>
+        </span>
+      )}
       <div className="flex items-start gap-3">
         <ProductCardGallery product={product} />
         <div className="flex flex-col h-[100px] justify-between gap-2 flex-1 min-w-0">
@@ -1031,7 +1037,7 @@ export function SubscriptionStep({
                     </div>
 
                     <ProductsSection
-                      title="Produtos do kit (obrigatório)"
+                      title="Produtos do kit"
                       products={getRequiredProductsForParticipant(participantIndex)}
                       participantIndex={participantIndex}
                       selectedVariations={selectedVariations}
@@ -1043,7 +1049,7 @@ export function SubscriptionStep({
 
                     <div className={getAdditionalProductsForParticipant(participantIndex).length > 0 ? "py-4" : ""}>
                       <ProductsSection
-                        title="Produtos adicionais (opcional)"
+                        title="Produtos adicionais"
                         products={getAdditionalProductsForParticipant(participantIndex)}
                         participantIndex={participantIndex}
                         selectedVariations={selectedVariations}
@@ -1172,7 +1178,7 @@ export function SubscriptionStep({
             </div>
 
             <ProductsSection
-              title="Produtos do kit (obrigatório)"
+              title="Produtos do kit"
               products={getRequiredProductsForParticipant(selectedParticipant)}
               participantIndex={selectedParticipant}
               selectedVariations={selectedVariations}
@@ -1183,7 +1189,7 @@ export function SubscriptionStep({
             />
 
             <ProductsSection
-              title="Produtos adicionais (opcional)"
+              title="Produtos adicionais"
               products={getAdditionalProductsForParticipant(selectedParticipant)}
               participantIndex={selectedParticipant}
               selectedVariations={selectedVariations}
