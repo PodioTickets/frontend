@@ -10,7 +10,6 @@ interface EventCarouselProps {
 }
 
 const GAP = 16;
-const TARGET_CARD = 300; // largura-alvo do card (Figma ~308). Cards preenchem a largura.
 
 export function EventCarousel({ items = 20 }: EventCarouselProps) {
   const { events } = useEvents({ page: 1, limit: items });
@@ -26,11 +25,20 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     const el = scrollerRef.current;
     if (!el) return;
     const w = el.clientWidth || 1;
-    // Card-alvo menor no mobile pra nao ocupar a tela toda (mostra ~1.5 -> peek do proximo).
-    const mobile = w < 640;
-    const target = mobile ? 240 : TARGET_CARD;
-    const minPerView = mobile ? 1.3 : 1.1;
-    setPerView(Math.max(minPerView, w / (target + GAP)));
+
+    if (w < 768) {
+      // Mobile/tablet pequeno: card menor + peek do próximo (~1.5).
+      setPerView(Math.max(1.3, w / (240 + GAP)));
+    } else {
+      // Desktop: card com a MESMA largura da /search (grid responsivo dentro de
+      // max-w-1280: 2/3/4/5 colunas, gap-6, px-4 / lg:px-8). Mantém full-bleed
+      // (mais cards rolam), mas cada card = largura do card da busca.
+      const cols = w >= 1536 ? 5 : w >= 1280 ? 4 : w >= 1024 ? 3 : 2;
+      const pad = w >= 1024 ? 64 : 32;
+      const content = Math.min(w, 1280) - pad;
+      const cardW = Math.max(160, (content - (cols - 1) * 24) / cols);
+      setPerView(Math.max(1.1, (w + GAP) / (cardW + GAP)));
+    }
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
     setCanNext(el.scrollLeft < max - 1);
