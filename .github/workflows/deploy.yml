@@ -126,7 +126,7 @@ jobs:
             cd ~/podiotickets-frontend
 
             cat > .env <<EOF
-            GHCR_IMAGE=${{ env.IMAGE_NAME }}
+            GHCR_IMAGE=podiotickets/podiotickets-frontend
             ORGANIZER_APP_HOST=${{ secrets.ORGANIZER_APP_HOST }}
             ROOT_SITE_URL=${{ secrets.ROOT_SITE_URL }}
             EOF
