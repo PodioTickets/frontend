@@ -102,10 +102,7 @@ export function EventCard({ event }: EventCardProps) {
       ? getAvatarUrl(event.organizer.user.avatarUrl)
       : null;
 
-  const eventImg =
-    event.bannerUrl && event.bannerUrl.trim() !== ""
-      ? event.bannerUrl
-      : (event as any).logoUrl;
+  const eventImg = (event as any).logoUrl;
 
   return (
     <Link href={`/events/${event.slug}`} className="block h-full">
