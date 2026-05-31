@@ -54,20 +54,20 @@ export function EventCard({ event }: EventCardProps) {
     !inscricoesEncerradas;
 
   const statusLabel = inscricoesEncerradas
-    ? "Inscrições encerradas"
+    ? "Inscrições encerradas!"
     : inscricoesEmBreve
-      ? "Inscrições em breve"
+      ? "Inscrições em breve!"
       : vagasEsgotadas
         ? "Vagas esgotadas!"
         : event.status === "COMPLETED"
           ? "Evento realizado"
           : "Inscrições abertas";
 
-  // Tag de status (canto inferior esquerdo). Aberto = verde (Figma).
+  // Tag de status (canto inferior esquerdo) — cores exatas do Figma.
   const tagBg = inscricoesEncerradas
-    ? "bg-red-50 border-red-200"
+    ? "bg-[#feebec] border-[#fdbdbe]"
     : inscricoesEmBreve
-      ? "bg-amber-50 border-amber-300"
+      ? "bg-[#fff7c2] border-[#f3d673]"
       : vagasEsgotadas
         ? "bg-violet-50 border-violet-200"
         : event.status === "COMPLETED"
@@ -75,14 +75,17 @@ export function EventCard({ event }: EventCardProps) {
           : "bg-[#c4e8d1] border-[#94ce9a]";
 
   const tagText = inscricoesEncerradas
-    ? "text-red-900"
+    ? "text-[#641723]"
     : inscricoesEmBreve
-      ? "text-amber-950"
+      ? "text-[#4f3422]"
       : vagasEsgotadas
         ? "text-violet-900"
         : event.status === "COMPLETED"
           ? "text-[#5B3FBF]"
           : "text-[#203c25]";
+
+  // Figma: só o estado "aberta" (e demais) tem o ponto; encerrada/em breve sem dot.
+  const hasDot = !inscricoesEncerradas && !inscricoesEmBreve;
 
   const dotColor = inscricoesEncerradas
     ? "bg-red-600"
@@ -162,7 +165,7 @@ export function EventCard({ event }: EventCardProps) {
 
           <div className="flex items-center">
             <div className={cn("flex items-center gap-1 rounded-tr-[16px] border-r border-t p-3", tagBg)}>
-              <span className={cn("size-3 shrink-0 rounded-full", dotColor)} />
+              {hasDot && <span className={cn("size-3 shrink-0 rounded-full", dotColor)} />}
               <span className={cn("font-family-dm-sans text-sm font-semibold leading-[1.3]", tagText)}>
                 {statusLabel}
               </span>
