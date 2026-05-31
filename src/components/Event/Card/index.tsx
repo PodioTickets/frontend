@@ -1,7 +1,6 @@
 "use client";
 
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { FlagIcon } from "@/components/Icons/FlagIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -138,20 +137,17 @@ export function EventCard({ event }: EventCardProps) {
         <div className="mt-auto flex flex-col gap-4 pt-3">
           <div className="flex flex-col gap-3 px-3">
             <div className="flex items-center gap-1">
-              {organizerImg ? (
-                <ImageWithInitialFallback
-                  src={organizerImg}
-                  alt={organizer?.name ?? "Organizador"}
-                  name={organizer?.name ?? "Organizador"}
-                  width={20}
-                  height={20}
-                  className="size-5 shrink-0 rounded-full"
-                  imgClassName="object-cover"
-                  letterClassName="text-xs"
-                />
-              ) : (
-                <FlagIcon className="size-5 shrink-0" />
-              )}
+              <ImageWithInitialFallback
+                src={organizerImg}
+                alt={organizer?.name ?? "Organizador"}
+                name={organizer?.name ?? "Organizador"}
+                fallbackId={organizer?.id ?? event.id}
+                width={20}
+                height={20}
+                className="size-5 shrink-0 rounded-full"
+                imgClassName="object-cover"
+                letterClassName="text-[10px]"
+              />
               <span className="truncate font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
                 {organizer?.name || "Organizador"}
               </span>
