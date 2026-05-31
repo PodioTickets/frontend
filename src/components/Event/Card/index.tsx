@@ -107,8 +107,8 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <Link href={`/events/${event.slug}`} className="block h-full">
       <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
-        {/* Imagem (banner) */}
-        <div className="relative h-[232px] w-full shrink-0 bg-gray-4">
+        {/* Imagem (proporção landscape do Figma: 308x232) */}
+        <div className="relative aspect-[308/232] w-full shrink-0 bg-gray-4">
           <ImageWithInitialFallback
             src={eventImg}
             alt={event.name}
