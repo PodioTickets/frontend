@@ -82,7 +82,7 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
       <button
         onClick={() => scrollByDir(-1)}
         disabled={!canPrev}
-        className={`${arrowClass} left-0 -translate-x-1/2`}
+        className={`${arrowClass} left-2`}
         aria-label="Slide anterior"
       >
         <ChevronLeft className="size-5 text-gray-12" />
@@ -90,7 +90,7 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
       <button
         onClick={() => scrollByDir(1)}
         disabled={!canNext}
-        className={`${arrowClass} right-0 translate-x-1/2`}
+        className={`${arrowClass} right-2`}
         aria-label="Próximo slide"
       >
         <ChevronRight className="size-5 text-gray-12" />

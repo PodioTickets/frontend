@@ -15,7 +15,7 @@ export default function Home() {
       </div>
 
       {/* Featured Events Section — full width (preenche a tela, igual Figma px-80) */}
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-8 md:mt-16 px-4 md:px-20">
+      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen mt-8 md:mt-16">
         <h1 className="font-manrope text-2xl md:text-[28px] font-extrabold text-center text-gray-12">
           Eventos em destaque
         </h1>
