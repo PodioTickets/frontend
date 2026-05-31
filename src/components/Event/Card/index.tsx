@@ -106,15 +106,15 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <Link href={`/events/${event.slug}`} className="block">
       <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
-        {/* Imagem (proporção landscape do Figma: 308x232) */}
-        <div className="relative aspect-[308/232] w-full shrink-0 bg-gray-4">
+        {/* Imagem sempre quadrada */}
+        <div className="relative aspect-square w-full shrink-0 bg-gray-4">
           <ImageWithInitialFallback
             src={eventImg}
             alt={event.name}
             name={event.name}
             fallbackId={event.id}
             fill
-            sizes="(max-width: 768px) 90vw, 308px"
+            sizes="(max-width: 768px) 65vw, 300px"
             className="size-full border-0 object-cover"
             letterClassName="text-6xl"
           />

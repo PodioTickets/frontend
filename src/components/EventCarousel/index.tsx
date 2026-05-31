@@ -26,8 +26,11 @@ export function EventCarousel({ items = 20 }: EventCarouselProps) {
     const el = scrollerRef.current;
     if (!el) return;
     const w = el.clientWidth || 1;
-    // Quantos cards de ~300px cabem na largura (preenche a tela). Mínimo 1.1 (peek no mobile).
-    setPerView(Math.max(1.1, w / (TARGET_CARD + GAP)));
+    // Card-alvo menor no mobile pra nao ocupar a tela toda (mostra ~1.5 -> peek do proximo).
+    const mobile = w < 640;
+    const target = mobile ? 240 : TARGET_CARD;
+    const minPerView = mobile ? 1.3 : 1.1;
+    setPerView(Math.max(minPerView, w / (target + GAP)));
     const max = el.scrollWidth - el.clientWidth;
     setCanPrev(el.scrollLeft > 1);
     setCanNext(el.scrollLeft < max - 1);
