@@ -80,7 +80,8 @@
       "Bash(sed -n '345,350p;874,880p' src/components/Checkout/PaymentSuccessStep.tsx)",
       "Bash(sed -n '447,451p' src/components/Checkout/ParticipantSummaryModal.tsx)",
       "Bash(sed -n '408,420p' src/components/Checkout/ModalitiesStep.tsx)",
-      "Bash(sed -n '492,500p' src/components/Checkout/ModalitiesStep.tsx)"
+      "Bash(sed -n '492,500p' src/components/Checkout/ModalitiesStep.tsx)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\" -Force)"
     ]
   },
   "disabledMcpjsonServers": [

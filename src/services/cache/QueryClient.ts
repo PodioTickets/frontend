@@ -7,15 +7,32 @@ import {
 
 const defaultQueryOptions: DefaultOptions = {
   queries: {
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    /* Política "menos cache possível" (decisão de produto): por padrão, todo
+     * dado é considerado IMEDIATAMENTE stale e RE-BUSCADO ao montar/navegar.
+     * Isso elimina a classe de bug "abri/voltei e vi dado velho" sem depender
+     * de cada hook lembrar de sobrescrever.
+     *
+     * - `staleTime: 0`        → nunca "fresco"; qualquer consumidor que monta dispara refetch.
+     * - `refetchOnMount: "always"` → revalida a cada montagem de página/componente.
+     * - `gcTime`              → SÓ retenção em memória (não causa dado velho): mantém um
+     *   snapshot pra render instantâneo enquanto o refetch corre. Reduzido p/ 5min
+     *   pra minimizar o "flash" de um snapshot antigo ao revisitar.
+     *
+     * `refetchOnWindowFocus` fica FALSE de PROPÓSITO: refetch ao focar a aba logo
+     * após uma mutação pode ler o backend ANTES da escrita propagar (eventual
+     * consistency) e "ressuscitar" um item recém-deletado — foi exatamente o
+     * sintoma "some e aparece de novo" da categoria. Consistência de MESMA página
+     * (criar/editar/excluir) é resolvida por optimistic update + invalidação/
+     * pending-writes nas mutations, não por refetch agressivo. */
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
     retry: (failureCount, error: any) => {
       if (error?.status === 401 || error?.status === 403) return false;
       return failureCount < 2;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: "always",
     refetchOnReconnect: "always",
     networkMode: "online",
   },
