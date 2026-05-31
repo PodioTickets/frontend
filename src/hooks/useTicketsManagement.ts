@@ -67,6 +67,76 @@ const EMPTY_BUNDLE: TicketsManagementBundle = {
   tickets: [],
 };
 
+/* ───────────────────────── Pending writes de CATEGORIA ─────────────────────
+ * Espelha a infra de tickets (`markTicketPendingWrite`/`merge…`): protege as
+ * mudanças OTIMISTAS de categoria (criar/excluir) contra refetches em background
+ * (focus/reconnect/staleTime) que voltem ANTES do backend propagar (eventual
+ * consistency). Sem isso, qualquer refetch substituía `cached.categories` e a
+ * categoria recém-criada sumia (ou a deletada reaparecia) até refresh manual.
+ *
+ * - `op: "create"` → enquanto o id NÃO estiver no servidor, anexa a categoria
+ *   pendente. Quando aparecer no servidor, o pending é descartado.
+ * - `op: "delete"` → enquanto o id AINDA estiver no servidor, remove-o da lista.
+ *   Quando sumir do servidor, o pending é descartado.
+ * TTL de segurança: após a janela, o servidor reina mesmo se parecer defasado. */
+const CATEGORY_PENDING_TTL_MS = 15_000;
+
+interface PendingCategoryEntry {
+  category: ModalityGroup;
+  op: "create" | "delete";
+  expiresAt: number;
+}
+
+const pendingCategoryWritesByEvent = new Map<string, Map<string, PendingCategoryEntry>>();
+
+export function markCategoryPendingWrite(
+  eventId: string | null,
+  category: ModalityGroup,
+  op: "create" | "delete" = "create",
+): void {
+  if (!eventId) return;
+  let m = pendingCategoryWritesByEvent.get(eventId);
+  if (!m) {
+    m = new Map();
+    pendingCategoryWritesByEvent.set(eventId, m);
+  }
+  m.set(category.id, { category, op, expiresAt: Date.now() + CATEGORY_PENDING_TTL_MS });
+}
+
+export function mergeCategoriesWithPendingWrites(
+  eventId: string | null,
+  serverCategories: ModalityGroup[],
+): ModalityGroup[] {
+  if (!eventId) return serverCategories;
+  const m = pendingCategoryWritesByEvent.get(eventId);
+  if (!m || m.size === 0) return serverCategories;
+
+  const now = Date.now();
+  const serverIds = new Set(serverCategories.map((c) => c.id));
+  let result = [...serverCategories];
+
+  for (const [id, entry] of [...m.entries()]) {
+    const expired = entry.expiresAt <= now;
+    if (entry.op === "create") {
+      // Confirmado no servidor (ou expirou) → para de forçar.
+      if (serverIds.has(id) || expired) {
+        m.delete(id);
+        continue;
+      }
+      result.push(entry.category); // ainda não propagou → anexa
+    } else {
+      // delete
+      if (!serverIds.has(id) || expired) {
+        m.delete(id);
+        continue;
+      }
+      result = result.filter((c) => c.id !== id); // ainda no servidor → remove
+    }
+  }
+
+  return result;
+}
+
 export interface UseTicketsManagementOptions {
   /**
    * Bundle já **formatado** pré-carregado no servidor (Server Component).
@@ -112,7 +182,7 @@ export function useTicketsManagement(
     // Cache já tem tickets formatados — apenas reconcila com pending writes.
     select: (cached) => ({
       event: cached.event,
-      categories: cached.categories,
+      categories: mergeCategoriesWithPendingWrites(eventId, cached.categories),
       tickets: mergeTicketsWithPendingWrites(eventId, cached.tickets),
     }),
     enabled: enabled && !!eventId,

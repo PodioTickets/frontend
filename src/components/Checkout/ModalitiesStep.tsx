@@ -413,7 +413,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
         {/* Instruction Card */}
         <div className=" rounded-lg mb-4">
           <p className="text-sm text-gray-11">
-            Escolha seu ingresso e defina a quantidade. Você pode ajustar depois em Informações.
+            Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.
           </p>
         </div>
 

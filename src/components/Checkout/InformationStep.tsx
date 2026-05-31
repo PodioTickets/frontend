@@ -1278,6 +1278,75 @@ export function InformationStep({
     return errors;
   };
 
+  /* Re-hidrata o estado "confirmado/colapsado" ao REMONTAR a etapa.
+   *
+   * Problema: os dados dos participantes persistem no CheckoutContext
+   * (sessionStorage), mas `savedParticipants`/`savedSnapshots`/`expandedParticipants`
+   * são estado LOCAL — ao avançar pro próximo step e voltar (ou ir pra /user e
+   * voltar), o componente remonta e esse estado zera, forçando o usuário a
+   * reconfirmar tudo.
+   *
+   * Solução: derivamos o "salvo" da completude dos dados JÁ persistidos. Todo
+   * participante que passa na MESMA validação do "Salvar e próximo" volta como
+   * confirmado (card colapsado), com snapshot = dados atuais (→ dirty=false,
+   * "Concluído"). Roda 1x, só no mount e só quando ainda não há nada salvo nesta
+   * sessão — não atropela edições/saves em curso. Participantes incompletos
+   * seguem pendentes; o primeiro deles fica aberto. */
+  const savedHydrationRef = useRef(false);
+  useEffect(() => {
+    if (savedHydrationRef.current) return;
+    if (loading || participantsWithRaces.length === 0) return;
+    savedHydrationRef.current = true;
+    if (Object.keys(savedParticipants).length > 0) return;
+
+    const nextSaved: Record<number, boolean> = {};
+    const nextSnapshots: Record<
+      number,
+      { participant: Record<string, string>; questionAnswers: Record<string, string | string[]> }
+    > = {};
+    let firstPendingIndex: number | null = null;
+
+    participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+      const errors = getParticipantValidationErrors(
+        participantIndex,
+        ticket.ageLimit,
+        ticket.gender,
+      );
+      if (Object.keys(errors).length === 0) {
+        const p = participants[participantIndex];
+        nextSaved[participantIndex] = true;
+        nextSnapshots[participantIndex] = {
+          participant: {
+            name: p?.name || "",
+            cpf: p?.cpf || "",
+            email: p?.email || "",
+            birthDate: p?.birthDate || "",
+            phone: p?.phone || "",
+            gender: p?.gender || "",
+            nationality: p?.nationality || userDefaultNationality,
+            hasEmergencyContact: String(p?.hasEmergencyContact ?? false),
+            emergencyContactName: p?.emergencyContactName || "",
+            emergencyPhone: p?.emergencyPhone || "",
+          },
+          questionAnswers: { ...(questionAnswers[participantIndex] || {}) },
+        };
+      } else if (firstPendingIndex === null) {
+        firstPendingIndex = participantIndex;
+      }
+    });
+
+    // Nada completo (fluxo novo / dados vazios) → mantém o default ({0: true}).
+    if (Object.keys(nextSaved).length === 0) return;
+
+    setSavedParticipants(nextSaved);
+    setSavedSnapshots(nextSnapshots);
+    // Colapsa os confirmados; abre só o primeiro pendente (se houver).
+    setExpandedParticipants(
+      firstPendingIndex === null ? {} : { [firstPendingIndex]: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, participantsWithRaces, participants, questionAnswers, userDefaultNationality]);
+
   const handleDeleteParticipant = (
     participantIndex: number,
     ticketId: string

@@ -20,6 +20,7 @@ import {
 } from "@/hooks/useTickets";
 import {
   useTicketsManagement,
+  markCategoryPendingWrite,
   type TicketsManagementBundle,
 } from "@/hooks/useTicketsManagement";
 import { organizerService } from "@/services";
@@ -357,7 +358,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
           return;
         }
         try {
-          await createCategory(
+          const created = await createCategory(
             nameToUse,
             descriptionOverride?.trim() ? { description: descriptionOverride.trim() } : undefined,
           );
@@ -365,11 +366,82 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
           setEditingGroupName("");
           setShowCreateGroupSection(false);
           setEditingGroupId(null);
+
+          /* A lista vem do BUNDLE (`ticketsManagement`); o `createCategory` do
+           * hook só invalida a query dedicada `ticketCategories` (`enabled:false`)
+           * → a nova categoria só aparecia após refresh. Inserimos OTIMISTA no
+           * bundle. Sem refetch imediato (mesma razão do delete: eventual
+           * consistency); reconciliação no `refetchOnWindowFocus`. */
+          /* Localiza o objeto da categoria no retorno do create,
+           * independentemente do encapsulamento (`{category}`, `{data}`,
+           * `{categories:[...]}`, array, ou o objeto direto). Basta um nó com
+           * `id` string — o `name` vem do que foi digitado (`nameToUse`) quando
+           * o backend não o devolve. Usar o RETORNO (não um refetch) é à prova
+           * do lag de leitura do backend — o create já traz o id recém-criado. */
+          const pickCreatedCategory = (
+            resp: unknown,
+            depth = 0,
+          ): Record<string, unknown> | null => {
+            if (!resp || typeof resp !== "object" || depth > 4) return null;
+            if (Array.isArray(resp)) {
+              for (let i = resp.length - 1; i >= 0; i--) {
+                const found = pickCreatedCategory(resp[i], depth + 1);
+                if (found) return found;
+              }
+              return null;
+            }
+            const o = resp as Record<string, unknown>;
+            if (typeof o.id === "string") return o;
+            for (const key of ["category", "data", "ticketCategory", "result", "categories"]) {
+              const found = pickCreatedCategory(o[key], depth + 1);
+              if (found) return found;
+            }
+            return null;
+          };
+          const cat = pickCreatedCategory(created) ?? {};
+          const newId = typeof cat.id === "string" ? cat.id : undefined;
+          if (process.env.NODE_ENV !== "production" && typeof window !== "undefined" && !newId) {
+            // eslint-disable-next-line no-console
+            console.warn("[categoria] create sem id no retorno:", created);
+          }
+          if (newId && eventId) {
+            const nextOrder =
+              categories.reduce((m, c) => Math.max(m, c.order ?? 0), -1) + 1;
+            const nowIso = new Date().toISOString();
+            const newCategory: ModalityGroup = {
+              id: newId,
+              name: typeof cat.name === "string" ? cat.name : nameToUse,
+              description:
+                descriptionOverride?.trim() ||
+                (typeof cat.description === "string" ? cat.description : undefined),
+              order: typeof cat.order === "number" ? cat.order : nextOrder,
+              eventId,
+              createdAt: typeof cat.createdAt === "string" ? cat.createdAt : nowIso,
+              updatedAt:
+                typeof cat.updatedAt === "string"
+                  ? cat.updatedAt
+                  : typeof cat.createdAt === "string"
+                    ? cat.createdAt
+                    : nowIso,
+            };
+            queryClient.setQueryData<{
+              event: unknown;
+              categories: ModalityGroup[];
+              tickets: Ticket[];
+            }>(queryKeys.events.ticketsManagement(eventId), (prev) => {
+              if (!prev) return prev;
+              if (prev.categories.some((c) => c.id === newId)) return prev; // idempotência
+              return { ...prev, categories: [...prev.categories, newCategory] };
+            });
+            // Protege contra refetch em background que volte antes do backend
+            // propagar (eventual consistency) — sem isso a nova categoria some.
+            markCategoryPendingWrite(eventId, newCategory, "create");
+          }
         } catch (e) {
           throw e;
         }
       },
-      [newGroupName, createCategory],
+      [newGroupName, createCategory, eventId, categories, queryClient],
     );
 
     const handleUpdateGroupName = useCallback(
@@ -452,11 +524,48 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
               return rest;
             });
           }
+          /* A lista renderizada vem do BUNDLE (`ticketsManagement`), que o
+           * `deleteCategory` do hook NÃO invalida (ele só invalida a query
+           * dedicada `ticketCategories`, aqui `enabled: false`). Sem isso, a
+           * categoria deletada só sumia após refresh manual. Fazemos a remoção
+           * OTIMISTA direto no cache do bundle: tira a categoria e move os
+           * ingressos dela pra avulsos.
+           *
+           * NÃO invalidamos/refetchamos aqui de propósito (mesmo motivo do
+           * duplicar ingresso, abaixo): a leitura do backend pode voltar ANTES
+           * da exclusão propagar (eventual consistency) e ressuscitar a
+           * categoria — foi o "some e aparece de novo". A reconciliação ocorre
+           * naturalmente no `refetchOnWindowFocus` do `useTicketsManagement`,
+           * quando o backend já está consistente. */
+          if (eventId) {
+            optimisticUpdateTickets(queryClient, eventId, (prev) =>
+              prev.map((t) =>
+                t.groupId === groupId ? { ...t, groupId: "uncategorized" } : t,
+              ),
+            );
+            const removed = categories.find((c) => c.id === groupId);
+            queryClient.setQueryData<{
+              event: unknown;
+              categories: ModalityGroup[];
+              tickets: Ticket[];
+            }>(queryKeys.events.ticketsManagement(eventId), (prev) =>
+              prev
+                ? { ...prev, categories: prev.categories.filter((c) => c.id !== groupId) }
+                : prev,
+            );
+            // Protege contra refetch que volte antes da exclusão propagar
+            // (eventual consistency) — sem isso a categoria reaparecia.
+            markCategoryPendingWrite(
+              eventId,
+              removed ?? ({ id: groupId } as ModalityGroup),
+              "delete",
+            );
+          }
         } catch {
           // handled in hook
         }
       },
-      [deleteCategory, persistMode],
+      [deleteCategory, persistMode, eventId, queryClient],
     );
 
     const handleDuplicateTicket = useCallback(

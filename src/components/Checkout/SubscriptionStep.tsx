@@ -878,7 +878,7 @@ export function SubscriptionStep({
       <div className="w-full md:hidden flex flex-col pb-24">
         <div className="pb-4 md:pb-0 md:py-6">
           <p className="text-sm text-gray-11">
-            Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento.
+            Configure os itens do seu kit antes de seguir para a etapa de conclusão da inscrição.
           </p>
         </div>
 

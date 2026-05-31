@@ -472,7 +472,9 @@ export function CreateCouponModal() {
       }
     }
 
-    if (cpfListStatus === "ENABLED" && cpfList.length === 0) {
+    // Cupom automático por QUANTIDADE não tem restrição por CPF — ignora a
+    // validação da lista (a UI da seção também fica escondida pra esse tipo).
+    if (couponType !== "QUANTITY" && cpfListStatus === "ENABLED" && cpfList.length === 0) {
       const msg = "Adicione ao menos um CPF à lista ou desabilite a restrição por CPF";
       setCpfListError(msg);
       toast.error(msg);
@@ -498,8 +500,10 @@ export function CreateCouponModal() {
         note: note.trim() || null,
         expiryDate: expiryEnabled && expiryDate ? expiryDate : null,
         maxUsage: usageLimitEnabled && usageLimit ? parseInt(usageLimit) : null,
-        cpfListStatus,
-        cpfList: cpfListStatus === "ENABLED" ? cpfList : null,
+        // QUANTITY não suporta restrição por CPF — sempre envia desabilitado/limpo.
+        cpfListStatus: couponType === "QUANTITY" ? "DISABLED" : cpfListStatus,
+        cpfList:
+          couponType !== "QUANTITY" && cpfListStatus === "ENABLED" ? cpfList : null,
         applyToProducts,
         // Campos específicos por tipo — quando o tipo do cupom muda, os campos
         // dos outros tipos precisam ser limpos no backend.
@@ -1086,6 +1090,7 @@ export function CreateCouponModal() {
                                 >
                                   {/* Validade do cupom */}
                                   <div className="flex flex-col gap-5">
+                                  {couponType !== "QUANTITY" && (
                                   <div className="flex flex-col gap-4">
                                     <div className="flex flex-col gap-2">
                                       <h3 className="text-gray-12 text-lg font-medium font-family-dm-sans leading-[1.3]">
@@ -1256,6 +1261,7 @@ export function CreateCouponModal() {
                                       </div>
                                     )}
                                   </div>
+                                  )}
 
                                   {/* Aplicar cupom nos adicionais */}
                                   <div className="flex flex-col gap-5">

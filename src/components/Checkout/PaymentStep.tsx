@@ -2300,9 +2300,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         {/* Instructional Text */}
         <div className="pb-6">
           <p className="text-sm text-gray-11 font-family-dm-sans">
-            {billingAddressConfirmed
-              ? "Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento."
-              : "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."}
+            {!billingAddressConfirmed
+              ? "Informe e confirme o endereço de cobrança para escolher a forma de pagamento."
+              : isFreeOrder
+                ? "Clique em Finalizar pedido para confirmar. Os ingressos serão liberados imediatamente."
+                : "Revise seu pedido e finalize com cartão ou Pix. Os ingressos serão liberados após a aprovação do pagamento."}
           </p>
         </div>
 

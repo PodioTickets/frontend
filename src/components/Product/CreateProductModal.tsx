@@ -314,7 +314,34 @@ export function CreateProductModal() {
         ),
       );
       const rawVars = rec.variations;
-      const vars = Array.isArray(rawVars) ? rawVars : [];
+      /* O backend pode devolver as variações em ordem diferente da criação
+       * (ex.: `createdAt DESC`), invertendo p,m,g → g,m,p ao reabrir o modal.
+       * Ordenação preferindo `sortOrder` (índice persistido no save — contrato
+       * pedido ao backend) e caindo pro `createdAt` ASC enquanto o backend não
+       * expõe o `sortOrder`. Sort ESTÁVEL: sem nenhuma das chaves mantém a
+       * ordem que a API devolveu — nunca piora. */
+      const variationSortOrder = (v: unknown): number | null => {
+        const r = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+        const s = r.sortOrder ?? r.sort_order;
+        const n = typeof s === "number" ? s : typeof s === "string" ? Number(s) : NaN;
+        return Number.isFinite(n) ? n : null;
+      };
+      const variationCreatedAtMs = (v: unknown): number | null => {
+        const r = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+        const c = r.createdAt ?? r.created_at;
+        const ms =
+          typeof c === "string" || typeof c === "number" ? new Date(c).getTime() : NaN;
+        return Number.isNaN(ms) ? null : ms;
+      };
+      const vars = (Array.isArray(rawVars) ? [...rawVars] : []).sort((a, b) => {
+        const sa = variationSortOrder(a);
+        const sb = variationSortOrder(b);
+        if (sa !== null && sb !== null) return sa - sb;
+        const ta = variationCreatedAtMs(a);
+        const tb = variationCreatedAtMs(b);
+        if (ta !== null && tb !== null) return ta - tb;
+        return 0;
+      });
       organizerHiddenSemInteresseRef.current = null;
       if (vars.length === 0) {
         setVariations([
@@ -818,19 +845,23 @@ export function CreateProductModal() {
               };
             });
           const hidden = organizerHiddenSemInteresseRef.current;
-          if (!isIncludedInTicket && hidden) {
-            const priceReais =
-              parseFloat(String(hidden.price || "0").replace(",", ".")) || 0;
-            return [
-              ...fromForm,
-              {
-                name: hidden.name.trim(),
-                price: Math.round(priceReais * 100),
-                stock: parseInt(hidden.stock, 10) || 0,
-              },
-            ];
-          }
-          return fromForm;
+          const all =
+            !isIncludedInTicket && hidden
+              ? [
+                  ...fromForm,
+                  {
+                    name: hidden.name.trim(),
+                    price:
+                      Math.round(
+                        (parseFloat(String(hidden.price || "0").replace(",", ".")) || 0) * 100,
+                      ),
+                    stock: parseInt(hidden.stock, 10) || 0,
+                  },
+                ]
+              : fromForm;
+          // `sortOrder` = índice na ordem final do array, pro backend persistir
+          // e devolver as variações na ordem em que o organizador as definiu.
+          return all.map((v, i) => ({ ...v, sortOrder: i }));
         })(),
         // Edição de variação pós-compra só é válida para produtos inclusos.
         // Defesa em profundidade: força `false`/0 caso o estado tenha sido

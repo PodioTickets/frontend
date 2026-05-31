@@ -191,11 +191,17 @@ export default function TicketDetailsPage() {
         .filter((item: any) => item.product?.isIncludedInTicket === true)
         .map((item: any) => toIncludedProduct(item, item.product?.basePrice ?? 0));
 
+      // Alteração de variação é permitida SOMENTE para produtos INCLUSOS no
+      // ingresso. Produtos adicionais (opcionais comprados) não podem trocar a
+      // variação — forçamos as flags em false aqui, escondendo botão "Alterar"
+      // e banner de prazo (o catálogo do incluso segue com as flags do backend).
       const additionalProducts: IncludedProduct[] = visibleProducts
         .filter((item: any) => item.product?.isIncludedInTicket !== true)
-        .map((item: any) =>
-          toIncludedProduct(item, item.unitPrice ?? item.product?.basePrice ?? 0),
-        );
+        .map((item: any) => ({
+          ...toIncludedProduct(item, item.unitPrice ?? item.product?.basePrice ?? 0),
+          buyerVariationEditAllowed: false,
+          canEditVariation: false,
+        }));
 
       return {
         id: reg.id,
