@@ -197,6 +197,7 @@ function ProductCard({
   onSelect,
   selectedVariation,
   variant,
+  requiredSection,
 }: {
   product: Product;
   selectedVariationId: string | null | undefined;
@@ -204,6 +205,7 @@ function ProductCard({
   onSelect: (opt: DropdownOption) => void;
   selectedVariation: Product["variations"][number] | null;
   variant: "mobile" | "desktop";
+  requiredSection?: boolean;
 }) {
   const sideLabel = selectedVariation
     ? previewVariationListPriceLabelForProduct(product, selectedVariation.price, selectedVariation.name)
@@ -213,7 +215,7 @@ function ProductCard({
     return (
       <div className="bg-gray-2 border border-gray-6 rounded-xl">
         <div className="flex flex-col gap-3 p-4 border-b border-gray-6">
-          {product.isIncludedInTicket && !selectedVariation && (
+          {requiredSection && variationOptions.length > 0 && !selectedVariation && (
             <span className="self-start inline-flex items-center gap-1.5 h-[27px] px-3 rounded-xl bg-[#fff7c2] border border-[#f3d673]">
               <span className="size-1.5 rounded-full bg-[#4f3422]" />
               <span className="text-xs font-semibold leading-none text-[#4f3422]">Falta escolher a variação</span>
@@ -249,7 +251,7 @@ function ProductCard({
 
   return (
     <div className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4">
-      {product.isIncludedInTicket && !selectedVariation && (
+      {requiredSection && variationOptions.length > 0 && !selectedVariation && (
         <span className="self-start inline-flex items-center gap-1.5 h-[27px] px-3 rounded-xl bg-[#fff7c2] border border-[#f3d673]">
           <span className="size-1.5 rounded-full bg-[#4f3422]" />
           <span className="text-xs font-semibold leading-none text-[#4f3422]">Falta escolher a variação</span>
@@ -291,6 +293,7 @@ function ProductsSection({
   getVariationOptions,
   getSelectedVariation,
   variant,
+  requiredSection,
 }: {
   title: string;
   products: Product[];
@@ -300,6 +303,7 @@ function ProductsSection({
   getVariationOptions: (product: Product) => DropdownOption[];
   getSelectedVariation: (participantIndex: number, product: Product) => Product["variations"][number] | null;
   variant: "mobile" | "desktop";
+  requiredSection?: boolean;
 }) {
   if (products.length === 0) return null;
 
@@ -318,6 +322,7 @@ function ProductsSection({
             onSelect={onVariationSelect(participantIndex, product.id)}
             selectedVariation={getSelectedVariation(participantIndex, product)}
             variant={variant}
+            requiredSection={requiredSection}
           />
         ))}
       </div>
@@ -1038,6 +1043,7 @@ export function SubscriptionStep({
 
                     <ProductsSection
                       title="Produtos do kit"
+                      requiredSection
                       products={getRequiredProductsForParticipant(participantIndex)}
                       participantIndex={participantIndex}
                       selectedVariations={selectedVariations}
@@ -1179,6 +1185,7 @@ export function SubscriptionStep({
 
             <ProductsSection
               title="Produtos do kit"
+              requiredSection
               products={getRequiredProductsForParticipant(selectedParticipant)}
               participantIndex={selectedParticipant}
               selectedVariations={selectedVariations}
