@@ -7,7 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { categorySortableId } from "@/lib/ticketCategoryOrder";
 import type { ModalityGroup } from "@/services/organizer/OrganizerService";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
-import { CheckRectangleIcon } from "@/components/Icons/CheckRectangleIcon";
+import { TickIcon } from "@/components/Icons/TickIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { DeleteTicketCategoryModal } from "./DeleteTicketCategoryModal";
 import { CategoryDeleteBlockedModal } from "./CategoryDeleteBlockedModal";
@@ -176,7 +176,7 @@ export function SortableTicketCategoryItem({
               aria-label={isEditing ? "Salvar nome da categoria" : "Editar nome da categoria"}
             >
               {isEditing ? (
-                <CheckRectangleIcon className="size-5 text-gray-11" />
+                <TickIcon className="size-5 text-gray-11" />
               ) : (
                 <PencilIcon className="size-5 text-gray-11" />
               )}
