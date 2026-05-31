@@ -2683,6 +2683,41 @@ export class OrganizerService {
     return response.data;
   }
 
+  /**
+   * Estorno (TOTAL e imediato) de um pedido pago pelo ORGANIZADOR com permissão
+   * financeira. Contrato: `organizer-refund-route.md`.
+   * - `reason` é obrigatório (≥ 3 chars) — vai pro audit log.
+   * - `pendingConfirmation: true` → Cielo aceitou mas confirma via webhook (PIX async).
+   * - Não é idempotente: re-chamar pedido já estornado → 409 `PAYMENT_NOT_PAID`.
+   */
+  async refundOrder(
+    eventId: string,
+    orderId: string,
+    reason: string,
+  ): Promise<{
+    orderId: string;
+    paymentId?: string;
+    cieloStatus?: string;
+    pendingConfirmation: boolean;
+    amount: number;
+    method: string;
+    refundedAt: string;
+  }> {
+    const { data: response } = await this.apiClient.post<{
+      message: string;
+      data: {
+        orderId: string;
+        paymentId?: string;
+        cieloStatus?: string;
+        pendingConfirmation: boolean;
+        amount: number;
+        method: string;
+        refundedAt: string;
+      };
+    }>(`/api/v1/events/${eventId}/repasse/orders/${orderId}/refund`, { reason });
+    return response.data;
+  }
+
   async getEventChargebacks(
     eventId: string,
     params?: {

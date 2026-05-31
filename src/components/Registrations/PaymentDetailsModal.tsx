@@ -25,6 +25,9 @@ import {
   formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
+import { Pagination } from '../Pagination';
+import { CancelOrderModal } from './CancelOrderModal';
+import { OrderApiError } from '@/interfaces/order';
 
 export function PaymentDetailsModal() {
   const { isOpen, closePaymentDetailsModal, data } = usePaymentDetailsModal();
@@ -33,6 +36,9 @@ export function PaymentDetailsModal() {
   const [ticketsPage, setTicketsPage] = useState(1);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [loading, setLoading] = useState(false);
+  // Modal de confirmação de cancelamento/estorno (overlay local, z-60).
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [refunding, setRefunding] = useState(false);
 
   const eventId = data?.eventId as string | undefined;
   const eventName = (data?.eventName as string) || "Evento";
@@ -318,6 +324,74 @@ export function PaymentDetailsModal() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  /* Estorno pelo organizador (contrato `organizer-refund-route.md`).
+   * O design (Figma) não captura motivo — enviamos um `reason` padrão (≥3 chars,
+   * exigido pelo backend p/ audit log). Em sucesso: marca o status como ESTORNADO
+   * localmente, fecha o modal e notifica a lista (`orderRefunded`) pra refazer. */
+  const handleConfirmCancelOrder = async () => {
+    const orderId = paymentDetails?.orderId;
+    if (!eventId || !orderId) {
+      toast.error("Pedido não encontrado.");
+      return;
+    }
+    setRefunding(true);
+    try {
+      const res = await organizerService.refundOrder(
+        eventId,
+        orderId,
+        "Pedido cancelado pelo organizador via painel",
+      );
+      toast.success(
+        res.pendingConfirmation
+          ? "Estorno enviado — aguardando confirmação."
+          : "Pedido cancelado e estornado com sucesso.",
+      );
+      // `payment.status` é `string` no tipo — marcamos como REFUNDED p/ refletir
+      // na hora (badge + desabilita o botão).
+      setPaymentDetails((prev) =>
+        prev?.payment
+          ? { ...prev, payment: { ...prev.payment, status: "REFUNDED" } }
+          : prev,
+      );
+      setShowCancelModal(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("orderRefunded", { detail: { orderId, eventId } }),
+        );
+      }
+    } catch (err: unknown) {
+      // erros do axios (status/code em `response.data`) ou OrderApiError.
+      const e = err as {
+        code?: string;
+        response?: { status?: number; data?: { code?: string; message?: string } };
+        message?: string;
+      };
+      const code = e?.code ?? e?.response?.data?.code;
+      const status = e?.response?.status;
+      if (code === "PAYMENT_NOT_PAID" || code === "ORDER_NOT_PAID") {
+        toast.error("Este pedido já foi estornado ou não está pago.");
+        setPaymentDetails((prev) =>
+          prev?.payment
+            ? { ...prev, payment: { ...prev.payment, status: "REFUNDED" } }
+            : prev,
+        );
+        setShowCancelModal(false);
+      } else if (status === 403) {
+        toast.error("Você não tem permissão financeira para estornar este pedido.");
+      } else if (code === "METHOD_NOT_REFUNDABLE") {
+        toast.error("Método de pagamento não estornável pelo sistema (devolução manual).");
+      } else {
+        toast.error(
+          e?.response?.data?.message ||
+            (err instanceof OrderApiError ? err.message : null) ||
+            "Não foi possível cancelar o pedido. Tente novamente.",
+        );
+      }
+    } finally {
+      setRefunding(false);
+    }
+  };
+
   const goToParticipantDetails = (registrationIdForView: string) => {
     if (!registrationId) return;
     const paymentReturnPayload = {
@@ -366,6 +440,17 @@ export function PaymentDetailsModal() {
 
   const { hasPermission } = useOrganizerPermissions();
   const eventTabs = eventId ? getEventTabs(eventId, hasPermission) : [];
+
+  /* Estorno só faz sentido em pedido PAGO e não-gratuito. Após estornar,
+   * `status` vira REFUNDED e o botão some — evita reenvio (a rota não é
+   * idempotente). NÃO gateamos por permissão no front: a modal é montada
+   * globalmente (fora do OrganizerPermissionsProvider), então `hasPermission`
+   * cairia no default `() => false` e esconderia o botão indevidamente. A
+   * autorização (`financial`) é garantida pelo backend (403 → toast). */
+  const canRefundOrder =
+    !isFreeOrder && paymentDetails?.payment?.status === "PAID";
+  const refundTicketCount = participants.length;
+  const refundAmountReais = (paymentInfo.totalAmount ?? 0) / 100;
 
   return (
     <AnimatePresence>
@@ -584,11 +669,10 @@ export function PaymentDetailsModal() {
                         {paginatedParticipants.map((participant: any, idx: number) => (
                           <article
                             key={participant.id}
-                            className={`bg-gray-1 px-3 py-4 flex flex-col gap-6 ${
-                              idx < paginatedParticipants.length - 1
-                                ? "border-b border-gray-6"
-                                : ""
-                            }`}
+                            className={`bg-gray-1 px-3 py-4 flex flex-col gap-6 ${idx < paginatedParticipants.length - 1
+                              ? "border-b border-gray-6"
+                              : ""
+                              }`}
                           >
                             <div className="flex flex-col gap-5 w-full">
                               {/* Header: avatar + nome/email — email com gap menor
@@ -680,11 +764,10 @@ export function PaymentDetailsModal() {
                                     key={pageNum}
                                     type="button"
                                     onClick={() => setTicketsPage(pageNum)}
-                                    className={`size-8 flex items-center justify-center rounded-lg font-family-dm-sans font-medium text-[14px] leading-[18.2px] transition-colors cursor-pointer ${
-                                      isActive
-                                        ? "bg-primary-11 text-primary-1"
-                                        : "bg-gray-4 text-gray-12 hover:bg-gray-5"
-                                    }`}
+                                    className={`size-8 flex items-center justify-center rounded-lg font-family-dm-sans font-medium text-[14px] leading-[18.2px] transition-colors cursor-pointer ${isActive
+                                      ? "bg-primary-11 text-primary-1"
+                                      : "bg-gray-4 text-gray-12 hover:bg-gray-5"
+                                      }`}
                                   >
                                     {pageNum}
                                   </button>
@@ -704,6 +787,25 @@ export function PaymentDetailsModal() {
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Ações do pedido (mobile) — espelha o desktop. */}
+                  <div className="flex flex-col gap-2 pb-2">
+                    <Button
+                      variant="outline"
+                      className="w-full border-gray-6 text-gray-12"
+                    >
+                      Baixar comprovante
+                    </Button>
+                    {canRefundOrder && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setShowCancelModal(true)}
+                        className="w-full"
+                      >
+                        Cancelar pedido
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1147,41 +1249,18 @@ export function PaymentDetailsModal() {
                             </div>
                           ))}
                         </div>
+                        <Pagination currentPage={ticketsPage} onPageChange={setTicketsPage} totalPages={totalPages} />
+                      </div>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                          <div className="flex items-center justify-end gap-1 px-4 py-5 border-t border-gray-6">
-                            <button
-                              onClick={() => setTicketsPage((prev) => Math.max(1, prev - 1))}
-                              disabled={ticketsPage === 1}
-                              className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <ChevronLeft className="size-4" />
-                            </button>
-                            {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => {
-                              const pageNum = i + 1;
-                              const isActive = pageNum === ticketsPage;
-                              return (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => setTicketsPage(pageNum)}
-                                  className={`size-8 flex items-center justify-center border rounded-lg text-[14px] font-family-dm-sans font-medium ${isActive
-                                    ? "bg-primary-11 border-primary-11 text-primary-1"
-                                    : "border-gray-6 hover:bg-gray-3"
-                                    }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              );
-                            })}
-                            <button
-                              onClick={() => setTicketsPage((prev) => Math.min(totalPages, prev + 1))}
-                              disabled={ticketsPage >= totalPages}
-                              className="size-8 flex items-center justify-center border border-gray-6 rounded-lg hover:bg-gray-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <ChevronRight className="size-4" />
-                            </button>
-                          </div>
+                      <div className='flex items-center gap-2'>
+                        <Button variant={"outline"} className='border-gray-6 text-gray-12'>Baixar comprovante</Button>
+                        {canRefundOrder && (
+                          <Button
+                            variant={"destructive"}
+                            onClick={() => setShowCancelModal(true)}
+                          >
+                            Cancelar pedido
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -1190,6 +1269,18 @@ export function PaymentDetailsModal() {
               )}
             </div>
           </motion.div>
+
+          {/* Confirmação de cancelamento/estorno — overlay por cima (z-60).
+              Controlado por estado local pra não fechar o PaymentDetailsModal
+              (o modalStore é single-modal). */}
+          <CancelOrderModal
+            isOpen={showCancelModal}
+            onClose={() => setShowCancelModal(false)}
+            onConfirm={handleConfirmCancelOrder}
+            loading={refunding}
+            ticketCount={refundTicketCount}
+            refundAmount={refundAmountReais}
+          />
         </>
       )}
     </AnimatePresence>
