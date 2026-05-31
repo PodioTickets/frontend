@@ -1,7 +1,6 @@
 "use client";
 
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { FlagIcon } from "@/components/Icons/FlagIcon";
 import { LocationIcon } from "@/components/Icons/LocationIcon";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -54,161 +53,123 @@ export function EventCard({ event }: EventCardProps) {
     !inscricoesEmBreve &&
     !inscricoesEncerradas;
 
-  const getStatusText = (status: Event["status"]) => {
-    switch (status) {
-      case "PUBLISHED":
-        return "Inscrições abertas";
-      case "DRAFT":
-        return "Rascunho";
-      case "CANCELLED":
-        return "Cancelado";
-      default:
-        return "Inscrições abertas";
-      case "COMPLETED":
-        return "Evento realizado";
-    }
-  };
+  const statusLabel = inscricoesEncerradas
+    ? "Inscrições encerradas"
+    : inscricoesEmBreve
+      ? "Inscrições em breve"
+      : vagasEsgotadas
+        ? "Vagas esgotadas!"
+        : event.status === "COMPLETED"
+          ? "Evento realizado"
+          : "Inscrições abertas";
 
-  const getStatusColor = (status: Event["status"]) => {
-    switch (status) {
-      case "PUBLISHED":
-        return "bg-primary-5 border-primary-7";
-      case "COMPLETED":
-        return "bg-[#F4F0FE] border-[#D4CAFE]";
-      case "CANCELLED":
-        return "bg-red-3 border-red-6";
-      case "SUSPENDED":
-        return "bg-primary-5 border-primary-7";
-      default:
-        return "bg-primary-5";
-    }
-  };
+  // Tag de status (canto inferior esquerdo). Aberto = verde (Figma).
+  const tagBg = inscricoesEncerradas
+    ? "bg-red-50 border-red-200"
+    : inscricoesEmBreve
+      ? "bg-amber-50 border-amber-300"
+      : vagasEsgotadas
+        ? "bg-violet-50 border-violet-200"
+        : event.status === "COMPLETED"
+          ? "bg-[#F4F0FE] border-[#D4CAFE]"
+          : "bg-[#c4e8d1] border-[#94ce9a]";
 
-  const cardContent = (
-    <>
-      <div className="relative w-full aspect-square overflow-hidden rounded-lg bg-gray-4">
-        <ImageWithInitialFallback
-          src={(event as any).logoUrl}
-          alt={event.name}
-          name={event.name}
-          fallbackId={event.id}
-          fill
-          sizes="(max-width: 768px) 100vw, 300px"
-          className="size-full border-transparent border-0 aspect-square"
-          letterClassName="text-6xl"
-        />
-      </div>
+  const tagText = inscricoesEncerradas
+    ? "text-red-900"
+    : inscricoesEmBreve
+      ? "text-amber-950"
+      : vagasEsgotadas
+        ? "text-violet-900"
+        : event.status === "COMPLETED"
+          ? "text-[#5B3FBF]"
+          : "text-[#203c25]";
 
-      <div className="flex flex-col gap-2 px-3 mt-2">
-        <h1 className="font-bold truncate">{event.name}</h1>
-        <h1 className="flex items-center gap-2 text-gray-12">
-          <LocationIcon className="size-5" />{" "}
-          <span className="text-sm text-gray-12">
-            {event.city}, {event.state}
-          </span>
-        </h1>
-      </div>
+  const dotColor = inscricoesEncerradas
+    ? "bg-red-600"
+    : inscricoesEmBreve
+      ? "bg-amber-500"
+      : vagasEsgotadas
+        ? "bg-violet-600"
+        : event.status === "COMPLETED"
+          ? "bg-[#5B3FBF]"
+          : "bg-[#3e9b4f]";
 
-      <div className="h-px w-full bg-gray-6 my-3" />
+  const organizer = getEventOrganizer(event);
+  const organizerImg = organizer?.logoUrl
+    ? getAvatarUrl(organizer.logoUrl)
+    : event.organizer?.user?.avatarUrl
+      ? getAvatarUrl(event.organizer.user.avatarUrl)
+      : null;
 
-      <div className="flex flex-col justify-between px-3 gap-3">
-        <h1 className="flex items-center gap-2 text-sm text-gray-12">
-          {(() => {
-            const organizer = getEventOrganizer(event);
-            if (!organizer) return <FlagIcon className="size-5" />;
-
-            // Se tiver logoUrl (organization), usa ela, senão usa avatar do user (organizer antigo)
-            if (organizer.logoUrl) {
-              return (
-                <ImageWithInitialFallback
-                  src={getAvatarUrl(organizer.logoUrl)}
-                  alt={organizer.name}
-                  name={organizer.name}
-                  width={20}
-                  height={20}
-                  className="hrink-0 rounded-full size-5"
-                  imgClassName="object-cover"
-                  letterClassName="text-xs"
-                />
-              );
-            }
-
-            // Fallback para formato antigo
-            if (event.organizer?.user?.avatarUrl) {
-              return (
-                <ImageWithInitialFallback
-                  src={getAvatarUrl(event.organizer.user.avatarUrl)}
-                  alt={organizer.name}
-                  name={organizer.name}
-                  width={20}
-                  height={20}
-                  className="rounded-sm shrink-0"
-                  imgClassName="object-cover"
-                  letterClassName="text-xs"
-                />
-              );
-            }
-
-            return <FlagIcon className="size-5" />;
-          })()}
-          <span>{getEventOrganizer(event)?.name || "Organizador"}</span>
-        </h1>
-        <h1 className="flex items-center gap-2 text-sm text-gray-12">
-          <CalendarIcon className="size-5" /> <span>{formattedDate}</span>
-        </h1>
-      </div>
-
-      <div className="flex items-center justify-between mt-3">
-        <div
-          className={cn(
-            "w-auto flex items-center justify-center gap-2 border rounded-tr-xl rounded-bl-xl p-2",
-            inscricoesEncerradas
-              ? "bg-red-50 border-red-200"
-              : inscricoesEmBreve
-                ? "bg-amber-50 border-amber-300"
-                : vagasEsgotadas
-                  ? "bg-violet-50 border-violet-200"
-                  : getStatusColor(event.status)
-          )}
-        >
-          {(event.status === "PUBLISHED" || event.status === "SUSPENDED") && !inscricoesEncerradas && !inscricoesEmBreve && !vagasEsgotadas && (
-            <div className="border border-primary-12 bg-primary-5 rounded-full p-1">
-              <div className="bg-primary-12 rounded-full size-1" />
-            </div>)}
-          <h1
-            className={cn(
-              "text-sm font-semibold font-family-dm-sans",
-              inscricoesEncerradas
-                ? "text-red-900"
-                : inscricoesEmBreve
-                  ? "text-amber-950"
-                  : vagasEsgotadas
-                    ? "text-violet-900"
-                    : "text-gray-12"
-            )}
-          >
-            {inscricoesEncerradas
-              ? "Inscrições encerradas"
-              : inscricoesEmBreve
-                ? "Inscrições em breve"
-                : vagasEsgotadas
-                  ? "Vagas esgotadas!"
-                  : getStatusText(event.status)}
-          </h1>
-        </div>
-      </div>
-    </>
-  );
+  const eventImg = (event as any).logoUrl;
 
   return (
-    <div className="rounded-xl overflow-hidden bg-gray-2 shadow-[0_-2px_8px_rgba(0,0,0,0.06),0_2px_8px_rgba(0,0,0,0.06)] transition-transform hover:scale-[1.02] duration-200">
-      {event ? (
-        <Link href={`/events/${event.slug}`} className="block">
-          {cardContent}
-        </Link>
-      ) : (
-        cardContent
-      )}
-    </div>
+    <Link href={`/events/${event.slug}`} className="block">
+      <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[#cecece] bg-[#f9f9f9] shadow-[0_2px_6px_0_rgba(17,17,17,0.3)] transition-transform duration-200 hover:scale-[1.01]">
+        {/* Imagem (proporção landscape do Figma: 308x232) */}
+        <div className="relative aspect-[308/232] w-full shrink-0 bg-gray-4">
+          <ImageWithInitialFallback
+            src={eventImg}
+            alt={event.name}
+            name={event.name}
+            fallbackId={event.id}
+            fill
+            sizes="(max-width: 768px) 90vw, 308px"
+            className="size-full border-0 object-cover"
+            letterClassName="text-6xl"
+          />
+        </div>
+
+        {/* Título + local */}
+        <div className="flex flex-col gap-3 border-b border-[#d9d9d9] px-3 pb-3 pt-4">
+          <p className="truncate font-manrope text-base font-bold leading-[1.1] text-[#202020]">
+            {event.name}
+          </p>
+          <div className="flex items-center gap-1">
+            <LocationIcon className="size-5 shrink-0 text-[#202020]" />
+            <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
+              {event.city}, {event.state}
+            </span>
+          </div>
+        </div>
+
+        {/* Organizador + data + tag */}
+        <div className="flex flex-col gap-4 pt-3">
+          <div className="flex flex-col gap-3 px-3">
+            <div className="flex items-center gap-1">
+              <ImageWithInitialFallback
+                src={organizerImg}
+                alt={organizer?.name ?? "Organizador"}
+                name={organizer?.name ?? "Organizador"}
+                fallbackId={organizer?.id ?? event.id}
+                width={20}
+                height={20}
+                className="size-5 shrink-0 rounded-full"
+                imgClassName="object-cover"
+                letterClassName="text-[10px]"
+              />
+              <span className="truncate font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
+                {organizer?.name || "Organizador"}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CalendarIcon className="size-5 shrink-0 text-[#202020]" />
+              <span className="font-family-dm-sans text-sm leading-[1.3] text-[#202020]">
+                {formattedDate}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center">
+            <div className={cn("flex items-center gap-1 rounded-tr-[16px] border-r border-t p-3", tagBg)}>
+              <span className={cn("size-3 shrink-0 rounded-full", dotColor)} />
+              <span className={cn("font-family-dm-sans text-sm font-semibold leading-[1.3]", tagText)}>
+                {statusLabel}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
