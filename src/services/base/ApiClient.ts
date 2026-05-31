@@ -117,8 +117,19 @@ export class ApiClient {
             }
 
             const response = await this.refreshToken(refreshToken);
-            const { access_token, refresh_token: newRefreshToken } =
-              response as any;
+            const body = response as any;
+            // Backend devolve { message, data: { access_token, refresh_token } }.
+            // Lê do nível `data` (com fallback plano por segurança). Ler errado
+            // resultava em access_token=undefined e envenenava o cookie.
+            const access_token = body?.data?.access_token ?? body?.access_token;
+            const newRefreshToken =
+              body?.data?.refresh_token ?? body?.refresh_token;
+
+            if (!access_token) {
+              // Refresh sem token válido: NÃO sobrescreve o cookie (senão grava
+              // "undefined" e derruba a sessão boa). Trata como falha de refresh.
+              throw new Error("Refresh response sem access_token");
+            }
 
             this.setAccessToken(access_token);
             if (newRefreshToken) {
@@ -186,14 +197,25 @@ export class ApiClient {
   }
 
   getAccessToken(): string | null {
-    return Cookies.get("access_token") || null;
+    return this.readToken("access_token");
   }
 
   getRefreshToken(): string | null {
-    return Cookies.get("refresh_token") || null;
+    return this.readToken("refresh_token");
+  }
+
+  // Lê o cookie tratando os literais "undefined"/"null" (de sessões antigas
+  // envenenadas pelo bug de refresh) como ausência de token.
+  private readToken(name: string): string | null {
+    const v = Cookies.get(name);
+    if (!v || v === "undefined" || v === "null") return null;
+    return v;
   }
 
   setAccessToken(token: string): void {
+    // Nunca grava valor vazio/undefined — evita cookie "undefined" e o consequente
+    // "Bearer undefined" que derruba a sessão.
+    if (!token) return;
     Cookies.set("access_token", token, {
       expires: 30, // 30 days
       secure: process.env.NODE_ENV === "production",
@@ -202,6 +224,7 @@ export class ApiClient {
   }
 
   setRefreshToken(token: string): void {
+    if (!token) return;
     Cookies.set("refresh_token", token, {
       expires: 90, // 90 days
       secure: process.env.NODE_ENV === "production",

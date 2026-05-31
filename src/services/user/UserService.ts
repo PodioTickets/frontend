@@ -434,11 +434,15 @@ export class UserService {
 
   async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
     try {
-      const response = await this.apiClient.post<RefreshTokenResponse>(
+      const response = await this.apiClient.post<any>(
         "/api/v1/auth/refresh",
         { refresh_token: refreshToken }
       );
-      return response.data as RefreshTokenResponse;
+      // Backend: { message, data: { access_token, refresh_token } }. Desembrulha
+      // o `data` (com fallback plano) — antes retornava o wrapper e o caller lia
+      // access_token=undefined.
+      const body = response.data as any;
+      return (body?.data ?? body) as RefreshTokenResponse;
     } catch (error: any) {
       throw this.handleError(error);
     }
