@@ -63,6 +63,11 @@ export function RegisterModal() {
   // Verifica se é para completar cadastro
   const isCompletingProfile = modalData?.completeProfile === true && !!user;
 
+  /* Mostra o botão "voltar": no cadastro normal sempre (step 1 volta pro login);
+   * no fluxo Google (completar perfil) só a partir do step 3 — o step 2 é a 1ª
+   * tela (não há senha/email antes). */
+  const canGoBack = !isCompletingProfile || currentStep > 2;
+
   // Form data state
   const [formData, setFormData] = useState({
     // Step 1: Personal Information
@@ -162,6 +167,11 @@ export function RegisterModal() {
   }, [isCompletingProfile, user, isOpen]);
 
   const handleBack = () => {
+    // Fluxo Google (completar perfil): começa no step 2; só volta 3→2.
+    if (isCompletingProfile) {
+      if (currentStep > 2) setCurrentStep((prev) => (prev - 1) as RegisterStep);
+      return;
+    }
     if (currentStep === 1) {
       closeRegisterModal();
       openLoginModal();
@@ -555,7 +565,7 @@ export function RegisterModal() {
   const renderPersonalInfoMobileHeader = () => (
     <div className="md:hidden border-b border-gray-6 flex items-center justify-center h-[52px] px-4 py-2 relative shrink-0 w-full">
       <div className="flex gap-2 items-center flex-1">
-        {!isCompletingProfile && (
+        {canGoBack && (
           <button
             onClick={handleBack}
             className="flex items-center justify-center shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3 rounded-lg"
@@ -848,7 +858,7 @@ export function RegisterModal() {
   // Header desktop compartilhado entre as duas sub-etapas de dados pessoais.
   const renderPersonalInfoDesktopHeader = () => (
     <div className="hidden md:flex border-b border-gray-6 gap-0.5 items-center px-4 py-3 relative shrink-0 w-full overflow-visible">
-      {!isCompletingProfile && (
+      {canGoBack && (
         <button
           onClick={handleBack}
           className="flex items-center justify-center rounded-lg shrink-0 size-8 transition-colors rotate-90 cursor-pointer hover:bg-gray-3"
