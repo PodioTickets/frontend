@@ -208,7 +208,7 @@ export function KitCard({ kit, index }: KitCardProps) {
                           <div className="flex items-center gap-2">
                             <DistanceIcon className="size-6 shrink-0" />
                             <p className="text-base font-medium text-gray-12 font-family-dm-sans leading-[1.3]">
-                              {race.distanceKm} Km
+                              {race.distanceKm} km
                             </p>
                           </div>
                           <div className="flex items-center gap-2">

@@ -167,7 +167,7 @@ const TicketItemMobile = memo(({
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
-  const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
+  const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
@@ -523,7 +523,7 @@ const TicketItemDesktop = memo(({
 
   const price = getTicketPrice(ticket);
   const distanceKm = getDistanceKm(ticket);
-  const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "Km" : "m"
+  const distanceUnit = ticket?.distanceUnit === "KM" || ticket?.distanceUnit === "Km" ? "km" : "m"
   const ageLimitText = formatAgeLimit(ticket.ageLimit);
   // Badge de limite de idade: `userAge` undefined (prop ausente, ex.: preview do
   // organizador) → comportamento antigo (sempre mostra); null (anônimo / sem
