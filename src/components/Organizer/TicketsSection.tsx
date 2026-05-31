@@ -34,6 +34,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { Plus } from "lucide-react";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
+import { TickIcon } from "@/components/Icons/TickIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
 import {
@@ -1256,14 +1257,17 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                   <div className="flex gap-[10px] items-center" data-category-draft-toolbar>
                     <button
                       type="button"
-                      title="Editar"
+                      title="Salvar categoria"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
-                        setEditingGroupId("new");
-                        setNewGroupName("");
+                        const value = newGroupName.trim();
+                        if (value) void handleCreateGroup(value);
+                        else toast.error("Nome da categoria é obrigatório");
                       }}
                       className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
+                      aria-label="Salvar categoria"
                     >
-                      <PencilIcon className="size-5 text-gray-11" />
+                      <TickIcon className="size-5 text-gray-11" />
                     </button>
                     <button
                       type="button"
@@ -1352,14 +1356,26 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                     <div className="flex gap-[10px] items-center" data-category-draft-toolbar>
                       <button
                         type="button"
-                        title="Editar"
+                        title={editingGroupId === "new" ? "Salvar categoria" : "Editar"}
+                        onMouseDown={editingGroupId === "new" ? (e) => e.preventDefault() : undefined}
                         onClick={() => {
-                          setEditingGroupId("new");
-                          setEditingGroupName("");
+                          if (editingGroupId === "new") {
+                            const value = editingGroupName.trim();
+                            if (value) void handleCreateGroup(value);
+                            else toast.error("Nome da categoria é obrigatório");
+                          } else {
+                            setEditingGroupId("new");
+                            setEditingGroupName("");
+                          }
                         }}
-                        className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center"
+                        className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
+                        aria-label={editingGroupId === "new" ? "Salvar categoria" : "Editar"}
                       >
-                        <PencilIcon className="size-5 text-gray-11" />
+                        {editingGroupId === "new" ? (
+                          <TickIcon className="size-5 text-gray-11" />
+                        ) : (
+                          <PencilIcon className="size-5 text-gray-11" />
+                        )}
                       </button>
                       <button
                         type="button"
@@ -1367,7 +1383,7 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
                         title="Deletar categoria"
                         className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center opacity-50 cursor-not-allowed"
                       >
-                        <PencilIcon className="size-5 text-red-12" />
+                        <TrashIcon className="size-5 text-red-12" />
                       </button>
                     </div>
                   </div>
