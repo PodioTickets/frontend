@@ -259,7 +259,7 @@ export function EventMobileTabs({
     : "w-full min-w-0 overflow-x-auto border-b border-gray-6 [&::-webkit-scrollbar]:hidden";
 
   const rowClass = isPageHeader
-    ? "flex min-w-max flex-nowrap items-center gap-0"
+    ? "flex min-w-max flex-nowrap items-center gap-6"
     : "flex min-w-max items-center";
 
   const linkTabClass = (active: boolean) =>
