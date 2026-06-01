@@ -62,6 +62,7 @@ type PublicEvent = {
   description?: string;
   bannerUrl?: string;
   city?: string;
+  logoUrl?: string;
   state?: string;
 };
 
@@ -118,7 +119,7 @@ export async function generateMetadata({
       ? `Inscreva-se: ${event.name} em ${locationLine}.`
       : `Inscreva-se no evento ${event.name}.`);
 
-  const imageUrl = toAbsoluteImageUrl(event.bannerUrl);
+  const imageUrl = toAbsoluteImageUrl(event.logoUrl);
 
   return {
     title,
