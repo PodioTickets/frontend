@@ -138,6 +138,16 @@ export const queryKeys = {
     tickets: (params?: { page?: number; limit?: number; status?: string }) =>
       [...queryKeys.user.all, "tickets", params] as const,
   },
+  /* Geo (estados/cidades por país) — dado de referência ESTÁTICO. As queries
+   * sobrescrevem a política global "menos cache" (staleTime Infinity, sem
+   * refetchOnMount) porque essa lista é imutável. Ver `src/hooks/useGeo.ts`. */
+  geo: {
+    all: ["geo"] as const,
+    states: (countryCode: string) =>
+      [...queryKeys.geo.all, "states", countryCode] as const,
+    cities: (countryCode: string, stateCode: string) =>
+      [...queryKeys.geo.all, "cities", countryCode, stateCode] as const,
+  },
   admin: {
     all: ["admin"] as const,
     notifications: {

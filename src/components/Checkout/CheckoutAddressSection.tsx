@@ -1,16 +1,25 @@
 "use client";
 
-import { useMemo, useCallback, useRef, useState } from "react";
+import { useMemo, useCallback, useRef, useState, useEffect } from "react";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Dropdown, type DropdownOption } from "@/components/Dropdown";
+import { Dropdown } from "@/components/Dropdown";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
 import { ArrowButton } from "../ArrowButton";
 import { lookupCepDigits } from "@/utils/lookupCep";
 import { getPostalCodeConfig } from "@/utils/postalCode";
 import { CountrySearchSelect } from "@/components/CountrySearchSelect";
+import { SearchSelect, type SearchSelectOption } from "@/components/SearchSelect";
+import { useGeoStates, useGeoCities } from "@/hooks/useGeo";
 import { AnimatePresence, motion } from "framer-motion";
+
+/** Comparação de nome de estado acento/caixa-insensível (recupera o `code` no prefill). */
+function sameStateName(a: string, b: string) {
+  const norm = (s: string) =>
+    s.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  return norm(a) === norm(b);
+}
 
 const BRAZIL_UFS: Record<string, string> = {
   AC: "Acre",
@@ -107,6 +116,68 @@ export function CheckoutAddressSection({
         .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
     []
   );
+
+  // ---- Geo (estado/cidade) — só estrangeiro -------------------------------
+  // Brasil mantém UF fixa + ViaCEP. Para estrangeiro, tentamos dropdowns em
+  // cascata vindos do backend (ver geo-states-cities-spec.md); se a lista não
+  // existir (endpoint ausente, país sem subdivisões, erro) cai em texto livre.
+  const {
+    states: geoStates,
+    isLoading: geoStatesLoading,
+    isError: geoStatesError,
+  } = useGeoStates(values.country, isForeign);
+
+  // `code` do estado selecionado — usado SÓ para buscar cidades. O valor
+  // PERSISTIDO continua sendo o NOME (`values.stateUf`), retrocompatível.
+  const [selectedStateCode, setSelectedStateCode] = useState("");
+
+  // Estado vira dropdown quando há lista (ou está carregando); senão texto livre.
+  const stateSelectMode =
+    isForeign && !geoStatesError && (geoStatesLoading || geoStates.length > 0);
+
+  const {
+    cities: geoCities,
+    isLoading: geoCitiesLoading,
+    isError: geoCitiesError,
+  } = useGeoCities(
+    values.country,
+    selectedStateCode,
+    stateSelectMode && !!selectedStateCode,
+  );
+
+  // Cidade vira dropdown quando o estado é dropdown geo: desabilitada até
+  // escolher o estado; loading enquanto busca; texto livre se vier vazia/erro.
+  const cityHasGeoList =
+    !!selectedStateCode && !geoCitiesError && geoCities.length > 0;
+  const citySelectMode =
+    isForeign &&
+    stateSelectMode &&
+    (!selectedStateCode || geoCitiesLoading || cityHasGeoList);
+
+  const stateGeoOptions = useMemo<SearchSelectOption[]>(
+    () =>
+      geoStates
+        .map((s) => ({ value: s.code, label: s.name }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [geoStates],
+  );
+  const cityGeoOptions = useMemo<SearchSelectOption[]>(
+    () =>
+      geoCities
+        .map((c) => ({ value: c.name, label: c.name }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [geoCities],
+  );
+
+  // Prefill: quando o estado veio por NOME (conta) e ainda não temos o `code`,
+  // casa o nome com a opção da lista geo para reativar a cascata de cidades.
+  useEffect(() => {
+    if (!isForeign || selectedStateCode) return;
+    const name = values.stateUf?.trim();
+    if (!name || geoStates.length === 0) return;
+    const match = geoStates.find((s) => sameStateName(s.name, name));
+    if (match) setSelectedStateCode(match.code);
+  }, [isForeign, selectedStateCode, values.stateUf, geoStates]);
 
   const invalidateConfirm = useCallback(() => {
     onConfirmedChange(false);
@@ -244,19 +315,41 @@ export function CheckoutAddressSection({
   const cityField = (
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,200px)]">
       <FieldLabel>Cidade</FieldLabel>
-      <Input
-        type="text"
-        autoComplete="address-level2"
-        placeholder="Digite sua cidade"
-        value={values.city}
-        onChange={(e) => {
-          onChange({ city: e.target.value });
-          clearError("city");
-          invalidateConfirm();
-        }}
-        aria-invalid={!!errors.city}
-        className={inputClass}
-      />
+      {citySelectMode ? (
+        // Estrangeiro com cascata geo: dropdown de cidades do estado escolhido.
+        // Desabilitado até escolher o estado; persiste o NOME em `city`.
+        <SearchSelect
+          value={values.city}
+          options={cityGeoOptions}
+          loading={geoCitiesLoading}
+          disabled={!selectedStateCode}
+          placeholder={
+            selectedStateCode ? "Selecione a cidade" : "Selecione o estado primeiro"
+          }
+          searchPlaceholder="Pesquisar cidade"
+          emptyText="Nenhuma cidade encontrada"
+          aria-invalid={!!errors.city}
+          onChange={(opt) => {
+            onChange({ city: opt.value });
+            clearError("city");
+            invalidateConfirm();
+          }}
+        />
+      ) : (
+        <Input
+          type="text"
+          autoComplete="address-level2"
+          placeholder="Digite sua cidade"
+          value={values.city}
+          onChange={(e) => {
+            onChange({ city: e.target.value });
+            clearError("city");
+            invalidateConfirm();
+          }}
+          aria-invalid={!!errors.city}
+          className={inputClass}
+        />
+      )}
       {errors.city && <p className="text-sm text-red-11">{errors.city}</p>}
     </div>
   );
@@ -265,20 +358,43 @@ export function CheckoutAddressSection({
     <div className="flex flex-col gap-2 flex-1 min-w-[min(100%,280px)]">
       <FieldLabel>{isForeign ? "Estado/Província" : "Estado"}</FieldLabel>
       {isForeign ? (
-        // Estrangeiro: texto livre — não existe lista de UFs fora do Brasil.
-        <Input
-          type="text"
-          autoComplete="address-level1"
-          placeholder="Estado ou província"
-          value={values.stateUf}
-          onChange={(e) => {
-            onChange({ stateUf: e.target.value });
-            clearError("stateUf");
-            invalidateConfirm();
-          }}
-          aria-invalid={!!errors.stateUf}
-          className={inputClass}
-        />
+        stateSelectMode ? (
+          // Estrangeiro com lista geo: dropdown com busca. Guarda o `code`
+          // localmente p/ a cascata; persiste o NOME em `stateUf`.
+          <SearchSelect
+            value={selectedStateCode}
+            options={stateGeoOptions}
+            loading={geoStatesLoading}
+            placeholder="Selecione o estado/província"
+            searchPlaceholder="Pesquisar estado"
+            emptyText="Nenhum estado encontrado"
+            aria-invalid={!!errors.stateUf}
+            onChange={(opt) => {
+              setSelectedStateCode(opt.value);
+              // Troca de estado limpa a cidade (cascata).
+              onChange({ stateUf: opt.label, city: "" });
+              clearError("stateUf");
+              clearError("city");
+              invalidateConfirm();
+            }}
+          />
+        ) : (
+          // Sem lista geo (endpoint ausente, país sem subdivisões, erro):
+          // texto livre — comportamento histórico do checkout estrangeiro.
+          <Input
+            type="text"
+            autoComplete="address-level1"
+            placeholder="Estado ou província"
+            value={values.stateUf}
+            onChange={(e) => {
+              onChange({ stateUf: e.target.value });
+              clearError("stateUf");
+              invalidateConfirm();
+            }}
+            aria-invalid={!!errors.stateUf}
+            className={inputClass}
+          />
+        )
       ) : (
         <Dropdown
           options={stateOptions}
@@ -389,10 +505,13 @@ export function CheckoutAddressSection({
             <CountrySearchSelect
               value={values.country}
               onChange={(country) => {
-                onChange({ country, cep: "", stateUf: "" });
+                // Troca de país zera estado/cidade/CEP e o código geo da cascata.
+                onChange({ country, cep: "", stateUf: "", city: "" });
+                setSelectedStateCode("");
                 clearError("country");
                 clearError("cep");
                 clearError("stateUf");
+                clearError("city");
                 invalidateConfirm();
               }}
             />

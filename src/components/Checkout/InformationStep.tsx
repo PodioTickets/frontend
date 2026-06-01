@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { ArrowButton } from "../ArrowButton";
 import type { Event } from "@/interfaces/event";
 import { Button } from "../Button";
@@ -15,7 +14,7 @@ import { Dropdown } from "../Dropdown";
 import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
 import { Checkbox } from "../CheckBox";
 import type { Question } from "@/interfaces/event";
-import { eventService, userService } from "@/services";
+import { userService } from "@/services";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import {
@@ -596,11 +595,6 @@ export function InformationStep({
       ({ participantIndex }) => savedParticipants[participantIndex],
     );
 
-  /* Algum participante expandido = usuário está preenchendo/editando. Enquanto
-   * isso o "Confirmar dados" some (só aparece com todos salvos E minimizados). */
-  const anyExpanded = participantsWithRaces.some(
-    ({ participantIndex }) => expandedParticipants[participantIndex],
-  );
 
   /* Eager-sync server-driven do cupom: a CADA "Salvar e próximo" de um
    * participante, envia o `PATCH /participants` com a lista PARCIAL dos já
@@ -1013,7 +1007,6 @@ export function InformationStep({
   ) => {
     const fullName = [looked.firstName, looked.lastName].filter(Boolean).join(" ");
     const lookedCountry = looked.country?.trim();
-    const nextNationality = lookedCountry || participants[index]?.nationality;
     // Nacionalidade do usuario encontrado tem prioridade — define o formato do
     // telefone e o label do documento. Sem isso, telefone de argentino vinha
     // mascarado como BR. Mantem a atual quando o lookup nao traz country.
@@ -1103,14 +1096,6 @@ export function InformationStep({
     updateParticipant(index, { [field]: masked });
   };
 
-  const formatDate = (date: string) => {
-    return formatDateBR(date, {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
   const formatDateShort = (date: string) => {
     if (!date) return "";
     return formatDateBR(date, {
@@ -1194,6 +1179,26 @@ export function InformationStep({
     });
     return map;
   }, [savedSnapshots, participants, questionAnswers]);
+
+  /* "Confirmar dados" some enquanto algum participante está sendo EDITADO — card
+   * expandido E (ainda não salvo OU com alterações não salvas). Um card salvo e
+   * limpo que esteja apenas aberto (ex.: reabriu a página / voltou de outra etapa
+   * com o accordion no índice 0) NÃO esconde o botão — senão ele sumia ao voltar
+   * ou ao abrir/fechar os detalhes. */
+  const anyExpanded = participantsWithRaces.some(
+    ({ participantIndex }) =>
+      expandedParticipants[participantIndex] &&
+      (!savedParticipants[participantIndex] || participantDirtyMap[participantIndex]),
+  );
+
+  /* Qualquer card LITERALMENTE aberto (independe de salvo/dirty). Usado só pra
+   * DESABILITAR o "Confirmar dados" no desktop: enquanto há um card aberto, o
+   * usuário ainda está conferindo/editando e não deve avançar. Difere de
+   * `anyExpanded` (que ignora card salvo-e-limpo) de propósito — `anyExpanded`
+   * controla a VISIBILIDADE no mobile e não pode sumir ao reabrir um card salvo. */
+  const anyCardOpen = participantsWithRaces.some(
+    ({ participantIndex }) => expandedParticipants[participantIndex],
+  );
 
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];
@@ -1495,19 +1500,6 @@ export function InformationStep({
       6,
       9
     )}-${numbers.slice(9, 11)}`;
-  };
-
-  const maskPhone = (value: string) => {
-    // Remove tudo que não é dígito
-    const numbers = value.replace(/\D/g, "");
-    // Aplica a máscara (99) 99999-9999
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 7)
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(
-      7,
-      11
-    )}`;
   };
 
   /* Mask CPF for display (partial masking).
@@ -2667,11 +2659,11 @@ export function InformationStep({
           )}
 
           {/* Botão Confirmar dados.
-              - Desktop (md+): SEMPRE visível — a validação vive no onClick (toast
-                guia o participante pendente), então não escondemos o destino do
-                fluxo nem deixamos um botão morto: ele é clicável e dá feedback.
-              - Mobile: mantém o gate "todos salvos e minimizados" (some enquanto
-                algum participante está expandido/sendo editado).
+              - Desktop (md+): SEMPRE visível, mas DESABILITADO até todos os
+                participantes estarem concluídos (salvos) E nenhum aberto/sendo
+                editado. Mostra o destino do fluxo sem permitir avançar cedo.
+              - Mobile: mantém o gate "todos salvos e minimizados" (o botão some
+                enquanto algum participante está expandido/sendo editado).
               A diferença por breakpoint é feita por classe (hidden md:flex) em vez
               de condicional de render, pois precisamos manter o nó no DOM no desktop. */}
           <div
@@ -2705,7 +2697,7 @@ export function InformationStep({
                 }
                 onNext();
               }}
-              disabled={previewMode || isSubmitting}
+              disabled={previewMode || isSubmitting || !allParticipantsSaved || anyCardOpen}
               isLoading={isSubmitting}
               variant="default"
               className="w-full md:w-1/4 font-bold"
