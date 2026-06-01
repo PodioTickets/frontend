@@ -49,7 +49,7 @@ type RegisterStep = 1 | 2 | 3 | 4;
 export function RegisterModal() {
   const { isOpen, closeRegisterModal, data: modalData } = useRegisterModal();
   const { openLoginModal } = useLoginModal();
-  const { register, isLoading: authLoading, user, refetchUser } = useAuth();
+  const { register, isLoading: authLoading, user, refetchUser, logout } = useAuth();
   const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -64,10 +64,10 @@ export function RegisterModal() {
   // Verifica se é para completar cadastro
   const isCompletingProfile = modalData?.completeProfile === true && !!user;
 
-  /* Mostra o botão "voltar": no cadastro normal sempre (step 1 volta pro login);
-   * no fluxo Google (completar perfil) só a partir do step 3 — o step 2 é a 1ª
-   * tela (não há senha/email antes). */
-  const canGoBack = !isCompletingProfile || currentStep > 2;
+  /* Botão "voltar" sempre visível. Normal: step 1 volta pro login. Google
+   * (completar perfil): step 3 volta pro 2; step 2 (1ª tela) = desloga, pois o
+   * usuário entrou via Google e não quer terminar o cadastro. */
+  const canGoBack = true;
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -168,9 +168,15 @@ export function RegisterModal() {
   }, [isCompletingProfile, user, isOpen]);
 
   const handleBack = () => {
-    // Fluxo Google (completar perfil): começa no step 2; só volta 3→2.
+    // Fluxo Google (completar perfil): começa no step 2.
     if (isCompletingProfile) {
-      if (currentStep > 2) setCurrentStep((prev) => (prev - 1) as RegisterStep);
+      if (currentStep > 2) {
+        setCurrentStep((prev) => (prev - 1) as RegisterStep);
+      } else {
+        // Step 2 é a 1ª tela do Google: voltar = não quer terminar o cadastro → desloga.
+        logout();
+        closeRegisterModal();
+      }
       return;
     }
     if (currentStep === 1) {
