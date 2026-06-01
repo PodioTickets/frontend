@@ -596,11 +596,6 @@ export function InformationStep({
       ({ participantIndex }) => savedParticipants[participantIndex],
     );
 
-  /* Algum participante expandido = usuário está preenchendo/editando. Enquanto
-   * isso o "Confirmar dados" some (só aparece com todos salvos E minimizados). */
-  const anyExpanded = participantsWithRaces.some(
-    ({ participantIndex }) => expandedParticipants[participantIndex],
-  );
 
   /* Eager-sync server-driven do cupom: a CADA "Salvar e próximo" de um
    * participante, envia o `PATCH /participants` com a lista PARCIAL dos já
@@ -1194,6 +1189,17 @@ export function InformationStep({
     });
     return map;
   }, [savedSnapshots, participants, questionAnswers]);
+
+  /* "Confirmar dados" some enquanto algum participante está sendo EDITADO — card
+   * expandido E (ainda não salvo OU com alterações não salvas). Um card salvo e
+   * limpo que esteja apenas aberto (ex.: reabriu a página / voltou de outra etapa
+   * com o accordion no índice 0) NÃO esconde o botão — senão ele sumia ao voltar
+   * ou ao abrir/fechar os detalhes. */
+  const anyExpanded = participantsWithRaces.some(
+    ({ participantIndex }) =>
+      expandedParticipants[participantIndex] &&
+      (!savedParticipants[participantIndex] || participantDirtyMap[participantIndex]),
+  );
 
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];
