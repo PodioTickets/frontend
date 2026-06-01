@@ -2049,7 +2049,7 @@ export function InformationStep({
                                     {participant.gender && (
                                       <>
                                         <span className="size-1 bg-gray-11 rounded-full" />
-                                        {participant.gender}
+                                        {participant.gender.charAt(0).toUpperCase()}
                                       </>
                                     )}
                                     {participant.cpf && (

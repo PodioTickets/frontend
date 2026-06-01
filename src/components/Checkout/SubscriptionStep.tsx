@@ -978,7 +978,7 @@ export function SubscriptionStep({
                     )}
                     {participant?.gender && (
                       <>
-                        {participant.gender}
+                        {participant.gender.charAt(0).toUpperCase()}
                         {participant?.cpf && (
                           <span className="size-1 bg-gray-11 rounded-full" />
                         )}
