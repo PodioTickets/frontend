@@ -66,7 +66,9 @@ const initialFormData: CreateEventFormData = {
   youtube: "",
   tiktok: "",
   website: "",
-  organizerFeePercent: 0,
+  // Default da divisão da taxa (total fixa = 6%): organizador absorve 4%,
+  // logo participante paga 6 − 4 = 2% (derivado em FinancialSection/saveFinancialSettings).
+  organizerFeePercent: 4,
   maxInstallments: 1,
 };
 

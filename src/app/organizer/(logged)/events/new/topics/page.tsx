@@ -292,7 +292,7 @@ export default function TopicosPage() {
       description="Adicione e organize seções de conteúdo que aparecem na página do evento."
       showDescriptionOnMobile
       onBack={handleBack}
-      className="pt-0 md:pt-[52px]"
+      className="pt-0 md:pt-12"
       isLoading={!authChecked || loading}
       actions={
         <>
@@ -303,14 +303,14 @@ export default function TopicosPage() {
               if (id) writeTopicsPreviewDraft({ v: 1, eventId: id, sections });
               orgNav.push("/organizer/events/new/topics/preview");
             }}
-            className="h-[52px] w-full border-gray-6 font-manrope text-base font-bold text-gray-12 max-md:h-12 md:w-auto md:px-11 md:text-[20px]"
+            className="rounded-lg w-full sm:w-auto sm:px-8 font-manrope text-gray-12 border-gray-6 text-lg sm:text-base font-bold disabled:cursor-not-allowed disabled:opacity-50"
           >
             Prévia
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving || loading || !sections.find((s) => !s.allowDelete)?.content?.trim()}
-            className="h-[52px] w-full font-manrope text-base font-bold max-md:h-12 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto md:px-11 md:text-[20px]"
+            className="rounded-lg w-full sm:w-auto sm:px-8 font-manrope text-lg sm:text-base font-bold disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Salvando..." : (
               <>

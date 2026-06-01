@@ -2181,6 +2181,7 @@ export function InformationStep({
                                 disabled={previewMode}
                                 onDeleteUser={async (userId) => {
                                   await userService.removeLinkedUser(userId);
+                                  toast.success("Perfil removido da sua lista!")
                                   queryClient.invalidateQueries({ queryKey: ["linked-users"] });
                                 }}
                                 onChange={(value) => {
@@ -2665,46 +2666,53 @@ export function InformationStep({
             }
           )}
 
-          {/* Botão Confirmar dados — só aparece com TODOS salvos e minimizados;
-              some enquanto algum participante está expandido (sendo editado). */}
-          {allParticipantsSaved && !anyExpanded && (
-            <div className="flex items-center justify-center w-full mt-6">
-              <Button
-                onClick={() => {
-                  if (participantsWithRaces.length === 0) return;
-                  const allErrors: Record<number, Record<string, string>> = {};
-                  let firstInvalidIndex: number | null = null;
-                  participantsWithRaces.forEach(({ participantIndex, ticket }) => {
-                    const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
-                    if (Object.keys(errors).length > 0) {
-                      allErrors[participantIndex] = errors;
-                      if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
-                    }
-                  });
-                  if (Object.keys(allErrors).length > 0) {
-                    setFieldErrors(allErrors);
-                    if (firstInvalidIndex !== null) {
-                      // Accordion: abre só o 1º inválido, minimiza os demais.
-                      setExpandedParticipants({ [firstInvalidIndex]: true });
-                    }
-                    toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
-                    return;
+          {/* Botão Confirmar dados.
+              - Desktop (md+): SEMPRE visível — a validação vive no onClick (toast
+                guia o participante pendente), então não escondemos o destino do
+                fluxo nem deixamos um botão morto: ele é clicável e dá feedback.
+              - Mobile: mantém o gate "todos salvos e minimizados" (some enquanto
+                algum participante está expandido/sendo editado).
+              A diferença por breakpoint é feita por classe (hidden md:flex) em vez
+              de condicional de render, pois precisamos manter o nó no DOM no desktop. */}
+          <div
+            className={`items-center justify-center w-full mt-6 ${allParticipantsSaved && !anyExpanded ? "flex" : "hidden md:flex"
+              }`}
+          >
+            <Button
+              onClick={() => {
+                if (participantsWithRaces.length === 0) return;
+                const allErrors: Record<number, Record<string, string>> = {};
+                let firstInvalidIndex: number | null = null;
+                participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+                  const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
+                  if (Object.keys(errors).length > 0) {
+                    allErrors[participantIndex] = errors;
+                    if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
                   }
-                  if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
-                    toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
-                    return;
+                });
+                if (Object.keys(allErrors).length > 0) {
+                  setFieldErrors(allErrors);
+                  if (firstInvalidIndex !== null) {
+                    // Accordion: abre só o 1º inválido, minimiza os demais.
+                    setExpandedParticipants({ [firstInvalidIndex]: true });
                   }
-                  onNext();
-                }}
-                disabled={previewMode || isSubmitting || !allParticipantsSaved}
-                isLoading={isSubmitting}
-                variant="default"
-                className="w-full md:w-1/4 font-bold"
-              >
-                Confirmar dados
-              </Button>
-            </div>
-          )}
+                  toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
+                  return;
+                }
+                if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
+                  toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
+                  return;
+                }
+                onNext();
+              }}
+              disabled={previewMode || isSubmitting}
+              isLoading={isSubmitting}
+              variant="default"
+              className="w-full md:w-1/4 font-bold"
+            >
+              Confirmar dados
+            </Button>
+          </div>
         </div>
       </div>
 

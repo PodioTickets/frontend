@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
+import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { Button } from "@/components/Button";
+import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { FinancialSection } from "@/components/Organizer/FinancialSection";
 import toast from "react-hot-toast";
@@ -85,7 +87,30 @@ export default function EditFinancialPage() {
       maxInstallments !== baseline.maxInstallments ||
       totalFee !== baseline.totalFee);
 
+  /* Descarta as edições locais, restaurando o baseline (GET inicial / último
+   * save). Os estados são locais ao componente, então o reset é direto. */
+  const discardLocalChanges = useCallback(() => {
+    const b = baselineRef.current;
+    if (!b) return;
+    setOrganizerPercent(b.organizerPercent);
+    setMaxInstallments(b.maxInstallments);
+    setTotalFee(b.totalFee);
+  }, []);
+
+  /* Guarda de saída: histórico/popstate + beforeunload + interceptação de
+   * cliques em links (stepper) enquanto houver alterações não salvas.
+   * `navigateTarget` = etapa anterior (questionário). */
+  const {
+    leavePromptOpen,
+    confirmLeaveWithoutSaving,
+    dismissLeavePrompt,
+  } = useUnsavedLeaveGuard(hasChanges, {
+    navigateTarget: `/admin/events/${eventId}/edit/questionnaire`,
+    onDiscard: discardLocalChanges,
+  });
+
   return (
+    <>
     <WizardStepLayout
       title="Pagamento"
       className="flex-1 bg-gray-2 px-5 pt-0 pb-[176px] max-md:pb-40"
@@ -115,5 +140,14 @@ export default function EditFinancialPage() {
         onTotalFeeChange={setTotalFee}
       />
     </WizardStepLayout>
+
+    <UnsavedChangesModal
+      open={leavePromptOpen}
+      onClose={dismissLeavePrompt}
+      title="Alterações não salvas"
+      description="Você alterou a configuração financeira. Se sair agora, as alterações serão perdidas."
+      onLeaveWithoutSaving={confirmLeaveWithoutSaving}
+    />
+    </>
   );
 }
