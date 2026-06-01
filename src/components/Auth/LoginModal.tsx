@@ -20,6 +20,13 @@ import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { useRouter } from "next/navigation";
+import {
+  saveReturnPath,
+  sanitizeReturnPath,
+  readReturnPath,
+  clearReturnPath,
+} from "@/utils/authRedirect";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -266,11 +273,10 @@ function ForgotPasswordNewPasswordPanel({
                 placeholder="Digite uma nova senha"
                 value={password}
                 onChange={(e) => onPasswordChange(e.target.value)}
-                className={`pl-10 pr-10 h-12 rounded-lg ${
-                  fieldErrors.password
+                className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.password
                     ? "border-red-9 focus-visible:border-red-9"
                     : ""
-                }`}
+                  }`}
                 aria-invalid={!!fieldErrors.password}
               />
               <button
@@ -304,11 +310,10 @@ function ForgotPasswordNewPasswordPanel({
                 placeholder="Digite sua senha novamente"
                 value={confirmPassword}
                 onChange={(e) => onConfirmPasswordChange(e.target.value)}
-                className={`pl-10 pr-10 h-12 rounded-lg ${
-                  fieldErrors.confirmPassword
+                className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.confirmPassword
                     ? "border-red-9 focus-visible:border-red-9"
                     : ""
-                }`}
+                  }`}
                 aria-invalid={!!fieldErrors.confirmPassword}
               />
               <button
@@ -374,6 +379,7 @@ export function LoginModal() {
   const { isOpen, closeLoginModal, openLoginModal, data: loginModalData } =
     useLoginModal();
   const { openRegisterModal } = useRegisterModal();
+  const router = useRouter();
   const { login, finishLoginMfa, isLoading: authLoading } = useAuth();
   const {
     forgotPassword,
@@ -469,7 +475,7 @@ export function LoginModal() {
       window.history.replaceState(null, "", window.location.pathname);
       openLoginModal();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const forgotResendTimerActive = forgotResendCooldown > 0;
@@ -505,16 +511,26 @@ export function LoginModal() {
   }, [isOpen, loginModalData?.passwordResetToken]);
 
   const handleGoogleLogin = () => {
-    // Salva a URL atual para redirecionar após o login
+    // Salva a URL atual para voltar a ela após o login (resiliente ao
+    // round-trip do OAuth — ver utils/authRedirect).
+    let returnTo: string | null = null;
     if (typeof window !== "undefined") {
       const currentPath = window.location.pathname + window.location.search;
       // Não salvar se já estiver na página de callback ou auth
       if (!currentPath.startsWith("/auth/")) {
-        sessionStorage.setItem("redirectAfterLogin", currentPath);
+        saveReturnPath(currentPath);
+        returnTo = sanitizeReturnPath(currentPath);
       }
     }
     const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
-    window.location.href = `${apiUrl}/api/v1/auth/google`;
+    // Também enviamos o destino na URL: se o backend ecoar `redirect_to` no
+    // callback, o retorno sobrevive mesmo a uma troca de origem do OAuth (quando
+    // o storage por-origem não está visível na origem do callback). Inofensivo
+    // se o backend ignorar o param.
+    const googleUrl = returnTo
+      ? `${apiUrl}/api/v1/auth/google?redirect_to=${encodeURIComponent(returnTo)}`
+      : `${apiUrl}/api/v1/auth/google`;
+    window.location.href = googleUrl;
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -757,6 +773,15 @@ export function LoginModal() {
       closeLoginModal();
       setFormData({ email: "", password: "" });
       setErrors({});
+      // MFA do Google: o callback redirecionou pra `/?googleMfa=1` e o destino
+      // original ficou no storage. Concluído o 2FA, volta pra lá (ex.: checkout
+      // com a quantidade já selecionada). Só navega se houver destino salvo —
+      // MFA de e-mail/senha não salva e mantém o comportamento atual (só fecha).
+      const returnTo = readReturnPath();
+      if (returnTo) {
+        clearReturnPath();
+        router.replace(returnTo);
+      }
     } catch (err: any) {
       setMfaError(err?.message || "Código inválido. Tente novamente.");
       setMfaResendCooldown(60);
@@ -1001,8 +1026,8 @@ export function LoginModal() {
                                 handleInputChange("email", e.target.value)
                               }
                               className={`pl-10 h-12 ${errors.email
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.email}
                             />
@@ -1029,8 +1054,8 @@ export function LoginModal() {
                                 handleInputChange("password", e.target.value)
                               }
                               className={`pl-10 pr-10 h-12 ${errors.password
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.password}
                             />
@@ -1140,18 +1165,6 @@ export function LoginModal() {
                           Criar conta
                         </button>
                       </div>
-
-                      {/* Terms and privacy */}
-                      <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
-                        Ao continuar você concorda com nossos{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Termos de serviço
-                        </button>{" "}
-                        e{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Política de privacidade
-                        </button>
-                      </p>
                     </div>
                   </div>
                 </>
@@ -1175,8 +1188,8 @@ export function LoginModal() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
               className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden max-h-[calc(100dvh-32px)] ${mfaToken || showForgotFlow
-                  ? "max-w-[460px] bg-transparent"
-                  : "max-w-[600px] bg-gray-1 overflow-y-auto"
+                ? "max-w-[460px] bg-transparent"
+                : "max-w-[600px] bg-gray-1 overflow-y-auto"
                 }`}
             >
               {mfaToken ? (
@@ -1261,8 +1274,8 @@ export function LoginModal() {
                                 handleInputChange("email", e.target.value)
                               }
                               className={`pl-10 h-12 ${errors.email
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.email}
                             />
@@ -1289,8 +1302,8 @@ export function LoginModal() {
                                 handleInputChange("password", e.target.value)
                               }
                               className={`pl-10 pr-10 h-12 ${errors.password
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.password}
                             />

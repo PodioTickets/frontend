@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
+import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
+import { usePathname } from "next/navigation";
 
 /**
  * Barra de resumo fixa (mobile) unificada do checkout.
@@ -61,6 +63,22 @@ export interface MobileSummaryBarProps {
   };
   /** Conteúdo extra no bottom-sheet (ex.: cards de participante do PaymentStep). */
   extraDetails?: React.ReactNode;
+  /**
+   * Layout da barra fixa minimizada:
+   * - `full`: card completo (nome + participantes + desconto + taxa + total + CTA
+   *   + aba "Ver detalhes"). Usado SÓ em /ingressos (ModalitiesStep).
+   * - `compact` (default): linha enxuta "(N participantes) · Ver detalhes" —
+   *   demais etapas do checkout.
+   * O bottom-sheet de detalhes é idêntico nos dois.
+   */
+  variant?: "full" | "compact";
+  /**
+   * Controle EXTERNO do bottom-sheet (opcional). Permite que um irmão (ex.: o
+   * "Ver detalhes" do `OrderSummary` no PaymentStep) abra o mesmo sheet. Se
+   * `open` for fornecido, o componente fica controlado; senão usa estado interno.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const formatPrice = (price: number) =>
@@ -104,16 +122,28 @@ export function MobileSummaryBar({
   total,
   cta,
   extraDetails,
+  variant = "compact",
+  open: controlledOpen,
+  onOpenChange,
 }: MobileSummaryBarProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  // Controlado se `open` foi passado; senão usa o estado interno.
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      onOpenChange?.(next);
+      if (controlledOpen === undefined) setInternalOpen(next);
+    },
+    [controlledOpen, onOpenChange],
+  );
   // Portal só monta no client (document indisponível no SSR), igual ao padrão
   // de modais do projeto.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const closeSheet = useCallback(() => setOpen(false), []);
+  const closeSheet = useCallback(() => setOpen(false), [setOpen]);
   // A aba "Ver detalhes" alterna o sheet (abre/fecha no mesmo controle).
-  const toggleSheet = useCallback(() => setOpen((prev) => !prev), []);
+  const toggleSheet = useCallback(() => setOpen(!open), [setOpen, open]);
 
   // Drag-to-dismiss: o gesto é disparado SÓ pelo header/grabber (via
   // dragControls + dragListener={false}) pra não competir com o scroll do
@@ -162,45 +192,57 @@ export function MobileSummaryBar({
 
   return (
     <>
-      {/* Barra minimizada — só cupom/voucher + taxa + total + CTA. */}
-      <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
-        {/* Aba "Ver detalhes" acima do card (mesmo formato da tela de pagamento). */}
-        <button
-          type="button"
-          onClick={toggleSheet}
-          aria-expanded={open}
-          className="self-end w-1/3 bg-gray-2 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 text-xs font-medium text-gray-11 text-center font-family-dm-sans hover:text-gray-12 active:scale-95 transition-transform"
-        >
-          {open ? "Ocultar detalhes" : "Ver detalhes"}
-        </button>
+      {/* Barra minimizada COMPLETA — só em /ingressos (variant="full"):
+          nome + participantes + desconto + taxa + total + CTA + aba "Ver detalhes". */}
+      {variant === "full" ? (
+        <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
+          {/* Aba "Ver detalhes" acima do card (mesmo formato da tela de pagamento). */}
+          <button
+            type="button"
+            onClick={toggleSheet}
+            aria-expanded={open}
+            className="self-end w-1/3 bg-gray-2 border-t border-l border-r border-gray-6 rounded-tl-xl py-2 text-xs font-medium text-gray-11 text-center font-family-dm-sans hover:text-gray-12 active:scale-95 transition-transform"
+          >
+            {open ? "Ocultar detalhes" : "Ver detalhes"}
+          </button>
 
-        <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3">
-          <div className="flex flex-col gap-2">
-            {/* Identificação do pedido também na barra minimizada. */}
-            <div className="flex items-center justify-between gap-2 min-w-0">
-              <h3 className="min-w-0 truncate font-manrope font-bold text-sm text-gray-12">
-                {eventName}
-              </h3>
-            </div>
-            <SummaryRow label="Participantes" value={totalParticipants} />
-            {discountRow}
-            {feeRow}
-            <div className="flex items-center justify-between gap-3">
-              <SummaryRow label="Total" value={formatPrice(total)} emphasize />
-              {cta && (
-                <Button
-                  onClick={cta.onClick}
-                  disabled={cta.disabled}
-                  isLoading={cta.loading}
-                  className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {cta.label}
-                </Button>
-              )}
+          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3">
+            <div className="flex flex-col gap-2">
+              {/* Identificação do pedido também na barra minimizada. */}
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <h3 className="min-w-0 truncate font-manrope font-bold text-sm text-gray-12">
+                  {eventName}
+                </h3>
+              </div>
+              <SummaryRow label="Participantes" value={totalParticipants} />
+              {discountRow}
+              {feeRow}
+              <div className="flex items-center justify-between gap-3">
+                <SummaryRow label="Total" value={formatPrice(total)} emphasize />
+                {cta && (
+                  <Button
+                    onClick={cta.onClick}
+                    disabled={cta.disabled}
+                    isLoading={cta.loading}
+                    className="font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {cta.label}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        /* Barra minimizada COMPACTA — demais etapas: "(N participantes) · Ver detalhes". */
+        <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
+          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between pb-5 w-full">
+            <h1 className="text-sm text-gray-11">({totalParticipants} {totalParticipants > 1 ? "Participantes" : "Participante"})</h1>
+            <h1 onClick={toggleSheet}
+              aria-expanded={open} className="flex items-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer">Ver detalhes <SeeDetailsIcon /></h1>
+          </div>
+        </div>
+      )}
 
       {/* Bottom-sheet com os detalhes completos — portado pro document.body
           (padrão de modais do projeto) pra escapar de stacking contexts /
@@ -332,19 +374,7 @@ export function MobileSummaryBar({
                   </div>
                 </div>
 
-                {/* Rodapé fixo com CTA (omitido quando a barra é só resumo). */}
-                {cta && (
-                  <div className="shrink-0 border-t border-gray-6 px-4 py-3 bg-gray-1">
-                    <Button
-                      onClick={handleSheetCta}
-                      disabled={cta.disabled}
-                      isLoading={cta.loading}
-                      className="w-full font-bold font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {cta.label}
-                    </Button>
-                  </div>
-                )}
+
               </motion.div>
             )}
           </AnimatePresence>,

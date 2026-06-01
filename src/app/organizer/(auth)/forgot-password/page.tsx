@@ -188,8 +188,7 @@ export default function OrganizerForgotPasswordPage() {
                     Esqueci minha senha
                   </h1>
                   <p className="text-base text-gray-11 font-family-dm-sans leading-[1.3]">
-                    Informe o e-mail da sua conta organizador. Se existir uma
-                    conta, você receberá um código para redefinir a senha.
+                    Informe o e-mail da sua conta de organizador. Se ele estiver cadastrado, enviaremos um código para redefinir sua senha.
                   </p>
                 </div>
 

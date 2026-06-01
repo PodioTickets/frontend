@@ -81,6 +81,33 @@ export function ImageCarouselModal({
     };
   }, [isOpen]);
 
+  /* Insets do mobile: o Header (fixo no topo) e a MobileSummaryBar (fixa na
+   * base) cobrem o modal — e a barra é mais alta que o header, então centralizar
+   * na viewport inteira deixa a imagem baixa demais (parte escondida atrás da
+   * barra). Medimos as duas (robusto a mudanças de altura) e centralizamos a
+   * imagem na ÁREA LIVRE entre elas. No desktop não há barra e o layout
+   * centralizado já está correto → insets zerados (= inset-0 puro). */
+  const [mobileInsets, setMobileInsets] = useState({ top: 0, bottom: 0 });
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const compute = () => {
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      if (!isMobile) {
+        setMobileInsets({ top: 0, bottom: 0 });
+        return;
+      }
+      const header = document.querySelector("header");
+      const bar = document.querySelector('[data-mobile-summary-bar="true"]');
+      setMobileInsets({
+        top: header?.getBoundingClientRect().height ?? 0,
+        bottom: bar?.getBoundingClientRect().height ?? 0,
+      });
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [isOpen]);
+
   const handlePrevious = () => {
     setCurrentIndex((prev) =>
       prev === 0 ? orderedItems.length - 1 : prev - 1,
@@ -133,13 +160,15 @@ export function ImageCarouselModal({
             onClick={onClose}
           />
 
-          {/* Modal */}
+          {/* Modal — centraliza na área livre entre Header e MobileSummaryBar no
+              mobile (insets); no desktop os insets são 0 (= viewport inteira). */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ top: mobileInsets.top, bottom: mobileInsets.bottom }}
             onClick={onClose}
           >
             <div

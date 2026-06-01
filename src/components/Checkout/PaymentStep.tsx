@@ -11,7 +11,6 @@ import {
   type CheckoutBillingAddress,
 } from "./CheckoutAddressSection";
 import { getPostalCodeConfig } from "@/utils/postalCode";
-import { MobileSummaryBar, SummaryRow } from "./MobileSummaryBar";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
@@ -66,6 +65,8 @@ import toast from "react-hot-toast";
 import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
 import { useAuth } from "@/hooks/useAuth";
+import { PencilIcon } from "../Icons/PencilIcon";
+import { SummaryRow } from "./MobileSummaryBar";
 
 interface PaymentStepProps {
   event: Event;
@@ -687,22 +688,28 @@ function BillingAddressConfirmedSummary({
 }) {
   return (
     <div
-      className={`border border-gray-6 rounded-xl p-5 flex flex-col gap-4 w-full bg-gray-1 ${className}`}
+      className={`border border-gray-6 rounded-lg p-4 md:p-5 flex flex-col gap-4 w-full bg-gray-1 ${className}`}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 className="font-manrope font-bold text-xl leading-[1.1] text-gray-12">
-          Endereço
-        </h2>
-        <Button
-          type="button"
-          variant="outline"
-          className="shrink-0 border-gray-6 text-gray-12 font-semibold font-family-dm-sans"
-          onClick={onEdit}
-        >
-          Alterar endereço
-        </Button>
+      <div className="flex md:flex-wrap items-center md:items-start justify-between gap-3">
+        <div>
+          <h2 className="font-manrope font-bold text-sm md:text-xl leading-[1.1] text-gray-12 pb-1 md:pb-0">
+            Endereço
+          </h2>
+          <p className="text-gray-11 text-sm">
+            {[
+              [address.street, address.number].filter(Boolean).join(", "),
+              [address.city, address.stateUf].filter(Boolean).join(" - "),
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </p>
+        </div>
+
+        <div onClick={onEdit} className="p-2 border border-gray-6 rounded-lg text-gray-11">
+          <PencilIcon className="size-4" />
+        </div>
       </div>
-      <div className="text-sm text-gray-12 font-family-dm-sans leading-[1.4] space-y-1">
+      <div className="hidden md:block text-sm text-gray-12 font-family-dm-sans leading-[1.4] space-y-1">
         <p>
           {address.street}, {address.number}
           {address.complement?.trim()
@@ -728,6 +735,9 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>("credit");
   const [selectedInstallments, setSelectedInstallments] = useState<string>("1");
+  // Bottom-sheet de detalhes (mobile) elevado: o MobileSummaryBar é controlado
+  // por este estado, e o "Ver detalhes" do OrderSummary (irmão) também o abre.
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   // Form states
   const [cardName, setCardName] = useState("");
@@ -2296,7 +2306,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       />
 
       {/* Mobile Layout */}
-      <div className="w-full md:hidden flex flex-col pb-24">
+      <div className="w-full md:hidden flex flex-col pb-52">
         {/* Instructional Text */}
         <div className="pb-6">
           <p className="text-sm text-gray-11 font-family-dm-sans">
@@ -2341,41 +2351,43 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
               </div>
             )}
 
-            {/* Coupon Section */}
-            <div className="pb-6" data-coupon-section>
-              <div className="flex flex-col gap-3">
-                <Input
-                  type="text"
-                  placeholder="Código de cupom"
-                  value={couponCode}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase().substring(0, 30);
-                    setCouponCode(value);
-                    setCouponError(null);
-                  }}
-                  maxLength={30}
-                  className={
-                    couponError
-                      ? "border-red-6"
-                      : isCouponApplied
-                        ? "border-primary-8 bg-primary-3"
-                        : ""
-                  }
-                />
-                {couponError && (
-                  <p className="text-base font-medium text-red-11 font-family-dm-sans">
-                    {couponError}
-                  </p>
-                )}
-                <Button
-                  onClick={handleApplyCoupon}
-                  className="w-full bg-gray-12 text-gray-2 font-bold font-manrope"
-                >
-                  Aplicar cupom
-                </Button>
-              </div>
-            </div>
-            {!isFreeOrder && <div className="pb-6 flex flex-col gap-3">
+            <OrderSummary
+              event={event}
+              items={orderItems}
+              totalParticipants={totalParticipants}
+              groupedTickets={groupedTickets}
+              serviceFee={serviceFee}
+              subtotalOverride={currentOrder ? subtotalValue : undefined}
+              total={totalValue}
+              coupon={{
+                code: couponCode,
+                discount: couponDiscount,
+                name: appliedCouponName,
+                percent: couponPercent,
+                type: currentOrder?.coupon?.type ?? undefined,
+                couponType: currentOrder?.coupon?.couponType ?? undefined,
+                fixedValue: currentOrder?.coupon?.type === "FIXED" ? currentOrder.coupon.value / 100 : undefined,
+                error: couponError,
+                isApplied: isCouponApplied,
+                isLoading: couponLoading,
+                onApply: () => { void handleApplyCoupon(); },
+                onChange: (code) => {
+                  setCouponCode(code);
+                  setCouponError(null);
+                },
+              }}
+              voucher={currentOrder?.voucher ? {
+                code: currentOrder.voucher.code,
+                discount: voucherDiscount,
+                name: appliedVoucherName,
+              } : undefined}
+              participantsData={participantsData}
+              onParticipantClick={handleParticipantClick}
+              onShowDetails={() => setSummaryOpen(true)}
+            />
+
+
+            {!isFreeOrder && <div className="py-6 flex flex-col gap-3">
               {/* Card Option (crédito + débito unificados) */}
               <div
                 data-payment-method="card"
@@ -2538,47 +2550,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           </>
         ) : null}
       </div>
-
-      {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
-      <MobileSummaryBar
-        eventName={event.name}
-        totalParticipants={totalParticipants}
-        tickets={groupedTickets.map((t) => ({
-          name: t.raceName,
-          quantity: t.quantity,
-          total: t.total,
-        }))}
-        subtotal={ticketSubtotalLocal + additionalProductsTotal}
-        discount={
-          isCouponApplied && couponDiscount > 0
-            ? {
-              label: `${isAutomaticCoupon
-                ? "Cupom automático"
-                : appliedCouponName
-                  ? `Cupom ${appliedCouponName}`
-                  : "Cupom"
-                }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}`,
-              amount: couponDiscount,
-            }
-            : isVoucherApplied && voucherDiscount > 0
-              ? {
-                label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
-                amount: voucherDiscount,
-              }
-              : null
-        }
-        additionalProducts={
-          additionalProductsCount > 0
-            ? { count: additionalProductsCount, total: additionalProductsTotal }
-            : null
-        }
-        serviceFee={serviceFee}
-        total={totalValue}
-        /* Sem CTA: no mobile o PaymentStep finaliza pelos botões do próprio
-         * formulário (Finalizar pedido/compra por método). A barra fixa aqui é
-         * só resumo — evita botão de finalizar duplicado/conflitante. */
-        extraDetails={paymentSummaryDetails}
-      />
 
       {/* Desktop Layout */}
       <div className="hidden md:flex w-full items-start justify-between gap-11">

@@ -1792,7 +1792,7 @@ export function InformationStep({
 
   return (
     <>
-      <div className="w-full flex items-start gap-10 pb-24 md:pb-0">
+      <div className="w-full flex items-start gap-10 pb-52 md:pb-0">
         {/* Coluna esquerda - Formulários */}
         <div className="flex-1 flex flex-col gap-2 md:gap-6">
           {!previewMode && (
@@ -1817,7 +1817,7 @@ export function InformationStep({
                 esquerda com overlay do nome, resumo à direita. */}
             <div className="hidden md:flex items-stretch gap-11 rounded-2xl overflow-hidden bg-gray-2 shadow-[0_5px_10px_rgba(0,0,0,0.3)] mb-10">
               {/* Banner + gradiente + nome do evento */}
-              <div className="relative w-1/2 shrink-0 self-stretch min-h-[200px]">
+              <div className="relative w-1/2 shrink-0 self-stretch min-h-[250px]">
                 <Image
                   src={event.bannerUrl}
                   alt={event.name}
@@ -1984,7 +1984,7 @@ export function InformationStep({
                               <p className="text-sm text-gray-11 font-family-dm-sans mt-2">
                                 {categoryName.trim() || "Ingresso avulso"}
                               </p>
-                              <p className="font-bold text-2xl text-gray-12 mb-2">
+                              <p className="font-bold text-md md:text-2xl text-gray-12 mb-2">
                                 {ticket.name}
                               </p>
                             </div>
@@ -2099,7 +2099,7 @@ export function InformationStep({
                           }}
                         >
                           <div className="flex flex-col gap-2 pb-3">
-                            <p className="text-sm text-gray-11">
+                            <p className="text-sm font-medium text-gray-12">
                               Participante {index + 1}
                             </p>
                             <div>
@@ -2116,14 +2116,6 @@ export function InformationStep({
                           </div>
 
                           <div className="flex items-center h-full gap-2 relative z-20">
-                            <div
-                              className={`px-3 py-1 rounded-full text-sm font-medium transition-opacity duration-300 ${isComplete
-                                ? "bg-primary-3 text-primary-12"
-                                : "bg-yellow-3 text-yellow-12"
-                                }`}
-                            >
-                              {isComplete ? "Concluído" : "Pendente"}
-                            </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -2637,7 +2629,7 @@ export function InformationStep({
 
           {/* Botão Confirmar dados — desabilitado até cada participante ter
               clicado em "Salvar e próximo" (mesmo critério aplicado no CTA mobile). */}
-          <div className="hidden md:flex items-center justify-center w-full mt-6">
+          <div className="flex items-center justify-center w-full mt-6">
             <Button
               onClick={() => {
                 if (participantsWithRaces.length === 0) return;
@@ -2667,7 +2659,7 @@ export function InformationStep({
               disabled={previewMode || isSubmitting || !allParticipantsSaved}
               isLoading={isSubmitting}
               variant="default"
-              className="w-1/4 font-bold"
+              className="w-full md:w-1/4 font-bold"
             >
               Confirmar dados
             </Button>

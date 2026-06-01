@@ -17,7 +17,7 @@ type FinancialBaseline = {
 };
 
 const DEFAULT_BASELINE: FinancialBaseline = {
-  organizerPercent: 0,
+  organizerPercent: 4,
   maxInstallments: 1,
   totalFee: 6,
 };

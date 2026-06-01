@@ -11,10 +11,9 @@ import { FinancialSection } from "@/components/Organizer/FinancialSection";
 export default function EditFinancialPage() {
   const params = useParams();
   const eventId = params.id as string;
-  const orgNav = useOrganizerNavigate();
   const { authChecked } = useWizardAuth();
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [organizerPercent, setOrganizerPercent] = useState(0);
+  const [organizerPercent, setOrganizerPercent] = useState(4);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
   const [totalFee, setTotalFee] = useState<number>(6);
 
@@ -30,10 +29,6 @@ export default function EditFinancialPage() {
       .catch(() => {})
       .finally(() => setDataLoaded(true));
   }, [authChecked, eventId]);
-
-  const handleBack = () => {
-    orgNav.push(`/organizer/events/${eventId}/edit/questionnaire`);
-  };
 
   return (
     <WizardStepLayout

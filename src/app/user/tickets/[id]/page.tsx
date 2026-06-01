@@ -143,7 +143,15 @@ export default function TicketDetailsPage() {
 
   const participants = useMemo(() => {
     if (!orderData) return [];
-    return (orderData.registrations || []).map((reg: any) => {
+    const registrations = orderData.registrations || [];
+    // Preço por ingresso: o endpoint não dá valor por unidade, então distribui o
+    // subtotal igualmente entre as inscrições — mesma regra da tela de sucesso
+    // (`checkout/sucesso`). Em centavos → reais.
+    const perTicketPrice =
+      registrations.length > 0
+        ? (orderData.order?.pricing?.subtotal ?? 0) / registrations.length / 100
+        : 0;
+    return registrations.map((reg: any) => {
       const p = reg.participant || {};
       const ticket = reg.ticket || {};
 
@@ -216,6 +224,7 @@ export default function TicketDetailsPage() {
         avatarUrl: p.avatarUrl || "",
         qrCode: reg.qrCode || "",
         ticket,
+        ticketPrice: perTicketPrice,
         emergencyContact: reg.emergencyContact || null,
         questionAnswers: reg.questionAnswers || [],
         includedProducts,
@@ -559,7 +568,7 @@ export default function TicketDetailsPage() {
                               <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                                 Incluídos no ingresso
                               </h3>
-                              <div className="grid grid-cols-2 gap-3 w-full">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                                 {participant.includedProducts.map((product: IncludedProduct) => (
                                   <ProductVariationCard
                                     key={product.id}
@@ -577,7 +586,7 @@ export default function TicketDetailsPage() {
                               <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                                 Adicionais
                               </h3>
-                              <div className="grid grid-cols-2 gap-3 w-full">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                                 {participant.additionalProducts.map((product: IncludedProduct) => (
                                   <ProductVariationCard
                                     key={product.id}
@@ -670,6 +679,31 @@ export default function TicketDetailsPage() {
 
               {/* Seção 2: valores — linhas com borda individual */}
               <div className="flex flex-col gap-2">
+                {/* Ingressos — uma linha por participante (categoria + nome +
+                    preço), acima do Subtotal. Preço = subtotal / nº inscrições
+                    (o endpoint não dá valor por unidade). */}
+                {participants.map((participant: any, index: number) => {
+                  const t = participant.ticket || {};
+                  return (
+                    <div
+                      key={participant.id || index}
+                      className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3"
+                    >
+                      <span className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-xs text-gray-11 font-family-dm-sans leading-[1.3] truncate">
+                          {t?.category?.name ?? "Ingresso avulso"}
+                        </span>
+                        <span className="text-base font-semibold text-gray-12 font-manrope leading-[1.2] break-words">
+                          {t.name || "Ingresso"}
+                        </span>
+                      </span>
+                      <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right shrink-0">
+                        {formatPrice((participant.ticketPrice ?? 0) * 100)}
+                      </p>
+                    </div>
+                  );
+                })}
+
                 <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Subtotal:

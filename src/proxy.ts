@@ -413,6 +413,7 @@ export async function proxy(request: NextRequest) {
   const trustedDomains = [
     "'self'",
     "https://api.podioticket.com.br",
+    "https://homologacao.api.podioticket.com.br",
     "https://prod.spline.design",
   ];
 

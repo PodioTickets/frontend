@@ -277,6 +277,14 @@ export function Header() {
             ) : (
               <>
                 <Button
+                  onClick={() => openModal("register")}
+                  variant="outline"
+                  size="default"
+                  className="border-[#3A3A3A] text-[#EEEEEE] font-bold font-manrope"
+                >
+                  Criar conta
+                </Button>
+                <Button
                   onClick={() => openModal("login")}
                   variant="default"
                   size="default"
@@ -413,12 +421,26 @@ export function Header() {
                   ) : (
                     <div className="flex flex-col gap-2 p-4">
                       <Button
-                        onClick={() => openModal("login")}
+                        onClick={() => {
+                          openModal("login");
+                          setMobileMenuOpen(false);
+                        }}
                         variant="default"
                         size="default"
                         className="w-full"
                       >
                         Entrar
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          openModal("register");
+                          setMobileMenuOpen(false);
+                        }}
+                        variant="outline"
+                        size="default"
+                        className="w-full border-[#3A3A3A] text-[#EEEEEE] font-bold font-manrope"
+                      >
+                        Criar conta
                       </Button>
                       <MobileLanguageToggle
                         onClose={() => setMobileMenuOpen(false)}

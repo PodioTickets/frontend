@@ -27,11 +27,33 @@ export function Footer() {
 
   const currentYear = new Date().getFullYear();
 
+  // Etapas de checkout: no MOBILE o footer é removido (a MobileSummaryBar fixa
+  // ocupa a base e o footer só atrapalha). No desktop o footer permanece — por
+  // isso escondemos só o bloco mobile e zeramos a moldura do <footer> no mobile
+  // (`max-md:hidden` no próprio footer faria sumir tudo, mas precisamos manter o
+  // desktop, então usamos `max-md:hidden` no bloco mobile e neutralizamos a
+  // borda/padding do footer no mobile).
+  const isCheckoutStep =
+    pathname.startsWith("/checkout/ingressos") ||
+    pathname.startsWith("/checkout/informacoes") ||
+    pathname.startsWith("/checkout/produtos") ||
+    pathname.startsWith("/checkout/pagamento");
+
+  // Eventos têm só o CTA "Inscreva-se" fixo no mobile → respiro pro footer não
+  // ser cortado por ele.
+  const isEventPage = pathname.startsWith("/events/");
+  const mobileFixedBarPad = isEventPage ? " pb-44" : "";
+
   return (
-    <footer className="w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] border-t border-gray-6 px-4 py-6 md:p-20 md:pt-[52px]">
+    <footer
+      className={`w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] md:p-20 md:pt-[52px] ${
+        isCheckoutStep
+          ? "max-md:hidden md:border-t md:border-gray-6"
+          : "border-t border-gray-6 px-4 py-6"
+      }`}
+    >
       {/* Mobile Layout */}
-      {/* pb accounts for the fixed CTA button on event pages */}
-      <div className={`w-full flex flex-col md:hidden${pathname.startsWith("/events/") ? " pb-44" : ""}`}>
+      <div className={`w-full flex flex-col md:hidden${mobileFixedBarPad}`}>
         {/* Logo */}
         <div className="mb-4 flex items-center justify-center gap-2">
           <Image

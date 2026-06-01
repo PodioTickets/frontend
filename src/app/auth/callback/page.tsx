@@ -7,6 +7,7 @@ import { userService } from "@/services";
 import toast from "react-hot-toast";
 import { isProfileComplete } from "@/utils/checkProfileComplete";
 import { useRegisterModal } from "@/stores/modalStore";
+import { readReturnPath, clearReturnPath } from "@/utils/authRedirect";
 
 function CallbackContent() {
   const router = useRouter();
@@ -26,6 +27,11 @@ function CallbackContent() {
         const accessToken = searchParams.get("access_token");
         const refreshToken = searchParams.get("refresh_token");
         const error = searchParams.get("error");
+
+        // Destino pós-login (param de URL > localStorage > sessionStorage), já
+        // saneado contra open-redirect. Único ponto de leitura — usado em todas
+        // as saídas de sucesso/perfil-incompleto.
+        const savedReturnTo = readReturnPath(searchParams.get("redirect_to"));
 
         // Se houver erro na URL, exibe mensagem e redireciona
         if (error) {
@@ -86,26 +92,17 @@ function CallbackContent() {
                 "Login realizado com sucesso! Complete seu cadastro para continuar."
               );
               openRegisterModal({ completeProfile: true });
-              const returnTo =
-                typeof window !== "undefined"
-                  ? sessionStorage.getItem("redirectAfterLogin")
-                  : null;
-              router.replace(returnTo && returnTo.length > 0 ? returnTo : "/");
+              clearReturnPath();
+              router.replace(savedReturnTo || "/");
               return;
             }
 
             toast.success("Login realizado com sucesso!");
 
-            // Redireciona para a URL salva antes do login ou para home
-            const redirectPath =
-              typeof window !== "undefined"
-                ? sessionStorage.getItem("redirectAfterLogin") || "/"
-                : "/";
-
-            // Remove a URL salva após usar
-            if (typeof window !== "undefined") {
-              sessionStorage.removeItem("redirectAfterLogin");
-            }
+            // Volta para o destino salvo antes do login (resiliente ao OAuth)
+            // ou para a home.
+            const redirectPath = savedReturnTo || "/";
+            clearReturnPath();
 
             setTimeout(() => {
               router.replace(redirectPath);
@@ -146,26 +143,17 @@ function CallbackContent() {
                 "Login realizado com sucesso! Complete seu cadastro para continuar."
               );
               openRegisterModal({ completeProfile: true });
-              const returnTo =
-                typeof window !== "undefined"
-                  ? sessionStorage.getItem("redirectAfterLogin")
-                  : null;
-              router.replace(returnTo && returnTo.length > 0 ? returnTo : "/");
+              clearReturnPath();
+              router.replace(savedReturnTo || "/");
               return;
             }
 
             toast.success("Login realizado com sucesso!");
 
-            // Redireciona para a URL salva antes do login ou para home
-            const redirectPath =
-              typeof window !== "undefined"
-                ? sessionStorage.getItem("redirectAfterLogin") || "/"
-                : "/";
-
-            // Remove a URL salva após usar
-            if (typeof window !== "undefined") {
-              sessionStorage.removeItem("redirectAfterLogin");
-            }
+            // Volta para o destino salvo antes do login (resiliente ao OAuth)
+            // ou para a home.
+            const redirectPath = savedReturnTo || "/";
+            clearReturnPath();
 
             setTimeout(() => {
               router.replace(redirectPath);

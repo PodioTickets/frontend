@@ -352,6 +352,27 @@ export function PaymentSuccessStep({
                       </p>
                     </div>
 
+                    {/* Ingressos — uma linha por participante (categoria + nome +
+                        preço), acima do Subtotal. */}
+                    {participantsData.map((p) => (
+                      <div
+                        key={p.participantIndex}
+                        className="border border-gray-6 flex items-center justify-between gap-3 p-4 rounded-lg w-full"
+                      >
+                        <span className="flex flex-col gap-0.5 min-w-0">
+                          <span className="text-xs font-normal text-gray-11 font-family-dm-sans truncate">
+                            {p.categoryName ?? "Ingresso avulso"}
+                          </span>
+                          <span className="font-semibold text-sm leading-[1.2] text-gray-12 font-manrope break-words">
+                            {p.ticketName}
+                          </span>
+                        </span>
+                        <p className="font-bold text-base leading-[1.1] text-gray-12 font-manrope shrink-0">
+                          {formatCurrency(p.ticketPrice)}
+                        </p>
+                      </div>
+                    ))}
+
                     {/* Subtotal */}
                     <div className="border border-gray-6 flex items-center justify-between p-4 rounded-lg w-full">
                       <p className="font-semibold text-base leading-[1.1] text-gray-12 font-manrope">
@@ -880,6 +901,27 @@ export function PaymentSuccessStep({
                         {formatCurrency(additionalProductsTotal)}
                       </p>
                     </div>
+
+                    {/* Ingressos — uma linha por participante (categoria + nome +
+                        preço), acima do Subtotal. */}
+                    {participantsData.map((p) => (
+                      <div
+                        key={p.participantIndex}
+                        className="border border-gray-6 flex items-center justify-between gap-3 p-[16px] rounded-[8px] w-full"
+                      >
+                        <span className="flex flex-col gap-0.5 min-w-0">
+                          <span className="text-xs font-normal text-gray-11 font-family-dm-sans truncate">
+                            {p.categoryName ?? "Ingresso avulso"}
+                          </span>
+                          <span className="font-semibold text-base leading-[1.2] text-gray-12 font-manrope break-words">
+                            {p.ticketName}
+                          </span>
+                        </span>
+                        <p className="font-bold text-[16px] leading-[1.1] text-gray-12 font-manrope shrink-0">
+                          {formatCurrency(p.ticketPrice)}
+                        </p>
+                      </div>
+                    ))}
 
                     {/* Subtotal */}
                     <div className="border border-gray-6 flex items-center justify-between p-[16px] rounded-[8px] w-full">
