@@ -868,6 +868,18 @@ export function SubscriptionStep({
     );
   }
 
+  /* Confirmação só é liberada quando: (a) nenhum card de participante está
+   * ABERTO (força salvar/minimizar antes); e (b) TODOS passaram pelo "Salvar e
+   * próximo" (`completedParticipants[idx]`). `isParticipantComplete` conta
+   * auto-fill de variação única, então exigimos a confirmação explícita.
+   * Reusado pelo botão "Confirmar produtos" (mobile) e pelo CTA da barra. */
+  const canConfirmProducts =
+    totalParticipants > 0 &&
+    !Object.values(expandedParticipants).some(Boolean) &&
+    participantsWithTickets.every(
+      ({ participantIndex }) => completedParticipants[participantIndex],
+    );
+
   return (
     <>
       {/* Mobile Layout */}
@@ -1064,6 +1076,17 @@ export function SubscriptionStep({
             );
           })}
         </div>
+
+        {/* Botão de confirmação abaixo da lista — habilita só quando todos os
+            participantes estão confirmados (mesma regra do CTA da barra). */}
+        <Button
+          className="w-full mt-2"
+          onClick={onNext}
+          disabled={!canConfirmProducts}
+          isLoading={isSubmitting}
+        >
+          Confirmar produtos
+        </Button>
       </div>
 
       {/* Mobile Footer Summary */}
@@ -1090,17 +1113,8 @@ export function SubscriptionStep({
         cta={{
           label: "Confirmar produtos",
           onClick: onNext,
-          /* Desabilitado quando: (a) há algum card de participante ABERTO
-           * (força o usuário a salvar/minimizar antes de confirmar); ou (b)
-           * algum participante ainda não passou pelo "Salvar e próximo" do card
-           * (= `completedParticipants[idx]`). `isParticipantComplete` conta
-           * auto-fill de variação única, então exigimos confirmação explícita. */
-          disabled:
-            totalParticipants === 0 ||
-            Object.values(expandedParticipants).some(Boolean) ||
-            !participantsWithTickets.every(
-              ({ participantIndex }) => completedParticipants[participantIndex],
-            ),
+          // Mesma regra do botão "Confirmar produtos" abaixo da lista.
+          disabled: !canConfirmProducts,
         }}
       />
 

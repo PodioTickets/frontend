@@ -2629,7 +2629,7 @@ export function InformationStep({
 
           {/* Botão Confirmar dados — desabilitado até cada participante ter
               clicado em "Salvar e próximo" (mesmo critério aplicado no CTA mobile). */}
-          <div className="hidden md:flex items-center justify-center w-full mt-6">
+          <div className="flex items-center justify-center w-full mt-6">
             <Button
               onClick={() => {
                 if (participantsWithRaces.length === 0) return;
@@ -2659,7 +2659,7 @@ export function InformationStep({
               disabled={previewMode || isSubmitting || !allParticipantsSaved}
               isLoading={isSubmitting}
               variant="default"
-              className="w-1/4 font-bold"
+              className="w-full md:w-1/4 font-bold"
             >
               Confirmar dados
             </Button>

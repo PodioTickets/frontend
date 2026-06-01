@@ -462,6 +462,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
 
         {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
         <MobileSummaryBar
+          variant="full"
           eventName={event.name}
           totalParticipants={totalParticipants}
           tickets={groupedTickets.map((t) => ({

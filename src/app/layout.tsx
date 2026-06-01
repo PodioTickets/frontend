@@ -24,6 +24,15 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  // Base para resolver URLs relativas das tags OG/canonical (ex.: og:image).
+  // As páginas com `generateMetadata` já emitem URLs absolutas, mas definir aqui
+  // silencia o aviso do Next e cobre metadata relativa em qualquer rota.
+  metadataBase: new URL(
+    (process.env.NEXT_PUBLIC_ROOT_SITE_URL || "http://localhost:3000").replace(
+      /\/$/,
+      "",
+    ),
+  ),
   title: "PódioTicket",
   description:
     "PódioTicket is a platform for creating and managing tickets for your events.",
