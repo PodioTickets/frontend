@@ -1903,13 +1903,10 @@ export function InformationStep({
                     </button>
                   )}
 
-                  {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-                  {groupedTickets.length > 1 && (
-                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">Subtotal:</p>
-                      <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                    <p className="font-semibold">Subtotal:</p>
+                    <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
+                  </div>
                   {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">{formatCouponLineLabel(appliedCoupon)}:</p>
@@ -2811,13 +2808,10 @@ export function InformationStep({
                         </p>
                       </div>
                     ))}
-                    {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-                    {groupedTickets.length > 1 && (
-                      <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">Subtotal:</p>
-                        <p className="font-bold">{formatPrice(totalPrice)}</p>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">Subtotal:</p>
+                      <p className="font-bold">{formatPrice(totalPrice)}</p>
+                    </div>
                     {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">

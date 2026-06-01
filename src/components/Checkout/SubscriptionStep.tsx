@@ -20,6 +20,7 @@ import {
   formatVoucherLineLabel,
 } from "@/lib/orderCouponDiscount";
 import type { Ticket } from "@/hooks/useTickets";
+import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
 import { buildParticipantTicketSlots } from "@/lib/checkoutProductStep";
 import { useSubscriptionData } from "@/hooks/useSubscriptionData";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -728,7 +729,14 @@ export function SubscriptionStep({
     const participantAdditionalProducts = getAdditionalProductsForParticipant(participantIndex);
     return participantAdditionalProducts.filter((product) => {
       const variationKey = getVariationKey(participantIndex, product.id);
-      return selectedVariations[variationKey] !== null && selectedVariations[variationKey] !== undefined;
+      const selectedId = selectedVariations[variationKey];
+      if (selectedId === null || selectedId === undefined) return false;
+      // "Sem interesse" = opt-out: não conta como item adicional (nem soma — o
+      // total já zera via billableReaisForProductSelection). Sem isso, aparecia
+      // "1x Item adicional: R$ 0,00".
+      const selectedVariation = getSelectedVariation(participantIndex, product);
+      if (selectedVariation && isSemInteresseVariation(selectedVariation)) return false;
+      return true;
     }).length;
   };
 
