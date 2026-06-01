@@ -86,6 +86,12 @@ export function EventCard({ event }: EventCardProps) {
 
   // Figma: só o estado "aberta" (e demais) tem o ponto; encerrada/em breve sem dot.
   const hasDot = !inscricoesEncerradas && !inscricoesEmBreve;
+  // "Inscrições abertas" usa o dot de 2 camadas (anel + miolo); demais usam dot simples.
+  const isOpen =
+    !inscricoesEncerradas &&
+    !inscricoesEmBreve &&
+    !vagasEsgotadas &&
+    event.status !== "COMPLETED";
 
   const dotColor = inscricoesEncerradas
     ? "bg-red-600"
@@ -165,7 +171,15 @@ export function EventCard({ event }: EventCardProps) {
 
           <div className="flex items-center">
             <div className={cn("flex items-center gap-1 rounded-tr-[16px] border-r border-t p-3", tagBg)}>
-              {hasDot && <span className={cn("size-3 shrink-0 rounded-full", dotColor)} />}
+              {hasDot &&
+                (isOpen ? (
+                  <span className="relative inline-block size-3 shrink-0">
+                    <span className="absolute left-0 top-0 size-3 rounded-full border border-[#308737] bg-[#B2DDB5]" />
+                    <span className="absolute left-[3px] top-[3px] size-1.5 rounded-full bg-[#308737]" />
+                  </span>
+                ) : (
+                  <span className={cn("size-3 shrink-0 rounded-full", dotColor)} />
+                ))}
               <span className={cn("font-family-dm-sans text-sm font-semibold leading-[1.3]", tagText)}>
                 {statusLabel}
               </span>
