@@ -434,7 +434,7 @@ export function Header() {
                         size="default"
                         className="w-full border-[#3A3A3A] text-[#EEEEEE] font-bold font-manrope"
                       >
-                        Cadastre-se
+                        Criar conta
                       </Button>
                       <MobileLanguageToggle
                         onClose={() => setMobileMenuOpen(false)}
