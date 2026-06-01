@@ -970,9 +970,18 @@ export function SubscriptionStep({
                         </p>
                       </div>
                     )}
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-12">{ticket.name}</p>
-                      <p className="text-base font-bold text-gray-12">{formatPrice(ticketPrice)}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex flex-col gap-0.5 min-w-0">
+                        {ticket.groupId && categories.find((c) => c.id === ticket.groupId)?.name ? (
+                          <span className="text-xs font-normal text-gray-11 truncate">
+                            {categories.find((c) => c.id === ticket.groupId)?.name}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-normal text-gray-11">Ingresso Avulso</span>
+                        )}
+                        <span className="text-sm font-semibold text-gray-12">{ticket.name}</span>
+                      </span>
+                      <p className="text-base font-bold text-gray-12 shrink-0">{formatPrice(ticketPrice)}</p>
                     </div>
                   </div>
                   <div className="px-3 py-4 flex items-center justify-between">
@@ -1035,9 +1044,18 @@ export function SubscriptionStep({
                           </p>
                         </div>
                       )}
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-gray-12">{ticket.name}</p>
-                        <p className="text-base font-bold text-gray-12">{formatPrice(ticketPrice)}</p>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex flex-col gap-0.5 min-w-0">
+                          {ticket.groupId && categories.find((c) => c.id === ticket.groupId)?.name ? (
+                            <span className="text-xs font-normal text-gray-11 truncate">
+                              {categories.find((c) => c.id === ticket.groupId)?.name}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-normal text-gray-11">Ingresso Avulso</span>
+                          )}
+                          <span className="text-sm font-semibold text-gray-12">{ticket.name}</span>
+                        </span>
+                        <p className="text-base font-bold text-gray-12 shrink-0">{formatPrice(ticketPrice)}</p>
                       </div>
                     </div>
 

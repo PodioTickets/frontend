@@ -208,12 +208,12 @@ export function ProductVariationCard({
       <div className="flex items-center justify-between p-4">
         <div className="flex gap-1 items-center flex-1 min-w-0">
           {product.variationType && (
-            <span className="text-base leading-[1.3] text-gray-12 font-family-dm-sans whitespace-nowrap">
+            <span className="text-base leading-[1.3] text-gray-12 font-family-dm-sans whitespace-nowrap shrink-0">
               {product.variationType}:
             </span>
           )}
           {localSelected && (
-            <span className="text-base font-semibold leading-[1.1] text-gray-12 font-manrope whitespace-nowrap ml-1">
+            <span className="text-base font-semibold leading-[1.1] text-gray-12 font-manrope truncate ml-1 min-w-0">
               {localSelected.name}
             </span>
           )}

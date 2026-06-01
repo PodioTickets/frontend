@@ -27,11 +27,26 @@ export function Footer() {
 
   const currentYear = new Date().getFullYear();
 
+  // Rotas com barra/CTA fixo na base da viewport (mobile): o footer precisa de
+  // respiro inferior pra que seu conteúdo suba acima da barra e não seja cortado
+  // por ela. Eventos têm só o CTA "Inscreva-se"; as etapas de checkout têm a
+  // MobileSummaryBar (aba "Ver detalhes" + resumo + CTA), mais alta → mais pad.
+  const isEventPage = pathname.startsWith("/events/");
+  const isCheckoutStep =
+    pathname.startsWith("/checkout/ingressos") ||
+    pathname.startsWith("/checkout/informacoes") ||
+    pathname.startsWith("/checkout/produtos") ||
+    pathname.startsWith("/checkout/pagamento");
+  const mobileFixedBarPad = isCheckoutStep
+    ? " pb-52"
+    : isEventPage
+      ? " pb-44"
+      : "";
+
   return (
     <footer className="w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] border-t border-gray-6 px-4 py-6 md:p-20 md:pt-[52px]">
       {/* Mobile Layout */}
-      {/* pb accounts for the fixed CTA button on event pages */}
-      <div className={`w-full flex flex-col md:hidden${pathname.startsWith("/events/") ? " pb-44" : ""}`}>
+      <div className={`w-full flex flex-col md:hidden${mobileFixedBarPad}`}>
         {/* Logo */}
         <div className="mb-4 flex items-center justify-center gap-2">
           <Image

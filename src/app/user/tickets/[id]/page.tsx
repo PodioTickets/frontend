@@ -559,7 +559,7 @@ export default function TicketDetailsPage() {
                               <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                                 Incluídos no ingresso
                               </h3>
-                              <div className="grid grid-cols-2 gap-3 w-full">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                                 {participant.includedProducts.map((product: IncludedProduct) => (
                                   <ProductVariationCard
                                     key={product.id}
@@ -577,7 +577,7 @@ export default function TicketDetailsPage() {
                               <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
                                 Adicionais
                               </h3>
-                              <div className="grid grid-cols-2 gap-3 w-full">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                                 {participant.additionalProducts.map((product: IncludedProduct) => (
                                   <ProductVariationCard
                                     key={product.id}
