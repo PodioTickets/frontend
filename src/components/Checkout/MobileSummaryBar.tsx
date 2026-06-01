@@ -273,7 +273,7 @@ export function MobileSummaryBar({
                   // Fecha se arrastou o suficiente pra baixo ou com velocidade.
                   if (info.offset.y > 120 || info.velocity.y > 600) closeSheet();
                 }}
-                className="md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[88vh] flex flex-col shadow-2xl"
+                className="md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[88vh] flex flex-col overflow-hidden shadow-2xl"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Detalhes do pedido"
@@ -305,8 +305,9 @@ export function MobileSummaryBar({
                   </div>
                 </div>
 
-                {/* Corpo rolável */}
-                <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
+                {/* Corpo rolável — `min-h-0` é obrigatório p/ o overflow funcionar
+                    dentro do flex-col com altura limitada (senão transborda e cobre a tela). */}
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
                   {/* Detalhe rico do step (cards de participante + imagens dos
                     produtos) quando fornecido; senão, a lista flat de ingressos. */}
                   {extraDetails ? (
