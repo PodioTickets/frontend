@@ -27,6 +27,20 @@ export function defaultEventKitSelectionDisplay(): EventKitSelectionDisplay {
   };
 }
 
+/**
+ * Estado INICIAL ao CRIAR ingressos de um evento novo (sem baseline salvo).
+ * Diferente do default de LEITURA (`defaultEventKitSelectionDisplay`): aqui o
+ * radio "Deseja exibir as imagens do kit..." começa em "Não" por decisão de
+ * produto. NÃO usar no parse/fallback de eventos existentes — isso esconderia
+ * imagens de eventos já publicados que não persistiram o campo.
+ */
+export function initialEventKitSelectionDisplayForCreation(): EventKitSelectionDisplay {
+  return {
+    ...defaultEventKitSelectionDisplay(),
+    showKitImagesOnSelection: false,
+  };
+}
+
 /** Normaliza resposta da API (camelCase ou snake_case). */
 export function parseEventKitSelectionDisplay(
   raw: unknown

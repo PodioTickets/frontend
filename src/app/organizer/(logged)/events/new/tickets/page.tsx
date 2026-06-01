@@ -11,6 +11,7 @@ import { TicketAdvancedKitDisplayOptions } from "@/components/Ticket/TicketAdvan
 import { type KitImageLayoutMode } from "@/components/Ticket/KitImagePositionDrawer";
 import {
   defaultEventKitSelectionDisplay,
+  initialEventKitSelectionDisplayForCreation,
   drawerModeToApiLayout,
   layoutToDrawerMode,
   type EventKitSelectionDisplay,
@@ -34,7 +35,7 @@ export default function IngressosPage() {
   // No fluxo de criação não há baseline salvo: começa no default e é persistido
   // no evento ao confirmar os ingressos.
   const [draftKitSelection, setDraftKitSelection] = useState<EventKitSelectionDisplay>(
-    () => ({ ...defaultEventKitSelectionDisplay() }),
+    () => ({ ...initialEventKitSelectionDisplayForCreation() }),
   );
 
   // Ao voltar da página de prévia o componente remonta. Reidrata o rascunho do
@@ -54,7 +55,7 @@ export default function IngressosPage() {
   // Difere do default? Usado só pra já abrir o painel avançado quando o usuário
   // volta da prévia com escolhas pendentes.
   const kitSelectionDirty = useMemo(() => {
-    const def = defaultEventKitSelectionDisplay();
+    const def = initialEventKitSelectionDisplayForCreation();
     const norm = (k: EventKitSelectionDisplay) =>
       JSON.stringify({
         show: k.showKitImagesOnSelection,

@@ -96,7 +96,8 @@
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros na pagina de tickets \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"tickets\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em SubscriptionStep \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"SubscriptionStep\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em ImageCarouselModal \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"ImageCarouselModal\" }\\) -join \"`n\"; \"--- fim ---\")",
-      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros na pagina tickets/[id] \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"tickets\" }\\) -join \"`n\"; \"--- fim ---\")"
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros na pagina tickets/[id] \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"tickets\" }\\) -join \"`n\"; \"--- fim ---\")",
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em new/tickets ou eventKitSelectionDisplay \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"new.tickets|eventKitSelectionDisplay\" }\\) -join \"`n\"; \"--- fim ---\")"
     ]
   },
   "disabledMcpjsonServers": [

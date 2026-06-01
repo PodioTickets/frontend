@@ -17,7 +17,7 @@ export default function ReviewFinancialPage() {
   const { authChecked } = useWizardAuth();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [organizerPercent, setOrganizerPercent] = useState(0);
+  const [organizerPercent, setOrganizerPercent] = useState(4);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
   const [totalFee, setTotalFee] = useState<number>(6);
 
