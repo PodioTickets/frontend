@@ -206,17 +206,18 @@ export function PaymentSuccessStep({
     cpf?: string | null;
   }): string | null => (isParticipantBr(p) ? p.country || "Brasil" : p.country ?? null);
 
+  // Detalhe do ingresso (compra aprovada) usa a inicial do sexo: M / F / O.
   const getGenderLabel = (gender: string) => {
     const labels: Record<string, string> = {
-      MALE: "Masculino",
-      FEMALE: "Feminino",
-      OTHER: "Outro",
-      PREFER_NOT_TO_SAY: "Prefiro não informar",
-      male: "Masculino",
-      female: "Feminino",
-      other: "Outro",
+      MALE: "M",
+      FEMALE: "F",
+      OTHER: "O",
+      PREFER_NOT_TO_SAY: "N",
+      male: "M",
+      female: "F",
+      other: "O",
     };
-    return labels[gender] || gender;
+    return labels[gender] || (gender ? gender.charAt(0).toUpperCase() : gender);
   };
 
   // Calculate totals
