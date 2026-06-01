@@ -884,12 +884,11 @@ export function InformationStep({
       }
     }
 
-    // Fechar/abrir o participante (sempre permite abrir, só valida ao fechar)
+    // Fechar/abrir o participante (sempre permite abrir, só valida ao fechar).
+    // Comportamento accordion: ao ABRIR, minimiza todos os outros (só um expandido
+    // por vez). Ao FECHAR, apenas colapsa o atual.
     const willClose = isCurrentlyExpanded;
-    setExpandedParticipants((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
+    setExpandedParticipants(willClose ? {} : { [index]: true });
 
     // Depois de salvar (fechar) um participante, rola para o proximo pendente
     // em vez de deixar o usuario perdido fora do viewport. Vale pra mobile e
@@ -2568,7 +2567,8 @@ export function InformationStep({
                               const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
                               if (Object.keys(errors).length > 0) {
                                 setFieldErrors((prev) => ({ ...prev, [participantIndex]: errors }));
-                                setExpandedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
+                                // Accordion: mantém só este aberto.
+                                setExpandedParticipants({ [participantIndex]: true });
                                 toast.error("Preencha todos os campos obrigatórios corretamente.");
                                 return;
                               }
@@ -2677,7 +2677,8 @@ export function InformationStep({
                   if (Object.keys(allErrors).length > 0) {
                     setFieldErrors(allErrors);
                     if (firstInvalidIndex !== null) {
-                      setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                      // Accordion: abre só o 1º inválido, minimiza os demais.
+                      setExpandedParticipants({ [firstInvalidIndex]: true });
                     }
                     toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
                     return;
@@ -2738,7 +2739,8 @@ export function InformationStep({
             if (Object.keys(allErrors).length > 0) {
               setFieldErrors(allErrors);
               if (firstInvalidIndex !== null) {
-                setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                // Accordion: abre só o 1º inválido, minimiza os demais.
+                setExpandedParticipants({ [firstInvalidIndex]: true });
               }
               toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
               return;

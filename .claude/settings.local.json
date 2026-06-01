@@ -111,7 +111,9 @@
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em sucesso/tickets/PaymentSuccessStep \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"sucesso|tickets.\\\\[id\\\\]|PaymentSuccessStep\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em tickets/PaymentSuccessStep \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"tickets.\\\\[id\\\\]|PaymentSuccessStep\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em arquivos tocados \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"PaymentSuccessStep|sucesso.page|tickets.\\\\[id\\\\]|ParticipantProductsTab|registrationProducts\" }\\) -join \"`n\"; \"--- fim ---\")",
-      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em ProductVariationCard/ParticipantProductsTab \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"ProductVariationCard|ParticipantProductsTab\" }\\) -join \"`n\"; \"--- fim ---\")"
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em ProductVariationCard/ParticipantProductsTab \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"ProductVariationCard|ParticipantProductsTab\" }\\) -join \"`n\"; \"--- fim ---\")",
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em sucesso \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"sucesso\" }\\) -join \"`n\"; \"--- fim ---\")",
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em PaymentStep/sucesso \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"PaymentStep|sucesso\" }\\) -join \"`n\"; \"--- fim ---\")"
     ]
   },
   "disabledMcpjsonServers": [

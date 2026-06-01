@@ -1671,6 +1671,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       syncFromOrder(updated);
       setCurrentOrder(updated);
       setBillingAddressConfirmed(true);
+      // Mobile: ao confirmar o endereço, a área de pagamento expande logo abaixo
+      // e a tela ficava parada no meio (sobre o card de endereço). Sobe ao topo
+      // absoluto pra o usuário ver os métodos de pagamento desde o começo. rAF
+      // duplo espera o reflow da expansão antes de rolar.
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 767px)").matches
+      ) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          });
+        });
+      }
       // Meta Pixel: InitiateCheckout = usuário confirmou o endereço (CEP) e a
       // área de pagamento abriu. Disparamos AQUI (não no mount da etapa), pois
       // só nesse ponto ele de fato "iniciou o checkout" de pagamento. Usamos o
