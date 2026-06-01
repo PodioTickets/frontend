@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/drawer";
 import { X, ChevronLeft, ChevronRight, FileText, Search } from "lucide-react";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
-import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { ArrowButton } from "../ArrowButton";
@@ -18,7 +17,6 @@ import { DetailsIcon } from "../Icons/DetailsIcon";
 import { organizerService } from "@/services";
 import type { Installment } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
-import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
@@ -102,7 +100,8 @@ export function InstallmentsDrawer({
       },
       releaseDate: formattedDate,
       nextReleaseDate: formattedDate,
-      paymentMethod: "Pix", // Será preenchido pela API
+      // Parcela é sempre cartão de crédito (PIX/boleto não parcelam).
+      paymentMethod: "CREDIT_CARD",
       value: installment.amount / 100, // Converter de centavos
       installment: "1/1", // Será preenchido pela API
     };
@@ -279,11 +278,9 @@ export function InstallmentsDrawer({
                             </div>
                           </div>
                           <div className="shrink-0">
-                            {installment.paymentMethod === "Pix" ? (
-                              <PixIcon className="size-5 text-gray-12" />
-                            ) : (
-                              <CardIcon className="size-5 text-gray-12" />
-                            )}
+                            {/* Parcela = sempre cartão de crédito (PIX/boleto não
+                                parcelam) → ícone de cartão, não PIX. */}
+                            <CardIcon className="size-5 text-gray-12" />
                           </div>
                         </div>
                         <p className="font-family-dm-sans font-medium text-sm text-gray-12">ID Pedido: {installment.orderId}</p>
@@ -492,17 +489,11 @@ export function InstallmentsDrawer({
                           </div>
                         </div>
 
-                        {/* Pagamento */}
+                        {/* Pagamento — parcela é sempre cartão de crédito
+                            (PIX/boleto não parcelam) → ícone de cartão. */}
                         <div className="flex flex-1 h-full items-center min-h-px min-w-px p-4 px-0">
                           <div className="flex items-center gap-2 justify-center w-full">
-                            {installment.paymentMethod === "Pix" ? (
-                              <PixIcon className="size-5 text-gray-12" />
-                            ) : (
-                              <PaymentIcon
-                                type={installment.paymentMethod as any}
-                                className="size-8 text-gray-12"
-                              />
-                            )}
+                            <CardIcon className="size-5 text-gray-12" />
                           </div>
                         </div>
 
