@@ -630,6 +630,34 @@ export default function TicketDetailsPage() {
                   </p>
                 </div>
 
+                {/* Ingressos da compra — uma linha por participante (categoria +
+                    nome do ingresso). Espelha a lista de participantes acima. */}
+                {participants.length > 0 && (
+                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between w-full gap-3">
+                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                      {participants.length > 1 ? "Ingressos:" : "Ingresso:"}
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {participants.map((participant: any, index: number) => {
+                        const t = participant.ticket || {};
+                        return (
+                          <div
+                            key={participant.id || index}
+                            className="flex flex-col gap-0.5 min-w-0"
+                          >
+                            <p className="text-xs text-gray-11 font-family-dm-sans leading-[1.3] truncate">
+                              {t?.category?.name ?? "Ingresso avulso"}
+                            </p>
+                            <p className="text-sm font-semibold text-gray-12 font-family-dm-sans leading-[1.3] break-words">
+                              {t.name || "Ingresso"}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
                     Data da compra:
