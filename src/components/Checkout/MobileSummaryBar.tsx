@@ -356,11 +356,8 @@ export function MobileSummaryBar({
                         value={formatPrice(additionalProducts.total)}
                       />
                     )}
-                    {/* Subtotal só faz sentido quando há mais de um ingresso diferente
-                      pra somar — com um único, a linha do ingresso já é o subtotal. */}
-                    {tickets.length > 1 && (
-                      <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
-                    )}
+                    {/* Subtotal sempre visível, logo acima da taxa de serviço. */}
+                    <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
                     {discountRow}
                     {feeRow}
                     <SummaryRow label="Total" value={formatPrice(total)} emphasize />
