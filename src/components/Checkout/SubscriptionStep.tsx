@@ -429,6 +429,8 @@ export function SubscriptionStep({
   const [selectedParticipant, setSelectedParticipant] = useState<number>(0);
   const [expandedParticipants, setExpandedParticipants] = useState<Record<number, boolean>>({ 0: true });
   const [completedParticipants, setCompletedParticipants] = useState<Record<number, boolean>>({});
+  // Expand/collapse dos produtos por participante no detalhe do resumo mobile (igual PaymentStep).
+  const [expandedDetailProducts, setExpandedDetailProducts] = useState<Record<number, boolean>>({});
 
   const isUpdatingFromContextRef = useRef(false);
 
@@ -888,6 +890,196 @@ export function SubscriptionStep({
       ({ participantIndex }) => completedParticipants[participantIndex],
     );
 
+  /* Detalhe rico do resumo mobile (cards de participante + produtos com imagem),
+   * renderizado dentro do bottom-sheet do MobileSummaryBar via `extraDetails`.
+   * Mesma estrutura da tela de Pagamento pra manter paridade. */
+  const productsSummaryDetails = (
+    <div className="flex flex-col">
+      {participantsWithTickets.map(({ ticket, participantIndex }, index) => {
+        const participant = participants[participantIndex];
+        const ticketPrice = getTicketPrice(ticket);
+        const categoryName = ticket.groupId
+          ? categories.find((c) => c.id === ticket.groupId)?.name
+          : undefined;
+
+        const allProducts = [
+          ...getRequiredProductsForParticipant(participantIndex),
+          ...getAdditionalProductsForParticipant(participantIndex),
+        ].map((product) => {
+          const variation = getSelectedVariation(participantIndex, product);
+          const priceReais = billableReaisForProductSelection(product, variation);
+          return {
+            product,
+            name: product.name,
+            priceReais,
+            size: variation?.name ?? null,
+            isIncluded: priceReais === 0,
+          };
+        });
+        const optional = allProducts.filter((p) => !p.isIncluded);
+        const included = allProducts.filter((p) => p.isIncluded);
+        const optionalTotal = optional.reduce((sum, p) => sum + p.priceReais, 0);
+        const hasAnyProduct = allProducts.length > 0;
+        const expanded = !!expandedDetailProducts[participantIndex];
+
+        return (
+          <div
+            key={participantIndex}
+            className={`${index > 0 ? "border-t border-gray-6 pt-4" : "pb-4"}`}
+          >
+            <p className="text-sm font-semibold text-gray-12 mb-4 font-family-dm-sans">
+              Participante {participantIndex + 1}
+            </p>
+
+            {/* Card do participante */}
+            <div className="border border-gray-6 rounded-xl p-2 mb-4 w-full">
+              <div className="flex items-center gap-2">
+                <div className="size-10 rounded-full bg-gray-5 flex items-center justify-center shrink-0 overflow-hidden relative">
+                  {participant?.name ? (
+                    <span className="text-sm font-bold text-gray-12">
+                      {participant.name.charAt(0).toUpperCase()}
+                    </span>
+                  ) : (
+                    <ImageWithInitialFallback
+                      src={event.bannerUrl}
+                      alt={event.name}
+                      name={event.name}
+                      fallbackId={event.id}
+                      fill
+                      sizes="40px"
+                      className="size-full"
+                      imgClassName="object-cover"
+                      letterClassName="text-sm font-bold"
+                    />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-12 font-family-dm-sans">
+                    {participant?.name || `Participante ${participantIndex + 1}`}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-11 font-family-dm-sans">
+                    {participant?.birthDate && (
+                      <>
+                        {formatDateShort(participant.birthDate)}
+                        {(participant?.gender || participant?.cpf) && (
+                          <span className="size-1 bg-gray-11 rounded-full" />
+                        )}
+                      </>
+                    )}
+                    {participant?.gender && (
+                      <>
+                        {participant.gender}
+                        {participant?.cpf && (
+                          <span className="size-1 bg-gray-11 rounded-full" />
+                        )}
+                      </>
+                    )}
+                    {participant?.cpf && maskCPF(participant.cpf)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Ingresso — categoria acima do nome */}
+            <div className="flex items-end justify-between gap-3 mb-3">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <p className="font-family-dm-sans font-normal text-xs leading-[1.3] text-gray-11 truncate">
+                  {categoryName || "Ingresso Avulso"}
+                </p>
+                <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 truncate">
+                  {ticket.name}
+                </p>
+              </div>
+              <p className="font-manrope font-bold text-sm leading-[1.2] text-gray-12 shrink-0">
+                {formatPrice(ticketPrice)}
+              </p>
+            </div>
+
+            {/* Resumo de produtos: adicionais (cobrados) + inclusos (grátis). */}
+            {optional.length > 0 && (
+              <div className="mb-3">
+                <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                  <span>
+                    {optional.length}x{" "}
+                    {optional.length > 1 ? "Itens adicionais" : "Item adicional"}
+                  </span>
+                  <span className="font-bold">{formatPrice(optionalTotal)}</span>
+                </p>
+              </div>
+            )}
+            {included.length > 0 && (
+              <div className="mb-3 flex items-baseline gap-1 text-gray-12 font-family-manrope">
+                <span className="text-sm font-medium">
+                  {included.length}x{" "}
+                  {included.length > 1 ? "Itens inclusos" : "Item incluso"}
+                </span>
+              </div>
+            )}
+
+            {/* Lista expandida — todos os produtos com imagem + tamanho. */}
+            {expanded && hasAnyProduct && (
+              <div className="mb-4">
+                {allProducts.map((item, productIndex) => (
+                  <div
+                    key={item.product.id ?? productIndex}
+                    className="bg-gray-2 border border-gray-6 rounded-xl mb-3"
+                  >
+                    <div className="flex gap-3 p-3 border-b border-gray-6">
+                      <div className="relative w-[64px] h-[64px] shrink-0 overflow-hidden rounded border border-gray-6">
+                        <ImageWithInitialFallback
+                          src={item.product.image}
+                          alt={item.name}
+                          name={item.name}
+                          fallbackId={item.product.id}
+                          fill
+                          sizes="64px"
+                          className="size-full border-0"
+                          imgClassName="object-cover"
+                          letterClassName="text-lg font-semibold"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-between flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-12 font-family-dm-sans line-clamp-2 flex-1 min-w-0">
+                          {item.name}
+                        </p>
+                        <p className="text-sm font-semibold text-gray-12 font-manrope">
+                          {item.isIncluded ? "Incluso" : formatPrice(item.priceReais)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-2.5">
+                      <div className="flex gap-1 items-center">
+                        <p className="text-sm text-gray-12 font-family-dm-sans">Tamanho:</p>
+                        <p className="text-sm font-semibold text-gray-12 font-manrope">
+                          {item.size || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {hasAnyProduct && (
+              <button
+                type="button"
+                onClick={() =>
+                  setExpandedDetailProducts((prev) => ({
+                    ...prev,
+                    [participantIndex]: !prev[participantIndex],
+                  }))
+                }
+                className="text-sm font-medium text-gray-11 font-family-dm-sans underline"
+              >
+                {expanded ? "Mostrar menos" : "Mostrar mais"}
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <>
       {/* Mobile Layout */}
@@ -1118,6 +1310,7 @@ export function SubscriptionStep({
               : null
         }
         additionalProducts={totalProductsPrice > 0 ? { total: totalProductsPrice } : null}
+        extraDetails={productsSummaryDetails}
         serviceFee={serviceFee}
         total={totalAmount}
         cta={{
