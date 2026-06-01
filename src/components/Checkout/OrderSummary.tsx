@@ -231,7 +231,7 @@ export function OrderSummary({
             </div>
           )}
 
-          <div className="hidden md:flex items-center justify-between text-sm text-gray-12">
+          <div className="flex items-center justify-between text-sm text-gray-12">
             <p className="font-manrope font-medium md:font-semibold">Subtotal:</p>
             <p className="font-manrope font-semibold md:font-bold">{formatPrice(subtotal)}</p>
           </div>
