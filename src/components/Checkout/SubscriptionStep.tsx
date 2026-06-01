@@ -1079,14 +1079,16 @@ export function SubscriptionStep({
 
         {/* Botão de confirmação abaixo da lista — habilita só quando todos os
             participantes estão confirmados (mesma regra do CTA da barra). */}
-        <Button
-          className="w-full mt-2"
-          onClick={onNext}
-          disabled={!canConfirmProducts}
-          isLoading={isSubmitting}
-        >
-          Confirmar produtos
-        </Button>
+        {canConfirmProducts && (
+          <Button
+            className="w-full mt-2"
+            onClick={onNext}
+            disabled={!canConfirmProducts}
+            isLoading={isSubmitting}
+          >
+            Confirmar produtos
+          </Button>
+        )}
       </div>
 
       {/* Mobile Footer Summary */}

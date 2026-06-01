@@ -349,6 +349,38 @@ export function InformationStep({
     readSavedState<SavedSnapshotMap>(savedSnapshotsKey, {}),
   );
 
+  /* Descarta o estado "salvo" quando o PEDIDO muda (nova reserva → inscrição
+   * diferente). `savedParticipants`/`savedSnapshots` são keyed por EVENTO, não
+   * por pedido — então uma inscrição anterior no mesmo evento deixava
+   * `{0:true}` residual no sessionStorage, marcando o participante 1 como salvo
+   * sem clique. Isso fazia o "abrir 1º pendente" pular pro 2º. Comparamos o
+   * orderId atual com o último visto (persistido): só limpa quando MUDA entre
+   * dois pedidos reais (não no null→valor do mount, nem ao voltar de Produtos
+   * com o mesmo pedido). */
+  const savedOrderIdKey = eventId
+    ? `checkout:savedParticipantsOrderId:${eventId}`
+    : null;
+  // Guard da reconciliação 1x do estado "salvo" (definido aqui pra o reset por
+  // troca de pedido, logo abaixo, poder rearmá-lo).
+  const savedPruneRef = useRef(false);
+  useEffect(() => {
+    if (!orderId || !savedOrderIdKey || typeof window === "undefined") return;
+    const prevOrderId = readSavedState<string | null>(savedOrderIdKey, null);
+    if (prevOrderId && prevOrderId !== orderId) {
+      // Pedido trocado: zera o estado de "salvo" deste evento e libera a
+      // reconciliação/abertura do card pra rodar de novo (caso o pedido só
+      // tenha mudado DEPOIS da poda inicial — ex.: orderId tardio).
+      setSavedParticipants({});
+      setSavedSnapshots({});
+      savedPruneRef.current = false;
+    }
+    try {
+      window.sessionStorage.setItem(savedOrderIdKey, JSON.stringify(orderId));
+    } catch {
+      /* quota/disabled — ignora */
+    }
+  }, [orderId, savedOrderIdKey]);
+
   // Persiste o estado de "salvo" + snapshots por evento (write-through).
   useEffect(() => {
     if (!savedParticipantsKey || typeof window === "undefined") return;
@@ -1341,7 +1373,6 @@ export function InformationStep({
    *
    * Também ajusta o card aberto: abre o 1º participante PENDENTE (não salvo). Se
    * todos já estão salvos (voltou de etapa posterior), colapsa todos. */
-  const savedPruneRef = useRef(false);
   useEffect(() => {
     if (savedPruneRef.current) return;
     if (loading || participantsWithRaces.length === 0) return;
@@ -1352,26 +1383,29 @@ export function InformationStep({
         getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender),
       ).length === 0;
 
-    // Poda flags obsoletas — nunca adiciona.
-    setSavedParticipants((prev) => {
-      if (Object.keys(prev).length === 0) return prev;
-      const next: Record<number, boolean> = {};
-      let changed = false;
-      participantsWithRaces.forEach(({ participantIndex, ticket }) => {
-        if (prev[participantIndex] && isValid(participantIndex, ticket)) {
-          next[participantIndex] = true;
-        }
-      });
-      // Detecta remoção (chaves que existiam em prev mas não em next).
-      for (const k of Object.keys(prev)) {
-        if (!next[Number(k)]) changed = true;
+    /* Mapa "salvo" PODADO — fonte única pra poda E pra decidir o card aberto.
+     * Antes o `find` do "1º pendente" lia `savedParticipants` do closure (valor
+     * PRÉ-poda): uma flag obsoleta `{0:true}` vinda do sessionStorage (ex.:
+     * inscrição anterior no mesmo evento, não limpa) fazia o `find` pular o
+     * participante 1 e abrir o 2. Computando o mapa podado aqui, os dois usam o
+     * MESMO valor reconciliado. */
+    const prunedSaved: Record<number, boolean> = {};
+    participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+      if (savedParticipants[participantIndex] && isValid(participantIndex, ticket)) {
+        prunedSaved[participantIndex] = true;
       }
-      return changed ? next : prev;
     });
 
-    // Abre o 1º pendente (não salvo); todos salvos → colapsa.
+    // Aplica a poda no estado (nunca adiciona — só remove flags obsoletas).
+    setSavedParticipants((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      const changed = Object.keys(prev).some((k) => !prunedSaved[Number(k)]);
+      return changed ? prunedSaved : prev;
+    });
+
+    // Abre o 1º pendente (não salvo, já reconciliado); todos salvos → colapsa.
     const firstPending = participantsWithRaces.find(
-      ({ participantIndex }) => !savedParticipants[participantIndex],
+      ({ participantIndex }) => !prunedSaved[participantIndex],
     );
     setExpandedParticipants(
       firstPending ? { [firstPending.participantIndex]: true } : {},
@@ -2629,41 +2663,43 @@ export function InformationStep({
 
           {/* Botão Confirmar dados — desabilitado até cada participante ter
               clicado em "Salvar e próximo" (mesmo critério aplicado no CTA mobile). */}
-          <div className="flex items-center justify-center w-full mt-6">
-            <Button
-              onClick={() => {
-                if (participantsWithRaces.length === 0) return;
-                const allErrors: Record<number, Record<string, string>> = {};
-                let firstInvalidIndex: number | null = null;
-                participantsWithRaces.forEach(({ participantIndex, ticket }) => {
-                  const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
-                  if (Object.keys(errors).length > 0) {
-                    allErrors[participantIndex] = errors;
-                    if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
+          {allParticipantsSaved && (
+            <div className="flex items-center justify-center w-full mt-6">
+              <Button
+                onClick={() => {
+                  if (participantsWithRaces.length === 0) return;
+                  const allErrors: Record<number, Record<string, string>> = {};
+                  let firstInvalidIndex: number | null = null;
+                  participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+                    const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
+                    if (Object.keys(errors).length > 0) {
+                      allErrors[participantIndex] = errors;
+                      if (firstInvalidIndex === null) firstInvalidIndex = participantIndex;
+                    }
+                  });
+                  if (Object.keys(allErrors).length > 0) {
+                    setFieldErrors(allErrors);
+                    if (firstInvalidIndex !== null) {
+                      setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                    }
+                    toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
+                    return;
                   }
-                });
-                if (Object.keys(allErrors).length > 0) {
-                  setFieldErrors(allErrors);
-                  if (firstInvalidIndex !== null) {
-                    setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                  if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
+                    toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
+                    return;
                   }
-                  toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
-                  return;
-                }
-                if (!participantsWithRaces.every(({ participantIndex }) => savedParticipants[participantIndex])) {
-                  toast.error("Clique em \"Salvar e próximo\" em cada participante antes de confirmar.");
-                  return;
-                }
-                onNext();
-              }}
-              disabled={previewMode || isSubmitting || !allParticipantsSaved}
-              isLoading={isSubmitting}
-              variant="default"
-              className="w-full md:w-1/4 font-bold"
-            >
-              Confirmar dados
-            </Button>
-          </div>
+                  onNext();
+                }}
+                disabled={previewMode || isSubmitting || !allParticipantsSaved}
+                isLoading={isSubmitting}
+                variant="default"
+                className="w-full md:w-1/4 font-bold"
+              >
+                Confirmar dados
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

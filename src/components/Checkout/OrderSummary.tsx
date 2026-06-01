@@ -285,6 +285,7 @@ export function OrderSummary({
               </p>
             </div>
           )}
+          
           {onShowDetails && (
             <button
               type="button"

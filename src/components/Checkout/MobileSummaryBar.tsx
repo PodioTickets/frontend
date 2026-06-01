@@ -71,7 +71,7 @@ export interface MobileSummaryBarProps {
    *   demais etapas do checkout.
    * O bottom-sheet de detalhes é idêntico nos dois.
    */
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "hidden";
   /**
    * Controle EXTERNO do bottom-sheet (opcional). Permite que um irmão (ex.: o
    * "Ver detalhes" do `OrderSummary` no PaymentStep) abra o mesmo sheet. Se
@@ -155,13 +155,6 @@ export function MobileSummaryBar({
     [dragControls]
   );
 
-  // CTA disparado de dentro do sheet: fecha primeiro pra revelar a tela (ex.:
-  // campos com erro de validação destacados pelo handler do step).
-  const handleSheetCta = useCallback(() => {
-    setOpen(false);
-    cta?.onClick();
-  }, [cta]);
-
   // Trava o scroll do fundo enquanto o bottom-sheet está aberto (UX de modal).
   useEffect(() => {
     if (!open) return;
@@ -233,7 +226,7 @@ export function MobileSummaryBar({
             </div>
           </div>
         </div>
-      ) : (
+      ) : variant === "compact" ? (
         /* Barra minimizada COMPACTA — demais etapas: "(N participantes) · Ver detalhes". */
         <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
           <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between pb-5 w-full">
@@ -242,7 +235,7 @@ export function MobileSummaryBar({
               aria-expanded={open} className="flex items-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer">Ver detalhes <SeeDetailsIcon /></h1>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Bottom-sheet com os detalhes completos — portado pro document.body
           (padrão de modais do projeto) pra escapar de stacking contexts /

@@ -129,7 +129,7 @@ export function Footer() {
           width={100000}
           height={100000}
           draggable={false}
-          className="absolute top-8 left-0 object-cover w-[25%] h-auto"
+          className="absolute top-8 left-0 object-cover w-[25%] 2xl:w-[15%] h-auto"
         />
         <Image
           src="/images/right_footer.png"
@@ -137,7 +137,7 @@ export function Footer() {
           width={100000}
           height={100000}
           draggable={false}
-          className="absolute top-8 right-0 object-cover w-[25%] h-auto"
+          className="absolute top-8 right-0 object-cover w-[25%] 2xl:w-[15%] h-auto"
         />
         <div className="flex flex-col items-center justify-between h-full w-full max-w-[45%]">
           <Image

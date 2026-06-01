@@ -11,6 +11,7 @@ import {
   type CheckoutBillingAddress,
 } from "./CheckoutAddressSection";
 import { getPostalCodeConfig } from "@/utils/postalCode";
+import { MobileSummaryBar, SummaryRow } from "./MobileSummaryBar";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
@@ -66,7 +67,6 @@ import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
 import { useAuth } from "@/hooks/useAuth";
 import { PencilIcon } from "../Icons/PencilIcon";
-import { SummaryRow } from "./MobileSummaryBar";
 
 interface PaymentStepProps {
   event: Event;
@@ -695,7 +695,7 @@ function BillingAddressConfirmedSummary({
           <h2 className="font-manrope font-bold text-sm md:text-xl leading-[1.1] text-gray-12 pb-1 md:pb-0">
             Endereço
           </h2>
-          <p className="text-gray-11 text-sm">
+          <p className="md:hidden text-gray-11 text-sm">
             {[
               [address.street, address.number].filter(Boolean).join(", "),
               [address.city, address.stateUf].filter(Boolean).join(" - "),
@@ -2550,6 +2550,50 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           </>
         ) : null}
       </div>
+
+      {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
+      <MobileSummaryBar
+        eventName={event.name}
+        totalParticipants={totalParticipants}
+        tickets={groupedTickets.map((t) => ({
+          name: t.raceName,
+          quantity: t.quantity,
+          total: t.total,
+        }))}
+        subtotal={ticketSubtotalLocal + additionalProductsTotal}
+        discount={
+          isCouponApplied && couponDiscount > 0
+            ? {
+              label: `${isAutomaticCoupon
+                ? "Cupom automático"
+                : appliedCouponName
+                  ? `Cupom ${appliedCouponName}`
+                  : "Cupom"
+                }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}`,
+              amount: couponDiscount,
+            }
+            : isVoucherApplied && voucherDiscount > 0
+              ? {
+                label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
+                amount: voucherDiscount,
+              }
+              : null
+        }
+        additionalProducts={
+          additionalProductsCount > 0
+            ? { count: additionalProductsCount, total: additionalProductsTotal }
+            : null
+        }
+        serviceFee={serviceFee}
+        total={totalValue}
+        variant="hidden"
+        /* Sem CTA: no mobile o PaymentStep finaliza pelos botões do próprio
+         * formulário (Finalizar pedido/compra por método). A barra fixa aqui é
+         * só resumo — evita botão de finalizar duplicado/conflitante. */
+        extraDetails={paymentSummaryDetails}
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+      />
 
       {/* Desktop Layout */}
       <div className="hidden md:flex w-full items-start justify-between gap-11">
