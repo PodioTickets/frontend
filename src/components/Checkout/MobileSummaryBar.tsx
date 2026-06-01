@@ -236,7 +236,7 @@ export function MobileSummaryBar({
       ) : (
         /* Barra minimizada COMPACTA — demais etapas: "(N participantes) · Ver detalhes". */
         <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
-          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between w-full">
+          <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between pb-5 w-full">
             <h1 className="text-sm text-gray-11">({totalParticipants} {totalParticipants > 1 ? "Participantes" : "Participante"})</h1>
             <h1 onClick={toggleSheet}
               aria-expanded={open} className="flex items-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer">Ver detalhes <SeeDetailsIcon /></h1>
