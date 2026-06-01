@@ -282,7 +282,7 @@ export function Header() {
                   size="default"
                   className="border-[#3A3A3A] text-[#EEEEEE] font-bold font-manrope"
                 >
-                  Cadastre-se
+                  Criar conta
                 </Button>
                 <Button
                   onClick={() => openModal("login")}
