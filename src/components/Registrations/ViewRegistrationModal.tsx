@@ -24,6 +24,7 @@ import {
   formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
+import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 
 /** Badge exibido quando o organizador trocou a variação do produto do
  *  participante (snapshot `variationEdited: true`). */
@@ -289,7 +290,7 @@ export function ViewRegistrationModal() {
       return {
         id: item.id,
         productName: item.name || "Produto",
-        productImage: image || "/banners/card_placeholder.png",
+        productImage: image || null,
         variationType: item.variationType || null,
         variationName: item.selectedVariation?.name || null,
         price: unitPrice,
@@ -304,7 +305,7 @@ export function ViewRegistrationModal() {
     return {
       id: item.id,
       productName: item.product?.name || "Produto",
-      productImage: item.product?.image || "/banners/card_placeholder.png",
+      productImage: item.product?.image || null,
       variationType: item.product?.variationType || null,
       variationName: item.variation?.name || item.variationName || null,
       price: item.unitPrice || item.totalPrice || 0,
@@ -322,7 +323,7 @@ export function ViewRegistrationModal() {
     return {
       id: product.id,
       productName: product.name,
-      productImage: product.image || "/banners/card_placeholder.png",
+      productImage: product.image || null,
       variationType: product.variationType || null,
       variationName: selectedVariation?.name || null,
       price: product.basePrice || 0,
@@ -335,7 +336,7 @@ export function ViewRegistrationModal() {
     return {
       id: item.id,
       productName: item.kitItem?.name || item.name || "Produto",
-      productImage: item.kitItem?.image || item.image || "/banners/card_placeholder.png",
+      productImage: item.kitItem?.image || item.image || null,
       variationType: item.kitItem?.variationType || null,
       variationName: item.selectedSize || item.size || null,
       price: item.kitItem?.price || item.price || 0,
@@ -555,12 +556,13 @@ export function ViewRegistrationModal() {
                           >
                             <div className="flex gap-3">
                               <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
-                                <Image
+                                <ImageWithInitialFallback
                                   src={product.productImage}
                                   alt={product.productName}
-                                  width={100}
-                                  height={100}
-                                  className="object-cover w-full h-full"
+                                  name={product.productName}
+                                  sizes="100"
+                                  fill
+                                  className="object-cover w-full h-full border-0"
                                 />
                               </div>
                               <div className="flex-1 flex flex-col justify-between min-w-0">
@@ -854,12 +856,13 @@ export function ViewRegistrationModal() {
                                 <div className="p-4">
                                   <div className="flex gap-3">
                                     <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
-                                      <Image
+                                      <ImageWithInitialFallback
                                         src={product.productImage}
                                         alt={product.productName}
-                                        width={100}
-                                        height={100}
-                                        className="object-cover w-full h-full"
+                                        name={product.productName}
+                                        sizes="100px"
+                                        fill
+                                        className="object-cover w-full h-full border-0"
                                       />
                                     </div>
                                     <div className="flex-1 flex flex-col justify-between py-2">
@@ -1019,12 +1022,13 @@ export function ViewRegistrationModal() {
                           <div className="p-4">
                             <div className="flex gap-3">
                               <div className="size-[100px] rounded-lg border border-gray-6 shrink-0 overflow-hidden">
-                                <Image
+                                <ImageWithInitialFallback
                                   src={product.productImage}
                                   alt={product.productName}
-                                  width={100}
-                                  height={100}
-                                  className="object-cover w-full h-full"
+                                  name={product.productName}
+                                  sizes="100px"
+                                  fill
+                                  className="object-cover w-full h-full border-0"
                                 />
                               </div>
                               <div className="flex-1 flex flex-col justify-between py-2 min-w-0">
