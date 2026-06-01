@@ -29,7 +29,7 @@ const EVENT_TAB_ICON: Record<string, ComponentType<{ className?: string }>> = {
 export function EventTabLabel({ label }: { label: string }) {
   const Icon = EVENT_TAB_ICON[label];
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-2 md:px-4">
       {Icon ? <Icon className="size-4 shrink-0" /> : null}
       <span>{label}</span>
     </span>

@@ -8,7 +8,7 @@ import { Suspense, useEffect, useState, useMemo } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { userService } from "@/services";
-import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { buildRegistrationProducts } from "@/lib/registrationProducts";
 import { trackMetaPixel } from "@/lib/metaPixel";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -77,70 +77,37 @@ function CheckoutSucessoContent() {
       ? (PAYMENT_METHOD_LABELS[payment.method] ?? payment.method)
       : undefined;
 
-    // Distribui o subtotal igualmente entre inscrições para ter o preço por ingresso
-    const perTicketPrice =
+    /* Preço por ingresso: usa o `ticket.unitPrice` autoritativo do backend
+     * (centavos, SÓ o ingresso — ver order-details-response-spec.md §5). Antes
+     * diluíamos `subtotal / nº inscrições`, o que misturava produtos no preço do
+     * ingresso (produto de 1 ingresso aparecia rateado nos 2). Fallback p/ a
+     * diluição legada só quando o campo não vier (pedidos antigos). */
+    const ticketsHaveUnitPrice = registrations.some(
+      (reg: any) => typeof reg?.ticket?.unitPrice === "number",
+    );
+    const legacyPerTicketPrice =
       registrations.length > 0
         ? (order?.pricing?.subtotal ?? 0) / registrations.length / 100
         : 0;
 
     const participantsData = registrations.map((reg: any, index: number) => {
-      // `reg.products` = carrinho (produtos adicionais pagos). Shape:
-      // { product: {id, name, image, variationType}, variation: {name, price}, variationName, quantity, unitPrice, totalPrice }
-      const rawProducts = (reg.products || reg.additionalProducts || []) as any[];
-      const additionalProducts = rawProducts
-        .filter((item: any) => {
-          const variationName = item.variation?.name ?? item.variationName ?? null;
-          if (variationName && isSemInteresseVariation({ name: variationName })) return false;
-          return true;
-        })
-        .map((item: any) => {
-          const qty = item.quantity ?? 1;
-          const totalCents = item.totalPrice ?? (item.unitPrice ?? 0) * qty;
-          return {
-            name: item.product?.name ?? "Produto",
-            price: totalCents / 100,
-            quantity: qty,
-            variationName: item.variation?.name ?? item.variationName ?? null,
-            variationType: item.product?.variationType ?? null,
-            image: item.product?.image ?? null,
-          };
-        });
+      // Produtos normalizados pela MESMA fonte/shape que a tela de ingresso do
+      // usuário — a tab de Produtos (ParticipantProductsTab) é compartilhada.
+      const { includedProducts, additionalProducts } = buildRegistrationProducts(reg);
 
-      // Set de productIds que já aparecem no carrinho (`reg.products`).
-      // Esses NÃO entram em "Inclusos no ingresso" — senão duplica visualmente
-      // (o backend devolve o produto opcional comprado em ambas as listas).
-      const cartProductIds = new Set<string>(
-        rawProducts
-          .map((item: any) => item.product?.id)
-          .filter((id: any): id is string => typeof id === "string" && id.length > 0),
-      );
-
-      // `ticket.includedProducts` é o catálogo completo de produtos configurados
-      // pro ticket. Só os com `isIncludedInTicket === true` E que NÃO estejam
-      // no carrinho são truly bundled grátis.
-      const includedProducts = (reg.ticket?.includedProducts ?? [])
-        .filter((p: any) => {
-          if (p.isIncludedInTicket !== true) return false;
-          if (p.selectedVariation?.name && isSemInteresseVariation({ name: p.selectedVariation.name })) return false;
-          if (p.id && cartProductIds.has(p.id)) return false;
-          return true;
-        })
-        .map((p: any) => ({
-          name: p.name,
-          price: (p.basePrice ?? 0) / 100,
-          quantity: 1,
-          variationName: p.selectedVariation?.name ?? null,
-          variationType: p.variationType ?? null,
-          isIncluded: true,
-          isRequired: p.isRequired ?? true,
-          image: p.image ?? null,
-        }));
+      const ticketPrice =
+        typeof reg.ticket?.unitPrice === "number"
+          ? reg.ticket.unitPrice / 100
+          : ticketsHaveUnitPrice
+            ? 0 // payload novo, mas este ticket sem unitPrice → não inventa rateio
+            : legacyPerTicketPrice;
 
       return {
         participantIndex: index,
+        registrationId: reg.id ?? "",
         ticketName: reg.ticket?.name ?? "Ingresso",
         categoryName: reg.ticket?.category?.name ?? undefined,
-        ticketPrice: perTicketPrice,
+        ticketPrice,
         qrCode: reg.qrCode,
         includedProducts,
         additionalProducts,

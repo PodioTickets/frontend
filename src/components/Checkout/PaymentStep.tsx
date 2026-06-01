@@ -1372,18 +1372,30 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         );
         if (!product) return;
 
-        // Se o produto está incluído no ingresso, não cobrar
-        if (product.isIncludedInTicket) return;
-
         // Encontrar a variação selecionada
         const variation = product.variations?.find((v: any, i: number) =>
           (v.id || `${product.id}-${i}`) === variationId
         );
 
-        // Variação só sobrescreve basePrice quando tem preço próprio (> 0).
-        const variationPrice = Number(variation?.price ?? 0);
-        const basePrice = Number(product.basePrice ?? 0);
-        const price = variationPrice > 0 ? variationPrice : basePrice;
+        // "Sem interesse" (opt-out): não cobra nem lista em lugar nenhum.
+        if (variation && isSemInteresseVariation({ name: variation.name ?? "" })) return;
+
+        // Valor cobrável (centavos), MESMA regra do SubscriptionStep
+        // (`billableReaisForProductSelection`):
+        //  - incluso no ingresso: cobra só o UPGRADE quando a variação custa mais
+        //    que o base (`v - base`); variação ≤ base → 0 (já pago no ingresso).
+        //    Antes descartávamos TODO incluso — então um produto "incluso E
+        //    opcional" escolhido com upgrade sumia do resumo (aparecia "(1x)" em
+        //    vez de "(2x)").
+        //  - opcional puro: cobra a variação (ou o base se a variação não tem
+        //    preço próprio).
+        const variationPriceCents = Number(variation?.price ?? 0);
+        const basePriceCents = Number(product.basePrice ?? 0);
+        const price = product.isIncludedInTicket
+          ? Math.max(0, variationPriceCents - basePriceCents)
+          : variationPriceCents > 0
+            ? variationPriceCents
+            : basePriceCents;
 
         if (price > 0) {
           items.push({
