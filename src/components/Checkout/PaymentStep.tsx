@@ -66,6 +66,7 @@ import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
 import { useAuth } from "@/hooks/useAuth";
 import { PencilIcon } from "../Icons/PencilIcon";
+import { SummaryRow } from "./MobileSummaryBar";
 
 interface PaymentStepProps {
   event: Event;
