@@ -596,6 +596,12 @@ export function InformationStep({
       ({ participantIndex }) => savedParticipants[participantIndex],
     );
 
+  /* Algum participante expandido = usuário está preenchendo/editando. Enquanto
+   * isso o "Confirmar dados" some (só aparece com todos salvos E minimizados). */
+  const anyExpanded = participantsWithRaces.some(
+    ({ participantIndex }) => expandedParticipants[participantIndex],
+  );
+
   /* Eager-sync server-driven do cupom: a CADA "Salvar e próximo" de um
    * participante, envia o `PATCH /participants` com a lista PARCIAL dos já
    * salvos (o backend aceita lista parcial — §3.5 — sem liberar vagas) e dá
@@ -2659,9 +2665,9 @@ export function InformationStep({
             }
           )}
 
-          {/* Botão Confirmar dados — desabilitado até cada participante ter
-              clicado em "Salvar e próximo" (mesmo critério aplicado no CTA mobile). */}
-          {allParticipantsSaved && (
+          {/* Botão Confirmar dados — só aparece com TODOS salvos e minimizados;
+              some enquanto algum participante está expandido (sendo editado). */}
+          {allParticipantsSaved && !anyExpanded && (
             <div className="flex items-center justify-center w-full mt-6">
               <Button
                 onClick={() => {
@@ -2722,10 +2728,10 @@ export function InformationStep({
         }
         serviceFee={displayedServiceFee}
         total={totalAmountWithAge}
-        cta={{
+        cta={(allParticipantsSaved && !anyExpanded) ? {
           label: "Confirmar dados",
           loading: isSubmitting,
-          disabled: isSubmitting || !allParticipantsSaved,
+          disabled: isSubmitting,
           onClick: () => {
             if (participantsWithRaces.length === 0) return;
             const allErrors: Record<number, Record<string, string>> = {};
@@ -2752,7 +2758,7 @@ export function InformationStep({
             }
             onNext();
           },
-        }}
+        } : undefined}
       />
 
       {/* Modal para mostrar todos os ingressos */}
