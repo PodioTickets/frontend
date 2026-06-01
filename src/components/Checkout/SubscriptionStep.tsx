@@ -905,17 +905,27 @@ export function SubscriptionStep({
         const allProducts = [
           ...getRequiredProductsForParticipant(participantIndex),
           ...getAdditionalProductsForParticipant(participantIndex),
-        ].map((product) => {
-          const variation = getSelectedVariation(participantIndex, product);
-          const priceReais = billableReaisForProductSelection(product, variation);
-          return {
+        ]
+          .map((product) => ({
             product,
-            name: product.name,
-            priceReais,
-            size: variation?.name ?? null,
-            isIncluded: priceReais === 0,
-          };
-        });
+            variation: getSelectedVariation(participantIndex, product),
+          }))
+          // Só lista o produto depois que a variação foi escolhida (e não é "sem
+          // interesse"). Antes de selecionar/salvar nada, o detalhe não mostra
+          // produtos — evitava aparecer item do kit com "Tamanho: N/A".
+          .filter(
+            ({ variation }) => variation != null && !isSemInteresseVariation(variation),
+          )
+          .map(({ product, variation }) => {
+            const priceReais = billableReaisForProductSelection(product, variation);
+            return {
+              product,
+              name: product.name,
+              priceReais,
+              size: variation?.name ?? null,
+              isIncluded: priceReais === 0,
+            };
+          });
         const optional = allProducts.filter((p) => !p.isIncluded);
         const included = allProducts.filter((p) => p.isIncluded);
         const optionalTotal = optional.reduce((sum, p) => sum + p.priceReais, 0);
