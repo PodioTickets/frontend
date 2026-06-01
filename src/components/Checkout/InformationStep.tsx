@@ -2099,7 +2099,7 @@ export function InformationStep({
                           }}
                         >
                           <div className="flex flex-col gap-2 pb-3">
-                            <p className="text-sm text-gray-11">
+                            <p className="text-sm font-medium text-gray-12">
                               Participante {index + 1}
                             </p>
                             <div>
@@ -2116,14 +2116,6 @@ export function InformationStep({
                           </div>
 
                           <div className="flex items-center h-full gap-2 relative z-20">
-                            <div
-                              className={`px-3 py-1 rounded-full text-sm font-medium transition-opacity duration-300 ${isComplete
-                                ? "bg-primary-3 text-primary-12"
-                                : "bg-yellow-3 text-yellow-12"
-                                }`}
-                            >
-                              {isComplete ? "Concluído" : "Pendente"}
-                            </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
