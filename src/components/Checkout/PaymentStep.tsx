@@ -11,7 +11,6 @@ import {
   type CheckoutBillingAddress,
 } from "./CheckoutAddressSection";
 import { getPostalCodeConfig } from "@/utils/postalCode";
-import { MobileSummaryBar, SummaryRow } from "./MobileSummaryBar";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
@@ -2550,49 +2549,6 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           </>
         ) : null}
       </div>
-
-      {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
-      <MobileSummaryBar
-        eventName={event.name}
-        totalParticipants={totalParticipants}
-        tickets={groupedTickets.map((t) => ({
-          name: t.raceName,
-          quantity: t.quantity,
-          total: t.total,
-        }))}
-        subtotal={ticketSubtotalLocal + additionalProductsTotal}
-        discount={
-          isCouponApplied && couponDiscount > 0
-            ? {
-              label: `${isAutomaticCoupon
-                ? "Cupom automático"
-                : appliedCouponName
-                  ? `Cupom ${appliedCouponName}`
-                  : "Cupom"
-                }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}`,
-              amount: couponDiscount,
-            }
-            : isVoucherApplied && voucherDiscount > 0
-              ? {
-                label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
-                amount: voucherDiscount,
-              }
-              : null
-        }
-        additionalProducts={
-          additionalProductsCount > 0
-            ? { count: additionalProductsCount, total: additionalProductsTotal }
-            : null
-        }
-        serviceFee={serviceFee}
-        total={totalValue}
-        /* Sem CTA: no mobile o PaymentStep finaliza pelos botões do próprio
-         * formulário (Finalizar pedido/compra por método). A barra fixa aqui é
-         * só resumo — evita botão de finalizar duplicado/conflitante. */
-        extraDetails={paymentSummaryDetails}
-        open={summaryOpen}
-        onOpenChange={setSummaryOpen}
-      />
 
       {/* Desktop Layout */}
       <div className="hidden md:flex w-full items-start justify-between gap-11">
