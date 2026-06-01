@@ -76,7 +76,7 @@ export function PublishEventModal() {
                     Publicar evento?
                   </p>
                   <p className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans text-center">
-                    Ao publicar, seu evento ficará visível para o público e as inscrições poderão ser realizadas pela página do evento
+                    Ao publicar, seu evento será disponibilizado ao público, permitindo que os participantes realizem inscrições pela página do evento.
                   </p>
                 </div>
 
