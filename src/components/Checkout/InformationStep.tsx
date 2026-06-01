@@ -1792,7 +1792,7 @@ export function InformationStep({
 
   return (
     <>
-      <div className="w-full flex items-start gap-10 pb-24 md:pb-0">
+      <div className="w-full flex items-start gap-10 pb-52 md:pb-0">
         {/* Coluna esquerda - Formulários */}
         <div className="flex-1 flex flex-col gap-2 md:gap-6">
           {!previewMode && (
@@ -1984,7 +1984,7 @@ export function InformationStep({
                               <p className="text-sm text-gray-11 font-family-dm-sans mt-2">
                                 {categoryName.trim() || "Ingresso avulso"}
                               </p>
-                              <p className="font-bold text-2xl text-gray-12 mb-2">
+                              <p className="font-bold text-md md:text-2xl text-gray-12 mb-2">
                                 {ticket.name}
                               </p>
                             </div>

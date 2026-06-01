@@ -273,11 +273,10 @@ function ForgotPasswordNewPasswordPanel({
                 placeholder="Digite uma nova senha"
                 value={password}
                 onChange={(e) => onPasswordChange(e.target.value)}
-                className={`pl-10 pr-10 h-12 rounded-lg ${
-                  fieldErrors.password
+                className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.password
                     ? "border-red-9 focus-visible:border-red-9"
                     : ""
-                }`}
+                  }`}
                 aria-invalid={!!fieldErrors.password}
               />
               <button
@@ -311,11 +310,10 @@ function ForgotPasswordNewPasswordPanel({
                 placeholder="Digite sua senha novamente"
                 value={confirmPassword}
                 onChange={(e) => onConfirmPasswordChange(e.target.value)}
-                className={`pl-10 pr-10 h-12 rounded-lg ${
-                  fieldErrors.confirmPassword
+                className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.confirmPassword
                     ? "border-red-9 focus-visible:border-red-9"
                     : ""
-                }`}
+                  }`}
                 aria-invalid={!!fieldErrors.confirmPassword}
               />
               <button
@@ -477,7 +475,7 @@ export function LoginModal() {
       window.history.replaceState(null, "", window.location.pathname);
       openLoginModal();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const forgotResendTimerActive = forgotResendCooldown > 0;
@@ -1028,8 +1026,8 @@ export function LoginModal() {
                                 handleInputChange("email", e.target.value)
                               }
                               className={`pl-10 h-12 ${errors.email
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.email}
                             />
@@ -1056,8 +1054,8 @@ export function LoginModal() {
                                 handleInputChange("password", e.target.value)
                               }
                               className={`pl-10 pr-10 h-12 ${errors.password
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.password}
                             />
@@ -1167,18 +1165,6 @@ export function LoginModal() {
                           Criar conta
                         </button>
                       </div>
-
-                      {/* Terms and privacy */}
-                      <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
-                        Ao continuar você concorda com nossos{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Termos de serviço
-                        </button>{" "}
-                        e{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Política de privacidade
-                        </button>
-                      </p>
                     </div>
                   </div>
                 </>
@@ -1202,8 +1188,8 @@ export function LoginModal() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
               className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden max-h-[calc(100dvh-32px)] ${mfaToken || showForgotFlow
-                  ? "max-w-[460px] bg-transparent"
-                  : "max-w-[600px] bg-gray-1 overflow-y-auto"
+                ? "max-w-[460px] bg-transparent"
+                : "max-w-[600px] bg-gray-1 overflow-y-auto"
                 }`}
             >
               {mfaToken ? (
@@ -1288,8 +1274,8 @@ export function LoginModal() {
                                 handleInputChange("email", e.target.value)
                               }
                               className={`pl-10 h-12 ${errors.email
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.email}
                             />
@@ -1316,8 +1302,8 @@ export function LoginModal() {
                                 handleInputChange("password", e.target.value)
                               }
                               className={`pl-10 pr-10 h-12 ${errors.password
-                                  ? "border-red-9 focus-visible:border-red-9"
-                                  : ""
+                                ? "border-red-9 focus-visible:border-red-9"
+                                : ""
                                 }`}
                               aria-invalid={!!errors.password}
                             />

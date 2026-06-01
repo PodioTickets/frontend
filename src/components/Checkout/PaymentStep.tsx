@@ -2296,7 +2296,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       />
 
       {/* Mobile Layout */}
-      <div className="w-full md:hidden flex flex-col pb-24">
+      <div className="w-full md:hidden flex flex-col pb-52">
         {/* Instructional Text */}
         <div className="pb-6">
           <p className="text-sm text-gray-11 font-family-dm-sans">

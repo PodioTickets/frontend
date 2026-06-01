@@ -973,9 +973,9 @@ export function TicketCategoryCard({
             className="overflow-hidden transition-all duration-200 ease-out"
             style={{ maxHeight: isExpanded ? "10000px" : "0", opacity: isExpanded ? 1 : 0 }}
           >
-            <div className="px-4 pb-7 border-t border-gray-6 flex flex-col gap-6">
+            <div className="px-4 pb-7 border-t border-gray-6 flex flex-col gap-6 pt-6">
               {categoryDescription?.trim() ? (
-                <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3] pt-6">
+                <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3] ">
                   {categoryDescription.trim()}
                 </p>
               ) : null}

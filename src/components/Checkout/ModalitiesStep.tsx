@@ -409,7 +409,7 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   return (
     <>
       {/* Mobile Layout */}
-      <div className="w-full md:hidden pb-24 px-0">
+      <div className="w-full md:hidden pb-52 px-0">
         {/* Instruction Card */}
         <div className=" rounded-lg mb-4">
           <p className="text-sm text-gray-11">

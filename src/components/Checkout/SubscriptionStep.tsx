@@ -216,8 +216,7 @@ function ProductCard({
       <div className="bg-gray-2 border border-gray-6 rounded-xl">
         <div className="flex flex-col gap-3 p-4 border-b border-gray-6">
           {requiredSection && variationOptions.length > 0 && !selectedVariation && (
-            <span className="self-start inline-flex items-center gap-1.5 h-[27px] px-3 rounded-xl bg-[#fff7c2] border border-[#f3d673]">
-              <span className="size-1.5 rounded-full bg-[#4f3422]" />
+            <span className="self-start inline-flex items-center h-[27px] px-3 rounded-xl bg-[#fff7c2]">
               <span className="text-xs font-semibold leading-none text-[#4f3422]">Falta escolher a variação</span>
             </span>
           )}
@@ -252,8 +251,7 @@ function ProductCard({
   return (
     <div className="flex flex-col gap-3 border border-gray-6 rounded-lg p-4">
       {requiredSection && variationOptions.length > 0 && !selectedVariation && (
-        <span className="self-start inline-flex items-center gap-1.5 h-[27px] px-3 rounded-xl bg-[#fff7c2] border border-[#f3d673]">
-          <span className="size-1.5 rounded-full bg-[#4f3422]" />
+        <span className="self-start inline-flex items-center h-[27px] px-3 rounded-xl bg-[#fff7c2]">
           <span className="text-xs font-semibold leading-none text-[#4f3422]">Falta escolher a variação</span>
         </span>
       )}
@@ -606,19 +604,6 @@ export function SubscriptionStep({
     setSelectedParticipant(participantIndex);
   };
 
-  const toggleParticipant = (participantIndex: number) => {
-    setExpandedParticipants((prev) => {
-      const isCurrentlyExpanded = prev[participantIndex] || false;
-      if (!isCurrentlyExpanded) {
-        setSelectedParticipant(participantIndex);
-        return { [participantIndex]: true };
-      }
-      const newState = { ...prev };
-      delete newState[participantIndex];
-      return newState;
-    });
-  };
-
   const hasAllRequiredVariations = (participantIndex: number): boolean => {
     const allParticipantProducts = [
       ...getRequiredProductsForParticipant(participantIndex),
@@ -886,7 +871,7 @@ export function SubscriptionStep({
   return (
     <>
       {/* Mobile Layout */}
-      <div className="w-full md:hidden flex flex-col pb-24">
+      <div className="w-full md:hidden flex flex-col pb-52">
         <div className="pb-4 md:pb-0 md:py-6">
           <p className="text-sm text-gray-11">
             Configure os itens do seu kit antes de seguir para a etapa de conclusão da inscrição.
@@ -1009,31 +994,13 @@ export function SubscriptionStep({
                   className={`transition-all duration-300 ease-in-out ${isExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0 overflow-hidden pointer-events-none"}`}
                 >
                   <div className="p-4 border-b border-gray-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <h2 className="text-lg font-extrabold text-gray-12">
-                          Participante {participantIndex + 1}
-                        </h2>
-                        <div
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${isCompleted ? "bg-primary-3 text-primary-12" : "bg-yellow-3 text-yellow-12"}`}
-                        >
-                          {isCompleted ? "Concluído" : "Pendente"}
-                        </div>
-                      </div>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleParticipant(participantIndex);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="border border-gray-6"
-                      >
-                        Minimizar
-                      </Button>
+                    <div className="flex items-center">
+                      <h2 className="text-lg font-extrabold text-gray-12">
+                        Participante {participantIndex + 1}
+                      </h2>
                     </div>
 
-                    <div className="py-5 border-b border-gray-6">
+                    <div className="pb-4 pt-2 border-b border-gray-6">
                       {getAdditionalProductsCount(participantIndex) > 0 && (
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-sm font-semibold text-gray-12">
