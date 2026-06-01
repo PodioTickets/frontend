@@ -13,6 +13,7 @@ import { CopyIcon } from "@/components/Icons/CopyIcon";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import toast from "react-hot-toast";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { useCreateCouponModal, useDeleteCouponModal } from "@/stores/modalStore";
@@ -176,7 +177,7 @@ export default function CouponsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
+    return formatDateBR(dateString, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

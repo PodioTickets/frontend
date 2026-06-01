@@ -10,16 +10,17 @@ import {
 } from "@/components/ui/drawer";
 import { X } from "lucide-react";
 import type { AdminAuditLogItem } from "@/services/admin/AdminService";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = d.toLocaleDateString("pt-BR", {
+  const date = formatDateBR(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = d.toLocaleTimeString("pt-BR", {
+  const time = formatTimeBR(iso, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",

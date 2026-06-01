@@ -7,6 +7,7 @@ import { cn } from "@/utils/cn";
 import { userService } from "@/services";
 import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 interface ProductVariation {
   id: string;
@@ -82,7 +83,7 @@ function computeBanner(
       : { type: "expired", text: "Prazo de edição encerrado" };
   }
 
-  const deadlineStr = deadline.toLocaleDateString("pt-BR", {
+  const deadlineStr = formatDateBR(deadline, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

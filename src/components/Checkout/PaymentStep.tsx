@@ -13,6 +13,7 @@ import {
 import { getPostalCodeConfig } from "@/utils/postalCode";
 import { MobileSummaryBar, SummaryRow } from "./MobileSummaryBar";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { VisaIcon } from "../Icons/VisaIcon";
@@ -2129,11 +2130,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const formatDateShort = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   if (loading) {

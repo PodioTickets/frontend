@@ -26,6 +26,7 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 import { Pagination } from '../Pagination';
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 import { CancelOrderModal } from './CancelOrderModal';
 import { OrderApiError } from '@/interfaces/order';
 
@@ -299,13 +300,7 @@ export function PaymentDetailsModal() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
     try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
-      return `${day}/${month}/${year} - ${hours}:${minutes}`;
+      return `${formatDateBR(dateString)} - ${formatTimeBR(dateString)}`;
     } catch {
       return "";
     }
@@ -319,11 +314,7 @@ export function PaymentDetailsModal() {
   const formatBirthDate = (dateString?: string) => {
     if (!dateString) return "";
     try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
+      return formatDateBR(dateString);
     } catch {
       return "";
     }

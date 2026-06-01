@@ -10,6 +10,7 @@ import { ShareIcon } from "@/components/Icons/ShareIcon";
 import { ShareModal } from "@/components/ShareModal";
 import type { Event } from "@/interfaces/event";
 import { cn } from "@/utils/cn";
+import { formatDateBR, formatDateTimeBR } from "@/utils/datetimeBR";
 import { resolveCheckoutModalityIconSrc } from "@/utils/checkoutModalityDisplay";
 import {
   formatBrazilianPhone,
@@ -63,13 +64,13 @@ function useEventRegistrationUiState(event: Event) {
 
     const registrationOpensDateText =
       registrationsNotOpenYet && registrationOpensAt
-        ? new Intl.DateTimeFormat("pt-BR", {
+        ? formatDateTimeBR(registrationOpensAt, {
           day: "numeric",
           month: "long",
-          ...(registrationOpensAt.getFullYear() !== new Date().getFullYear()
+          ...(registrationOpensAt.getUTCFullYear() !== new Date().getUTCFullYear()
             ? { year: "numeric" }
             : {}),
-        }).format(registrationOpensAt)
+        })
         : "";
 
     const registrationSlotsSoldOut =
@@ -106,19 +107,19 @@ function useEventRegistrationUiState(event: Event) {
 }
 
 function formatDateShort(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return formatDateBR(date, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(date));
+  });
 }
 
 function formatDateLong(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return formatDateBR(date, {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  }).format(new Date(date));
+  });
 }
 
 type EventPublicInfoCardProps = {

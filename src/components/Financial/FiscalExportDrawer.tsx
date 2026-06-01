@@ -30,6 +30,7 @@ import { PaymentItemDetailsDrawer } from "./PaymentItemDetailsDrawer";
 import { Tooltip } from "../Tooltip";
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
 import { isPersonBr, formatDocumentDisplay } from "@/utils/documentDisplay";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 type PaymentDetailsItem = {
   orderId: string;
@@ -46,7 +47,7 @@ const buildPaymentItem = (order: FiscalOrder): PaymentDetailsItem => {
   const date = new Date(order.purchaseDate);
   const formattedDate = Number.isNaN(date.getTime())
     ? order.purchaseDate
-    : date.toLocaleDateString("pt-BR", {
+    : formatDateBR(order.purchaseDate, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -104,11 +105,11 @@ const formatCurrency = (cents: number) =>
 const formatPurchaseDate = (iso: string) => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return { day: "—", time: "" };
-  const day = date.toLocaleDateString("pt-BR", {
+  const day = formatDateBR(iso, {
     day: "2-digit",
     month: "short",
   }).replace(".", "");
-  const time = date.toLocaleTimeString("pt-BR", {
+  const time = formatTimeBR(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });

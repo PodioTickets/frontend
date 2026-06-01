@@ -9,6 +9,7 @@ import { LoadingAnimation } from "@/components/Loading";
 import { Button } from "@/components/Button";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { AdminCollaboratorDrawer, type AdminMember } from "@/components/Admin/AdminCollaboratorDrawer";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,7 +30,7 @@ function formatLastAccess(iso: string | null | undefined) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} • ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  return `${formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" })} • ${formatTimeBR(iso, { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function memberInitials(m: Member) {

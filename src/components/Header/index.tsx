@@ -15,6 +15,7 @@ import { LanguageToggle } from "../LanguageToggle";
 import { modalitiesColumns } from "@/constants";
 import { eventService } from "@/services";
 import { useModalStore } from "@/stores/modalStore";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { User, LogOut, X, Globe } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
@@ -114,7 +115,7 @@ export function Header() {
             let date: string | undefined;
             const rawDate = e.eventDate || e.event_date;
             if (rawDate) {
-              date = new Date(rawDate).toLocaleDateString("pt-BR", {
+              date = formatDateBR(rawDate, {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",

@@ -10,6 +10,7 @@ import { DistanceIcon } from "../Icons/DistanceIcon";
 import { ProductCardGallery } from "./ProductCardGallery";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 interface Product {
   id: string;
@@ -99,11 +100,11 @@ export function ParticipantSummaryModal({
 
   const formatDate = (date?: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   const formatPrice = (price: number) => {

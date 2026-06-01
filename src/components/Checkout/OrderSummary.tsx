@@ -6,6 +6,7 @@ import { TicketIcon } from "../Icons/TicketIcon";
 import { StarIcon } from "../Icons/StarIcon";
 import type { Event } from "@/interfaces/event";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
 
 interface OrderItem {
@@ -141,11 +142,11 @@ export function OrderSummary({
 
   const formatDate = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   const getGenderLabel = (gender?: string) => {

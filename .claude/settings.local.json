@@ -115,7 +115,8 @@
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em sucesso \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"sucesso\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em PaymentStep/sucesso \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"PaymentStep|sucesso\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em PaymentDetailsModal/PaymentItemDetailsDrawer \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"PaymentDetailsModal|PaymentItemDetailsDrawer\" }\\) -join \"`n\"; \"--- fim ---\")",
-      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em InstallmentsDrawer \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"InstallmentsDrawer\" }\\) -join \"`n\"; \"--- fim ---\")"
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em InstallmentsDrawer \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"InstallmentsDrawer\" }\\) -join \"`n\"; \"--- fim ---\")",
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; $touched = 'AdminAuditLogTab','AdminAuditLogDetailsDrawer','NotificationDetailDrawer','OrganizerEditDrawer','SystemAuditLogTab','EventNotificationsPanel','BannerSection','PaymentDetailsModal','ViewVoucherModal'; $hits = $touched | ForEach-Object { $f=$_; \\($out -split \"`n\"\\) | Where-Object { $_ -match $f } }; \"Touched-file errors: $\\($hits.Count\\)\"; $hits)"
     ]
   },
   "disabledMcpjsonServers": [

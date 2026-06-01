@@ -8,6 +8,7 @@ import { modalitiesColumns } from "@/constants";
 import Image from "next/image";
 import { useState, useCallback } from "react";
 import { itemInitialLetter } from "@/utils/itemInitial";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 export interface Ticket {
   id: string;
@@ -56,8 +57,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("pt-BR", {
+    return formatDateBR(dateString, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

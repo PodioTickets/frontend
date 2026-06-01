@@ -19,6 +19,7 @@ import { organizerService } from "@/services";
 import type { Transfer } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
 import { Pagination } from "../Pagination";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 interface TransferHistoryDrawerProps {
   isOpen: boolean;
@@ -78,9 +79,8 @@ export function TransferHistoryDrawer({
   };
 
   const formatTransferForDisplay = (transfer: Transfer) => {
-    const date = new Date(transfer.createdAt);
-    const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const formattedTime = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const formattedDate = formatDateBR(transfer.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" });
+    const formattedTime = formatTimeBR(transfer.createdAt, { hour: "2-digit", minute: "2-digit" });
     const id = transfer.id
     return {
       id: `#${id.slice(0, 6)}...${id.slice(-4)}`,
@@ -525,8 +525,8 @@ export function TransferHistoryDrawer({
           eventId={eventId}
           transfer={{
             id: selectedTransfer.id,
-            requestDate: new Date(selectedTransfer.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }),
-            requestTime: new Date(selectedTransfer.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+            requestDate: formatDateBR(selectedTransfer.createdAt, { day: "2-digit", month: "short", year: "numeric" }),
+            requestTime: formatTimeBR(selectedTransfer.createdAt, { hour: "2-digit", minute: "2-digit" }),
             value: selectedTransfer.amount / 100,
             status: selectedTransfer.status === "COMPLETED" ? "Concluído" :
               selectedTransfer.status === "PROCESSING" ? "Processando" :

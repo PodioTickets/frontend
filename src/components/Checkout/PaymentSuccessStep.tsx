@@ -13,6 +13,7 @@ import { EventInfoCard } from "@/components/Event/EventInfoCard";
 import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 interface PaymentSuccessStepProps {
   event: Event;
@@ -139,11 +140,11 @@ export function PaymentSuccessStep({
 
   const formatDate = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   const formatCurrency = (value: number) => {

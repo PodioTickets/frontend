@@ -25,6 +25,7 @@ import {
   formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -91,17 +92,11 @@ export function PaymentItemDetailsDrawer({
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "—";
-    try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
-      return `${day}/${month}/${year} - ${hours}:${minutes}`;
-    } catch {
-      return dateString;
-    }
+    // UTC, sem shift de fuso. Mantém o formato "dd/mm/yyyy - HH:mm".
+    const day = formatDateBR(dateString, { day: "2-digit", month: "2-digit", year: "numeric" });
+    if (!day) return dateString;
+    const time = formatTimeBR(dateString, { hour: "2-digit", minute: "2-digit" });
+    return `${day} - ${time}`;
   };
 
   const formatGender = (gender?: string | null) => {
@@ -171,15 +166,8 @@ export function PaymentItemDetailsDrawer({
   /** Só a data (dd/mm/yyyy) — `formatDate` inclui hora, que não cabe em "Data de nascimento". */
   const formatBirthDate = (dateString?: string | null) => {
     if (!dateString) return "—";
-    try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch {
-      return dateString;
-    }
+    // UTC, sem shift de fuso. Só a data (dd/mm/yyyy).
+    return formatDateBR(dateString, { day: "2-digit", month: "2-digit", year: "numeric" }) || dateString;
   };
 
   const handleCopy = (text: string) => {

@@ -21,6 +21,7 @@ import { TimerIcon } from "../Icons/Organizer/TimerIcon";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
 import { Tooltip } from "../Tooltip";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 interface InstallmentsDrawerProps {
   isOpen: boolean;
@@ -86,8 +87,7 @@ export function InstallmentsDrawer({
   };
 
   const formatInstallmentForDisplay = (installment: Installment, registrationId?: string) => {
-    const date = new Date(installment.dueDate);
-    const formattedDate = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const formattedDate = formatDateBR(installment.dueDate, { day: "2-digit", month: "2-digit", year: "numeric" });
     const paymentId = installment.paymentId || installment.orderId;
 
     return {

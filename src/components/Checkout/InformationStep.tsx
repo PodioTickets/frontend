@@ -34,6 +34,7 @@ import toast from "react-hot-toast";
 import { Loading } from "../Loading";
 import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { OrderApiError } from "@/interfaces/order";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { FlagIcon } from "../Icons/FlagIcon";
@@ -1097,20 +1098,20 @@ export function InformationStep({
   };
 
   const formatDate = (date: string) => {
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "long",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   const formatDateShort = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   /* Idade na DATA DO EVENTO a partir de uma data de nascimento ISO. Mesmo

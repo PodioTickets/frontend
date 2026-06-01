@@ -15,15 +15,13 @@ import {
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(dateString: string) {
   if (!dateString) return "";
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${day}/${month}/${date.getFullYear()}`;
+  return formatDateBR(dateString);
 }
 
 function StatusPill({ done }: { done: boolean }) {

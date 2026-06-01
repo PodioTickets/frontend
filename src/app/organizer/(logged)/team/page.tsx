@@ -14,6 +14,7 @@ import { SystemAuditLogTab } from "@/components/Organizer/SystemAuditLogTab";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { cn } from "@/utils/cn";
 import { isCurrentUserOrganizationOwner } from "@/utils/organizationOwner";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -21,12 +22,12 @@ function formatLastAccess(iso: string | null | undefined) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = d.toLocaleDateString("pt-BR", {
+  const date = formatDateBR(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = d.toLocaleTimeString("pt-BR", {
+  const time = formatTimeBR(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });

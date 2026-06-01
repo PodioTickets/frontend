@@ -7,6 +7,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { organizerService } from "@/services";
 import type { OrganizationAuditLogItem } from "@/services/organizer/OrganizerService";
 import toast from "react-hot-toast";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 export type SystemLogEntry = OrganizationAuditLogItem;
 
@@ -45,12 +46,12 @@ function getVisiblePaginationPages(
 function formatLogDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const date = d.toLocaleDateString("pt-BR", {
+  const date = formatDateBR(iso, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const time = d.toLocaleTimeString("pt-BR", {
+  const time = formatTimeBR(iso, {
     hour: "2-digit",
     minute: "2-digit",
   });

@@ -22,6 +22,7 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { Tooltip } from "../Tooltip";
 import { BookIcon } from "../Icons/BookIcon";
 import { FinancialDetailsMobile, type FinancialDetailsItem } from "./FinancialDetailsMobile";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 interface RefundedDrawerProps {
   isOpen: boolean;
@@ -112,13 +113,12 @@ export function RefundedDrawer({
   const totalPages = pagination.totalPages;
 
   const formatRefundedForDisplay = (item: RefundedItem) => {
-    const date = new Date(item.refundDate);
-    const formattedDate = date.toLocaleDateString("pt-BR", {
+    const formattedDate = formatDateBR(item.refundDate, {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
-    const formattedTime = date.toLocaleTimeString("pt-BR", {
+    const formattedTime = formatTimeBR(item.refundDate, {
       hour: "2-digit",
       minute: "2-digit",
     });
