@@ -103,7 +103,8 @@
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em InformationStep \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"InformationStep\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em events/[slug] ou layout \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"events.\\\\[slug\\\\]|\\\\[slug\\\\].layout\" }\\) -join \"`n\"; \"--- fim ---\")",
       "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em layout/events \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"app.layout|events.\\\\[slug\\\\]|\\\\[slug\\\\]\" }\\) -join \"`n\"; \"--- contagem total erros TS ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"error TS\" }\\).Count)",
-      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em MobileSummaryBar/ModalitiesStep \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"MobileSummaryBar|ModalitiesStep\" }\\) -join \"`n\"; \"--- fim ---\")"
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em MobileSummaryBar/ModalitiesStep \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"MobileSummaryBar|ModalitiesStep\" }\\) -join \"`n\"; \"--- fim ---\")",
+      "PowerShell($out = npx tsc --noEmit 2>&1 | Out-String; \"EXIT=$LASTEXITCODE\"; \"--- erros em MobileSummaryBar/OrderSummary/PaymentStep \\(vazio = OK\\) ---\"; \\($out -split \"`r?`n\" | Where-Object { $_ -match \"MobileSummaryBar|OrderSummary|PaymentStep\" }\\) -join \"`n\"; \"--- fim ---\")"
     ]
   },
   "disabledMcpjsonServers": [

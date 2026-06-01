@@ -72,6 +72,13 @@ export interface MobileSummaryBarProps {
    * O bottom-sheet de detalhes é idêntico nos dois.
    */
   variant?: "full" | "compact";
+  /**
+   * Controle EXTERNO do bottom-sheet (opcional). Permite que um irmão (ex.: o
+   * "Ver detalhes" do `OrderSummary` no PaymentStep) abra o mesmo sheet. Se
+   * `open` for fornecido, o componente fica controlado; senão usa estado interno.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const formatPrice = (price: number) =>
@@ -116,17 +123,27 @@ export function MobileSummaryBar({
   cta,
   extraDetails,
   variant = "compact",
+  open: controlledOpen,
+  onOpenChange,
 }: MobileSummaryBarProps) {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname()
+  const [internalOpen, setInternalOpen] = useState(false);
+  // Controlado se `open` foi passado; senão usa o estado interno.
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      onOpenChange?.(next);
+      if (controlledOpen === undefined) setInternalOpen(next);
+    },
+    [controlledOpen, onOpenChange],
+  );
   // Portal só monta no client (document indisponível no SSR), igual ao padrão
   // de modais do projeto.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const closeSheet = useCallback(() => setOpen(false), []);
+  const closeSheet = useCallback(() => setOpen(false), [setOpen]);
   // A aba "Ver detalhes" alterna o sheet (abre/fecha no mesmo controle).
-  const toggleSheet = useCallback(() => setOpen((prev) => !prev), []);
+  const toggleSheet = useCallback(() => setOpen(!open), [setOpen, open]);
 
   // Drag-to-dismiss: o gesto é disparado SÓ pelo header/grabber (via
   // dragControls + dragListener={false}) pra não competir com o scroll do

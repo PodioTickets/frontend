@@ -373,7 +373,7 @@ export function CheckoutAddressSection({
   return (
     <div
       className={cn(
-        "border border-gray-6 rounded-xl p-5 flex flex-col gap-6 w-full bg-gray-1",
+        "border border-gray-6 rounded-lg p-5 flex flex-col gap-6 w-full bg-gray-1",
         className
       )}
     >
@@ -389,9 +389,6 @@ export function CheckoutAddressSection({
             <CountrySearchSelect
               value={values.country}
               onChange={(country) => {
-                // Limpa código postal e estado: ambos são específicos do país
-                // (formato do CEP / lista de UFs vs. texto livre). Um valor
-                // remanescente ficaria inválido ou passaria na validação errada.
                 onChange({ country, cep: "", stateUf: "" });
                 clearError("country");
                 clearError("cep");

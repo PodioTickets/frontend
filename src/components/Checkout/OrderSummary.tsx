@@ -6,6 +6,7 @@ import { TicketIcon } from "../Icons/TicketIcon";
 import { StarIcon } from "../Icons/StarIcon";
 import type { Event } from "@/interfaces/event";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
+import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
 
 interface OrderItem {
   name: string;
@@ -78,9 +79,13 @@ interface OrderSummaryProps {
   total: number;
   coupon: OrderSummaryCoupon;
   voucher?: OrderSummaryVoucher;
+  totalParticipants?: number;
   participantsData?: ParticipantData[];
   onParticipantClick?: (participantIndex: number) => void;
   event: Event;
+  /** Abre o bottom-sheet de detalhes (mobile). Quando fornecido, exibe o link
+   *  "Ver detalhes" — o sheet em si vive no `MobileSummaryBar` (componente irmão). */
+  onShowDetails?: () => void;
 }
 
 export function OrderSummary({
@@ -91,9 +96,11 @@ export function OrderSummary({
   total,
   coupon,
   voucher,
+  totalParticipants,
   participantsData = [],
   onParticipantClick,
   event,
+  onShowDetails,
 }: OrderSummaryProps) {
   const {
     code: externalCouponCode = "",
@@ -174,17 +181,19 @@ export function OrderSummary({
   return (
     <div className="flex flex-col gap-6 w-full">
       {/* Seção de Valores */}
-      <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] p-6">
-        <div className="flex flex-col gap-3 pb-6">
-          <p className="font-manrope font-bold text-xl leading-[1.1] text-gray-12 mb-2">
+      <div className="bg-gray-2 rounded-lg border md:border-0 border-gray-6 md:shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] p-4 md:p-6">
+        <div className="flex flex-col gap-1 md:gap-3 pb-6">
+          <p className="font-manrope font-bold text-lg md:text-xl leading-[1.1] text-gray-12 mb-2">
             {event.name}
           </p>
 
-          {/* Ingressos da compra — nomes acima de itens adicionais e cupom,
-              espelhando o resumo da etapa /informacoes. `groupedTickets` vem
-              da order (server-driven); `total` já é o valor cobrado da linha. */}
+          <div className="flex md:hidden items-center justify-between text-sm text-gray-12">
+            <p className="font-manrope font-medium md:font-semibold">Participantes:</p>
+            <p className="font-manrope font-semibold md:font-bold">{totalParticipants}</p>
+          </div>
+
           {groupedTickets.length > 0 && (
-            <div className="flex flex-col gap-2">
+            <div className="hidden md:flex flex-col gap-2">
               {groupedTickets.map((ticket, index) => (
                 <div
                   key={index}
@@ -194,11 +203,11 @@ export function OrderSummary({
                     <p className="font-family-dm-sans font-normal text-sm leading-[1.3] text-gray-11 truncate">
                       {ticket.categoryName || "Ingresso avulso"}
                     </p>
-                    <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12 truncate">
-                     ({ticket.quantity}x) {ticket.raceName}
+                    <p className="font-manrope font-medium md:font-semibold text-sm leading-[1.1] text-gray-12 truncate">
+                      ({ticket.quantity}x) {ticket.raceName}
                     </p>
                   </div>
-                  <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12 shrink-0">
+                  <p className="font-manrope font-medium md:font-semibold text-sm leading-[1.1] text-gray-12 shrink-0">
                     {formatPrice(ticket.total)}
                   </p>
                 </div>
@@ -208,14 +217,14 @@ export function OrderSummary({
 
           {/* Itens adicionais */}
           {items.length > 0 && (
-            <div className="flex gap-8 items-center">
+            <div className="hidden md:flex gap-8 items-center">
               <div className="flex flex-1 flex-col">
-                <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12">
+                <p className="font-manrope font-medium md:font-semibold text-sm leading-[1.1] text-gray-12">
                   ({items.length}x) {items.length > 1 ? "Itens adicionais" : "Item adicional"}:
                 </p>
               </div>
               <div className="flex flex-col items-end">
-                <p className="font-manrope font-semibold text-sm leading-[1.1] text-gray-12">
+                <p className="font-manrope font-medium md:font-semibold text-sm leading-[1.1] text-gray-12">
                   {formatPrice(productsSubtotal)}
                 </p>
               </div>
@@ -226,15 +235,15 @@ export function OrderSummary({
           {/* Subtotal só com mais de um ingresso diferente pra somar. */}
           {groupedTickets.length > 1 && (
             <div className="flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-semibold">Subtotal:</p>
-              <p className="font-manrope font-bold">{formatPrice(subtotal)}</p>
+              <p className="font-manrope font-medium md:font-semibold">Subtotal:</p>
+              <p className="font-manrope font-semibold md:font-bold">{formatPrice(subtotal)}</p>
             </div>
           )}
 
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (
             <div className="flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-semibold">
+              <p className="font-manrope font-medium md:font-semibold">
                 {couponType === "QUANTITY" || couponType === "AGE"
                   ? "Cupom automático"
                   : couponName
@@ -245,7 +254,7 @@ export function OrderSummary({
                   : ""}
                 :
               </p>
-              <p className="font-manrope font-bold">
+              <p className="font-manrope font-semibold md:font-bold">
                 -{formatPrice(couponDiscount)}
               </p>
             </div>
@@ -254,10 +263,10 @@ export function OrderSummary({
           {/* Voucher aplicado */}
           {voucherCode && voucherDiscount > 0 && (
             <div className="flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-semibold">
+              <p className="font-manrope font-medium md:font-semibold">
                 {voucherCode ? `Voucher ${voucherCode}` : "Voucher aplicado"}:
               </p>
-              <p className="font-manrope font-bold">
+              <p className="font-manrope font-semibold md:font-bold">
                 -{formatPrice(voucherDiscount)}
               </p>
             </div>
@@ -266,29 +275,38 @@ export function OrderSummary({
           {/* Taxa de serviço — só renderiza quando > 0 */}
           {serviceFee > 0 && (
             <div className="flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-semibold">Taxa de serviço:</p>
-              <p className="font-manrope font-bold">
+              <p className="font-manrope font-medium md:font-semibold">Taxa de serviço:</p>
+              <p className="font-manrope font-semibold md:font-bold">
                 {formatPrice(serviceFee)}
               </p>
             </div>
+          )}
+          {onShowDetails && (
+            <button
+              type="button"
+              onClick={onShowDetails}
+              className="md:hidden flex items-center justify-center text-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer"
+            >
+              Ver detalhes <SeeDetailsIcon />
+            </button>
           )}
 
         </div>
 
         {/* Total */}
-        <div className="border-t border-gray-6 flex font-manrope font-bold items-center justify-between py-6 text-xl text-gray-12">
+        <div className="border-t border-gray-6 flex font-manrope font-bold items-center justify-between py-4 md:py-6 text-base text-gray-12">
           <p>Total:</p>
           <p>{formatPrice(total)}</p>
         </div>
 
         {/* Campo Cupom */}
-        <div className="border-t border-gray-8 flex flex-col gap-5 items-end justify-center pt-6">
+        <div className="md:border-t border-gray-8 flex flex-col gap-5 items-end justify-center md:pt-6">
           <div className="flex flex-col items-start w-full">
             <div className="flex gap-3 items-center w-full">
               <div className="border-[1.5px] border-gray-8 flex flex-1 h-12 items-center px-3 rounded-lg">
                 <input
                   type="text"
-                  placeholder="Código de cupom (opcional)"
+                  placeholder="Código de cupom"
                   value={couponCode}
                   onChange={(e) => {
                     const value = e.target.value.toUpperCase().substring(0, 30);
@@ -317,7 +335,7 @@ export function OrderSummary({
       </div>
 
       {/* Resumo da Compra */}
-      <div className="bg-gray-2 rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] overflow-hidden">
+      <div className="bg-gray-2 hidden md:block rounded-lg shadow-[0px_2px_6px_0px_rgba(17,17,17,0.15)] overflow-hidden">
         <div className="flex flex-col items-start px-4 py-1">
           <div className="flex items-center justify-center py-4 w-full">
             <p className="font-family-dm-sans font-semibold text-xl leading-[1.3] text-gray-12">
