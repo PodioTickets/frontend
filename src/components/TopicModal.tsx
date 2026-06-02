@@ -1206,6 +1206,10 @@ export function TopicModal() {
         scriptSrcs = embedScriptSrcsRef.current;
       }
 
+      // Defesa: `innerHTML = undefined` coage pra a string "undefined" e contamina
+      // o conteúdo salvo (depois aparece "undefined" na lista/prévia). Garante string.
+      if (typeof renderableHtml !== "string") renderableHtml = "";
+
       // Imagens em data: URL (coladas pelo usuário) — fazer upload antes de salvar.
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = renderableHtml;
