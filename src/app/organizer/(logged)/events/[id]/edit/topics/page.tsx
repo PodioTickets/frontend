@@ -272,7 +272,7 @@ export default function EditTopicsPage() {
       setSections((prev) =>
         prev.map((s) =>
           s.id === topicId
-            ? { ...s, title: topicData.title, content: topicData.content }
+            ? { ...s, title: topicData.title, content: topicData.content ?? "" }
             : s
         )
       );
@@ -287,7 +287,7 @@ export default function EditTopicsPage() {
         {
           id: newPendingTopicId(),
           title: topicData.title,
-          content: topicData.content,
+          content: topicData.content ?? "",
           allowDelete: true,
           variant: "topic",
         },
@@ -308,7 +308,7 @@ export default function EditTopicsPage() {
       setSections((prev) =>
         prev.map((s) =>
           !s.allowDelete
-            ? { ...s, title: titleToSave, content: topicData.content }
+            ? { ...s, title: titleToSave, content: topicData.content ?? "" }
             : s
         )
       );
@@ -321,7 +321,7 @@ export default function EditTopicsPage() {
       setSections((prev) =>
         prev.map((s) =>
           s.id === topicId
-            ? { ...s, title: topicData.title, content: topicData.content }
+            ? { ...s, title: topicData.title, content: topicData.content ?? "" }
             : s
         )
       );
