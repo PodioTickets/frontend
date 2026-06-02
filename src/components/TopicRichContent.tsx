@@ -9,7 +9,10 @@ interface TopicRichContentProps {
 
 const injectedScriptSrcs = new Set<string>();
 
-export function TopicRichContent({ html, className }: TopicRichContentProps) {
+export function TopicRichContent({ html: rawHtml, className }: TopicRichContentProps) {
+  // Nunca renderiza a string "undefined"/"null": `DOMParser.parseFromString(undefined)`
+  // coage o argumento pra "undefined" e exibe esse texto literal. Normaliza pra "".
+  const html = typeof rawHtml === "string" ? rawHtml : "";
   // Start with the raw html so server and client render the same thing (no hydration mismatch).
   // The useEffect below replaces Quill code blocks with real HTML on the client.
   const [renderedHtml, setRenderedHtml] = useState(html);
