@@ -62,37 +62,60 @@ export type TopicsPreviewDraftV1 = {
 
 const TOPICS_PREVIEW_STORAGE_KEY = "podiotickets.organizerTopicsPreview.v1";
 
+/**
+ * Fallback em memória (módulo-level). O módulo NÃO é recriado em navegação
+ * client-side do Next (tópicos → prévia → voltar = mesma sessão JS), então
+ * este valor sobrevive ao round-trip da prévia mesmo se o sessionStorage
+ * falhar (quota estourada por conteúdo grande, modo privado, etc.).
+ *
+ * Era exatamente a causa do bug "as alterações somem ao voltar da prévia":
+ * o `setItem` lançava em silêncio (catch vazio) e o draft sumia. Com o
+ * fallback em memória, o draft NUNCA se perde no round-trip.
+ */
+let memoryDraft: TopicsPreviewDraftV1 | null = null;
+
+function isValidDraft(
+  d: TopicsPreviewDraftV1 | null,
+  eventId: string,
+): d is TopicsPreviewDraftV1 {
+  return (
+    !!d && d.v === 1 && d.eventId === eventId && Array.isArray(d.sections)
+  );
+}
+
 export function writeTopicsPreviewDraft(draft: TopicsPreviewDraftV1): void {
+  // Memória primeiro — sempre funciona, sem quota. Garante a preservação
+  // mesmo que o sessionStorage abaixo falhe.
+  memoryDraft = draft;
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(TOPICS_PREVIEW_STORAGE_KEY, JSON.stringify(draft));
   } catch {
-    /* quota / modo privado */
+    /* quota / modo privado — o fallback em memória cobre a navegação client-side */
   }
 }
 
 export function readTopicsPreviewDraft(
   eventId: string,
 ): TopicsPreviewDraftV1 | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(TOPICS_PREVIEW_STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as TopicsPreviewDraftV1;
-    if (
-      data?.v !== 1 ||
-      data.eventId !== eventId ||
-      !Array.isArray(data.sections)
-    ) {
-      return null;
+  // 1) sessionStorage (sobrevive a full reload). 2) memória (sobrevive a
+  // falha do sessionStorage no round-trip client-side).
+  if (typeof window !== "undefined") {
+    try {
+      const raw = sessionStorage.getItem(TOPICS_PREVIEW_STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw) as TopicsPreviewDraftV1;
+        if (isValidDraft(data, eventId)) return data;
+      }
+    } catch {
+      /* ignore — cai no fallback de memória */
     }
-    return data;
-  } catch {
-    return null;
   }
+  return isValidDraft(memoryDraft, eventId) ? memoryDraft : null;
 }
 
 export function clearTopicsPreviewDraft(): void {
+  memoryDraft = null;
   if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem(TOPICS_PREVIEW_STORAGE_KEY);
