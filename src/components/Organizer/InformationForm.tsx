@@ -450,6 +450,20 @@ export function InformationForm({
               </div>
 
               <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
+                <label className="text-gray-12 text-base font-family-dm-sans">Estado</label>
+                <SearchableSelect
+                  options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${name} - ${uf}` }))}
+                  value={values.state ?? ""}
+                  onChange={(val) => { onChange({ state: val, city: "" }); if (errors.state) onErrorsChange((prev) => ({ ...prev, state: "" })); if (errors.city) onErrorsChange((prev) => ({ ...prev, city: "" })); }}
+                  placeholder="Selecione o estado"
+                  searchPlaceholder="Pesquisar estado..."
+                  emptyText="Nenhum estado encontrado"
+                  error={!!errors.state}
+                />
+                {errors.state && <p className="text-red-10 text-sm">{errors.state}</p>}
+              </div>
+
+              <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
                 <label className="text-gray-12 text-base font-family-dm-sans">Cidade</label>
                 <SearchableSelect
                   options={stateCities.map((c) => ({ id: c, label: c }))}
@@ -466,19 +480,7 @@ export function InformationForm({
                 {errors.city && <p className="text-red-10 text-sm">{errors.city}</p>}
               </div>
 
-              <div className="flex flex-col gap-2 w-full md:min-w-[365px] md:flex-1">
-                <label className="text-gray-12 text-base font-family-dm-sans">Estado</label>
-                <SearchableSelect
-                  options={BRAZIL_STATES.map(({ uf, name }) => ({ id: uf, label: `${name} - ${uf}` }))}
-                  value={values.state ?? ""}
-                  onChange={(val) => { onChange({ state: val, city: "" }); if (errors.state) onErrorsChange((prev) => ({ ...prev, state: "" })); if (errors.city) onErrorsChange((prev) => ({ ...prev, city: "" })); }}
-                  placeholder="Selecione o estado"
-                  searchPlaceholder="Pesquisar estado..."
-                  emptyText="Nenhum estado encontrado"
-                  error={!!errors.state}
-                />
-                {errors.state && <p className="text-red-10 text-sm">{errors.state}</p>}
-              </div>
+
 
               <div className="flex flex-col gap-2 w-full">
                 <div className="flex items-center gap-1.5 flex-wrap">

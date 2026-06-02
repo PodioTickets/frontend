@@ -114,10 +114,10 @@ export function CreateQuestionModal() {
   };
 
   const handleRemoveOption = (index: number) => {
-    if (options.length > 2) {
+    if (options.length > 1) {
       setOptions(options.filter((_, i) => i !== index));
     } else {
-      toast.error("É necessário ter pelo menos 2 opções");
+      toast.error("É necessário ter pelo menos 1 opção");
     }
   };
 
@@ -149,15 +149,10 @@ export function CreateQuestionModal() {
       return;
     }
 
-    if ((type === "select" || type === "multiple_choice") && options.length < 2) {
-      toast.error("Adicione pelo menos 2 opções");
-      return;
-    }
-
-    if ((type === "select" || type === "multiple_choice")) {
+    if (type === "select" || type === "multiple_choice") {
       const validOptions = options.filter(opt => opt.trim() !== "");
-      if (validOptions.length < 2) {
-        toast.error("Preencha pelo menos 2 opções");
+      if (validOptions.length < 1) {
+        toast.error("Preencha pelo menos 1 opção");
         return;
       }
     }
@@ -432,8 +427,8 @@ export function CreateQuestionModal() {
                               </h3>
                               <p className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
                                 {type === "select"
-                                  ? "O participante pode marcar mais de uma opção entre as que você cadastrar. Adicione pelo menos 2 opções."
-                                  : "O participante escolhe apenas uma opção entre as listadas. Adicione pelo menos 2 opções."}
+                                  ? "O participante pode marcar mais de uma opção entre as que você cadastrar. Adicione pelo menos 1 opção."
+                                  : "O participante escolhe apenas uma opção entre as listadas. Adicione pelo menos 1 opção."}
                               </p>
                             </div>
                           </div>
