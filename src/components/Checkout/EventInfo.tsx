@@ -212,21 +212,21 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     () =>
       useVoucher
         ? computeTicketPricingWithDiscount(
-            voucherDiscount,
+          voucherDiscount,
+          totalPrice,
+          event.participantFeePercent ?? 0,
+        )
+        : ageCoupon
+          ? computeTicketPricingWithDiscount(
+            ageDiscount,
             totalPrice,
             event.participantFeePercent ?? 0,
           )
-        : ageCoupon
-          ? computeTicketPricingWithDiscount(
-              ageDiscount,
-              totalPrice,
-              event.participantFeePercent ?? 0,
-            )
           : computeTicketPricingWithCoupon(
-              resolvedCoupon,
-              totalPrice,
-              event.participantFeePercent ?? 0,
-            ),
+            resolvedCoupon,
+            totalPrice,
+            event.participantFeePercent ?? 0,
+          ),
     [useVoucher, voucherDiscount, ageCoupon, ageDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
@@ -311,16 +311,14 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
             </p>
           )}
         </div>
+        <div className="mt-4 flex items-center justify-between w-full text-sm text-gray-12">
+          <p className="font-semibold">Subtotal:</p>
+          <p className="font-bold">{formatPrice(totalPrice)}</p>
+        </div>
 
         {groupedTickets.length > 0 && (
           <>
-            {/* Subtotal só quando há mais de um ingresso diferente pra somar. */}
-            {groupedTickets.length > 1 && (
-              <div className="mt-4 flex items-center justify-between w-full text-sm text-gray-12">
-                <p className="font-semibold">Subtotal:</p>
-                <p className="font-bold">{formatPrice(totalPrice)}</p>
-              </div>
-            )}
+
             {hasCouponLine ? (
               <div className="mt-2 flex items-center justify-between w-full text-sm text-gray-12">
                 <p className="font-semibold">{discountLineLabel}:</p>

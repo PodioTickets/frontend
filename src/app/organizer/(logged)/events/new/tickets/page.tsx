@@ -182,13 +182,13 @@ export default function IngressosPage() {
               "Posição das imagens atualizada. Use «Confirmar ingressos» abaixo para gravar no evento.",
           }}
           actionSlot={(ticketCount) => (
-            <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleOpenPreview}
                 disabled={ticketCount === 0 || !eventId}
-                className="h-14 w-full rounded-lg border-gray-6 font-manrope text-lg font-bold text-gray-12 sm:h-12 sm:w-auto sm:px-8 sm:text-base disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg sm:px-8 font-manrope text-gray-12 border-gray-6 text-lg sm:text-base font-bold disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Prévia
               </Button>
@@ -197,7 +197,7 @@ export default function IngressosPage() {
                 onClick={() => void handleConfirmIngressos()}
                 variant="default"
                 disabled={savingConfirm || ticketCount === 0}
-                className="h-14 w-full rounded-lg font-manrope text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:px-10 sm:text-[20px]"
+                className="rounded-lg font-manrope text-lg sm:text-base font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:px-8"
               >
                 {savingConfirm ? "Salvando..." : "Confirmar ingressos"}
               </Button>

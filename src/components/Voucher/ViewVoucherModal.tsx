@@ -7,6 +7,7 @@ import { X, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { organizerService } from "@/services";
 import toast from "react-hot-toast";
 import { useClipboard } from "@/hooks/useClipboard";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { CopyIcon } from "@/components/Icons/CopyIcon";
 import { Button } from "@/components/Button";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -180,7 +181,7 @@ export function ViewVoucherModal() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Sem validade";
-    return new Date(dateString).toLocaleDateString("pt-BR", {
+    return formatDateBR(dateString, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

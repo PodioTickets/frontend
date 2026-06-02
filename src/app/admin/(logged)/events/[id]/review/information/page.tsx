@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useRef, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { useEditEvent } from "@/contexts/EditEventContext";
+import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { Button } from "@/components/Button";
+import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { InformationForm } from "@/components/Organizer/InformationForm";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
@@ -25,7 +27,6 @@ const INFORMATION_FIELDS = [
 export default function ReviewInformationPage() {
   const params = useParams();
   const eventId = params.id as string;
-  const router = useRouter();
   const { authChecked } = useWizardAuth();
   const { formData, updateFormData, errors, setErrors, loading: eventLoading } = useEditEvent();
   const [saving, setSaving] = useState(false);
@@ -98,10 +99,6 @@ export default function ReviewInformationPage() {
     }
   };
 
-  const handleBack = () => {
-    router.push("/admin/auditoria-evento");
-  };
-
   const cepDigits = (formData.cep ?? "").replace(/\D/g, "");
   const isFormValid =
     !!formData.name?.trim() &&
@@ -123,7 +120,29 @@ export default function ReviewInformationPage() {
 
   const canSave = isFormValid && hasChanges;
 
+  /* Descarta as edições locais re-aplicando o baseline (`initialDataRef`) sobre
+   * o `formData` do contexto (compartilhado entre os steps via layout) + limpa
+   * erros. Sem o reset, a edição não salva vazaria para os demais passos. */
+  const discardLocalChanges = useCallback(() => {
+    if (initialDataRef.current) updateFormData(initialDataRef.current);
+    setErrors({});
+  }, [updateFormData, setErrors]);
+
+  /* Guarda de saída: histórico/popstate + beforeunload + interceptação de
+   * cliques em links (stepper) enquanto houver alterações não salvas.
+   * `handleBack` (no botão voltar) e `navigateTarget` levam à auditoria. */
+  const {
+    leavePromptOpen,
+    handleBack,
+    confirmLeaveWithoutSaving,
+    dismissLeavePrompt,
+  } = useUnsavedLeaveGuard(hasChanges, {
+    navigateTarget: `/admin/auditoria-evento`,
+    onDiscard: discardLocalChanges,
+  });
+
   return (
+    <>
     <WizardStepLayout
       title="Informações"
       onBack={handleBack}
@@ -163,5 +182,14 @@ export default function ReviewInformationPage() {
         onHasPendingPdfChange={setHasPendingPdf}
       />
     </WizardStepLayout>
+
+    <UnsavedChangesModal
+      open={leavePromptOpen}
+      onClose={dismissLeavePrompt}
+      title="Alterações não salvas"
+      description="Você fez alterações nas informações do evento. Se sair agora, elas serão perdidas."
+      onLeaveWithoutSaving={confirmLeaveWithoutSaving}
+    />
+    </>
   );
 }

@@ -7,6 +7,7 @@ import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { queryKeys } from "@/services/cache/QueryClient";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
+import { formatTimeBR } from "@/utils/datetimeBR";
 import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -48,8 +49,8 @@ function formatDate(iso?: string | null): { date: string; time: string } {
   if (Number.isNaN(d.getTime())) return { date: "—", time: "" };
   const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   return {
-    date: `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]}, ${d.getFullYear()}`,
-    time: d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    date: `${String(d.getUTCDate()).padStart(2, "0")} ${months[d.getUTCMonth()]}, ${d.getUTCFullYear()}`,
+    time: formatTimeBR(iso, { hour: "2-digit", minute: "2-digit" }),
   };
 }
 

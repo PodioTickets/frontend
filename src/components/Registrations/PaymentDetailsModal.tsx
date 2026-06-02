@@ -26,6 +26,7 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 import { Pagination } from '../Pagination';
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 import { CancelOrderModal } from './CancelOrderModal';
 import { OrderApiError } from '@/interfaces/order';
 
@@ -156,9 +157,20 @@ export function PaymentDetailsModal() {
     totalAmount: paymentDetails.payment?.totalAmount || registration?.finalAmount || 0,
     purchaseDate: paymentDetails.payment?.purchaseDate || paymentDetails.payment?.paymentDate || registration?.purchaseDate || "",
     gateway: paymentDetails.payment?.gateway || "Gateway",
-    installments: paymentDetails.payment?.installments && paymentDetails.payment?.installmentValue
-      ? `${paymentDetails.payment.installments}x de ${formatPrice(paymentDetails.payment.installmentValue / 100)}`
-      : "À vista",
+    /* Parcelamento: o backend manda `installments` mas nem sempre o
+     * `installmentValue`. Quando >1 parcela, derivamos o valor da parcela do
+     * total (`totalAmount / installments`) se o valor unitário não vier. ≤1
+     * parcela → "À vista". Antes exigia AMBOS os campos e caía sempre em "À
+     * vista" mesmo com installments=3. */
+    installments: (() => {
+      const n = paymentDetails.payment?.installments ?? 0;
+      if (n <= 1) return "À vista";
+      const totalCents = paymentDetails.payment?.totalAmount ?? 0;
+      const perCents =
+        paymentDetails.payment?.installmentValue ??
+        (totalCents > 0 ? Math.round(totalCents / n) : 0);
+      return perCents > 0 ? `${n}x de ${formatPrice(perCents / 100)}` : `${n}x`;
+    })(),
     authorizationCode: paymentDetails.payment?.authorizationCode || "—",
     transactionId: paymentDetails.transactionId || "—",
     nsu: paymentDetails.payment?.nsu || "—",
@@ -288,13 +300,7 @@ export function PaymentDetailsModal() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
     try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
-      return `${day}/${month}/${year} - ${hours}:${minutes}`;
+      return `${formatDateBR(dateString)} - ${formatTimeBR(dateString)}`;
     } catch {
       return "";
     }
@@ -308,11 +314,7 @@ export function PaymentDetailsModal() {
   const formatBirthDate = (dateString?: string) => {
     if (!dateString) return "";
     try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
+      return formatDateBR(dateString);
     } catch {
       return "";
     }

@@ -8,22 +8,21 @@ import type { Event } from "@/interfaces/event";
 import { getAvatarUrl } from "@/utils/avatar";
 import { getEventOrganizer } from "@/utils/organization";
 import { cn } from "@/utils/cn";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 
 interface EventCardProps {
   event: Event;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
-
 export function EventCard({ event }: EventCardProps) {
   const formattedDate = useMemo(() => {
     if (!event?.eventDate) return "";
-    return dateFormatter?.format?.(new Date(event?.eventDate));
+    return formatDateBR(event.eventDate, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   }, [event?.eventDate]);
 
   const eventRealizationPassed = useMemo(() => {

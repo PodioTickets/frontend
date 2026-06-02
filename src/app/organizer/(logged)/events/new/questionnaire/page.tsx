@@ -104,10 +104,7 @@ export default function QuestionnairePage() {
           type="button"
           onClick={goFinanceiro}
           variant="default"
-          className={cn(
-            "h-[52px] px-11 font-manrope text-lg font-bold text-gray-12",
-            "max-md:h-12 max-md:w-full max-md:px-4",
-          )}
+          className="rounded-lg font-manrope text-lg sm:text-base font-bold disabled:cursor-not-allowed disabled:opacity-50 sm:px-8"
         >
           Próximo
         </Button>

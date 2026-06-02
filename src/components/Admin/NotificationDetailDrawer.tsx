@@ -8,6 +8,7 @@ import { cn } from "@/utils/cn";
 import { getApiClient } from "@/services/base/ApiClient";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 type NotificationStatus = "review" | "sent" | "denied";
 
@@ -37,7 +38,7 @@ function formatDateShort(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {

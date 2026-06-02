@@ -1,14 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { organizerService, adminService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
+import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { Button } from "@/components/Button";
+import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { FinancialSection } from "@/components/Organizer/FinancialSection";
 import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
+
+type FinancialBaseline = {
+  organizerPercent: number;
+  maxInstallments: 1 | 2 | 3;
+  totalFee: number;
+};
+
+const DEFAULT_BASELINE: FinancialBaseline = {
+  organizerPercent: 4,
+  maxInstallments: 1,
+  totalFee: 6,
+};
 
 export default function ReviewFinancialPage() {
   const params = useParams();
@@ -17,9 +31,13 @@ export default function ReviewFinancialPage() {
   const { authChecked } = useWizardAuth();
   const [dataLoaded, setDataLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [organizerPercent, setOrganizerPercent] = useState(4);
-  const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
-  const [totalFee, setTotalFee] = useState<number>(6);
+  const [organizerPercent, setOrganizerPercent] = useState(DEFAULT_BASELINE.organizerPercent);
+  const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(DEFAULT_BASELINE.maxInstallments);
+  const [totalFee, setTotalFee] = useState<number>(DEFAULT_BASELINE.totalFee);
+
+  // Baseline do GET inicial — usado só pelo guard de saída (não trava o botão
+  // de publicar, que deve funcionar mesmo sem alterar a taxa).
+  const baselineRef = useRef<FinancialBaseline | null>(null);
 
   useEffect(() => {
     if (!authChecked || !eventId) return;
@@ -29,14 +47,13 @@ export default function ReviewFinancialPage() {
         setOrganizerPercent(organizerFeePercent);
         setMaxInstallments(mi);
         setTotalFee(tf);
+        baselineRef.current = { organizerPercent: organizerFeePercent, maxInstallments: mi, totalFee: tf };
       })
-      .catch(() => { /* fallback to defaults */ })
+      .catch(() => {
+        baselineRef.current = { ...DEFAULT_BASELINE };
+      })
       .finally(() => setDataLoaded(true));
   }, [authChecked, eventId]);
-
-  const handleBack = () => {
-    router.push(`/admin/events/${eventId}/review/questionnaire`);
-  };
 
   const handleSave = async () => {
     if (!eventId) return;
@@ -54,7 +71,37 @@ export default function ReviewFinancialPage() {
     }
   };
 
+  const baseline = baselineRef.current;
+  const hasChanges =
+    baseline !== null &&
+    (organizerPercent !== baseline.organizerPercent ||
+      maxInstallments !== baseline.maxInstallments ||
+      totalFee !== baseline.totalFee);
+
+  /* Descarta as edições locais, restaurando o baseline (GET inicial). */
+  const discardLocalChanges = useCallback(() => {
+    const b = baselineRef.current;
+    if (!b) return;
+    setOrganizerPercent(b.organizerPercent);
+    setMaxInstallments(b.maxInstallments);
+    setTotalFee(b.totalFee);
+  }, []);
+
+  /* Guarda de saída: histórico/popstate + beforeunload + interceptação de
+   * cliques em links (stepper). `handleBack` (botão voltar) e `navigateTarget`
+   * levam à etapa anterior (questionário). */
+  const {
+    leavePromptOpen,
+    handleBack,
+    confirmLeaveWithoutSaving,
+    dismissLeavePrompt,
+  } = useUnsavedLeaveGuard(hasChanges, {
+    navigateTarget: `/admin/events/${eventId}/review/questionnaire`,
+    onDiscard: discardLocalChanges,
+  });
+
   return (
+    <>
     <WizardStepLayout
       title="Pagamento"
       onBack={handleBack}
@@ -85,5 +132,14 @@ export default function ReviewFinancialPage() {
         onTotalFeeChange={setTotalFee}
       />
     </WizardStepLayout>
+
+    <UnsavedChangesModal
+      open={leavePromptOpen}
+      onClose={dismissLeavePrompt}
+      title="Alterações não salvas"
+      description="Você alterou a configuração financeira. Se sair agora, as alterações serão perdidas."
+      onLeaveWithoutSaving={confirmLeaveWithoutSaving}
+    />
+    </>
   );
 }

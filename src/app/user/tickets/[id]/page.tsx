@@ -12,8 +12,8 @@ import { ClockIcon } from "@/components/Icons/ClockIcon";
 import { EventInfoCard } from "@/components/Event/EventInfoCard";
 import { RegistrationQRCode } from "@/components/QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
-import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
-import { ProductVariationCard, type IncludedProduct } from "@/components/Ticket/ProductVariationCard";
+import { buildRegistrationProducts } from "@/lib/registrationProducts";
+import { ParticipantProductsTab } from "@/components/Checkout/ParticipantProductsTab";
 import { Tooltip } from "@/components/Tooltip";
 import { formatPhoneForCountry } from "@/utils/phone";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
@@ -144,72 +144,31 @@ export default function TicketDetailsPage() {
   const participants = useMemo(() => {
     if (!orderData) return [];
     const registrations = orderData.registrations || [];
-    // Preço por ingresso: o endpoint não dá valor por unidade, então distribui o
-    // subtotal igualmente entre as inscrições — mesma regra da tela de sucesso
-    // (`checkout/sucesso`). Em centavos → reais.
-    const perTicketPrice =
+    /* Preço por ingresso: usa o `ticket.unitPrice` autoritativo do backend
+     * (centavos, SÓ o ingresso — ver order-details-response-spec.md §5). Antes
+     * diluía `subtotal / nº inscrições`, misturando produtos no preço do ingresso
+     * (produto de 1 ingresso aparecia rateado nos 2). Fallback p/ a diluição
+     * legada só quando o campo não vier (pedidos antigos). */
+    const ticketsHaveUnitPrice = registrations.some(
+      (reg: any) => typeof reg?.ticket?.unitPrice === "number",
+    );
+    const legacyPerTicketPrice =
       registrations.length > 0
         ? (orderData.order?.pricing?.subtotal ?? 0) / registrations.length / 100
         : 0;
     return registrations.map((reg: any) => {
       const p = reg.participant || {};
       const ticket = reg.ticket || {};
+      const perTicketPrice =
+        typeof ticket.unitPrice === "number"
+          ? ticket.unitPrice / 100
+          : ticketsHaveUnitPrice
+            ? 0
+            : legacyPerTicketPrice;
 
-      // O backend manda TODOS os produtos do participante em `reg.products`
-      // (inclusos no ingresso + opcionais comprados), cada item já com os dados
-      // de edição de variação: `product` (catálogo, com `isIncludedInTicket`),
-      // `variation` (selecionada), `variations` (opções), `buyerVariationEditAllowed`,
-      // `canEditVariation`, `variationEdited` e `variationEditDeadline` (ISO).
-      // Diferenciamos incluso × opcional pela flag `product.isIncludedInTicket`.
-      const rawProducts = (reg.products || reg.additionalProducts || []) as any[];
-
-      // Normaliza um item do carrinho pro shape consumido pelo ProductVariationCard.
-      // `price` é o valor exibido: 0/base pro incluso, valor pago (unitPrice) pro opcional.
-      const toIncludedProduct = (item: any, price: number): IncludedProduct => {
-        const prod = item.product || {};
-        return {
-          // O endpoint de update é keyed pelo id do PRODUTO (catálogo).
-          id: prod.id ?? item.id,
-          name: prod.name ?? "Produto",
-          image: prod.image,
-          basePrice: price,
-          variationType: prod.variationType,
-          buyerVariationEditAllowed: item.buyerVariationEditAllowed === true,
-          canEditVariation: item.canEditVariation === true,
-          variationEdited: item.variationEdited === true,
-          variationEditDeadline: item.variationEditDeadline,
-          selectedVariation: item.variation
-            ? {
-                id: item.variation.id,
-                name: item.variation.name,
-                price: item.variation.price ?? 0,
-              }
-            : undefined,
-          variations: item.variations,
-        };
-      };
-
-      // Esconde variação "sem interesse" (opt-out de produto opcional).
-      const visibleProducts = rawProducts.filter((item: any) => {
-        const variationName = item.variation?.name ?? item.variationName ?? null;
-        return !(variationName && isSemInteresseVariation({ name: variationName }));
-      });
-
-      const includedProducts: IncludedProduct[] = visibleProducts
-        .filter((item: any) => item.product?.isIncludedInTicket === true)
-        .map((item: any) => toIncludedProduct(item, item.product?.basePrice ?? 0));
-
-      // Alteração de variação é permitida SOMENTE para produtos INCLUSOS no
-      // ingresso. Produtos adicionais (opcionais comprados) não podem trocar a
-      // variação — forçamos as flags em false aqui, escondendo botão "Alterar"
-      // e banner de prazo (o catálogo do incluso segue com as flags do backend).
-      const additionalProducts: IncludedProduct[] = visibleProducts
-        .filter((item: any) => item.product?.isIncludedInTicket !== true)
-        .map((item: any) => ({
-          ...toIncludedProduct(item, item.unitPrice ?? item.product?.basePrice ?? 0),
-          buyerVariationEditAllowed: false,
-          canEditVariation: false,
-        }));
+      // Produtos (inclusos + adicionais) normalizados pela MESMA fonte que a tela
+      // de pagamento concluído usa — ver lib/registrationProducts.
+      const { includedProducts, additionalProducts } = buildRegistrationProducts(reg);
 
       return {
         id: reg.id,
@@ -237,6 +196,30 @@ export default function TicketDetailsPage() {
     if (!orderData?.event) return null;
     return orderData.event;
   }, [orderData]);
+
+  /* Agrupa ingressos IDÊNTICOS (mesma categoria + nome + preço) numa linha
+   * "(Nx) Nome" no resumo de valores. Preserva ordem de 1ª aparição. */
+  const groupedTicketLines = useMemo(() => {
+    const map = new Map<
+      string,
+      { categoryName?: string; ticketName: string; quantity: number; total: number }
+    >();
+    for (const participant of participants as any[]) {
+      const t = participant.ticket || {};
+      const categoryName = t?.category?.name ?? undefined;
+      const ticketName = t.name || "Ingresso";
+      const unit = participant.ticketPrice ?? 0;
+      const key = `${categoryName ?? ""}|${ticketName}|${unit}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.quantity += 1;
+        existing.total += unit;
+      } else {
+        map.set(key, { categoryName, ticketName, quantity: 1, total: unit });
+      }
+    }
+    return Array.from(map.values());
+  }, [participants]);
 
   /* Mantém o skeleton enquanto o fetch da order roda — o `loading.tsx` do Next
    * só cobre a navegação; após o RSC chegar, o estado client começa em loading
@@ -562,50 +545,12 @@ export default function TicketDetailsPage() {
                       )}
 
                       {tab === "products" && (
-                        <div className="flex flex-col gap-8">
-                          {participant.includedProducts.length > 0 && (
-                            <div className="flex flex-col gap-4">
-                              <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                                Incluídos no ingresso
-                              </h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-                                {participant.includedProducts.map((product: IncludedProduct) => (
-                                  <ProductVariationCard
-                                    key={product.id}
-                                    product={product}
-                                    orderCreatedAt={order.createdAt}
-                                    registrationId={participant.id}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {participant.additionalProducts.length > 0 && (
-                            <div className="flex flex-col gap-4">
-                              <h3 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
-                                Adicionais
-                              </h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-                                {participant.additionalProducts.map((product: IncludedProduct) => (
-                                  <ProductVariationCard
-                                    key={product.id}
-                                    product={product}
-                                    orderCreatedAt={order.createdAt}
-                                    registrationId={participant.id}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {participant.includedProducts.length === 0 &&
-                            participant.additionalProducts.length === 0 && (
-                              <p className="text-base text-gray-11 font-family-dm-sans">
-                                Nenhum produto para este participante.
-                              </p>
-                            )}
-                        </div>
+                        <ParticipantProductsTab
+                          includedProducts={participant.includedProducts}
+                          additionalProducts={participant.additionalProducts}
+                          registrationId={participant.id}
+                          orderCreatedAt={order.createdAt}
+                        />
                       )}
                     </div>
                   )}
@@ -679,30 +624,41 @@ export default function TicketDetailsPage() {
 
               {/* Seção 2: valores — linhas com borda individual */}
               <div className="flex flex-col gap-2">
-                {/* Ingressos — uma linha por participante (categoria + nome +
-                    preço), acima do Subtotal. Preço = subtotal / nº inscrições
-                    (o endpoint não dá valor por unidade). */}
-                {participants.map((participant: any, index: number) => {
-                  const t = participant.ticket || {};
-                  return (
-                    <div
-                      key={participant.id || index}
-                      className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3"
-                    >
-                      <span className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-xs text-gray-11 font-family-dm-sans leading-[1.3] truncate">
-                          {t?.category?.name ?? "Ingresso avulso"}
-                        </span>
-                        <span className="text-base font-semibold text-gray-12 font-manrope leading-[1.2] break-words">
-                          {t.name || "Ingresso"}
-                        </span>
+                {/* Produtos adicionais — linha agregada (centavos do backend). */}
+                {(pricing.productsSubtotal ?? 0) > 0 && (
+                  <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
+                    <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                      Produtos adicionais:
+                    </p>
+                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
+                      {formatPrice(pricing.productsSubtotal ?? 0)}
+                    </p>
+                  </div>
+                )}
+
+
+                {/* Ingressos — agrupados por tipo idêntico "(Nx) Nome", acima do
+                    Subtotal. Preço = `ticket.unitPrice` do backend (só o
+                    ingresso, sem produtos). */}
+                {groupedTicketLines.map((line, lineIndex) => (
+                  <div
+                    key={lineIndex}
+                    className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3"
+                  >
+                    <span className="flex flex-col gap-0.5 min-w-0">
+                      <span className="text-xs text-gray-11 font-family-dm-sans leading-[1.3] truncate">
+                        {line.categoryName ?? "Ingresso avulso"}
                       </span>
-                      <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right shrink-0">
-                        {formatPrice((participant.ticketPrice ?? 0) * 100)}
-                      </p>
-                    </div>
-                  );
-                })}
+                      <span className="text-base font-semibold text-gray-12 font-manrope leading-[1.2] break-words">
+                        {line.quantity > 1 ? `(${line.quantity}x) ` : ""}{line.ticketName}
+                      </span>
+                    </span>
+                    <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right shrink-0">
+                      {formatPrice(line.total * 100)}
+                    </p>
+                  </div>
+                ))}
+
 
                 <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
@@ -713,15 +669,7 @@ export default function TicketDetailsPage() {
                   </p>
                 </div>
 
-                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
-                    Taxa de serviço:
-                  </p>
-                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
-                    {formatPrice(pricing.serviceFee ?? 0)}
-                  </p>
-                </div>
-
+                {/* Cupom/voucher ANTES da taxa (taxa por último). */}
                 {(pricing.discount ?? 0) > 0 && (() => {
                   const coupon = order.coupon ?? null;
                   const voucher = order.voucher ?? null;
@@ -737,7 +685,7 @@ export default function TicketDetailsPage() {
                       : coupon?.code
                         ? `Cupom ${coupon.code}`
                         : "Cupom"
-                      }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
+                    }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}:`;
 
                   return (
                     <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
@@ -750,6 +698,15 @@ export default function TicketDetailsPage() {
                     </div>
                   );
                 })()}
+
+                <div className="border border-gray-6 rounded-lg p-4 flex items-center justify-between gap-3">
+                  <p className="text-base font-semibold text-gray-12 font-manrope leading-[1.1]">
+                    Taxa de serviço:
+                  </p>
+                  <p className="text-base font-bold text-gray-12 font-manrope leading-[1.1] text-right">
+                    {formatPrice(pricing.serviceFee ?? 0)}
+                  </p>
+                </div>
               </div>
             </div>
 

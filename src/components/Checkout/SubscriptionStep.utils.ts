@@ -1,4 +1,5 @@
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 export interface Product {
   id: string;
@@ -157,11 +158,11 @@ export const parseVariationKey = (key: string): { participantIndex: number; prod
 
 export const formatDateShort = (date: string) => {
   if (!date) return "";
-  return new Intl.DateTimeFormat("pt-BR", {
+  return formatDateBR(date, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(date));
+  });
 };
 
 export const maskCPF = (cpf: string) => {
@@ -170,9 +171,9 @@ export const maskCPF = (cpf: string) => {
 };
 
 export const formatDate = (date: string) => {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return formatDateBR(date, {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  }).format(new Date(date));
+  });
 };

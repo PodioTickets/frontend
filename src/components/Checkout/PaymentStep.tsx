@@ -11,7 +11,9 @@ import {
   type CheckoutBillingAddress,
 } from "./CheckoutAddressSection";
 import { getPostalCodeConfig } from "@/utils/postalCode";
+import { MobileSummaryBar, SummaryRow } from "./MobileSummaryBar";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { Button } from "../Button";
 import { Dropdown, DropdownOption } from "../Dropdown";
 import { VisaIcon } from "../Icons/VisaIcon";
@@ -66,7 +68,6 @@ import { CheckoutCardErrorModal } from "./CheckoutCardErrorModal";
 import { Checkbox } from "@/components/CheckBox";
 import { useAuth } from "@/hooks/useAuth";
 import { PencilIcon } from "../Icons/PencilIcon";
-import { SummaryRow } from "./MobileSummaryBar";
 
 interface PaymentStepProps {
   event: Event;
@@ -688,14 +689,14 @@ function BillingAddressConfirmedSummary({
 }) {
   return (
     <div
-      className={`border border-gray-6 rounded-lg p-4 md:p-5 flex flex-col gap-4 w-full bg-gray-1 ${className}`}
+      className={`border border-gray-6 rounded-lg p-4 md:p-5 flex flex-col w-full bg-gray-1 ${className}`}
     >
-      <div className="flex md:flex-wrap items-center md:items-start justify-between gap-3">
+      <div className="flex md:flex-wrap items-center md:items-center justify-between gap-3">
         <div>
           <h2 className="font-manrope font-bold text-sm md:text-xl leading-[1.1] text-gray-12 pb-1 md:pb-0">
             Endereço
           </h2>
-          <p className="text-gray-11 text-sm">
+          <p className="md:hidden text-gray-11 text-sm">
             {[
               [address.street, address.number].filter(Boolean).join(", "),
               [address.city, address.stateUf].filter(Boolean).join(" - "),
@@ -705,23 +706,26 @@ function BillingAddressConfirmedSummary({
           </p>
         </div>
 
-        <div onClick={onEdit} className="p-2 border border-gray-6 rounded-lg text-gray-11">
+        <div onClick={onEdit} className="md:hidden p-2 border border-gray-6 rounded-lg text-gray-11">
           <PencilIcon className="size-4" />
         </div>
+        <Button onClick={onEdit} variant="outline" className="md:flex hidden border-gray-6 text-gray-12">
+          Alterar endereço
+        </Button>
       </div>
       <div className="hidden md:block text-sm text-gray-12 font-family-dm-sans leading-[1.4] space-y-1">
         <p>
           {address.street}, {address.number}
           {address.complement?.trim()
-            ? ` — ${address.complement.trim()}`
+            ? ` - ${address.complement.trim()}`
             : ""}
         </p>
         <p>
-          {address.neighborhood?.trim() ? `${address.neighborhood} — ` : ""}
+          {address.neighborhood?.trim() ? `${address.neighborhood} - ` : ""}
           {address.city}
           {address.stateUf ? `/${address.stateUf}` : ""}
         </p>
-        <p className="text-gray-11">
+        <p className="text-gray-12">
           {address.country?.trim() && address.country !== "Brasil"
             ? `Código postal ${address.cep} · ${address.country}`
             : `CEP ${address.cep}`}
@@ -1369,18 +1373,30 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
         );
         if (!product) return;
 
-        // Se o produto está incluído no ingresso, não cobrar
-        if (product.isIncludedInTicket) return;
-
         // Encontrar a variação selecionada
         const variation = product.variations?.find((v: any, i: number) =>
           (v.id || `${product.id}-${i}`) === variationId
         );
 
-        // Variação só sobrescreve basePrice quando tem preço próprio (> 0).
-        const variationPrice = Number(variation?.price ?? 0);
-        const basePrice = Number(product.basePrice ?? 0);
-        const price = variationPrice > 0 ? variationPrice : basePrice;
+        // "Sem interesse" (opt-out): não cobra nem lista em lugar nenhum.
+        if (variation && isSemInteresseVariation({ name: variation.name ?? "" })) return;
+
+        // Valor cobrável (centavos), MESMA regra do SubscriptionStep
+        // (`billableReaisForProductSelection`):
+        //  - incluso no ingresso: cobra só o UPGRADE quando a variação custa mais
+        //    que o base (`v - base`); variação ≤ base → 0 (já pago no ingresso).
+        //    Antes descartávamos TODO incluso — então um produto "incluso E
+        //    opcional" escolhido com upgrade sumia do resumo (aparecia "(1x)" em
+        //    vez de "(2x)").
+        //  - opcional puro: cobra a variação (ou o base se a variação não tem
+        //    preço próprio).
+        const variationPriceCents = Number(variation?.price ?? 0);
+        const basePriceCents = Number(product.basePrice ?? 0);
+        const price = product.isIncludedInTicket
+          ? Math.max(0, variationPriceCents - basePriceCents)
+          : variationPriceCents > 0
+            ? variationPriceCents
+            : basePriceCents;
 
         if (price > 0) {
           items.push({
@@ -1656,6 +1672,20 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       syncFromOrder(updated);
       setCurrentOrder(updated);
       setBillingAddressConfirmed(true);
+      // Mobile: ao confirmar o endereço, a área de pagamento expande logo abaixo
+      // e a tela ficava parada no meio (sobre o card de endereço). Sobe ao topo
+      // absoluto pra o usuário ver os métodos de pagamento desde o começo. rAF
+      // duplo espera o reflow da expansão antes de rolar.
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 767px)").matches
+      ) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          });
+        });
+      }
       // Meta Pixel: InitiateCheckout = usuário confirmou o endereço (CEP) e a
       // área de pagamento abriu. Disparamos AQUI (não no mount da etapa), pois
       // só nesse ponto ele de fato "iniciou o checkout" de pagamento. Usamos o
@@ -2100,11 +2130,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const formatDateShort = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   if (loading) {
@@ -2163,7 +2193,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     )}
                     {participant.gender && (
                       <>
-                        {participant.gender}
+                        {participant.gender.charAt(0).toUpperCase()}
                         {participant.cpf && (
                           <span className="size-1 bg-gray-11 rounded-full" />
                         )}
@@ -2550,6 +2580,50 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
           </>
         ) : null}
       </div>
+
+      {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
+      <MobileSummaryBar
+        eventName={event.name}
+        totalParticipants={totalParticipants}
+        tickets={groupedTickets.map((t) => ({
+          name: t.raceName,
+          quantity: t.quantity,
+          total: t.total,
+        }))}
+        subtotal={ticketSubtotalLocal + additionalProductsTotal}
+        discount={
+          isCouponApplied && couponDiscount > 0
+            ? {
+              label: `${isAutomaticCoupon
+                ? "Cupom automático"
+                : appliedCouponName
+                  ? `Cupom ${appliedCouponName}`
+                  : "Cupom"
+                }${couponPercent != null && couponPercent > 0 ? ` (-${couponPercent}%)` : ""}`,
+              amount: couponDiscount,
+            }
+            : isVoucherApplied && voucherDiscount > 0
+              ? {
+                label: appliedVoucherName ? `Voucher ${appliedVoucherName}` : "Voucher",
+                amount: voucherDiscount,
+              }
+              : null
+        }
+        additionalProducts={
+          additionalProductsCount > 0
+            ? { count: additionalProductsCount, total: additionalProductsTotal }
+            : null
+        }
+        serviceFee={serviceFee}
+        total={totalValue}
+        variant="hidden"
+        /* Sem CTA: no mobile o PaymentStep finaliza pelos botões do próprio
+         * formulário (Finalizar pedido/compra por método). A barra fixa aqui é
+         * só resumo — evita botão de finalizar duplicado/conflitante. */
+        extraDetails={paymentSummaryDetails}
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+      />
 
       {/* Desktop Layout */}
       <div className="hidden md:flex w-full items-start justify-between gap-11">

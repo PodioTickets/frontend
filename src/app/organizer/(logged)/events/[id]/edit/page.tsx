@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { useEditEvent } from "@/contexts/EditEventContext";
+import { useUnsavedLeaveGuard } from "@/hooks/useUnsavedLeaveGuard";
 import { Button } from "@/components/Button";
+import { UnsavedChangesModal } from "@/components/UnsavedChangesModal";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { InformationForm } from "@/components/Organizer/InformationForm";
 import { buildCreateEventBodyFromForm } from "@/lib/createEventDraftSync";
@@ -126,7 +128,30 @@ export default function EditInformationPage() {
 
   const canSave = isFormValid && hasChanges;
 
+  /* Descarta as edições locais re-aplicando o baseline (`initialFormData`) sobre
+   * o `formData`. Necessário porque o `EditEventProvider` vive no LAYOUT (acima
+   * dos steps): sem o reset, uma alteração não salva aqui vazaria pros demais
+   * passos do editor ao navegar. Também limpa os erros de validação pendentes. */
+  const discardLocalChanges = useCallback(() => {
+    updateFormData(initialFormData);
+    setErrors({});
+  }, [initialFormData, updateFormData, setErrors]);
+
+  /* Guarda de saída: histórico/popstate + beforeunload + interceptação de
+   * cliques em links (ex.: o stepper de etapas no layout) enquanto houver
+   * alterações não salvas. `navigateTarget` é o destino padrão do "voltar"
+   * (sair do editor) — cliques em outras etapas guardam o próprio alvo. */
+  const {
+    leavePromptOpen,
+    confirmLeaveWithoutSaving,
+    dismissLeavePrompt,
+  } = useUnsavedLeaveGuard(hasChanges, {
+    navigateTarget: `/organizer/events`,
+    onDiscard: discardLocalChanges,
+  });
+
   return (
+    <>
     <WizardStepLayout
       title="Informações"
       description="Edite as informações principais do evento."
@@ -165,5 +190,14 @@ export default function EditInformationPage() {
         onHasPendingPdfChange={setHasPendingPdf}
       />
     </WizardStepLayout>
+
+    <UnsavedChangesModal
+      open={leavePromptOpen}
+      onClose={dismissLeavePrompt}
+      title="Alterações não salvas"
+      description="Você fez alterações nas informações do evento. Se sair agora, elas serão perdidas."
+      onLeaveWithoutSaving={confirmLeaveWithoutSaving}
+    />
+    </>
   );
 }

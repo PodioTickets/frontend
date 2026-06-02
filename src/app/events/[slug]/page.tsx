@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/Button";
 import { EventMap } from "@/components/EventMap";
 import { useEventBySlug } from "@/hooks/useEvent";
+import { formatDateTimeBR } from "@/utils/datetimeBR";
 import { useQueryClient } from "@tanstack/react-query";
 import { RegistrationCountdown } from "@/components/Event/RegistrationCountdown";
 import { ShareIcon } from "@/components/Icons/ShareIcon";
@@ -139,11 +140,11 @@ export default function EventPage() {
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateTimeBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   /* Mantém o skeleton da página enquanto o fetch do evento roda — sem isso,
@@ -188,13 +189,13 @@ export default function EventPage() {
 
   const registrationOpensDateText =
     registrationsNotOpenYet && registrationOpensAt
-      ? new Intl.DateTimeFormat("pt-BR", {
+      ? formatDateTimeBR(registrationOpensAt, {
         day: "numeric",
         month: "long",
-        ...(registrationOpensAt.getFullYear() !== new Date().getFullYear()
+        ...(registrationOpensAt.getUTCFullYear() !== new Date().getUTCFullYear()
           ? { year: "numeric" }
           : {}),
-      }).format(registrationOpensAt)
+      })
       : "";
 
   const registrationSlotsSoldOut =

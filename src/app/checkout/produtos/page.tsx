@@ -54,6 +54,15 @@ function CheckoutProdutosContent() {
     })();
   }, [hasSelectableProducts, autoSelectedProducts, eventId, orderId, patchProducts, syncFromOrder, router]);
 
+  // Ao entrar na etapa (vindo de Informações), começa no topo — senão herda o
+  // scroll da etapa anterior e o kit aparece "pra baixo" (mobile).
+  const scrolledTopRef = useRef(false);
+  useEffect(() => {
+    if (scrolledTopRef.current || isLoading || !event) return;
+    scrolledTopRef.current = true;
+    window.scrollTo(0, 0);
+  }, [isLoading, event]);
+
   const handleNext = async () => {
     if (!eventId || isSubmittingRef.current) return;
     isSubmittingRef.current = true;

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronDown } from "lucide-react";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { cn } from "@/utils/cn";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 interface ParticipantCardProps {
   participantIndex: number;
@@ -34,11 +35,11 @@ function ParticipantCard({
 }: ParticipantCardProps) {
   const formatDate = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   const maskCPF = (cpf: string) => {

@@ -40,6 +40,7 @@ import { useViewRegistrationModal, useExportDataModal, usePaymentDetailsModal } 
 import { AdminEventHeader } from "@/components/Admin/AdminEventHeader";
 import Image from "next/image";
 import { getAvatarUrl } from "@/utils/avatar";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 import { Tooltip } from "@/components/Tooltip";
 
 const REG_API_STATUSES = [
@@ -992,8 +993,8 @@ export default function EventRegistrationsPage() {
                     const statusClass = isPaid ? "bg-[#21835d] text-primary-1" : isCancelled || isRefunded || isChargeback ? "bg-red-11 text-white" : "bg-yellow-11 text-yellow-1";
                     const fullName = `${registration.user?.firstName || ""} ${registration.user?.lastName || ""}`.trim();
                     const createdDate = registration.createdAt ? new Date(registration.createdAt) : null;
-                    const timeStr = createdDate ? createdDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + "H" : "—";
-                    const dateStr = createdDate ? createdDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+                    const timeStr = createdDate ? formatTimeBR(registration.createdAt, { hour: "2-digit", minute: "2-digit" }) + "H" : "—";
+                    const dateStr = createdDate ? formatDateBR(registration.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
                     const price = registration?.order?.finalAmount != null ? (registration?.order?.finalAmount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
                     return (
                       <div key={registration.id} className="bg-gray-1 border border-gray-6 rounded-lg overflow-hidden">

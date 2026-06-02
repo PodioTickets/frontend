@@ -3,6 +3,7 @@ import { EventService } from "./events/EventService";
 import { UserService } from "./user/UserService";
 import { OrganizerService } from "./organizer/OrganizerService";
 import { AdminService } from "./admin/AdminService";
+import { GeoService } from "./geo/GeoService";
 
 export type { ApiResponse } from "./base/ApiClient";
 export type {
@@ -22,6 +23,9 @@ export const userService = new UserService(apiClient);
 export const eventService = new EventService(apiClient);
 export const organizerService = new OrganizerService(apiClient);
 export const adminService = new AdminService(apiClient);
+export const geoService = new GeoService(apiClient);
+
+export type { GeoState, GeoCity } from "./geo/GeoService";
 
 export type {
   AdminAuditLogItem,

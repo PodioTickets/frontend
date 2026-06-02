@@ -33,7 +33,6 @@ import { ArrowButton } from "@/components/ArrowButton";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Plus } from "lucide-react";
-import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TickIcon } from "@/components/Icons/TickIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import { TicketCategoryCard } from "@/components/Ticket/TicketCategoryCard";
@@ -1312,95 +1311,16 @@ export const TicketsSection = forwardRef<TicketsSectionRef, TicketsSectionProps>
               </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty state — sem categorias e sem ingressos. Mostra apenas a
+                ilustração + mensagem, SEM o card em forma de categoria (que dava
+                a impressão de uma "categoria pré-criada"). A criação de categoria/
+                ingresso acontece pelos botões "Criar categoria"/"Criar ingresso"
+                acima. */}
             {hasNoCategories && allTickets.length === 0 && (
-              <div className="flex flex-col gap-11 items-end">
-                <div className="border border-gray-6 rounded-xl p-5 w-full flex flex-col gap-6">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    {editingGroupId === "new" ? (
-                      <input
-                        type="text"
-                        value={editingGroupName}
-                        onChange={(e) => setEditingGroupName(e.target.value)}
-                        onBlur={(e) => {
-                          const next =
-                            e.relatedTarget instanceof HTMLElement
-                              ? e.relatedTarget.closest("[data-category-draft-toolbar]")
-                              : null;
-                          if (next) return;
-                          const value = editingGroupName.trim();
-                          if (value) void handleCreateGroup(value);
-                          else {
-                            setEditingGroupId(null);
-                            setEditingGroupName("");
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            if (editingGroupName.trim())
-                              void handleCreateGroup(editingGroupName.trim());
-                          } else if (e.key === "Escape") {
-                            setEditingGroupId(null);
-                            setEditingGroupName("");
-                          }
-                        }}
-                        className="text-gray-12 text-base md:text-2xl font-bold font-manrope leading-[1.1] bg-transparent border-b border-gray-6 focus:outline-none focus:border-primary-8 flex-1"
-                        placeholder="Adicione um nome a esta categoria..."
-                        autoFocus
-                      />
-                    ) : (
-                      <h3 className="text-gray-12 text-base md:text-2xl font-bold font-manrope leading-[1.1]">
-                        Adicione um nome a esta categoria...
-                      </h3>
-                    )}
-                    <div className="flex gap-[10px] items-center" data-category-draft-toolbar>
-                      <button
-                        type="button"
-                        title={editingGroupId === "new" ? "Salvar categoria" : "Editar"}
-                        onMouseDown={editingGroupId === "new" ? (e) => e.preventDefault() : undefined}
-                        onClick={() => {
-                          if (editingGroupId === "new") {
-                            const value = editingGroupName.trim();
-                            if (value) void handleCreateGroup(value);
-                            else toast.error("Nome da categoria é obrigatório");
-                          } else {
-                            setEditingGroupId("new");
-                            setEditingGroupName("");
-                          }
-                        }}
-                        className="bg-gray-2 border-[1.5px] border-gray-6 p-1 rounded-lg hover:bg-gray-3 transition-colors size-9 flex items-center justify-center cursor-pointer"
-                        aria-label={editingGroupId === "new" ? "Salvar categoria" : "Editar"}
-                      >
-                        {editingGroupId === "new" ? (
-                          <TickIcon className="size-5 text-gray-11" />
-                        ) : (
-                          <PencilIcon className="size-5 text-gray-11" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        disabled
-                        title="Deletar categoria"
-                        className="bg-red-2 border-[1.5px] border-red-6 p-1 rounded-lg hover:bg-red-3 transition-colors size-9 flex items-center justify-center opacity-50 cursor-not-allowed"
-                      >
-                        <TrashIcon className="size-5 text-red-12" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-8 items-center justify-center py-11 px-0">
-                    <div className="relative h-[64px] w-[111px]">
-                      <Image
-                        src="/icons-3d/Icon3D-Busca-sem-resultado.webp"
-                        alt="Empty"
-                        fill
-                        className="object-contain"
-                      />
-                    </div>
-                    <p className="text-gray-12 text-base md:text-xl font-semibold font-manrope leading-[1.1]">
-                      Nenhum ingresso criado ainda....
-                    </p>
-                  </div>
-                </div>
+              <div className="border border-gray-6 rounded-xl p-5 w-full flex flex-col gap-8 items-center justify-center py-11">
+                <p className="text-gray-11 text-sm md:text-base font-semibold font-manrope leading-[1.1]">
+                  Nenhum ingresso criado ainda...
+                </p>
               </div>
             )}
 

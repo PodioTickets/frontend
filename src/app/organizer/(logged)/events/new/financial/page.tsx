@@ -43,9 +43,18 @@ export default function FinancialPage() {
   };
 
   const handleSaveDraft = async () => {
-    const eventId = await ensureCreateEventSyncedFromDraft({ formData, updateFormData });
-    await saveFinancialSettings(eventId);
-    toast.success("Evento salvo como rascunho com sucesso!");
+    try {
+      const eventId = await ensureCreateEventSyncedFromDraft({ formData, updateFormData });
+      await saveFinancialSettings(eventId);
+      toast.success("Evento salvo como rascunho com sucesso!");
+      // Rascunho salvo → sai do wizard e volta para a lista de eventos.
+      orgNav.push("/organizer/events");
+    } catch (e) {
+      // Só navega em caso de sucesso — se a sincronização do rascunho falhar,
+      // mantém o usuário na etapa para não perder o que foi preenchido.
+      console.error(e);
+      toast.error("Não foi possível salvar o rascunho.");
+    }
   };
 
   const handlePublish = async () => {

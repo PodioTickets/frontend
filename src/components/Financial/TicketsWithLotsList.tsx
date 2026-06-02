@@ -6,6 +6,7 @@ import { Tooltip } from "@/components/Tooltip";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { cn } from "@/utils/cn";
 import type { FinancialTicket } from "@/services/organizer/OrganizerService";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 /**
  * Lista compartilhada "Ingressos de lotes" usada nas páginas de financeiro
@@ -337,7 +338,7 @@ export function TicketsWithLotsList({
 
                   <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
                     <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                      {new Date(item.createdAt).toLocaleDateString("pt-BR")}
+                      {formatDateBR(item.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -387,7 +388,7 @@ export function TicketsWithLotsList({
 
                         <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
                           <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                            {new Date(lotCreatedAt).toLocaleDateString("pt-BR")}
+                            {formatDateBR(lotCreatedAt)}
                           </p>
                         </div>
                       </div>

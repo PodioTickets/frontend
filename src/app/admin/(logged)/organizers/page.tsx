@@ -10,6 +10,7 @@ import { queryKeys } from "@/services/cache/QueryClient";
 import type { AdminAuditOrganization } from "@/services/admin/AdminService";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { OrganizerEditDrawer } from "@/components/Admin/OrganizerEditDrawer";
+import { formatTimeBR } from "@/utils/datetimeBR";
 import { Button } from "@/components/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,8 +33,8 @@ function formatDate(iso?: string): { date: string; time: string } {
     "Jul", "Ago", "Set", "Out", "Nov", "Dez",
   ];
   return {
-    date: `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]}, ${d.getFullYear()}`,
-    time: d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    date: `${String(d.getUTCDate()).padStart(2, "0")} ${months[d.getUTCMonth()]}, ${d.getUTCFullYear()}`,
+    time: formatTimeBR(iso, { hour: "2-digit", minute: "2-digit" }),
   };
 }
 

@@ -71,7 +71,7 @@ export interface MobileSummaryBarProps {
    *   demais etapas do checkout.
    * O bottom-sheet de detalhes é idêntico nos dois.
    */
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "hidden";
   /**
    * Controle EXTERNO do bottom-sheet (opcional). Permite que um irmão (ex.: o
    * "Ver detalhes" do `OrderSummary` no PaymentStep) abra o mesmo sheet. Se
@@ -155,13 +155,6 @@ export function MobileSummaryBar({
     [dragControls]
   );
 
-  // CTA disparado de dentro do sheet: fecha primeiro pra revelar a tela (ex.:
-  // campos com erro de validação destacados pelo handler do step).
-  const handleSheetCta = useCallback(() => {
-    setOpen(false);
-    cta?.onClick();
-  }, [cta]);
-
   // Trava o scroll do fundo enquanto o bottom-sheet está aberto (UX de modal).
   useEffect(() => {
     if (!open) return;
@@ -233,7 +226,7 @@ export function MobileSummaryBar({
             </div>
           </div>
         </div>
-      ) : (
+      ) : variant === "compact" ? (
         /* Barra minimizada COMPACTA — demais etapas: "(N participantes) · Ver detalhes". */
         <div data-mobile-summary-bar="true" className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex flex-col">
           <div className="bg-gray-2 border-t border-gray-6 shadow-lg px-4 py-3 flex items-center justify-between pb-5 w-full">
@@ -242,7 +235,7 @@ export function MobileSummaryBar({
               aria-expanded={open} className="flex items-center gap-2 text-primary-11 font-medium text-sm underline cursor-pointer">Ver detalhes <SeeDetailsIcon /></h1>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Bottom-sheet com os detalhes completos — portado pro document.body
           (padrão de modais do projeto) pra escapar de stacking contexts /
@@ -280,7 +273,7 @@ export function MobileSummaryBar({
                   // Fecha se arrastou o suficiente pra baixo ou com velocidade.
                   if (info.offset.y > 120 || info.velocity.y > 600) closeSheet();
                 }}
-                className="md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[88vh] flex flex-col shadow-2xl"
+                className="md:hidden fixed bottom-0 left-0 right-0 z-[61] bg-gray-1 rounded-t-2xl max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Detalhes do pedido"
@@ -312,8 +305,9 @@ export function MobileSummaryBar({
                   </div>
                 </div>
 
-                {/* Corpo rolável */}
-                <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
+                {/* Corpo rolável — `min-h-0` é obrigatório p/ o overflow funcionar
+                    dentro do flex-col com altura limitada (senão transborda e cobre a tela). */}
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-4 py-4 flex flex-col gap-5">
                   {/* Detalhe rico do step (cards de participante + imagens dos
                     produtos) quando fornecido; senão, a lista flat de ingressos. */}
                   {extraDetails ? (
@@ -363,11 +357,8 @@ export function MobileSummaryBar({
                         value={formatPrice(additionalProducts.total)}
                       />
                     )}
-                    {/* Subtotal só faz sentido quando há mais de um ingresso diferente
-                      pra somar — com um único, a linha do ingresso já é o subtotal. */}
-                    {tickets.length > 1 && (
-                      <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
-                    )}
+                    {/* Subtotal sempre visível, logo acima da taxa de serviço. */}
+                    <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
                     {discountRow}
                     {feeRow}
                     <SummaryRow label="Total" value={formatPrice(total)} emphasize />

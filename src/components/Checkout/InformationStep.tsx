@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { ArrowButton } from "../ArrowButton";
 import type { Event } from "@/interfaces/event";
 import { Button } from "../Button";
@@ -15,7 +14,7 @@ import { Dropdown } from "../Dropdown";
 import { DatePickerWithConfirm } from "../DateOfBirthPicker/DatePickerWithConfirm";
 import { Checkbox } from "../CheckBox";
 import type { Question } from "@/interfaces/event";
-import { eventService, userService } from "@/services";
+import { userService } from "@/services";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { organizerService } from "@/services";
 import {
@@ -34,6 +33,7 @@ import toast from "react-hot-toast";
 import { Loading } from "../Loading";
 import { getCpfValidationMessage, isValidCPF } from "@/utils/cpf";
 import { isBrazilianCountry } from "@/validators/Auth.validator";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { OrderApiError } from "@/interfaces/order";
 import { COUNTRIES_PT_BR } from "@/data/countries";
 import { FlagIcon } from "../Icons/FlagIcon";
@@ -349,6 +349,38 @@ export function InformationStep({
     readSavedState<SavedSnapshotMap>(savedSnapshotsKey, {}),
   );
 
+  /* Descarta o estado "salvo" quando o PEDIDO muda (nova reserva → inscrição
+   * diferente). `savedParticipants`/`savedSnapshots` são keyed por EVENTO, não
+   * por pedido — então uma inscrição anterior no mesmo evento deixava
+   * `{0:true}` residual no sessionStorage, marcando o participante 1 como salvo
+   * sem clique. Isso fazia o "abrir 1º pendente" pular pro 2º. Comparamos o
+   * orderId atual com o último visto (persistido): só limpa quando MUDA entre
+   * dois pedidos reais (não no null→valor do mount, nem ao voltar de Produtos
+   * com o mesmo pedido). */
+  const savedOrderIdKey = eventId
+    ? `checkout:savedParticipantsOrderId:${eventId}`
+    : null;
+  // Guard da reconciliação 1x do estado "salvo" (definido aqui pra o reset por
+  // troca de pedido, logo abaixo, poder rearmá-lo).
+  const savedPruneRef = useRef(false);
+  useEffect(() => {
+    if (!orderId || !savedOrderIdKey || typeof window === "undefined") return;
+    const prevOrderId = readSavedState<string | null>(savedOrderIdKey, null);
+    if (prevOrderId && prevOrderId !== orderId) {
+      // Pedido trocado: zera o estado de "salvo" deste evento e libera a
+      // reconciliação/abertura do card pra rodar de novo (caso o pedido só
+      // tenha mudado DEPOIS da poda inicial — ex.: orderId tardio).
+      setSavedParticipants({});
+      setSavedSnapshots({});
+      savedPruneRef.current = false;
+    }
+    try {
+      window.sessionStorage.setItem(savedOrderIdKey, JSON.stringify(orderId));
+    } catch {
+      /* quota/disabled — ignora */
+    }
+  }, [orderId, savedOrderIdKey]);
+
   // Persiste o estado de "salvo" + snapshots por evento (write-through).
   useEffect(() => {
     if (!savedParticipantsKey || typeof window === "undefined") return;
@@ -562,6 +594,7 @@ export function InformationStep({
     participantsWithRaces.every(
       ({ participantIndex }) => savedParticipants[participantIndex],
     );
+
 
   /* Eager-sync server-driven do cupom: a CADA "Salvar e próximo" de um
    * participante, envia o `PATCH /participants` com a lista PARCIAL dos já
@@ -852,12 +885,11 @@ export function InformationStep({
       }
     }
 
-    // Fechar/abrir o participante (sempre permite abrir, só valida ao fechar)
+    // Fechar/abrir o participante (sempre permite abrir, só valida ao fechar).
+    // Comportamento accordion: ao ABRIR, minimiza todos os outros (só um expandido
+    // por vez). Ao FECHAR, apenas colapsa o atual.
     const willClose = isCurrentlyExpanded;
-    setExpandedParticipants((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
+    setExpandedParticipants(willClose ? {} : { [index]: true });
 
     // Depois de salvar (fechar) um participante, rola para o proximo pendente
     // em vez de deixar o usuario perdido fora do viewport. Vale pra mobile e
@@ -975,7 +1007,6 @@ export function InformationStep({
   ) => {
     const fullName = [looked.firstName, looked.lastName].filter(Boolean).join(" ");
     const lookedCountry = looked.country?.trim();
-    const nextNationality = lookedCountry || participants[index]?.nationality;
     // Nacionalidade do usuario encontrado tem prioridade — define o formato do
     // telefone e o label do documento. Sem isso, telefone de argentino vinha
     // mascarado como BR. Mantem a atual quando o lookup nao traz country.
@@ -1065,21 +1096,13 @@ export function InformationStep({
     updateParticipant(index, { [field]: masked });
   };
 
-  const formatDate = (date: string) => {
-    return new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(date));
-  };
-
   const formatDateShort = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   /* Idade na DATA DO EVENTO a partir de uma data de nascimento ISO. Mesmo
@@ -1156,6 +1179,26 @@ export function InformationStep({
     });
     return map;
   }, [savedSnapshots, participants, questionAnswers]);
+
+  /* "Confirmar dados" some enquanto algum participante está sendo EDITADO — card
+   * expandido E (ainda não salvo OU com alterações não salvas). Um card salvo e
+   * limpo que esteja apenas aberto (ex.: reabriu a página / voltou de outra etapa
+   * com o accordion no índice 0) NÃO esconde o botão — senão ele sumia ao voltar
+   * ou ao abrir/fechar os detalhes. */
+  const anyExpanded = participantsWithRaces.some(
+    ({ participantIndex }) =>
+      expandedParticipants[participantIndex] &&
+      (!savedParticipants[participantIndex] || participantDirtyMap[participantIndex]),
+  );
+
+  /* Qualquer card LITERALMENTE aberto (independe de salvo/dirty). Usado só pra
+   * DESABILITAR o "Confirmar dados" no desktop: enquanto há um card aberto, o
+   * usuário ainda está conferindo/editando e não deve avançar. Difere de
+   * `anyExpanded` (que ignora card salvo-e-limpo) de propósito — `anyExpanded`
+   * controla a VISIBILIDADE no mobile e não pode sumir ao reabrir um card salvo. */
+  const anyCardOpen = participantsWithRaces.some(
+    ({ participantIndex }) => expandedParticipants[participantIndex],
+  );
 
   const isParticipantComplete = (index: number) => {
     const participant = participants[index];
@@ -1341,7 +1384,6 @@ export function InformationStep({
    *
    * Também ajusta o card aberto: abre o 1º participante PENDENTE (não salvo). Se
    * todos já estão salvos (voltou de etapa posterior), colapsa todos. */
-  const savedPruneRef = useRef(false);
   useEffect(() => {
     if (savedPruneRef.current) return;
     if (loading || participantsWithRaces.length === 0) return;
@@ -1352,26 +1394,29 @@ export function InformationStep({
         getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender),
       ).length === 0;
 
-    // Poda flags obsoletas — nunca adiciona.
-    setSavedParticipants((prev) => {
-      if (Object.keys(prev).length === 0) return prev;
-      const next: Record<number, boolean> = {};
-      let changed = false;
-      participantsWithRaces.forEach(({ participantIndex, ticket }) => {
-        if (prev[participantIndex] && isValid(participantIndex, ticket)) {
-          next[participantIndex] = true;
-        }
-      });
-      // Detecta remoção (chaves que existiam em prev mas não em next).
-      for (const k of Object.keys(prev)) {
-        if (!next[Number(k)]) changed = true;
+    /* Mapa "salvo" PODADO — fonte única pra poda E pra decidir o card aberto.
+     * Antes o `find` do "1º pendente" lia `savedParticipants` do closure (valor
+     * PRÉ-poda): uma flag obsoleta `{0:true}` vinda do sessionStorage (ex.:
+     * inscrição anterior no mesmo evento, não limpa) fazia o `find` pular o
+     * participante 1 e abrir o 2. Computando o mapa podado aqui, os dois usam o
+     * MESMO valor reconciliado. */
+    const prunedSaved: Record<number, boolean> = {};
+    participantsWithRaces.forEach(({ participantIndex, ticket }) => {
+      if (savedParticipants[participantIndex] && isValid(participantIndex, ticket)) {
+        prunedSaved[participantIndex] = true;
       }
-      return changed ? next : prev;
     });
 
-    // Abre o 1º pendente (não salvo); todos salvos → colapsa.
+    // Aplica a poda no estado (nunca adiciona — só remove flags obsoletas).
+    setSavedParticipants((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      const changed = Object.keys(prev).some((k) => !prunedSaved[Number(k)]);
+      return changed ? prunedSaved : prev;
+    });
+
+    // Abre o 1º pendente (não salvo, já reconciliado); todos salvos → colapsa.
     const firstPending = participantsWithRaces.find(
-      ({ participantIndex }) => !savedParticipants[participantIndex],
+      ({ participantIndex }) => !prunedSaved[participantIndex],
     );
     setExpandedParticipants(
       firstPending ? { [firstPending.participantIndex]: true } : {},
@@ -1455,19 +1500,6 @@ export function InformationStep({
       6,
       9
     )}-${numbers.slice(9, 11)}`;
-  };
-
-  const maskPhone = (value: string) => {
-    // Remove tudo que não é dígito
-    const numbers = value.replace(/\D/g, "");
-    // Aplica a máscara (99) 99999-9999
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 7)
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(
-      7,
-      11
-    )}`;
   };
 
   /* Mask CPF for display (partial masking).
@@ -1869,13 +1901,10 @@ export function InformationStep({
                     </button>
                   )}
 
-                  {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-                  {groupedTickets.length > 1 && (
-                    <div className="flex items-center justify-between w-full text-sm text-gray-12">
-                      <p className="font-semibold">Subtotal:</p>
-                      <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between w-full text-sm text-gray-12">
+                    <p className="font-semibold">Subtotal:</p>
+                    <p className="font-semibold font-family-dm-sans">{formatPrice(totalPrice)}</p>
+                  </div>
                   {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                     <div className="flex items-center justify-between w-full text-sm text-gray-12">
                       <p className="font-semibold">{formatCouponLineLabel(appliedCoupon)}:</p>
@@ -2012,7 +2041,7 @@ export function InformationStep({
                                     {participant.gender && (
                                       <>
                                         <span className="size-1 bg-gray-11 rounded-full" />
-                                        {participant.gender}
+                                        {participant.gender.charAt(0).toUpperCase()}
                                       </>
                                     )}
                                     {participant.cpf && (
@@ -2144,6 +2173,7 @@ export function InformationStep({
                                 disabled={previewMode}
                                 onDeleteUser={async (userId) => {
                                   await userService.removeLinkedUser(userId);
+                                  toast.success("Perfil removido da sua lista!")
                                   queryClient.invalidateQueries({ queryKey: ["linked-users"] });
                                 }}
                                 onChange={(value) => {
@@ -2537,7 +2567,8 @@ export function InformationStep({
                               const errors = getParticipantValidationErrors(participantIndex, ticket.ageLimit, ticket.gender);
                               if (Object.keys(errors).length > 0) {
                                 setFieldErrors((prev) => ({ ...prev, [participantIndex]: errors }));
-                                setExpandedParticipants((prev) => ({ ...prev, [participantIndex]: true }));
+                                // Accordion: mantém só este aberto.
+                                setExpandedParticipants({ [participantIndex]: true });
                                 toast.error("Preencha todos os campos obrigatórios corretamente.");
                                 return;
                               }
@@ -2627,9 +2658,18 @@ export function InformationStep({
             }
           )}
 
-          {/* Botão Confirmar dados — desabilitado até cada participante ter
-              clicado em "Salvar e próximo" (mesmo critério aplicado no CTA mobile). */}
-          <div className="flex items-center justify-center w-full mt-6">
+          {/* Botão Confirmar dados.
+              - Desktop (md+): SEMPRE visível, mas DESABILITADO até todos os
+                participantes estarem concluídos (salvos) E nenhum aberto/sendo
+                editado. Mostra o destino do fluxo sem permitir avançar cedo.
+              - Mobile: mantém o gate "todos salvos e minimizados" (o botão some
+                enquanto algum participante está expandido/sendo editado).
+              A diferença por breakpoint é feita por classe (hidden md:flex) em vez
+              de condicional de render, pois precisamos manter o nó no DOM no desktop. */}
+          <div
+            className={`items-center justify-center w-full mt-6 ${allParticipantsSaved && !anyExpanded ? "flex" : "hidden md:flex"
+              }`}
+          >
             <Button
               onClick={() => {
                 if (participantsWithRaces.length === 0) return;
@@ -2645,7 +2685,8 @@ export function InformationStep({
                 if (Object.keys(allErrors).length > 0) {
                   setFieldErrors(allErrors);
                   if (firstInvalidIndex !== null) {
-                    setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                    // Accordion: abre só o 1º inválido, minimiza os demais.
+                    setExpandedParticipants({ [firstInvalidIndex]: true });
                   }
                   toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
                   return;
@@ -2656,7 +2697,7 @@ export function InformationStep({
                 }
                 onNext();
               }}
-              disabled={previewMode || isSubmitting || !allParticipantsSaved}
+              disabled={previewMode || isSubmitting || !allParticipantsSaved || anyCardOpen}
               isLoading={isSubmitting}
               variant="default"
               className="w-full md:w-1/4 font-bold"
@@ -2687,10 +2728,10 @@ export function InformationStep({
         }
         serviceFee={displayedServiceFee}
         total={totalAmountWithAge}
-        cta={{
+        cta={(allParticipantsSaved && !anyExpanded) ? {
           label: "Confirmar dados",
           loading: isSubmitting,
-          disabled: isSubmitting || !allParticipantsSaved,
+          disabled: isSubmitting,
           onClick: () => {
             if (participantsWithRaces.length === 0) return;
             const allErrors: Record<number, Record<string, string>> = {};
@@ -2705,7 +2746,8 @@ export function InformationStep({
             if (Object.keys(allErrors).length > 0) {
               setFieldErrors(allErrors);
               if (firstInvalidIndex !== null) {
-                setExpandedParticipants((prev) => ({ ...prev, [firstInvalidIndex!]: true }));
+                // Accordion: abre só o 1º inválido, minimiza os demais.
+                setExpandedParticipants({ [firstInvalidIndex]: true });
               }
               toast.error("Preencha todos os campos obrigatórios de todos os participantes.");
               return;
@@ -2716,7 +2758,7 @@ export function InformationStep({
             }
             onNext();
           },
-        }}
+        } : undefined}
       />
 
       {/* Modal para mostrar todos os ingressos */}
@@ -2775,13 +2817,10 @@ export function InformationStep({
                         </p>
                       </div>
                     ))}
-                    {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-                    {groupedTickets.length > 1 && (
-                      <div className="flex items-center justify-between text-base text-gray-12">
-                        <p className="font-semibold">Subtotal:</p>
-                        <p className="font-bold">{formatPrice(totalPrice)}</p>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-base text-gray-12">
+                      <p className="font-semibold">Subtotal:</p>
+                      <p className="font-bold">{formatPrice(totalPrice)}</p>
+                    </div>
                     {appliedCoupon && showCouponDiscount && couponDiscountAmount > 0 && (
                       <div className="flex items-center justify-between text-base text-gray-12">
                         <p className="font-semibold">

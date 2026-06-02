@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Check } from "lucide-react";
+import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { cn } from "@/utils/cn";
 import { userService } from "@/services";
 import { getApiClient } from "@/services/base/ApiClient";
 import toast from "react-hot-toast";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 interface ProductVariation {
   id: string;
@@ -36,6 +37,8 @@ interface Props {
   product: IncludedProduct;
   orderCreatedAt?: string;
   registrationId: string;
+  /** Produto incluso no ingresso (brinde): exibe "Incluso" no lugar do preço. */
+  isIncluded?: boolean;
   onVariationUpdated?: (productId: string, variationId: string) => void;
 }
 
@@ -80,7 +83,7 @@ function computeBanner(
       : { type: "expired", text: "Prazo de edição encerrado" };
   }
 
-  const deadlineStr = deadline.toLocaleDateString("pt-BR", {
+  const deadlineStr = formatDateBR(deadline, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -113,6 +116,7 @@ export function ProductVariationCard({
   product,
   orderCreatedAt,
   registrationId,
+  isIncluded = false,
   onVariationUpdated,
 }: Props) {
   const [isSelecting, setIsSelecting] = useState(false);
@@ -160,21 +164,24 @@ export function ProductVariationCard({
       <div className="border-b border-gray-6 flex flex-col gap-3 p-4">
         <div className="flex gap-3 h-[100px] items-center">
           <div className="size-[100px] rounded-lg border border-gray-6 overflow-hidden shrink-0 relative bg-gray-4">
-            {imageSrc && (
-              <Image
-                src={imageSrc}
-                alt={product.name}
-                fill
-                className="object-cover"
-              />
-            )}
+            <ImageWithInitialFallback
+              src={imageSrc}
+              alt={product.name}
+              name={product.name}
+              fallbackId={product.id}
+              fill
+              sizes="100px"
+              className="size-full border-0"
+              imgClassName="object-cover"
+              letterClassName="text-2xl font-semibold"
+            />
           </div>
           <div className="flex flex-col justify-between flex-1 min-w-0 h-full py-2">
             <p className="text-sm font-semibold leading-[1.3] text-gray-12 font-family-dm-sans line-clamp-3">
               {product.name}
             </p>
             <p className="text-base font-semibold leading-[1.1] text-gray-12 font-manrope whitespace-nowrap">
-              {formatPrice(product.basePrice)}
+              {isIncluded ? "Incluso" : formatPrice(product.basePrice)}
             </p>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { PaymentStep } from "@/components/Checkout/PaymentStep";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEvent } from "@/hooks/useEvent";
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { Loading } from "@/components/Loading";
 import { useCheckoutProductStep } from "@/hooks/useCheckoutProductStep";
 import CheckoutPagamentoLoading from "./loading";
@@ -16,6 +16,15 @@ function CheckoutPagamentoContent() {
   const eventId = searchParams.get("eventId");
   const { event, loading: isLoading } = useEvent(eventId ?? "");
   const { hasSelectableProducts } = useCheckoutProductStep(eventId);
+
+  // Ao entrar no pagamento (vindo de Produtos), começa no topo — o endereço
+  // estava aparecendo "pra baixo" por herdar o scroll da etapa anterior.
+  const scrolledTopRef = useRef(false);
+  useEffect(() => {
+    if (scrolledTopRef.current || isLoading || !event) return;
+    scrolledTopRef.current = true;
+    window.scrollTo(0, 0);
+  }, [isLoading, event]);
 
   const handleBack = () => {
     if (!eventId) return;

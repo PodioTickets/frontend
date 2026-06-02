@@ -25,6 +25,7 @@ import {
   formatDocumentDisplay,
   formatPersonPhone,
 } from "@/utils/documentDisplay";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 interface PaymentItemDetailsDrawerProps {
   isOpen: boolean;
@@ -91,17 +92,11 @@ export function PaymentItemDetailsDrawer({
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "—";
-    try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
-      return `${day}/${month}/${year} - ${hours}:${minutes}`;
-    } catch {
-      return dateString;
-    }
+    // UTC, sem shift de fuso. Mantém o formato "dd/mm/yyyy - HH:mm".
+    const day = formatDateBR(dateString, { day: "2-digit", month: "2-digit", year: "numeric" });
+    if (!day) return dateString;
+    const time = formatTimeBR(dateString, { hour: "2-digit", minute: "2-digit" });
+    return `${day} - ${time}`;
   };
 
   const formatGender = (gender?: string | null) => {
@@ -120,9 +115,25 @@ export function PaymentItemDetailsDrawer({
     return map[method] || method;
   };
 
-  const formatInstallments = (installments: number | null, installmentValue: number | null) => {
-    if (!installments || !installmentValue) return null;
-    return `${installments}x de R$ ${(installmentValue / 100).toFixed(2).replace(".", ",")}`;
+  /* Parcelamento: o backend manda `installments` mas nem sempre o
+   * `installmentValue`. Com >1 parcela, deriva o valor da parcela do total
+   * (`totalAmount / installments`) quando o valor unitário não vier. ≤1 parcela
+   * → null (o caller decide "À vista"). Antes exigia AMBOS e caía em "À vista"
+   * mesmo com installments=3. */
+  const formatInstallments = (
+    installments: number | null,
+    installmentValue: number | null,
+    totalAmountCents?: number | null,
+  ) => {
+    const n = installments ?? 0;
+    if (n <= 1) return null;
+    const perCents =
+      installmentValue ??
+      (totalAmountCents && totalAmountCents > 0
+        ? Math.round(totalAmountCents / n)
+        : 0);
+    if (perCents <= 0) return `${n}x`;
+    return `${n}x de R$ ${(perCents / 100).toFixed(2).replace(".", ",")}`;
   };
 
   const getStatusLabel = (status: string) => {
@@ -155,15 +166,8 @@ export function PaymentItemDetailsDrawer({
   /** Só a data (dd/mm/yyyy) — `formatDate` inclui hora, que não cabe em "Data de nascimento". */
   const formatBirthDate = (dateString?: string | null) => {
     if (!dateString) return "—";
-    try {
-      const date = new Date(dateString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch {
-      return dateString;
-    }
+    // UTC, sem shift de fuso. Só a data (dd/mm/yyyy).
+    return formatDateBR(dateString, { day: "2-digit", month: "2-digit", year: "numeric" }) || dateString;
   };
 
   const handleCopy = (text: string) => {
@@ -280,7 +284,7 @@ export function PaymentItemDetailsDrawer({
           authorizationCode={payment.authorizationCode ?? undefined}
           transactionId={paymentDetails.transactionId}
           installmentsLabel={
-            formatInstallments(payment.installments ?? null, payment.installmentValue ?? null) ||
+            formatInstallments(payment.installments ?? null, payment.installmentValue ?? null, payment.totalAmount) ||
             (payment.method !== "PIX" ? "À vista" : undefined)
           }
           nsu={payment.nsu ?? undefined}
@@ -453,7 +457,7 @@ export function PaymentItemDetailsDrawer({
                   {
                     label: "Parcelamento",
                     value:
-                      formatInstallments(payment.installments ?? null, payment.installmentValue ?? null) ||
+                      formatInstallments(payment.installments ?? null, payment.installmentValue ?? null, payment.totalAmount) ||
                       "À vista",
                   },
                 ].map(({ label, value }) => (

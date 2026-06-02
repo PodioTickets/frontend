@@ -20,6 +20,7 @@ import { getAvatarUrl } from "@/utils/avatar";
 import { ChargeBackIcon } from "../Icons/ChargeBackIcon";
 import { Tooltip } from "../Tooltip";
 import { FinancialDetailsMobile, type FinancialDetailsItem } from "./FinancialDetailsMobile";
+import { formatDateBR, formatTimeBR } from "@/utils/datetimeBR";
 
 interface ChargebackDrawerProps {
   isOpen: boolean;
@@ -110,13 +111,12 @@ export function ChargebackDrawer({
   const totalPages = pagination.totalPages;
 
   const formatChargebackForDisplay = (item: ChargebackItem) => {
-    const date = new Date(item.chargebackDate);
-    const formattedDate = date.toLocaleDateString("pt-BR", {
+    const formattedDate = formatDateBR(item.chargebackDate, {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
-    const formattedTime = date.toLocaleTimeString("pt-BR", {
+    const formattedTime = formatTimeBR(item.chargebackDate, {
       hour: "2-digit",
       minute: "2-digit",
     });

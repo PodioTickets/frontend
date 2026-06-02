@@ -6,6 +6,7 @@ import { TicketIcon } from "../Icons/TicketIcon";
 import { StarIcon } from "../Icons/StarIcon";
 import type { Event } from "@/interfaces/event";
 import { formatDocumentDisplay, isPersonBr } from "@/utils/documentDisplay";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { SeeDetailsIcon } from "../Icons/SeeDetailsIcon";
 
 interface OrderItem {
@@ -141,11 +142,11 @@ export function OrderSummary({
 
   const formatDate = (date: string) => {
     if (!date) return "";
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(new Date(date));
+    });
   };
 
   const getGenderLabel = (gender?: string) => {
@@ -168,8 +169,7 @@ export function OrderSummary({
   );
   // Subtotal = soma dos itens ANTES da taxa. A taxa é exibida em linha própria,
   // então não pode entrar aqui (senão é contada duas vezes no fallback).
-  const subtotal =
-    subtotalOverride ?? ticketsSubtotal + productsSubtotal;
+  const subtotal = ticketsSubtotal + productsSubtotal
 
   const toggleParticipant = (index: number) => {
     setExpandedParticipants((prev) => ({
@@ -231,18 +231,10 @@ export function OrderSummary({
             </div>
           )}
 
-          <div className="md:hidden flex items-center justify-between text-sm text-gray-12">
+          <div className="flex items-center justify-between text-sm text-gray-12">
             <p className="font-manrope font-medium md:font-semibold">Subtotal:</p>
             <p className="font-manrope font-semibold md:font-bold">{formatPrice(subtotal)}</p>
           </div>
-
-          {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-          {groupedTickets.length > 1 && (
-            <div className="hidden md:flex items-center justify-between text-sm text-gray-12">
-              <p className="font-manrope font-medium md:font-semibold">Subtotal:</p>
-              <p className="font-manrope font-semibold md:font-bold">{formatPrice(subtotal)}</p>
-            </div>
-          )}
 
           {/* Cupom aplicado */}
           {isCouponApplied && couponDiscount > 0 && (
@@ -285,6 +277,7 @@ export function OrderSummary({
               </p>
             </div>
           )}
+
           {onShowDetails && (
             <button
               type="button"

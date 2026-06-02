@@ -350,7 +350,7 @@ export function EventMobileTabs({
 
             if (isDescontoTab) {
               return (
-                <div key="desconto" className="shrink-0" ref={descontoTriggerRef}>
+                <div key="desconto" className="shrink-0 md:-mb-0.5" ref={descontoTriggerRef}>
                   <button
                     type="button"
                     onClick={() => {

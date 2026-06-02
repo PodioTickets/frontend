@@ -9,6 +9,7 @@ import { VoucherIcon } from "@/components/Icons/VoucherIcon";
 import { PencilIcon } from "@/components/Icons/PencilIcon";
 import { TrashIcon } from "@/components/Icons/TrashIcon";
 import toast from "react-hot-toast";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCreateVoucherModal, useDeleteVoucherModal, useViewVoucherModal } from "@/stores/modalStore";
 import { AdminEventHeader } from "@/components/Admin/AdminEventHeader";
@@ -155,7 +156,7 @@ export default function VouchersPage() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Sem validade";
-    return new Date(dateString).toLocaleDateString("pt-BR", {
+    return formatDateBR(dateString, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

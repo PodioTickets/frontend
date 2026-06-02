@@ -9,6 +9,7 @@ import { ClockIcon } from "../Icons/ClockIcon";
 import { Counter } from "./Counter";
 import type { Kit } from "@/constants/kits";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { formatDateBR } from "@/utils/datetimeBR";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 
 interface KitCardProps {
@@ -22,11 +23,11 @@ export function KitCard({ kit, index }: KitCardProps) {
   const { raceQuantities, updateRaceQuantity } = useCheckout();
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("pt-BR", {
+    return formatDateBR(date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(date);
+    });
   };
 
   const formatPrice = (price: number) => {

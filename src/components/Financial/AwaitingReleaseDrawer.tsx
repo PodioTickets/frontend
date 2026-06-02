@@ -24,6 +24,7 @@ import Image from "next/image";
 import { Button } from "../Button";
 import { Tooltip } from "../Tooltip";
 import { Pagination } from "../Pagination";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 interface AwaitingReleaseDrawerProps {
   isOpen: boolean;
@@ -116,11 +117,9 @@ export function AwaitingReleaseDrawer({
     }
   };
 
-  // Formatar data para exibição
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  };
+  // Formatar data para exibição (UTC, sem shift de fuso)
+  const formatDate = (dateString: string) =>
+    formatDateBR(dateString, { day: "2-digit", month: "2-digit", year: "numeric" });
 
   // Usar paginação do servidor
   const totalPages = pagination.totalPages;
