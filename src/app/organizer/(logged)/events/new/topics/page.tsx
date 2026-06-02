@@ -16,6 +16,7 @@ import {
   DEFAULT_TOPIC_SENTINEL,
   isPendingTopicId,
   newPendingTopicId,
+  readTopicsPreviewDraft,
   topicIdsInUiOrder,
   writeTopicsPreviewDraft,
   type TopicSectionRow,
@@ -47,10 +48,23 @@ export default function TopicosPage() {
       setLoading(true);
       try {
         const event = await organizerService.getEventById(formData.createdEventId);
-        const { sections: next, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
-        defaultTopicApiIdRef.current = defaultTopicApiId;
-        setSections(next);
-        setCommittedSectionsJson(JSON.stringify(next));
+        const { sections: fromApi, defaultTopicApiId } = buildTopicSectionsFromEvent(event);
+        // Restaura o rascunho da prévia (edições não salvas) ao voltar de
+        // /topics/preview — sem isso o load re-buscava da API e descartava o
+        // que o usuário tinha digitado (bug: descrição sumia/virava "undefined").
+        const draft = readTopicsPreviewDraft(formData.createdEventId);
+        if (draft && draft.sections.length > 0) {
+          const draftDefault = draft.sections.find((s) => !s.allowDelete);
+          defaultTopicApiIdRef.current =
+            draftDefault && draftDefault.id !== DEFAULT_TOPIC_SENTINEL
+              ? draftDefault.id
+              : defaultTopicApiId;
+          setSections(draft.sections);
+        } else {
+          defaultTopicApiIdRef.current = defaultTopicApiId;
+          setSections(fromApi);
+        }
+        setCommittedSectionsJson(JSON.stringify(fromApi));
       } catch (error: any) {
         toast.error("Erro ao carregar tópicos");
       } finally {
