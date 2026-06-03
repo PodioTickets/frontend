@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useMemo, ReactNode, useCallback } from "react";
+import { useState, useRef, useMemo, ReactNode, useCallback, useLayoutEffect } from "react";
 
 interface VirtualListProps {
   items: any[];
@@ -8,6 +8,13 @@ interface VirtualListProps {
   overscan?: number;
   renderItem: (item: any, index: number) => ReactNode;
   className?: string;
+  /**
+   * Índice que deve ficar no TOPO da janela visível no MOMENTO DA MONTAGEM (ex.:
+   * abrir um dropdown já posicionado no item selecionado). Aplicado só uma vez —
+   * para reposicionar a cada abertura, troque a `key` do componente (remount).
+   * `null`/`undefined` = começa no topo (0).
+   */
+  initialScrollIndex?: number | null;
 }
 
 export function VirtualList({
@@ -17,9 +24,27 @@ export function VirtualList({
   overscan = 3,
   renderItem,
   className = "",
+  initialScrollIndex,
 }: VirtualListProps) {
-  const [scrollTop, setScrollTop] = useState(0);
+  // Scroll inicial derivado do índice alvo (clampado ao máximo). Estado lazy: o
+  // 1º render já calcula a fatia certa — sem setState em effect e sem flash.
+  // Reposicionamento por abertura vem do remount (key trocada pelo pai).
+  const initialScrollTop = useMemo(() => {
+    if (initialScrollIndex == null) return 0;
+    const maxTop = Math.max(0, items.length * itemHeight - containerHeight);
+    return Math.min(Math.max(0, initialScrollIndex * itemHeight), maxTop);
+  }, [initialScrollIndex, items.length, itemHeight, containerHeight]);
+  const [scrollTop, setScrollTop] = useState(initialScrollTop);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sincroniza o scroll do DOM com o estado inicial (só no mount). Atualiza um
+  // sistema externo (o nó scrollável) — uso legítimo de effect, sem setState.
+  useLayoutEffect(() => {
+    if (initialScrollTop > 0 && containerRef.current) {
+      containerRef.current.scrollTop = initialScrollTop;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const totalHeight = useMemo(() => items.length * itemHeight, [items.length, itemHeight]);
   

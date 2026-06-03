@@ -167,9 +167,10 @@ export function DatePickerWithConfirm({
   const displayMonth = useMemo(() => {
     const d = tempDate ?? validDate ?? undefined;
     if (d) return new Date(d.getFullYear(), d.getMonth(), 1);
-    // Data de nascimento: sem valor, abre o calendário/seletor de ano já nos anos 90
-    // (1995) — evita o usuário rolar ~30 anos a partir do ano atual.
-    return new Date(1995, 0, 1);
+    // Data de nascimento: sem valor, ancora em 1990 — assim o dropdown de ano
+    // abre com 1990 no topo (scroll-to do selecionado), com 2026..1991 acima e
+    // 1989..1900 abaixo ao rolar. Evita começar lá em 2026.
+    return new Date(1990, 0, 1);
   }, [tempDate, validDate]);
 
   const handleMonthChange = (newMonth: Date) => {
@@ -212,6 +213,9 @@ export function DatePickerWithConfirm({
             captionLayout="dropdown"
             month={displayMonth}
             onMonthChange={handleMonthChange}
+            // Range completo (1900–atual): todos os anos selecionáveis. O dropdown
+            // de ano abre ANCORADO em 1990 (scroll-to do item selecionado) — ver
+            // `displayMonth` e `scrollToSelectedOnOpen` no Dropdown de ano.
             fromYear={1900}
             toYear={new Date().getFullYear()}
             disablePastDates={false}
