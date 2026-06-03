@@ -1082,8 +1082,13 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
       const map = new Map<string, { quantity: number; categoryName?: string; raceName: string; distance: string; price: number; total: number }>();
       currentOrder.tickets.forEach((t) => {
         const local = localTicketLookup.get(t.ticketId);
-        const unitPrice = (t.finalUnitPrice ?? t.unitPrice) / 100;
-        const lineTotal = (t.finalTotalPrice ?? t.unitPrice) / 100;
+        // Valor CHEIO (bruto, antes de desconto): a linha do ingresso e o subtotal
+        // exibem o preço de tabela; o desconto de cupom/voucher aparece em linha
+        // própria (padrão `orderAutoCouponDisplay` + card do participante usa o
+        // mesmo `unitPrice` cheio). Não usar `finalUnitPrice`/`finalTotalPrice`
+        // aqui senão o subtotal já vem descontado e a conta visual duplica o abate.
+        const unitPrice = t.unitPrice / 100;
+        const lineTotal = (t.unitPrice * t.quantity) / 100;
         const existing = map.get(t.ticketId);
         if (existing) {
           existing.quantity += t.quantity;
