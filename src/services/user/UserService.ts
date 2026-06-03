@@ -531,6 +531,20 @@ export class UserService {
           /* não-JSON (ex.: "all" ou string solta) → sem restrição */
         }
       }
+      // [DIAGNÓSTICO TEMPORÁRIO] confirma o que o backend devolve no preview do
+      // cupom — remover após validar o appliesTo. Se `rawAppliesTo` vier
+      // undefined/null, o cupom é tratado como "todos" e desconta ingressos não
+      // cobertos (sintoma reportado).
+      if (typeof window !== "undefined") {
+        // eslint-disable-next-line no-console
+        console.warn("[coupon-preview]", {
+          code: d.code,
+          rawAppliesTo: d.appliesTo,
+          parsedAppliesTo: couponAppliesTo,
+          minCartValue: d.minCartValue,
+          minQuantity: d.minQuantity,
+        });
+      }
       return {
         kind: "coupon",
         code: String(d.code ?? code),

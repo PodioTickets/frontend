@@ -64,6 +64,28 @@ export const validateExpiry = (expiry: string): boolean => {
   return endOfExpiryMonth.getTime() >= Date.now();
 };
 
+/**
+ * Máscara da validade do cartão (MM/AA). Deletion-aware: ao apagar, NÃO
+ * re-adiciona a barra quando sobra só o mês — senão `"12/"` fica impossível de
+ * apagar (o backspace tira a `/`, mas a máscara a recoloca a cada tecla).
+ *
+ * - Digitando: a barra aparece sozinha ao começar o ano (`"12"` → `"12/"`).
+ * - Apagando: `"12/"` → `"12"` → `"1"` → `""` normalmente.
+ *
+ * `previous` é o valor ANTERIOR do campo (detecta a deleção por encurtamento).
+ */
+export const maskCardExpiry = (raw: string, previous = ""): string => {
+  const digits = raw.replace(/\D/g, "").slice(0, 4);
+  const isDeleting = raw.length < previous.length;
+  if (digits.length >= 3) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  if (digits.length === 2 && !isDeleting) {
+    return `${digits}/`;
+  }
+  return digits;
+};
+
 export const validateCVV = (cvv: string): boolean => {
   const digits = cvv.replace(/\D/g, '');
   return digits.length === 3 || digits.length === 4;
