@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/ageCoupon";
 import type { OrderCoupon, OrderVoucher } from "@/interfaces/order";
 import {
+  computeLinkCouponTicketDiscount,
   computeTicketPricingWithCoupon,
   computeTicketPricingWithDiscount,
   computeVoucherTicketsDiscount,
@@ -205,6 +206,38 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     return computeAgeCouponTicketDiscount(ageCoupon, selected, totalPrice);
   }, [ageCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
+  // Cupom de LINK manual (`?cupom=`, preview): respeita appliesTo + minCartValue
+  // + minQuantity, espelhando o ModalitiesStep pra desktop e mobile mostrarem o
+  // MESMO desconto. Só quando não há cupom REAL na order (`id !== "preview"`) nem
+  // auto (QUANTITY/AGE — ocultos até o pagamento). Conta a quantidade total do
+  // carrinho pro `minQuantity`.
+  const isAutoLinkCoupon =
+    couponData?.couponType === "QUANTITY" || couponData?.couponType === "AGE";
+  const hasRealOrderCoupon = !!appliedCoupon && appliedCoupon.id !== "preview";
+  const useLinkCoupon = !!couponData && !isAutoLinkCoupon && !hasRealOrderCoupon;
+  const linkCouponDiscount = useMemo(() => {
+    if (!useLinkCoupon) return 0;
+    const selected: Array<{ id: string; price: number; quantity: number }> = [];
+    let cartQuantity = 0;
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        if (quantity > 0) {
+          selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+          cartQuantity += quantity;
+        }
+      });
+    });
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) {
+        selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+        cartQuantity += quantity;
+      }
+    });
+    return computeLinkCouponTicketDiscount(couponData, selected, totalPrice, cartQuantity);
+  }, [useLinkCoupon, couponData, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+
   // Taxa de serviço sobre o subtotal JÁ DESCONTADO (mesma regra do /produtos).
   // Voucher e cupom de idade entram como desconto pré-calculado; cupom manual
   // segue o caminho percentual/fixo.
@@ -222,12 +255,20 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
             totalPrice,
             event.participantFeePercent ?? 0,
           )
-          : computeTicketPricingWithCoupon(
-            resolvedCoupon,
-            totalPrice,
-            event.participantFeePercent ?? 0,
-          ),
-    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
+          : useLinkCoupon
+            ? // Cupom de link: desconto JÁ filtrado por appliesTo + gated por
+              // minCartValue/minQuantity (0 = condições não atendidas → silêncio).
+              computeTicketPricingWithDiscount(
+                linkCouponDiscount,
+                totalPrice,
+                event.participantFeePercent ?? 0,
+              )
+            : computeTicketPricingWithCoupon(
+              resolvedCoupon,
+              totalPrice,
+              event.participantFeePercent ?? 0,
+            ),
+    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, useLinkCoupon, linkCouponDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;

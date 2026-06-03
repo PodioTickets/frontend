@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 import { normalizeNationality } from "@/utils/nationality";
 import { isPersonBr } from "@/utils/documentDisplay";
 import { getCountryCodeFromName } from "@/utils/phone";
-import { computeCouponDiscount } from "@/lib/orderCouponDiscount";
+import {
+  computeCouponDiscount,
+  computeLinkCouponTicketDiscount,
+  couponConditionsMet,
+} from "@/lib/orderCouponDiscount";
 import type { OrderCoupon } from "@/interfaces/order";
 
 /**
@@ -77,5 +81,62 @@ describe("orderCouponDiscount.computeCouponDiscount — cupom FIXED (unidade)", 
   it("cupom FIXED maior que o subtotal faz clamp na base (não fica negativo)", () => {
     // R$300 (value=30000) sobre carrinho de R$200 → desconta no máximo R$200.
     expect(computeCouponDiscount(fixed(30000), 200, 0).totalDiscount).toBe(200);
+  });
+});
+
+// ── cupom de LINK: appliesTo + minCartValue + minQuantity ─────────────────
+// Regras do preview (`GET /coupons/.../preview`) aplicadas no /ingressos.
+// Ausência de min* = sem condição (interceptor remove null). appliesTo null = todos.
+
+describe("orderCouponDiscount.couponConditionsMet", () => {
+  it("sem condições (min* null) sempre atende", () => {
+    expect(couponConditionsMet({}, 0, 0)).toBe(true);
+  });
+
+  it("minCartValue (centavos) compara com o subtotal em REAIS", () => {
+    // mínimo R$50 (5000 centavos): R$40 não atende, R$50 atende.
+    expect(couponConditionsMet({ minCartValue: 5000 }, 40, 1)).toBe(false);
+    expect(couponConditionsMet({ minCartValue: 5000 }, 50, 1)).toBe(true);
+  });
+
+  it("minQuantity compara com a quantidade de ingressos", () => {
+    expect(couponConditionsMet({ minQuantity: 2 }, 999, 1)).toBe(false);
+    expect(couponConditionsMet({ minQuantity: 2 }, 999, 2)).toBe(true);
+  });
+});
+
+describe("orderCouponDiscount.computeLinkCouponTicketDiscount", () => {
+  const A = { id: "tk-A", price: 100, quantity: 1 };
+  const B = { id: "tk-B", price: 50, quantity: 1 };
+
+  it("appliesTo null → todos os ingressos elegíveis (10% de R$150 = R$15)", () => {
+    const c = { type: "PERCENTAGE" as const, value: 10, appliesTo: null };
+    expect(computeLinkCouponTicketDiscount(c, [A, B], 150, 2)).toBe(15);
+  });
+
+  it("appliesTo subconjunto desconta SÓ os cobertos (10% de tk-A = R$10)", () => {
+    const c = { type: "PERCENTAGE" as const, value: 10, appliesTo: ["tk-A"] };
+    expect(computeLinkCouponTicketDiscount(c, [A, B], 150, 2)).toBe(10);
+  });
+
+  it("minCartValue não atingido → 0 (silêncio)", () => {
+    const c = { type: "PERCENTAGE" as const, value: 10, minCartValue: 20000 };
+    expect(computeLinkCouponTicketDiscount(c, [A, B], 150, 2)).toBe(0);
+  });
+
+  it("minQuantity não atingido → 0 (silêncio)", () => {
+    const c = { type: "PERCENTAGE" as const, value: 10, minQuantity: 3 };
+    expect(computeLinkCouponTicketDiscount(c, [A, B], 150, 2)).toBe(0);
+  });
+
+  it("FIXED (centavos) clampado ao subtotal ELEGÍVEL de appliesTo", () => {
+    // R$80 de desconto (8000) restrito a tk-B (R$50) → clamp em R$50.
+    const c = { type: "FIXED" as const, value: 8000, appliesTo: ["tk-B"] };
+    expect(computeLinkCouponTicketDiscount(c, [A, B], 150, 2)).toBe(50);
+  });
+
+  it("nenhum ingresso elegível selecionado → 0", () => {
+    const c = { type: "PERCENTAGE" as const, value: 10, appliesTo: ["tk-Z"] };
+    expect(computeLinkCouponTicketDiscount(c, [A, B], 150, 2)).toBe(0);
   });
 });

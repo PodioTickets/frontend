@@ -506,6 +506,31 @@ export class UserService {
       }
 
       // Cupom tradicional (backend pode ou não enviar `kind: "coupon"`).
+      // `appliesTo` espelha o ramo do voucher: "all"/ausente → null (todos);
+      // array OU string JSON ('["id1","id2"]') → lista de ticketIds.
+      // `minCartValue`/`minQuantity` chegam só quando não-nulos (o
+      // ResponseCompressionInterceptor remove null/""/undefined) → ausência =
+      // "sem condição".
+      let couponAppliesTo: string[] | null = null;
+      const rawApplies = d.appliesTo;
+      if (Array.isArray(rawApplies)) {
+        const ids = rawApplies.filter(
+          (x: unknown): x is string => typeof x === "string",
+        );
+        couponAppliesTo = ids.length ? ids : null;
+      } else if (typeof rawApplies === "string" && rawApplies !== "all") {
+        try {
+          const parsed = JSON.parse(rawApplies);
+          if (Array.isArray(parsed)) {
+            const ids = parsed.filter(
+              (x: unknown): x is string => typeof x === "string",
+            );
+            couponAppliesTo = ids.length ? ids : null;
+          }
+        } catch {
+          /* não-JSON (ex.: "all" ou string solta) → sem restrição */
+        }
+      }
       return {
         kind: "coupon",
         code: String(d.code ?? code),
@@ -513,6 +538,10 @@ export class UserService {
         type: d.type === "FIXED" ? "FIXED" : "PERCENTAGE",
         couponType: d.couponType,
         applyToProducts: d.applyToProducts,
+        appliesTo: couponAppliesTo,
+        minCartValue:
+          typeof d.minCartValue === "number" ? d.minCartValue : null,
+        minQuantity: typeof d.minQuantity === "number" ? d.minQuantity : null,
       };
     } catch {
       return null;
