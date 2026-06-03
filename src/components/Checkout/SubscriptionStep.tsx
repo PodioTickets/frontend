@@ -1538,15 +1538,12 @@ export function SubscriptionStep({
                 })}
               </div>
 
-              {/* Subtotal só com mais de um ingresso diferente pra somar. */}
-              {groupedTickets.length > 1 && (
-                <div className="flex flex-col gap-2 mt-6">
-                  <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
-                    Subtotal:
-                    <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
-                  </p>
-                </div>
-              )}
+              <div className="flex flex-col gap-2 mt-6">
+                <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
+                  Subtotal:
+                  <span className="text-gray-12">{formatPrice(totalPrice + totalProductsPrice)}</span>
+                </p>
+              </div>
               {hasCouponLine && (
                 <div className="flex flex-col gap-2 mt-2">
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
@@ -1564,7 +1561,7 @@ export function SubscriptionStep({
                 </div>
               )}
               {serviceFee > 0 && (
-                <div className={`flex flex-col gap-2 ${hasCouponLine || hasVoucherLine ? "mt-2" : "mt-6"}`}>
+                <div className={`flex flex-col gap-2 mt-2`}>
                   <p className="text-sm font-medium text-gray-12 flex items-center justify-between">
                     Taxa de serviço:
                     <span className="text-gray-12">{formatPrice(serviceFee)}</span>
