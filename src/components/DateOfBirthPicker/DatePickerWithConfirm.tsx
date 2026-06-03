@@ -167,7 +167,9 @@ export function DatePickerWithConfirm({
   const displayMonth = useMemo(() => {
     const d = tempDate ?? validDate ?? undefined;
     if (d) return new Date(d.getFullYear(), d.getMonth(), 1);
-    return new Date();
+    // Data de nascimento: sem valor, abre o calendário/seletor de ano já nos anos 90
+    // (1995) — evita o usuário rolar ~30 anos a partir do ano atual.
+    return new Date(1995, 0, 1);
   }, [tempDate, validDate]);
 
   const handleMonthChange = (newMonth: Date) => {
