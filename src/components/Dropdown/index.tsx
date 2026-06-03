@@ -323,6 +323,13 @@ export interface DropdownProps {
    * Se `true`, ignora `menuInPortal`.
    */
   menuInline?: boolean;
+  /**
+   * Ao abrir, rola a lista (virtualizada) até deixar o item selecionado
+   * (`selectedIds[0]`) no topo. Útil para listas longas como anos de nascimento
+   * — abre ancorado no ano corrente em vez de no início. Só tem efeito quando a
+   * lista é virtualizada (>10 itens).
+   */
+  scrollToSelectedOnOpen?: boolean;
 }
 
 export function Dropdown({
@@ -343,6 +350,7 @@ export function Dropdown({
   onMultiSelectChange,
   menuInPortal = false,
   menuInline = false,
+  scrollToSelectedOnOpen = false,
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -569,6 +577,17 @@ export function Dropdown({
     return options && options.length > 10;
   }, [options]);
 
+  // Índice do item selecionado pra ancorar o scroll ao ABRIR (só quando opt-in).
+  // `undefined` quando fechado → na próxima abertura o valor muda de novo e a
+  // `VirtualList` reposiciona (efeito dispara a cada open).
+  const scrollToIndex = useMemo(() => {
+    if (!scrollToSelectedOnOpen || !isOpen) return undefined;
+    const sel = internalSelectedIds[0];
+    if (sel == null) return undefined;
+    const idx = options.findIndex((o) => (o.id ?? o.label) === sel);
+    return idx >= 0 ? idx : undefined;
+  }, [scrollToSelectedOnOpen, isOpen, internalSelectedIds, options]);
+
   // No modo portal, o pai (do portal) já clampa a altura ao espaço disponível
   // na viewport — aqui usamos o mesmo valor pra evitar bug em que o filho
   // tem max-h maior que o pai e itens ficam cortados sem aparecer no scroll.
@@ -630,10 +649,14 @@ export function Dropdown({
         </div>
       ) : shouldUseVirtualList ? (
         <VirtualList
+          // Remonta quando o índice alvo muda (cada abertura) pra reaplicar o
+          // scroll inicial sem setState em effect.
+          key={`vlist-${scrollToIndex ?? "top"}`}
           items={options}
           itemHeight={50}
           containerHeight={effectiveMenuMaxHeight}
           overscan={3}
+          initialScrollIndex={scrollToIndex}
           className="[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
           renderItem={(option, index) => (
             <OptionItem
