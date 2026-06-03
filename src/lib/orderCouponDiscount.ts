@@ -217,6 +217,47 @@ export function couponConditionsMet(
 }
 
 /**
+ * Normaliza `appliesTo` de QUALQUER fonte para `string[] | null` (null = todos):
+ *  - `null`/`undefined`/`"all"` → null (sem restrição);
+ *  - array → os ids string (vazio → null);
+ *  - string JSON (`'["id1","id2"]'`) → ids (vazio/ inválido → null).
+ * Cobre tanto o preview de link (array) quanto o `OrderCoupon.appliesTo` (string).
+ */
+export function normalizeCouponAppliesTo(
+  appliesTo: string | string[] | null | undefined,
+): string[] | null {
+  if (appliesTo == null) return null;
+  if (Array.isArray(appliesTo)) return appliesTo.length ? appliesTo : null;
+  if (appliesTo === "all") return null;
+  try {
+    const parsed = JSON.parse(appliesTo);
+    if (Array.isArray(parsed)) {
+      const ids = parsed.filter((x: unknown): x is string => typeof x === "string");
+      return ids.length ? ids : null;
+    }
+  } catch {
+    /* não-JSON (ex.: string solta) → sem restrição */
+  }
+  return null;
+}
+
+/**
+ * True quando o cupom de link cobre ALGUM ingresso SELECIONADO (`appliesTo`).
+ * `null`/vazio = sem restrição → cobre todos. Espelha o voucher: ingresso fora
+ * do escopo → o cupom nem deve aparecer no resumo (sem desconto e sem "ao
+ * continuar"). Usado só pra DECIDIR EXIBIÇÃO; o desconto sai de
+ * `computeLinkCouponTicketDiscount`.
+ */
+export function couponCoversAnySelected(
+  appliesTo: string[] | null | undefined,
+  selected: Array<{ id: string; quantity: number }>,
+): boolean {
+  if (!appliesTo || appliesTo.length === 0) return true;
+  const set = new Set(appliesTo);
+  return selected.some((t) => t.quantity > 0 && set.has(t.id));
+}
+
+/**
  * Desconto (em REAIS) de um cupom de LINK (`?cupom=`) sobre os ingressos
  * selecionados, respeitando as MESMAS regras do cupom de idade
  * (`computeAgeCouponTicketDiscount`) + `minQuantity`:

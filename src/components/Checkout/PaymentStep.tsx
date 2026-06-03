@@ -59,7 +59,7 @@ const COUPON_ERROR_MESSAGES: Record<string, string> = {
   VOUCHER_EXPIRED: "Voucher expirado.",
   DISCOUNT_CONFLICT: "Cupom e voucher não podem ser usados juntos.",
 };
-import { validateCardNumber, validateExpiry, validateCVV, getCardBrand } from "@/utils/cardValidation";
+import { validateCardNumber, validateExpiry, validateCVV, getCardBrand, maskCardExpiry } from "@/utils/cardValidation";
 import { isValidCPF } from "@/utils/cpf";
 import { getPendingCoupon, getPendingCouponKind } from "@/hooks/usePendingCoupon";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
@@ -138,22 +138,14 @@ const CreditCardForm = memo(function CreditCardForm({
     }
   };
 
-  const formatExpiry = (value: string) => {
-    const v = value.replace(/\D/g, "");
-    if (v.length >= 2) {
-      return v.substring(0, 2) + "/" + v.substring(2, 4);
-    }
-    return v;
-  };
-
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCardNumber(e.target.value);
     if (setCardNumber) setCardNumber(formatted);
   };
 
   const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatExpiry(e.target.value);
-    if (setCardExpiry) setCardExpiry(formatted);
+    // Máscara deletion-aware: passa o valor ANTERIOR pra permitir apagar "MM/".
+    if (setCardExpiry) setCardExpiry(maskCardExpiry(e.target.value, cardExpiry || ""));
   };
 
   // Detectar se é Amex para permitir 4 dígitos no CVV
@@ -316,12 +308,6 @@ const DebitCardForm = memo(function DebitCardForm({
     return parts.length ? parts.join(" ") : v;
   };
 
-  const formatExpiry = (value: string) => {
-    const v = value.replace(/\D/g, "");
-    if (v.length >= 2) return v.substring(0, 2) + "/" + v.substring(2, 4);
-    return v;
-  };
-
   const isAmex = cardNumber ? getCardBrand(cardNumber) === "AMEX" : false;
   const cvvMaxLength = isAmex ? 4 : 3;
 
@@ -366,7 +352,7 @@ const DebitCardForm = memo(function DebitCardForm({
           <Input
             type="text"
             value={cardExpiry || ""}
-            onChange={(e) => setCardExpiry && setCardExpiry(formatExpiry(e.target.value))}
+            onChange={(e) => setCardExpiry && setCardExpiry(maskCardExpiry(e.target.value, cardExpiry || ""))}
             className="bg-gray-2"
             maxLength={5}
             placeholder="MM/AA"

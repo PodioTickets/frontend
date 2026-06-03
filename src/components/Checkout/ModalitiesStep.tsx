@@ -22,9 +22,11 @@ import {
   computeTicketPricingWithDiscount,
   computeVoucherTicketsDiscount,
   couponConditionsMet,
+  couponCoversAnySelected,
   couponPreviewToOrderCoupon,
   formatCouponLineLabel,
   formatVoucherLineLabel,
+  normalizeCouponAppliesTo,
 } from "@/lib/orderCouponDiscount";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import { useAuth } from "@/hooks/useAuth";
@@ -310,6 +312,30 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
   const linkCouponConditionsMet = useLinkCoupon
     ? couponConditionsMet(couponData, totalPrice, totalParticipants)
     : true;
+  // Cupom de link cobre ALGUM ingresso selecionado? Se não (ticket fora do
+  // `appliesTo`), o cupom não deve aparecer no resumo — espelha o voucher.
+  const linkCouponCoversSelection = useLinkCoupon
+    ? couponCoversAnySelected(couponData?.appliesTo, selectedTickets)
+    : false;
+
+  // Cupom DISCOUNT REAL já aplicado na order (reserva): também precisa respeitar
+  // `appliesTo` — antes caía no `computeTicketPricingWithCoupon`, que descontava o
+  // subtotal INTEIRO (inclusive ingressos não cobertos). Preços vêm cheios
+  // (`unitPrice`), então recalculamos só sobre os elegíveis. Sem gating de min
+  // (o backend já validou ao aplicar). Auto (QUANTITY/AGE) seguem no caminho antigo.
+  const orderManualCouponDiscount =
+    !useLinkCoupon && appliedCoupon?.couponType === "DISCOUNT"
+      ? computeLinkCouponTicketDiscount(
+          {
+            type: appliedCoupon.type,
+            value: appliedCoupon.value,
+            appliesTo: normalizeCouponAppliesTo(appliedCoupon.appliesTo),
+          },
+          selectedTickets,
+          totalPrice,
+          totalParticipants,
+        )
+      : null;
 
   // Cupom AUTOMÁTICO de idade (elegibilidade do backend). Só entra quando não há
   // voucher nem cupom manual de link — esses são intenção explícita do usuário e
@@ -365,12 +391,20 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
                 totalPrice,
                 event.participantFeePercent ?? 0,
               )
-            : computeTicketPricingWithCoupon(
-                appliedCoupon,
-                totalPrice,
-                event.participantFeePercent ?? 0,
-              ),
-    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, linkCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
+            : orderManualCouponDiscount != null
+              ? // Cupom DISCOUNT real da order: idem, mas appliesTo-aware (não
+                // desconta mais o subtotal inteiro quando cobre só algumas modalidades).
+                computeTicketPricingWithDiscount(
+                  orderManualCouponDiscount,
+                  totalPrice,
+                  event.participantFeePercent ?? 0,
+                )
+              : computeTicketPricingWithCoupon(
+                  appliedCoupon,
+                  totalPrice,
+                  event.participantFeePercent ?? 0,
+                ),
+    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, linkCouponDiscount, orderManualCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const totalWithFee = pricing.total;
@@ -386,7 +420,10 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
         : "";
   // Cupom do link ainda sem desconto calculado ("ao continuar"). Voucher e cupom
   // de idade são calculados client-side, então não usam esse fallback.
-  const couponPending = !!pendingCoupon && !voucherData;
+  // "Ao continuar" (cupom pendente) só quando o cupom de link cobre a seleção —
+  // ticket fora do `appliesTo` esconde o cupom por inteiro (paridade com voucher).
+  const couponPending =
+    !!pendingCoupon && !voucherData && (!useLinkCoupon || linkCouponCoversSelection);
 
   // Agrupa ingressos para exibição
   const groupedTickets = useMemo(() => {

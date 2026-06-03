@@ -20,9 +20,11 @@ import {
   computeTicketPricingWithCoupon,
   computeTicketPricingWithDiscount,
   computeVoucherTicketsDiscount,
+  couponCoversAnySelected,
   couponPreviewToOrderCoupon,
   formatCouponLineLabel,
   formatVoucherLineLabel,
+  normalizeCouponAppliesTo,
 } from "@/lib/orderCouponDiscount";
 
 interface EventInfoProps {
@@ -238,6 +240,52 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
     return computeLinkCouponTicketDiscount(couponData, selected, totalPrice, cartQuantity);
   }, [useLinkCoupon, couponData, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
 
+  // Cupom de link cobre ALGUM ingresso selecionado? Se não (fora do `appliesTo`),
+  // o cupom some do resumo — paridade com o voucher.
+  const linkCouponCoversSelection = useMemo(() => {
+    if (!useLinkCoupon) return false;
+    const selected: Array<{ id: string; quantity: number }> = [];
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        if (quantity > 0) selected.push({ id: ticket.id, quantity });
+      });
+    });
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) selected.push({ id: ticket.id, quantity });
+    });
+    return couponCoversAnySelected(couponData?.appliesTo, selected);
+  }, [useLinkCoupon, couponData, categorizedTickets, uncategorizedTickets, raceQuantities]);
+
+  // Cupom DISCOUNT REAL da order (reserva): também respeita `appliesTo` (antes o
+  // `computeTicketPricingWithCoupon` descontava o subtotal inteiro, inclusive
+  // ingressos não cobertos). Preços vêm cheios → recalcula só sobre os elegíveis.
+  const orderManualCouponDiscount = useMemo(() => {
+    if (useLinkCoupon || resolvedCoupon?.couponType !== "DISCOUNT") return null;
+    const selected: Array<{ id: string; price: number; quantity: number }> = [];
+    categorizedTickets.forEach((category) => {
+      category.tickets.forEach((ticket) => {
+        const quantity = raceQuantities[ticket.id] || 0;
+        if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+      });
+    });
+    uncategorizedTickets.forEach((ticket) => {
+      const quantity = raceQuantities[ticket.id] || 0;
+      if (quantity > 0) selected.push({ id: ticket.id, price: getTicketPrice(ticket), quantity });
+    });
+    return computeLinkCouponTicketDiscount(
+      {
+        type: resolvedCoupon.type,
+        value: resolvedCoupon.value,
+        appliesTo: normalizeCouponAppliesTo(resolvedCoupon.appliesTo),
+      },
+      selected,
+      totalPrice,
+      selected.reduce((s, t) => s + t.quantity, 0),
+    );
+  }, [useLinkCoupon, resolvedCoupon, categorizedTickets, uncategorizedTickets, raceQuantities, totalPrice]);
+
   // Taxa de serviço sobre o subtotal JÁ DESCONTADO (mesma regra do /produtos).
   // Voucher e cupom de idade entram como desconto pré-calculado; cupom manual
   // segue o caminho percentual/fixo.
@@ -263,12 +311,19 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                 totalPrice,
                 event.participantFeePercent ?? 0,
               )
-            : computeTicketPricingWithCoupon(
-              resolvedCoupon,
-              totalPrice,
-              event.participantFeePercent ?? 0,
-            ),
-    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, useLinkCoupon, linkCouponDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
+            : orderManualCouponDiscount != null
+              ? // Cupom DISCOUNT real da order: appliesTo-aware (só sobre os elegíveis).
+                computeTicketPricingWithDiscount(
+                  orderManualCouponDiscount,
+                  totalPrice,
+                  event.participantFeePercent ?? 0,
+                )
+              : computeTicketPricingWithCoupon(
+                resolvedCoupon,
+                totalPrice,
+                event.participantFeePercent ?? 0,
+              ),
+    [useVoucher, voucherDiscount, ageCoupon, ageDiscount, useLinkCoupon, linkCouponDiscount, orderManualCouponDiscount, resolvedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
   const hasCouponLine = pricing.showCouponDiscount && pricing.couponDiscount > 0;
@@ -282,7 +337,10 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
         : "";
   // Cupom do link sem desconto ainda calculado. Voucher é client-side: quando
   // não cobre a seleção (desconto 0), a linha do voucher simplesmente não aparece.
-  const couponPending = !!pendingCoupon && !useVoucher;
+  // O "ao continuar" do cupom também só vale quando ele cobre a seleção — ticket
+  // fora do `appliesTo` esconde o cupom por inteiro (paridade com voucher).
+  const couponPending =
+    !!pendingCoupon && !useVoucher && (!useLinkCoupon || linkCouponCoversSelection);
 
   const totalParticipants = useMemo(() => {
     let participants = 0;

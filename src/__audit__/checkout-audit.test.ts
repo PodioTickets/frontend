@@ -6,6 +6,8 @@ import {
   computeCouponDiscount,
   computeLinkCouponTicketDiscount,
   couponConditionsMet,
+  couponCoversAnySelected,
+  normalizeCouponAppliesTo,
 } from "@/lib/orderCouponDiscount";
 import type { OrderCoupon } from "@/interfaces/order";
 
@@ -138,5 +140,48 @@ describe("orderCouponDiscount.computeLinkCouponTicketDiscount", () => {
   it("nenhum ingresso elegível selecionado → 0", () => {
     const c = { type: "PERCENTAGE" as const, value: 10, appliesTo: ["tk-Z"] };
     expect(computeLinkCouponTicketDiscount(c, [A, B], 150, 2)).toBe(0);
+  });
+});
+
+describe("orderCouponDiscount.couponCoversAnySelected", () => {
+  const A = { id: "tk-A", quantity: 1 };
+  const B = { id: "tk-B", quantity: 1 };
+
+  it("appliesTo null/vazio cobre todos (true)", () => {
+    expect(couponCoversAnySelected(null, [A])).toBe(true);
+    expect(couponCoversAnySelected([], [A])).toBe(true);
+  });
+
+  it("true quando ALGUM selecionado está no appliesTo", () => {
+    expect(couponCoversAnySelected(["tk-A"], [A, B])).toBe(true);
+  });
+
+  it("false quando NENHUM selecionado está no appliesTo (esconde o cupom)", () => {
+    expect(couponCoversAnySelected(["tk-Z"], [A, B])).toBe(false);
+  });
+
+  it("ignora itens com quantidade 0", () => {
+    expect(couponCoversAnySelected(["tk-A"], [{ id: "tk-A", quantity: 0 }])).toBe(false);
+  });
+});
+
+describe("orderCouponDiscount.normalizeCouponAppliesTo", () => {
+  it("null/undefined/'all' → null (todos)", () => {
+    expect(normalizeCouponAppliesTo(null)).toBeNull();
+    expect(normalizeCouponAppliesTo(undefined)).toBeNull();
+    expect(normalizeCouponAppliesTo("all")).toBeNull();
+  });
+
+  it("array de ids → o próprio array; vazio → null", () => {
+    expect(normalizeCouponAppliesTo(["tk-A", "tk-B"])).toEqual(["tk-A", "tk-B"]);
+    expect(normalizeCouponAppliesTo([])).toBeNull();
+  });
+
+  it("string JSON (OrderCoupon.appliesTo) → lista de ids", () => {
+    expect(normalizeCouponAppliesTo('["tk-A","tk-B"]')).toEqual(["tk-A", "tk-B"]);
+  });
+
+  it("string não-JSON → null (sem restrição)", () => {
+    expect(normalizeCouponAppliesTo("qualquer-coisa")).toBeNull();
   });
 });
