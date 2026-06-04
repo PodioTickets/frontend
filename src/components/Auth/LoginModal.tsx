@@ -1084,17 +1084,23 @@ export function LoginModal() {
                         </button>
                       </div>
 
-                      {/* Captcha Turnstile */}
+                      {/* Captcha Turnstile — retângulo "normal" (300×65)
+                          reduzido via scale pra ~255×55: não existe tamanho
+                          fino nativo no widget. Wrapper com altura fixa
+                          absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <Turnstile
-                          ref={mobileTurnstileRef}
-                          siteKey={TURNSTILE_SITE_KEY}
-                          onSuccess={setTurnstileToken}
-                          onError={() => setTurnstileToken(null)}
-                          onExpire={() => setTurnstileToken(null)}
-                          options={{ theme: "auto", size: "flexible" }}
-                          className="w-full"
-                        />
+                        <div className="flex h-14 w-full items-center justify-center">
+                          <div className="scale-[0.85]">
+                            <Turnstile
+                              ref={mobileTurnstileRef}
+                              siteKey={TURNSTILE_SITE_KEY}
+                              onSuccess={setTurnstileToken}
+                              onError={() => setTurnstileToken(null)}
+                              onExpire={() => setTurnstileToken(null)}
+                              options={{ theme: "auto", size: "normal" }}
+                            />
+                          </div>
+                        </div>
                       )}
 
                       {/* Login button */}
@@ -1322,17 +1328,23 @@ export function LoginModal() {
                         </button>
                       </div>
 
-                      {/* Captcha Turnstile */}
+                      {/* Captcha Turnstile — retângulo "normal" (300×65)
+                          reduzido via scale pra ~255×55: não existe tamanho
+                          fino nativo no widget. Wrapper com altura fixa
+                          absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
-                        <Turnstile
-                          ref={desktopTurnstileRef}
-                          siteKey={TURNSTILE_SITE_KEY}
-                          onSuccess={setTurnstileToken}
-                          onError={() => setTurnstileToken(null)}
-                          onExpire={() => setTurnstileToken(null)}
-                          options={{ theme: "auto", size: "flexible" }}
-                          className="w-full"
-                        />
+                        <div className="flex h-14 w-full items-center justify-center">
+                          <div className="scale-100 w-full">
+                            <Turnstile
+                              ref={desktopTurnstileRef}
+                              siteKey={TURNSTILE_SITE_KEY}
+                              onSuccess={setTurnstileToken}
+                              onError={() => setTurnstileToken(null)}
+                              onExpire={() => setTurnstileToken(null)}
+                              options={{ theme: "light", size: "flexible" }}
+                            />
+                          </div>
+                        </div>
                       )}
 
                       {/* Login button */}
