@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { useCheckoutReservation } from "@/hooks/useCheckoutReservation";
+import { useCheckout } from "@/contexts/CheckoutContext";
 import { OrderApiError, type OrderResponse } from "@/interfaces/order";
 import { CheckoutExpiredModal } from "@/components/Checkout/CheckoutExpiredModal";
 
@@ -128,6 +129,10 @@ export function computeRemainingMs(
 export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { getOrder } = useCheckoutReservation();
+  // Provider SEMPRE montado dentro do CheckoutProvider (layout /checkout).
+  // Usado pra limpar a seleção quando o pedido vinculado já foi PAGO fora do
+  // fluxo (ex.: PIX confirmado com a tela presa, aba fechada antes do /sucesso).
+  const { resetCheckout } = useCheckout();
 
   const [state, setState] = useState<TimerState | null>(null);
   const [currentOrder, setCurrentOrder] = useState<OrderResponse | null>(null);
@@ -141,9 +146,13 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
   // Refs estáveis para funções usadas no tick — evita re-runs desnecessários.
   const getOrderRef = useRef(getOrder);
   const routerRef = useRef(router);
+  const resetCheckoutRef = useRef(resetCheckout);
   useEffect(() => {
     getOrderRef.current = getOrder;
   }, [getOrder]);
+  useEffect(() => {
+    resetCheckoutRef.current = resetCheckout;
+  }, [resetCheckout]);
   useEffect(() => {
     routerRef.current = router;
   }, [router]);
@@ -296,6 +305,14 @@ export function CheckoutTimerProvider({ children }: { children: ReactNode }) {
           }
         } else {
           clearStored(eventId);
+          // Pedido PAGO fora do fluxo (PIX confirmado com a tela presa, aba
+          // fechada antes do /sucesso): a seleção/participantes persistidos
+          // pertencem a ele e não devem pré-popular a próxima compra.
+          // CANCELLED/expirado MANTÉM a seleção — a pessoa provavelmente vai
+          // refazer a MESMA compra.
+          if (order.status === "PAID") {
+            resetCheckoutRef.current();
+          }
         }
       } catch (err) {
         if (cancelled) return;

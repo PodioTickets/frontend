@@ -409,6 +409,7 @@ function PixModal({
 }) {
   const [timeLeft, setTimeLeft] = useState(30 * 60);
   const [status, setStatus] = useState<"PENDING" | "PAID" | "CANCELLED" | null>(null);
+  const { getPaymentStatus } = useCheckoutReservation();
 
   // Refs estáveis — nunca mudam de referência, evitam re-execução dos effects
   const confirmedRef = useRef(false);
@@ -451,6 +452,66 @@ function PixModal({
       socket.disconnect();
     };
   }, [isOpen, orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Polling — FALLBACK do WebSocket. O socket pode perder a confirmação
+   * (queda de conexão, webhook processado entre disconnect/subscribe, restart
+   * do server) e aí o pagamento confirmava no banco mas a tela ficava presa
+   * no QR pra sempre. Três gatilhos:
+   *   1. Checagem IMEDIATA ao abrir (webhook pode ter chegado antes do subscribe);
+   *   2. Intervalo de 5s enquanto o modal está aberto e não confirmado;
+   *   3. Volta de foco/visibilidade — o fluxo típico de PIX é sair pro app do
+   *      banco e voltar; checar na hora elimina a espera do próximo tick.
+   * Erros de rede são ignorados (transitórios — o próximo tick tenta de novo). */
+  useEffect(() => {
+    if (!isOpen || !orderId) return;
+    let cancelled = false;
+    let inFlight = false;
+
+    const check = async () => {
+      if (cancelled || inFlight || confirmedRef.current) return;
+      inFlight = true;
+      try {
+        const res = await getPaymentStatus(orderId);
+        if (cancelled || confirmedRef.current) return;
+        // O body real usa `orderStatus` (orders.service.getPaymentStatus) e
+        // Payment.status do Prisma é UPPERCASE ("PAID"); o tipo do front
+        // declara `status`/"approved" — normaliza e aceita qualquer um.
+        const raw = res as unknown as Record<string, unknown>;
+        const norm = (v: unknown) =>
+          typeof v === "string" ? v.toLowerCase() : "";
+        const orderStatus = norm(raw.orderStatus) || norm(raw.status);
+        const paymentStatus = norm(res.payment?.status);
+        if (
+          orderStatus === "paid" ||
+          paymentStatus === "paid" ||
+          paymentStatus === "approved"
+        ) {
+          handleConfirmed();
+        }
+      } catch {
+        /* transitório — próximo tick tenta de novo */
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void check();
+    const interval = setInterval(() => void check(), 5000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+    const onFocus = () => void check();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isOpen, orderId, getPaymentStatus, handleConfirmed]);
 
 
   // Countdown baseado no expiresAt do servidor. Fallback de 30min quando o

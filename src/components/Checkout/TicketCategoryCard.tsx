@@ -241,7 +241,7 @@ const TicketItemMobile = memo(({
   const isSingleImageLayout = productItems.length === 1;
 
   return (
-    <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-6">
+    <div className="bg-gray-2 border border-gray-6 rounded-xl p-4 flex flex-col gap-2 md:gap-6">
       {isSingleImageLayout ? (
         <div className="flex gap-3 items-start w-full">
           {/* Imagem principal */}
@@ -383,7 +383,7 @@ const TicketItemMobile = memo(({
             </div>
           )}
 
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1">
               <h2 className="text-lg font-bold text-gray-12 font-manrope leading-[1.1]">
                 {ticket.name}
@@ -956,7 +956,7 @@ export function TicketCategoryCard({
             onClick={handleToggle}
           >
             <div className="flex flex-1 items-center gap-3 min-w-0">
-              {showCategoryLevelKit && headerThumbItem ? (
+              {showCategoryLevelKit && headerThumbItem && !isExpanded ? (
                 <div className="size-20 shrink-0 rounded-lg border border-gray-6 overflow-hidden relative bg-gray-2">
                   <ImageWithInitialFallback
                     src={headerThumbItem.src}
@@ -971,17 +971,17 @@ export function TicketCategoryCard({
                 </div>
               ) : null}
               <div className="flex flex-col gap-1 min-w-0">
-                <h1 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1]">
+                <h1 className="text-lg font-bold text-gray-12 font-manrope break-normal line-clamp-2">
                   {categoryName}
                 </h1>
                 {!isExpanded ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
-                    <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
+                    <span className="text-gray-12 font-bold font-manrope">
                       {formatDisplayPrice(minPriceBreakdown)}
                     </span>
                     {minPriceBreakdown.hasDiscount && (
-                      <span className="text-gray-11 text-sm font-medium font-manrope leading-[1.1] line-through">
+                      <span className="text-gray-11 text-sm font-medium font-manrope line-through">
                         {formatPrice(minPrice)}
                       </span>
                     )}
@@ -996,7 +996,7 @@ export function TicketCategoryCard({
             className="overflow-hidden transition-all duration-200 ease-out"
             style={{ maxHeight: isExpanded ? "10000px" : "0", opacity: isExpanded ? 1 : 0 }}
           >
-            <div className="px-4 pb-7 border-t border-gray-6 flex flex-col gap-6 pt-6">
+            <div className="px-4 pb-6 border-t border-gray-6 flex flex-col gap-6 pt-6">
               {categoryDescription?.trim() ? (
                 <p className="text-sm text-gray-11 font-family-dm-sans leading-[1.3] ">
                   {categoryDescription.trim()}

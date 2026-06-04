@@ -305,19 +305,19 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
           )
           : useLinkCoupon
             ? // Cupom de link: desconto JÁ filtrado por appliesTo + gated por
-              // minCartValue/minQuantity (0 = condições não atendidas → silêncio).
+            // minCartValue/minQuantity (0 = condições não atendidas → silêncio).
+            computeTicketPricingWithDiscount(
+              linkCouponDiscount,
+              totalPrice,
+              event.participantFeePercent ?? 0,
+            )
+            : orderManualCouponDiscount != null
+              ? // Cupom DISCOUNT real da order: appliesTo-aware (só sobre os elegíveis).
               computeTicketPricingWithDiscount(
-                linkCouponDiscount,
+                orderManualCouponDiscount,
                 totalPrice,
                 event.participantFeePercent ?? 0,
               )
-            : orderManualCouponDiscount != null
-              ? // Cupom DISCOUNT real da order: appliesTo-aware (só sobre os elegíveis).
-                computeTicketPricingWithDiscount(
-                  orderManualCouponDiscount,
-                  totalPrice,
-                  event.participantFeePercent ?? 0,
-                )
               : computeTicketPricingWithCoupon(
                 resolvedCoupon,
                 totalPrice,
@@ -392,11 +392,9 @@ export function EventInfo({ event, onNext, isSubmitting = false, tickets = [], c
                   key={index}
                   className="text-sm font-semibold text-gray-12 flex items-end justify-between w-full"
                 >
-                  <div className="flex items-end">
-                    <div className="flex flex-col items-start">
-                      <span className="text-gray-11 text-xs truncate">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
-                      <span className="text-gray-12 text-sm truncate">({ticket.quantity}x){" "} {ticket.ticketName}:{" "}</span>
-                    </div>
+                  <div className="flex flex-col items-start w-[80%]">
+                    <span className="text-gray-11 text-xs truncate w-full line-clamp-1">{ticket.categoryName ? `${ticket.categoryName}` : "Ingresso Avulso"}</span>
+                    <span className="text-gray-12 text-sm truncate">({ticket.quantity}x){" "} {ticket.ticketName}:{" "}</span>
                   </div>
                   <span className="text-gray-12 font-bold">
                     {formatPrice(ticket.total)}

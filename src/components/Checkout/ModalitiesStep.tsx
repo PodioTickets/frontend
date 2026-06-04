@@ -259,8 +259,8 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
   // Desconto autoritativo do voucher já aplicado na order (centavos → reais).
   const orderVoucherDiscount = orderVoucher
     ? (orderData?.pricing?.voucherDiscount ??
-        timerCurrentOrder?.pricing?.voucherDiscount ??
-        0) / 100
+      timerCurrentOrder?.pricing?.voucherDiscount ??
+      0) / 100
     : 0;
   // Desconto do voucher: do preview do link calcula client-side (1 unidade de
   // maior valor entre os selecionados); da order usa o valor autoritativo.
@@ -303,11 +303,11 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
   const useLinkCoupon = !!couponData && !isAutoLinkCoupon && !orderCoupon;
   const linkCouponDiscount = useLinkCoupon
     ? computeLinkCouponTicketDiscount(
-        couponData,
-        selectedTickets,
-        totalPrice,
-        totalParticipants,
-      )
+      couponData,
+      selectedTickets,
+      totalPrice,
+      totalParticipants,
+    )
     : null;
   // Condições globais (valor/qtd mínimos) atendidas? Usado pra suprimir o
   // strike-through dos cards quando o desconto ainda não vale (mantém card e
@@ -329,15 +329,15 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
   const orderManualCouponDiscount =
     !useLinkCoupon && appliedCoupon?.couponType === "DISCOUNT"
       ? computeLinkCouponTicketDiscount(
-          {
-            type: appliedCoupon.type,
-            value: appliedCoupon.value,
-            appliesTo: normalizeCouponAppliesTo(appliedCoupon.appliesTo),
-          },
-          selectedTickets,
-          totalPrice,
-          totalParticipants,
-        )
+        {
+          type: appliedCoupon.type,
+          value: appliedCoupon.value,
+          appliesTo: normalizeCouponAppliesTo(appliedCoupon.appliesTo),
+        },
+        selectedTickets,
+        totalPrice,
+        totalParticipants,
+      )
       : null;
 
   // Cupom AUTOMÁTICO de idade (elegibilidade do backend). Só entra quando não há
@@ -359,13 +359,13 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
   const ageCouponPreview: CouponPreviewResult | null =
     ageCoupon && (ageCoupon.appliesTo == null || ageCoupon.appliesTo === "all")
       ? {
-          kind: "coupon",
-          code: "",
-          value: ageCoupon.value,
-          type: ageCoupon.type,
-          couponType: "AGE",
-          applyToProducts: ageCoupon.applyToProducts,
-        }
+        kind: "coupon",
+        code: "",
+        value: ageCoupon.value,
+        type: ageCoupon.type,
+        couponType: "AGE",
+        applyToProducts: ageCoupon.applyToProducts,
+      }
       : null;
 
   // Taxa de serviço + total calculados client-side com a MESMA regra do
@@ -375,38 +375,38 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
     () =>
       useVoucher
         ? computeTicketPricingWithDiscount(
-            voucherDiscount,
+          voucherDiscount,
+          totalPrice,
+          event.participantFeePercent ?? 0,
+        )
+        : ageCoupon
+          ? computeTicketPricingWithDiscount(
+            ageDiscount,
             totalPrice,
             event.participantFeePercent ?? 0,
           )
-        : ageCoupon
-          ? computeTicketPricingWithDiscount(
-              ageDiscount,
+          : linkCouponDiscount != null
+            ? // Cupom de link manual: desconto JÁ filtrado por appliesTo + gated
+            // por minCartValue/minQuantity. A taxa recai sobre o subtotal já
+            // descontado, igual aos demais caminhos.
+            computeTicketPricingWithDiscount(
+              linkCouponDiscount,
               totalPrice,
               event.participantFeePercent ?? 0,
             )
-          : linkCouponDiscount != null
-            ? // Cupom de link manual: desconto JÁ filtrado por appliesTo + gated
-              // por minCartValue/minQuantity. A taxa recai sobre o subtotal já
-              // descontado, igual aos demais caminhos.
+            : orderManualCouponDiscount != null
+              ? // Cupom DISCOUNT real da order: idem, mas appliesTo-aware (não
+              // desconta mais o subtotal inteiro quando cobre só algumas modalidades).
               computeTicketPricingWithDiscount(
-                linkCouponDiscount,
+                orderManualCouponDiscount,
                 totalPrice,
                 event.participantFeePercent ?? 0,
               )
-            : orderManualCouponDiscount != null
-              ? // Cupom DISCOUNT real da order: idem, mas appliesTo-aware (não
-                // desconta mais o subtotal inteiro quando cobre só algumas modalidades).
-                computeTicketPricingWithDiscount(
-                  orderManualCouponDiscount,
-                  totalPrice,
-                  event.participantFeePercent ?? 0,
-                )
               : computeTicketPricingWithCoupon(
-                  appliedCoupon,
-                  totalPrice,
-                  event.participantFeePercent ?? 0,
-                ),
+                appliedCoupon,
+                totalPrice,
+                event.participantFeePercent ?? 0,
+              ),
     [useVoucher, voucherDiscount, ageCoupon, ageDiscount, linkCouponDiscount, orderManualCouponDiscount, appliedCoupon, totalPrice, event.participantFeePercent],
   );
   const serviceFee = pricing.serviceFee;
@@ -536,34 +536,36 @@ export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: 
         </div>
 
         {/* Barra de resumo fixa (mobile) — unificada entre os steps do checkout. */}
-        <MobileSummaryBar
-          variant="full"
-          eventName={event.name}
-          totalParticipants={totalParticipants}
-          tickets={groupedTickets.map((t) => ({
-            categoryName: t.categoryName,
-            name: t.ticketName,
-            quantity: t.quantity,
-            total: t.total,
-          }))}
-          subtotal={totalPrice}
-          discount={
-            hasCouponLine
-              ? { label: discountLineLabel, amount: pricing.couponDiscount }
-              : null
-          }
-          pendingDiscountLabel={
-            couponPending ? `Cupom ${pendingCoupon}${couponPercentSuffix}` : null
-          }
-          serviceFee={serviceFee}
-          total={totalWithFee}
-          cta={{
-            label: "Selecionar",
-            onClick: handleNext,
-            disabled: totalParticipants === 0,
-            loading: isSubmitting,
-          }}
-        />
+        {groupedTickets.length > 0 && (
+          <MobileSummaryBar
+            variant="full"
+            eventName={event.name}
+            totalParticipants={totalParticipants}
+            tickets={groupedTickets.map((t) => ({
+              categoryName: t.categoryName,
+              name: t.ticketName,
+              quantity: t.quantity,
+              total: t.total,
+            }))}
+            subtotal={totalPrice}
+            discount={
+              hasCouponLine
+                ? { label: discountLineLabel, amount: pricing.couponDiscount }
+                : null
+            }
+            pendingDiscountLabel={
+              couponPending ? `Cupom ${pendingCoupon}${couponPercentSuffix}` : null
+            }
+            serviceFee={serviceFee}
+            total={totalWithFee}
+            cta={{
+              label: "Selecionar",
+              onClick: handleNext,
+              disabled: totalParticipants === 0,
+              loading: isSubmitting,
+            }}
+          />
+        )}
       </div>
 
       {/* Desktop Layout */}
