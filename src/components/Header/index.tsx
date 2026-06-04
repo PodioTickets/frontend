@@ -474,17 +474,14 @@ export function Header() {
 
                   {/* Introductory Text */}
                   <p className="font-family-dm-sans text-[#B4B4B4] text-sm text-center leading-relaxed">
-                    PodioTicket é o ponto de encontro de quem vibra por esporte,
-                    onde você descobre o próximo desafio, junta a galera,
-                    combina a largada e transforma cada chegada em uma memória
-                    que dá vontade de repetir
+                    A PódioTicket é o ponto de encontro de quem vive o esporte. Aqui você encontra seu próximo desafio, reúne os amigos, combina a largada e transforma cada chegada em uma história que merece ser lembrada.
                   </p>
 
                   {/* Social Media Section */}
                   <div className="text-[#EEE] flex items-center gap-10 w-full my-4 mb-6">
                     <div className="flex-1 h-px bg-[#606060] min-w-0" />
                     <p className="text-start whitespace-nowrap shrink-0">
-                      Nós conheça mais
+                      Saiba mais sobre nós
                     </p>
                     <div className="flex-1 h-px bg-[#606060] min-w-0" />
                   </div>

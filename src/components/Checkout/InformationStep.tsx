@@ -1875,10 +1875,10 @@ export function InformationStep({
                   {groupedTickets.slice(0, 2).map((ticket, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between gap-2 w-full"
+                      className="flex items-end justify-between gap-2 w-full"
                     >
                       <div className="flex flex-col min-w-0">
-                        <p className="text-sm text-gray-11 font-family-dm-sans">
+                        <p className="text-sm text-gray-11 font-family-dm-sans truncate line-clamp-1">
                           {ticket.categoryName || "Ingresso avulso"}
                         </p>
                         <p className="text-sm font-semibold text-gray-12 truncate">
@@ -2804,14 +2804,17 @@ export function InformationStep({
                         key={index}
                         className="flex items-center justify-between text-base text-gray-12 pb-4 border-b border-gray-6 last:border-b-0 last:pb-0"
                       >
-                        <p className="font-semibold">
-                          ({ticket.quantity}x){" "}
-                          {ticket.categoryName ? (
-                            <span className="text-gray-11">{ticket.categoryName} · </span>
-                          ) : null}
-                          {ticket.distance ? `${ticket.distance} ` : ""}
-                          {ticket.raceName}:
-                        </p>
+                        <div className="flex flex-col w-[80%]">
+                          <p className="font-semibold truncate line-clamp-1">
+                            {ticket.categoryName ? (
+                              <span className="text-gray-11">{ticket.categoryName} </span>
+                            ) : null}
+
+                          </p>
+                          <p className="font-semibold">
+                            ({ticket.quantity}x) {ticket.raceName}
+                          </p>
+                        </div>
                         <p className="font-bold">
                           {formatPrice(ticket.total)}
                         </p>
