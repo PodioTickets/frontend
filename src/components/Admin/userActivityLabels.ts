@@ -33,6 +33,27 @@ export const CATEGORY_BADGE: Record<string, string> = {
   OTHER: "bg-gray-4 text-gray-12",
 };
 
+/**
+ * Etapas do funil de compra (tab "Funil de compra"), na ordem da jornada.
+ * Actions espelham `PURCHASE_FUNNEL_STAGES` do backend.
+ */
+export const FUNNEL_STAGE_LABELS: Record<string, string> = {
+  "page:event": "Visualizou a página do evento",
+  "order.reserve": "Reservou ingressos",
+  "order.billing-address": "Informou endereço de cobrança",
+  "order.pay": "Iniciou pagamento",
+  "order.paid": "Pagamento confirmado",
+};
+
+/** Descrição curta de cada etapa — tooltip/legenda do funil. */
+export const FUNNEL_STAGE_HINTS: Record<string, string> = {
+  "page:event": "Abriu a página pública do evento (inclui anônimos)",
+  "order.reserve": "Criou um pedido reservando ingressos",
+  "order.billing-address": "Preencheu o endereço de cobrança no checkout",
+  "order.pay": "Submeteu uma tentativa de pagamento (PIX/cartão)",
+  "order.paid": "Pagamento confirmado — conversão efetiva",
+};
+
 /** Cor da BARRA por categoria (gráficos de distribuição do dashboard). */
 export const CATEGORY_BAR: Record<string, string> = {
   PAGE_VIEW: "bg-gray-8",

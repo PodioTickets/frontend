@@ -1646,18 +1646,26 @@ export class OrganizerService {
     return { ...raw, participantFeePercent, totalFee, acceptedPaymentMethods };
   }
 
+  /**
+   * Semântica PATCH: campo omitido mantém o valor atual no servidor.
+   * Pós-publicação só a divisão da taxa fica travada (409 ao enviá-la) —
+   * parcelamento e formas de pagamento seguem editáveis pelo organizador.
+   */
   async saveFinancialSettings(
     eventId: string,
-    organizerFeePercent: number,
-    participantFeePercent: number,
-    maxInstallments: 1 | 2 | 3,
-    totalFee?: number,
-    acceptedPaymentMethods?: AcceptedPaymentMethod[],
+    settings: {
+      organizerFeePercent?: number;
+      participantFeePercent?: number;
+      maxInstallments?: 1 | 2 | 3;
+      totalFee?: number;
+      acceptedPaymentMethods?: AcceptedPaymentMethod[];
+    },
   ): Promise<void> {
+    const { organizerFeePercent, participantFeePercent, maxInstallments, totalFee, acceptedPaymentMethods } = settings;
     await this.apiClient.patch(`/api/v1/events/${eventId}/financial-settings`, {
-      organizerFeePercent,
-      participantFeePercent,
-      maxInstallments,
+      ...(organizerFeePercent !== undefined && { organizerFeePercent }),
+      ...(participantFeePercent !== undefined && { participantFeePercent }),
+      ...(maxInstallments !== undefined && { maxInstallments }),
       ...(totalFee !== undefined && { totalFee }),
       // Só envia quando válido — PATCH com array vazio seria 400 (mín. 1 no DTO)
       ...(acceptedPaymentMethods?.length && { acceptedPaymentMethods }),

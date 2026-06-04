@@ -130,7 +130,19 @@
       "PowerShell(@\\(\"$env:ProgramFiles\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\", \"${env:ProgramFiles\\(x86\\)}\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"\\) | Where-Object { Test-Path $_ } | Select-Object -First 1)",
       "PowerShell(Set-Location *)",
       "PowerShell(Set-Location 'C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend'; \\(Get-Content package.json | ConvertFrom-Json\\).dependencies.PSObject.Properties.Name | Select-String -Pattern 'chart|recharts|d3|nivo|visx')",
-      "PowerShell(Set-Content *)"
+      "PowerShell(Set-Content *)",
+      "PowerShell(npx vitest run 2>$null | Select-Object -Last 12)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(npx eslint \"src/components/Organizer/FinancialSection.tsx\" \"src/app/organizer/\\(logged\\)/events/[id]/edit/financial/page.tsx\" \"src/app/organizer/\\(logged\\)/events/new/financial/page.tsx\" \"src/app/admin/\\(logged\\)/events/[id]/edit/financial/page.tsx\" \"src/app/admin/\\(logged\\)/events/[id]/review/financial/page.tsx\" \"src/services/organizer/OrganizerService.ts\")",
+      "PowerShell(Out-File *)",
+      "PowerShell(npx vitest run --reporter=basic 2>&1 | Select-Object -Last 10)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -First 25)",
+      "PowerShell(npx eslint \"src/lib/activityTelemetry.ts\" \"src/services/base/ApiClient.ts\" \"src/services/admin/AdminService.ts\" \"src/components/Admin/AdminUserActivityDashboard.tsx\" \"src/components/Admin/AdminUserActivityFunnelTab.tsx\" \"src/components/Admin/AdminEventFilterSelect.tsx\" \"src/components/Admin/userActivityLabels.ts\" \"src/app/admin/\\(logged\\)/atividade/page.tsx\" \"src/app/events/[slug]/page.tsx\" 2>&1 | Select-Object -Last 20)",
+      "PowerShell(npx eslint \"src/lib/activityTelemetry.ts\" \"src/services/base/ApiClient.ts\" \"src/services/admin/AdminService.ts\" \"src/components/Admin/AdminUserActivityDashboard.tsx\" \"src/components/Admin/AdminUserActivityFunnelTab.tsx\" \"src/components/Admin/AdminEventFilterSelect.tsx\" \"src/components/Admin/userActivityLabels.ts\" \"src/app/admin/\\(logged\\)/atividade/page.tsx\" \"src/app/events/[slug]/page.tsx\" 2>&1 | Select-Object -First 40)",
+      "PowerShell(Get-CimInstance *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(findstr *)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 12)"
     ]
   },
   "disabledMcpjsonServers": [

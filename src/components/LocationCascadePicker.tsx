@@ -107,7 +107,7 @@ export function LocationCascadePicker({
             />
           </div>
         </div>
-        <div className="overflow-y-auto max-h-[320px]">
+        <div className="overflow-y-auto max-h-[320px] overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
 
           {filteredCities.map((city, index) => (
             <button
@@ -175,7 +175,7 @@ export function LocationCascadePicker({
           </button>
         </div>
       )}
-      <div className="overflow-y-auto max-h-[320px]">
+      <div className="overflow-y-auto max-h-[320px] overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
         {filteredStates.map((state, index) => (
           <button
             key={state.apiValue}

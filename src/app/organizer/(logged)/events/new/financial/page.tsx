@@ -48,7 +48,12 @@ export default function FinancialPage() {
   const saveFinancialSettings = async (eventId: string) => {
     try {
       const participantFeePercent = parseFloat((6 - organizerPercent).toFixed(2));
-      await organizerService.saveFinancialSettings(eventId, organizerPercent, participantFeePercent, maxInstallments, undefined, acceptedPaymentMethods);
+      await organizerService.saveFinancialSettings(eventId, {
+        organizerFeePercent: organizerPercent,
+        participantFeePercent,
+        maxInstallments,
+        acceptedPaymentMethods,
+      });
     } catch {
       // endpoint pode ainda não existir no servidor — não bloqueia o fluxo
     }

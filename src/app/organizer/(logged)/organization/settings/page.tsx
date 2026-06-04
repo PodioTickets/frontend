@@ -137,7 +137,9 @@ export default function OrganizationSettingsPage() {
         neighborhood: org.neighborhood || "",
         city: org.city || "",
         state: org.state || "",
-        email: org.fiscalEmail || "",
+        // E-mail de CONTATO (org.email) — o fiscal (org.fiscalEmail) é outro
+        // campo, exibido read-only em "Detalhes da organização".
+        email: org.email || "",
         whatsapp: org.whatsapp || "",
         phone: org.phone || "",
         siteUrl: org.siteUrl || "",
@@ -726,8 +728,6 @@ export default function OrganizationSettingsPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="contato@meuevento.com.br"
-                    disabled
-                    className="opacity-60 cursor-not-allowed"
                   />
                 </div>
 
@@ -772,7 +772,7 @@ export default function OrganizationSettingsPage() {
                 </div>
               </div>
               <p className="font-family-dm-sans text-sm text-gray-11">
-                Os contatos da organização não podem ser alterados por aqui. Para mudar, fale com o suporte.
+                O WhatsApp e o telefone da organização não podem ser alterados por aqui. Para mudar, fale com o suporte.
               </p>
             </div>
 
