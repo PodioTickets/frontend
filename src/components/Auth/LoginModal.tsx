@@ -941,71 +941,53 @@ export function LoginModal() {
                 </div>
               ) : (
                 <>
-                  {/* Header with glow effect */}
-                  <div className="relative h-[164px] flex items-end justify-between pb-7 pt-8 px-4 overflow-hidden">
-                    {/* Glow effect background */}
-                    <div className="absolute top-[-190px] left-1/2 -translate-x-1/2 w-[390px] h-[312px] flex items-center justify-center pointer-events-none">
-                      <div className="rotate-90 w-[312px] h-[390px] relative">
-                        <div className="absolute inset-[-60.87%_-76.09%] opacity-20">
-                          <div className="w-full h-full bg-primary-5 rounded-full blur-3xl" />
-                        </div>
-                      </div>
-                    </div>
-
+                  {/* Header — mesmo padrão do desktop: logo central + linhas
+                      decorativas em gradiente (Figma 883:50467/50468). */}
+                  <div className="relative h-[68px] px-4 flex items-center justify-center overflow-hidden">
                     {/* Close button */}
                     <button
                       onClick={closeLoginModal}
-                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full bg-gray-1 hover:bg-gray-3 transition-colors"
                       aria-label="Fechar modal"
                     >
                       <X className="size-5 text-gray-12" />
                     </button>
 
-                    {/* Left decorative */}
-                    <div className="absolute left-0 top-0 w-[162px] h-[80px]">
-                      <Image
-                        src="/images/login_left.png"
-                        alt="Decorative left"
-                        width={162}
-                        height={80}
-                        draggable={false}
-                        className="w-full h-full object-contain"
-                      />
+                    {/* Linhas decorativas — versão REDUZIDA (~65%) das do
+                        desktop: em 390px de viewport, dois lados de 162px
+                        quase encostariam no logo. Lado esquerdo é espelho. */}
+                    <div className="pointer-events-none absolute right-0 top-0 h-[68px] w-[106px]" aria-hidden>
+                      <div className="absolute bottom-[42px] left-[33px] h-1.5 w-[73px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[31px] left-[53px] h-1.5 w-[53px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[20px] left-[73px] h-1.5 w-[33px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                    </div>
+                    <div className="pointer-events-none absolute left-0 top-0 h-[68px] w-[106px] -scale-x-100" aria-hidden>
+                      <div className="absolute bottom-[42px] left-[33px] h-1.5 w-[73px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[31px] left-[53px] h-1.5 w-[53px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[20px] left-[73px] h-1.5 w-[33px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
                     </div>
 
                     {/* Logo */}
-                    <div className="relative w-full z-10 flex items-center justify-center gap-2.5">
+                    <div className="relative z-10 flex items-center justify-center">
                       <Image
                         src="/images/logo_horizontal_black.png"
                         alt="Pódio Ticket"
-                        width={33}
-                        height={33}
+                        width={210}
+                        height={36}
                         priority
                         className="h-8 w-auto"
                         draggable={false}
                       />
                     </div>
-
-                    {/* Right decorative */}
-                    <div className="absolute right-0 top-0 w-[162px] h-[80px]">
-                      <Image
-                        src="/images/login_right.png"
-                        alt="Decorative right"
-                        width={162}
-                        height={80}
-                        draggable={false}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
                   </div>
 
                   {/* Content */}
-                  <div className="flex flex-col items-center w-full min-h-[648px]">
-                    {/* Welcome text */}
-                    <div className="flex flex-col items-center justify-center pt-3 px-4 pb-0">
-                      <h2 className="font-extrabold text-2xl leading-[1.1] text-gray-12 font-manrope">
-                        Bem-vindo de volta
-                      </h2>
+                  <div className="flex flex-col items-center justify-center w-full min-h-[648px] h-full">
+                    {/* Welcome text — mesmo texto do desktop */}
+                    <div className="flex flex-col items-center justify-center pt-6 px-4 pb-0 text-center">
+                      <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
+                        Sua próxima largada começa aqui!
+                      </p>
                     </div>
 
                     {/* Form inputs */}
@@ -1020,7 +1002,7 @@ export function LoginModal() {
                             Email
                           </label>
                           <div className="relative w-full">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                             <Input
                               type="email"
                               placeholder="Digite seu email"
@@ -1048,7 +1030,7 @@ export function LoginModal() {
                             Senha
                           </label>
                           <div className="relative w-full">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                            <PasswordIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="Digite sua senha"
@@ -1119,7 +1101,7 @@ export function LoginModal() {
                       <Button
                         type="submit"
                         disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
-                        className="w-full h-11 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full h-11 font-bold text-base font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading
                           ? "Conectando..."
@@ -1128,7 +1110,7 @@ export function LoginModal() {
                     </form>
 
                     {/* Social login section */}
-                    <div className="flex-1 flex flex-col gap-6 items-center justify-between pb-8 pt-4 px-4 w-full">
+                    <div className="flex-1 flex flex-col gap-6 items-center justify-between pb-8 px-4 w-full">
                       <div className="flex flex-col gap-6 items-start w-full">
                         {/* Divider */}
                         <div className="flex gap-2.5 items-center justify-center w-full">
