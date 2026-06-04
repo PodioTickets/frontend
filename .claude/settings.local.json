@@ -129,7 +129,8 @@
       "PowerShell(Set-Location 'C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend'; $out = npx tsc --noEmit 2>&1; \"exit=$LASTEXITCODE\"; $out | Select-String -Pattern 'ingressos|PaymentStep|interfaces/order|UserService|useVoucherLink'; npx eslint \"src/app/checkout/ingressos/page.tsx\" \"src/hooks/useVoucherLinkValidation.ts\" \"src/interfaces/order.ts\" 2>&1 | Select-String -Pattern 'error|warning' | Select-Object -First 10)",
       "PowerShell(@\\(\"$env:ProgramFiles\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\", \"${env:ProgramFiles\\(x86\\)}\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"\\) | Where-Object { Test-Path $_ } | Select-Object -First 1)",
       "PowerShell(Set-Location *)",
-      "PowerShell(Set-Location 'C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend'; \\(Get-Content package.json | ConvertFrom-Json\\).dependencies.PSObject.Properties.Name | Select-String -Pattern 'chart|recharts|d3|nivo|visx')"
+      "PowerShell(Set-Location 'C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend'; \\(Get-Content package.json | ConvertFrom-Json\\).dependencies.PSObject.Properties.Name | Select-String -Pattern 'chart|recharts|d3|nivo|visx')",
+      "PowerShell(Set-Content *)"
     ]
   },
   "disabledMcpjsonServers": [
