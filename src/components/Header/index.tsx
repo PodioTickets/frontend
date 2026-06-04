@@ -253,11 +253,6 @@ export function Header() {
                     },
                   },
                   {
-                    id: "help",
-                    icon: InfoIcon,
-                    label: "Central de ajuda",
-                  },
-                  {
                     id: "logout",
                     label: "Logout",
                     icon: LogOut,
@@ -398,12 +393,12 @@ export function Header() {
                           Meus ingressos
                         </span>
                       </button>
-                      <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
+                     {/*  <button className="w-full flex gap-2 items-center h-[52px] px-4 border-b border-[#3a3a3a] text-[#EEE] hover:bg-[#2a2a2a] transition-colors">
                         <InfoIcon className="w-5 h-5 text-[#EEE]" />
                         <span className="text-base font-medium text-[#EEE]">
                           Central de ajuda
                         </span>
-                      </button>
+                      </button> */}
 
                       <button
                         onClick={() => {
