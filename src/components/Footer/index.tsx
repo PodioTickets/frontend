@@ -46,11 +46,10 @@ export function Footer() {
 
   return (
     <footer
-      className={`w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] md:p-20 md:pt-[52px] ${
-        isCheckoutStep
-          ? "max-md:hidden md:border-t md:border-gray-6"
-          : "border-t border-gray-6 px-4 py-6"
-      }`}
+      className={`w-full relative flex flex-col items-center justify-start overflow-hidden bg-linear-to-b from-[#191919] to-[#222222] md:p-20 md:pt-[52px] ${isCheckoutStep
+        ? "max-md:hidden md:border-t md:border-gray-6"
+        : "border-t border-gray-6 px-4 py-6"
+        }`}
     >
       {/* Mobile Layout */}
       <div className={`w-full flex flex-col md:hidden${mobileFixedBarPad}`}>
@@ -76,16 +75,14 @@ export function Footer() {
 
         {/* Introductory Text */}
         <p className="font-family-dm-sans text-white text-sm text-center leading-relaxed">
-          PodioTicket é o ponto de encontro de quem vibra por esporte, onde você
-          descobre o próximo desafio, junta a galera, combina a largada e
-          transforma cada chegada em uma memória que dá vontade de repetir
+          A PódioTicket é o ponto de encontro de quem vive o esporte. Aqui você encontra seu próximo desafio, reúne os amigos, combina a largada e transforma cada chegada em uma história que merece ser lembrada.
         </p>
 
         {/* Social Media Section */}
         <div className="text-white flex items-center gap-10 w-full my-4 mb-6">
           <div className="flex-1 h-px bg-[#606060] min-w-0" />
           <p className="text-start whitespace-nowrap shrink-0">
-            Nós conheça mais
+            Saiba mais sobre nós
           </p>
           <div className="flex-1 h-px bg-[#606060] min-w-0" />
         </div>
@@ -150,15 +147,13 @@ export function Footer() {
           />
 
           <p className="font-family-dm-sans text-center text-[#B4B4B4] mt-6">
-            PodioTicket é o ponto de encontro de quem vibra por esporte, onde
-            você descobre o próximo desafio, junta a galera, combina a largada e
-            transforma cada chegada em uma memória que dá vontade de repetir
+            A PódioTicket é o ponto de encontro de quem vive o esporte. Aqui você encontra seu próximo desafio, reúne os amigos, combina a largada e transforma cada chegada em uma história que merece ser lembrada.
           </p>
         </div>
 
         <div className="text-[#B4B4B4] flex items-center gap-10 w-full my-20">
           <p className="text-start whitespace-nowrap shrink-0">
-            Nós conheça mais
+            Saiba mais sobre nós
           </p>
           <div className="flex-1 h-px bg-[#606060] min-w-0" />
           <div className="flex items-center justify-end gap-2 whitespace-nowrap shrink-0">
