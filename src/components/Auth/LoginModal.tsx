@@ -1090,14 +1090,14 @@ export function LoginModal() {
                           absorve o espaço extra do scale. */}
                       {TURNSTILE_SITE_KEY && (
                         <div className="flex h-14 w-full items-center justify-center">
-                          <div className="scale-[0.85]">
+                          <div className="w-full scale-[0.85]">
                             <Turnstile
                               ref={mobileTurnstileRef}
                               siteKey={TURNSTILE_SITE_KEY}
                               onSuccess={setTurnstileToken}
                               onError={() => setTurnstileToken(null)}
                               onExpire={() => setTurnstileToken(null)}
-                              options={{ theme: "auto", size: "normal" }}
+                              options={{ theme: "light", size: "flexible" }}
                             />
                           </div>
                         </div>
