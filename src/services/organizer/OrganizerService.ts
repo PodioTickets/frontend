@@ -1,5 +1,6 @@
 import type { ApiClient } from "../base/ApiClient";
-import type { Event } from "@/interfaces/event";
+import type { Event, AcceptedPaymentMethod } from "@/interfaces/event";
+import { ACCEPTED_PAYMENT_METHODS } from "@/interfaces/event";
 import type { EventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { sanitizeOrganizerAuditPageKey } from "@/lib/organizerAudit";
 
@@ -1621,6 +1622,7 @@ export class OrganizerService {
     participantFeePercent: number;
     maxInstallments: 1 | 2 | 3;
     totalFee: number;
+    acceptedPaymentMethods: AcceptedPaymentMethod[];
   }> {
     const { data } = await this.apiClient.get<{
       data: {
@@ -1628,6 +1630,7 @@ export class OrganizerService {
         participantFeePercent?: number;
         maxInstallments: 1 | 2 | 3;
         totalFee?: number;
+        acceptedPaymentMethods?: AcceptedPaymentMethod[];
       };
     }>(`/api/v1/events/${eventId}/financial-settings`);
     const raw = data.data;
@@ -1635,7 +1638,12 @@ export class OrganizerService {
     const totalFee =
       raw.totalFee ??
       parseFloat((raw.organizerFeePercent + participantFeePercent).toFixed(2));
-    return { ...raw, participantFeePercent, totalFee };
+    // Servidor antigo (sem o campo) ou array vazio → todos os métodos, espelhando
+    // o default do backend. Ordem canônica garante dirty-check estável nas telas.
+    const acceptedPaymentMethods = ACCEPTED_PAYMENT_METHODS.filter((m) =>
+      raw.acceptedPaymentMethods?.length ? raw.acceptedPaymentMethods.includes(m) : true,
+    );
+    return { ...raw, participantFeePercent, totalFee, acceptedPaymentMethods };
   }
 
   async saveFinancialSettings(
@@ -1644,12 +1652,15 @@ export class OrganizerService {
     participantFeePercent: number,
     maxInstallments: 1 | 2 | 3,
     totalFee?: number,
+    acceptedPaymentMethods?: AcceptedPaymentMethod[],
   ): Promise<void> {
     await this.apiClient.patch(`/api/v1/events/${eventId}/financial-settings`, {
       organizerFeePercent,
       participantFeePercent,
       maxInstallments,
       ...(totalFee !== undefined && { totalFee }),
+      // Só envia quando válido — PATCH com array vazio seria 400 (mín. 1 no DTO)
+      ...(acceptedPaymentMethods?.length && { acceptedPaymentMethods }),
     });
   }
 

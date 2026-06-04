@@ -260,6 +260,7 @@ export type OrderErrorCode =
   | "COUPON_MIN_VALUE"
   | "VOUCHER_NOT_FOUND"
   | "VOUCHER_EXPIRED"
+  | "VOUCHER_ALREADY_USED"
   | "DISCOUNT_CONFLICT"
   // Remoção de slot reservado (`DELETE /orders/:id/participants/:slot`)
   | "INVALID_SLOT"

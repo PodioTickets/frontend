@@ -563,6 +563,47 @@ export class UserService {
   }
 
   /**
+   * Valida o voucher do LINK (`?voucher=`) no `/checkout/ingressos`. O preview
+   * (`previewCoupon`) devolve `null` pra voucher usado/expirado SEM o motivo —
+   * por design ele nunca lança. O motivo real vem do GET de produtos com
+   * `?voucher=`, que o backend valida ANTES de listar e responde 422 tipado
+   * (VOUCHER_ALREADY_USED / VOUCHER_EXPIRED / VOUCHER_NOT_FOUND).
+   *
+   * Só o 422 é tratado como "inusável"; rede/5xx/401 devolvem `usable: true`
+   * pra nunca alarmar com falso negativo — quem decide de verdade é o apply
+   * (`patchCoupon`) e o `/pay`.
+   */
+  async validateVoucherLink(
+    eventId: string,
+    code: string,
+  ): Promise<
+    | { usable: true }
+    | { usable: false; code: string | null; message: string }
+  > {
+    try {
+      // `limit: 1` minimiza o payload — só interessa a validação do voucher
+      await this.apiClient.get(`/api/v1/products/events/${eventId}`, {
+        params: { voucher: code, limit: 1 },
+      });
+      return { usable: true };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+      if (status === 422) {
+        return {
+          usable: false,
+          code: typeof data?.code === "string" ? data.code : null,
+          message:
+            typeof data?.message === "string" && data.message
+              ? data.message
+              : "Voucher inválido ou não encontrado.",
+        };
+      }
+      return { usable: true };
+    }
+  }
+
+  /**
    * Elegibilidade do cupom AUTOMÁTICO de idade pro usuário logado, já em
    * `/checkout/ingressos`. `OptionalJwtAuthGuard`: anônimo / sem dateOfBirth
    * recebe `applicable: false` (não 401). `age` = idade na data do EVENTO.
