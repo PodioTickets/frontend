@@ -971,7 +971,7 @@ export function TicketCategoryCard({
                 </div>
               ) : null}
               <div className="flex flex-col gap-1 min-w-0">
-                <h1 className="text-xl font-bold text-gray-12 font-manrope break-all line-clamp-2">
+                <h1 className="text-lg font-bold text-gray-12 font-manrope break-normal line-clamp-2">
                   {categoryName}
                 </h1>
                 {!isExpanded ? (
