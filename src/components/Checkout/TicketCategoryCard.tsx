@@ -971,17 +971,17 @@ export function TicketCategoryCard({
                 </div>
               ) : null}
               <div className="flex flex-col gap-1 min-w-0">
-                <h1 className="text-xl font-bold text-gray-12 font-manrope leading-[1.1] truncate line-clamp-1">
+                <h1 className="text-xl font-bold text-gray-12 font-manrope break-all line-clamp-2">
                   {categoryName}
                 </h1>
                 {!isExpanded ? (
                   <div className="flex flex-wrap items-center gap-1 text-base">
                     <p className="text-gray-11 font-family-dm-sans leading-[1.3]">A partir de:</p>
-                    <span className="text-gray-12 font-bold font-manrope leading-[1.1]">
+                    <span className="text-gray-12 font-bold font-manrope">
                       {formatDisplayPrice(minPriceBreakdown)}
                     </span>
                     {minPriceBreakdown.hasDiscount && (
-                      <span className="text-gray-11 text-sm font-medium font-manrope leading-[1.1] line-through">
+                      <span className="text-gray-11 text-sm font-medium font-manrope line-through">
                         {formatPrice(minPrice)}
                       </span>
                     )}
