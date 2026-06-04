@@ -1452,7 +1452,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     0
   );
   
-  const serviceFee = currentOrder?.pricing.serviceFee ?? 0;
+  const serviceFee = (currentOrder?.pricing.serviceFee ?? 0) / 100;
   // Subtotal e desconto de cupom vêm direto do backend — não recalcular no frontend
   const subtotalValue = currentOrder
     ? currentOrder.pricing.subtotal / 100
