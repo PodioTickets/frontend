@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTickets } from "@/hooks/useTickets";
 import { useTicketCategories } from "@/hooks/useTicketCategories";
 import { Loading } from "../Loading";
+import { ArrowButton } from "../ArrowButton";
 import { MobileSummaryBar } from "./MobileSummaryBar";
 import type { Ticket } from "@/hooks/useTickets";
 import { parseEventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
@@ -39,10 +40,12 @@ import { computeAgeCouponTicketDiscount, formatAgeCouponLineLabel } from "@/lib/
 interface ModalitiesStepProps {
   event: Event;
   onNext: () => void;
+  /** Voltar pra página do evento — espelha o botão dos demais steps do checkout. */
+  onBack?: () => void;
   isSubmitting?: boolean;
 }
 
-export function ModalitiesStep({ event, onNext, isSubmitting = false }: ModalitiesStepProps) {
+export function ModalitiesStep({ event, onNext, onBack, isSubmitting = false }: ModalitiesStepProps) {
   const { raceQuantities } = useCheckout();
   const { isAuthenticated } = useAuth();
   const { openLoginModal } = useLoginModal();
@@ -566,7 +569,18 @@ export function ModalitiesStep({ event, onNext, isSubmitting = false }: Modaliti
       {/* Desktop Layout */}
       <div className="hidden md:block w-full">
         <div className="w-full">
-          <h1 className="text-2xl font-bold">Selecione seus ingressos</h1>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                className="cursor-pointer rotate-180 size-8 flex items-center justify-center rounded-full border border-gray-6"
+                onClick={onBack}
+                aria-label="Voltar para a página do evento"
+              >
+                <ArrowButton isOpen={false} />
+              </button>
+            )}
+            <h1 className="text-2xl font-bold">Selecione seus ingressos</h1>
+          </div>
           <p className="text-sm text-gray-11 mt-4">
             Escolha seus ingressos e defina a quantidade. Você pode ajustar depois em Informações.
           </p>

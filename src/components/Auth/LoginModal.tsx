@@ -27,6 +27,8 @@ import {
   readReturnPath,
   clearReturnPath,
 } from "@/utils/authRedirect";
+import { EmailIcon } from "../Icons/EmailIcon";
+import { PasswordIcon } from "../Icons/PasswordIcon";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -274,8 +276,8 @@ function ForgotPasswordNewPasswordPanel({
                 value={password}
                 onChange={(e) => onPasswordChange(e.target.value)}
                 className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.password
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
+                  ? "border-red-9 focus-visible:border-red-9"
+                  : ""
                   }`}
                 aria-invalid={!!fieldErrors.password}
               />
@@ -311,8 +313,8 @@ function ForgotPasswordNewPasswordPanel({
                 value={confirmPassword}
                 onChange={(e) => onConfirmPasswordChange(e.target.value)}
                 className={`pl-10 pr-10 h-12 rounded-lg ${fieldErrors.confirmPassword
-                    ? "border-red-9 focus-visible:border-red-9"
-                    : ""
+                  ? "border-red-9 focus-visible:border-red-9"
+                  : ""
                   }`}
                 aria-invalid={!!fieldErrors.confirmPassword}
               />
@@ -346,13 +348,14 @@ function ForgotPasswordNewPasswordPanel({
   );
 }
 
-const GoogleIcon = () => (
+const GoogleIcon = ({ className = "size-6" }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="28"
     height="28"
     viewBox="0 0 28 28"
     fill="none"
+    className={className}
   >
     <path
       d="M25.4404 11.7148H24.5007V11.6663H14.0007V16.333H20.5941C19.6322 19.0496 17.0474 20.9997 14.0007 20.9997C10.1349 20.9997 7.00065 17.8654 7.00065 13.9997C7.00065 10.1339 10.1349 6.99967 14.0007 6.99967C15.7851 6.99967 17.4085 7.67284 18.6446 8.77242L21.9445 5.47251C19.8608 3.53059 17.0737 2.33301 14.0007 2.33301C7.55773 2.33301 2.33398 7.55676 2.33398 13.9997C2.33398 20.4426 7.55773 25.6663 14.0007 25.6663C20.4436 25.6663 25.6673 20.4426 25.6673 13.9997C25.6673 13.2174 25.5868 12.4538 25.4404 11.7148Z"
@@ -1189,7 +1192,7 @@ export function LoginModal() {
               onClick={(e) => e.stopPropagation()}
               className={`rounded-xl shadow-2xl w-full mx-4 relative overflow-hidden max-h-[calc(100dvh-32px)] ${mfaToken || showForgotFlow
                 ? "max-w-[460px] bg-transparent"
-                : "max-w-[600px] bg-gray-1 overflow-y-auto"
+                : "max-w-[624px] bg-gray-1 overflow-y-auto"
                 }`}
             >
               {mfaToken ? (
@@ -1198,24 +1201,27 @@ export function LoginModal() {
                 forgotStepContent
               ) : (
                 <>
-                  <div className="relative pt-8 pb-3 px-6 flex items-center justify-center">
+                  <div className="relative h-[68px] px-6 flex items-center justify-center">
                     {/* Close button */}
                     <button
                       onClick={closeLoginModal}
-                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full hover:bg-gray-3 transition-colors"
+                      className="absolute top-4 right-4 z-20 flex items-center justify-center size-8 rounded-full bg-gray-1 hover:bg-gray-3 transition-colors"
                       aria-label="Fechar modal"
                     >
                       <X className="size-5 text-gray-12" />
                     </button>
 
-                    <div className="absolute left-0 top-0 w-[162px] h-[80px] flex items-center justify-center">
-                      <Image
-                        src="/images/login_left.png"
-                        alt="Decorative left"
-                        width={162}
-                        height={80}
-                        draggable={false}
-                      />
+                    {/* Linhas decorativas em gradiente (Figma 883:50467/50468) —
+                        lado esquerdo é o espelho horizontal do direito. */}
+                    <div className="pointer-events-none absolute right-0 top-0 h-[68px] w-[162px]" aria-hidden>
+                      <div className="absolute bottom-[46px] left-[50px] h-2 w-[112px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[30px] left-[81px] h-2 w-[81px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[14px] left-[111px] h-2 w-[51px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                    </div>
+                    <div className="pointer-events-none absolute left-0 top-0 h-[68px] w-[162px] -scale-x-100" aria-hidden>
+                      <div className="absolute bottom-[46px] left-[50px] h-2 w-[112px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[30px] left-[81px] h-2 w-[81px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
+                      <div className="absolute bottom-[14px] left-[111px] h-2 w-[51px] rounded-l-full bg-gradient-to-l from-[rgba(62,155,79,0)] to-[#3e9b4f]" />
                     </div>
 
                     <div className="relative z-10 flex items-center">
@@ -1225,17 +1231,7 @@ export function LoginModal() {
                         width={210}
                         height={36}
                         priority
-                        className="h-9 w-auto"
-                        draggable={false}
-                      />
-                    </div>
-
-                    <div className="absolute right-0 top-0 w-[162px] h-[80px]">
-                      <Image
-                        src="/images/login_right.png"
-                        alt="Decorative right"
-                        width={162}
-                        height={80}
+                        className="h-8 w-auto"
                         draggable={false}
                       />
                     </div>
@@ -1244,28 +1240,25 @@ export function LoginModal() {
                   {/* Content */}
                   <div className="flex flex-col items-center w-full">
                     {/* Welcome text */}
-                    <div className="flex flex-col gap-4 items-center justify-center pt-8 pb-0 px-6 text-center">
-                      <h2 className="font-extrabold text-[28px] leading-[1.1] text-gray-12 font-manrope">
-                        Bem-vindo de volta
-                      </h2>
+                    <div className="flex flex-col gap-4 items-center justify-center pt-6 pb-0 px-6 text-center">
                       <p className="font-normal text-lg leading-[1.3] text-gray-11 font-family-dm-sans">
-                        Por favor, preencha os campos para Entrar
+                        Sua próxima largada começa aqui!
                       </p>
                     </div>
 
                     {/* Form inputs */}
                     <form
                       onSubmit={handleSubmit}
-                      className="flex flex-col gap-5 items-start p-6 w-full"
+                      className="flex flex-col gap-3 items-start p-6 w-full"
                     >
-                      <div className="flex flex-col gap-5 items-start w-full">
+                      <div className="flex flex-col gap-3 items-start w-full">
                         {/* Email input */}
                         <div className="flex flex-col gap-1 items-start w-full">
                           <label className="font-normal text-base leading-[1.3] text-gray-11 font-family-dm-sans">
                             Email
                           </label>
                           <div className="relative w-full">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
+                            <EmailIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11" />
                             <Input
                               type="email"
                               placeholder="Digite seu email"
@@ -1293,7 +1286,7 @@ export function LoginModal() {
                             Senha
                           </label>
                           <div className="relative w-full">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                            <PasswordIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="Digite sua senha"
@@ -1364,7 +1357,7 @@ export function LoginModal() {
                       <Button
                         type="submit"
                         disabled={isSubmitting || authLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
-                        className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-xl font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full h-12 font-bold text-lg font-manrope disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting || authLoading
                           ? "Conectando..."
@@ -1373,7 +1366,7 @@ export function LoginModal() {
                     </form>
 
                     {/* Social login section */}
-                    <div className="flex flex-col gap-6 items-center justify-center pb-8 px-6 w-full">
+                    <div className="flex flex-col gap-8 items-center justify-center pt-2 pb-8 px-6 w-full">
                       <div className="flex flex-col gap-6 items-start w-full">
                         {/* Divider */}
                         <div className="flex gap-2.5 items-center justify-center w-full">
@@ -1390,8 +1383,8 @@ export function LoginModal() {
                             onClick={handleGoogleLogin}
                             className="w-full border border-gray-6 rounded-lg h-12 flex items-center justify-center gap-2 hover:bg-gray-3 transition-colors"
                           >
-                            <GoogleIcon />
-                            <span className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+                            <GoogleIcon className="size-6" />
+                            <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans">
                               Entrar com Google
                             </span>
                           </Button>
@@ -1413,18 +1406,6 @@ export function LoginModal() {
                           Criar conta
                         </button>
                       </div>
-
-                      {/* Terms and privacy */}
-                      <p className="text-xs leading-[1.3] text-gray-11 text-center font-family-dm-sans">
-                        Ao continuar você concorda com nossos{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Termos de serviço
-                        </button>{" "}
-                        e{" "}
-                        <button className="font-bold text-gray-12 underline hover:text-primary-10 transition-colors cursor-pointer">
-                          Política de privacidade
-                        </button>
-                      </p>
                     </div>
                   </div>
                 </>

@@ -7,6 +7,10 @@ import { organizerService } from "@/services";
 import { useWizardAuth } from "@/hooks/useWizardAuth";
 import { WizardStepLayout } from "@/components/Organizer/WizardStepLayout";
 import { FinancialSection } from "@/components/Organizer/FinancialSection";
+import {
+  ACCEPTED_PAYMENT_METHODS,
+  type AcceptedPaymentMethod,
+} from "@/interfaces/event";
 
 export default function EditFinancialPage() {
   const params = useParams();
@@ -16,15 +20,19 @@ export default function EditFinancialPage() {
   const [organizerPercent, setOrganizerPercent] = useState(4);
   const [maxInstallments, setMaxInstallments] = useState<1 | 2 | 3>(1);
   const [totalFee, setTotalFee] = useState<number>(6);
+  const [acceptedPaymentMethods, setAcceptedPaymentMethods] = useState<AcceptedPaymentMethod[]>(
+    [...ACCEPTED_PAYMENT_METHODS],
+  );
 
   useEffect(() => {
     if (!authChecked || !eventId) return;
     organizerService
       .getFinancialSettings(eventId)
-      .then(({ organizerFeePercent, maxInstallments: mi, totalFee: tf }) => {
+      .then(({ organizerFeePercent, maxInstallments: mi, totalFee: tf, acceptedPaymentMethods: apm }) => {
         setOrganizerPercent(organizerFeePercent);
         setMaxInstallments(mi);
         setTotalFee(tf);
+        setAcceptedPaymentMethods(apm);
       })
       .catch(() => {})
       .finally(() => setDataLoaded(true));
@@ -47,6 +55,7 @@ export default function EditFinancialPage() {
         onOrganizerPercentChange={setOrganizerPercent}
         onMaxInstallmentsChange={setMaxInstallments}
         totalFee={totalFee}
+        acceptedPaymentMethods={acceptedPaymentMethods}
         readOnly
       />
     </WizardStepLayout>

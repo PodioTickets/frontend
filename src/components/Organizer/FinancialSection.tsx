@@ -1,10 +1,16 @@
 "use client";
 
 import { useRef, useCallback } from "react";
+import toast from "react-hot-toast";
 import { cn } from "@/utils/cn";
+import { Checkbox } from "@/components/CheckBox";
 import { PixIcon } from "@/components/Icons/PixIcon";
 import { CardIcon } from "@/components/Icons/CardIcon";
 import { InfoIcon } from "@/components/Icons/InfoIcon";
+import {
+  ACCEPTED_PAYMENT_METHODS,
+  type AcceptedPaymentMethod,
+} from "@/interfaces/event";
 
 const DEFAULT_TOTAL_FEE = 6;
 const BASE_SIMULATION = 100;
@@ -19,6 +25,9 @@ interface FinancialSectionProps {
   /** Total platform fee — editable when onTotalFeeChange is provided (admin only) */
   totalFee?: number;
   onTotalFeeChange?: (value: number) => void;
+  /** Formas de pagamento aceitas no checkout (default: todas). */
+  acceptedPaymentMethods?: AcceptedPaymentMethod[];
+  onAcceptedPaymentMethodsChange?: (value: AcceptedPaymentMethod[]) => void;
 }
 
 export function FinancialSection({
@@ -29,8 +38,31 @@ export function FinancialSection({
   readOnly = false,
   totalFee,
   onTotalFeeChange,
+  acceptedPaymentMethods,
+  onAcceptedPaymentMethodsChange,
 }: FinancialSectionProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+
+  const accepted = acceptedPaymentMethods ?? [...ACCEPTED_PAYMENT_METHODS];
+  const isAccepted = (method: AcceptedPaymentMethod) => accepted.includes(method);
+
+  const toggleMethod = useCallback(
+    (method: AcceptedPaymentMethod) => {
+      if (readOnly || !onAcceptedPaymentMethodsChange) return;
+      const current = acceptedPaymentMethods ?? [...ACCEPTED_PAYMENT_METHODS];
+      // O checkout exige ao menos uma forma de pagamento — bloqueia desmarcar a última
+      if (current.includes(method) && current.length === 1) {
+        toast.error("Pelo menos uma forma de pagamento deve ficar ativa");
+        return;
+      }
+      // Deriva da ordem canônica → array estável pra comparação no dirty-check
+      const next = ACCEPTED_PAYMENT_METHODS.filter((m) =>
+        m === method ? !current.includes(m) : current.includes(m),
+      );
+      onAcceptedPaymentMethodsChange(next);
+    },
+    [readOnly, onAcceptedPaymentMethodsChange, acceptedPaymentMethods],
+  );
 
   const totalFeeValue = totalFee ?? DEFAULT_TOTAL_FEE;
   const participantPercent = parseFloat((totalFeeValue - organizerPercent).toFixed(2));
@@ -223,42 +255,76 @@ export function FinancialSection({
 
         <div className="flex flex-col gap-5">
           {/* PIX */}
-          <div className="flex items-center gap-5 rounded-lg border border-gray-6 bg-gray-2 p-5">
-            <PixIcon className="size-10 shrink-0" />
-            <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
-              PIX
-            </span>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-6 bg-gray-2 p-5">
+            <div className="flex items-center gap-5">
+              <PixIcon className="size-10 shrink-0" />
+              <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
+                PIX
+              </span>
+            </div>
+            <Checkbox
+              aria-label="Aceitar pagamento via PIX"
+              checked={isAccepted("PIX")}
+              onCheckedChange={() => toggleMethod("PIX")}
+              disabled={readOnly}
+              className="size-7"
+            />
           </div>
 
           {/* Debit card */}
           <div className="flex flex-col overflow-hidden rounded-lg border border-gray-6 bg-gray-2">
-            <div className="flex items-center gap-5 p-5">
-              <CardIcon className="size-10 shrink-0 text-gray-12" />
-              <div className="flex flex-col gap-2">
-                <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
-                  Cartão de débito
-                </span>
-                <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
-                  Aceita Visa, Mastercard, Elo, Hipercard e American Express
-                </span>
+            <div className="flex items-center justify-between gap-4 p-5">
+              <div className="flex items-center gap-5">
+                <CardIcon className="size-10 shrink-0 text-gray-12" />
+                <div className="flex flex-col gap-2">
+                  <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
+                    Cartão de débito
+                  </span>
+                  <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
+                    Aceita Visa, Mastercard, Elo, Hipercard e American Express
+                  </span>
+                </div>
               </div>
+              <Checkbox
+                aria-label="Aceitar pagamento com cartão de débito"
+                checked={isAccepted("DEBIT_CARD")}
+                onCheckedChange={() => toggleMethod("DEBIT_CARD")}
+                disabled={readOnly}
+                className="size-7"
+              />
             </div>
           </div>
 
           {/* Credit card */}
           <div className="flex flex-col overflow-hidden rounded-lg border border-gray-6 bg-gray-2">
-            <div className="flex items-center gap-5 border-b border-gray-6 p-5">
-              <CardIcon className="size-10 shrink-0 text-gray-12" />
-              <div className="flex flex-col gap-2">
-                <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
-                  Cartão de crédito
-                </span>
-                <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
-                  Aceita Visa, Mastercard, Elo, Hipercard e American Express
-                </span>
+            <div
+              className={cn(
+                "flex items-center justify-between gap-4 p-5",
+                isAccepted("CREDIT_CARD") && "border-b border-gray-6",
+              )}
+            >
+              <div className="flex items-center gap-5">
+                <CardIcon className="size-10 shrink-0 text-gray-12" />
+                <div className="flex flex-col gap-2">
+                  <span className="font-manrope text-lg font-extrabold leading-[1.1] text-gray-12">
+                    Cartão de crédito
+                  </span>
+                  <span className="font-family-dm-sans text-base font-medium leading-[1.3] text-gray-11">
+                    Aceita Visa, Mastercard, Elo, Hipercard e American Express
+                  </span>
+                </div>
               </div>
+              <Checkbox
+                aria-label="Aceitar pagamento com cartão de crédito"
+                checked={isAccepted("CREDIT_CARD")}
+                onCheckedChange={() => toggleMethod("CREDIT_CARD")}
+                disabled={readOnly}
+                className="size-7"
+              />
             </div>
 
+            {/* Parcelamento só faz sentido com crédito habilitado */}
+            {isAccepted("CREDIT_CARD") && (
             <div className="flex flex-col gap-5 p-5">
               <div className="flex flex-col gap-4">
                 <span className="font-manrope text-base font-semibold leading-[1.1] text-gray-12">
@@ -300,6 +366,7 @@ export function FinancialSection({
                 ))}
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

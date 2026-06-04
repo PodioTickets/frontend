@@ -27,9 +27,12 @@ import {
 } from "@/components/ImageUploadWithCrop";
 import { EVENT_IMAGE_SPECS } from "@/lib/eventImageSpecs";
 import { BookIcon } from "../Icons/BookIcon";
+import { CalendarIcon } from "../Icons/CalendarIcon";
 import { LoadingAnimation } from "@/components/Loading";
 import { cn } from "@/utils/cn";
 import { isSemInteresseVariation } from "@/utils/semInteresseVariation";
+import { useEvent } from "@/hooks/useEvent";
+import { formatDateBR, toUtcDate } from "@/utils/datetimeBR";
 
 interface ProductVariation {
   id: string;
@@ -145,6 +148,23 @@ export function CreateProductModal() {
   const isReadOnly = data?.readOnly === true;
   const eventId = data?.eventId;
   const isProductLoading = isEditing && productFetchStatus === "loading";
+
+  /* Data do evento — base do aviso "Participantes podem alterar até dia X".
+   * O modal roda fora dos providers de página (zustand global), então busca
+   * o evento por conta própria; só quando aberto, pra não custar nada parado. */
+  const { event: modalEvent } = useEvent(eventId ?? null, isOpen && !!eventId);
+
+  /* Data-limite = data do evento − N dias, em UTC (padrão datetimeBR: o
+   * servidor manda o instante pretendido; aritmética em UTC evita o bug de
+   * "−1 dia" perto da meia-noite). Null (sem evento/dias vazio) esconde o box. */
+  const variationDeadlineDateLabel = useMemo(() => {
+    const days = parseInt(variationChangeDeadlineDays, 10);
+    const base = toUtcDate(modalEvent?.eventDate);
+    if (!base || !Number.isFinite(days)) return null;
+    const limit = new Date(base.getTime());
+    limit.setUTCDate(limit.getUTCDate() - days);
+    return formatDateBR(limit, { day: "numeric", month: "long", year: "numeric" });
+  }, [modalEvent?.eventDate, variationChangeDeadlineDays]);
 
   /** Estoque inicial de cada variação nova: soma das vagas de todos os lotes do ingresso (vem do modal). */
   const defaultVariationStockFromBatches = useMemo(() => {
@@ -1610,12 +1630,13 @@ export function CreateProductModal() {
                         </div>
                       )}
                       {isIncludedInTicket && buyerCanEditVariation && (
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-4">
                           <p className="text-gray-12 text-base font-normal font-family-dm-sans leading-[1.3]">
                             Até quantos dias antes do evento o participante
                             pode alterar a variação?
                           </p>
-                          <div className="flex flex-wrap items-center gap-2">
+                          {/* Campo composto (número + sufixo acoplado) — Figma 4906:166308 */}
+                          <div className="flex h-12 w-fit items-stretch overflow-hidden rounded-lg border border-gray-6 focus-within:border-primary-8">
                             <input
                               type="text"
                               inputMode="numeric"
@@ -1629,14 +1650,31 @@ export function CreateProductModal() {
                                     .slice(0, 4),
                                 )
                               }
-                              className="h-9 min-w-13 w-10 shrink-0 rounded-lg border border-gray-6 bg-gray-1 px-2 text-center text-base font-normal font-family-dm-sans text-gray-11 placeholder:text-gray-11 focus:border-primary-8 focus:outline-none"
+                              className="w-18 shrink-0 bg-transparent px-2 text-center font-manrope text-xl font-bold leading-[1.1] text-gray-11 placeholder:text-gray-11 outline-none"
                               placeholder="30"
                               aria-label="Dias antes do evento para alterar variação"
                             />
-                            <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                              Dias antes do evento
-                            </span>
+                            <div className="flex items-center border-l border-gray-6 bg-gray-3 px-3">
+                              <span className="text-base font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                Dias antes do evento
+                              </span>
+                            </div>
                           </div>
+                          {/* Data-limite calculada (evento − N dias) — Figma 4895:156352 */}
+                          {variationDeadlineDateLabel && (
+                            <div className="flex flex-col gap-2.5 rounded-lg bg-primary-3 px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <CalendarIcon className="size-5 shrink-0 text-primary-12" />
+                                <p className="text-base font-medium font-family-dm-sans leading-[1.3] text-primary-12">
+                                  Participantes podem alterar até dia {variationDeadlineDateLabel}
+                                </p>
+                              </div>
+                              <p className="text-base font-normal font-family-dm-sans leading-[1.3] text-primary-12">
+                                Após esta data, o participante não poderá mais
+                                editar a variação do produto.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

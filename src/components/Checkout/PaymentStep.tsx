@@ -27,6 +27,7 @@ import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback"
 import { ProductCardGallery } from "./ProductCardGallery";
 import { Tooltip, CVVTooltip } from "../Tooltip";
 import type { Event } from "@/interfaces/event";
+import { ACCEPTED_PAYMENT_METHODS } from "@/interfaces/event";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import { Input } from "../Input";
 import { useTickets } from "@/hooks/useTickets";
@@ -57,6 +58,7 @@ const COUPON_ERROR_MESSAGES: Record<string, string> = {
   COUPON_MIN_VALUE: "Pedido abaixo do valor mínimo do cupom.",
   VOUCHER_NOT_FOUND: "Voucher inválido ou não encontrado.",
   VOUCHER_EXPIRED: "Voucher expirado.",
+  VOUCHER_ALREADY_USED: "Este voucher já foi utilizado.",
   DISCOUNT_CONFLICT: "Cupom e voucher não podem ser usados juntos.",
 };
 import { validateCardNumber, validateExpiry, validateCVV, getCardBrand, maskCardExpiry } from "@/utils/cardValidation";
@@ -1449,14 +1451,8 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
     (sum, item) => sum + item.price / 100,
     0
   );
-  // Fallback local inclui produtos adicionais — base da taxa é
-  // tickets + produtos (mesma fórmula do backend). Sem isso, a taxa fica
-  // subestimada quando a order ainda não foi recalculada com produtos.
-  const serverServiceFee = currentOrder?.pricing.serviceFee ?? 0;
-  const serviceFee = serverServiceFee > 0
-    ? serverServiceFee / 100
-    : (ticketSubtotalLocal + additionalProductsTotal) *
-    ((event.participantFeePercent ?? 0) / 100);
+  
+  const serviceFee = currentOrder?.pricing.serviceFee ?? 0;
   // Subtotal e desconto de cupom vêm direto do backend — não recalcular no frontend
   const subtotalValue = currentOrder
     ? currentOrder.pricing.subtotal / 100
@@ -1475,6 +1471,31 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
   const isFreeOrder = totalValue <= 0;
   const isCardSelected = selectedPaymentMethod === "credit" || selectedPaymentMethod === "debit";
+
+  // Whitelist da tela financeira do organizador/admin — só renderiza os métodos
+  // configurados. Ausente/vazia (evento antigo ou payload de servidor sem o
+  // campo) = todos, espelhando o default do backend. O /pay valida server-side.
+  const acceptedMethods = event.acceptedPaymentMethods?.length
+    ? event.acceptedPaymentMethods
+    : ACCEPTED_PAYMENT_METHODS;
+  const allowPix = acceptedMethods.includes("PIX");
+  const allowCredit = acceptedMethods.includes("CREDIT_CARD");
+  const allowDebit = acceptedMethods.includes("DEBIT_CARD");
+  const allowCard = allowCredit || allowDebit;
+  const defaultCardMethod: PaymentMethod = allowCredit ? "credit" : "debit";
+
+  // Default do estado é "credit" — se o evento não aceita o método selecionado,
+  // realinha pro primeiro permitido (crédito → débito → PIX; mín. 1 garantido
+  // pela tela financeira).
+  useEffect(() => {
+    const blocked =
+      (selectedPaymentMethod === "credit" && !allowCredit) ||
+      (selectedPaymentMethod === "debit" && !allowDebit) ||
+      (selectedPaymentMethod === "pix" && !allowPix);
+    if (blocked) {
+      setSelectedPaymentMethod(allowCredit ? "credit" : allowDebit ? "debit" : "pix");
+    }
+  }, [selectedPaymentMethod, allowCredit, allowDebit, allowPix]);
 
   const isCouponApplied = !!currentOrder?.coupon;
   const isVoucherApplied = !!currentOrder?.voucher;
@@ -2410,11 +2431,11 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
             {!isFreeOrder && <div className="py-6 flex flex-col gap-3">
               {/* Card Option (crédito + débito unificados) */}
-              <div
+              {allowCard && <div
                 data-payment-method="card"
                 className={`border rounded-lg p-4 transition-colors border-gray-6 bg-gray-3`}
                 onClick={() => {
-                  if (!isCardSelected) setSelectedPaymentMethod("credit");
+                  if (!isCardSelected) setSelectedPaymentMethod(defaultCardMethod);
                   scrollPaymentMethodIntoView();
                 }}
               >
@@ -2443,22 +2464,22 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
 
                 {isCardSelected && (
                   <div className="mt-4" onClick={(e) => e.stopPropagation()}>
-                    {/* Seleção crédito / débito */}
+                    {/* Seleção crédito / débito — só os métodos aceitos pelo evento */}
                     <div className="flex gap-6 mb-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      {allowCredit && <label className="flex items-center gap-2 cursor-pointer">
                         <Checkbox
                           checked={selectedPaymentMethod === "credit"}
                           onCheckedChange={() => setSelectedPaymentMethod("credit")}
                         />
                         <span className="text-sm font-semibold text-gray-12 font-manrope">Crédito</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      </label>}
+                      {allowDebit && <label className="flex items-center gap-2 cursor-pointer">
                         <Checkbox
                           checked={selectedPaymentMethod === "debit"}
                           onCheckedChange={() => setSelectedPaymentMethod("debit")}
                         />
                         <span className="text-sm font-semibold text-gray-12 font-manrope">Débito</span>
-                      </label>
+                      </label>}
                     </div>
 
                     {selectedPaymentMethod === "credit" && (
@@ -2516,10 +2537,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     )}
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* PIX Option */}
-              <div
+              {allowPix && <div
                 data-payment-method="pix"
                 className={`border rounded-lg p-4 transition-colors ${selectedPaymentMethod === "pix"
                   ? "border-blue-6 bg-gray-3"
@@ -2564,7 +2585,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                     </Button>
                   </div>
                 )}
-              </div>
+              </div>}
             </div>}
 
 
@@ -2671,30 +2692,30 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
             {billingAddressConfirmed && !isFreeOrder ? (
               <div className="space-y-6">
                 {/* Cartão (crédito + débito unificados) */}
-                <div>
+                {allowCard && <div>
                   <PaymentMethodOption
                     option={{ id: "credit", name: "Cartão", description: "", icons: cardIcons }}
                     isSelected={isCardSelected}
-                    onSelect={() => { if (!isCardSelected) setSelectedPaymentMethod("credit"); }}
+                    onSelect={() => { if (!isCardSelected) setSelectedPaymentMethod(defaultCardMethod); }}
                   />
                   {isCardSelected && (
                     <div className="mt-4">
-                      {/* Seleção crédito / débito */}
+                      {/* Seleção crédito / débito — só os métodos aceitos pelo evento */}
                       <div className="flex gap-6 mb-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        {allowCredit && <label className="flex items-center gap-2 cursor-pointer">
                           <Checkbox
                             checked={selectedPaymentMethod === "credit"}
                             onCheckedChange={() => setSelectedPaymentMethod("credit")}
                           />
                           <span className="text-sm font-semibold text-gray-12 font-manrope">Crédito</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        </label>}
+                        {allowDebit && <label className="flex items-center gap-2 cursor-pointer">
                           <Checkbox
                             checked={selectedPaymentMethod === "debit"}
                             onCheckedChange={() => setSelectedPaymentMethod("debit")}
                           />
                           <span className="text-sm font-semibold text-gray-12 font-manrope">Débito</span>
-                        </label>
+                        </label>}
                       </div>
 
                       {selectedPaymentMethod === "credit" && (
@@ -2752,10 +2773,10 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       )}
                     </div>
                   )}
-                </div>
+                </div>}
 
                 {/* PIX */}
-                <div>
+                {allowPix && <div>
                   <PaymentMethodOption
                     option={{ id: "pix", name: "PIX", description: "" }}
                     isSelected={selectedPaymentMethod === "pix"}
@@ -2773,7 +2794,7 @@ export function PaymentStep({ event, onBack, onSuccess }: PaymentStepProps) {
                       />
                     </div>
                   )}
-                </div>
+                </div>}
               </div>
             ) : null}
           </div>
