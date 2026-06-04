@@ -234,16 +234,6 @@ function CheckoutIngressosContent() {
     <div className="w-full gap-4">
       <CheckoutHeader activeStep={1} />
       <div className="w-full max-w-[1280px] mx-auto flex flex-col min-h-screen items-start justify-start gap-4 py-4 md:py-11 px-4 bg-gray-2 md:bg-transparent">
-        {linkVoucherError && (
-          <div className="flex w-full items-start gap-3 rounded-xl border border-red-6 bg-red-3 px-4 py-3">
-            <InfoIcon className="mt-0.5 size-5 shrink-0 text-red-11" />
-            <p className="font-family-dm-sans text-sm leading-[1.3] text-red-11">
-              <span className="font-semibold">{linkVoucherError}.</span>{" "}
-              O voucher do link não será aplicado, mas você pode continuar a
-              compra normalmente.
-            </p>
-          </div>
-        )}
         <ModalitiesStep event={event} onNext={handleNext} onBack={handleBack} isSubmitting={reserving || isNavigating} />
       </div>
     </div>
