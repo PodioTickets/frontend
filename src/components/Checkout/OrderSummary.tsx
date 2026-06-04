@@ -169,7 +169,7 @@ export function OrderSummary({
   );
   // Subtotal = soma dos itens ANTES da taxa. A taxa é exibida em linha própria,
   // então não pode entrar aqui (senão é contada duas vezes no fallback).
-  const subtotal = ticketsSubtotal + productsSubtotal
+  const subtotal = (ticketsSubtotal + productsSubtotal)
 
   const toggleParticipant = (index: number) => {
     setExpandedParticipants((prev) => ({

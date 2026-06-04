@@ -2,6 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { clearAllCreateEventClientStorage } from "@/lib/createEventWizardPersistence";
+import {
+  ACCEPTED_PAYMENT_METHODS,
+  type AcceptedPaymentMethod,
+} from "@/interfaces/event";
 
 export interface CreateEventFormData {
   name: string;
@@ -28,6 +32,7 @@ export interface CreateEventFormData {
   website: string;
   organizerFeePercent: number;
   maxInstallments: 1 | 2 | 3;
+  acceptedPaymentMethods: AcceptedPaymentMethod[];
 }
 
 interface CreateEventContextType {
@@ -70,6 +75,8 @@ const initialFormData: CreateEventFormData = {
   // logo participante paga 6 − 4 = 2% (derivado em FinancialSection/saveFinancialSettings).
   organizerFeePercent: 4,
   maxInstallments: 1,
+  // Default = todas as formas aceitas (espelha o default do backend)
+  acceptedPaymentMethods: [...ACCEPTED_PAYMENT_METHODS],
 };
 
 // Helper function to load initial data from localStorage

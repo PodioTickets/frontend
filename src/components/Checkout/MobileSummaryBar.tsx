@@ -349,15 +349,6 @@ export function MobileSummaryBar({
 
                   {/* Breakdown completo */}
                   <div className="flex flex-col gap-2 border-t border-gray-6 pt-4">
-
-                    {additionalProducts && additionalProducts.total > 0 && (
-                      <SummaryRow
-                        label={`${additionalProducts.count ? ` (${additionalProducts.count}x)` : ""
-                          } ${additionalProducts.count === 1 ? "Produto adicional" : "Produtos adicionais"}`}
-                        value={formatPrice(additionalProducts.total)}
-                      />
-                    )}
-                    {/* Subtotal sempre visível, logo acima da taxa de serviço. */}
                     <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
                     {discountRow}
                     {feeRow}

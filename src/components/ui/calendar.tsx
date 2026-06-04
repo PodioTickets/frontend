@@ -205,6 +205,8 @@ function CalendarCaptionWithDropdowns({ calendarMonth }: MonthCaptionProps) {
         width="min-w-[100px]"
         maxHeight={dropdownMaxHeight}
         dataAttribute="calendar-year"
+        scrollToSelectedOnOpen
+
         trigger={() => (
           <div className="flex items-center justify-between gap-1.5 h-8 min-w-[90px] px-2 rounded-md border border-gray-6 bg-gray-1 text-sm font-medium text-gray-12 cursor-pointer hover:bg-gray-3 transition-colors">
             <span className="truncate">{yearLabel}</span>

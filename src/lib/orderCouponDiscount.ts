@@ -13,6 +13,16 @@ export type CouponPreviewResult =
       type: "PERCENTAGE" | "FIXED";
       couponType?: string;
       applyToProducts?: boolean;
+      /**
+       * Ingressos cobertos pelo cupom (espelha o ramo do voucher). Já
+       * normalizado no boundary do `UserService`: `null` = todos ("all"/ausente);
+       * `string[]` = subconjunto de ticketIds. Ausência = sem restrição.
+       */
+      appliesTo?: string[] | null;
+      /** Valor mínimo do carrinho em CENTAVOS. `null`/ausente = sem condição. */
+      minCartValue?: number | null;
+      /** Quantidade mínima de ingressos no carrinho. `null`/ausente = sem condição. */
+      minQuantity?: number | null;
     }
   | {
       kind: "voucher";
@@ -179,6 +189,118 @@ export function couponPreviewToOrderCoupon(
     value: preview.value,
     applyToProducts: preview.applyToProducts,
   };
+}
+
+/**
+ * Condições de aplicação de um cupom de LINK no checkout (preview):
+ *  - `minCartValue` (CENTAVOS): carrinho abaixo do mínimo → não atende;
+ *  - `minQuantity`: menos ingressos que o mínimo → não atende.
+ * Ausência de cada campo = sem aquela condição. `cartSubtotal` em REAIS;
+ * `cartQuantity` = total de ingressos selecionados. Backend é a verdade final.
+ */
+export function couponConditionsMet(
+  coupon:
+    | { minCartValue?: number | null; minQuantity?: number | null }
+    | null
+    | undefined,
+  cartSubtotal: number,
+  cartQuantity: number,
+): boolean {
+  if (!coupon) return false;
+  if (coupon.minCartValue != null && cartSubtotal < coupon.minCartValue / 100) {
+    return false;
+  }
+  if (coupon.minQuantity != null && cartQuantity < coupon.minQuantity) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Normaliza `appliesTo` de QUALQUER fonte para `string[] | null` (null = todos):
+ *  - `null`/`undefined`/`"all"` → null (sem restrição);
+ *  - array → os ids string (vazio → null);
+ *  - string JSON (`'["id1","id2"]'`) → ids (vazio/ inválido → null).
+ * Cobre tanto o preview de link (array) quanto o `OrderCoupon.appliesTo` (string).
+ */
+export function normalizeCouponAppliesTo(
+  appliesTo: string | string[] | null | undefined,
+): string[] | null {
+  if (appliesTo == null) return null;
+  if (Array.isArray(appliesTo)) return appliesTo.length ? appliesTo : null;
+  if (appliesTo === "all") return null;
+  try {
+    const parsed = JSON.parse(appliesTo);
+    if (Array.isArray(parsed)) {
+      const ids = parsed.filter((x: unknown): x is string => typeof x === "string");
+      return ids.length ? ids : null;
+    }
+  } catch {
+    /* não-JSON (ex.: string solta) → sem restrição */
+  }
+  return null;
+}
+
+/**
+ * True quando o cupom de link cobre ALGUM ingresso SELECIONADO (`appliesTo`).
+ * `null`/vazio = sem restrição → cobre todos. Espelha o voucher: ingresso fora
+ * do escopo → o cupom nem deve aparecer no resumo (sem desconto e sem "ao
+ * continuar"). Usado só pra DECIDIR EXIBIÇÃO; o desconto sai de
+ * `computeLinkCouponTicketDiscount`.
+ */
+export function couponCoversAnySelected(
+  appliesTo: string[] | null | undefined,
+  selected: Array<{ id: string; quantity: number }>,
+): boolean {
+  if (!appliesTo || appliesTo.length === 0) return true;
+  const set = new Set(appliesTo);
+  return selected.some((t) => t.quantity > 0 && set.has(t.id));
+}
+
+/**
+ * Desconto (em REAIS) de um cupom de LINK (`?cupom=`) sobre os ingressos
+ * selecionados, respeitando as MESMAS regras do cupom de idade
+ * (`computeAgeCouponTicketDiscount`) + `minQuantity`:
+ *  - `appliesTo`: `null` → todos os ingressos; lista → só os ticketIds cobertos;
+ *  - `minCartValue`/`minQuantity`: condições não atendidas → 0 (desconto não
+ *    entra; o resumo segue cheio e a linha de cupom não aparece — "aplicar em
+ *    silêncio").
+ *
+ * Unidades: PERCENTAGE `value` = % (1–100); FIXED `value`/`minCartValue` em
+ * CENTAVOS (convenção do backend). `selected.price`/`cartSubtotal` em REAIS. Sem
+ * produtos nesta etapa — a base é só ingressos. Fonte da verdade do desconto
+ * final é o backend no pagamento; aqui é só feedback visual pré-reserva.
+ */
+export function computeLinkCouponTicketDiscount(
+  coupon:
+    | {
+        type: "PERCENTAGE" | "FIXED";
+        value: number;
+        appliesTo?: string[] | null;
+        minCartValue?: number | null;
+        minQuantity?: number | null;
+      }
+    | null
+    | undefined,
+  selected: Array<{ id: string; price: number; quantity: number }>,
+  cartSubtotal: number,
+  cartQuantity: number,
+): number {
+  if (!coupon || coupon.value <= 0) return 0;
+  if (!couponConditionsMet(coupon, cartSubtotal, cartQuantity)) return 0;
+  // `null`/vazio → sem restrição de modalidade (todos os ingressos).
+  const allowedSet =
+    coupon.appliesTo && coupon.appliesTo.length ? new Set(coupon.appliesTo) : null;
+  const eligibleSubtotal = selected.reduce((sum, t) => {
+    if (allowedSet && !allowedSet.has(t.id)) return sum;
+    return sum + Math.max(0, t.price) * Math.max(0, t.quantity);
+  }, 0);
+  if (eligibleSubtotal <= 0) return 0;
+  if (coupon.type === "PERCENTAGE") {
+    return round2(eligibleSubtotal * (coupon.value / 100));
+  }
+  // FIXED em centavos → reais, clampado ao subtotal elegível.
+  return round2(Math.min(coupon.value / 100, eligibleSubtotal));
 }
 
 export interface TicketPricingWithCoupon {

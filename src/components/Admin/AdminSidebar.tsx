@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { FileText, Send, TrendingUp, Users, File } from "lucide-react";
+import { Activity, FileText, Send, TrendingUp, Users, File } from "lucide-react";
 import { getAvatarUrl } from "@/utils/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { label: "Aud. Evento", href: "/admin/auditoria-evento", icon: File },
   { label: "Anúncios", href: "/admin/anuncios", icon: Send },
   { label: "Logs", href: "/admin/logs", icon: FileText },
+  { label: "Atividade", href: "/admin/atividade", icon: Activity },
 ] as const;
 
 export function AdminSidebar() {

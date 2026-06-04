@@ -506,6 +506,45 @@ export class UserService {
       }
 
       // Cupom tradicional (backend pode ou não enviar `kind: "coupon"`).
+      // `appliesTo` espelha o ramo do voucher: "all"/ausente → null (todos);
+      // array OU string JSON ('["id1","id2"]') → lista de ticketIds.
+      // `minCartValue`/`minQuantity` chegam só quando não-nulos (o
+      // ResponseCompressionInterceptor remove null/""/undefined) → ausência =
+      // "sem condição".
+      let couponAppliesTo: string[] | null = null;
+      const rawApplies = d.appliesTo;
+      if (Array.isArray(rawApplies)) {
+        const ids = rawApplies.filter(
+          (x: unknown): x is string => typeof x === "string",
+        );
+        couponAppliesTo = ids.length ? ids : null;
+      } else if (typeof rawApplies === "string" && rawApplies !== "all") {
+        try {
+          const parsed = JSON.parse(rawApplies);
+          if (Array.isArray(parsed)) {
+            const ids = parsed.filter(
+              (x: unknown): x is string => typeof x === "string",
+            );
+            couponAppliesTo = ids.length ? ids : null;
+          }
+        } catch {
+          /* não-JSON (ex.: "all" ou string solta) → sem restrição */
+        }
+      }
+      // [DIAGNÓSTICO TEMPORÁRIO] confirma o que o backend devolve no preview do
+      // cupom — remover após validar o appliesTo. Se `rawAppliesTo` vier
+      // undefined/null, o cupom é tratado como "todos" e desconta ingressos não
+      // cobertos (sintoma reportado).
+      if (typeof window !== "undefined") {
+        // eslint-disable-next-line no-console
+        console.warn("[coupon-preview]", {
+          code: d.code,
+          rawAppliesTo: d.appliesTo,
+          parsedAppliesTo: couponAppliesTo,
+          minCartValue: d.minCartValue,
+          minQuantity: d.minQuantity,
+        });
+      }
       return {
         kind: "coupon",
         code: String(d.code ?? code),
@@ -513,9 +552,54 @@ export class UserService {
         type: d.type === "FIXED" ? "FIXED" : "PERCENTAGE",
         couponType: d.couponType,
         applyToProducts: d.applyToProducts,
+        appliesTo: couponAppliesTo,
+        minCartValue:
+          typeof d.minCartValue === "number" ? d.minCartValue : null,
+        minQuantity: typeof d.minQuantity === "number" ? d.minQuantity : null,
       };
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Valida o voucher do LINK (`?voucher=`) no `/checkout/ingressos`. O preview
+   * (`previewCoupon`) devolve `null` pra voucher usado/expirado SEM o motivo —
+   * por design ele nunca lança. O motivo real vem do GET de produtos com
+   * `?voucher=`, que o backend valida ANTES de listar e responde 422 tipado
+   * (VOUCHER_ALREADY_USED / VOUCHER_EXPIRED / VOUCHER_NOT_FOUND).
+   *
+   * Só o 422 é tratado como "inusável"; rede/5xx/401 devolvem `usable: true`
+   * pra nunca alarmar com falso negativo — quem decide de verdade é o apply
+   * (`patchCoupon`) e o `/pay`.
+   */
+  async validateVoucherLink(
+    eventId: string,
+    code: string,
+  ): Promise<
+    | { usable: true }
+    | { usable: false; code: string | null; message: string }
+  > {
+    try {
+      // `limit: 1` minimiza o payload — só interessa a validação do voucher
+      await this.apiClient.get(`/api/v1/products/events/${eventId}`, {
+        params: { voucher: code, limit: 1 },
+      });
+      return { usable: true };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+      if (status === 422) {
+        return {
+          usable: false,
+          code: typeof data?.code === "string" ? data.code : null,
+          message:
+            typeof data?.message === "string" && data.message
+              ? data.message
+              : "Voucher inválido ou não encontrado.",
+        };
+      }
+      return { usable: true };
     }
   }
 
