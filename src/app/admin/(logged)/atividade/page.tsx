@@ -4,9 +4,11 @@ import { useState } from "react";
 import { cn } from "@/utils/cn";
 import { AdminUserActivityTab } from "@/components/Admin/AdminUserActivityTab";
 import { AdminUserActivityDashboard } from "@/components/Admin/AdminUserActivityDashboard";
+import { AdminUserActivityFunnelTab } from "@/components/Admin/AdminUserActivityFunnelTab";
 
 const TABS = [
   { id: "overview", label: "Visão geral" },
+  { id: "funnel", label: "Funil de compra" },
   { id: "records", label: "Registros" },
 ] as const;
 
@@ -57,8 +59,9 @@ export default function AdminUserActivityPage() {
         </div>
 
         {/* Lista mantém estado (filtros/página) ao alternar — esconde em vez
-            de desmontar. O dashboard é barato e monta sob demanda. */}
+            de desmontar. Dashboard e funil são baratos e montam sob demanda. */}
         {activeTab === "overview" ? <AdminUserActivityDashboard /> : null}
+        {activeTab === "funnel" ? <AdminUserActivityFunnelTab /> : null}
         <div className={activeTab === "records" ? "block" : "hidden"}>
           <AdminUserActivityTab />
         </div>

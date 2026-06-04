@@ -440,25 +440,33 @@ export function Dropdown({
           ? spaceBelow >= Math.min(desired, 200) || spaceBelow >= spaceAbove
           : !(spaceAbove >= Math.min(desired, 200) || spaceAbove >= spaceBelow);
 
-      if (useBottom) {
-        // Limita maxHeight ao espaço disponível pra evitar que o menu transborde
-        // a viewport (e o usuário não consiga rolar pra ver mais variações).
-        const cappedHeight = Math.max(120, Math.min(desired, spaceBelow));
-        setPortalPlacement({
-          top: r.bottom + gap,
-          left: r.left,
-          width: r.width,
-          maxHeight: cappedHeight,
-        });
-      } else {
-        const cappedHeight = Math.max(120, Math.min(desired, spaceAbove));
-        setPortalPlacement({
-          bottom: window.innerHeight - r.top + gap,
-          left: r.left,
-          width: r.width,
-          maxHeight: cappedHeight,
-        });
-      }
+      // Limita maxHeight ao espaço disponível pra evitar que o menu
+      // transborde a viewport (e o usuário não consiga rolar pra ver mais
+      // variações).
+      const next = {
+        top: useBottom ? r.bottom + gap : undefined,
+        bottom: useBottom ? undefined : window.innerHeight - r.top + gap,
+        left: r.left,
+        width: r.width,
+        maxHeight: Math.max(
+          120,
+          Math.min(desired, useBottom ? spaceBelow : spaceAbove)
+        ),
+      };
+
+      // O listener de scroll roda em capture e dispara também pro scroll
+      // INTERNO do menu — sem este guard, cada frame de scroll gerava um
+      // objeto novo → re-render no meio do gesto (quebra o momentum no iOS).
+      setPortalPlacement((prev) =>
+        prev &&
+        prev.top === next.top &&
+        prev.bottom === next.bottom &&
+        prev.left === next.left &&
+        prev.width === next.width &&
+        prev.maxHeight === next.maxHeight
+          ? prev
+          : next
+      );
     };
 
     update();
@@ -593,9 +601,15 @@ export function Dropdown({
   // tem max-h maior que o pai e itens ficam cortados sem aparecer no scroll.
   const effectiveMenuMaxHeight =
     portalPlacement?.maxHeight ?? containerHeight;
+  // Quando a lista é virtualizada, quem rola é a própria VirtualList — o
+  // wrapper NÃO pode ser scrollável também: dois scrollers aninhados com a
+  // mesma altura fazem o iOS "agarrar" o externo (sem conteúdo pra rolar) e
+  // o gesto vai pra página atrás, travando o scroll do dropdown no iPhone.
+  const usesVirtualList =
+    !children && !(columns && multiSelect) && shouldUseVirtualList;
   const menuBody = (
     <div
-      className="overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
+      className={`${usesVirtualList ? "overflow-hidden" : "overflow-y-auto"} overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full`}
       style={{ maxHeight: effectiveMenuMaxHeight }}
     >
       {children ? (

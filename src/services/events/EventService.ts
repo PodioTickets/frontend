@@ -32,7 +32,7 @@ export interface SearchEventsResponse {
 }
 
 export class EventService {
-  constructor(private apiClient: ApiClient) {}
+  constructor(private apiClient: ApiClient) { }
 
   async getEvents(params?: {
     page?: number;
@@ -43,6 +43,8 @@ export class EventService {
     const { data } = await this.apiClient.get("/api/v1/events", {
       params: { page, limit },
     });
+
+    console.log(data)
 
     return (
       data.data || {

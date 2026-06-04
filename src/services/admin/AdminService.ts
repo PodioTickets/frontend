@@ -67,12 +67,37 @@ export interface AdminUserActivityStats {
     uniqueUsers: number;
     uniqueSessions: number;
     anonymousEvents: number;
+    /** Views da página pública de evento (action `page:event`) no período. */
+    eventPageViews: number;
+    /** Pagamentos confirmados (action `order.paid`) no período. */
+    paymentsConfirmed: number;
   };
   byCategory: Array<{ category: string; count: number }>;
   bySource: Array<{ source: string; count: number }>;
   topActions: Array<{ action: string; count: number }>;
   /** Série diária esparsa (`day` = YYYY-MM-DD UTC) — dias sem evento são omitidos. */
   perDay: Array<{ day: string; count: number }>;
+  /** Views da página de evento por dia (esparsa, mesmo formato de `perDay`). */
+  viewsPerDay: Array<{ day: string; count: number }>;
+}
+
+/**
+ * Etapa do funil de compra (`GET /admin/user-activity/funnel`). Ordem
+ * canônica garantida pelo backend: page:event → order.reserve →
+ * order.billing-address → order.pay → order.paid.
+ */
+export interface AdminPurchaseFunnelStage {
+  action: string;
+  /** Contagem bruta de ações (cada clique/tentativa conta). */
+  total: number;
+  /** Sessões/usuários únicos que chegaram na etapa — base do funil. */
+  unique: number;
+}
+
+export interface AdminPurchaseFunnel {
+  range: { from: string; to: string };
+  eventId: string | null;
+  stages: AdminPurchaseFunnelStage[];
 }
 
 export interface AdminAuditOrganization {
@@ -711,6 +736,8 @@ export class AdminService {
   async getUserActivityStats(params?: {
     category?: string;
     source?: string;
+    /** Restringe as métricas a um evento esportivo (metadata.eventId). */
+    eventId?: string;
     from?: string;
     to?: string;
   }): Promise<AdminUserActivityStats> {
@@ -749,6 +776,8 @@ export class AdminService {
         uniqueUsers: n(totals.uniqueUsers),
         uniqueSessions: n(totals.uniqueSessions),
         anonymousEvents: n(totals.anonymousEvents),
+        eventPageViews: n(totals.eventPageViews),
+        paymentsConfirmed: n(totals.paymentsConfirmed),
       },
       byCategory: arr(data.byCategory).map((g) => ({
         category: s(g.category),
@@ -766,6 +795,57 @@ export class AdminService {
         day: s(g.day),
         count: n(g.count),
       })),
+      viewsPerDay: arr(data.viewsPerDay).map((g) => ({
+        day: s(g.day),
+        count: n(g.count),
+      })),
+    };
+  }
+
+  /**
+   * `GET /admin/user-activity/funnel` — funil de compra (sessões únicas por
+   * etapa). O backend já devolve as etapas na ordem canônica com zero-fill;
+   * a normalização aqui é só defesa contra chave dropada pelo
+   * ResponseCompressionInterceptor (count 0 → chave ausente).
+   */
+  async getUserActivityFunnel(params?: {
+    eventId?: string;
+    from?: string;
+    to?: string;
+  }): Promise<AdminPurchaseFunnel> {
+    const res = await this.apiClient.get<Record<string, unknown>>(
+      `${ADMIN_USER_ACTIVITY_PATH}/funnel`,
+      {
+        params: Object.fromEntries(
+          Object.entries(params ?? {}).filter(
+            ([, v]) => typeof v === "string" && v.trim() !== ""
+          )
+        ),
+      }
+    );
+
+    const body = (res.data ?? {}) as Record<string, unknown>;
+    const data = (body.data ?? body) as Record<string, unknown>;
+
+    const n = (v: unknown): number =>
+      typeof v === "number" && Number.isFinite(v) ? v : 0;
+    const s = (v: unknown): string => (typeof v === "string" ? v : "");
+    const range = (data.range ?? {}) as Record<string, unknown>;
+    const rawStages = Array.isArray(data.stages) ? data.stages : [];
+
+    return {
+      range: { from: s(range.from), to: s(range.to) },
+      eventId: typeof data.eventId === "string" ? data.eventId : null,
+      stages: rawStages
+        .filter(
+          (x): x is Record<string, unknown> =>
+            !!x && typeof x === "object" && !Array.isArray(x)
+        )
+        .map((g) => ({
+          action: s(g.action),
+          total: n(g.total),
+          unique: n(g.unique),
+        })),
     };
   }
 

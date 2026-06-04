@@ -178,6 +178,8 @@ export const queryKeys = {
         [...queryKeys.admin.userActivity.all(), "list", params] as const,
       stats: (params: Record<string, unknown>) =>
         [...queryKeys.admin.userActivity.all(), "stats", params] as const,
+      funnel: (params: Record<string, unknown>) =>
+        [...queryKeys.admin.userActivity.all(), "funnel", params] as const,
     },
     auditEvent: {
       all: () => [...queryKeys.admin.all, "auditEvent"] as const,

@@ -73,7 +73,15 @@ export function VirtualList({
     <div
       ref={containerRef}
       className={`overflow-auto ${className}`}
-      style={{ height: `${containerHeight}px`, willChange: 'scroll-position' }}
+      style={{
+        height: `${containerHeight}px`,
+        willChange: "scroll-position",
+        // iOS/Android: garante que o gesto de toque role ESTA lista (e não a
+        // página atrás) — momentum no iOS antigo + sem scroll chaining.
+        WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
+        touchAction: "pan-y",
+      }}
       onScroll={handleScroll}
     >
       <div style={{ height: `${totalHeight}px`, position: "relative" }}>
