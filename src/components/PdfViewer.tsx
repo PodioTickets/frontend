@@ -8,8 +8,13 @@ import { Document, Page, pdfjs } from "react-pdf";
  * funciona igual no desktop e no mobile (iOS/Safari NÃO renderiza PDF em <iframe>).
  * Sem text/annotation layer → leve e sem CSS extra; é só leitura.
  *
- * Worker casado com a versão de pdfjs que o react-pdf empacota (evita o erro de
- * "API version does not match Worker version").
+ * Worker self-hospedado em /public (mesma origem) — o CSP do app (src/proxy.ts)
+ * só libera script-src/worker-src de 'self', então não dá pra puxar de CDN
+ * (unpkg etc. são bloqueados). O arquivo é copiado de
+ * node_modules/pdfjs-dist/build/pdf.worker.min.mjs e PRECISA bater com a versão
+ * do pdfjs que o react-pdf usa (hoje 5.4.296). Se subir o react-pdf, recopiar:
+ *   cp node_modules/.pnpm/pdfjs-dist@<ver>/node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs
+ * senão dá "API version does not match Worker version".
  */
 
 // pdf.js 5 usa `Promise.withResolvers`, que só existe no Safari 17.4+. Sem este
@@ -31,7 +36,7 @@ if (
     };
 }
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 interface PdfViewerProps {
   /** URL do PDF (ex.: "/termos-comprador.pdf" servido de /public). */
