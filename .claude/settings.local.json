@@ -152,7 +152,8 @@
       "PowerShell(npx eslint \"src/app/organizer/\\(logged\\)/events/new/topics/preview/page.tsx\" \"src/app/organizer/\\(logged\\)/events/[id]/edit/topics/preview/page.tsx\" \"src/app/admin/\\(logged\\)/events/[id]/edit/topics/preview/page.tsx\" \"src/app/admin/\\(logged\\)/events/[id]/review/topics/preview/page.tsx\")",
       "PowerShell(npx vitest run --pool=threads src/utils/__tests__/googleMapsEmbed.test.ts)",
       "PowerShell(npx eslint src/utils/googleMapsEmbed.ts src/components/EventMap/index.tsx \"src/app/events/[slug]/page.tsx\")",
-      "PowerShell(npx eslint \"src/app/events/[slug]/layout.tsx\")"
+      "PowerShell(npx eslint \"src/app/events/[slug]/layout.tsx\")",
+      "PowerShell(npx eslint src/contexts/EditEventContext.tsx)"
     ]
   },
   "disabledMcpjsonServers": [
