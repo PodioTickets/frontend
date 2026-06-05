@@ -525,6 +525,7 @@ export default function EventPage() {
                 city={event.city}
                 state={event.state}
                 title={event.name}
+                googleMapsLink={mapsUrl}
               />
             </div>
             <Button
@@ -753,6 +754,7 @@ export default function EventPage() {
                   city={event.city}
                   state={event.state}
                   title={event.name}
+                  googleMapsLink={mapsUrl}
                 />
               </div>
 

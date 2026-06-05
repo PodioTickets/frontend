@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatDateBR } from "@/utils/datetimeBR";
 
 /**
  * Server Component que injeta as meta tags Open Graph / Twitter Card da página
@@ -64,6 +65,7 @@ type PublicEvent = {
   city?: string;
   logoUrl?: string;
   state?: string;
+  registrationStartDate?: string;
 };
 
 async function fetchEventBySlug(slug: string): Promise<PublicEvent | null> {
@@ -113,11 +115,15 @@ export async function generateMetadata({
   // local. Limite ~200 chars (recomendação OG; WhatsApp mostra ~2-3 linhas).
   const locationLine = [event.city, event.state].filter(Boolean).join(" - ");
   const plain = event.description ? htmlToPlainText(event.description) : "";
-  const description =
-    truncate(plain, 200) ||
-    (locationLine
-      ? `Inscreva-se: ${event.name} em ${locationLine}.`
-      : `Inscreva-se no evento ${event.name}.`);
+  // "Inscrições abertas a partir de dd/mm/aaaa" (data em UTC, padrão do
+  // projeto). Sem data válida, cai pro texto do evento / local.
+  const registrationStartText = formatDateBR(event.registrationStartDate);
+  const description = registrationStartText
+    ? `Inscrições abertas a partir de ${registrationStartText}`
+    : truncate(plain, 200) ||
+      (locationLine
+        ? `Inscreva-se: ${event.name} em ${locationLine}.`
+        : `Inscreva-se no evento ${event.name}.`);
 
   const imageUrl = toAbsoluteImageUrl(event.logoUrl);
 

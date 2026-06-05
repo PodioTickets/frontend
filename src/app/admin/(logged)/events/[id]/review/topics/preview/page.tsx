@@ -72,6 +72,8 @@ export default function ReviewTopicsPreviewPage() {
   const bannerUrl = event?.bannerUrl as string | undefined;
   const city = event?.city as string | undefined;
   const state = event?.state as string | undefined;
+  const regulationUrl = event?.regulationUrl as string | undefined;
+  const googleMapsLink = event?.googleMapsLink as string | undefined;
   const eventTyped = event as Event | null;
 
   return (
@@ -115,6 +117,24 @@ export default function ReviewTopicsPreviewPage() {
                 </div>
               ))}
 
+              {/* Regulamento — espelha a página pública do evento (vem logo
+                  após os tópicos, quando houver regulationUrl). */}
+              {regulationUrl && (
+                <div className="w-full border-b border-gray-8 py-10">
+                  <div className="flex flex-col items-start gap-6">
+                    <h2 className="font-manrope text-2xl font-bold leading-[1.1] text-gray-12">Regulamento</h2>
+                    <a
+                      href={regulationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
+                    >
+                      <Button variant="outline" className="text-gray-12 border-gray-6">Ler regulamento</Button>
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {kits.length > 0 && (
                 <div className="w-full border-b border-gray-8 py-10">
                   <div className="flex flex-col items-start gap-6">
@@ -135,7 +155,7 @@ export default function ReviewTopicsPreviewPage() {
                 <div className="flex w-full flex-col items-start gap-6 py-10">
                   <h2 className="font-manrope text-2xl font-bold leading-[1.1] text-gray-12">Onde acontecerá o evento</h2>
                   <div className="relative h-[310px] w-full overflow-hidden rounded-xl">
-                    <div className="h-full w-full rounded-xl"><EventMap city={city} state={state} title={eventName} /></div>
+                    <div className="h-full w-full rounded-xl"><EventMap city={city} state={state} title={eventName} googleMapsLink={googleMapsLink} /></div>
                   </div>
                   <Button disabled variant="outline" className="h-12 border-gray-6 px-11 font-manrope text-base font-bold text-gray-12">Ver no mapa</Button>
                 </div>

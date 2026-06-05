@@ -231,17 +231,22 @@ export default function AdminLoginPage() {
               </div>
             )}
 
-            {/* Captcha */}
+            {/* Captcha Turnstile — no mobile segue o padrão do login mobile
+                (scale ~0.85 com wrapper de altura fixa); no desktop fica em
+                tamanho cheio, igual ao login desktop. */}
             {TURNSTILE_SITE_KEY && (
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={TURNSTILE_SITE_KEY}
-                onSuccess={setTurnstileToken}
-                onError={() => setTurnstileToken(null)}
-                onExpire={() => setTurnstileToken(null)}
-                options={{ theme: "auto", size: "flexible" }}
-                className="w-full"
-              />
+              <div className="flex h-14 w-full items-center justify-center">
+                <div className="w-full scale-[0.85] lg:scale-100">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setTurnstileToken}
+                    onError={() => setTurnstileToken(null)}
+                    onExpire={() => setTurnstileToken(null)}
+                    options={{ theme: "light", size: "flexible" }}
+                  />
+                </div>
+              </div>
             )}
 
             <Button
