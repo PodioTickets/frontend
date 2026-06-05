@@ -22,6 +22,12 @@ interface FinancialSectionProps {
   onMaxInstallmentsChange: (value: 1 | 2 | 3) => void;
   /** When true, slider and installment buttons are read-only */
   readOnly?: boolean;
+  /**
+   * Readonly só do card "Formas de pagamento aceitas" (checkboxes + parcelamento).
+   * Default: acompanha `readOnly`. Permite taxa travada + pagamento editável
+   * (organizador pós-publicação).
+   */
+  paymentMethodsReadOnly?: boolean;
   /** Total platform fee — editable when onTotalFeeChange is provided (admin only) */
   totalFee?: number;
   onTotalFeeChange?: (value: number) => void;
@@ -36,6 +42,7 @@ export function FinancialSection({
   onOrganizerPercentChange,
   onMaxInstallmentsChange,
   readOnly = false,
+  paymentMethodsReadOnly,
   totalFee,
   onTotalFeeChange,
   acceptedPaymentMethods,
@@ -43,12 +50,15 @@ export function FinancialSection({
 }: FinancialSectionProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
+  // Card de pagamento herda o readOnly geral quando não especificado
+  const pmReadOnly = paymentMethodsReadOnly ?? readOnly;
+
   const accepted = acceptedPaymentMethods ?? [...ACCEPTED_PAYMENT_METHODS];
   const isAccepted = (method: AcceptedPaymentMethod) => accepted.includes(method);
 
   const toggleMethod = useCallback(
     (method: AcceptedPaymentMethod) => {
-      if (readOnly || !onAcceptedPaymentMethodsChange) return;
+      if (pmReadOnly || !onAcceptedPaymentMethodsChange) return;
       const current = acceptedPaymentMethods ?? [...ACCEPTED_PAYMENT_METHODS];
       // O checkout exige ao menos uma forma de pagamento — bloqueia desmarcar a última
       if (current.includes(method) && current.length === 1) {
@@ -61,7 +71,7 @@ export function FinancialSection({
       );
       onAcceptedPaymentMethodsChange(next);
     },
-    [readOnly, onAcceptedPaymentMethodsChange, acceptedPaymentMethods],
+    [pmReadOnly, onAcceptedPaymentMethodsChange, acceptedPaymentMethods],
   );
 
   const totalFeeValue = totalFee ?? DEFAULT_TOTAL_FEE;
@@ -247,7 +257,7 @@ export function FinancialSection({
             Formas de pagamento aceitas
           </h2>
           <p className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
-            {readOnly
+            {pmReadOnly
               ? "Formas de pagamento configuradas para este evento."
               : "Escolha como os participantes poderão pagar pela inscrição."}
           </p>
@@ -266,7 +276,7 @@ export function FinancialSection({
               aria-label="Aceitar pagamento via PIX"
               checked={isAccepted("PIX")}
               onCheckedChange={() => toggleMethod("PIX")}
-              disabled={readOnly}
+              disabled={pmReadOnly}
               className="size-7"
             />
           </div>
@@ -289,7 +299,7 @@ export function FinancialSection({
                 aria-label="Aceitar pagamento com cartão de débito"
                 checked={isAccepted("DEBIT_CARD")}
                 onCheckedChange={() => toggleMethod("DEBIT_CARD")}
-                disabled={readOnly}
+                disabled={pmReadOnly}
                 className="size-7"
               />
             </div>
@@ -318,7 +328,7 @@ export function FinancialSection({
                 aria-label="Aceitar pagamento com cartão de crédito"
                 checked={isAccepted("CREDIT_CARD")}
                 onCheckedChange={() => toggleMethod("CREDIT_CARD")}
-                disabled={readOnly}
+                disabled={pmReadOnly}
                 className="size-7"
               />
             </div>
@@ -328,25 +338,25 @@ export function FinancialSection({
             <div className="flex flex-col gap-5 p-5">
               <div className="flex flex-col gap-4">
                 <span className="font-manrope text-base font-semibold leading-[1.1] text-gray-12">
-                  {readOnly ? "Parcelamento configurado" : "Em quantas vezes o participante pode parcelar?"}
+                  {pmReadOnly ? "Parcelamento configurado" : "Em quantas vezes o participante pode parcelar?"}
                 </span>
-                {!readOnly && (
+                {!pmReadOnly && (
                   <span className="font-family-dm-sans text-base leading-[1.3] text-gray-11">
                     Você pode oferecer parcelamento em até 3 vezes sem juros. Por padrão, parcelamos em 1x
                   </span>
                 )}
               </div>
-              <div className={cn("flex flex-wrap gap-3", readOnly && "pointer-events-none")}>
+              <div className={cn("flex flex-wrap gap-3", pmReadOnly && "pointer-events-none")}>
                 {([1, 2, 3] as const).map((n) => (
                   <button
                     key={n}
                     type="button"
-                    onClick={() => !readOnly && onMaxInstallmentsChange(n)}
+                    onClick={() => !pmReadOnly && onMaxInstallmentsChange(n)}
                     className={cn(
                       "flex flex-1 flex-col items-center justify-center gap-5 rounded-lg border px-8 py-7 transition-colors",
                       maxInstallments === n
                         ? "border-[#46a758] bg-[#daf1db] text-[#203c25]"
-                        : readOnly
+                        : pmReadOnly
                           ? "border-gray-6 bg-gray-3 text-gray-11"
                           : "border-gray-6 bg-gray-2 text-gray-12",
                     )}
@@ -357,7 +367,7 @@ export function FinancialSection({
                     <span
                       className={cn(
                         "font-family-dm-sans text-base font-medium leading-[1.3]",
-                        maxInstallments === n ? "text-[#203c25]" : readOnly ? "text-gray-11" : "text-gray-11",
+                        maxInstallments === n ? "text-[#203c25]" : "text-gray-11",
                       )}
                     >
                       {n === 1 ? "À vista" : "Sem juros"}

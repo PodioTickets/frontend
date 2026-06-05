@@ -2,32 +2,45 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import {
+  googleMapsLinkToEmbedUrl,
+  safeGoogleMapsExternalLink,
+} from "@/utils/googleMapsEmbed";
 
 interface EventMapProps {
   city: string;
   state: string;
   title?: string;
+  /**
+   * Link do Google Maps informado pelo organizador no cadastro do evento.
+   * Quando presente e conversível, o embed e o "Abrir no Google Maps" usam o
+   * LOCAL EXATO desse link; senão, fallback pra busca por cidade/estado.
+   */
+  googleMapsLink?: string | null;
 }
 
-export function EventMap({ city, state, title }: EventMapProps) {
+export function EventMap({ city, state, title, googleMapsLink }: EventMapProps) {
   // Create address string for Google Maps
   const address = useMemo(() => {
     return `${city}, ${state}, Brasil`;
   }, [city, state]);
 
-  // Create Google Maps embed URL
+  // Embed: link do organizador (local exato) > busca cidade/estado.
   const mapUrl = useMemo(() => {
-    return `https://www.google.com/maps?q=${encodeURIComponent(
-      address
-    )}&output=embed`;
-  }, [address]);
+    return (
+      googleMapsLinkToEmbedUrl(googleMapsLink) ??
+      `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`
+    );
+  }, [googleMapsLink, address]);
 
-  // Create Google Maps link for external navigation
-  const googleMapsLink = useMemo(() => {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      address
-    )}`;
-  }, [address]);
+  // Link externo: link do organizador validado (só hosts Google — abre em
+  // _blank, nunca URL arbitrária) > busca cidade/estado.
+  const externalLink = useMemo(() => {
+    return (
+      safeGoogleMapsExternalLink(googleMapsLink) ??
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+    );
+  }, [googleMapsLink, address]);
 
   return (
     <div className="w-full h-[450px] rounded-xl overflow-hidden border border-gray-6 shadow-lg relative">
@@ -44,7 +57,7 @@ export function EventMap({ city, state, title }: EventMapProps) {
       />
       <div className="absolute bottom-4 right-4">
         <Link
-          href={googleMapsLink}
+          href={externalLink}
           target="_blank"
           rel="noopener noreferrer"
           className="bg-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium text-gray-12 hover:bg-gray-2 transition-colors flex items-center gap-2"

@@ -63,17 +63,19 @@ export function EventInfoCard({
       {/* Topo mobile / esquerda desktop: imagem + nome (mobile junta numa row, desktop separa) */}
       <div className="flex gap-3 items-center md:contents">
         {/* Aspect 16:9 — mesmo formato dos banners 1280x720 enviados pelo
-            organizador e renderizados na página do evento (object-cover). */}
-        <div className="h-[70px] md:h-[70px] w-auto md:w-[150px] md:aspect-video rounded-lg overflow-hidden shrink-0 relative">
+            organizador e renderizados na página do evento (object-cover).
+            A largura precisa ser explícita TAMBÉM no mobile (aspect-video):
+            com `w-auto`, o `w-full` da imagem (100% de pai auto) é indefinido
+            por spec — o Safari do iOS resolve como 0 e o banner some. */}
+        <div className="h-[70px] w-[45%] md:w-[150px] rounded-lg overflow-hidden shrink-0 relative">
           {event.bannerUrl ? (
             <Image
               src={event.bannerUrl}
               alt={event.name || "Evento"}
-              sizes="70px"
-              className="object-contain h-full w-full"
+              fill
+              sizes="150px"
+              className="object-cover rounded-lg"
               unoptimized
-              width={10000000}
-              height={1000000}
             />
           ) : null}
         </div>

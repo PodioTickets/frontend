@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import Cookies from "js-cookie";
+import { getActivitySessionId } from "@/lib/activityTelemetry";
 
 // Tipos base para respostas de API
 export interface ApiResponse<T = any> {
@@ -60,6 +61,13 @@ export class ApiClient {
         }
         const token = this.getAccessToken();
         if (token) config.headers.Authorization = `Bearer ${token}`;
+
+        // Identidade de telemetria: o backend usa este header pra costurar a
+        // jornada (page view anônimo ↔ checkout autenticado) nos registros de
+        // UserActivityLog. Null no SSR/storage bloqueado → header omitido.
+        const activitySid = getActivitySessionId();
+        if (activitySid) config.headers["x-session-id"] = activitySid;
+
         return config;
       },
       (error) => Promise.reject(error)

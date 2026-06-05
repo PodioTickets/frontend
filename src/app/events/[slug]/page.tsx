@@ -29,6 +29,7 @@ import { getEnabledTopicsSorted } from "@/lib/eventTopicSections";
 import { normalizeTopicHtmlAnchorHrefs } from "@/lib/normalizeTopicHtmlLinks";
 import { TopicRichContent } from "@/components/TopicRichContent";
 import { trackMetaPixel } from "@/lib/metaPixel";
+import { trackEventPageView } from "@/lib/activityTelemetry";
 import { InstagramIcon } from "@/components/Icons/InstagramIcon";
 import { FacebookIcon } from "@/components/Icons/FacebookIcon";
 import { YoutubeIcon } from "@/components/Icons/YoutubeIcon";
@@ -109,6 +110,13 @@ export default function EventPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [eventSlug]);
+
+  // Telemetria interna — page view do evento (topo do funil de compra no
+  // /admin/atividade). Throttle interno de 30s por evento absorve StrictMode.
+  useEffect(() => {
+    if (!event?.id) return;
+    trackEventPageView(event.id, eventSlug);
+  }, [event?.id, eventSlug]);
 
   // Meta Pixel — ViewContent: abriu a página do evento. Dedup por evento na
   // sessão (sessionStorage) → não re-dispara em F5 na mesma aba.
@@ -517,6 +525,7 @@ export default function EventPage() {
                 city={event.city}
                 state={event.state}
                 title={event.name}
+                googleMapsLink={mapsUrl}
               />
             </div>
             <Button
@@ -745,6 +754,7 @@ export default function EventPage() {
                   city={event.city}
                   state={event.state}
                   title={event.name}
+                  googleMapsLink={mapsUrl}
                 />
               </div>
 

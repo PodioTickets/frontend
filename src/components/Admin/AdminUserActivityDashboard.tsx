@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Users, Link2, Ghost } from "lucide-react";
+import { Activity, Users, Link2, Ghost, Eye, BadgeCheck } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { adminService } from "@/services";
 import { queryKeys } from "@/services/cache/QueryClient";
@@ -17,6 +17,10 @@ import {
   SOURCE_LABELS,
   CATEGORY_BAR,
 } from "./userActivityLabels";
+import {
+  AdminEventFilterSelect,
+  type EventFilterOption,
+} from "./AdminEventFilterSelect";
 
 const PERIOD_OPTIONS = [
   { value: 7, label: "Últimos 7 dias" },
@@ -32,6 +36,80 @@ function fromForPeriod(days: number): string {
 }
 
 const numberFmt = new Intl.NumberFormat("pt-BR");
+
+/**
+ * Série diária densa: o backend manda apenas dias COM eventos — preenche os
+ * buracos com 0 sobre a janela pra barra de cada dia existir no gráfico.
+ * Cap defensivo de 370 pontos — range malformado não trava o render.
+ */
+function densifyDailySeries(
+  series: Array<{ day: string; count: number }>,
+  fromIso: string,
+  toIso: string
+): Array<{ day: string; count: number }> {
+  const byDay = new Map(series.map((p) => [p.day, p.count]));
+  const start = toUtcDate(fromIso.slice(0, 10));
+  const end = toUtcDate(toIso.slice(0, 10));
+  if (!start || !end) return series;
+  const out: Array<{ day: string; count: number }> = [];
+  const cursor = new Date(start.getTime());
+  while (cursor.getTime() <= end.getTime() && out.length < 370) {
+    const key = cursor.toISOString().slice(0, 10);
+    out.push({ day: key, count: byDay.get(key) ?? 0 });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return out;
+}
+
+/** Gráfico de barras diário (CSS puro — sem custo de bundle de chart lib). */
+function DailyBars({
+  series,
+  unitLabel,
+}: {
+  series: Array<{ day: string; count: number }>;
+  unitLabel: string;
+}) {
+  const max = series.reduce((m, p) => Math.max(m, p.count), 0);
+  if (max === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-gray-11 font-family-dm-sans">
+        Nenhum registro no período.
+      </p>
+    );
+  }
+  return (
+    <>
+      <div className="flex h-[160px] items-end gap-px md:gap-0.5">
+        {series.map((p) => (
+          <div
+            key={p.day}
+            className="group relative flex-1 min-w-0 h-full flex items-end"
+            title={`${formatDateBR(p.day)} — ${numberFmt.format(p.count)} ${unitLabel}`}
+          >
+            <div
+              className={cn(
+                "w-full rounded-t-sm transition-colors",
+                p.count > 0
+                  ? "bg-primary-9 group-hover:bg-primary-11"
+                  : "bg-gray-4"
+              )}
+              style={{
+                height:
+                  p.count > 0
+                    ? `${Math.max(4, (p.count / max) * 100)}%`
+                    : "2px",
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between text-[11px] text-gray-11 font-family-dm-sans">
+        <span>{formatDateBR(series[0]?.day)}</span>
+        <span>{formatDateBR(series[series.length - 1]?.day)}</span>
+      </div>
+    </>
+  );
+}
 
 function StatCard({
   icon,
@@ -97,6 +175,9 @@ export function AdminUserActivityDashboard() {
   const [periodDays, setPeriodDays] = useState<number>(30);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [eventFilter, setEventFilter] = useState<EventFilterOption | null>(
+    null
+  );
 
   const from = useMemo(() => fromForPeriod(periodDays), [periodDays]);
 
@@ -105,12 +186,14 @@ export function AdminUserActivityDashboard() {
       from,
       category: categoryFilter,
       source: sourceFilter,
+      eventId: eventFilter?.id ?? "",
     }),
     queryFn: () =>
       adminService.getUserActivityStats({
         from,
         category: categoryFilter || undefined,
         source: sourceFilter || undefined,
+        eventId: eventFilter?.id || undefined,
       }),
     placeholderData: (prev) => prev,
     staleTime: 60_000,
@@ -132,28 +215,19 @@ export function AdminUserActivityDashboard() {
   const stats = statsQuery.data;
   const loading = statsQuery.isLoading;
 
-  /* Série diária densa: o backend manda apenas dias COM eventos — preenche os
-   * buracos com 0 sobre a janela selecionada pra barra de cada dia existir. */
-  const dailySeries = useMemo(() => {
-    if (!stats) return [];
-    const byDay = new Map(stats.perDay.map((p) => [p.day, p.count]));
-    const start = toUtcDate(stats.range.from.slice(0, 10));
-    const end = toUtcDate(stats.range.to.slice(0, 10));
-    if (!start || !end) return stats.perDay;
-    const out: Array<{ day: string; count: number }> = [];
-    const cursor = new Date(start.getTime());
-    // Cap defensivo de 370 pontos — range malformado não trava o render
-    while (cursor.getTime() <= end.getTime() && out.length < 370) {
-      const key = cursor.toISOString().slice(0, 10);
-      out.push({ day: key, count: byDay.get(key) ?? 0 });
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-    }
-    return out;
-  }, [stats]);
+  const dailySeries = useMemo(
+    () =>
+      stats ? densifyDailySeries(stats.perDay, stats.range.from, stats.range.to) : [],
+    [stats]
+  );
 
-  const dailyMax = useMemo(
-    () => dailySeries.reduce((m, p) => Math.max(m, p.count), 0),
-    [dailySeries]
+  /* Views da página de evento por dia — "quantos eventos (views) deu no dia". */
+  const viewsSeries = useMemo(
+    () =>
+      stats
+        ? densifyDailySeries(stats.viewsPerDay, stats.range.from, stats.range.to)
+        : [],
+    [stats]
   );
 
   const categoryMax = stats?.byCategory[0]?.count ?? 0;
@@ -226,6 +300,13 @@ export function AdminUserActivityDashboard() {
               ))}
             </select>
           </div>
+          <div className="w-full sm:w-[min(100%,280px)] shrink-0">
+            <label className="sr-only">Filtrar por evento</label>
+            <AdminEventFilterSelect
+              value={eventFilter}
+              onChange={setEventFilter}
+            />
+          </div>
           {rangeLabel ? (
             <p className="flex items-center text-sm text-gray-11 font-family-dm-sans sm:ml-auto">
               {rangeLabel}
@@ -271,51 +352,38 @@ export function AdminUserActivityDashboard() {
                   : undefined
               }
             />
+            <StatCard
+              icon={<Eye className="size-4" />}
+              label="Views de evento"
+              value={stats.totals.eventPageViews}
+              hint="Página pública do evento"
+            />
+            <StatCard
+              icon={<BadgeCheck className="size-4" />}
+              label="Pagamentos confirmados"
+              value={stats.totals.paymentsConfirmed}
+              hint={
+                stats.totals.eventPageViews > 0
+                  ? `${Math.round((stats.totals.paymentsConfirmed / stats.totals.eventPageViews) * 100)}% das views`
+                  : undefined
+              }
+            />
           </div>
 
-          {/* Série diária */}
+          {/* Série diária — todas as atividades */}
           <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
             <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
               Eventos por dia
             </p>
-            {dailyMax === 0 ? (
-              <p className="py-8 text-center text-sm text-gray-11 font-family-dm-sans">
-                Nenhum evento no período.
-              </p>
-            ) : (
-              <>
-                <div className="flex h-[160px] items-end gap-px md:gap-0.5">
-                  {dailySeries.map((p) => (
-                    <div
-                      key={p.day}
-                      className="group relative flex-1 min-w-0 h-full flex items-end"
-                      title={`${formatDateBR(p.day)} — ${numberFmt.format(p.count)} evento(s)`}
-                    >
-                      <div
-                        className={cn(
-                          "w-full rounded-t-sm transition-colors",
-                          p.count > 0
-                            ? "bg-primary-9 group-hover:bg-primary-11"
-                            : "bg-gray-4"
-                        )}
-                        style={{
-                          height:
-                            p.count > 0
-                              ? `${Math.max(4, (p.count / dailyMax) * 100)}%`
-                              : "2px",
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-2 flex justify-between text-[11px] text-gray-11 font-family-dm-sans">
-                  <span>{formatDateBR(dailySeries[0]?.day)}</span>
-                  <span>
-                    {formatDateBR(dailySeries[dailySeries.length - 1]?.day)}
-                  </span>
-                </div>
-              </>
-            )}
+            <DailyBars series={dailySeries} unitLabel="evento(s)" />
+          </div>
+
+          {/* Série diária — views da página de evento */}
+          <div className="rounded-xl border border-gray-6 bg-gray-1 p-4 shadow-[0px_2px_6px_0px_rgba(17,17,17,0.08)]">
+            <p className="text-sm font-bold text-gray-12 font-manrope mb-4">
+              Views de evento por dia
+            </p>
+            <DailyBars series={viewsSeries} unitLabel="view(s)" />
           </div>
 
           {/* Distribuições */}

@@ -70,7 +70,13 @@ export default function ReviewFinancialPage() {
     setSaving(true);
     try {
       const participantFeePercent = parseFloat((totalFee - organizerPercent).toFixed(2));
-      await organizerService.saveFinancialSettings(eventId, organizerPercent, participantFeePercent, maxInstallments, totalFee, acceptedPaymentMethods);
+      await organizerService.saveFinancialSettings(eventId, {
+        organizerFeePercent: organizerPercent,
+        participantFeePercent,
+        maxInstallments,
+        totalFee,
+        acceptedPaymentMethods,
+      });
       await adminService.publishEvent(eventId);
       toast.success("Evento publicado com sucesso!");
       router.push("/admin/auditoria-evento");

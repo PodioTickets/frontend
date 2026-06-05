@@ -8,69 +8,25 @@ import { useOrganizerAppSurface } from "@/contexts/OrganizerAppSurfaceContext";
 import { withOrganizerPathPrefix } from "@/lib/organizerPathPresentation";
 import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
-import { Dropdown, DropdownOption } from "../Dropdown";
+import { Dropdown } from "../Dropdown";
 import { ArrowButton } from "../ArrowButton";
 import { SearchBar } from "../SearchBar";
-import { LanguageToggle } from "../LanguageToggle";
 import { modalitiesColumns } from "@/constants";
 import { eventService } from "@/services";
 import { useModalStore } from "@/stores/modalStore";
 import { formatDateBR } from "@/utils/datetimeBR";
-import { User, LogOut, X, Globe } from "lucide-react";
+import { User, LogOut, X } from "lucide-react";
 import { TicketIcon } from "../Icons/TicketIcon";
 import { InfoIcon } from "../Icons/InfoIcon";
 import { TwitterIcon } from "../Icons/TwitterIcon";
 import { InstagramIcon } from "../Icons/InstagramIcon";
 import { FacebookIcon } from "../Icons/FacebookIcon";
-import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { UserIcon } from "../Icons/UserIcon";
 import { getAvatarUrl } from "@/utils/avatar";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import { withAdminPathPrefix } from "@/lib/adminPathPresentation";
 import { useAdminAppSurface } from "@/contexts/AdminAppSurfaceContext";
 import { YoutubeIcon } from "../Icons/YoutubeIcon";
-
-function MobileLanguageToggle({ onClose }: { onClose: () => void }) {
-  const { language, setLanguage } = useLanguage();
-
-  const languages: Array<{ code: Language; label: string }> = [
-    { code: "pt", label: "PT-BR" },
-    { code: "en", label: "ENG" },
-    { code: "es", label: "ESP" },
-  ];
-
-  const dropdownOptions: DropdownOption[] = languages.map((lang) => ({
-    id: lang.code,
-    label: lang.label,
-    onClick: () => {
-      setLanguage(lang.code);
-      onClose();
-    },
-  }));
-
-  return (
-    <div className="relative">
-      <Dropdown
-        options={dropdownOptions}
-        dataAttribute="mobile-language"
-        width="w-full"
-        maxHeight="max-h-[200px]"
-        className="top-14 left-0 right-0"
-        trigger={(isOpen) => (
-          <Button variant="outline" className="w-full">
-            <Globe className="size-5" />
-            <span className="text-base font-medium">Idioma</span>
-          </Button>
-        )}
-        onSelect={(option) => {
-          if (option.onClick) {
-            option.onClick();
-          }
-        }}
-      />
-    </div>
-  );
-}
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -364,7 +320,7 @@ export function Header() {
               </div>
 
               {/* Scrollable Content */}
-              <div className="overflow-y-auto h-[calc(100vh-64px)]">
+              <div className="overflow-y-auto h-[calc(100vh-64px)] overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
                 {/* Menu Items */}
                 <div className="bg-[#222] border-b border-[#3a3a3a] space-y-2 font-family-dm-sans">
                   {isAuthenticated && user ? (
@@ -438,9 +394,6 @@ export function Header() {
                       >
                         Criar conta
                       </Button>
-                      <MobileLanguageToggle
-                        onClose={() => setMobileMenuOpen(false)}
-                      />
                     </div>
                   )}
                 </div>

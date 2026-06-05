@@ -81,7 +81,13 @@ export default function EditFinancialPage() {
     setSaving(true);
     try {
       const participantFeePercent = parseFloat((totalFee - organizerPercent).toFixed(2));
-      await organizerService.saveFinancialSettings(eventId, organizerPercent, participantFeePercent, maxInstallments, totalFee, acceptedPaymentMethods);
+      await organizerService.saveFinancialSettings(eventId, {
+        organizerFeePercent: organizerPercent,
+        participantFeePercent,
+        maxInstallments,
+        totalFee,
+        acceptedPaymentMethods,
+      });
       baselineRef.current = { organizerPercent, maxInstallments, totalFee, acceptedPaymentMethods };
       toast.success("Configurações financeiras salvas!");
     } catch (error: any) {

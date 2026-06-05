@@ -296,6 +296,91 @@ const OptionItem = memo(
 
 OptionItem.displayName = "OptionItem";
 
+const SCROLL_THUMB_MIN_PX = 24;
+const SCROLL_THUMB_INSET_PX = 4;
+
+/**
+ * Área scrollável com thumb customizado em overlay. iOS Safari IGNORA
+ * ::-webkit-scrollbar (o indicador nativo só pisca durante o gesto), então a
+ * scrollbar estilizada que aparece no Android nunca renderiza no iPhone — sem
+ * este thumb o usuário não sabe que há mais opções. O thumb é posicionado por
+ * mutação direta de DOM (sem setState por frame): re-render no meio do gesto
+ * mata o momentum do scroll no iOS.
+ */
+function ScrollAreaWithThumb({
+  maxHeight,
+  children,
+}: {
+  maxHeight: number;
+  children: ReactNode;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  const syncThumb = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const overflow = el.scrollHeight > el.clientHeight + 1;
+    // Funcional + bail-out: durante o gesto o valor não muda → zero re-render.
+    setHasOverflow((prev) => (prev === overflow ? prev : overflow));
+    const thumb = thumbRef.current;
+    if (!thumb || !overflow) return;
+    const track = el.clientHeight - SCROLL_THUMB_INSET_PX * 2;
+    const height = Math.max(
+      SCROLL_THUMB_MIN_PX,
+      (el.clientHeight / el.scrollHeight) * track
+    );
+    const progress = Math.min(
+      1,
+      Math.max(0, el.scrollTop / (el.scrollHeight - el.clientHeight))
+    );
+    thumb.style.height = `${height}px`;
+    thumb.style.transform = `translateY(${
+      SCROLL_THUMB_INSET_PX + progress * (track - height)
+    }px)`;
+  }, []);
+
+  // 1º sync + acompanha mudanças de tamanho (conteúdo async, resize do menu).
+  useLayoutEffect(() => {
+    syncThumb();
+    const el = scrollerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(syncThumb);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => ro.disconnect();
+  }, [syncThumb, children]);
+
+  // Quando o overflow é detectado o thumb acabou de montar (ref era null no
+  // sync anterior) — reposiciona.
+  useLayoutEffect(() => {
+    if (hasOverflow) syncThumb();
+  }, [hasOverflow, syncThumb]);
+
+  return (
+    <div className="relative">
+      <div
+        ref={scrollerRef}
+        onScroll={syncThumb}
+        // Scrollbar nativa escondida (Android/desktop) — o thumb overlay é o
+        // indicador único, consistente entre plataformas (inclusive iPhone).
+        className="overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ maxHeight }}
+      >
+        {children}
+      </div>
+      {hasOverflow && (
+        <div
+          ref={thumbRef}
+          aria-hidden
+          className="pointer-events-none absolute right-1 top-0 w-1.5 rounded-full bg-gray-6"
+        />
+      )}
+    </div>
+  );
+}
+
 export type DropdownChildrenRender = (helpers: {
   close: () => void;
 }) => ReactNode;
@@ -440,25 +525,33 @@ export function Dropdown({
           ? spaceBelow >= Math.min(desired, 200) || spaceBelow >= spaceAbove
           : !(spaceAbove >= Math.min(desired, 200) || spaceAbove >= spaceBelow);
 
-      if (useBottom) {
-        // Limita maxHeight ao espaço disponível pra evitar que o menu transborde
-        // a viewport (e o usuário não consiga rolar pra ver mais variações).
-        const cappedHeight = Math.max(120, Math.min(desired, spaceBelow));
-        setPortalPlacement({
-          top: r.bottom + gap,
-          left: r.left,
-          width: r.width,
-          maxHeight: cappedHeight,
-        });
-      } else {
-        const cappedHeight = Math.max(120, Math.min(desired, spaceAbove));
-        setPortalPlacement({
-          bottom: window.innerHeight - r.top + gap,
-          left: r.left,
-          width: r.width,
-          maxHeight: cappedHeight,
-        });
-      }
+      // Limita maxHeight ao espaço disponível pra evitar que o menu
+      // transborde a viewport (e o usuário não consiga rolar pra ver mais
+      // variações).
+      const next = {
+        top: useBottom ? r.bottom + gap : undefined,
+        bottom: useBottom ? undefined : window.innerHeight - r.top + gap,
+        left: r.left,
+        width: r.width,
+        maxHeight: Math.max(
+          120,
+          Math.min(desired, useBottom ? spaceBelow : spaceAbove)
+        ),
+      };
+
+      // O listener de scroll roda em capture e dispara também pro scroll
+      // INTERNO do menu — sem este guard, cada frame de scroll gerava um
+      // objeto novo → re-render no meio do gesto (quebra o momentum no iOS).
+      setPortalPlacement((prev) =>
+        prev &&
+        prev.top === next.top &&
+        prev.bottom === next.bottom &&
+        prev.left === next.left &&
+        prev.width === next.width &&
+        prev.maxHeight === next.maxHeight
+          ? prev
+          : next
+      );
     };
 
     update();
@@ -593,11 +686,14 @@ export function Dropdown({
   // tem max-h maior que o pai e itens ficam cortados sem aparecer no scroll.
   const effectiveMenuMaxHeight =
     portalPlacement?.maxHeight ?? containerHeight;
-  const menuBody = (
-    <div
-      className="overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
-      style={{ maxHeight: effectiveMenuMaxHeight }}
-    >
+  // Quando a lista é virtualizada, quem rola é a própria VirtualList — o
+  // wrapper NÃO pode ser scrollável também: dois scrollers aninhados com a
+  // mesma altura fazem o iOS "agarrar" o externo (sem conteúdo pra rolar) e
+  // o gesto vai pra página atrás, travando o scroll do dropdown no iPhone.
+  const usesVirtualList =
+    !children && !(columns && multiSelect) && shouldUseVirtualList;
+  const menuInner = (
+    <>
       {children ? (
         typeof children === "function" ? (
           children({
@@ -657,7 +753,6 @@ export function Dropdown({
           containerHeight={effectiveMenuMaxHeight}
           overscan={3}
           initialScrollIndex={scrollToIndex}
-          className="[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-6 [&::-webkit-scrollbar-thumb]:rounded-full"
           renderItem={(option, index) => (
             <OptionItem
               key={option.id || option.label || index}
@@ -681,7 +776,25 @@ export function Dropdown({
           );
         })
       )}
+    </>
+  );
+
+  // Caminho virtualizado: quem rola (e desenha o thumb) é a própria
+  // VirtualList — o wrapper NÃO pode ser scrollável também (dois scrollers
+  // aninhados de mesma altura fazem o iOS "agarrar" o externo e o gesto vai
+  // pra página atrás). Demais caminhos: ScrollAreaWithThumb rola e desenha o
+  // thumb overlay (visível também no iPhone, onde ::-webkit-scrollbar não existe).
+  const menuBody = usesVirtualList ? (
+    <div
+      className="overflow-hidden overscroll-contain"
+      style={{ maxHeight: effectiveMenuMaxHeight }}
+    >
+      {menuInner}
     </div>
+  ) : (
+    <ScrollAreaWithThumb maxHeight={effectiveMenuMaxHeight}>
+      {menuInner}
+    </ScrollAreaWithThumb>
   );
 
   const portalMenu =
