@@ -32,6 +32,19 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
 
   transpilePackages: ["quill-resize-module"],
+  async redirects() {
+    return [
+      {
+        // /terms entrega direto o PDF estático dos termos (abre no viewer nativo
+        // do browser). É o link público canônico — usado no footer do login do
+        // organizador via publicSiteHref("/terms"). 307 (não-permanente) pra não
+        // cachear no browser caso vire uma página real depois.
+        source: "/terms",
+        destination: "/termos-comprador.pdf",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
