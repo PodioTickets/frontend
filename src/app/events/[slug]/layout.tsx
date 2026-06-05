@@ -26,29 +26,6 @@ const DEFAULT_TITLE = "PódioTicket";
 const DEFAULT_DESCRIPTION =
   "Descubra e inscreva-se em eventos esportivos na PódioTicket.";
 
-/** Remove tags HTML, decodifica entidades básicas e normaliza espaços. A
- *  descrição do evento é rich text (pode vir com `<div>`, `<p>`, etc.). */
-function htmlToPlainText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Trunca preservando palavra inteira, com reticências. */
-function truncate(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
-}
-
 /** Garante URL absoluta para a imagem OG (crawlers exigem absoluta). */
 function toAbsoluteImageUrl(raw: string | undefined | null): string | null {
   const v = raw?.trim();
@@ -111,19 +88,8 @@ export async function generateMetadata({
   }
 
   const title = event.name;
-  // Descrição: usa o texto do evento (limpo de HTML); fallback monta a partir de
-  // local. Limite ~200 chars (recomendação OG; WhatsApp mostra ~2-3 linhas).
-  const locationLine = [event.city, event.state].filter(Boolean).join(" - ");
-  const plain = event.description ? htmlToPlainText(event.description) : "";
-  // "Inscrições abertas a partir de dd/mm/aaaa" (data em UTC, padrão do
-  // projeto). Sem data válida, cai pro texto do evento / local.
-  const registrationStartText = formatDateBR(event.registrationStartDate);
-  const description = registrationStartText
-    ? `Inscrições abertas a partir de ${registrationStartText}`
-    : truncate(plain, 200) ||
-      (locationLine
-        ? `Inscreva-se: ${event.name} em ${locationLine}.`
-        : `Inscreva-se no evento ${event.name}.`);
+  // "Inscrições abertas a partir de dd/mm/aaaa" (data em UTC, padrão do projeto).
+  const description = `Inscrições abertas a partir de ${formatDateBR(event.registrationStartDate)}`;
 
   const imageUrl = toAbsoluteImageUrl(event.logoUrl);
 
