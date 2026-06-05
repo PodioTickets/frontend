@@ -86,6 +86,13 @@ const defaultFormData: EditEventFormData = {
 
 const EditEventContext = createContext<EditEventContextType | undefined>(undefined);
 
+/** Igualdade campo a campo (mesma semântica do dirty check das páginas). */
+function sameFormData(a: EditEventFormData, b: EditEventFormData): boolean {
+  return (Object.keys(defaultFormData) as (keyof EditEventFormData)[]).every(
+    (k) => (a[k] ?? "") === (b[k] ?? ""),
+  );
+}
+
 function formatDateForInput(dateString: string | null | undefined) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -180,28 +187,53 @@ export function EditEventProvider({ children }: { children: ReactNode }) {
     eventId,
   });
   const initialLoadDone = useRef(false);
+  // Espelhos síncronos dos states — o efeito de reidratação precisa comparar
+  // form vs baseline SEM entrar na lista de deps (senão re-dispararia a cada
+  // tecla digitada).
+  const formDataRef = useRef(formData);
+  const initialFormDataRef = useRef(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Reidrata formData/initialFormData sempre que o evento muda (1ª carga +
-  // qualquer reload). O initialFormData fixa apenas na 1ª carga — usado
-  // pro dirty check.
+  // Reidrata formData/initialFormData quando o evento muda (1ª carga + reloads
+  // do React Query — com `refetchOnMount: "always"`, TODA entrada na tela tem
+  // um refetch após a 1ª pintura com cache).
+  //
+  // Nas recargas, o baseline é re-sincronizado JUNTO com o form — desde que
+  // não exista edição local pendente. Sem isso, a 1ª carga com cache stale
+  // fixava um baseline velho e o refetch (dados frescos) só atualizava o
+  // form → dirty "fantasma": modal de sair sem salvar logo ao entrar, sem o
+  // usuário ter tocado em nada. Com edição local pendente, nada é sobrescrito
+  // (preserva a digitação do usuário durante refetches em background).
   useEffect(() => {
     if (!event || !eventId) return;
     const loaded = buildFormDataFromEvent(eventId, event);
-    setFormData(loaded);
-    if (!initialLoadDone.current) {
-      setInitialFormData(loaded);
-      initialLoadDone.current = true;
+    if (initialLoadDone.current) {
+      const hasLocalEdits = !sameFormData(
+        formDataRef.current,
+        initialFormDataRef.current,
+      );
+      if (hasLocalEdits) return;
     }
+    initialLoadDone.current = true;
+    formDataRef.current = loaded;
+    initialFormDataRef.current = loaded;
+    setFormData(loaded);
+    setInitialFormData(loaded);
   }, [event, eventId]);
 
   const updateFormData = (data: Partial<EditEventFormData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
+    setFormData((prev) => {
+      const next = { ...prev, ...data };
+      formDataRef.current = next;
+      return next;
+    });
   };
 
   const commitInitialFormData = (partial?: Partial<EditEventFormData>) => {
     setFormData((prev) => {
       const next = partial ? { ...prev, ...partial } : prev;
+      formDataRef.current = next;
+      initialFormDataRef.current = next;
       setInitialFormData(next);
       return next;
     });
