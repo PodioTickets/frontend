@@ -184,6 +184,28 @@ export default function PreviewEventPage() {
                 </div>
               ))}
 
+              {/* Regulamento — espelha a página pública do evento (vem logo
+                  após os tópicos, quando houver regulationUrl). */}
+              {event?.regulationUrl && (
+                <div className="border-b border-gray-8 py-10 w-full">
+                  <div className="flex flex-col gap-6 items-start">
+                    <h2 className="text-gray-12 text-2xl font-bold font-manrope leading-[1.1]">
+                      Regulamento
+                    </h2>
+                    <a
+                      href={event.regulationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary-11 font-medium underline hover:text-primary-10"
+                    >
+                      <Button variant="outline" className="text-gray-12 border-gray-6">
+                        Ler regulamento
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Kits */}
               {kits.length > 0 && (
                 <div className="border-b border-gray-8 py-10 w-full">
@@ -225,7 +247,7 @@ export default function PreviewEventPage() {
                   </h2>
                   <div className="h-[310px] relative rounded-xl w-full overflow-hidden">
                     <div className="w-full h-full rounded-xl">
-                      <EventMap city={event.city} state={event.state} title={event.name} />
+                      <EventMap city={event.city} state={event.state} title={event.name} googleMapsLink={event.googleMapsLink} />
                     </div>
                   </div>
                   <Button disabled variant="outline" className="border-gray-6 text-gray-12 text-base font-bold px-11 h-12">

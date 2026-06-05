@@ -142,7 +142,17 @@
       "PowerShell(Get-CimInstance *)",
       "PowerShell(Stop-Process *)",
       "PowerShell(findstr *)",
-      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 12)"
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 12)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 8)",
+      "PowerShell(npx vitest run src/utils/__tests__/checkoutModalityDisplay.test.ts)",
+      "PowerShell(npx vitest run --pool=threads src/utils/__tests__/checkoutModalityDisplay.test.ts)",
+      "PowerShell(npx eslint src/components/Dropdown/index.tsx src/components/VirtualList/index.tsx)",
+      "PowerShell(npx eslint \"src/components/Auth/RegisterModal.tsx\" \"src/components/Event/ContactOrganizerModal.tsx\" \"src/app/organizer/\\(auth\\)/login/page.tsx\" \"src/app/admin/\\(auth\\)/login/page.tsx\")",
+      "PowerShell(npx eslint src/components/Event/EventInfoCard.tsx)",
+      "PowerShell(npx eslint \"src/app/organizer/\\(logged\\)/events/new/topics/preview/page.tsx\" \"src/app/organizer/\\(logged\\)/events/[id]/edit/topics/preview/page.tsx\" \"src/app/admin/\\(logged\\)/events/[id]/edit/topics/preview/page.tsx\" \"src/app/admin/\\(logged\\)/events/[id]/review/topics/preview/page.tsx\")",
+      "PowerShell(npx vitest run --pool=threads src/utils/__tests__/googleMapsEmbed.test.ts)",
+      "PowerShell(npx eslint src/utils/googleMapsEmbed.ts src/components/EventMap/index.tsx \"src/app/events/[slug]/page.tsx\")",
+      "PowerShell(npx eslint \"src/app/events/[slug]/layout.tsx\")"
     ]
   },
   "disabledMcpjsonServers": [

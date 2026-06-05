@@ -453,16 +453,22 @@ export function ContactOrganizerModal({
 
               {/* Footer */}
               <div className="flex flex-col gap-3 px-4 py-5 border-t border-gray-6 shrink-0">
+                {/* Captcha Turnstile — mesmo padrão do login mobile: retângulo
+                    "normal" reduzido via scale (~255×55); wrapper com altura
+                    fixa absorve o espaço extra do scale. */}
                 {TURNSTILE_SITE_KEY && (
-                  <Turnstile
-                    ref={mobileTurnstileRef}
-                    siteKey={TURNSTILE_SITE_KEY}
-                    onSuccess={setTurnstileToken}
-                    onError={() => setTurnstileToken(null)}
-                    onExpire={() => setTurnstileToken(null)}
-                    options={{ theme: "auto", size: "flexible" }}
-                    className="w-full"
-                  />
+                  <div className="flex h-14 w-full items-center justify-center">
+                    <div className="w-full scale-[0.85]">
+                      <Turnstile
+                        ref={mobileTurnstileRef}
+                        siteKey={TURNSTILE_SITE_KEY}
+                        onSuccess={setTurnstileToken}
+                        onError={() => setTurnstileToken(null)}
+                        onExpire={() => setTurnstileToken(null)}
+                        options={{ theme: "light", size: "flexible" }}
+                      />
+                    </div>
+                  </div>
                 )}
                 <div className="flex items-center gap-3">
                   <Button
@@ -537,7 +543,7 @@ export function ContactOrganizerModal({
                     onSuccess={setTurnstileToken}
                     onError={() => setTurnstileToken(null)}
                     onExpire={() => setTurnstileToken(null)}
-                    options={{ theme: "auto", size: "flexible" }}
+                    options={{ theme: "light", size: "flexible" }}
                     className="w-full"
                   />
                 )}

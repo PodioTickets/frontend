@@ -80,10 +80,24 @@ export function resolveCheckoutModalityIconSrc(
   return `${base}/${t}`;
 }
 
+/**
+ * Detecta distância no nome do ingresso ("5km", "5 km", "10 KM teste",
+ * "21,1km"…). Nesses casos o nome já comunica a modalidade/distância e o
+ * bloco de modalidade (ícone + nome) ao lado vira ruído duplicado.
+ */
+export function ticketNameHasDistance(name: string | null | undefined): boolean {
+  if (!name) return false;
+  return /\d+(?:[.,]\d+)?\s*km\b/i.test(name);
+}
+
 export function getCheckoutModalityInfo(
   ticket: Ticket,
   event: Event,
 ): { name: string; icon?: string } | null {
+  // Nome do ingresso já traz a distância (ex.: "5KM") → oculta o bloco de
+  // modalidade inteiro pra não duplicar a informação no card.
+  if (ticketNameHasDistance(ticket.name)) return null;
+
   const modalityValue = ticket.modality?.trim();
   if (!modalityValue) return null;
 

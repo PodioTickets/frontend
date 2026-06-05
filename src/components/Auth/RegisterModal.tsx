@@ -831,16 +831,22 @@ export function RegisterModal() {
         {/* Step final (UX): Turnstile + checkbox de termos + botão. */}
         <div className="flex flex-col items-start relative shrink-0 w-full gap-4">
           {renderAcceptTermsCheckbox()}
+          {/* Captcha Turnstile — mesmo padrão do login mobile: retângulo
+              "normal" reduzido via scale (~255×55); wrapper com altura fixa
+              absorve o espaço extra do scale. */}
           {!isCompletingProfile && TURNSTILE_SITE_KEY && (
-            <Turnstile
-              ref={mobileTurnstileRef}
-              siteKey={TURNSTILE_SITE_KEY}
-              onSuccess={setTurnstileToken}
-              onError={() => setTurnstileToken(null)}
-              onExpire={() => setTurnstileToken(null)}
-              options={{ theme: "auto", size: "flexible" }}
-              className="w-full"
-            />
+            <div className="flex h-14 w-full items-center justify-center">
+              <div className="w-full scale-[0.85]">
+                <Turnstile
+                  ref={mobileTurnstileRef}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onSuccess={setTurnstileToken}
+                  onError={() => setTurnstileToken(null)}
+                  onExpire={() => setTurnstileToken(null)}
+                  options={{ theme: "light", size: "flexible" }}
+                />
+              </div>
+            </div>
           )}
           <Button
             onClick={handleNext}
@@ -1128,7 +1134,7 @@ export function RegisterModal() {
               onSuccess={setTurnstileToken}
               onError={() => setTurnstileToken(null)}
               onExpire={() => setTurnstileToken(null)}
-              options={{ theme: "auto", size: "flexible" }}
+              options={{ theme: "light", size: "flexible" }}
               className="w-full"
             />
           )}

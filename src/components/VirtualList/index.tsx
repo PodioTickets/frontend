@@ -69,47 +69,75 @@ export function VirtualList({
     setScrollTop(newScrollTop);
   }, []);
 
+  // Thumb de scroll customizado (overlay): iOS Safari IGNORA ::-webkit-scrollbar
+  // (só pisca o indicador nativo durante o gesto), então sem isso o usuário não
+  // tem pista visual de que a lista rola. Derivado do `scrollTop` que JÁ é
+  // estado da virtualização — nenhum setState extra por frame de scroll.
+  const maxScrollTop = Math.max(0, totalHeight - containerHeight);
+  const showThumb = maxScrollTop > 0;
+  const thumbInset = 4;
+  const thumbTrack = containerHeight - thumbInset * 2;
+  const thumbHeight = showThumb
+    ? Math.max(24, (containerHeight / totalHeight) * thumbTrack)
+    : 0;
+  const thumbTop = showThumb
+    ? thumbInset +
+      (Math.min(scrollTop, maxScrollTop) / maxScrollTop) *
+        (thumbTrack - thumbHeight)
+    : 0;
+
   return (
-    <div
-      ref={containerRef}
-      className={`overflow-auto ${className}`}
-      style={{
-        height: `${containerHeight}px`,
-        willChange: "scroll-position",
-        // iOS/Android: garante que o gesto de toque role ESTA lista (e não a
-        // página atrás) — momentum no iOS antigo + sem scroll chaining.
-        WebkitOverflowScrolling: "touch",
-        overscrollBehavior: "contain",
-        touchAction: "pan-y",
-      }}
-      onScroll={handleScroll}
-    >
-      <div style={{ height: `${totalHeight}px`, position: "relative" }}>
-        <div
-          style={{
-            transform: `translateY(${startIndex * itemHeight}px)`,
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            willChange: 'transform',
-          }}
-        >
-          {visibleItems.map(({ item, index }) => (
-            <div 
-              key={index} 
-              style={{ 
-                height: `${itemHeight}px`,
-                minHeight: `${itemHeight}px`,
-                maxHeight: `${itemHeight}px`,
-                overflow: 'hidden'
-              }}
-            >
-              {renderItem(item, index)}
-            </div>
-          ))}
+    <div className="relative" style={{ height: `${containerHeight}px` }}>
+      <div
+        ref={containerRef}
+        // Esconde a scrollbar nativa nas plataformas que suportam estilização
+        // (Android/desktop) — o thumb overlay abaixo é o indicador único,
+        // consistente entre plataformas (inclusive iPhone).
+        className={`overflow-auto h-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+        style={{
+          willChange: "scroll-position",
+          // iOS/Android: garante que o gesto de toque role ESTA lista (e não a
+          // página atrás) — momentum no iOS antigo + sem scroll chaining.
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          touchAction: "pan-y",
+        }}
+        onScroll={handleScroll}
+      >
+        <div style={{ height: `${totalHeight}px`, position: "relative" }}>
+          <div
+            style={{
+              transform: `translateY(${startIndex * itemHeight}px)`,
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              willChange: 'transform',
+            }}
+          >
+            {visibleItems.map(({ item, index }) => (
+              <div
+                key={index}
+                style={{
+                  height: `${itemHeight}px`,
+                  minHeight: `${itemHeight}px`,
+                  maxHeight: `${itemHeight}px`,
+                  overflow: 'hidden'
+                }}
+              >
+                {renderItem(item, index)}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+      {showThumb && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute right-1 w-1.5 rounded-full bg-gray-6"
+          style={{ height: thumbHeight, top: thumbTop }}
+        />
+      )}
     </div>
   );
 }
