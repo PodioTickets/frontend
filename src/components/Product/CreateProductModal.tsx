@@ -868,16 +868,16 @@ export function CreateProductModal() {
           const all =
             !isIncludedInTicket && hidden
               ? [
-                  ...fromForm,
-                  {
-                    name: hidden.name.trim(),
-                    price:
-                      Math.round(
-                        (parseFloat(String(hidden.price || "0").replace(",", ".")) || 0) * 100,
-                      ),
-                    stock: parseInt(hidden.stock, 10) || 0,
-                  },
-                ]
+                ...fromForm,
+                {
+                  name: hidden.name.trim(),
+                  price:
+                    Math.round(
+                      (parseFloat(String(hidden.price || "0").replace(",", ".")) || 0) * 100,
+                    ),
+                  stock: parseInt(hidden.stock, 10) || 0,
+                },
+              ]
               : fromForm;
           // `sortOrder` = índice na ordem final do array, pro backend persistir
           // e devolver as variações na ordem em que o organizador as definiu.
@@ -1718,7 +1718,7 @@ export function CreateProductModal() {
                       {productPreviewDropdownOptions.length > 0 ? (
                         <div className="p-4">
                           <p className="mb-2 text-base text-gray-12">
-                            Escolha a variação - {variationTypeName.trim() || "Variações"}
+                            Escolha a variação  {`- ${variationTypeName.trim() || ""}`}
                           </p>
                           <Dropdown
                             options={productPreviewDropdownOptions}
