@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   googleMapsLinkToEmbedUrl,
+  isShortGoogleMapsLink,
   safeGoogleMapsExternalLink,
 } from "../googleMapsEmbed";
 
@@ -32,6 +33,16 @@ describe("googleMapsLinkToEmbedUrl", () => {
     expect(
       googleMapsLinkToEmbedUrl(
         "https://www.google.com/maps/place/Parque+Ibirapuera/@-23.5874162,-46.6576336,17z",
+      ),
+    ).toBe(
+      `https://www.google.com/maps?q=${encodeURIComponent("-23.5874162,-46.6576336")}&output=embed`,
+    );
+  });
+
+  it("prioriza a coordenada do PIN (!3d/!4d) sobre a da câmera (@)", () => {
+    expect(
+      googleMapsLinkToEmbedUrl(
+        "https://www.google.com/maps/place/Parque+Ibirapuera/@-23.58,-46.65,17z/data=!3m1!4b1!4m6!3m5!1s0x0:0x0!8m2!3d-23.5874162!4d-46.6576336!16s",
       ),
     ).toBe(
       `https://www.google.com/maps?q=${encodeURIComponent("-23.5874162,-46.6576336")}&output=embed`,
@@ -89,5 +100,20 @@ describe("safeGoogleMapsExternalLink", () => {
 
   it("rejeita host não-Google", () => {
     expect(safeGoogleMapsExternalLink("https://evil.com/maps")).toBeNull();
+  });
+});
+
+describe("isShortGoogleMapsLink", () => {
+  it("detecta maps.app.goo.gl e goo.gl (com ou sem protocolo)", () => {
+    expect(isShortGoogleMapsLink("https://maps.app.goo.gl/AbCd1234")).toBe(true);
+    expect(isShortGoogleMapsLink("maps.app.goo.gl/AbCd1234")).toBe(true);
+    expect(isShortGoogleMapsLink("https://goo.gl/maps/AbCd1234")).toBe(true);
+  });
+
+  it("não considera links longos nem hosts estranhos", () => {
+    expect(isShortGoogleMapsLink("https://www.google.com/maps?q=Centro")).toBe(false);
+    expect(isShortGoogleMapsLink("https://evil.goo.gl.evil.com/x")).toBe(false);
+    expect(isShortGoogleMapsLink(null)).toBe(false);
+    expect(isShortGoogleMapsLink("")).toBe(false);
   });
 });

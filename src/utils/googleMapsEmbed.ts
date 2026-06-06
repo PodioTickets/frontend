@@ -21,11 +21,24 @@ const GOOGLE_MAPS_HOSTS = new Set([
   "goo.gl",
 ]);
 
-function isAllowedGoogleHost(hostname: string): boolean {
+export function isAllowedGoogleHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
   if (GOOGLE_MAPS_HOSTS.has(h)) return true;
   // www.google.com, google.com.br, www.google.com.br, maps.google.com.br…
   return /^(www\.|maps\.)?google\.(com|com\.[a-z]{2}|[a-z]{2})$/.test(h);
+}
+
+/**
+ * Link curto de compartilhamento (maps.app.goo.gl / goo.gl)? Não é conversível
+ * client-side (redirect bloqueado por CORS) — precisa ser resolvido pelo
+ * endpoint `/api/maps/resolve` antes de virar embed.
+ */
+export function isShortGoogleMapsLink(link: string | null | undefined): boolean {
+  if (!link) return false;
+  const url = parseMapsLink(link);
+  if (!url) return false;
+  const h = url.hostname.toLowerCase();
+  return h === "maps.app.goo.gl" || h === "goo.gl";
 }
 
 /** Parseia o link normalizando protocolo ausente ("www.google.com/..."). */
@@ -50,11 +63,16 @@ function extractMapsQuery(url: URL): string | null {
   const fromParams = url.searchParams.get("query") || url.searchParams.get("q");
   if (fromParams?.trim()) return fromParams.trim();
 
-  // 2. /maps/place/<nome>/@lat,lng — coordenada é o sinal mais preciso.
+  // 2. data=!…!3d<lat>!4d<lng> — coordenada DO PIN (links longos resolvidos de
+  //    links curtos têm esse formato; mais preciso que o @, que é só a câmera).
+  const pin = url.pathname.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+  if (pin) return `${pin[1]},${pin[2]}`;
+
+  // 3. /maps/place/<nome>/@lat,lng — centro da câmera (aproxima o local).
   const coords = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
   if (coords) return `${coords[1]},${coords[2]}`;
 
-  // 3. Segmento de path: /maps/place/<nome> ou /maps/search/<termo>.
+  // 4. Segmento de path: /maps/place/<nome> ou /maps/search/<termo>.
   const segment = url.pathname.match(/\/maps\/(?:place|search|dir)\/([^/@]+)/);
   if (segment?.[1]) {
     try {

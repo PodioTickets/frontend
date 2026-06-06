@@ -2,13 +2,16 @@ import { useMutation } from "@tanstack/react-query";
 import { userService } from "@/services";
 import toast from "react-hot-toast";
 
+/** Identificador exclusivo: informe `email` OU `cpf` (dígitos, sem máscara). */
 interface ForgotPasswordData {
-  email: string;
+  email?: string;
+  cpf?: string;
   accountType?: "USER" | "ORGANIZER";
 }
 
 interface VerifyCodeData {
-  email: string;
+  email?: string;
+  cpf?: string;
   code: string;
   accountType?: "USER" | "ORGANIZER";
 }
@@ -55,6 +58,7 @@ export function useForgotPassword(): UseForgotPasswordReturn {
     mutationFn: async (data: ForgotPasswordData) => {
       return userService.forgotPassword({
         email: data.email,
+        cpf: data.cpf,
         accountType: data.accountType ?? "USER",
       });
     },
@@ -75,6 +79,7 @@ export function useForgotPassword(): UseForgotPasswordReturn {
     mutationFn: async (data: ForgotPasswordData) => {
       return userService.resendResetCode({
         email: data.email,
+        cpf: data.cpf,
         accountType: data.accountType ?? "USER",
       });
     },

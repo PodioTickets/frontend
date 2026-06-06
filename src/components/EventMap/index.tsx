@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   googleMapsLinkToEmbedUrl,
+  isShortGoogleMapsLink,
   safeGoogleMapsExternalLink,
 } from "@/utils/googleMapsEmbed";
 
@@ -20,18 +21,41 @@ interface EventMapProps {
 }
 
 export function EventMap({ city, state, title, googleMapsLink }: EventMapProps) {
-  // Create address string for Google Maps
   const address = useMemo(() => {
     return `${city}, ${state}, Brasil`;
   }, [city, state]);
 
-  // Embed: link do organizador (local exato) > busca cidade/estado.
+  /**
+   * Link curto (maps.app.goo.gl) não é conversível client-side: resolve o
+   * redirect via /api/maps/resolve. Enquanto resolve (ou se falhar), o iframe
+   * mostra o fallback por cidade/estado e troca pro local exato quando chegar.
+   */
+  const [resolvedLink, setResolvedLink] = useState<string | null>(null);
+  useEffect(() => {
+    setResolvedLink(null);
+    if (!googleMapsLink || !isShortGoogleMapsLink(googleMapsLink)) return;
+    const controller = new AbortController();
+    fetch(`/api/maps/resolve?url=${encodeURIComponent(googleMapsLink)}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { url?: string } | null) => {
+        if (data?.url) setResolvedLink(data.url);
+      })
+      .catch(() => {
+        /* timeout/abort: mantém o fallback cidade/estado */
+      });
+    return () => controller.abort();
+  }, [googleMapsLink]);
+
+  // Embed: link do organizador (local exato; resolvido se for curto) >
+  // busca cidade/estado.
   const mapUrl = useMemo(() => {
     return (
-      googleMapsLinkToEmbedUrl(googleMapsLink) ??
+      googleMapsLinkToEmbedUrl(resolvedLink ?? googleMapsLink) ??
       `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`
     );
-  }, [googleMapsLink, address]);
+  }, [resolvedLink, googleMapsLink, address]);
 
   // Link externo: link do organizador validado (só hosts Google — abre em
   // _blank, nunca URL arbitrária) > busca cidade/estado.

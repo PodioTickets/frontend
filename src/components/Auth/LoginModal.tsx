@@ -29,24 +29,49 @@ import {
 } from "@/utils/authRedirect";
 import { EmailIcon } from "../Icons/EmailIcon";
 import { PasswordIcon } from "../Icons/PasswordIcon";
+import { CPFIcon } from "../Icons/CPFIcon";
+import { Checkbox } from "@/components/CheckBox";
+import { getCpfValidationMessage } from "@/utils/cpf";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
+/** Identificador escolhido para recuperar a senha. */
+type ForgotMethod = "email" | "cpf";
+
+/** Máscara progressiva de CPF (xxx.xxx.xxx-xx) — mesma usada no cadastro. */
+function maskCPF(value: string): string {
+  const numbers = value.replace(/\D/g, "");
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+  if (numbers.length <= 9)
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+  return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+}
+
 function ForgotPasswordPanel({
+  method,
+  onMethodChange,
   email,
   onEmailChange,
+  cpf,
+  onCpfChange,
   error,
   onSubmit,
   isPending,
   onClose,
 }: {
+  method: ForgotMethod;
+  onMethodChange: (method: ForgotMethod) => void;
   email: string;
   onEmailChange: (value: string) => void;
+  cpf: string;
+  onCpfChange: (value: string) => void;
   error?: string;
   onSubmit: (e: FormEvent) => void;
   isPending: boolean;
   onClose: () => void;
 }) {
+  const isCpf = method === "cpf";
   return (
     <div className="bg-gray-1 rounded-xl w-full overflow-hidden flex flex-col border border-gray-6 md:border-0">
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-6 shrink-0">
@@ -65,33 +90,94 @@ function ForgotPasswordPanel({
       <form onSubmit={onSubmit} className="flex flex-col w-full">
         <div className="flex flex-col gap-8 pt-4 pb-6 px-6">
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Informe o e-mail da sua conta e enviaremos um código para criar uma
-            nova senha
+            Informe o e-mail ou CPF da sua conta. Enviaremos um código de 6
+            dígitos para que você possa criar uma nova senha.
           </p>
-          <div className="flex flex-col gap-2 w-full min-w-0">
-            <label
-              htmlFor="forgot-password-email"
-              className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+          <div className="flex flex-col gap-5 w-full min-w-0">
+            {/* Toggle email/CPF: visual de checkbox (design), semântica de radio */}
+            <div
+              role="radiogroup"
+              aria-label="Como deseja recuperar a senha"
+              className="flex gap-4 items-center"
             >
-              E-mail cadastrado
-            </label>
-            <div className="relative w-full">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
-              <Input
-                id="forgot-password-email"
-                type="email"
-                autoComplete="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => onEmailChange(e.target.value)}
-                className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
-                  }`}
-                aria-invalid={!!error}
-              />
+              <label className="flex gap-2 items-center cursor-pointer">
+                <Checkbox
+                  checked={!isCpf}
+                  onCheckedChange={() => onMethodChange("email")}
+                  role="radio"
+                  aria-checked={!isCpf}
+                />
+                <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans select-none">
+                  Informar email
+                </span>
+              </label>
+              <label className="flex gap-2 items-center cursor-pointer">
+                <Checkbox
+                  checked={isCpf}
+                  onCheckedChange={() => onMethodChange("cpf")}
+                  role="radio"
+                  aria-checked={isCpf}
+                />
+                <span className="font-normal text-sm leading-[1.3] text-gray-12 font-family-dm-sans select-none">
+                  Informar CPF
+                </span>
+              </label>
             </div>
-            {error ? (
-              <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
-            ) : null}
+            {isCpf ? (
+              <div className="flex flex-col gap-2 w-full min-w-0">
+                <label
+                  htmlFor="forgot-password-cpf"
+                  className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+                >
+                  CPF cadastrado
+                </label>
+                <div className="relative w-full">
+                  <CPFIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                  <Input
+                    id="forgot-password-cpf"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={14}
+                    placeholder="000.000.000-00"
+                    value={cpf}
+                    onChange={(e) => onCpfChange(e.target.value)}
+                    className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
+                      }`}
+                    aria-invalid={!!error}
+                  />
+                </div>
+                {error ? (
+                  <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 w-full min-w-0">
+                <label
+                  htmlFor="forgot-password-email"
+                  className="font-normal text-base leading-[1.3] text-gray-12 font-family-dm-sans"
+                >
+                  E-mail cadastrado
+                </label>
+                <div className="relative w-full">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-11 pointer-events-none" />
+                  <Input
+                    id="forgot-password-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => onEmailChange(e.target.value)}
+                    className={`pl-10 h-12 rounded-lg ${error ? "border-red-9 focus-visible:border-red-9" : ""
+                      }`}
+                    aria-invalid={!!error}
+                  />
+                </div>
+                {error ? (
+                  <p className="text-sm text-red-9 font-family-dm-sans">{error}</p>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex px-6 pt-4 pb-8 w-full">
@@ -100,7 +186,7 @@ function ForgotPasswordPanel({
             disabled={isPending}
             className="w-full h-12 leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? "Enviando..." : "Enviar código de recuperação"}
+            {isPending ? "Enviando..." : "Recuperar senha"}
           </Button>
         </div>
       </form>
@@ -121,6 +207,7 @@ function ForgotPasswordEnterCodePanel({
   isVerifying,
   resendCooldownSeconds,
 }: {
+  /** E-mail digitado pelo usuário; vazio quando o fluxo foi por CPF (não revelamos o e-mail da conta). */
   sentToEmail: string;
   code: string;
   onCodeChange: (value: string) => void;
@@ -161,9 +248,19 @@ function ForgotPasswordEnterCodePanel({
       <form onSubmit={onSubmit} className="flex flex-col w-full">
         <div className="flex flex-col gap-6 pt-4 pb-2 px-6 w-full">
           <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            Enviamos um código de 6 dígitos para{" "}
-            <span className="font-bold text-gray-12">{sentToEmail}</span>.
-            Digite-o abaixo para continuar.
+            {sentToEmail ? (
+              <>
+                Enviamos um código de 6 dígitos para{" "}
+                <span className="font-bold text-gray-12">{sentToEmail}</span>.
+                Digite-o abaixo para continuar.
+              </>
+            ) : (
+              <>
+                Se houver uma conta com este CPF, enviamos um código de 6
+                dígitos para o e-mail cadastrado. Digite-o abaixo para
+                continuar.
+              </>
+            )}
           </p>
           <div className="flex flex-col gap-3 w-full min-w-0">
             <OtpCodeInput
@@ -338,7 +435,7 @@ function ForgotPasswordNewPasswordPanel({
           <Button
             type="submit"
             disabled={isPending}
-            className="w-full h-12 bg-primary-11 text-primary-2 hover:bg-primary-10 font-bold text-lg leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 font-bold text-lg leading-[1.1] font-manrope rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPending ? "Salvando..." : "Salvar"}
           </Button>
@@ -408,8 +505,12 @@ export function LoginModal() {
   const [mfaResendCooldown, setMfaResendCooldown] = useState(0);
 
   const [forgotFlow, setForgotFlow] = useState<ForgotFlow>("idle");
+  const [forgotMethod, setForgotMethod] = useState<ForgotMethod>("email");
   const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotCpf, setForgotCpf] = useState("");
   const [passwordResetEmail, setPasswordResetEmail] = useState("");
+  /** CPF (só dígitos) usado no passo 1 — identificador das chamadas verify/resend. */
+  const [passwordResetCpf, setPasswordResetCpf] = useState("");
   const [forgotEmailError, setForgotEmailError] = useState<string | undefined>(
     undefined
   );
@@ -440,8 +541,11 @@ export function LoginModal() {
   useEffect(() => {
     if (!isOpen) {
       setForgotFlow("idle");
+      setForgotMethod("email");
       setForgotEmail("");
+      setForgotCpf("");
       setPasswordResetEmail("");
+      setPasswordResetCpf("");
       setForgotEmailError(undefined);
       setResetCode("");
       setResetCodeError(undefined);
@@ -602,13 +706,39 @@ export function LoginModal() {
     if (forgotEmailError) setForgotEmailError(undefined);
   };
 
+  const handleForgotCpfChange = (value: string) => {
+    setForgotCpf(maskCPF(value));
+    if (forgotEmailError) setForgotEmailError(undefined);
+  };
+
+  const handleForgotMethodChange = (method: ForgotMethod) => {
+    setForgotMethod(method);
+    setForgotEmailError(undefined);
+  };
+
   const handleForgotPasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      forgotPasswordStep1Schema.parse({ email: forgotEmail });
-      setForgotEmailError(undefined);
-      await forgotPassword({ email: forgotEmail, accountType: "USER" });
-      setPasswordResetEmail(forgotEmail);
+      if (forgotMethod === "cpf") {
+        // Validação local (algoritmo da Receita) antes de bater no backend
+        const cpfError = getCpfValidationMessage(forgotCpf);
+        if (cpfError) {
+          setForgotEmailError(cpfError);
+          toast.error(cpfError);
+          return;
+        }
+        const cpfDigits = forgotCpf.replace(/\D/g, "");
+        setForgotEmailError(undefined);
+        await forgotPassword({ cpf: cpfDigits, accountType: "USER" });
+        setPasswordResetCpf(cpfDigits);
+        setPasswordResetEmail("");
+      } else {
+        forgotPasswordStep1Schema.parse({ email: forgotEmail });
+        setForgotEmailError(undefined);
+        await forgotPassword({ email: forgotEmail, accountType: "USER" });
+        setPasswordResetEmail(forgotEmail);
+        setPasswordResetCpf("");
+      }
       setResetCode("");
       setResetCodeError(undefined);
       setForgotResendCooldown(60);
@@ -633,7 +763,10 @@ export function LoginModal() {
     try {
       setResetCodeError(undefined);
       const result = await verifyResetCode({
-        email: passwordResetEmail,
+        // Mesmo identificador usado no passo 1 (email OU cpf)
+        ...(passwordResetEmail
+          ? { email: passwordResetEmail }
+          : { cpf: passwordResetCpf }),
         code: resetCode,
         accountType: "USER",
       });
@@ -645,9 +778,15 @@ export function LoginModal() {
   };
 
   const handleResendResetEmail = async () => {
-    if (!passwordResetEmail || forgotResendCooldown > 0) return;
+    if ((!passwordResetEmail && !passwordResetCpf) || forgotResendCooldown > 0)
+      return;
     try {
-      await resendCode({ email: passwordResetEmail, accountType: "USER" });
+      await resendCode({
+        ...(passwordResetEmail
+          ? { email: passwordResetEmail }
+          : { cpf: passwordResetCpf }),
+        accountType: "USER",
+      });
       setForgotResendCooldown(60);
       setResetCode("");
       setResetCodeError(undefined);
@@ -683,7 +822,7 @@ export function LoginModal() {
     setNewPassword("");
     setConfirmNewPassword("");
     setResetPasswordToken("");
-    if (passwordResetEmail) {
+    if (passwordResetEmail || passwordResetCpf) {
       setForgotFlow("enter-code");
     } else {
       setForgotFlow("email");
@@ -877,8 +1016,12 @@ export function LoginModal() {
   const forgotStepContent =
     forgotFlow === "email" ? (
       <ForgotPasswordPanel
+        method={forgotMethod}
+        onMethodChange={handleForgotMethodChange}
         email={forgotEmail}
         onEmailChange={handleForgotEmailChange}
+        cpf={forgotCpf}
+        onCpfChange={handleForgotCpfChange}
         error={forgotEmailError}
         onSubmit={handleForgotPasswordSubmit}
         isPending={forgotPasswordPending}
@@ -1074,7 +1217,16 @@ export function LoginModal() {
                         <button
                           type="button"
                           onClick={() => {
-                            setForgotEmail(formData.email);
+                            {
+                              // Login aceita email OU CPF: pré-seleciona o
+                              // método conforme o que foi digitado lá.
+                              const typed = formData.email.trim();
+                              const isCpfLike =
+                                typed !== "" && /^[\d.\-\s]+$/.test(typed);
+                              setForgotMethod(isCpfLike ? "cpf" : "email");
+                              setForgotEmail(isCpfLike ? "" : typed);
+                              setForgotCpf(isCpfLike ? maskCPF(typed) : "");
+                            }
                             setForgotEmailError(undefined);
                             setForgotFlow("email");
                           }}
@@ -1318,7 +1470,16 @@ export function LoginModal() {
                         <button
                           type="button"
                           onClick={() => {
-                            setForgotEmail(formData.email);
+                            {
+                              // Login aceita email OU CPF: pré-seleciona o
+                              // método conforme o que foi digitado lá.
+                              const typed = formData.email.trim();
+                              const isCpfLike =
+                                typed !== "" && /^[\d.\-\s]+$/.test(typed);
+                              setForgotMethod(isCpfLike ? "cpf" : "email");
+                              setForgotEmail(isCpfLike ? "" : typed);
+                              setForgotCpf(isCpfLike ? maskCPF(typed) : "");
+                            }
                             setForgotEmailError(undefined);
                             setForgotFlow("email");
                           }}

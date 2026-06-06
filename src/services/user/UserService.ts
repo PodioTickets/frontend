@@ -754,12 +754,15 @@ export class UserService {
   }
 
   async forgotPassword(data: {
-    email: string;
+    email?: string;
+    cpf?: string;
     accountType?: "USER" | "ORGANIZER";
   }): Promise<{ success?: boolean; message?: string }> {
     try {
+      // Identificador exclusivo: envia apenas email OU cpf (contrato do backend)
       const payload = {
-        email: data.email,
+        ...(data.email ? { email: data.email } : {}),
+        ...(data.cpf ? { cpf: data.cpf } : {}),
         accountType: data.accountType ?? "USER",
       };
       const response = await this.apiClient.post(
@@ -772,10 +775,11 @@ export class UserService {
     }
   }
 
-  async verifyResetCode(data: { email: string; code: string; accountType?: "USER" | "ORGANIZER" }): Promise<{ token: string }> {
+  async verifyResetCode(data: { email?: string; cpf?: string; code: string; accountType?: "USER" | "ORGANIZER" }): Promise<{ token: string }> {
     try {
       const payload = {
-        email: data.email,
+        ...(data.email ? { email: data.email } : {}),
+        ...(data.cpf ? { cpf: data.cpf } : {}),
         code: data.code,
         ...(data.accountType && { accountType: data.accountType }),
       };
@@ -790,12 +794,14 @@ export class UserService {
   }
 
   async resendResetCode(data: {
-    email: string;
+    email?: string;
+    cpf?: string;
     accountType?: "USER" | "ORGANIZER";
   }): Promise<{ success?: boolean; message?: string }> {
     try {
       const payload = {
-        email: data.email,
+        ...(data.email ? { email: data.email } : {}),
+        ...(data.cpf ? { cpf: data.cpf } : {}),
         accountType: data.accountType ?? "USER",
       };
       const response = await this.apiClient.post(

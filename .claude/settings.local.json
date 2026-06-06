@@ -153,7 +153,15 @@
       "PowerShell(npx vitest run --pool=threads src/utils/__tests__/googleMapsEmbed.test.ts)",
       "PowerShell(npx eslint src/utils/googleMapsEmbed.ts src/components/EventMap/index.tsx \"src/app/events/[slug]/page.tsx\")",
       "PowerShell(npx eslint \"src/app/events/[slug]/layout.tsx\")",
-      "PowerShell(npx eslint src/contexts/EditEventContext.tsx)"
+      "PowerShell(npx eslint src/contexts/EditEventContext.tsx)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\server\" -Depth 2)",
+      "Bash(Select-Object -First 50)",
+      "Bash(Format-Table Name, PSIsContainer)",
+      "PowerShell(npx tsc --noEmit > tsc_out.txt; Select-String -Path tsc_out.txt -Pattern \"LoginModal|services/user/UserService|useForgotPassword\" | Select-Object -First 30)",
+      "PowerShell(Get-Content tsc_out.txt | Select-String -Pattern \"LoginModal|UserService|useForgotPassword\"; \"----total----\"; \\(Get-Content tsc_out.txt | Measure-Object -Line\\).Lines)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(npx vitest run --reporter=dot 2>$null | Select-Object -Last 10)",
+      "PowerShell(Copy-Item *)"
     ]
   },
   "disabledMcpjsonServers": [
