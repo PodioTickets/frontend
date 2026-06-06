@@ -87,7 +87,7 @@ export const formatProductCardBasePriceLabel = (product: Product): string => {
 
 /** Alinhado ao CreateProductModal: "Escolha a variação - {tipo}" ou "Variações". */
 export const variationSectionTitle = (product: Product) =>
-  `Escolha a variação - ${(product.variationType ?? "").trim() || "Variações"}`;
+  `Escolha a variação  ${- (product.variationType ?? "").trim() || ""}`;
 
 /**
  * Valor em reais a somar no total do pedido.
