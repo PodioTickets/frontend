@@ -41,33 +41,6 @@ export function ShareModal({
 
   const shareOptions = [
     {
-      id: "instagram",
-      label: "Instagram",
-      icon: InstagramIcon,
-      outline: true,
-      // Instagram NÃO tem endpoint web de compartilhamento de link (ao
-      // contrário de FB/Twitter/Telegram). No mobile o Web Share API abre a
-      // folha nativa do SO — que lista o Instagram. No desktop (sem Web Share)
-      // copiamos o link e abrimos o Instagram pra o usuário colar.
-      onClick: async () => {
-        if (typeof navigator !== "undefined" && navigator.share) {
-          try {
-            await navigator.share({ title: eventName, text: eventName, url: fullUrl });
-          } catch {
-            /* usuário cancelou a folha de compartilhamento — sem ação */
-          }
-          return;
-        }
-        try {
-          await navigator.clipboard.writeText(fullUrl);
-          toast.success("Link copiado! Cole no seu story ou perfil do Instagram.");
-        } catch {
-          toast.error("Erro ao copiar link");
-        }
-        window.open("https://www.instagram.com/", "_blank");
-      },
-    },
-    {
       id: "whatsapp",
       label: "WhatsApp",
       icon: WhatsappIcon,
@@ -138,7 +111,7 @@ export function ShareModal({
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-2 md:gap-6 mb-6 px-4">
+        <div className="flex items-center justify-center gap-2 md:gap-2 mb-6 px-4">
           {shareOptions.map((option) => {
             const Icon = option.icon;
             return (
