@@ -52,6 +52,8 @@ interface AdminEvent {
   country?: string;
   eventDate?: string | null;
   createdAt: string;
+  revenue?: number;
+  confirmedRegistrations?: number;
   organization: {
     id: string;
     name: string;
@@ -625,14 +627,14 @@ export default function AdminEventsPage() {
                         {/* Inscritos */}
                         <td className="py-3.5 px-4 text-center">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {event._count?.registrations ?? 0}
+                            {event.confirmedRegistrations ?? 0}
                           </span>
                         </td>
 
                         {/* Receita */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <span className="text-sm font-semibold text-gray-12 font-family-dm-sans">
-                            {formatCurrency(event.totalSales ?? event.totalRevenue ?? 0)}
+                            {formatCurrency(event.revenue ?? 0)}
                           </span>
                         </td>
 
