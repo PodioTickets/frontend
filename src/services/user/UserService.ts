@@ -757,7 +757,7 @@ export class UserService {
     email?: string;
     cpf?: string;
     accountType?: "USER" | "ORGANIZER";
-  }): Promise<{ success?: boolean; message?: string }> {
+  }): Promise<{ success?: boolean; message?: string; maskedEmail?: string }> {
     try {
       // Identificador exclusivo: envia apenas email OU cpf (contrato do backend)
       const payload = {

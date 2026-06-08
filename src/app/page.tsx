@@ -1,7 +1,44 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { HomeFilters } from "@/components/HomeFilters";
 import { EventCarousel } from "@/components/EventCarousel";
 import { Button } from "@/components/Button";
+
+/**
+ * Metadata Open Graph / Twitter da HOME. Diferente da página do evento (que
+ * resolve dados dinâmicos por slug no servidor via `generateMetadata`), a home
+ * é estática — então a metadata também é estática. O que faltava para o preview
+ * de link em redes sociais (WhatsApp/Telegram/Facebook/Twitter) ficar completo
+ * era a `og:image`: o root layout só definia título/descrição, sem imagem.
+ *
+ * A imagem usa caminho relativo: o `metadataBase` do root layout o resolve para
+ * URL absoluta (crawlers exigem absoluta). Os campos abaixo sobrescrevem os
+ * defaults herdados do root layout para esta rota.
+ */
+const OG_TITLE = "PódioTicket";
+const OG_DESCRIPTION =
+  "Descubra e inscreva-se em eventos esportivos na PódioTicket.";
+const OG_IMAGE = "/images/logo.png";
+
+export const metadata: Metadata = {
+  title: OG_TITLE,
+  description: OG_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    url: "/",
+    type: "website",
+    siteName: "PódioTicket",
+    images: [{ url: OG_IMAGE, alt: "PódioTicket" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    images: [OG_IMAGE],
+  },
+};
 
 export default function Home() {
   return (

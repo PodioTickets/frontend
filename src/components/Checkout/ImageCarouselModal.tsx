@@ -172,7 +172,7 @@ export function ImageCarouselModal({
             onClick={onClose}
           >
             <div
-              className="relative w-full max-w-6xl max-h-[60vh] flex flex-col"
+              className="relative flex h-full w-full max-w-6xl flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button */}
@@ -184,8 +184,13 @@ export function ImageCarouselModal({
                 <X className="size-6" />
               </button>
 
-              {/* Image Container */}
-              <div className="relative w-full h-[80vh] flex items-center justify-center">
+              {/* Image Container — `flex-1 min-h-0` faz a imagem ocupar APENAS o
+                  espaço livre da caixa (que no mobile é restrita pelos insets do
+                  Header/MobileSummaryBar). Sem unidades `vh`: no iOS Safari o `vh`
+                  resolve pra viewport cheia, ignorando os insets, e a imagem
+                  estourava/era cortada. `min-h-0` é obrigatório para o filho flex
+                  poder encolher abaixo do seu tamanho intrínseco. */}
+              <div className="relative flex min-h-0 w-full flex-1 items-center justify-center">
                 {/* Previous Button */}
                 {orderedItems.length > 1 && (
                   <button
@@ -197,14 +202,14 @@ export function ImageCarouselModal({
                   </button>
                 )}
 
-                <div className="relative w-full h-full flex items-center justify-center">
+                <div className="relative flex h-full w-full items-center justify-center">
                   <motion.div
                     key={current.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="relative w-full h-full max-w-5xl"
+                    className="relative h-full w-full max-w-5xl"
                   >
                     <ImageWithInitialFallback
                       src={current.src}
@@ -232,15 +237,16 @@ export function ImageCarouselModal({
                 )}
               </div>
 
-              {/* Thumbnails */}
+              {/* Thumbnails — `shrink-0` para não roubar altura da imagem; tamanho
+                  menor no mobile, onde a caixa é mais baixa. */}
               {orderedItems.length > 1 && (
-                <div className="pt-10 flex items-center justify-center gap-2 px-4 pb-6">
+                <div className="flex shrink-0 items-center justify-center gap-2 px-4 pt-4 pb-1">
                   {orderedItems.map((item, index) => (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setCurrentIndex(index)}
-                      className={`relative size-20 rounded-lg border-2 overflow-hidden shrink-0 transition-all ${index === currentIndex
+                      className={`relative size-14 md:size-20 rounded-lg border-2 overflow-hidden shrink-0 transition-all ${index === currentIndex
                         ? "border-primary-11 scale-110"
                         : "border-gray-6 hover:border-gray-6"
                         }`}
@@ -261,9 +267,10 @@ export function ImageCarouselModal({
                 </div>
               )}
 
-              {/* Image Counter */}
+              {/* Image Counter — em fluxo (não mais `-bottom-10` absoluto, que no
+                  mobile sumia atrás da MobileSummaryBar). */}
               {orderedItems.length > 1 && (
-                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+                <div className="mx-auto mt-2 shrink-0 rounded-full bg-black/50 px-4 py-1.5 text-sm text-white">
                   {currentIndex + 1} / {orderedItems.length}
                 </div>
               )}

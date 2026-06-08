@@ -16,8 +16,15 @@ interface VerifyCodeData {
   accountType?: "USER" | "ORGANIZER";
 }
 
+/** Resultado do passo 1 — `maskedEmail` só vem no fluxo por CPF. */
+interface ForgotPasswordResult {
+  success?: boolean;
+  message?: string;
+  maskedEmail?: string;
+}
+
 interface UseForgotPasswordReturn {
-  forgotPassword: (data: ForgotPasswordData) => Promise<void>;
+  forgotPassword: (data: ForgotPasswordData) => Promise<ForgotPasswordResult>;
   resendCode: (data: ForgotPasswordData) => Promise<void>;
   verifyResetCode: (data: VerifyCodeData) => Promise<{ token: string }>;
   isPending: boolean;
@@ -111,7 +118,7 @@ export function useForgotPassword(): UseForgotPasswordReturn {
 
   return {
     forgotPassword: async (data: ForgotPasswordData) => {
-      await mutation.mutateAsync(data);
+      return mutation.mutateAsync(data);
     },
     resendCode: async (data: ForgotPasswordData) => {
       await resendMutation.mutateAsync(data);
