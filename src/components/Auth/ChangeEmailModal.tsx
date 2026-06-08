@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/utils/cn";
 import Image from "next/image";
+import { EmailIcon } from "../Icons/EmailIcon";
 
 type Step = "confirm" | "form" | "code" | "success";
 
@@ -134,7 +135,7 @@ export function ChangeEmailModal() {
     try {
       await userService.verifyEmailChange(codeStr);
       setStep("success");
-      refetchUser().catch(() => {});
+      refetchUser().catch(() => { });
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || "Código inválido ou expirado.";
       toast.error(msg);
@@ -242,7 +243,7 @@ export function ChangeEmailModal() {
                       </h2>
                       {user?.email && (
                         <div className="flex items-center gap-2 px-3 py-2 bg-gray-3 rounded-lg border border-gray-6">
-                          <Mail className="w-4 h-4 text-gray-11 shrink-0" />
+                          <EmailIcon className="w-4 h-4 text-gray-11 shrink-0" />
                           <span className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
                             {user.email}
                           </span>
@@ -399,7 +400,7 @@ export function ChangeEmailModal() {
                   <div className="border-b border-gray-6 flex items-center justify-between p-4 w-full">
                     <div className="flex gap-0.5 items-center">
                       <button
-                        onClick={() => { setStep("form"); setCode(["","","","","",""]); setCodeError(""); }}
+                        onClick={() => { setStep("form"); setCode(["", "", "", "", "", ""]); setCodeError(""); }}
                         className="flex items-center justify-center rounded-lg w-8 h-8 hover:bg-gray-3 transition-colors"
                         aria-label="Voltar"
                       >
@@ -472,7 +473,7 @@ export function ChangeEmailModal() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => { setStep("form"); setCode(["","","","","",""]); setCodeError(""); }}
+                        onClick={() => { setStep("form"); setCode(["", "", "", "", "", ""]); setCodeError(""); }}
                         className="flex-1 h-12 border-[1.5px] border-gray-6 text-gray-12 font-bold text-base font-manrope"
                       >
                         Cancelar

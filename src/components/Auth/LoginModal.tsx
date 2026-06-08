@@ -247,21 +247,18 @@ function ForgotPasswordEnterCodePanel({
       </div>
       <form onSubmit={onSubmit} className="flex flex-col w-full">
         <div className="flex flex-col gap-6 pt-4 pb-2 px-6 w-full">
-          <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
-            {sentToEmail ? (
-              <>
-                Enviamos um código de 6 dígitos para{" "}
-                <span className="font-bold text-gray-12">{sentToEmail}</span>.
-                Digite-o abaixo para continuar.
-              </>
-            ) : (
-              <>
-                Se houver uma conta com este CPF, enviamos um código de 6
-                dígitos para o e-mail cadastrado. Digite-o abaixo para
-                continuar.
-              </>
-            )}
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="font-medium text-base leading-[1.3] text-gray-12 font-family-dm-sans">
+              Vamos enviar um código de 6 dígitos para o e-mail abaixo para que você possa criar uma nova senha.
+            </p>
+            <div className="flex items-center justify-center gap-2 px-3 py-2 w-min bg-gray-3 rounded-lg border border-gray-6">
+              <EmailIcon className="w-4 h-4 text-gray-11 shrink-0" />
+              <span className="font-normal text-sm leading-[1.3] text-gray-11 font-family-dm-sans">
+                {sentToEmail}
+              </span>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 w-full min-w-0">
             <OtpCodeInput
               value={code}
@@ -511,6 +508,8 @@ export function LoginModal() {
   const [passwordResetEmail, setPasswordResetEmail] = useState("");
   /** CPF (só dígitos) usado no passo 1 — identificador das chamadas verify/resend. */
   const [passwordResetCpf, setPasswordResetCpf] = useState("");
+  /** E-mail MASCARADO da conta (só no fluxo por CPF) — pra indicar onde o código foi enviado. */
+  const [passwordResetMaskedEmail, setPasswordResetMaskedEmail] = useState("");
   const [forgotEmailError, setForgotEmailError] = useState<string | undefined>(
     undefined
   );
@@ -546,6 +545,7 @@ export function LoginModal() {
       setForgotCpf("");
       setPasswordResetEmail("");
       setPasswordResetCpf("");
+      setPasswordResetMaskedEmail("");
       setForgotEmailError(undefined);
       setResetCode("");
       setResetCodeError(undefined);
@@ -729,15 +729,42 @@ export function LoginModal() {
         }
         const cpfDigits = forgotCpf.replace(/\D/g, "");
         setForgotEmailError(undefined);
-        await forgotPassword({ cpf: cpfDigits, accountType: "USER" });
+
+        // Cooldown: se já enviamos para ESTE mesmo CPF e o cooldown ainda corre,
+        // NÃO reenvia (o usuário não pode burlar o limite voltando pra cá) — só
+        // retorna ao passo do código com o tempo restante. Identificador
+        // diferente = pedido novo → segue o fluxo normal abaixo.
+        if (forgotResendCooldown > 0 && passwordResetCpf === cpfDigits) {
+          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
+          setForgotFlow("enter-code");
+          return;
+        }
+
+        const result = await forgotPassword({ cpf: cpfDigits, accountType: "USER" });
         setPasswordResetCpf(cpfDigits);
         setPasswordResetEmail("");
+        // E-mail mascarado da conta (quando o CPF existe) pra mostrar no passo
+        // do código. Ausente = CPF sem conta; mantém a mensagem genérica.
+        setPasswordResetMaskedEmail(result?.maskedEmail ?? "");
       } else {
         forgotPasswordStep1Schema.parse({ email: forgotEmail });
         setForgotEmailError(undefined);
+
+        // Mesmo cooldown para o fluxo por e-mail (comparação canônica: trim +
+        // lowercase, igual à chave de rate limit do backend).
+        const sameEmail =
+          passwordResetEmail.trim().toLowerCase() ===
+          forgotEmail.trim().toLowerCase();
+        if (forgotResendCooldown > 0 && sameEmail) {
+          toast.error(`Aguarde ${forgotResendCooldown}s para reenviar o código.`);
+          setForgotFlow("enter-code");
+          return;
+        }
+
         await forgotPassword({ email: forgotEmail, accountType: "USER" });
         setPasswordResetEmail(forgotEmail);
         setPasswordResetCpf("");
+        setPasswordResetMaskedEmail("");
       }
       setResetCode("");
       setResetCodeError(undefined);
@@ -1029,7 +1056,7 @@ export function LoginModal() {
       />
     ) : forgotFlow === "enter-code" ? (
       <ForgotPasswordEnterCodePanel
-        sentToEmail={passwordResetEmail}
+        sentToEmail={passwordResetEmail || passwordResetMaskedEmail}
         code={resetCode}
         onCodeChange={(v) => { setResetCode(v); if (resetCodeError) setResetCodeError(undefined); }}
         error={resetCodeError}

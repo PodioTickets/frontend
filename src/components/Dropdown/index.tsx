@@ -24,6 +24,8 @@ export interface DropdownOption {
   onClick?: () => void;
   isDivider?: boolean;
   id?: string;
+  /** Opção não-selecionável (ex.: variação esgotada). Render apagado + "Esgotado". */
+  disabled?: boolean;
 }
 
 export interface ModalityColumn {
@@ -206,6 +208,7 @@ const OptionItem = memo(
     allOptions?: DropdownOption[];
   }) => {
     const handleClick = useCallback(() => {
+      if (option.disabled) return;
       if (option.onClick) {
         option.onClick();
       }
@@ -228,7 +231,12 @@ const OptionItem = memo(
             </p>
           </div>
         ) : (
-          <div className="h-[48px] px-4 flex items-center gap-3 text-gray-12 hover:bg-gray-3 transition-colors duration-150 cursor-pointer group min-w-0">
+          <div
+            className={`h-[48px] px-4 flex items-center gap-3 transition-colors duration-150 min-w-0 ${option.disabled
+              ? "text-gray-9 cursor-not-allowed"
+              : "text-gray-12 hover:bg-gray-3 cursor-pointer group"
+              }`}
+          >
             {isIconComponent && (
               <div className="shrink-0 w-5 h-5 flex items-center justify-center text-gray-11 group-hover:text-gray-12 transition-colors">
                 {React.createElement(option.icon, { className: "w-5 h-5" })}
@@ -240,12 +248,23 @@ const OptionItem = memo(
                 alt={option.label}
                 width={20}
                 height={20}
-                className="shrink-0"
+                className={`shrink-0 ${option.disabled ? "opacity-50" : ""}`}
                 loading="lazy"
                 decoding="async"
               />
             )}
-            {option.suffix != null ? (
+            {option.disabled ? (
+              // Esgotado: nome apagado à esquerda + selo "Esgotado" à direita
+              // (substitui o preço, que não é relevante quando indisponível).
+              <div className="flex flex-1 min-w-0 items-center justify-between gap-2">
+                <span className="text-sm font-normal text-gray-9 truncate min-w-0">
+                  {option.label}
+                </span>
+                <span className="text-xs font-semibold text-gray-10 shrink-0">
+                  Esgotado
+                </span>
+              </div>
+            ) : option.suffix != null ? (
               <div className="flex flex-1 min-w-0 items-center gap-1">
                 <span className="text-sm font-normal text-gray-12 truncate min-w-0">
                   {option.label}
@@ -285,7 +304,11 @@ const OptionItem = memo(
             {content}
           </Link>
         ) : (
-          <div onClick={handleClick} className="cursor-pointer h-full">
+          <div
+            onClick={handleClick}
+            className={`h-full ${option.disabled ? "" : "cursor-pointer"}`}
+            aria-disabled={option.disabled || undefined}
+          >
             {content}
           </div>
         )}
@@ -587,6 +610,8 @@ export function Dropdown({
 
   const handleSelect = useCallback(
     (option: DropdownOption) => {
+      // Opção desabilitada (ex.: variação esgotada) nunca seleciona.
+      if (option.disabled) return;
       if (multiSelect && option.id) {
         const isCurrentlySelected = selectedIdsSet.has(option.id);
         const newSelectedIds = isCurrentlySelected

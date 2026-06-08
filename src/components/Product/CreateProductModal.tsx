@@ -39,6 +39,30 @@ interface ProductVariation {
   name: string;
   price: string;
   stock: string;
+  /**
+   * Snapshot PERSISTIDO do backend (só em edição). Usados pra exibir
+   * "restantes/total" no campo Estoque. Ausentes em criação / variação nova.
+   * - `persistedStock`  → limite salvo (`0` = ilimitado).
+   * - `availableStock`  → restante salvo.
+   * - `soldCount`       → vendidas (confirmadas).
+   */
+  persistedStock?: number;
+  availableStock?: number;
+  soldCount?: number;
+}
+
+/**
+ * Texto "restantes/total" do estoque persistido de uma variação (edição).
+ * Retorna `null` em criação / variação nova (sem snapshot do backend) e
+ * "Ilimitado" quando o limite salvo é `0` (sentinela do backend). O denominador
+ * usa o estoque PERSISTIDO (não o input editável) pra não oscilar enquanto o
+ * organizador digita um novo total.
+ */
+function formatVariationStockSummary(v: ProductVariation): string | null {
+  if (v.persistedStock == null) return null;
+  if (v.persistedStock <= 0) return "Ilimitado";
+  const remaining = Math.max(0, v.availableStock ?? v.persistedStock);
+  return `${remaining}/${v.persistedStock}`;
 }
 
 type LinkedTicketListItem = { name: string; categoryLabel: string };
@@ -377,6 +401,13 @@ export function CreateProductModal() {
           (v: unknown, i: number) => {
             const row =
               v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+            // Inteiro de campo da API (camelCase/snake_case); null se ausente.
+            const toApiInt = (val: unknown): number | undefined => {
+              if (val == null || val === "") return undefined;
+              const n = typeof val === "number" ? val : parseInt(String(val), 10);
+              return Number.isFinite(n) ? n : undefined;
+            };
+            const persistedStock = toApiInt(row.stock ?? row.quantity);
             return {
               id: String(row.id ?? `v-${Date.now()}-${i}`),
               name: String(row.name ?? row.variation_name ?? ""),
@@ -389,6 +420,10 @@ export function CreateProductModal() {
                   : row.quantity != null
                     ? String(row.quantity)
                     : "",
+              // Snapshot persistido p/ exibir "restantes/total" (só em edição).
+              persistedStock,
+              availableStock: toApiInt(row.availableStock ?? row.available_stock),
+              soldCount: toApiInt(row.soldCount ?? row.sold_count),
             };
           },
         );
@@ -1446,7 +1481,17 @@ export function CreateProductModal() {
                         </div>
 
                         {/* Variations List */}
-                        {variations.map((variation) => (
+                        {variations.map((variation) => {
+                          // "restantes/total" persistido (edição); null em criação;
+                          // "Ilimitado" quando o limite salvo é 0.
+                          const stockSummary = formatVariationStockSummary(variation);
+                          const isUnlimited = stockSummary === "Ilimitado";
+                          // Restantes (persistido) p/ exibir no lugar da quantidade.
+                          const remaining =
+                            stockSummary && !isUnlimited
+                              ? Math.max(0, variation.availableStock ?? variation.persistedStock ?? 0)
+                              : null;
+                          return (
                           <Fragment key={variation.id}>
                             {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
                             <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
@@ -1482,7 +1527,11 @@ export function CreateProductModal() {
                                     Estoque
                                   </p>
                                   <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {variation.stock || "0"} Un
+                                    {stockSummary
+                                      ? isUnlimited
+                                        ? "Ilimitado"
+                                        : `${stockSummary} Un`
+                                      : `${variation.stock || "0"} Un`}
                                   </p>
                                 </div>
                               </div>
@@ -1530,6 +1579,11 @@ export function CreateProductModal() {
                                 )}
                               </div>
                               <div className="flex w-[132px] items-center justify-center px-4">
+                                {remaining != null && (
+                                  <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums">
+                                    {remaining}/
+                                  </span>
+                                )}
                                 <input
                                   type="number"
                                   value={variation.stock}
@@ -1540,7 +1594,7 @@ export function CreateProductModal() {
                                       e.target.value,
                                     )
                                   }
-                                  className="w-16 border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:ring-0"
+                                  className={`border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [field-sizing:content] min-w-[1.5ch] ${remaining != null ? "max-w-[5ch]" : "w-16"}`}
                                   placeholder="0"
                                 />
                               </div>
@@ -1558,7 +1612,8 @@ export function CreateProductModal() {
                               </div>
                             </div>
                           </Fragment>
-                        ))}
+                          );
+                        })}
 
                         {/* Add Variation Button — desktop adiciona linha inline, mobile abre bottom sheet. */}
                         <div className="flex justify-center p-4 max-md:pt-0 md:border-t md:border-gray-6">
@@ -1718,7 +1773,7 @@ export function CreateProductModal() {
                       {productPreviewDropdownOptions.length > 0 ? (
                         <div className="p-4">
                           <p className="mb-2 text-base text-gray-12">
-                            Escolha a variação  {`- ${variationTypeName.trim() || ""}`}
+                            Escolha a variação {(variationTypeName.trim() ? `- ${variationTypeName.trim()}` : "").trim() || ""}
                           </p>
                           <Dropdown
                             options={productPreviewDropdownOptions}
