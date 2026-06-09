@@ -885,7 +885,11 @@ export function CreateProductModal() {
         isIncludedInTicket,
         basePrice: Math.round(basePriceReais * 100),
         isRequired: isIncludedInTicket ? isRequired : false,
-        variationType: variationTypeName.trim() || undefined,
+        // Vazio = SEM tipo de variação. Enviamos "" (não `undefined`): no update
+        // o backend stripa `undefined` e manteria o tipo antigo, então limpar o
+        // campo no modal não surtia efeito. "" é gravado e LIMPA o campo. `null`
+        // não serve (o DTO valida `@IsString()`).
+        variationType: variationTypeName.trim(),
         variations: (() => {
           const fromForm = variations
             .filter((v) => v.name.trim())
@@ -1773,7 +1777,10 @@ export function CreateProductModal() {
                       {productPreviewDropdownOptions.length > 0 ? (
                         <div className="p-4">
                           <p className="mb-2 text-base text-gray-12">
-                            Escolha a variação {(variationTypeName.trim() ? `- ${variationTypeName.trim()}` : "").trim() || ""}
+                            {/* Com nome: usa o texto do organizador como título
+                                (ex.: "Escolha o tamanho da camisa"). Vazio: rótulo
+                                padrão "Escolha a variação". */}
+                            {variationTypeName.trim() || "Escolha a variação"}
                           </p>
                           <Dropdown
                             options={productPreviewDropdownOptions}

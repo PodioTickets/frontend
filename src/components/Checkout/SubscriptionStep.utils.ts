@@ -117,9 +117,13 @@ export const formatProductCardBasePriceLabel = (product: Product): string => {
   return formatPrice(product.basePrice);
 };
 
-/** Alinhado ao CreateProductModal: "Escolha a variação - {tipo}" ou "Variações". */
+/**
+ * Título da seção de variação. Quando o organizador define um tipo, esse texto
+ * é o título completo (ex.: "Escolha o tamanho da camisa"); vazio cai no rótulo
+ * padrão "Escolha a variação". Espelha o preview do CreateProductModal.
+ */
 export const variationSectionTitle = (product: Product) =>
-  `Escolha a variação ${(product.variationType ? `- ${product.variationType}` : "").trim() || ""}`;
+  product.variationType?.trim() || "Escolha a variação";
 
 /**
  * Valor em reais a somar no total do pedido.
