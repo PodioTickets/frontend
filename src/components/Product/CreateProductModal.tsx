@@ -885,7 +885,11 @@ export function CreateProductModal() {
         isIncludedInTicket,
         basePrice: Math.round(basePriceReais * 100),
         isRequired: isIncludedInTicket ? isRequired : false,
-        variationType: variationTypeName.trim() || undefined,
+        // Vazio = SEM tipo de variação. Enviamos "" (não `undefined`): no update
+        // o backend stripa `undefined` e manteria o tipo antigo, então limpar o
+        // campo no modal não surtia efeito. "" é gravado e LIMPA o campo. `null`
+        // não serve (o DTO valida `@IsString()`).
+        variationType: variationTypeName.trim(),
         variations: (() => {
           const fromForm = variations
             .filter((v) => v.name.trim())
