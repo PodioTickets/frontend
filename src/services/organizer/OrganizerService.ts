@@ -730,9 +730,7 @@ export interface DashboardRankingsData {
   tickets: {
     message: string;
     data: {
-      /** Shape idêntico ao retornado por `/events/:id/financial` — raw, pra
-       * passar por `formatRawTicket` + `mapTicketsToFinancialList`. */
-      tickets: any[];
+      tickets: FinancialTicket[];
       pagination: DashboardPagination;
     };
   };
@@ -820,22 +818,33 @@ export interface RevenueChartData {
   }>;
 }
 
+/** Lote de um ingresso, conforme `TicketsService.findAll` (Prisma `Batch`). */
+export interface FinancialTicketBatch {
+  id: string;
+  /** Preço do lote em centavos. */
+  price: number;
+  /** Unidades vendidas do lote (agregado pelo backend). */
+  quantitySold?: number;
+  createdAt?: string;
+}
+
+/**
+ * Ingresso no bloco `tickets` — shape idêntico ao retornado pelo backend em
+ * `/dashboard/rankings` e `/events/:id/financial` (`TicketsService.findAll` +
+ * `organizerNet` injetado pelo dashboard). Consumido diretamente por
+ * `TicketsWithLotsList`, sem etapa de formatação intermediária.
+ */
 export interface FinancialTicket {
   id: string;
-  type: "category" | "lot";
   name: string;
-  subtitle?: string;
-  categoryId?: string;
-  sold: string;
-  revenue: number;
   createdAt: string;
-  lots?: Array<{
-    id: string;
-    name: string;
-    sold: string;
-    revenue: number;
-    createdAt: string;
-  }>;
+  categoryId?: string | null;
+  category?: { name: string } | null;
+  /** Total vendido do ingresso (soma dos lotes), agregado pelo backend. */
+  quantitySold?: number;
+  /** Receita líquida do organizador no período (centavos). Só em `/dashboard/rankings`. */
+  organizerNet?: number;
+  batches: FinancialTicketBatch[];
 }
 
 export interface FinancialData {
@@ -844,7 +853,7 @@ export interface FinancialData {
   tickets: {
     message: string;
     data: {
-      tickets: any[];
+      tickets: FinancialTicket[];
       pagination: {
         page: number;
         limit: number;
