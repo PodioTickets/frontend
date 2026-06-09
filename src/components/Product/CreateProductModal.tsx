@@ -1777,7 +1777,10 @@ export function CreateProductModal() {
                       {productPreviewDropdownOptions.length > 0 ? (
                         <div className="p-4">
                           <p className="mb-2 text-base text-gray-12">
-                            Escolha a variação {(variationTypeName.trim() ? `- ${variationTypeName.trim()}` : "").trim() || ""}
+                            {/* Com nome: usa o texto do organizador como título
+                                (ex.: "Escolha o tamanho da camisa"). Vazio: rótulo
+                                padrão "Escolha a variação". */}
+                            {variationTypeName.trim() || "Escolha a variação"}
                           </p>
                           <Dropdown
                             options={productPreviewDropdownOptions}
