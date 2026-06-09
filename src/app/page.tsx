@@ -16,7 +16,7 @@ import { Button } from "@/components/Button";
  * defaults herdados do root layout para esta rota.
  */
 const OG_TITLE = "PódioTicket";
-const OG_DESCRIPTION = "Escolha seu próximo desafio.";
+const OG_DESCRIPTION = "Grandes conquistas começam com uma inscrição.";
 const OG_IMAGE = "/images/logo_graph.jpeg";
 
 export const metadata: Metadata = {
