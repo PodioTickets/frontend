@@ -22,7 +22,7 @@ export const contentType = "image/png";
 export default async function OpengraphImage() {
   // Logo horizontal em alta resolução (1400×240) — nítida ao escalar.
   const logo = await readFile(
-    join(process.cwd(), "public/images/logo-podioticket.png"),
+    join(process.cwd(), "public/images/logo_graph.jpeg"),
   );
   const logoSrc = `data:image/png;base64,${logo.toString("base64")}`;
 
