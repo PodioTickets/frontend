@@ -5,7 +5,10 @@ import { ArrowButton } from "@/components/ArrowButton";
 import { Tooltip } from "@/components/Tooltip";
 import { TicketIcon } from "@/components/Icons/TicketIcon";
 import { cn } from "@/utils/cn";
-import type { FinancialTicket } from "@/services/organizer/OrganizerService";
+import type {
+  FinancialTicket,
+  FinancialTicketBatch,
+} from "@/services/organizer/OrganizerService";
 import { formatDateBR } from "@/utils/datetimeBR";
 
 /**
@@ -85,6 +88,61 @@ const formatBRL = (cents: number) =>
     maximumFractionDigits: 2,
   });
 
+// ── Derivações de exibição a partir do shape cru do backend ──────────────────
+// O backend já entrega `quantitySold` agregado e os lotes (centavos). Estas
+// funções puras calculam o que a tabela mostra — sem etapa de formatação prévia.
+
+const batchSold = (batch: FinancialTicketBatch) => batch.quantitySold ?? 0;
+const batchGrossCents = (batch: FinancialTicketBatch) =>
+  batchSold(batch) * (batch.price || 0);
+
+/** Categoria do ingresso; ingressos avulsos não têm categoria. */
+const ticketSubtitle = (ticket: FinancialTicket) =>
+  ticket.category?.name || "Ingresso avulso";
+
+/** Total vendido: usa o agregado do backend, com fallback à soma dos lotes. */
+const ticketSold = (ticket: FinancialTicket) =>
+  ticket.quantitySold ?? ticket.batches.reduce((sum, b) => sum + batchSold(b), 0);
+
+/** Receita bruta do ingresso = soma de `vendidos × preço` por lote (centavos). */
+const ticketGrossCents = (ticket: FinancialTicket) =>
+  ticket.batches.reduce((sum, b) => sum + batchGrossCents(b), 0);
+
+/**
+ * Receita LÍQUIDA do ingresso (centavos) — o que a coluna "Receita líquida"
+ * exibe. Prioriza `organizerNet` (líquido do organizador no período, já calculado
+ * pelo backend em `/dashboard/rankings`). Onde ele não vem (ex.: `/events/:id/
+ * financial`), cai na receita bruta dos lotes.
+ */
+const ticketNetCents = (ticket: FinancialTicket) =>
+  ticket.organizerNet ?? ticketGrossCents(ticket);
+
+/**
+ * Receita líquida POR LOTE (centavos), na mesma métrica do total do ingresso.
+ * O backend não fornece líquido por lote, então quando há `organizerNet` ele é
+ * rateado proporcionalmente à receita bruta de cada lote — e o último lote
+ * absorve o arredondamento para que a soma feche exatamente com `organizerNet`.
+ * Sem `organizerNet`, retorna a receita bruta de cada lote.
+ */
+const lotNetCents = (ticket: FinancialTicket): number[] => {
+  const grosses = ticket.batches.map(batchGrossCents);
+  const net = ticket.organizerNet;
+  if (net == null) return grosses;
+
+  const totalGross = grosses.reduce((sum, g) => sum + g, 0);
+  // Sem base bruta para ratear (ex.: 100% cortesia): concentra tudo no 1º lote.
+  if (totalGross <= 0)
+    return grosses.map((_, i) => (i === 0 ? net : 0));
+
+  let allocated = 0;
+  return grosses.map((gross, i) => {
+    if (i === grosses.length - 1) return net - allocated; // remanescente
+    const share = Math.round((net * gross) / totalGross);
+    allocated += share;
+    return share;
+  });
+};
+
 export function TicketsWithLotsList({
   tickets,
   expandedRows,
@@ -94,6 +152,7 @@ export function TicketsWithLotsList({
   onPageChange,
   mobileTitle = "Ingressos de lotes",
 }: TicketsWithLotsListProps) {
+  console.log(tickets)
   return (
     <>
       {/* ========== MOBILE ========== */}
@@ -104,9 +163,11 @@ export function TicketsWithLotsList({
         <div className="flex flex-col gap-3">
           {tickets.map((item) => {
             const isExpanded = expandedRows.has(item.id);
-            const hasLots = !!item.lots && item.lots.length > 0;
-            const revenueLabel = `R$ ${formatBRL(item.revenue)}`;
-            const subtitleLabel = item.subtitle || "Sem categoria";
+            const hasLots = item.batches.length > 0;
+            const revenueLabel = `R$ ${formatBRL(ticketNetCents(item))}`;
+            const subtitleLabel = ticketSubtitle(item);
+            const soldLabel = ticketSold(item);
+            const lotNets = lotNetCents(item);
 
             /* Card de CATEGORIA com lotes — cinza minimizado / azul expandido. */
             if (hasLots) {
@@ -135,7 +196,7 @@ export function TicketsWithLotsList({
                           {subtitleLabel}
                         </p>
                         <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap shrink-0">
-                          {item.sold} vendidos
+                          {soldLabel} vendidos
                         </p>
                       </div>
                       <div className="flex items-center justify-between gap-3 min-w-0">
@@ -155,11 +216,9 @@ export function TicketsWithLotsList({
                     </p>
                   </button>
                   {isExpanded &&
-                    item.lots &&
-                    item.lots.map((lot: any, lotIndex: number) => {
-                      const lotSold = lot.quantitySold || 0;
-                      const lotRevenue = lotSold * (lot.price || 0);
-                      const lotRevenueLabel = `R$ ${formatBRL(lotRevenue)}`;
+                    item.batches.map((lot, lotIndex) => {
+                      const lotSold = batchSold(lot);
+                      const lotRevenueLabel = `R$ ${formatBRL(lotNets[lotIndex])}`;
                       return (
                         <div
                           key={`${item.id}-lot-${lot.id}`}
@@ -199,7 +258,7 @@ export function TicketsWithLotsList({
                         {subtitleLabel}
                       </p>
                       <p className="font-family-dm-sans font-medium text-sm leading-[1.3] text-gray-12 whitespace-nowrap shrink-0">
-                        {item.sold} vendidos
+                        {soldLabel} vendidos
                       </p>
                     </div>
                     <div className="flex items-center justify-between gap-3 min-w-0">
@@ -254,15 +313,15 @@ export function TicketsWithLotsList({
         <div className="flex flex-col items-start w-full">
           {tickets.map((item) => {
             const isExpanded = expandedRows.has(item.id);
-            const isCategory = item.type === "category";
-            const hasLots = !!item.lots && item.lots.length > 0;
+            const hasLots = item.batches.length > 0;
+            const subtitleLabel = ticketSubtitle(item);
+            const lotNets = lotNetCents(item);
             return (
               <div key={item.id} className="w-full">
                 <div
                   className={cn(
-                    "border-b border-gray-6 flex items-center justify-between w-full hover:bg-gray-2 transition-colors",
+                    "border-b border-gray-6 flex items-center justify-between w-full h-[56px] hover:bg-gray-2 transition-colors",
                     isExpanded && hasLots ? "bg-blue-3" : "bg-gray-1",
-                    isCategory ? "h-[56px]" : "h-[48px]",
                   )}
                 >
                   <div className="flex h-full items-center px-4 py-3 w-[289.5px]">
@@ -287,21 +346,19 @@ export function TicketsWithLotsList({
                         </button>
                       )}
                       <div className="flex flex-col gap-0 w-[200px]">
-                        {item.subtitle && (
-                          <Tooltip
-                            contentClassName="w-auto px-3 py-2 gap-0"
-                            position="topRight"
-                            content={
-                              <p className="font-inter font-normal text-xs text-gray-11 leading-[1.3] whitespace-nowrap">
-                                {item.subtitle}
-                              </p>
-                            }
-                          >
-                            <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
-                              {item.subtitle}
+                        <Tooltip
+                          contentClassName="w-auto px-3 py-2 gap-0"
+                          position="topRight"
+                          content={
+                            <p className="font-inter font-normal text-xs text-gray-11 leading-[1.3] whitespace-nowrap">
+                              {subtitleLabel}
                             </p>
-                          </Tooltip>
-                        )}
+                          }
+                        >
+                          <p className="font-inter font-normal leading-[1.3] text-sm text-gray-11 truncate">
+                            {subtitleLabel}
+                          </p>
+                        </Tooltip>
                         <Tooltip
                           contentClassName="w-auto px-3 py-2 gap-0"
                           position="topRight"
@@ -321,7 +378,7 @@ export function TicketsWithLotsList({
 
                   <div className="flex flex-1 h-full items-center min-h-px min-w-px px-4 py-3">
                     <p className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                      {item.sold}
+                      {ticketSold(item)}
                     </p>
                   </div>
 
@@ -331,7 +388,7 @@ export function TicketsWithLotsList({
                         R$
                       </span>
                       <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                        {(item.revenue / 100).toFixed(2).replace(".", ",")}
+                        {formatBRL(ticketNetCents(item))}
                       </span>
                     </div>
                   </div>
@@ -344,11 +401,9 @@ export function TicketsWithLotsList({
                 </div>
 
                 {isExpanded &&
-                  hasLots &&
-                  item.lots &&
-                  item.lots.map((lot: any, lotIndex: number) => {
-                    const lotSold = lot.quantitySold || 0;
-                    const lotRevenue = (lot.price || 0) * lotSold;
+                  item.batches.map((lot, lotIndex) => {
+                    const lotSold = batchSold(lot);
+                    const lotRevenueLabel = formatBRL(lotNets[lotIndex]);
                     const lotCreatedAt = lot.createdAt || item.createdAt;
                     const lotName = `Lote ${lotIndex + 1}`;
 
@@ -379,9 +434,7 @@ export function TicketsWithLotsList({
                               R$
                             </span>
                             <span className="font-inter font-semibold leading-[1.3] text-sm text-gray-12">
-                              {(lotRevenue / 100)
-                                .toFixed(2)
-                                .replace(".", ",")}
+                              {lotRevenueLabel}
                             </span>
                           </div>
                         </div>

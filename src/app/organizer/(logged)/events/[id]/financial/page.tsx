@@ -29,8 +29,6 @@ import { useRequestTransferModal } from "@/stores/modalStore";
 import { RepasseIcon } from "@/components/Icons/RepasseIcon";
 import { PaymentIcon } from "@/components/Icons/PaymentIcon";
 import type { FinancialTicket, PaymentMethodStats } from "@/services/organizer/OrganizerService";
-import { mapTicketsToFinancialList } from "@/utils/financialTickets";
-import { formatRawTicket } from "@/hooks/useTickets";
 import { RemoveIcon } from "@/components/Icons/RemoveIcon";
 import { ChargeBackIcon } from "@/components/Icons/ChargeBackIcon";
 import { TimerIcon } from "@/components/Icons/Organizer/TimerIcon";
@@ -143,11 +141,7 @@ export default function EventFinancialPage() {
         paymentMethodStats: financialDataResponse.summary.paymentMethodStats,
       });
 
-      const rawTickets: any[] = financialDataResponse.tickets.data.tickets;
-      const formattedTickets = mapTicketsToFinancialList(
-        rawTickets.map(formatRawTicket),
-      );
-      setTicketsData(formattedTickets);
+      setTicketsData(financialDataResponse.tickets.data.tickets);
       setTicketsPagination(financialDataResponse.tickets.data.pagination);
     } catch (error: any) {
       console.error("Error loading event:", error);
