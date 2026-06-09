@@ -204,6 +204,15 @@ export function CreateProductModal() {
   const hasMinVariations = filledVariationsCount >= 1;
 
   /**
+   * Produto SEGURA estoque próprio quando NÃO é incluso-E-obrigatório ao mesmo
+   * tempo (espelha `holdsStock` do backend). Incluso+obrigatório é gated pela
+   * vaga do ingresso → estoque da variação é irrelevante: a coluna de Estoque
+   * fica OCULTA. Quando segura estoque (opcional ou não-incluso), o estoque é
+   * exigido (> 0) na validação.
+   */
+  const productHoldsStock = !(isIncludedInTicket && isRequired);
+
+  /**
    * Primeiro nome de variação duplicado (trim + case-insensitive pt-BR), ou
    * null se todos são únicos. Detecção em tempo real para o erro inline abaixo
    * da lista — espelha a regra do `validateBeforeSave` (que só avisa via toast
@@ -851,6 +860,21 @@ export function CreateProductModal() {
       return false;
     }
 
+    // Itens que SEGURAM estoque (opcionais ou não-inclusos): o estoque é o
+    // limite de venda e não pode ser 0 (vazio = 0). Para incluso+obrigatório a
+    // coluna nem aparece (gated pela vaga do ingresso) → não validamos.
+    if (productHoldsStock) {
+      for (const v of variations) {
+        if (!v.name.trim()) continue;
+        if ((parseInt(v.stock, 10) || 0) <= 0) {
+          toast.error(
+            `Informe um estoque maior que zero para a variação "${v.name.trim()}".`,
+          );
+          return false;
+        }
+      }
+    }
+
     if (!isIncludedInTicket && parsePriceReais(basePrice) <= 0) {
       toast.error("Informe um preço maior que zero para o produto.");
       return false;
@@ -1472,11 +1496,13 @@ export function CreateProductModal() {
                               </Tooltip>
                             </span>
                           </div>
-                          <div className="flex w-[132px] items-center justify-center px-4">
-                            <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
-                              Estoque
-                            </span>
-                          </div>
+                          {productHoldsStock && (
+                            <div className="flex w-[132px] items-center justify-center px-4">
+                              <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
+                                Estoque
+                              </span>
+                            </div>
+                          )}
                           <div className="flex h-full w-[74px] items-center justify-center border-l border-gray-6 px-4">
                             <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               Ações
@@ -1526,18 +1552,20 @@ export function CreateProductModal() {
                                     {isIncludedInTicket ? "Incluso" : `R$ ${variation.price || "0,00"}`}
                                   </p>
                                 </div>
-                                <div className="flex flex-col items-end gap-3">
-                                  <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                    Estoque
-                                  </p>
-                                  <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {stockSummary
-                                      ? isUnlimited
-                                        ? "Ilimitado"
-                                        : `${stockSummary} Un`
-                                      : `${variation.stock || "0"} Un`}
-                                  </p>
-                                </div>
+                                {productHoldsStock && (
+                                  <div className="flex flex-col items-end gap-3">
+                                    <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                      Estoque
+                                    </p>
+                                    <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                      {stockSummary
+                                        ? isUnlimited
+                                          ? "Ilimitado"
+                                          : `${stockSummary} Un`
+                                        : `${variation.stock || "0"} Un`}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -1582,26 +1610,28 @@ export function CreateProductModal() {
                                   </div>
                                 )}
                               </div>
-                              <div className="flex w-[132px] items-center justify-center px-4">
-                                {remaining != null && (
-                                  <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums">
-                                    {remaining}/
-                                  </span>
-                                )}
-                                <input
-                                  type="number"
-                                  value={variation.stock}
-                                  onChange={(e) =>
-                                    handleVariationChange(
-                                      variation.id,
-                                      "stock",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className={`border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [field-sizing:content] min-w-[1.5ch] ${remaining != null ? "max-w-[5ch]" : "w-16"}`}
-                                  placeholder="0"
-                                />
-                              </div>
+                              {productHoldsStock && (
+                                <div className="flex w-[132px] items-center justify-center px-4">
+                                  {remaining != null && (
+                                    <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums">
+                                      {remaining}/
+                                    </span>
+                                  )}
+                                  <input
+                                    type="number"
+                                    value={variation.stock}
+                                    onChange={(e) =>
+                                      handleVariationChange(
+                                        variation.id,
+                                        "stock",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={`border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [field-sizing:content] min-w-[1.5ch] ${remaining != null ? "max-w-[5ch]" : "w-16"}`}
+                                    placeholder="0"
+                                  />
+                                </div>
+                              )}
                               <div className="flex w-[74px] items-center justify-center px-4">
                                 <button
                                   type="button"
@@ -2015,18 +2045,20 @@ export function CreateProductModal() {
                         </div>
                       </div>
                     )}
-                    <div className="flex flex-col gap-2">
-                      <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                        Estoque
-                      </label>
-                      <input
-                        type="number"
-                        value={mobileVariationDraft.stock}
-                        onChange={(e) => setMobileVariationDraft({ ...mobileVariationDraft, stock: e.target.value })}
-                        placeholder="Ex: 100"
-                        className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
-                      />
-                    </div>
+                    {productHoldsStock && (
+                      <div className="flex flex-col gap-2">
+                        <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                          Estoque
+                        </label>
+                        <input
+                          type="number"
+                          value={mobileVariationDraft.stock}
+                          onChange={(e) => setMobileVariationDraft({ ...mobileVariationDraft, stock: e.target.value })}
+                          placeholder="Ex: 100"
+                          className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                     <Button
