@@ -204,6 +204,13 @@ export function CreateProductModal() {
   const hasMinVariations = filledVariationsCount >= 1;
 
   /**
+   * Coluna "Total vendidos": só aparece quando há venda real (`soldCount > 0`)
+   * em ALGUMA variação. Sem nenhuma venda (criação, ou edição de produto que
+   * ainda não vendeu) a coluna fica oculta.
+   */
+  const showSoldColumn = variations.some((v) => (v.soldCount ?? 0) > 0);
+
+  /**
    * Produto SEGURA estoque próprio quando NÃO é incluso-E-obrigatório ao mesmo
    * tempo (espelha `holdsStock` do backend). Incluso+obrigatório é gated pela
    * vaga do ingresso → estoque da variação é irrelevante: a coluna de Estoque
@@ -1254,7 +1261,7 @@ export function CreateProductModal() {
                           type="text"
                           value={productName}
                           onChange={(e) => setProductName(e.target.value)}
-                          placeholder="Ex: (item extra) Camiseta da Nike"
+                          placeholder="Ex: Kit basico, camisa, mochila"
                           maxLength={100}
                           showCharCount
                           className="h-12 px-3"
@@ -1462,7 +1469,7 @@ export function CreateProductModal() {
                               {variationTypeName.trim() || "Variações"}
                             </span>
                           </div>
-                          <div className="flex w-[188px] items-center justify-center px-4">
+                          <div className="flex w-[188px] items-center justify-center px-4 border-r h-full border-gray-6">
                             <span className="flex items-center gap-1 text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               Preço específico{" "}
                               <Tooltip
@@ -1484,7 +1491,7 @@ export function CreateProductModal() {
                                     </p>
                                   </div>
                                 }
-                                position="topRight"
+                                position="topLeft"
                               >
                                 <button
                                   type="button"
@@ -1500,6 +1507,13 @@ export function CreateProductModal() {
                             <div className="flex w-[132px] items-center justify-center px-4">
                               <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
                                 Estoque
+                              </span>
+                            </div>
+                          )}
+                          {showSoldColumn && (
+                            <div className="flex w-[150px] items-center justify-center px-4">
+                              <span className="text-sm w-max font-medium font-inter leading-[1.3] text-gray-12">
+                                Total vendidos
                               </span>
                             </div>
                           )}
@@ -1522,130 +1536,149 @@ export function CreateProductModal() {
                               ? Math.max(0, variation.availableStock ?? variation.persistedStock ?? 0)
                               : null;
                           return (
-                          <Fragment key={variation.id}>
-                            {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
-                            <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
-                              <div className="flex w-full items-start justify-between gap-2">
-                                <div className="flex min-w-0 flex-1 flex-col gap-3">
-                                  <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                    Nome da variação
-                                  </p>
-                                  <p className="truncate text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {variation.name || "—"}
-                                  </p>
+                            <Fragment key={variation.id}>
+                              {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
+                              <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
+                                <div className="flex w-full items-start justify-between gap-2">
+                                  <div className="flex min-w-0 flex-1 flex-col gap-3">
+                                    <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                      Nome da variação
+                                    </p>
+                                    <p className="truncate text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                      {variation.name || "—"}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setMobileMoreMenuVariationId(variation.id)}
+                                    className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
+                                    aria-label="Mais opções da variação"
+                                  >
+                                    <MoreVertical className="size-6" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setMobileMoreMenuVariationId(variation.id)}
-                                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
-                                  aria-label="Mais opções da variação"
-                                >
-                                  <MoreVertical className="size-6" />
-                                </button>
-                              </div>
-                              <div className="flex w-full items-start justify-between gap-4">
-                                <div className="flex flex-col gap-3">
-                                  <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                    Preço específico
-                                  </p>
-                                  <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {isIncludedInTicket ? "Incluso" : `R$ ${variation.price || "0,00"}`}
-                                  </p>
-                                </div>
-                                {productHoldsStock && (
-                                  <div className="flex flex-col items-end gap-3">
-                                    <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                      Estoque
+                                <div className="flex w-full items-start justify-between gap-4">
+                                  <div className="flex flex-col gap-3">
+                                    <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                      Preço específico
                                     </p>
                                     <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                      {stockSummary
-                                        ? isUnlimited
-                                          ? "Ilimitado"
-                                          : `${stockSummary} Un`
-                                        : `${variation.stock || "0"} Un`}
+                                      {isIncludedInTicket ? "Incluso" : `R$ ${variation.price || "0,00"}`}
                                     </p>
                                   </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Desktop — linha da tabela */}
-                            <div className="hidden border-b border-gray-6 md:flex md:h-[52px] md:items-center">
-                              <div className="flex flex-1 px-4">
-                                <input
-                                  type="text"
-                                  value={variation.name}
-                                  onChange={(e) =>
-                                    handleVariationChange(
-                                      variation.id,
-                                      "name",
-                                      e.target.value,
-                                    )
-                                  }
-                                  placeholder="Ex: P, M, G"
-                                  className="h-auto w-full border-0 bg-transparent px-0 text-sm font-medium font-inter text-gray-12 focus:border-0 focus:outline-none focus:ring-0"
-                                />
-                              </div>
-                              <div className="flex w-[188px] items-center justify-center px-4">
-                                {isIncludedInTicket ? (
-                                  <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
-                                    Incluso
-                                  </span>
-                                ) : (
-                                  <div className="flex items-center gap-0.5 text-sm font-semibold font-inter text-gray-12">
-                                    <span>R$</span>
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      value={variation.price || "0,00"}
-                                      onChange={(e) =>
-                                        handlePriceChange(
-                                          variation.id,
-                                          e.target.value,
-                                        )
-                                      }
-                                      className="w-16 border-0 bg-transparent px-0 focus:border-0 focus:outline-none focus:ring-0"
-                                      placeholder="0,00"
-                                    />
+                                  <div className="flex items-start gap-6">
+                                    {productHoldsStock && (
+                                      <div className="flex flex-col items-end gap-3">
+                                        <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                          Estoque
+                                        </p>
+                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                          {stockSummary
+                                            ? isUnlimited
+                                              ? "Ilimitado"
+                                              : `${stockSummary} Un`
+                                            : `${variation.stock || "0"} Un`}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {showSoldColumn && (
+                                      <div className="flex flex-col items-end gap-3">
+                                        <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                          Total vendidos
+                                        </p>
+                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12 tabular-nums">
+                                          {variation.soldCount ?? 0}
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
+                                </div>
                               </div>
-                              {productHoldsStock && (
-                                <div className="flex w-[132px] items-center justify-center px-4">
-                                  {remaining != null && (
-                                    <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums">
-                                      {remaining}/
-                                    </span>
-                                  )}
+
+                              {/* Desktop — linha da tabela */}
+                              <div className="hidden border-b border-gray-6 md:flex md:h-[52px] md:items-center">
+                                <div className="flex flex-1 px-4">
                                   <input
-                                    type="number"
-                                    value={variation.stock}
+                                    type="text"
+                                    value={variation.name}
                                     onChange={(e) =>
                                       handleVariationChange(
                                         variation.id,
-                                        "stock",
+                                        "name",
                                         e.target.value,
                                       )
                                     }
-                                    className={`border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [field-sizing:content] min-w-[1.5ch] ${remaining != null ? "max-w-[5ch]" : "w-16"}`}
-                                    placeholder="0"
+                                    placeholder="Ex: P, M, G"
+                                    className="h-auto w-full border-0 bg-transparent px-0 text-sm font-medium font-inter text-gray-12 focus:border-0 focus:outline-none focus:ring-0"
                                   />
                                 </div>
-                              )}
-                              <div className="flex w-[74px] items-center justify-center px-4">
-                                <button
-                                  type="button"
-                                  title="Remover variação"
-                                  onClick={() =>
-                                    handleRemoveVariation(variation.id)
-                                  }
-                                  className="flex size-9 items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 transition-colors hover:bg-red-3"
-                                >
-                                  <TrashIcon className="size-5 text-red-12" />
-                                </button>
+                                <div className="flex w-[188px] items-center justify-center px-4">
+                                  {isIncludedInTicket ? (
+                                    <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
+                                      Incluso
+                                    </span>
+                                  ) : (
+                                    <div className="flex items-center gap-0.5 text-sm font-semibold font-inter text-gray-12">
+                                      <span>R$</span>
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={variation.price || "0,00"}
+                                        onChange={(e) =>
+                                          handlePriceChange(
+                                            variation.id,
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="w-16 border-0 bg-transparent px-0 focus:border-0 focus:outline-none focus:ring-0"
+                                        placeholder="0,00"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                                {productHoldsStock && (
+                                  <div className="flex w-[132px] items-center justify-center px-4">
+                                    {remaining != null && (
+                                      <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums">
+                                        {remaining}/
+                                      </span>
+                                    )}
+                                    <input
+                                      type="number"
+                                      value={variation.stock}
+                                      onChange={(e) =>
+                                        handleVariationChange(
+                                          variation.id,
+                                          "stock",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={`border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [field-sizing:content] min-w-[1.5ch] ${remaining != null ? "max-w-[5ch]" : "w-16"}`}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                )}
+                                {showSoldColumn && (
+                                  <div className="flex w-[150px] items-center justify-center px-4">
+                                    <span className="text-sm font-semibold font-inter text-gray-12 tabular-nums w-max">
+                                      {variation.soldCount ?? 0}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex w-[74px] items-center justify-center px-4">
+                                  <button
+                                    type="button"
+                                    title="Remover variação"
+                                    onClick={() =>
+                                      handleRemoveVariation(variation.id)
+                                    }
+                                    className="flex size-9 items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 transition-colors hover:bg-red-3"
+                                  >
+                                    <TrashIcon className="size-5 text-red-12" />
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          </Fragment>
+                            </Fragment>
                           );
                         })}
 

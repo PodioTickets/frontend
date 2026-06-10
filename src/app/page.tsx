@@ -62,13 +62,13 @@ export default function Home() {
       </div>
 
       <div className="w-full mt-6 md:mt-14">
-        <div className="md:bg-[url('/banners/banner_2.png')] bg-[url('/banners/banner_2_mobile.png')] md:bg-cover bg-cover bg-center bg-no-repeat w-full h-auto lg:h-[256px] rounded-lg p-5 md:p-10 flex flex-col justify-between">
-          <div className="flex flex-col gap-2 md:gap-5">
+        <div className="md:bg-[url('/banners/banner_2.png')] bg-[url('/banners/banner_2_mobile.png')] md:bg-cover bg-cover md:bg-center bg-no-repeat w-full h-auto lg:h-[256px] rounded-lg p-5 md:p-10 flex flex-col justify-between">
+          <div className="flex flex-col gap-2 md:gap-1">
             <h1 className="font-manrope text-base md:text-[28px] font-extrabold text-gray-1">
               Organize eventos com a PódioTicket!
             </h1>
-            <p className="font-manrope text-sm md:text-lg md:font-medium text-gray-1">
-              Venda ingressos online, acompanhe inscrições e simplifique <br /> a gestão do seu evento esportivo
+            <p className="font-manrope text-[12px] md:text-lg md:font-medium text-gray-1">
+              Venda ingressos online, acompanhe inscrições e simplifique <br className="hidden md:block" /> a gestão do seu evento esportivo
             </p>
           </div>
           <Button className="w-max px-8 py-5 font-bold mt-10 md:mt-0">
