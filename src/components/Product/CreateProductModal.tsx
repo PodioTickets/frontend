@@ -38,34 +38,42 @@ interface ProductVariation {
   id: string;
   name: string;
   price: string;
+  /**
+   * Estoque UNIFICADO editável = restante disponível. O "total/limite" deixou de
+   * existir na UI; é derivado no save aplicando ao limite persistido o MESMO
+   * delta que o organizador aplicou ao restante (ver `variationStockToPersist`).
+   */
   stock: string;
   /**
-   * Snapshot PERSISTIDO do backend (só em edição). Usados pra exibir
-   * "restantes/total" no campo Estoque. Ausentes em criação / variação nova.
-   * - `persistedStock`  → limite salvo (`0` = ilimitado).
-   * - `availableStock`  → restante salvo.
-   * - `soldCount`       → vendidas (confirmadas).
+   * Snapshot PERSISTIDO do backend (só em edição). Necessários pra reconstruir o
+   * limite preservando vendas E holds. Ausentes em criação / variação nova.
+   * - `persistedStock`     → limite salvo (`0` = ilimitado).
+   * - `persistedAvailable` → restante salvo na carga (baseline do delta).
+   * - `soldCount`          → vendidas confirmadas (coluna "Total vendidos").
    */
   persistedStock?: number;
-  availableStock?: number;
+  persistedAvailable?: number;
   soldCount?: number;
 }
 
-/**
- * Texto "restantes/total" do estoque persistido de uma variação (edição).
- * Retorna `null` em criação / variação nova (sem snapshot do backend) e
- * "Ilimitado" quando o limite salvo é `0` (sentinela do backend). O denominador
- * usa o estoque PERSISTIDO (não o input editável) pra não oscilar enquanto o
- * organizador digita um novo total.
- */
-function formatVariationStockSummary(v: ProductVariation): string | null {
-  if (v.persistedStock == null) return null;
-  if (v.persistedStock <= 0) return "Ilimitado";
-  const remaining = Math.max(0, v.availableStock ?? v.persistedStock);
-  return `${remaining}/${v.persistedStock}`;
-}
-
 type LinkedTicketListItem = { name: string; categoryLabel: string };
+
+/**
+ * Limite (`stock`) a enviar pro backend a partir do estoque RESTANTE editável.
+ * O backend reconcilia o restante por DELTA do limite — então preservamos vendas
+ * E holds aplicando ao limite persistido o MESMO delta que o organizador aplicou
+ * ao restante:  novoLimite = limitePersistido + (restanteAtual − restanteOriginal).
+ * Variação nova (sem snapshot): limite = restante digitado (sem vendas/holds).
+ * Nunca abaixo de 0.
+ */
+function variationStockToPersist(v: ProductVariation): number {
+  const remaining = parseInt(v.stock, 10) || 0;
+  if (v.persistedStock == null || v.persistedAvailable == null) {
+    return Math.max(0, remaining);
+  }
+  const delta = remaining - v.persistedAvailable;
+  return Math.max(0, v.persistedStock + delta);
+}
 
 function categoryLabelFromTicket(t: Record<string, unknown>): string {
   const nested = t.category as { name?: string } | undefined;
@@ -423,22 +431,28 @@ export function CreateProductModal() {
               const n = typeof val === "number" ? val : parseInt(String(val), 10);
               return Number.isFinite(n) ? n : undefined;
             };
-            const persistedStock = toApiInt(row.stock ?? row.quantity);
             return {
               id: String(row.id ?? `v-${Date.now()}-${i}`),
               name: String(row.name ?? row.variation_name ?? ""),
               price: formatPriceFromApi(
                 (row.price ?? row.unit_price) as number | string | undefined,
               ),
+              // Campo de estoque UNIFICADO = restante disponível
+              // (`availableStock`). O "total" deixou de existir na UI; o limite
+              // é derivado no save (restante + vendidas). Fallback ao limite
+              // (`stock`) p/ respostas legadas sem `availableStock`.
               stock:
-                row.stock != null
-                  ? String(row.stock)
-                  : row.quantity != null
-                    ? String(row.quantity)
-                    : "",
-              // Snapshot persistido p/ exibir "restantes/total" (só em edição).
-              persistedStock,
-              availableStock: toApiInt(row.availableStock ?? row.available_stock),
+                row.availableStock != null
+                  ? String(row.availableStock)
+                  : row.available_stock != null
+                    ? String(row.available_stock)
+                    : row.stock != null
+                      ? String(row.stock)
+                      : row.quantity != null
+                        ? String(row.quantity)
+                        : "",
+              persistedStock: toApiInt(row.stock ?? row.quantity),
+              persistedAvailable: toApiInt(row.availableStock ?? row.available_stock),
               soldCount: toApiInt(row.soldCount ?? row.sold_count),
             };
           },
@@ -867,13 +881,15 @@ export function CreateProductModal() {
       return false;
     }
 
-    // Itens que SEGURAM estoque (opcionais ou não-inclusos): o estoque é o
-    // limite de venda e não pode ser 0 (vazio = 0). Para incluso+obrigatório a
-    // coluna nem aparece (gated pela vaga do ingresso) → não validamos.
+    // Itens que SEGURAM estoque (opcionais ou não-inclusos): o campo é o estoque
+    // RESTANTE. O total (restante + vendidas) precisa ser > 0 — uma variação
+    // esgotada (restante 0, mas com vendas) é válida; restante 0 sem nenhuma
+    // venda significaria total 0, que não é permitido. Para incluso+obrigatório
+    // a coluna nem aparece (gated pela vaga do ingresso) → não validamos.
     if (productHoldsStock) {
       for (const v of variations) {
         if (!v.name.trim()) continue;
-        if ((parseInt(v.stock, 10) || 0) <= 0) {
+        if (variationStockToPersist(v) <= 0) {
           toast.error(
             `Informe um estoque maior que zero para a variação "${v.name.trim()}".`,
           );
@@ -931,7 +947,9 @@ export function CreateProductModal() {
               return {
                 name: v.name.trim(),
                 price: Math.round(priceReais * 100),
-                stock: parseInt(v.stock, 10) || 0,
+                // Campo = restante disponível; deriva o LIMITE preservando
+                // vendas e holds (delta sobre o limite persistido).
+                stock: variationStockToPersist(v),
               };
             });
           const hidden = organizerHiddenSemInteresseRef.current;
@@ -945,7 +963,7 @@ export function CreateProductModal() {
                     Math.round(
                       (parseFloat(String(hidden.price || "0").replace(",", ".")) || 0) * 100,
                     ),
-                  stock: parseInt(hidden.stock, 10) || 0,
+                  stock: variationStockToPersist(hidden),
                 },
               ]
               : fromForm;
@@ -1526,15 +1544,6 @@ export function CreateProductModal() {
 
                         {/* Variations List */}
                         {variations.map((variation) => {
-                          // "restantes/total" persistido (edição); null em criação;
-                          // "Ilimitado" quando o limite salvo é 0.
-                          const stockSummary = formatVariationStockSummary(variation);
-                          const isUnlimited = stockSummary === "Ilimitado";
-                          // Restantes (persistido) p/ exibir no lugar da quantidade.
-                          const remaining =
-                            stockSummary && !isUnlimited
-                              ? Math.max(0, variation.availableStock ?? variation.persistedStock ?? 0)
-                              : null;
                           return (
                             <Fragment key={variation.id}>
                               {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
@@ -1573,11 +1582,7 @@ export function CreateProductModal() {
                                           Estoque
                                         </p>
                                         <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                          {stockSummary
-                                            ? isUnlimited
-                                              ? "Ilimitado"
-                                              : `${stockSummary} Un`
-                                            : `${variation.stock || "0"} Un`}
+                                          {`${variation.stock || "0"} Un`}
                                         </p>
                                       </div>
                                     )}
@@ -1638,11 +1643,6 @@ export function CreateProductModal() {
                                 </div>
                                 {productHoldsStock && (
                                   <div className="flex w-[132px] items-center justify-center px-4">
-                                    {remaining != null && (
-                                      <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums">
-                                        {remaining}/
-                                      </span>
-                                    )}
                                     <input
                                       type="number"
                                       value={variation.stock}
@@ -1653,7 +1653,7 @@ export function CreateProductModal() {
                                           e.target.value,
                                         )
                                       }
-                                      className={`border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [field-sizing:content] min-w-[1.5ch] ${remaining != null ? "max-w-[5ch]" : "w-16"}`}
+                                      className="w-16 border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                       placeholder="0"
                                     />
                                   </div>
