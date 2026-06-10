@@ -1586,7 +1586,7 @@ export function CreateProductModal() {
                                         <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
                                           Total vendidos
                                         </p>
-                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12 tabular-nums">
+                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-11 tabular-nums">
                                           {variation.soldCount ?? 0}
                                         </p>
                                       </div>
@@ -1660,7 +1660,7 @@ export function CreateProductModal() {
                                 )}
                                 {showSoldColumn && (
                                   <div className="flex w-[150px] items-center justify-center px-4">
-                                    <span className="text-sm font-semibold font-inter text-gray-12 tabular-nums w-max">
+                                    <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums w-max">
                                       {variation.soldCount ?? 0}
                                     </span>
                                   </div>
