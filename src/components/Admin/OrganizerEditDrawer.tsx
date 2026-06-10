@@ -434,6 +434,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
   const [instagram, setInstagram] = useState("");
   const [pixKeys, setPixKeys] = useState<PixKey[]>([]);
   const [cnpjValue, setCnpjValue] = useState("");
+  const [cnpjError, setCnpjError] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [ownerDocument, setOwnerDocument] = useState("");
   const [fiscalEmail, setFiscalEmail] = useState("");
@@ -546,6 +547,7 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
     if (!isCreate && !org) return;
     setSaving(true);
     setEmailError("");
+    setCnpjError("");
     try {
       const api = getApiClient();
       const payload = {
@@ -593,6 +595,13 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
       // falha. Regex genérico `email.*cadastrad` cobre "Esse email já foi
       // cadastrado", "email cadastrado", "e-mail já cadastrado" etc.
       const norm = apiMsg.normalize("NFC").toLowerCase();
+      // Conflito de DOCUMENTO (CPF/CNPJ) ja cadastrado em outra organizacao ->
+      // erro no input de CNPJ. Tem PRECEDENCIA sobre o conflito de e-mail porque
+      // a frase "Ja existe uma organizacao cadastrada com este documento..."
+      // tambem casaria com o regex amplo de organizacao abaixo.
+      const isDocumentConflict =
+        /document|cnpj/.test(norm) ||
+        (err?.response?.status === 409 && /cpf|cnpj|documento/.test(norm));
       // Cobertura ampla — inclui fallback por status 409 com "email" no texto,
       // pra capturar frases novas do backend que ainda não mapeamos.
       const isEmailConflict =
@@ -603,7 +612,9 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
         /j(?:á|á)\s+existe.*organiza/.test(norm) ||
         /e-?mail.*already\s+exists/.test(norm) ||
         (err?.response?.status === 409 && /e-?mail|usu(?:á|á)rio/.test(norm));
-      if (isEmailConflict) {
+      if (isDocumentConflict) {
+        setCnpjError(apiMsg);
+      } else if (isEmailConflict) {
         setEmailError(apiMsg);
       } else {
         const fallback = isCreate
@@ -752,7 +763,17 @@ export function OrganizerEditDrawer({ isOpen, onClose, org, onUpdated, mode = "e
               <div className="flex flex-col gap-6">
                 <SectionTitle icon={<Building2 className="size-5" />} label="Detalhes da organização" />
                 <div className="flex flex-wrap gap-x-4 gap-y-6">
-                  <FieldInput label="CNPJ" value={cnpjValue} onChange={(v) => setCnpjValue(formatCNPJ(v))} placeholder="00.000.000/0000-00" className="min-w-[284px]" />
+                  <FieldInput
+                    label="CNPJ"
+                    value={cnpjValue}
+                    onChange={(v) => {
+                      setCnpjValue(formatCNPJ(v));
+                      if (cnpjError) setCnpjError("");
+                    }}
+                    placeholder="00.000.000/0000-00"
+                    className="min-w-[284px]"
+                    error={cnpjError}
+                  />
                   <FieldInput label="Razão social" value={name} onChange={setName} placeholder="Razão social" className="min-w-[284px]" />
                   <FieldInput label="Nome fantasia" value={tradeName} onChange={setTradeName} placeholder="Nome fantasia" className="min-w-[284px]" />
                   <FieldInput label="Nome do responsável" value={ownerName} onChange={setOwnerName} placeholder="Nome completo" className="min-w-[284px]" />

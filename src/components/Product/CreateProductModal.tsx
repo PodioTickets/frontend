@@ -38,10 +38,42 @@ interface ProductVariation {
   id: string;
   name: string;
   price: string;
+  /**
+   * Estoque UNIFICADO editável = restante disponível. O "total/limite" deixou de
+   * existir na UI; é derivado no save aplicando ao limite persistido o MESMO
+   * delta que o organizador aplicou ao restante (ver `variationStockToPersist`).
+   */
   stock: string;
+  /**
+   * Snapshot PERSISTIDO do backend (só em edição). Necessários pra reconstruir o
+   * limite preservando vendas E holds. Ausentes em criação / variação nova.
+   * - `persistedStock`     → limite salvo (`0` = ilimitado).
+   * - `persistedAvailable` → restante salvo na carga (baseline do delta).
+   * - `soldCount`          → vendidas confirmadas (coluna "Total vendidos").
+   */
+  persistedStock?: number;
+  persistedAvailable?: number;
+  soldCount?: number;
 }
 
 type LinkedTicketListItem = { name: string; categoryLabel: string };
+
+/**
+ * Limite (`stock`) a enviar pro backend a partir do estoque RESTANTE editável.
+ * O backend reconcilia o restante por DELTA do limite — então preservamos vendas
+ * E holds aplicando ao limite persistido o MESMO delta que o organizador aplicou
+ * ao restante:  novoLimite = limitePersistido + (restanteAtual − restanteOriginal).
+ * Variação nova (sem snapshot): limite = restante digitado (sem vendas/holds).
+ * Nunca abaixo de 0.
+ */
+function variationStockToPersist(v: ProductVariation): number {
+  const remaining = parseInt(v.stock, 10) || 0;
+  if (v.persistedStock == null || v.persistedAvailable == null) {
+    return Math.max(0, remaining);
+  }
+  const delta = remaining - v.persistedAvailable;
+  return Math.max(0, v.persistedStock + delta);
+}
 
 function categoryLabelFromTicket(t: Record<string, unknown>): string {
   const nested = t.category as { name?: string } | undefined;
@@ -178,6 +210,22 @@ export function CreateProductModal() {
   const filledVariationsCount = variations.filter((v) => v.name.trim()).length;
   /** Criar e editar: no mínimo 1 nome de variação preenchido. */
   const hasMinVariations = filledVariationsCount >= 1;
+
+  /**
+   * Coluna "Total vendidos": só aparece quando há venda real (`soldCount > 0`)
+   * em ALGUMA variação. Sem nenhuma venda (criação, ou edição de produto que
+   * ainda não vendeu) a coluna fica oculta.
+   */
+  const showSoldColumn = variations.some((v) => (v.soldCount ?? 0) > 0);
+
+  /**
+   * Produto SEGURA estoque próprio quando NÃO é incluso-E-obrigatório ao mesmo
+   * tempo (espelha `holdsStock` do backend). Incluso+obrigatório é gated pela
+   * vaga do ingresso → estoque da variação é irrelevante: a coluna de Estoque
+   * fica OCULTA. Quando segura estoque (opcional ou não-incluso), o estoque é
+   * exigido (> 0) na validação.
+   */
+  const productHoldsStock = !(isIncludedInTicket && isRequired);
 
   /**
    * Primeiro nome de variação duplicado (trim + case-insensitive pt-BR), ou
@@ -377,18 +425,35 @@ export function CreateProductModal() {
           (v: unknown, i: number) => {
             const row =
               v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+            // Inteiro de campo da API (camelCase/snake_case); null se ausente.
+            const toApiInt = (val: unknown): number | undefined => {
+              if (val == null || val === "") return undefined;
+              const n = typeof val === "number" ? val : parseInt(String(val), 10);
+              return Number.isFinite(n) ? n : undefined;
+            };
             return {
               id: String(row.id ?? `v-${Date.now()}-${i}`),
               name: String(row.name ?? row.variation_name ?? ""),
               price: formatPriceFromApi(
                 (row.price ?? row.unit_price) as number | string | undefined,
               ),
+              // Campo de estoque UNIFICADO = restante disponível
+              // (`availableStock`). O "total" deixou de existir na UI; o limite
+              // é derivado no save (restante + vendidas). Fallback ao limite
+              // (`stock`) p/ respostas legadas sem `availableStock`.
               stock:
-                row.stock != null
-                  ? String(row.stock)
-                  : row.quantity != null
-                    ? String(row.quantity)
-                    : "",
+                row.availableStock != null
+                  ? String(row.availableStock)
+                  : row.available_stock != null
+                    ? String(row.available_stock)
+                    : row.stock != null
+                      ? String(row.stock)
+                      : row.quantity != null
+                        ? String(row.quantity)
+                        : "",
+              persistedStock: toApiInt(row.stock ?? row.quantity),
+              persistedAvailable: toApiInt(row.availableStock ?? row.available_stock),
+              soldCount: toApiInt(row.soldCount ?? row.sold_count),
             };
           },
         );
@@ -816,6 +881,23 @@ export function CreateProductModal() {
       return false;
     }
 
+    // Itens que SEGURAM estoque (opcionais ou não-inclusos): o campo é o estoque
+    // RESTANTE. O total (restante + vendidas) precisa ser > 0 — uma variação
+    // esgotada (restante 0, mas com vendas) é válida; restante 0 sem nenhuma
+    // venda significaria total 0, que não é permitido. Para incluso+obrigatório
+    // a coluna nem aparece (gated pela vaga do ingresso) → não validamos.
+    if (productHoldsStock) {
+      for (const v of variations) {
+        if (!v.name.trim()) continue;
+        if (variationStockToPersist(v) <= 0) {
+          toast.error(
+            `Informe um estoque maior que zero para a variação "${v.name.trim()}".`,
+          );
+          return false;
+        }
+      }
+    }
+
     if (!isIncludedInTicket && parsePriceReais(basePrice) <= 0) {
       toast.error("Informe um preço maior que zero para o produto.");
       return false;
@@ -850,7 +932,11 @@ export function CreateProductModal() {
         isIncludedInTicket,
         basePrice: Math.round(basePriceReais * 100),
         isRequired: isIncludedInTicket ? isRequired : false,
-        variationType: variationTypeName.trim() || undefined,
+        // Vazio = SEM tipo de variação. Enviamos "" (não `undefined`): no update
+        // o backend stripa `undefined` e manteria o tipo antigo, então limpar o
+        // campo no modal não surtia efeito. "" é gravado e LIMPA o campo. `null`
+        // não serve (o DTO valida `@IsString()`).
+        variationType: variationTypeName.trim(),
         variations: (() => {
           const fromForm = variations
             .filter((v) => v.name.trim())
@@ -861,7 +947,9 @@ export function CreateProductModal() {
               return {
                 name: v.name.trim(),
                 price: Math.round(priceReais * 100),
-                stock: parseInt(v.stock, 10) || 0,
+                // Campo = restante disponível; deriva o LIMITE preservando
+                // vendas e holds (delta sobre o limite persistido).
+                stock: variationStockToPersist(v),
               };
             });
           const hidden = organizerHiddenSemInteresseRef.current;
@@ -875,7 +963,7 @@ export function CreateProductModal() {
                     Math.round(
                       (parseFloat(String(hidden.price || "0").replace(",", ".")) || 0) * 100,
                     ),
-                  stock: parseInt(hidden.stock, 10) || 0,
+                  stock: variationStockToPersist(hidden),
                 },
               ]
               : fromForm;
@@ -1191,7 +1279,7 @@ export function CreateProductModal() {
                           type="text"
                           value={productName}
                           onChange={(e) => setProductName(e.target.value)}
-                          placeholder="Ex: (item extra) Camiseta da Nike"
+                          placeholder="Ex: Kit basico, camisa, mochila"
                           maxLength={100}
                           showCharCount
                           className="h-12 px-3"
@@ -1399,7 +1487,7 @@ export function CreateProductModal() {
                               {variationTypeName.trim() || "Variações"}
                             </span>
                           </div>
-                          <div className="flex w-[188px] items-center justify-center px-4">
+                          <div className="flex w-[188px] items-center justify-center px-4 border-r h-full border-gray-6">
                             <span className="flex items-center gap-1 text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               Preço específico{" "}
                               <Tooltip
@@ -1421,7 +1509,7 @@ export function CreateProductModal() {
                                     </p>
                                   </div>
                                 }
-                                position="topRight"
+                                position="topLeft"
                               >
                                 <button
                                   type="button"
@@ -1433,11 +1521,20 @@ export function CreateProductModal() {
                               </Tooltip>
                             </span>
                           </div>
-                          <div className="flex w-[132px] items-center justify-center px-4">
-                            <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
-                              Estoque
-                            </span>
-                          </div>
+                          {productHoldsStock && (
+                            <div className="flex w-[132px] items-center justify-center px-4">
+                              <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
+                                Estoque
+                              </span>
+                            </div>
+                          )}
+                          {showSoldColumn && (
+                            <div className="flex w-[150px] items-center justify-center px-4">
+                              <span className="text-sm w-max font-medium font-inter leading-[1.3] text-gray-12">
+                                Total vendidos
+                              </span>
+                            </div>
+                          )}
                           <div className="flex h-full w-[74px] items-center justify-center border-l border-gray-6 px-4">
                             <span className="text-sm font-medium font-inter leading-[1.3] text-gray-12">
                               Ações
@@ -1446,119 +1543,144 @@ export function CreateProductModal() {
                         </div>
 
                         {/* Variations List */}
-                        {variations.map((variation) => (
-                          <Fragment key={variation.id}>
-                            {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
-                            <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
-                              <div className="flex w-full items-start justify-between gap-2">
-                                <div className="flex min-w-0 flex-1 flex-col gap-3">
-                                  <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                    Nome da variação
-                                  </p>
-                                  <p className="truncate text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {variation.name || "—"}
-                                  </p>
+                        {variations.map((variation) => {
+                          return (
+                            <Fragment key={variation.id}>
+                              {/* Mobile — Figma 3428:160742 (cartão read-only, edição via bottom sheet) */}
+                              <div className="flex flex-col gap-4 rounded-lg border border-gray-6 bg-gray-1 px-3 py-4 md:hidden">
+                                <div className="flex w-full items-start justify-between gap-2">
+                                  <div className="flex min-w-0 flex-1 flex-col gap-3">
+                                    <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                      Nome da variação
+                                    </p>
+                                    <p className="truncate text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                      {variation.name || "—"}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setMobileMoreMenuVariationId(variation.id)}
+                                    className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
+                                    aria-label="Mais opções da variação"
+                                  >
+                                    <MoreVertical className="size-6" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setMobileMoreMenuVariationId(variation.id)}
-                                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-11 transition-colors hover:bg-gray-3"
-                                  aria-label="Mais opções da variação"
-                                >
-                                  <MoreVertical className="size-6" />
-                                </button>
+                                <div className="flex w-full items-start justify-between gap-4">
+                                  <div className="flex flex-col gap-3">
+                                    <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                      Preço específico
+                                    </p>
+                                    <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                      {isIncludedInTicket ? "Incluso" : `R$ ${variation.price || "0,00"}`}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-start gap-6">
+                                    {productHoldsStock && (
+                                      <div className="flex flex-col items-end gap-3">
+                                        <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                          Estoque
+                                        </p>
+                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
+                                          {`${variation.stock || "0"} Un`}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {showSoldColumn && (
+                                      <div className="flex flex-col items-end gap-3">
+                                        <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
+                                          Total vendidos
+                                        </p>
+                                        <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-11 tabular-nums">
+                                          {variation.soldCount ?? 0}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex w-full items-start justify-between gap-4">
-                                <div className="flex flex-col gap-3">
-                                  <p className="text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                    Preço específico
-                                  </p>
-                                  <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {isIncludedInTicket ? "Incluso" : `R$ ${variation.price || "0,00"}`}
-                                  </p>
-                                </div>
-                                <div className="flex flex-col items-end gap-3">
-                                  <p className="text-right text-sm font-normal font-family-dm-sans leading-[1.3] text-gray-11">
-                                    Estoque
-                                  </p>
-                                  <p className="text-sm font-semibold font-family-dm-sans leading-[1.3] text-gray-12">
-                                    {variation.stock || "0"} Un
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
 
-                            {/* Desktop — linha da tabela */}
-                            <div className="hidden border-b border-gray-6 md:flex md:h-[52px] md:items-center">
-                              <div className="flex flex-1 px-4">
-                                <input
-                                  type="text"
-                                  value={variation.name}
-                                  onChange={(e) =>
-                                    handleVariationChange(
-                                      variation.id,
-                                      "name",
-                                      e.target.value,
-                                    )
-                                  }
-                                  placeholder="Ex: P, M, G"
-                                  className="h-auto w-full border-0 bg-transparent px-0 text-sm font-medium font-inter text-gray-12 focus:border-0 focus:outline-none focus:ring-0"
-                                />
-                              </div>
-                              <div className="flex w-[188px] items-center justify-center px-4">
-                                {isIncludedInTicket ? (
-                                  <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
-                                    Incluso
-                                  </span>
-                                ) : (
-                                  <div className="flex items-center gap-0.5 text-sm font-semibold font-inter text-gray-12">
-                                    <span>R$</span>
+                              {/* Desktop — linha da tabela */}
+                              <div className="hidden border-b border-gray-6 md:flex md:h-[52px] md:items-center">
+                                <div className="flex flex-1 px-4">
+                                  <input
+                                    type="text"
+                                    value={variation.name}
+                                    onChange={(e) =>
+                                      handleVariationChange(
+                                        variation.id,
+                                        "name",
+                                        e.target.value,
+                                      )
+                                    }
+                                    placeholder="Ex: P, M, G"
+                                    className="h-auto w-full border-0 bg-transparent px-0 text-sm font-medium font-inter text-gray-12 focus:border-0 focus:outline-none focus:ring-0"
+                                  />
+                                </div>
+                                <div className="flex w-[188px] items-center justify-center px-4">
+                                  {isIncludedInTicket ? (
+                                    <span className="flex items-center gap-1 text-sm font-medium font-inter text-gray-11">
+                                      Incluso
+                                    </span>
+                                  ) : (
+                                    <div className="flex items-center gap-0.5 text-sm font-semibold font-inter text-gray-12">
+                                      <span>R$</span>
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={variation.price || "0,00"}
+                                        onChange={(e) =>
+                                          handlePriceChange(
+                                            variation.id,
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="w-16 border-0 bg-transparent px-0 focus:border-0 focus:outline-none focus:ring-0"
+                                        placeholder="0,00"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                                {productHoldsStock && (
+                                  <div className="flex w-[132px] items-center justify-center px-4">
                                     <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      value={variation.price || "0,00"}
+                                      type="number"
+                                      value={variation.stock}
                                       onChange={(e) =>
-                                        handlePriceChange(
+                                        handleVariationChange(
                                           variation.id,
+                                          "stock",
                                           e.target.value,
                                         )
                                       }
-                                      className="w-16 border-0 bg-transparent px-0 focus:border-0 focus:outline-none focus:ring-0"
-                                      placeholder="0,00"
+                                      className="w-16 border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 tabular-nums focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                      placeholder="0"
                                     />
                                   </div>
                                 )}
+                                {showSoldColumn && (
+                                  <div className="flex w-[150px] items-center justify-center px-4">
+                                    <span className="text-sm font-semibold font-inter text-gray-11 tabular-nums w-max">
+                                      {variation.soldCount ?? 0}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex w-[74px] items-center justify-center px-4">
+                                  <button
+                                    type="button"
+                                    title="Remover variação"
+                                    onClick={() =>
+                                      handleRemoveVariation(variation.id)
+                                    }
+                                    className="flex size-9 items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 transition-colors hover:bg-red-3"
+                                  >
+                                    <TrashIcon className="size-5 text-red-12" />
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex w-[132px] items-center justify-center px-4">
-                                <input
-                                  type="number"
-                                  value={variation.stock}
-                                  onChange={(e) =>
-                                    handleVariationChange(
-                                      variation.id,
-                                      "stock",
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="w-16 border-0 bg-transparent px-0 text-center text-sm font-semibold font-inter text-gray-12 focus:outline-none focus:ring-0"
-                                  placeholder="0"
-                                />
-                              </div>
-                              <div className="flex w-[74px] items-center justify-center px-4">
-                                <button
-                                  type="button"
-                                  title="Remover variação"
-                                  onClick={() =>
-                                    handleRemoveVariation(variation.id)
-                                  }
-                                  className="flex size-9 items-center justify-center rounded-lg border-[1.5px] border-red-6 bg-red-2 transition-colors hover:bg-red-3"
-                                >
-                                  <TrashIcon className="size-5 text-red-12" />
-                                </button>
-                              </div>
-                            </div>
-                          </Fragment>
-                        ))}
+                            </Fragment>
+                          );
+                        })}
 
                         {/* Add Variation Button — desktop adiciona linha inline, mobile abre bottom sheet. */}
                         <div className="flex justify-center p-4 max-md:pt-0 md:border-t md:border-gray-6">
@@ -1718,7 +1840,10 @@ export function CreateProductModal() {
                       {productPreviewDropdownOptions.length > 0 ? (
                         <div className="p-4">
                           <p className="mb-2 text-base text-gray-12">
-                            Escolha a variação  {`- ${variationTypeName.trim() || ""}`}
+                            {/* Com nome: usa o texto do organizador como título
+                                (ex.: "Escolha o tamanho da camisa"). Vazio: rótulo
+                                padrão "Escolha a variação". */}
+                            {variationTypeName.trim() || "Escolha a variação"}
                           </p>
                           <Dropdown
                             options={productPreviewDropdownOptions}
@@ -1953,18 +2078,20 @@ export function CreateProductModal() {
                         </div>
                       </div>
                     )}
-                    <div className="flex flex-col gap-2">
-                      <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
-                        Estoque
-                      </label>
-                      <input
-                        type="number"
-                        value={mobileVariationDraft.stock}
-                        onChange={(e) => setMobileVariationDraft({ ...mobileVariationDraft, stock: e.target.value })}
-                        placeholder="Ex: 100"
-                        className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
-                      />
-                    </div>
+                    {productHoldsStock && (
+                      <div className="flex flex-col gap-2">
+                        <label className="font-family-dm-sans text-base font-normal leading-[1.3] text-gray-12">
+                          Estoque
+                        </label>
+                        <input
+                          type="number"
+                          value={mobileVariationDraft.stock}
+                          onChange={(e) => setMobileVariationDraft({ ...mobileVariationDraft, stock: e.target.value })}
+                          placeholder="Ex: 100"
+                          className="h-12 rounded-lg border border-gray-6 bg-transparent px-3 py-4 font-family-dm-sans text-base leading-[1.3] text-gray-12 placeholder:text-gray-11 focus:border-gray-8 focus:outline-none"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                     <Button

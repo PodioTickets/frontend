@@ -43,9 +43,6 @@ import type { BestSellingVariationItem } from "@/components/Organizer/BestSellin
 import { Tooltip } from "@/components/Tooltip";
 import { cn } from "@/utils/cn";
 import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
-import { mapTicketsToFinancialList } from "@/utils/financialTickets";
-import { formatRawTicket } from "@/hooks/useTickets";
-import type { FinancialTicket } from "@/services/organizer/OrganizerService";
 
 const LOTS_NEAR_DEPLETION_PAGE_SIZE = 4;
 const TICKETS_WITH_LOTS_PAGE_SIZE = 10;
@@ -265,11 +262,9 @@ export default function EventDashboardPage() {
       ? isFirstLoad
       : false;
 
-  /* Lista "Ingressos de lotes" — derivada do rankings (paginação server-side). */
-  const ticketsWithLotsList: FinancialTicket[] = useMemo(() => {
-    const raw = rankingsQuery.data?.tickets?.data?.tickets ?? [];
-    return mapTicketsToFinancialList(raw.map(formatRawTicket));
-  }, [rankingsQuery.data]);
+  /* Lista "Ingressos de lotes" — shape cru do backend (paginação server-side),
+   * consumido direto por `TicketsWithLotsList` sem etapa de formatação. */
+  const ticketsWithLotsList = rankingsQuery.data?.tickets?.data?.tickets ?? [];
   const ticketsWithLotsTotalPages =
     rankingsQuery.data?.tickets?.data?.pagination?.totalPages || 1;
   const ticketRankingTotalPagesServer =

@@ -15,8 +15,40 @@ export interface Product {
     id?: string;
     name: string;
     price: number;
+    /** Limite configurado pelo organizador. `0` = ilimitado (sentinela do backend). */
     stock: number;
+    /** Restante disponível; só significativo quando `stock > 0`. Pode vir ausente em respostas legadas. */
+    availableStock?: number;
+    /** Unidades já vendidas (confirmadas no pagamento). */
+    soldCount?: number;
   }>;
+}
+
+/**
+ * Um produto SEGURA estoque próprio quando NÃO é incluso-E-obrigatório ao mesmo
+ * tempo. Incluso + obrigatório já é gated pela vaga do ingresso → não consome
+ * estoque da variação. Espelha `holdsStock` do backend (product-stock.util.ts):
+ * fonte única de verdade da regra de estoque.
+ */
+export function variationHoldsStock(product: Pick<Product, "isIncludedInTicket" | "isRequired">): boolean {
+  return !(product.isIncludedInTicket === true && product.isRequired === true);
+}
+
+/**
+ * Variação esgotada para fins de SELEÇÃO no checkout. Espelha o invariante do
+ * backend: só há esgotamento quando o produto segura estoque, o estoque é
+ * LIMITADO (`stock > 0`) e não resta disponível (`availableStock <= 0`).
+ * `stock === 0` é ilimitado → nunca esgota. O backend continua sendo a fonte
+ * autoritativa (valida atômico no PATCH /products); aqui é só prevenção de UX.
+ */
+export function isVariationSoldOut(
+  product: Pick<Product, "isIncludedInTicket" | "isRequired">,
+  variation: Pick<Product["variations"][number], "stock" | "availableStock">,
+): boolean {
+  if (!variationHoldsStock(product)) return false;
+  const stock = variation.stock ?? 0;
+  if (stock <= 0) return false; // ilimitado
+  return (variation.availableStock ?? 0) <= 0;
 }
 
 export const VARIATION_KEY_SEPARATOR = "::";
@@ -85,9 +117,13 @@ export const formatProductCardBasePriceLabel = (product: Product): string => {
   return formatPrice(product.basePrice);
 };
 
-/** Alinhado ao CreateProductModal: "Escolha a variação - {tipo}" ou "Variações". */
+/**
+ * Título da seção de variação. Quando o organizador define um tipo, esse texto
+ * é o título completo (ex.: "Escolha o tamanho da camisa"); vazio cai no rótulo
+ * padrão "Escolha a variação". Espelha o preview do CreateProductModal.
+ */
 export const variationSectionTitle = (product: Product) =>
-  `Escolha a variação  ${- (product.variationType ?? "").trim() || ""}`;
+  product.variationType?.trim() || "Escolha a variação";
 
 /**
  * Valor em reais a somar no total do pedido.

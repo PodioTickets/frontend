@@ -16,13 +16,9 @@ import { InstallmentsDrawer } from "@/components/Financial/InstallmentsDrawer";
 import { AwaitingReleaseDrawer } from "@/components/Financial/AwaitingReleaseDrawer";
 import { RefundedDrawer } from "@/components/Financial/RefundedDrawer";
 import { ChargebackDrawer } from "@/components/Financial/ChargebackDrawer";
-import { TicketsWithLotsList } from "@/components/Financial/TicketsWithLotsList";
 import { useRequestTransferModal } from "@/stores/modalStore";
 import { RepasseIcon } from "@/components/Icons/RepasseIcon";
 import { PaymentIcon } from "@/components/Icons/PaymentIcon";
-import type { FinancialTicket } from "@/services/organizer/OrganizerService";
-import { mapTicketsToFinancialList } from "@/utils/financialTickets";
-import { formatRawTicket } from "@/hooks/useTickets";
 import { RemoveIcon } from "@/components/Icons/RemoveIcon";
 import { ChargeBackIcon } from "@/components/Icons/ChargeBackIcon";
 import { TimerIcon } from "@/components/Icons/Organizer/TimerIcon";
@@ -76,16 +72,6 @@ export default function EventFinancialPage() {
     },
   });
 
-  // Data for tickets/lots
-  const [ticketsData, setTicketsData] = useState<FinancialTicket[]>([]);
-  const [ticketsPage, setTicketsPage] = useState(1);
-  const [ticketsPagination, setTicketsPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 1,
-  });
-
   useEffect(() => {
     if (authLoading) return;
 
@@ -103,7 +89,7 @@ export default function EventFinancialPage() {
   useEffect(() => {
     if (!authChecked || authLoading || !eventId) return;
     loadData();
-  }, [authChecked, eventId, periodFilter, ticketsPage]);
+  }, [authChecked, eventId, periodFilter]);
 
   const loadData = async () => {
     try {
@@ -112,7 +98,7 @@ export default function EventFinancialPage() {
         organizerService.getEventById(eventId),
         organizerService.getEventFinancial(eventId, {
           period: (periodFilter === "geral" ? "2m" : periodFilter) as "hoje" | "7d" | "15d" | "1m" | "2m",
-          page: ticketsPage,
+          page: 1,
           limit: 20,
         }),
       ]);
@@ -128,13 +114,6 @@ export default function EventFinancialPage() {
         revenueChange: 0,
         revenueChart: financialDataResponse.revenueChart,
       });
-
-      const rawTickets: any[] = financialDataResponse.tickets.data.tickets;
-      const formattedTickets = mapTicketsToFinancialList(
-        rawTickets.map(formatRawTicket),
-      );
-      setTicketsData(formattedTickets);
-      setTicketsPagination(financialDataResponse.tickets.data.pagination);
     } catch (error: any) {
       console.error("Error loading event:", error);
       toast.error("Erro ao carregar dados do evento");
@@ -164,15 +143,6 @@ export default function EventFinancialPage() {
       </div>
     );
   }
-
-  const periodOptions = [
-    { label: "Geral", value: "geral" },
-    { label: "Hoje", value: "hoje" },
-    { label: "7D", value: "7d" },
-    { label: "15D", value: "15d" },
-    { label: "1M", value: "1m" },
-    { label: "2M", value: "2m" },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-2">
@@ -473,19 +443,6 @@ export default function EventFinancialPage() {
               </div>
             </div>
           </div>
-
-
-          {/* Lista "Ingressos de lotes" — componente compartilhado (mobile + desktop). */}
-          <TicketsWithLotsList
-            tickets={ticketsData}
-            expandedRows={expandedRows}
-            onToggleRow={toggleRow}
-            page={ticketsPage}
-            totalPages={ticketsPagination.totalPages}
-            onPageChange={setTicketsPage}
-          />
-
-
         </div>
       </div>
 
