@@ -165,7 +165,7 @@ export function TicketBatchSection({
                   <div className="flex items-center gap-1">
                     <Info className="size-5 text-gray-11" />
                     <span className="text-gray-11 text-base font-normal font-family-dm-sans leading-[1.3]">
-                      Preço não pode ser alterado — já possui vendas
+                      Preço não pode ser alterado - já possui vendas
                     </span>
                   </div>
                 )}
