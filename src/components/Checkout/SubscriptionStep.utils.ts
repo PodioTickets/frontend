@@ -25,13 +25,13 @@ export interface Product {
 }
 
 /**
- * Um produto SEGURA estoque próprio quando NÃO é incluso-E-obrigatório ao mesmo
- * tempo. Incluso + obrigatório já é gated pela vaga do ingresso → não consome
- * estoque da variação. Espelha `holdsStock` do backend (product-stock.util.ts):
- * fonte única de verdade da regra de estoque.
+ * Política atual (espelha `holdsStock` do backend, product-stock.util.ts): TODO
+ * produto segura o próprio estoque da variação — inclusive incluso+obrigatório.
+ * Assim uma variação esgotada de item incluso+obrigatório também bloqueia a
+ * seleção no checkout. `stock = 0` segue ilimitado (ver `isVariationSoldOut`).
  */
-export function variationHoldsStock(product: Pick<Product, "isIncludedInTicket" | "isRequired">): boolean {
-  return !(product.isIncludedInTicket === true && product.isRequired === true);
+export function variationHoldsStock(_product: Pick<Product, "isIncludedInTicket" | "isRequired">): boolean {
+  return true;
 }
 
 /**
