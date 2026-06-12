@@ -183,7 +183,10 @@
       "Bash(ls src/app/auth/__tests__)",
       "Bash(echo \"---exit $?---\")",
       "Bash(cat server/docker-entrypoint.sh)",
-      "Bash(sed -n '1,60p' server/prisma/reconcile-included-required-stock.ts)"
+      "Bash(sed -n '1,60p' server/prisma/reconcile-included-required-stock.ts)",
+      "PowerShell(npx vitest run src/components/Checkout/__tests__/SubscriptionStep.utils.test.ts)",
+      "PowerShell(npx vitest run 2>&1 | Select-Object -Last 15)",
+      "PowerShell(npx vitest run src/lib/__tests__/authSurface.test.ts 2>&1 | Select-Object -Last 20)"
     ]
   },
   "disabledMcpjsonServers": [
