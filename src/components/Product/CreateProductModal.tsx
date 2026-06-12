@@ -285,8 +285,11 @@ export function CreateProductModal() {
 
   /**
    * Prévia do dropdown: sem nenhum preço específico (> 0), não exibe preço nas linhas.
-   * Com pelo menos um: nas demais variações mostra o preço base;
-   * onde há preço específico, acréscimo sobre a base (≥ base) ou total (< base).
+   * Com pelo menos um: nas demais variações mostra o preço base; onde há preço
+   * específico o rótulo reflete o que é cobrado no checkout
+   * (`billableReaisForProductSelection`):
+   *  - não incluso: o preço da variação é o TOTAL → exibe o valor cheio;
+   *  - incluso no ingresso: base já paga no ingresso → exibe só o acréscimo sobre a base.
    */
   const previewVariationListPriceLabel = useCallback(
     (variationPriceStr: string): string | undefined => {
@@ -304,12 +307,17 @@ export function CreateProductModal() {
       }
       const v =
         parseFloat(String(variationPriceStr || "0").replace(",", ".")) || 0;
+      // Não incluso: preço da variação = total (não subtrai a base).
+      if (!isIncludedInTicket) {
+        return `R$ ${fmt(v)}`;
+      }
+      // Incluso no ingresso: mostra só o acréscimo sobre a base já inclusa.
       if (v < base) {
         return `R$ ${fmt(v)}`;
       }
       return `R$ ${fmt(Math.max(0, v - base))}`;
     },
-    [anyVariationHasSpecificPrice, basePrice],
+    [anyVariationHasSpecificPrice, basePrice, isIncludedInTicket],
   );
 
   /** Prévia do comprador: não lista opt-out «sem interesse» (existe só no fluxo interno/checkout). */

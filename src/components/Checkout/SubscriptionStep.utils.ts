@@ -83,8 +83,11 @@ export const productAnyVariationHasSpecificPrice = (product: Product): boolean =
 
 /**
  * Mesma regra da prévia do CreateProductModal: sem preço específico em nenhuma variação,
- * não mostra valores à direita; com pelo menos um, linhas sem preço específico mostram a base;
- * com preço específico: total se variação < base, senão acréscimo sobre a base.
+ * não mostra valores à direita; com pelo menos um, linhas sem preço específico mostram a base.
+ * Com preço específico o rótulo deve refletir o que é efetivamente cobrado
+ * (`billableReaisForProductSelection` / PaymentStep):
+ *  - não incluso: o preço da variação é o TOTAL daquela variação → exibe o valor cheio;
+ *  - incluso no ingresso: a base já está paga no ingresso → exibe só o upgrade sobre a base.
  */
 export const previewVariationListPriceLabelForProduct = (
   product: Product,
@@ -105,6 +108,11 @@ export const previewVariationListPriceLabelForProduct = (
     return formatPrice(base);
   }
   const v = variationPriceReais;
+  // Não incluso: preço da variação = total cobrado (não subtrai a base).
+  if (!product.isIncludedInTicket) {
+    return formatPrice(v);
+  }
+  // Incluso no ingresso: cobra/mostra só o acréscimo sobre a base já inclusa.
   if (v < base) {
     return formatPrice(v);
   }
