@@ -14,6 +14,24 @@ export type AuthSurface = "admin" | "organizer" | "client";
 /** Header HTTP que carrega a superfície. Mantido em sincronia com o backend. */
 export const SURFACE_HEADER = "X-PT-Surface";
 
+/**
+ * Nome da `<meta>` que o `RootLayout` (SERVER) renderiza com a superfície do
+ * host do painel (admin/organizer), resolvida do env RUNTIME — a MESMA fonte que
+ * dirige o rewrite do proxy. É o sinal AUTORITATIVO no client: independe do
+ * `NEXT_PUBLIC_*_APP_HOST` (build-time) e funciona nas URLs curtas reescritas
+ * (/events), onde o path perde o prefixo /organizer.
+ */
+export const APP_SURFACE_META = "pt-app-surface";
+
+/** Lê a `<meta name="pt-app-surface">` (só admin/organizer; ausente no site público). */
+function readAppSurfaceMeta(): AuthSurface | null {
+  if (typeof document === "undefined") return null;
+  const v = document
+    .querySelector(`meta[name="${APP_SURFACE_META}"]`)
+    ?.getAttribute("content");
+  return v === "admin" || v === "organizer" ? v : null;
+}
+
 /** Extrai só o hostname de um valor que pode ser URL completa ou host:porta. */
 function hostnameOf(raw?: string): string | null {
   const v = raw?.trim();
@@ -51,11 +69,19 @@ export function surfaceFromHost(
 }
 
 /**
- * Superfície atual (CLIENT): host (ver `surfaceFromHost`) → path
- * (/admin, /organizer) → client. SSR (sem window) = 'client'.
+ * Superfície atual (CLIENT), em ordem de prioridade:
+ *  1. `<meta name="pt-app-surface">` do SERVER (env runtime; vale para TODO o host
+ *     do painel, inclusive nas URLs curtas reescritas /events) — autoritativo.
+ *  2. Host via `NEXT_PUBLIC_*_APP_HOST` (build-time) — fallback se o meta faltar.
+ *  3. Path (/admin, /organizer) — caminho de DEV (host único, sem rewrite).
+ *  4. client.
+ * SSR (sem window) = 'client'.
  */
 export function getCurrentSurface(): AuthSurface {
   if (typeof window === "undefined") return "client";
+
+  const byMeta = readAppSurfaceMeta();
+  if (byMeta) return byMeta;
 
   const byHost = surfaceFromHost(
     window.location.hostname,

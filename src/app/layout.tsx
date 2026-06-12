@@ -82,10 +82,24 @@ export default async function RootLayout({
   const isAppOrganizerSurface = Boolean(appHost && host === appHost);
   const isAdminSurface = Boolean(adminHost && host === adminHost);
 
+  // Superfície de AUTH resolvida no SERVER (env runtime, mesma fonte que dirige o
+  // rewrite do proxy). Exposta ao JS client via <meta> para o `getCurrentSurface`
+  // (em authSurface.ts) NÃO depender do `NEXT_PUBLIC_*_APP_HOST` em build-time —
+  // que, se ausente no build, faria o client cair em "client" nas URLs curtas
+  // reescritas (/events) e mandar o header de superfície errado → 401/bounce.
+  const appSurfaceForClient: "" | "admin" | "organizer" = isAdminSurface
+    ? "admin"
+    : isAppOrganizerSurface
+      ? "organizer"
+      : "";
+
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
       <head>
         <link rel="icon" href="/images/logo.png" />
+        {appSurfaceForClient ? (
+          <meta name="pt-app-surface" content={appSurfaceForClient} />
+        ) : null}
       </head>
 
       <body suppressHydrationWarning className="scroll-smooth antialiased">
