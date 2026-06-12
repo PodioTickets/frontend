@@ -12,7 +12,6 @@ import { Loading } from "@/components/Loading";
 import { ContentWrapper } from "@/components/ContentWrapper";
 import { OrganizerAppSurfaceProvider } from "@/contexts/OrganizerAppSurfaceContext";
 import { AdminAppSurfaceProvider } from "@/contexts/AdminAppSurfaceContext";
-import { surfaceFromHost } from "@/lib/authSurface";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -72,16 +71,16 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const host = headersList.get("host")?.split(":")[0]?.toLowerCase() ?? "";
-  // Mesma resolução host→superfície do client/SSR (match exato + rótulo do
-  // subdomínio) — funciona no homolog mesmo com o env herdando o host de DEV.
-  // Aceita os env com e sem prefixo NEXT_PUBLIC_.
-  const surface = surfaceFromHost(
-    host,
-    process.env.NEXT_PUBLIC_ADMIN_APP_HOST || process.env.ADMIN_APP_HOST,
-    process.env.NEXT_PUBLIC_ORGANIZER_APP_HOST || process.env.ORGANIZER_APP_HOST,
-  );
-  const isAppOrganizerSurface = surface === "organizer";
-  const isAdminSurface = surface === "admin";
+  // Shell (Header/Footer) por HOST do painel. Usa o env SERVER (settável por-deploy
+  // sem rebuild); cai pro NEXT_PUBLIC (build-time) se o server não estiver setado.
+  // Match EXATO de propósito: o app host serve também páginas públicas, então marcar
+  // por heurística esconderia o Header/Footer delas.
+  const appHost = (process.env.ORGANIZER_APP_HOST || process.env.NEXT_PUBLIC_ORGANIZER_APP_HOST)
+    ?.split("://").pop()?.split("/")[0]?.split(":")[0]?.trim().toLowerCase() ?? "";
+  const adminHost = (process.env.ADMIN_APP_HOST || process.env.NEXT_PUBLIC_ADMIN_APP_HOST)
+    ?.split("://").pop()?.split("/")[0]?.split(":")[0]?.trim().toLowerCase() ?? "";
+  const isAppOrganizerSurface = Boolean(appHost && host === appHost);
+  const isAdminSurface = Boolean(adminHost && host === adminHost);
 
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${dmSans.variable}`}>
