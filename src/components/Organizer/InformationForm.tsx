@@ -277,10 +277,10 @@ export function InformationForm({
       const fd = new FormData();
       fd.append("file", pdfFile);
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
-      const token = (userService as any).apiClient?.getAccessToken();
+      // Auth por cookie httpOnly: `credentials: "include"`.
       const response = await fetch(`${apiUrl}/api/v1/upload/pdf`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
         body: fd,
       });
       let result: Record<string, unknown> = {};

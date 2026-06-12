@@ -10,6 +10,7 @@ import { X, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback } from "react";
+import toast from "react-hot-toast";
 import { RegistrationQRCode } from "../QRCode/RegistrationQRCode";
 import { getAvatarUrl } from "@/utils/avatar";
 import { organizerService } from "@/services";
@@ -25,6 +26,7 @@ import {
   formatPersonPhone,
 } from "@/utils/documentDisplay";
 import { ImageWithInitialFallback } from "../ImageWithInitialFallback";
+import { Button } from "../Button";
 
 /** Badge exibido quando o organizador trocou a variação do produto do
  *  participante (snapshot `variationEdited: true`). */
@@ -56,6 +58,7 @@ export function ViewRegistrationModal() {
   const [productsPage, setProductsPage] = useState(1);
   const [loadingRegistration, setLoadingRegistration] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
+  const [isDownloadingTicket, setIsDownloadingTicket] = useState(false);
 
   const registrationId = useMemo(() => {
     return data?.registrationId || data?.registration?.id || null;
@@ -92,6 +95,31 @@ export function ViewRegistrationModal() {
       });
     }
   }, [closeViewRegistrationModal, openPaymentDetailsModal]);
+
+  /* Baixa o PDF do ingresso. O backend gera o arquivo a partir do snapshot
+   * imutável da inscrição (QR Code + dados do participante/produtos) e aplica o
+   * mesmo controle de acesso da visualização. Disparado por ID — não depende do
+   * payload já carregado, mas o gate visual garante que só aparece com dados. */
+  const handleDownloadTicket = useCallback(async () => {
+    if (!registrationId || isDownloadingTicket) return;
+    setIsDownloadingTicket(true);
+    try {
+      const { blob, filename } =
+        await organizerService.downloadRegistrationTicketPdf(registrationId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erro ao baixar o ingresso. Tente novamente.");
+    } finally {
+      setIsDownloadingTicket(false);
+    }
+  }, [registrationId, isDownloadingTicket]);
 
   useEffect(() => {
     if (!isOpen || !registrationId) {
@@ -353,6 +381,19 @@ export function ViewRegistrationModal() {
 
   // Formatar telefone
 
+  /* Botão de download do ingresso (PDF). Definido uma vez e reutilizado nos
+   * rodapés mobile e desktop — mesma ação/estado de loading nos dois layouts. */
+  const downloadTicketButton = (
+    <Button
+      type="button"
+      variant={"outline"}
+      onClick={handleDownloadTicket}
+      disabled={isDownloadingTicket}
+      className="flex w-full md:w-auto border-gray-6 text-gray-12 items-center justify-center gap-2 px-5 py-2.5 font-family-dm-sans disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+    >
+      {isDownloadingTicket ? "Gerando ingresso..." : "Baixar ingresso"}
+    </Button>
+  );
 
   return (
     <>
@@ -593,6 +634,11 @@ export function ViewRegistrationModal() {
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* Footer: baixar ingresso (PDF) */}
+                <div className="shrink-0 border-t border-gray-6 bg-gray-1 px-4 py-3">
+                  {downloadTicketButton}
                 </div>
               </div>
 
@@ -908,6 +954,11 @@ export function ViewRegistrationModal() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Footer: baixar ingresso (PDF) */}
+                <div className="flex items-center justify-start px-5 py-3 border-t border-gray-6">
+                  {downloadTicketButton}
                 </div>
               </div>
             </motion.div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { sanitizeRichHtml } from "@/lib/richContent";
 import { useOrganizerNavigate } from "@/hooks/useOrganizerNavigate";
 import { useAuth } from "@/hooks/useAuth";
 import { userService, organizerService } from "@/services";
@@ -216,7 +217,7 @@ export default function PreviewEventPage() {
                     <div
                       className="text-gray-11 text-base font-family-dm-sans leading-[1.3] prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{
-                        __html: kits.map((kit) => kit.description || "").filter(Boolean).join(" ") || "Informações sobre os kits do evento."
+                        __html: sanitizeRichHtml(kits.map((kit) => kit.description || "").filter(Boolean).join(" ")) || "Informações sobre os kits do evento."
                       }}
                     />
                     {kits[0] && (

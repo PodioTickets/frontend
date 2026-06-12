@@ -15,7 +15,8 @@ import { organizerService } from "@/services";
 import { SelectTicketsModal } from "../Coupon/SelectTicketsModal";
 import { ArrowButton } from "../ArrowButton";
 import { cn } from "@/utils/cn";
-import { isValidCPF } from "@/utils/cpf";
+import { useCpfList } from "@/hooks/useCpfList";
+import { formatCpf as formatCPF } from "@/lib/cpfList";
 
 type CPFListStatus = "DISABLED" | "ENABLED";
 type ExpiryStatus = "DISABLED" | "ENABLED";
@@ -30,24 +31,29 @@ export function CreateVoucherModal() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [expiryStatus, setExpiryStatus] = useState<ExpiryStatus>("DISABLED");
   const [expiryDate, setExpiryDate] = useState<string | null>(null);
-  const [cpfListStatus, setCpfListStatus] = useState<CPFListStatus>("DISABLED");
-  const [cpfList, setCpfList] = useState<string[]>([]);
-  const [cpfSearch, setCpfSearch] = useState("");
   const [applyToProducts, setApplyToProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMdUp, setIsMdUp] = useState(true);
 
-  // Estados do painel CPF — idênticos ao cupom
-  const [isAddingCpf, setIsAddingCpf] = useState(false);
-  const [newCpfInput, setNewCpfInput] = useState("");
-  const [newCpfError, setNewCpfError] = useState("");
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isDraggingCsv, setIsDraggingCsv] = useState(false);
-  const [cpfListError, setCpfListError] = useState("");
+  // Estado + handlers da lista de CPF (compartilhado com o modal de Cupom).
+  const {
+    cpfListStatus, setCpfListStatus,
+    cpfList, setCpfList,
+    cpfSearch, setCpfSearch,
+    isAddingCpf, setIsAddingCpf,
+    newCpfInput, setNewCpfInput,
+    newCpfError, setNewCpfError,
+    isDraggingCsv, setIsDraggingCsv,
+    cpfListError, setCpfListError,
+    showImportModal, setShowImportModal,
+    csvInputRef,
+    handleAddCPF, handleConfirmAddCPF, handleNewCpfInputChange,
+    handleImportCSV, handleCSVFileChange, handleDropzoneDrop,
+    handleRemoveCPF, handleClearList,
+  } = useCpfList();
 
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
   const advancedPanelRef = useRef<HTMLDivElement>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
 
   useLayoutEffect(() => {
     setIsMdUp(window.matchMedia("(min-width: 768px)").matches);
@@ -176,105 +182,6 @@ export function CreateVoucherModal() {
       resizeObserver?.disconnect();
     };
   }, [showAdvanced]);
-
-  // ─── Handlers de CPF — idênticos ao cupom ───
-
-  const handleAddCPF = () => {
-    setIsAddingCpf(true);
-    setNewCpfInput("");
-  };
-
-  const handleConfirmAddCPF = () => {
-    const digits = newCpfInput.replace(/\D/g, "");
-    if (digits.length !== 11 || !isValidCPF(digits)) {
-      setNewCpfError("CPF inválido.");
-      return;
-    }
-    if (cpfList.includes(digits)) {
-      setNewCpfError("CPF já está na lista.");
-      return;
-    }
-    setCpfList([...cpfList, digits]);
-    setIsAddingCpf(false);
-    setNewCpfInput("");
-    setNewCpfError("");
-  };
-
-  const handleNewCpfInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 11);
-    let formatted = raw;
-    if (raw.length > 9) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9)}`;
-    else if (raw.length > 6) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6)}`;
-    else if (raw.length > 3) formatted = `${raw.slice(0, 3)}.${raw.slice(3)}`;
-    setNewCpfInput(formatted);
-    if (newCpfError) setNewCpfError("");
-  };
-
-  const handleImportCSV = () => {
-    setShowImportModal(true);
-  };
-
-  const processCSVFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const lines = text.split(/[\r\n,;]+/);
-      const newCpfs: string[] = [];
-      let duplicates = 0;
-      let invalid = 0;
-      for (const line of lines) {
-        const digits = line.replace(/\D/g, "");
-        if (digits.length !== 11 || !isValidCPF(digits)) { if (digits.length > 0) invalid++; continue; }
-        if (cpfList.includes(digits) || newCpfs.includes(digits)) { duplicates++; continue; }
-        newCpfs.push(digits);
-      }
-      if (newCpfs.length > 0) {
-        setCpfList((prev) => [...prev, ...newCpfs]);
-        setCpfListError("");
-      }
-      const parts: string[] = [];
-      if (newCpfs.length > 0) parts.push(`${newCpfs.length} CPF(s) importado(s)`);
-      if (duplicates > 0) parts.push(`${duplicates} duplicado(s) ignorado(s)`);
-      if (invalid > 0) parts.push(`${invalid} inválido(s) ignorado(s)`);
-      if (parts.length > 0) toast.success(parts.join(", "));
-      else toast.error("Nenhum CPF válido encontrado no arquivo.");
-      setShowImportModal(false);
-    };
-    reader.onerror = () => toast.error("Erro ao ler o arquivo.");
-    reader.readAsText(file);
-  };
-
-  const handleCSVFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    processCSVFile(file);
-    e.target.value = "";
-  };
-
-  const handleDropzoneDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDraggingCsv(false);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    processCSVFile(file);
-  };
-
-  const handleRemoveCPF = (index: number) => {
-    setCpfList(cpfList.filter((_, i) => i !== index));
-  };
-
-  const handleClearList = () => {
-    setCpfList([]);
-    setCpfSearch("");
-  };
-
-  const formatCPF = (cpf: string) => {
-    const numbers = cpf.replace(/\D/g, "");
-    if (numbers.length === 11) {
-      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
-    }
-    return cpf;
-  };
 
   const handleSave = async () => {
     if (!isEditing) {

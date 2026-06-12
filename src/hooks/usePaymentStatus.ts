@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '@/services';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
 
@@ -23,18 +22,11 @@ export const usePaymentStatus = (registrationId: string | null) => {
     setError(null);
 
     try {
-      const token = apiClient.getAccessToken();
-      
-      if (!token) {
-        throw new Error('Você precisa estar autenticado');
-      }
-
+      // Auth por cookie httpOnly: cookie enviado via `credentials: 'include'`.
       const response = await fetch(
         `${API_BASE_URL}/api/v1/payments/registration/${registrationId}/summary`,
         {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          credentials: 'include',
         }
       );
 

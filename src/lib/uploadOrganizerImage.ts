@@ -88,17 +88,15 @@ export async function maybeDownscaleImageFileForUpload(
 
 export async function uploadOrganizerImage(file: File): Promise<string> {
   const apiUrl = getOrganizerApiUrl();
-  const token = getOrganizerAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
 
   const formDataUpload = new FormData();
   formDataUpload.append("file", file);
 
+  // Auth por cookie httpOnly: `credentials: "include"` envia o cookie; 401 cai
+  // no !ok abaixo (mensagem "Sessão expirada").
   const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
     body: formDataUpload,
   });
 

@@ -1288,13 +1288,11 @@ export class OrganizerService {
       const apiUrl = (
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333"
       ).replace(/\/$/, "");
-      const token = this.apiClient.getAccessToken();
 
+      // Auth por cookie httpOnly: `credentials: "include"` envia o cookie.
       const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include",
         body: formData,
       });
 
@@ -2933,6 +2931,52 @@ export class OrganizerService {
       };
     }>(`/api/v1/registrations/${registrationId}`);
     return response.data.registration;
+  }
+
+  /**
+   * Baixa o PDF do ingresso de uma inscrição (QR Code + dados do participante).
+   * O backend gera o PDF a partir do `receiptSnapshot` imutável e aplica o mesmo
+   * controle de acesso da visualização (comprador/participante/organizador/admin).
+   * Retorna o blob + o nome de arquivo sugerido no `Content-Disposition`.
+   */
+  async downloadRegistrationTicketPdf(
+    registrationId: string,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await this.apiClient.get<Blob>(
+      `/api/v1/registrations/${registrationId}/ticket-pdf`,
+      { responseType: "blob" },
+    );
+
+    const contentDisposition =
+      (response.headers as Record<string, string>)["content-disposition"] ?? "";
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    const filename =
+      match?.[1] ?? `ingresso-${registrationId.slice(0, 8)}.pdf`;
+
+    return { blob: response.data as unknown as Blob, filename };
+  }
+
+  /**
+   * Baixa o PDF do COMPROVANTE (recibo) do pedido ao qual a inscrição pertence —
+   * o mesmo documento anexado ao e-mail de confirmação. O backend gera por PEDIDO
+   * e aplica o controle de acesso (comprador/organizador/admin). Retorna o blob +
+   * o nome de arquivo sugerido no `Content-Disposition`.
+   */
+  async downloadRegistrationReceiptPdf(
+    registrationId: string,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await this.apiClient.get<Blob>(
+      `/api/v1/registrations/${registrationId}/receipt-pdf`,
+      { responseType: "blob" },
+    );
+
+    const contentDisposition =
+      (response.headers as Record<string, string>)["content-disposition"] ?? "";
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    const filename =
+      match?.[1] ?? `comprovante-${registrationId.slice(0, 8)}.pdf`;
+
+    return { blob: response.data as unknown as Blob, filename };
   }
 
   async contactOrganizer(

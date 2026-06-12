@@ -161,7 +161,21 @@
       "PowerShell(Get-Content tsc_out.txt | Select-String -Pattern \"LoginModal|UserService|useForgotPassword\"; \"----total----\"; \\(Get-Content tsc_out.txt | Measure-Object -Line\\).Lines)",
       "PowerShell(Remove-Item *)",
       "PowerShell(npx vitest run --reporter=dot 2>$null | Select-Object -Last 10)",
-      "PowerShell(Copy-Item *)"
+      "PowerShell(Copy-Item *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\muril\\\\Projects\\\\PodioTickets\\\\frontend\\\\src\" -Directory)",
+      "Bash(Get-ChildItem -Path src -Recurse -Directory)",
+      "Read(//c/Users/muril/Projects/PodioTickets/**)",
+      "Bash(sed -n '20,60p' src/hooks/useCheckoutPayment.ts)",
+      "Bash(sed -n '20,60p' src/hooks/usePaymentStatus.ts)",
+      "Bash(ls -la dist/app/auth/auth.controller.js)",
+      "Bash(grep -c \"applyAuthCookiesFromResult\" dist/app/auth/auth.controller.js)",
+      "Bash(echo \"total erros: $\\(npx tsc --noEmit 2>&1)",
+      "Bash(echo \"total erros tsc: $\\(npx tsc --noEmit 2>&1)",
+      "Bash(npx jest *)",
+      "Bash(awk '/^model Order /{f=1} f{print} /^}/{if\\(f\\)exit}' prisma/schema.prisma)",
+      "Bash(awk '/^model Organization /{f=1} f{print} /^}/{if\\(f\\)exit}' prisma/schema.prisma)",
+      "Bash(awk '/^model User /{f=1} f{print} /^}/{if\\(f\\)exit}' prisma/schema.prisma)",
+      "Bash(awk 'NR>=230 && /^  [a-zA-Z].*\\\\\\(.*\\\\\\).*\\\\{|^  async [a-zA-Z]/{print NR\": \"$0}' src/app/payments/payments.service.ts)"
     ]
   },
   "disabledMcpjsonServers": [

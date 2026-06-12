@@ -9,6 +9,7 @@ import { getApiClient } from "@/services/base/ApiClient";
 import { ImageWithInitialFallback } from "@/components/ImageWithInitialFallback";
 import toast from "react-hot-toast";
 import { formatDateBR } from "@/utils/datetimeBR";
+import { sanitizeRichHtml } from "@/lib/richContent";
 
 type NotificationStatus = "review" | "sent" | "denied";
 
@@ -278,7 +279,7 @@ export function NotificationDetailDrawer({ notificationId, open, onOpenChange, o
                 <div className="rounded-xl bg-gray-3 p-4">
                   <div
                     className="text-sm text-gray-12 font-family-dm-sans leading-relaxed [&_p]:mb-2 [&_p:last-child]:mb-0 [&_a]:text-primary-11 [&_a]:underline [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"
-                    dangerouslySetInnerHTML={{ __html: detail.messageHtml }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(detail.messageHtml) }}
                   />
                 </div>
               </section>

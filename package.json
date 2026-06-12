@@ -30,6 +30,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.24",
     "i18n-iso-countries": "^7.14.0",
+    "isomorphic-dompurify": "^3.16.0",
     "js-cookie": "^3.0.5",
     "libphonenumber-js": "^1.13.2",
     "lucide-react": "^0.553.0",
