@@ -232,6 +232,26 @@ function adminAppHostConfig(): { raw: string; hostname: string } | null {
   return { raw, hostname };
 }
 
+/**
+ * Guard de auth do admin no MIDDLEWARE (server-side) — DESLIGADO em dev.
+ *
+ * Motivo: o cookie httpOnly `pt_at_admin` é gravado pela API sob o host
+ * `localhost` (`COOKIE_DOMAIN=localhost`) e o browser NÃO o entrega ao host
+ * dedicado do admin (`test890.localhost`) na requisição de NAVEGAÇÃO — só nas
+ * chamadas XHR à API (que vão pro próprio `localhost`). Cookies de `localhost`
+ * não são compartilhados com `*.localhost`. Resultado: o guard SSR nunca
+ * enxerga o token e bounceia o admin pra `/login` mesmo logado. O organizador
+ * não sofre disso porque não tem guard SSR (auth é só client-side).
+ *
+ * Em dev, deixamos a auth a cargo do client (`useAdminAccess`), igual ao fluxo
+ * do organizador. NUNCA desligar em produção: lá `app.`/`api.` são same-site e o
+ * cookie de domínio-pai (`.podioticket.com.br`) é lido normalmente no SSR — o
+ * guard SSR é uma camada de defesa que queremos manter.
+ */
+function isAdminSsrGuardDisabled(): boolean {
+  return process.env.NODE_ENV === "development";
+}
+
 function applyAdminHostRouting(request: NextRequest): NextResponse | null {
   const cfg = adminAppHostConfig();
   if (!cfg) return null;
@@ -252,21 +272,28 @@ function applyAdminHostRouting(request: NextRequest): NextResponse | null {
 
     if (isAppHostInfrastructurePath(pathname)) return null;
 
-    // Auth guard integrado ao host admin
-    const isLoginPath = pathname === "/login" || pathname.startsWith("/login/");
-    const token = request.cookies.get("access_token")?.value;
+    // Auth guard integrado ao host admin. Lê o access token httpOnly da
+    // superfície ADMIN (`pt_at_admin`) — sessões isoladas por superfície (o
+    // middleware roda no server e enxerga cookies httpOnly).
+    // Em dev fica desligado (cookie de `localhost` não chega ao host dedicado
+    // `*.localhost` na navegação) → auth client-side via `useAdminAccess`.
+    if (!isAdminSsrGuardDisabled()) {
+      const isLoginPath =
+        pathname === "/login" || pathname.startsWith("/login/");
+      const token = request.cookies.get("pt_at_admin")?.value;
 
-    if (isLoginPath && token) {
-      const dest = request.nextUrl.clone();
-      dest.pathname = "/events";
-      return NextResponse.redirect(dest, 307);
-    }
+      if (isLoginPath && token) {
+        const dest = request.nextUrl.clone();
+        dest.pathname = "/events";
+        return NextResponse.redirect(dest, 307);
+      }
 
-    if (!isLoginPath && !token) {
-      const dest = request.nextUrl.clone();
-      dest.pathname = "/login";
-      if (pathname !== "/") dest.searchParams.set("next", pathname);
-      return NextResponse.redirect(dest, 307);
+      if (!isLoginPath && !token) {
+        const dest = request.nextUrl.clone();
+        dest.pathname = "/login";
+        if (pathname !== "/") dest.searchParams.set("next", pathname);
+        return NextResponse.redirect(dest, 307);
+      }
     }
 
     // Rewrite para /admin/*
@@ -299,8 +326,13 @@ function applyAdminAuthGuard(request: NextRequest): NextResponse | null {
 
   if (!pathname.startsWith("/admin")) return null;
 
+  // Em dev o guard SSR é desligado (ver `isAdminSsrGuardDisabled`): o cookie
+  // httpOnly não chega ao middleware no host dedicado → auth fica client-side.
+  if (isAdminSsrGuardDisabled()) return null;
+
   const isPublic = pathname.startsWith("/admin/login");
-  const token = request.cookies.get("access_token")?.value;
+  // Access token httpOnly da superfície ADMIN (isolada das demais).
+  const token = request.cookies.get("pt_at_admin")?.value;
 
   if (isPublic) {
     if (token) {

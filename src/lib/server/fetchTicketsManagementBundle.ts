@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { readServerSurfaceToken } from "./serverSurface";
 import {
   normalizeTicketsManagementRaw,
   type TicketsManagementBundle,
@@ -26,8 +26,7 @@ export async function fetchTicketsManagementBundle(
 ): Promise<TicketsManagementBundle | null> {
   if (!eventId) return null;
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
+  const token = await readServerSurfaceToken();
   if (!token) return null;
 
   const baseUrl = (

@@ -3,6 +3,7 @@ import type { Event, AcceptedPaymentMethod } from "@/interfaces/event";
 import { ACCEPTED_PAYMENT_METHODS } from "@/interfaces/event";
 import type { EventKitSelectionDisplay } from "@/lib/eventKitSelectionDisplay";
 import { sanitizeOrganizerAuditPageKey } from "@/lib/organizerAudit";
+import { surfaceHeader } from "@/lib/authSurface";
 
 export interface CreateOrganizerRequest {
   name: string;
@@ -1290,9 +1291,11 @@ export class OrganizerService {
       ).replace(/\/$/, "");
 
       // Auth por cookie httpOnly: `credentials: "include"` envia o cookie.
+      // `X-PT-Surface` declara a superfície (fetch cru não passa pelo ApiClient).
       const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
         method: "POST",
         credentials: "include",
+        headers: surfaceHeader(),
         body: formData,
       });
 

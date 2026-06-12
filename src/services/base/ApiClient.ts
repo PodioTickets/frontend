@@ -1,6 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import Cookies from "js-cookie";
 import { getActivitySessionId } from "@/lib/activityTelemetry";
+import {
+  getCurrentSurface,
+  SURFACE_HEADER,
+  sessionHintCookieName,
+} from "@/lib/authSurface";
 
 // Tipos base para respostas de API
 export interface ApiResponse<T = any> {
@@ -79,6 +84,10 @@ export class ApiClient {
         }
         const token = this.getAccessToken();
         if (token) config.headers.Authorization = `Bearer ${token}`;
+
+        // Declara a SUPERFÍCIE (admin/organizer/client) → o backend escolhe o
+        // cookie de sessão certo. Sessões isoladas: as 3 convivem no navegador.
+        config.headers[SURFACE_HEADER] = getCurrentSurface();
 
         // Identidade de telemetria: o backend usa este header pra costurar a
         // jornada (page view anônimo ↔ checkout autenticado) nos registros de
@@ -204,11 +213,12 @@ export class ApiClient {
     this.failedQueue = [];
   }
 
-  // Dica de sessão (cookie `pt_authed`, não-httpOnly, sem segredo) setada pelo
-  // backend no login. Permite saber "provavelmente logado" sem expor o token —
-  // o access_token httpOnly NÃO é legível por JS de propósito.
+  // Dica de sessão (cookie `pt_authed_<surface>`, não-httpOnly, sem segredo)
+  // setada pelo backend no login da superfície atual. Permite saber
+  // "provavelmente logado" sem expor o token — o access httpOnly NÃO é legível
+  // por JS de propósito. Por-superfície: o admin não vê o hint do cliente etc.
   hasSessionHint(): boolean {
-    return Cookies.get("pt_authed") === "1";
+    return Cookies.get(sessionHintCookieName()) === "1";
   }
 
   getAccessToken(): string | null {
@@ -244,6 +254,9 @@ export class ApiClient {
   clearTokens(): void {
     Cookies.remove("access_token");
     Cookies.remove("refresh_token");
+    // Remove a dica da superfície atual: após um refresh que falhou (sessão
+    // morta), evita que `hasSessionHint()` siga true e dispare /refresh em loop.
+    Cookies.remove(sessionHintCookieName());
   }
 
   private needsCsrfProtection(config: AxiosRequestConfig): boolean {
