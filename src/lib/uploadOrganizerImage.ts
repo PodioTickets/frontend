@@ -1,4 +1,5 @@
 import { userService } from "@/services";
+import { surfaceHeader } from "@/lib/authSurface";
 
 export function getOrganizerApiUrl(): string {
   return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
@@ -93,10 +94,12 @@ export async function uploadOrganizerImage(file: File): Promise<string> {
   formDataUpload.append("file", file);
 
   // Auth por cookie httpOnly: `credentials: "include"` envia o cookie; 401 cai
-  // no !ok abaixo (mensagem "Sessão expirada").
+  // no !ok abaixo (mensagem "Sessão expirada"). `X-PT-Surface` declara a
+  // superfície (fetch cru não passa pelo ApiClient).
   const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
     method: "POST",
     credentials: "include",
+    headers: surfaceHeader(),
     body: formDataUpload,
   });
 

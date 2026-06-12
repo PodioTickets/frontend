@@ -177,7 +177,11 @@
       "Bash(awk '/^model User /{f=1} f{print} /^}/{if\\(f\\)exit}' prisma/schema.prisma)",
       "Bash(awk 'NR>=230 && /^  [a-zA-Z].*\\\\\\(.*\\\\\\).*\\\\{|^  async [a-zA-Z]/{print NR\": \"$0}' src/app/payments/payments.service.ts)",
       "Bash(sed -n '40,75p' src/common/utils/product-stock.util.ts)",
-      "Bash(grep -n \"noUnusedParameters\\\\|noUnusedLocals\" tsconfig.json tsconfig.build.json)"
+      "Bash(grep -n \"noUnusedParameters\\\\|noUnusedLocals\" tsconfig.json tsconfig.build.json)",
+      "Bash(awk '/enum OrderStatus/{f=1} f{print} /}/{if\\(f\\)exit}' prisma/schema.prisma)",
+      "Bash(grep -rln \"applyAuthCookiesFromResult\\\\|clearAuthCookies\\\\|setAuthCookies\\\\|ACCESS_TOKEN_COOKIE\\\\|resolveAuthSurface\\\\|access_token\\\\|pt_authed\\\\|loginAdmin\\\\|loginEmail\" src/app/auth/__tests__)",
+      "Bash(ls src/app/auth/__tests__)",
+      "Bash(echo \"---exit $?---\")"
     ]
   },
   "disabledMcpjsonServers": [

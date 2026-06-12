@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { userService, organizerService } from "@/services";
+import { surfaceHeader } from "@/lib/authSurface";
 import { Button } from "@/components/Button";
 import { ArrowButton } from "@/components/ArrowButton";
 import { CalendarIcon } from "@/components/Icons/CalendarIcon";
@@ -126,9 +127,11 @@ export function BannerSection({
     const fd = new FormData();
     fd.append("file", file);
     // Auth por cookie httpOnly: `credentials: "include"`; 401 cai no !ok abaixo.
+    // `X-PT-Surface` declara a superfície (fetch cru não passa pelo ApiClient).
     const response = await fetch(`${apiUrl}/api/v1/upload/image`, {
       method: "POST",
       credentials: "include",
+      headers: surfaceHeader(),
       body: fd,
     });
 
