@@ -2,6 +2,7 @@ import type { ApiClient } from "../base/ApiClient";
 import type { CouponPreviewResult } from "@/lib/orderCouponDiscount";
 import type { AgeCouponEligibility } from "@/lib/ageCoupon";
 import { normalizeNationality } from "@/utils/nationality";
+import { userCacheKey, LEGACY_USER_CACHE_KEY } from "@/lib/authSurface";
 
 export interface LoginResponse {
   message?: string;
@@ -828,7 +829,8 @@ export class UserService {
    */
   clearLocalSession(): void {
     try {
-      localStorage.removeItem("user");
+      localStorage.removeItem(userCacheKey());
+      localStorage.removeItem(LEGACY_USER_CACHE_KEY); // chave global pré-isolamento
     } catch {
       /* ignore */
     }
